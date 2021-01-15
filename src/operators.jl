@@ -1,6 +1,5 @@
 import SpecialFunctions: gamma, lgamma, erf, erfc, beta
 
-
 import Base.FastMath: sqrt_llvm_fast, neg_float_fast,
     add_float_fast, sub_float_fast, mul_float_fast, div_float_fast, rem_float_fast,
     eq_float_fast, ne_float_fast, lt_float_fast, le_float_fast,

@@ -1,4 +1,5 @@
-include("/Users/mcranmer/sr.jl/julia/operators.jl")
+include("operators.jl")
+
 const una_constraints = [-1, -1]
 const bin_constraints = [(-1, -1), (-1, -1), (-1, -1)]
 const binops = [div, plus, mult]
