@@ -38,6 +38,7 @@ struct Options
     fractionReplaced::Float32
     topn::Integer
     verbosity::Integer
+    probNegate::Float32
 
 end
 
@@ -74,7 +75,8 @@ function Options(;
     ncyclesperiteration=3000,
     fractionReplaced=0.1f0,
     topn=10,
-    verbosity=0
+    verbosity=0,
+    probNegate=0.01f0,
    )
 
     if hofFile == nothing
@@ -88,7 +90,7 @@ function Options(;
         bin_constraints = [(-1, -1) for i=1:length(binops)]
     end
 
-    Options(una_constraints, bin_constraints, binops, unaops, n, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, nprocs, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity)
+    Options(una_constraints, bin_constraints, binops, unaops, n, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, nprocs, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate)
 end
 
 # @inline function BINOP!(x::Array{Float32, 1}, y::Array{Float32, 1}, i::Int, clen::Int)

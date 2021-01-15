@@ -1,6 +1,8 @@
-@everywhere include("src/hyperparams.jl")
 @everywhere include("src/sr.jl")
-using SR
+using .SR
 
-RunSR(100, Options())
+X = randn(Float32, 100, 5)
+y = X[1:end, 3] .^ 2
+
+RunSR(X, y, 100, Options())
 rmprocs(nprocs)

@@ -1,38 +1,7 @@
-
-    options.una_constraints
-    options.bin_constraints
-    options.binops
-    options.unaops
-    options.parsimony
-    options.alpha
-    options.maxsize
-    options.maxdepth
-    options.fast_cycle
-    options.migration
-    options.hofMigration
-    options.fractionReplacedHof
-    options.shouldOptimizeConstants
-    options.hofFile
-    options.npopulations
-    options.nrestarts
-    options.perturbationFactor
-    options.annealing
-    options.weighted
-    options.batching
-    options.batchSize
-    options.useVarMap
-    options.mutationWeights
-    options.warmupMaxsize
-    options.useFrequency
-    options.npop
-    options.ncyclesperiteration
-    options.fractionReplaced
-    options.topn
-
-
-
-
 module SR
+
+include("operators.jl")
+include("hyperparams.jl")
 
 # Types
 export Population,
@@ -45,16 +14,12 @@ export Population,
     RunSR, 
     SRCycle
 
-include("hyperparams.jl")
-include("operators.jl")
-
 using Optim
 using Printf: @printf
 using Random: shuffle!, randperm
+using Distributed
 
 const maxdegree = 2
-const actualMaxsize = options.maxsize + maxdegree
-
 
 # Sum of square error between two arrays
 function SSE(x::Array{Float32}, y::Array{Float32})::Float32
@@ -94,22 +59,10 @@ function MSE(x::Array{Float32}, y::Array{Float32}, w::Array{Float32})::Float32
     return SSE(x, y, w)/sum(w)
 end
 
-const len = size(X)[1]
-
-if options.weighted
-    const avgy = sum(y .* weights)/sum(weights)
-    const baselineMSE = MSE(y, convert(Array{Float32, 1}, ones(len) .* avgy), weights)
-else
-    const avgy = sum(y)/len
-    const baselineMSE = MSE(y, convert(Array{Float32, 1}, ones(len) .* avgy))
-end
-
 
 function id(x::Float32)::Float32
     x
 end
-
-const size(X)[2] = size(X)[2];
 
 function debug(verbosity, string...)
     verbosity > 0 ? println(string...) : nothing
@@ -282,7 +235,6 @@ end
 # Randomly perturb a constant
 function mutateConstant(
         tree::Node, T::Float32,
-        probNegate::Float32=0.01f0,
         options::Options)::Node
     # T is between 0 and 1.
 
@@ -305,7 +257,7 @@ function mutateConstant(
         node.val /= factor
     end
 
-    if rand() > probNegate
+    if rand() > options.probNegate
         node.val *= -1
     end
 
@@ -356,7 +308,7 @@ function evalTreeArray(tree::Node, cX::Array{Float32, 2}, options::Options)::Uni
 end
 
 # Score an equation
-function scoreFunc(tree::Node, options::Options)::Float32
+function scoreFunc(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, tree::Node, options::Options)::Float32
     prediction = evalTreeArray(tree, options)
     if prediction === nothing
         return 1f9
@@ -366,13 +318,13 @@ function scoreFunc(tree::Node, options::Options)::Float32
     else
         mse = MSE(prediction, y)
     end
-    return mse / baselineMSE + countNodes(tree)*options.parsimony
+    return mse / baseline + countNodes(tree)*options.parsimony
 end
 
 # Score an equation with a small batch
-function scoreFuncBatch(tree::Node, options::Options)::Float32
+function scoreFuncBatch(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, tree::Node, options::Options)::Float32
     # options.batchSize
-    batch_idx = randperm(len)[1:options.batchSize]
+    batch_idx = randperm(size(X)[1])[1:options.batchSize]
     batch_X = X[batch_idx, :]
     prediction = evalTreeArray(tree, batch_X, options)
     if prediction === nothing
@@ -383,15 +335,15 @@ function scoreFuncBatch(tree::Node, options::Options)::Float32
     if options.weighted
         batch_w = weights[batch_idx]
         mse = MSE(prediction, batch_y, batch_w)
-        size_adjustment = 1f0 * len / options.batchSize
+        size_adjustment = 1f0 * size(X)[1] / options.batchSize
     else
         mse = MSE(prediction, batch_y)
     end
-    return size_adjustment * mse / baselineMSE + countNodes(tree)*options.parsimony
+    return size_adjustment * mse / baseline + countNodes(tree)*options.parsimony
 end
 
 # Add a random unary/binary operation to the end of a tree
-function appendRandomOp(tree::Node, options::Options)::Node
+function appendRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
     node = randomNode(tree)
     while node.degree != 0
         node = randomNode(tree)
@@ -402,12 +354,12 @@ function appendRandomOp(tree::Node, options::Options)::Node
     if rand() > 0.5
         left = Float32(randn())
     else
-        left = rand(1:size(X)[2])
+        left = rand(1:nfeatures)
     end
     if rand() > 0.5
         right = Float32(randn())
     else
-        right = rand(1:size(X)[2])
+        right = rand(1:nfeatures)
     end
 
     if makeNewBinOp
@@ -489,11 +441,11 @@ function prependRandomOp(tree::Node, options::Options)::Node
     return node
 end
 
-function randomConstantNode()::Node
+function randomConstantNode(nfeatures::Int)::Node
     if rand() > 0.5
         val = Float32(randn())
     else
-        val = rand(1:size(X)[2])
+        val = rand(1:nfeatures)
     end
     newnode = Node(val)
     return newnode
@@ -689,8 +641,8 @@ mutable struct PopMember
 end
 
 
-function PopMember(t::Node, options::Options)
-    PopMember(t, scoreFunc(t, options), getTime())
+function PopMember(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, t::Node, options::Options)
+    PopMember(t, scoreFunc(X, y, baseline, t, options), getTime())
 end
 
 # Check if any binary operator are overly complex
@@ -738,7 +690,7 @@ end
 
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
-function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyComplexity::Array{Float32, 1}, options::Options)::PopMember
+function iterate(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, member::PopMember, T::Float32, curmaxsize::Integer, frequencyComplexity::Array{Float32, 1}, options::Options)::PopMember
     prev = member.tree
     tree = prev
     #TODO - reconsider this
@@ -747,6 +699,8 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
     else
         beforeLoss = member.score
     end
+
+    nfeatures = size(X)[2]
 
     mutationChoice = rand()
     #More constants => more likely to do constant mutation
@@ -790,9 +744,9 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
 
         elseif mutationChoice < cweights[3]
             if rand() < 0.5
-                tree = appendRandomOp(tree, options)
+                tree = appendRandomOp(tree, options, nfeatures)
             else
-                tree = prependRandomOp(tree, options)
+                tree = prependRandomOp(tree, options, nfeatures)
             end
             is_success_always_possible = false
             # Can potentially have a situation without success
@@ -812,7 +766,7 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
             # to commutative operator...
 
         elseif mutationChoice < cweights[7]
-            tree = genRandomTree(5, options) # Sometimes we generate a new tree completely tree
+            tree = genRandomTree(5, options, nfeatures) # Sometimes we generate a new tree completely tree
 
             is_success_always_possible = true
         else # no mutation applied
@@ -863,10 +817,10 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
 end
 
 # Create a random equation by appending random operators
-function genRandomTree(length::Integer, options::Options)::Node
+function genRandomTree(length::Integer, options::Options, nfeatures::Int)::Node
     tree = Node(1.0f0)
     for i=1:length
-        tree = appendRandomOp(tree, options)
+        tree = appendRandomOp(tree, options, nfeatures)
     end
     return tree
 end
@@ -882,12 +836,12 @@ mutable struct Population
 
 end
 
-function Population(options.npop::Integer, options::Options)
-    Population([PopMember(genRandomTree(3, options), options) for i=1:options.npop], options.npop)
+function Population(npop::Integer, options::Options, nfeatures::Int)
+    Population([PopMember(genRandomTree(3, options, nfeatures), options) for i=1:npop], npop)
 end
 
-function Population(options.npop::Integer, nlength::Integer, options::Options)
-    Population([PopMember(genRandomTree(nlength, options), options) for i=1:options.npop], options.npop)
+function Population(npop::Integer, nlength::Integer, options::Options, nfeatures::Int)
+    Population([PopMember(genRandomTree(nlength, options, nfeatures), options) for i=1:npop], npop)
 end
 
 # Sample 10 random members of the population, and make a new one
@@ -903,7 +857,7 @@ function bestOfSample(pop::Population)::PopMember
     return sample.members[best_idx]
 end
 
-function finalizeScores(pop::Population, options::Options)::Population
+function finalizeScores(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, pop::Population, options::Options)::Population
     need_recalculate = options.batching
     if need_recalculate
         @inbounds @simd for member=1:pop.n
@@ -914,14 +868,14 @@ function finalizeScores(pop::Population, options::Options)::Population
 end
 
 # Return best 10 examples
-function bestSubPop(pop::Population; options.topn::Integer=10)::Population
+function bestSubPop(pop::Population; topn::Integer=10)::Population
     best_idx = sortperm([pop.members[member].score for member=1:pop.n])
-    return Population(pop.members[best_idx[1:options.topn]])
+    return Population(pop.members[best_idx[1:topn]])
 end
 
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample
-function regEvolCycle(pop::Population, T::Float32, curmaxsize::Integer,
+function regEvolCycle(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, pop::Population, T::Float32, curmaxsize::Integer,
                       frequencyComplexity::Array{Float32, 1}, options::Options)::Population
     # Batch over each subsample. Can give 15% improvement in speed; probably moreso for large pops.
     # but is ultimately a different algorithm than regularized evolution, and might not be
@@ -966,7 +920,7 @@ end
 
 # Cycle through regularized evolution many times,
 # printing the fittest equation every 10% through
-function SRCycle(
+function SRCycle(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, 
         pop::Population,
         ncycles::Integer,
         curmaxsize::Integer,
@@ -1033,7 +987,7 @@ function optFunc(x::Array{Float32, 1}, tree::Node, options::Options)::Float32
 end
 
 # Use Nelder-Mead to optimize the constants in an equation
-function optimizeConstants(member::PopMember, options::Options)::PopMember
+function optimizeConstants(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, member::PopMember, options::Options)::PopMember
     nconst = countConstants(member.tree)
     if nconst == 0
         return member
@@ -1081,9 +1035,12 @@ mutable struct HallOfFame
     exists::Array{Bool, 1} #Whether it has been set
 
     # Arranged by complexity - store one at each.
-    HallOfFame() = new([PopMember(Node(1f0), 1f9) for i=1:actualMaxsize], [false for i=1:actualMaxsize])
 end
 
+function HallOfFame(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, options::Options)
+    actualMaxsize = options.maxsize + maxdegree
+    HallOfFame([PopMember(Node(1f0), 1f9) for i=1:actualMaxsize], [false for i=1:actualMaxsize])
+end
 
 # Check for errors before they happen
 function testConfiguration(options::Options)
@@ -1106,17 +1063,28 @@ function testConfiguration(options::Options)
     end
 end
 
-
-function RunSR(niterations::Integer, options::Options)
+function RunSR(X::Array{Float32, 2}, y::Array{Float32, 1},
+               niterations::Integer, options::Options)
 
     testConfiguration(options)
+
+    if options.weighted
+        avgy = sum(y .* weights)/sum(weights)
+        baselineMSE = MSE(y, convert(Array{Float32, 1}, ones(size(X)[1]) .* avgy), weights)
+    else
+        avgy = sum(y)/size(X)[1]
+        baselineMSE = MSE(y, convert(Array{Float32, 1}, ones(size(X)[1]) .* avgy))
+    end
+
+    nfeatures = size(X)[2]
 
     # 1. Start a population on every process
     allPops = Future[]
     # Set up a channel to send finished populations back to head node
     channels = [RemoteChannel(1) for j=1:options.npopulations]
-    bestSubPops = [Population(1, options) for j=1:options.npopulations]
-    hallOfFame = HallOfFame()
+    bestSubPops = [Population(1, options, nfeatures) for j=1:options.npopulations]
+    hallOfFame = HallOfFame(options)
+    actualMaxsize = options.maxsize + maxdegree
     frequencyComplexity = ones(Float32, actualMaxsize)
     curmaxsize = 3
     if options.warmupMaxsize == 0
@@ -1124,7 +1092,7 @@ function RunSR(niterations::Integer, options::Options)
     end
 
     for i=1:options.npopulations
-        future = @spawnat :any Population(options.npop, 3, options)
+        future = @spawnat :any Population(options.npop, 3, options, nfeatures)
         push!(allPops, future)
     end
 
@@ -1157,7 +1125,7 @@ function RunSR(niterations::Integer, options::Options)
             if isready(channels[i])
                 # Take the fetch operation from the channel since its ready
                 cur_pop = take!(channels[i])
-                bestSubPops[i] = bestSubPop(cur_pop, options.topn=options.topn)
+                bestSubPops[i] = bestSubPop(cur_pop, topn=options.topn)
 
                 #Try normal copy...
                 bestPops = Population([member for pop in bestSubPops for member in pop.members])
@@ -1175,6 +1143,7 @@ function RunSR(niterations::Integer, options::Options)
                 dominating = PopMember[]
                 open(options.hofFile, "w") do io
                     println(io,"Complexity|MSE|Equation")
+                    actualMaxsize = options.maxsize + maxdegree
                     for size=1:actualMaxsize
                         if hallOfFame.exists[size]
                             member = hallOfFame.members[size]
@@ -1279,6 +1248,7 @@ function RunSR(niterations::Integer, options::Options)
                 @printf("%-10d  %-8.3e  %-8.3e  %-.f\n", 0, curMSE, 0f0, avgy)
             end
 
+            actualMaxsize = options.maxsize + maxdegree
             for size=1:actualMaxsize
                 if hallOfFame.exists[size]
                     member = hallOfFame.members[size]
