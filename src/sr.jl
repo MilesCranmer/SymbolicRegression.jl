@@ -1,6 +1,17 @@
-import Optim
-import Printf: @printf
-import Random: shuffle!, randperm
+module SR
+
+# Types
+export Population,
+
+    #Functions:
+    RunSR, 
+    SRCycle
+
+include("operators.jl")
+
+using Optim: NelderMead, Newton, optimize, Options, converged
+using Printf: @printf
+using Random: shuffle!, randperm
 
 const maxdegree = 2
 const actualMaxsize = maxsize + maxdegree
@@ -913,7 +924,7 @@ end
 
 # Cycle through regularized evolution many times,
 # printing the fittest equation every 10% through
-function run(
+function SRCycle(
         pop::Population,
         ncycles::Integer,
         curmaxsize::Integer,
@@ -987,22 +998,22 @@ function optimizeConstants(member::PopMember)::PopMember
     x0 = getConstants(member.tree)
     f(x::Array{Float32,1})::Float32 = optFunc(x, member.tree)
     if size(x0)[1] == 1
-        algorithm = Optim.Newton
+        algorithm = Newton
     else
-        algorithm = Optim.NelderMead
+        algorithm = NelderMead
     end
 
     try
-        result = Optim.optimize(f, x0, algorithm(), Optim.Options(iterations=100))
+        result = optimize(f, x0, algorithm(), Options(iterations=100))
         # Try other initial conditions:
         for i=1:nrestarts
-            tmpresult = Optim.optimize(f, x0 .* (1f0 .+ 5f-1*randn(Float32, size(x0)[1])), algorithm(), Optim.Options(iterations=100))
+            tmpresult = optimize(f, x0 .* (1f0 .+ 5f-1*randn(Float32, size(x0)[1])), algorithm(), Options(iterations=100))
             if tmpresult.minimum < result.minimum
                 result = tmpresult
             end
         end
 
-        if Optim.converged(result)
+        if converged(result)
             setConstants(member.tree, result.minimizer)
             member.score = convert(Float32, result.minimum)
             member.birth = getTime()
@@ -1053,7 +1064,7 @@ function testConfiguration()
 end
 
 
-function fullRun(niterations::Integer;
+function RunSR(niterations::Integer;
                 npop::Integer=300,
                 ncyclesperiteration::Integer=3000,
                 fractionReplaced::Float32=0.1f0,
@@ -1082,7 +1093,7 @@ function fullRun(niterations::Integer;
 
     # # 2. Start the cycle on every process:
     @sync for i=1:npopulations
-        @async allPops[i] = @spawnat :any run(fetch(allPops[i]), ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=verbosity)
+        @async allPops[i] = @spawnat :any SRCycle(fetch(allPops[i]), ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=verbosity)
     end
     println("Started!")
     cycles_complete = npopulations * niterations
@@ -1178,7 +1189,7 @@ function fullRun(niterations::Integer;
 
                 @async begin
                     allPops[i] = @spawnat :any let
-                        tmp_pop = run(cur_pop, ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=verbosity)
+                        tmp_pop = SRCycle(cur_pop, ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=verbosity)
                         @inbounds @simd for j=1:tmp_pop.n
                             if rand() < 0.1
                                 tmp_pop.members[j].tree = simplifyTree(tmp_pop.members[j].tree)
@@ -1269,3 +1280,5 @@ function fullRun(niterations::Integer;
         end
     end
 end
+
+end #module SR
