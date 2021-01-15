@@ -109,10 +109,7 @@ function id(x::Float32)::Float32
     x
 end
 
-const nuna = size(options.unaops)[1]
-const nbin = size(options.binops)[1]
-const nops = nuna + nbin
-const nvar = size(X)[2];
+const size(X)[2] = size(X)[2];
 
 function debug(verbosity, string...)
     verbosity > 0 ? println(string...) : nothing
@@ -401,16 +398,16 @@ function appendRandomOp(tree::Node, options::Options)::Node
     end
 
     choice = rand()
-    makeNewBinOp = choice < nbin/nops
+    makeNewBinOp = choice < length(options.binops)/(length(options.unaops) + length(options.binops))
     if rand() > 0.5
         left = Float32(randn())
     else
-        left = rand(1:nvar)
+        left = rand(1:size(X)[2])
     end
     if rand() > 0.5
         right = Float32(randn())
     else
-        right = rand(1:nvar)
+        right = rand(1:size(X)[2])
     end
 
     if makeNewBinOp
@@ -438,7 +435,7 @@ end
 function insertRandomOp(tree::Node, options::Options)::Node
     node = randomNode(tree)
     choice = rand()
-    makeNewBinOp = choice < nbin/nops
+    makeNewBinOp = choice < length(options.binops)/(length(options.unaops) + length(options.binops))
     left = copyNode(node)
 
     if makeNewBinOp
@@ -467,7 +464,7 @@ end
 function prependRandomOp(tree::Node, options::Options)::Node
     node = tree
     choice = rand()
-    makeNewBinOp = choice < nbin/nops
+    makeNewBinOp = choice < length(options.binops)/(length(options.unaops) + length(options.binops))
     left = copyNode(tree)
 
     if makeNewBinOp
@@ -496,7 +493,7 @@ function randomConstantNode()::Node
     if rand() > 0.5
         val = Float32(randn())
     else
-        val = rand(1:nvar)
+        val = rand(1:size(X)[2])
     end
     newnode = Node(val)
     return newnode
@@ -823,12 +820,12 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
         end
 
         # Check for illegal equations
-        for i=1:nbin
+        for i=1:length(options.binops)
             if successful_mutation && flagBinOperatorComplexity(tree, i, options)
                 successful_mutation = false
             end
         end
-        for i=1:nuna
+        for i=1:length(options.unaops)
             if successful_mutation && flagUnaOperatorComplexity(tree, i, options)
                 successful_mutation = false
             end
