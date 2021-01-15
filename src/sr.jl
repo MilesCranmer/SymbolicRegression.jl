@@ -221,7 +221,7 @@ end
 
 # Randomly convert an operator into another one (binary->binary;
 # unary->unary)
-function mutateOperator(tree::Node, OPT)::Node
+function mutateOperator(tree::Node, options::Options)::Node
     if countOperators(tree) == 0
         return tree
     end
@@ -252,7 +252,7 @@ end
 function mutateConstant(
         tree::Node, T::Float32,
         probNegate::Float32=0.01f0,
-        OPT)::Node
+        options::Options)::Node
     # T is between 0 and 1.
 
     if countConstants(tree) == 0
@@ -283,7 +283,7 @@ end
 
 
 # Evaluate an equation over an array of datapoints
-function evalTreeArray(tree::Node, cX::Array{Float32, 2}, OPT)::Union{Array{Float32, 1}, Nothing}
+function evalTreeArray(tree::Node, cX::Array{Float32, 2}, options::Options)::Union{Array{Float32, 1}, Nothing}
     clen = size(cX)[1]
     if tree.degree == 0
         if tree.constant
@@ -292,7 +292,7 @@ function evalTreeArray(tree::Node, cX::Array{Float32, 2}, OPT)::Union{Array{Floa
             return copy(cX[:, tree.val])
         end
     elseif tree.degree == 1
-        cumulator = evalTreeArray(tree.l, cX, opt)
+        cumulator = evalTreeArray(tree.l, cX, options)
         if cumulator === nothing
             return nothing
         end
@@ -305,11 +305,11 @@ function evalTreeArray(tree::Node, cX::Array{Float32, 2}, OPT)::Union{Array{Floa
         end
         return cumulator
     else
-        cumulator = evalTreeArray(tree.l, cX, opt)
+        cumulator = evalTreeArray(tree.l, cX, options)
         if cumulator === nothing
             return nothing
         end
-        array2 = evalTreeArray(tree.r, cX, opt)
+        array2 = evalTreeArray(tree.r, cX, options)
         if array2 === nothing
             return nothing
         end
@@ -325,8 +325,8 @@ function evalTreeArray(tree::Node, cX::Array{Float32, 2}, OPT)::Union{Array{Floa
 end
 
 # Score an equation
-function scoreFunc(tree::Node, OPT)::Float32
-    prediction = evalTreeArray(tree, opt)
+function scoreFunc(tree::Node, options::Options)::Float32
+    prediction = evalTreeArray(tree, options)
     if prediction === nothing
         return 1f9
     end
@@ -339,11 +339,11 @@ function scoreFunc(tree::Node, OPT)::Float32
 end
 
 # Score an equation with a small batch
-function scoreFuncBatch(tree::Node, OPT)::Float32
+function scoreFuncBatch(tree::Node, options::Options)::Float32
     # batchSize
     batch_idx = randperm(len)[1:batchSize]
     batch_X = X[batch_idx, :]
-    prediction = evalTreeArray(tree, batch_X, opt)
+    prediction = evalTreeArray(tree, batch_X, options)
     if prediction === nothing
         return 1f9
     end
@@ -360,7 +360,7 @@ function scoreFuncBatch(tree::Node, OPT)::Float32
 end
 
 # Add a random unary/binary operation to the end of a tree
-function appendRandomOp(tree::Node, OPT)::Node
+function appendRandomOp(tree::Node, options::Options)::Node
     node = randomNode(tree)
     while node.degree != 0
         node = randomNode(tree)
@@ -401,7 +401,7 @@ function appendRandomOp(tree::Node, OPT)::Node
 end
 
 # Insert random node
-function insertRandomOp(tree::Node, OPT)::Node
+function insertRandomOp(tree::Node, options::Options)::Node
     node = randomNode(tree)
     choice = rand()
     makeNewBinOp = choice < nbin/nops
@@ -430,7 +430,7 @@ function insertRandomOp(tree::Node, OPT)::Node
 end
 
 # Add random node to the top of a tree
-function prependRandomOp(tree::Node, OPT)::Node
+function prependRandomOp(tree::Node, options::Options)::Node
     node = tree
     choice = rand()
     makeNewBinOp = choice < nbin/nops
@@ -541,7 +541,7 @@ function deleteRandomOp(tree::Node)::Node
 end
 
 # Simplify tree
-function combineOperators(tree::Node, OPT)::Node
+function combineOperators(tree::Node, options::Options)::Node
     # NOTE: (const (+*-) const) already accounted for. Call simplifyTree before.
     # ((const + var) + const) => (const + var)
     # ((const * var) * const) => (const * var)
@@ -551,10 +551,10 @@ function combineOperators(tree::Node, OPT)::Node
     if tree.degree == 0
         return tree
     elseif tree.degree == 1
-        tree.l = combineOperators(tree.l, opt)
+        tree.l = combineOperators(tree.l, options)
     elseif tree.degree == 2
-        tree.l = combineOperators(tree.l, opt)
-        tree.r = combineOperators(tree.r, opt)
+        tree.l = combineOperators(tree.l, options)
+        tree.r = combineOperators(tree.r, options)
     end
 
     top_level_constant = tree.degree == 2 && (tree.l.constant || tree.r.constant)
@@ -627,15 +627,15 @@ function combineOperators(tree::Node, OPT)::Node
 end
 
 # Simplify tree
-function simplifyTree(tree::Node, OPT)::Node
+function simplifyTree(tree::Node, options::Options)::Node
     if tree.degree == 1
-        tree.l = simplifyTree(tree.l, opt)
+        tree.l = simplifyTree(tree.l, options)
         if tree.l.degree == 0 && tree.l.constant
             return Node(unaops[tree.op](tree.l.val))
         end
     elseif tree.degree == 2
-        tree.l = simplifyTree(tree.l, opt)
-        tree.r = simplifyTree(tree.r, opt)
+        tree.l = simplifyTree(tree.l, options)
+        tree.r = simplifyTree(tree.r, options)
         constantsBelow = (
              tree.l.degree == 0 && tree.l.constant &&
              tree.r.degree == 0 && tree.r.constant
@@ -658,16 +658,16 @@ mutable struct PopMember
 end
 
 
-function PopMember(t::Node, OPT)
-    PopMember(t, scoreFunc(t, opt), getTime())
+function PopMember(t::Node, options::Options)
+    PopMember(t, scoreFunc(t, options), getTime())
 end
 
 # Check if any binary operator are overly complex
-function flagBinOperatorComplexity(tree::Node, op::Int, OPT)::Bool
+function flagBinOperatorComplexity(tree::Node, op::Int, options::Options)::Bool
     if tree.degree == 0
         return false
     elseif tree.degree == 1
-        return flagBinOperatorComplexity(tree.l, op, opt)
+        return flagBinOperatorComplexity(tree.l, op, options)
     else
         if tree.op == op
             overly_complex = (
@@ -681,12 +681,12 @@ function flagBinOperatorComplexity(tree::Node, op::Int, OPT)::Bool
                 return true
             end
         end
-        return (flagBinOperatorComplexity(tree.l, op, opt) || flagBinOperatorComplexity(tree.r, op, opt))
+        return (flagBinOperatorComplexity(tree.l, op, options) || flagBinOperatorComplexity(tree.r, op, options))
     end
 end
 
 # Check if any unary operators are overly complex
-function flagUnaOperatorComplexity(tree::Node, op::Int, OPT)::Bool
+function flagUnaOperatorComplexity(tree::Node, op::Int, options::Options)::Bool
     if tree.degree == 0
         return false
     elseif tree.degree == 1
@@ -699,20 +699,20 @@ function flagUnaOperatorComplexity(tree::Node, op::Int, OPT)::Bool
                 return true
             end
         end
-        return flagUnaOperatorComplexity(tree.l, op, opt)
+        return flagUnaOperatorComplexity(tree.l, op, options)
     else
-        return (flagUnaOperatorComplexity(tree.l, op, opt) || flagUnaOperatorComplexity(tree.r, op, opt))
+        return (flagUnaOperatorComplexity(tree.l, op, options) || flagUnaOperatorComplexity(tree.r, op, options))
     end
 end
 
 # Go through one simulated annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
-function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyComplexity::Array{Float32, 1}, OPT)::PopMember
+function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyComplexity::Array{Float32, 1}, options::Options)::PopMember
     prev = member.tree
     tree = prev
     #TODO - reconsider this
     if batching
-        beforeLoss = scoreFuncBatch(prev, opt)
+        beforeLoss = scoreFuncBatch(prev, options)
     else
         beforeLoss = member.score
     end
@@ -746,34 +746,34 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
         tree = copyNode(prev)
         successful_mutation = true
         if mutationChoice < cweights[1]
-            tree = mutateConstant(tree, T, opt)
+            tree = mutateConstant(tree, T, options)
 
             is_success_always_possible = true
             # Mutating a constant shouldn't invalidate an already-valid function
 
         elseif mutationChoice < cweights[2]
-            tree = mutateOperator(tree, opt)
+            tree = mutateOperator(tree, options)
 
             is_success_always_possible = true
             # Can always mutate to the same operator
 
         elseif mutationChoice < cweights[3]
             if rand() < 0.5
-                tree = appendRandomOp(tree, opt)
+                tree = appendRandomOp(tree, options)
             else
-                tree = prependRandomOp(tree, opt)
+                tree = prependRandomOp(tree, options)
             end
             is_success_always_possible = false
             # Can potentially have a situation without success
         elseif mutationChoice < cweights[4]
-            tree = insertRandomOp(tree, opt)
+            tree = insertRandomOp(tree, options)
             is_success_always_possible = false
         elseif mutationChoice < cweights[5]
-            tree = deleteRandomOp(tree, opt)
+            tree = deleteRandomOp(tree, options)
             is_success_always_possible = true
         elseif mutationChoice < cweights[6]
-            tree = simplifyTree(tree, opt) # Sometimes we simplify tree
-            tree = combineOperators(tree, opt) # See if repeated constants at outer levels
+            tree = simplifyTree(tree, options) # Sometimes we simplify tree
+            tree = combineOperators(tree, options) # See if repeated constants at outer levels
             return PopMember(tree, beforeLoss)
 
             is_success_always_possible = true
@@ -781,7 +781,7 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
             # to commutative operator...
 
         elseif mutationChoice < cweights[7]
-            tree = genRandomTree(5, opt) # Sometimes we generate a new tree completely tree
+            tree = genRandomTree(5, options) # Sometimes we generate a new tree completely tree
 
             is_success_always_possible = true
         else # no mutation applied
@@ -790,12 +790,12 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
 
         # Check for illegal equations
         for i=1:nbin
-            if successful_mutation && flagBinOperatorComplexity(tree, i, opt)
+            if successful_mutation && flagBinOperatorComplexity(tree, i, options)
                 successful_mutation = false
             end
         end
         for i=1:nuna
-            if successful_mutation && flagUnaOperatorComplexity(tree, i, opt)
+            if successful_mutation && flagUnaOperatorComplexity(tree, i, options)
                 successful_mutation = false
             end
         end
@@ -809,9 +809,9 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
     end
 
     if batching
-        afterLoss = scoreFuncBatch(tree, opt)
+        afterLoss = scoreFuncBatch(tree, options)
     else
-        afterLoss = scoreFunc(tree, opt)
+        afterLoss = scoreFunc(tree, options)
     end
 
     if annealing
@@ -832,10 +832,10 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
 end
 
 # Create a random equation by appending random operators
-function genRandomTree(length::Integer, OPT)::Node
+function genRandomTree(length::Integer, options::Options)::Node
     tree = Node(1.0f0)
     for i=1:length
-        tree = appendRandomOp(tree, opt)
+        tree = appendRandomOp(tree, options)
     end
     return tree
 end
@@ -851,12 +851,12 @@ mutable struct Population
 
 end
 
-function Population(npop::Integer, OPT)
-    Population([PopMember(genRandomTree(3, opt), opt) for i=1:npop], npop)
+function Population(npop::Integer, options::Options)
+    Population([PopMember(genRandomTree(3, options), options) for i=1:npop], npop)
 end
 
-function Population(npop::Integer, nlength::Integer, OPT)
-    Population([PopMember(genRandomTree(nlength, opt), opt) for i=1:npop], npop)
+function Population(npop::Integer, nlength::Integer, options::Options)
+    Population([PopMember(genRandomTree(nlength, options), options) for i=1:npop], npop)
 end
 
 # Sample 10 random members of the population, and make a new one
@@ -872,11 +872,11 @@ function bestOfSample(pop::Population)::PopMember
     return sample.members[best_idx]
 end
 
-function finalizeScores(pop::Population, OPT)::Population
+function finalizeScores(pop::Population, options::Options)::Population
     need_recalculate = batching
     if need_recalculate
         @inbounds @simd for member=1:pop.n
-            pop.members[member].score = scoreFunc(pop.members[member].tree, opt)
+            pop.members[member].score = scoreFunc(pop.members[member].tree, options)
         end
     end
     return pop
@@ -891,7 +891,7 @@ end
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample
 function regEvolCycle(pop::Population, T::Float32, curmaxsize::Integer,
-                      frequencyComplexity::Array{Float32, 1}, OPT)::Population
+                      frequencyComplexity::Array{Float32, 1}, options::Options)::Population
     # Batch over each subsample. Can give 15% improvement in speed; probably moreso for large pops.
     # but is ultimately a different algorithm than regularized evolution, and might not be
     # as good.
@@ -912,7 +912,7 @@ function regEvolCycle(pop::Population, T::Float32, curmaxsize::Integer,
                 end
             end
             allstar = pop.members[best_idx]
-            babies[i] = iterate(allstar, T, curmaxsize, frequencyComplexity, opt)
+            babies[i] = iterate(allstar, T, curmaxsize, frequencyComplexity, options)
         end
 
         # Replace the n_evol_cycles-oldest members of each population
@@ -923,7 +923,7 @@ function regEvolCycle(pop::Population, T::Float32, curmaxsize::Integer,
     else
         for i=1:round(Integer, pop.n/ns)
             allstar = bestOfSample(pop)
-            baby = iterate(allstar, T, curmaxsize, frequencyComplexity, opt)
+            baby = iterate(allstar, T, curmaxsize, frequencyComplexity, options)
             #printTree(baby.tree)
             oldest = argmin([pop.members[member].birth for member=1:pop.n])
             pop.members[oldest] = baby
@@ -941,22 +941,22 @@ function SRCycle(
         curmaxsize::Integer,
         frequencyComplexity::Array{Float32, 1};
         verbosity::Integer=0,
-        OPT
+        options::Options
        )::Population
 
     allT = LinRange(1.0f0, 0.0f0, ncycles)
     for iT in 1:size(allT)[1]
         if annealing
-            pop = regEvolCycle(pop, allT[iT], curmaxsize, frequencyComplexity, opt)
+            pop = regEvolCycle(pop, allT[iT], curmaxsize, frequencyComplexity, options)
         else
-            pop = regEvolCycle(pop, 1.0f0, curmaxsize, frequencyComplexity, opt)
+            pop = regEvolCycle(pop, 1.0f0, curmaxsize, frequencyComplexity, options)
         end
 
         if verbosity > 0 && (iT % verbosity == 0)
             bestPops = bestSubPop(pop)
             bestCurScoreIdx = argmin([bestPops.members[member].score for member=1:bestPops.n])
             bestCurScore = bestPops.members[bestCurScoreIdx].score
-            debug(verbosity, bestCurScore, " is the score for ", stringTree(bestPops.members[bestCurScoreIdx].tree, opt))
+            debug(verbosity, bestCurScore, " is the score for ", stringTree(bestPops.members[bestCurScoreIdx].tree, options))
         end
     end
 
@@ -996,19 +996,19 @@ end
 
 
 # Proxy function for optimization
-function optFunc(x::Array{Float32, 1}, tree::Node, OPT)::Float32
+function optFunc(x::Array{Float32, 1}, tree::Node, options::Options)::Float32
     setConstants(tree, x)
-    return scoreFunc(tree, opt)
+    return scoreFunc(tree, options)
 end
 
 # Use Nelder-Mead to optimize the constants in an equation
-function optimizeConstants(member::PopMember, OPT)::PopMember
+function optimizeConstants(member::PopMember, options::Options)::PopMember
     nconst = countConstants(member.tree)
     if nconst == 0
         return member
     end
     x0 = getConstants(member.tree)
-    f(x::Array{Float32,1})::Float32 = optFunc(x, member.tree, opt)
+    f(x::Array{Float32,1})::Float32 = optFunc(x, member.tree, options)
     if size(x0)[1] == 1
         algorithm = Newton
     else
@@ -1055,7 +1055,7 @@ end
 
 
 # Check for errors before they happen
-function testConfiguration(OPT)
+function testConfiguration(options::Options)
     test_input = LinRange(-100f0, 100f0, 99)
 
     try
@@ -1076,15 +1076,15 @@ function testConfiguration(OPT)
 end
 
 
-function RunSR(niterations::Integer, OPT)
+function RunSR(niterations::Integer, options::Options)
 
-    testConfiguration(opt)
+    testConfiguration(options)
 
     # 1. Start a population on every process
     allPops = Future[]
     # Set up a channel to send finished populations back to head node
     channels = [RemoteChannel(1) for j=1:npopulations]
-    bestSubPops = [Population(1, opt) for j=1:npopulations]
+    bestSubPops = [Population(1, options) for j=1:npopulations]
     hallOfFame = HallOfFame()
     frequencyComplexity = ones(Float32, actualMaxsize)
     curmaxsize = 3
@@ -1093,13 +1093,13 @@ function RunSR(niterations::Integer, OPT)
     end
 
     for i=1:npopulations
-        future = @spawnat :any Population(npop, 3, opt)
+        future = @spawnat :any Population(npop, 3, options)
         push!(allPops, future)
     end
 
     # # 2. Start the cycle on every process:
     @sync for i=1:npopulations
-        @async allPops[i] = @spawnat :any SRCycle(fetch(allPops[i]), ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=verbosity, opt=opt)
+        @async allPops[i] = @spawnat :any SRCycle(fetch(allPops[i]), ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=verbosity, options=options)
     end
     println("Started!")
     cycles_complete = npopulations * niterations
@@ -1148,16 +1148,16 @@ function RunSR(niterations::Integer, OPT)
                         if hallOfFame.exists[size]
                             member = hallOfFame.members[size]
                             if weighted
-                                curMSE = MSE(evalTreeArray(member.tree, opt), y, weights)
+                                curMSE = MSE(evalTreeArray(member.tree, options), y, weights)
                             else
-                                curMSE = MSE(evalTreeArray(member.tree, opt), y)
+                                curMSE = MSE(evalTreeArray(member.tree, options), y)
                             end
                             numberSmallerAndBetter = 0
                             for i=1:(size-1)
                                 if weighted
-                                    hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, opt), y, weights)
+                                    hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, options), y, weights)
                                 else
-                                    hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, opt), y)
+                                    hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, options), y)
                                 end
                                 if (hallOfFame.exists[size] && curMSE > hofMSE)
                                     numberSmallerAndBetter += 1
@@ -1165,7 +1165,7 @@ function RunSR(niterations::Integer, OPT)
                             end
                             betterThanAllSmaller = (numberSmallerAndBetter == 0)
                             if betterThanAllSmaller
-                                println(io, "$size|$(curMSE)|$(stringTree(member.tree, opt))")
+                                println(io, "$size|$(curMSE)|$(stringTree(member.tree, options))")
                                 push!(dominating, member)
                             end
                         end
@@ -1188,24 +1188,24 @@ function RunSR(niterations::Integer, OPT)
                         # Copy in case one gets used twice
                         to_copy = rand(1:size(dominating)[1])
                         cur_pop.members[k] = PopMember(
-                           copyNode(dominating[to_copy].tree), opt
+                           copyNode(dominating[to_copy].tree), options
                         )
                     end
                 end
 
                 @async begin
                     allPops[i] = @spawnat :any let
-                        tmp_pop = SRCycle(cur_pop, ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=verbosity, opt=opt)
+                        tmp_pop = SRCycle(cur_pop, ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=verbosity, options=options)
                         @inbounds @simd for j=1:tmp_pop.n
                             if rand() < 0.1
-                                tmp_pop.members[j].tree = simplifyTree(tmp_pop.members[j].tree, opt)
-                                tmp_pop.members[j].tree = combineOperators(tmp_pop.members[j].tree, opt)
+                                tmp_pop.members[j].tree = simplifyTree(tmp_pop.members[j].tree, options)
+                                tmp_pop.members[j].tree = combineOperators(tmp_pop.members[j].tree, options)
                                 if shouldOptimizeConstants
-                                    tmp_pop.members[j] = optimizeConstants(tmp_pop.members[j], opt)
+                                    tmp_pop.members[j] = optimizeConstants(tmp_pop.members[j], options)
                                 end
                             end
                         end
-                        tmp_pop = finalizeScores(tmp_pop, opt)
+                        tmp_pop = finalizeScores(tmp_pop, options)
                         tmp_pop
                     end
                     put!(channels[i], fetch(allPops[i]))
@@ -1252,16 +1252,16 @@ function RunSR(niterations::Integer, OPT)
                 if hallOfFame.exists[size]
                     member = hallOfFame.members[size]
                     if weighted
-                        curMSE = MSE(evalTreeArray(member.tree, opt), y, weights)
+                        curMSE = MSE(evalTreeArray(member.tree, options), y, weights)
                     else
-                        curMSE = MSE(evalTreeArray(member.tree, opt), y)
+                        curMSE = MSE(evalTreeArray(member.tree, options), y)
                     end
                     numberSmallerAndBetter = 0
                     for i=1:(size-1)
                         if weighted
-                            hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, opt), y, weights)
+                            hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, options), y, weights)
                         else
-                            hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, opt), y)
+                            hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, options), y)
                         end
                         if (hallOfFame.exists[size] && curMSE > hofMSE)
                             numberSmallerAndBetter += 1
@@ -1273,7 +1273,7 @@ function RunSR(niterations::Integer, OPT)
                         delta_l_mse = log(curMSE/lastMSE)
                         score = convert(Float32, -delta_l_mse/delta_c)
                         if verbosity > 0
-                            @printf("%-10d  %-8.3e  %-8.3e  %-s\n" , size, curMSE, score, stringTree(member.tree, opt))
+                            @printf("%-10d  %-8.3e  %-8.3e  %-s\n" , size, curMSE, score, stringTree(member.tree, options))
                         end
                         lastMSE = curMSE
                         lastComplexity = size
