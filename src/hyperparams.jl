@@ -45,10 +45,10 @@ struct Options
 end
 
 function Options(;
-    una_constraints=nothing,
-    bin_constraints=nothing,
     binops=[div, plus, mult],
     unaops=[exp, cos],
+    una_constraints=nothing,
+    bin_constraints=nothing,
     ns=10,
     parsimony=0.000100f0,
     alpha=0.100000f0,
