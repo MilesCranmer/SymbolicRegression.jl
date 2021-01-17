@@ -10,8 +10,8 @@ a Python frontend.
 
 # Quickstart
 
-Install with:
-```
+Install in Julia with:
+```julia
 using Pkg
 Pkg.add(url="https://github.com/MilesCranmer/SR.jl.git")
 ```
