@@ -309,7 +309,7 @@ end
 
 # Score an equation
 function scoreFunc(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, tree::Node, options::Options)::Float32
-    prediction = evalTreeArray(tree, options)
+    prediction = evalTreeArray(tree, X, options)
     if prediction === nothing
         return 1f9
     end
@@ -384,14 +384,14 @@ function appendRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
 end
 
 # Insert random node
-function insertRandomOp(tree::Node, options::Options)::Node
-    node = randomNode(tree)
+function insertRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
+    node = randomNode(tree, nfeatures)
     choice = rand()
     makeNewBinOp = choice < length(options.binops)/(length(options.unaops) + length(options.binops))
     left = copyNode(node)
 
     if makeNewBinOp
-        right = randomConstantNode()
+        right = randomConstantNode(nfeatures)
         newnode = Node(
             rand(1:length(options.binops)),
             left,
@@ -413,14 +413,14 @@ function insertRandomOp(tree::Node, options::Options)::Node
 end
 
 # Add random node to the top of a tree
-function prependRandomOp(tree::Node, options::Options)::Node
+function prependRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
     node = tree
     choice = rand()
     makeNewBinOp = choice < length(options.binops)/(length(options.unaops) + length(options.binops))
     left = copyNode(tree)
 
     if makeNewBinOp
-        right = randomConstantNode()
+        right = randomConstantNode(nfeatures)
         newnode = Node(
             rand(1:length(options.binops)),
             left,
@@ -478,13 +478,13 @@ end
 
 # Select a random node, and replace it an the subtree
 # with a variable or constant
-function deleteRandomOp(tree::Node)::Node
+function deleteRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
     node, parent = randomNodeAndParent(tree, nothing)
     isroot = (parent === nothing)
 
     if node.degree == 0
         # Replace with new constant
-        newnode = randomConstantNode()
+        newnode = randomConstantNode(nfeatures)
         node.l = newnode.l
         node.r = newnode.r
         node.op = newnode.op
@@ -642,7 +642,7 @@ end
 
 
 function PopMember(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, t::Node, options::Options)
-    PopMember(t, scoreFunc(X, y, baseline, t, options), getTime())
+    PopMember(t, scoreFunc(X, y, baseline, t, options))
 end
 
 # Check if any binary operator are overly complex
@@ -695,7 +695,7 @@ function iterate(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, 
     tree = prev
     #TODO - reconsider this
     if options.batching
-        beforeLoss = scoreFuncBatch(prev, options)
+        beforeLoss = scoreFuncBatch(X, y, baseline, prev, options)
     else
         beforeLoss = member.score
     end
@@ -751,10 +751,10 @@ function iterate(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, 
             is_success_always_possible = false
             # Can potentially have a situation without success
         elseif mutationChoice < cweights[4]
-            tree = insertRandomOp(tree, options)
+            tree = insertRandomOp(tree, options, nfeatures)
             is_success_always_possible = false
         elseif mutationChoice < cweights[5]
-            tree = deleteRandomOp(tree, options)
+            tree = deleteRandomOp(tree, options, nfeatures)
             is_success_always_possible = true
         elseif mutationChoice < cweights[6]
             tree = simplifyTree(tree, options) # Sometimes we simplify tree
@@ -794,9 +794,9 @@ function iterate(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, 
     end
 
     if options.batching
-        afterLoss = scoreFuncBatch(tree, options)
+        afterLoss = scoreFuncBatch(X, y, baseline, tree, options)
     else
-        afterLoss = scoreFunc(tree, options)
+        afterLoss = scoreFunc(X, y, baseline, tree, options)
     end
 
     if options.annealing
@@ -833,26 +833,27 @@ mutable struct Population
     n::Integer
 
     Population(pop::Array{PopMember, 1}) = new(pop, size(pop)[1])
+    Population(pop::Array{PopMember, 1}, npop::Integer) = new(pop, npop)
 
 end
 
-function Population(npop::Integer, options::Options, nfeatures::Int)
-    Population([PopMember(genRandomTree(3, options, nfeatures), options) for i=1:npop], npop)
+function Population(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, npop::Integer, options::Options, nfeatures::Int)
+    Population([PopMember(X, y, baseline, genRandomTree(3, options, nfeatures), options) for i=1:npop], npop)
 end
 
-function Population(npop::Integer, nlength::Integer, options::Options, nfeatures::Int)
-    Population([PopMember(genRandomTree(nlength, options, nfeatures), options) for i=1:npop], npop)
+function Population(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, npop::Integer, nlength::Integer, options::Options, nfeatures::Int)
+    Population([PopMember(X, y, baseline, genRandomTree(nlength, options, nfeatures), options) for i=1:npop], npop)
 end
 
 # Sample 10 random members of the population, and make a new one
-function samplePop(pop::Population)::Population
-    idx = rand(1:pop.n, ns)
+function samplePop(pop::Population, options::Options)::Population
+    idx = rand(1:pop.n, options.ns)
     return Population(pop.members[idx])
 end
 
 # Sample the population, and get the best member from that sample
-function bestOfSample(pop::Population)::PopMember
-    sample = samplePop(pop)
+function bestOfSample(pop::Population, options::Options)::PopMember
+    sample = samplePop(pop, options)
     best_idx = argmin([sample.members[member].score for member=1:sample.n])
     return sample.members[best_idx]
 end
@@ -861,7 +862,7 @@ function finalizeScores(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Fl
     need_recalculate = options.batching
     if need_recalculate
         @inbounds @simd for member=1:pop.n
-            pop.members[member].score = scoreFunc(pop.members[member].tree, options)
+            pop.members[member].score = scoreFunc(X, y, baseline, pop.members[member].tree, options)
         end
     end
     return pop
@@ -882,22 +883,22 @@ function regEvolCycle(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Floa
     # as good.
     if options.fast_cycle
         shuffle!(pop.members)
-        n_evol_cycles = round(Integer, pop.n/ns)
+        n_evol_cycles = round(Integer, pop.n/options.ns)
         babies = Array{PopMember}(undef, n_evol_cycles)
 
         # Iterate each ns-member sub-sample
         @inbounds Threads.@threads for i=1:n_evol_cycles
             best_score = Inf32
-            best_idx = 1+(i-1)*ns
+            best_idx = 1+(i-1)*options.ns
             # Calculate best member of the subsample:
-            for sub_i=1+(i-1)*ns:i*ns
+            for sub_i=1+(i-1)*options.ns:i*options.ns
                 if pop.members[sub_i].score < best_score
                     best_score = pop.members[sub_i].score
                     best_idx = sub_i
                 end
             end
             allstar = pop.members[best_idx]
-            babies[i] = iterate(allstar, T, curmaxsize, frequencyComplexity, options)
+            babies[i] = iterate(X, y, baseline, allstar, T, curmaxsize, frequencyComplexity, options)
         end
 
         # Replace the n_evol_cycles-oldest members of each population
@@ -906,9 +907,9 @@ function regEvolCycle(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Floa
             pop.members[oldest] = babies[i]
         end
     else
-        for i=1:round(Integer, pop.n/ns)
-            allstar = bestOfSample(pop)
-            baby = iterate(allstar, T, curmaxsize, frequencyComplexity, options)
+        for i=1:round(Integer, pop.n/options.ns)
+            allstar = bestOfSample(pop, options)
+            baby = iterate(X, y, baseline, allstar, T, curmaxsize, frequencyComplexity, options)
             #printTree(baby.tree)
             oldest = argmin([pop.members[member].birth for member=1:pop.n])
             pop.members[oldest] = baby
@@ -932,9 +933,9 @@ function SRCycle(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32,
     allT = LinRange(1.0f0, 0.0f0, ncycles)
     for iT in 1:size(allT)[1]
         if options.annealing
-            pop = regEvolCycle(pop, allT[iT], curmaxsize, frequencyComplexity, options)
+            pop = regEvolCycle(X, y, baseline, pop, allT[iT], curmaxsize, frequencyComplexity, options)
         else
-            pop = regEvolCycle(pop, 1.0f0, curmaxsize, frequencyComplexity, options)
+            pop = regEvolCycle(X, y, baseline, pop, 1.0f0, curmaxsize, frequencyComplexity, options)
         end
 
         if verbosity > 0 && (iT % verbosity == 0)
@@ -981,9 +982,9 @@ end
 
 
 # Proxy function for optimization
-function optFunc(x::Array{Float32, 1}, tree::Node, options::Options)::Float32
+function optFunc(x::Array{Float32, 1}, X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, tree::Node, options::Options)::Float32
     setConstants(tree, x)
-    return scoreFunc(tree, options)
+    return scoreFunc(X, y, baseline, tree, options)
 end
 
 # Use Nelder-Mead to optimize the constants in an equation
@@ -993,7 +994,7 @@ function optimizeConstants(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline:
         return member
     end
     x0 = getConstants(member.tree)
-    f(x::Array{Float32,1})::Float32 = optFunc(x, member.tree, options)
+    f(x::Array{Float32,1})::Float32 = optFunc(x, X, y, baseline, member.tree, options)
     if size(x0)[1] == 1
         algorithm = Newton
     else
@@ -1037,7 +1038,7 @@ mutable struct HallOfFame
     # Arranged by complexity - store one at each.
 end
 
-function HallOfFame(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, options::Options)
+function HallOfFame(options::Options)
     actualMaxsize = options.maxsize + maxdegree
     HallOfFame([PopMember(Node(1f0), 1f9) for i=1:actualMaxsize], [false for i=1:actualMaxsize])
 end
@@ -1082,7 +1083,7 @@ function RunSR(X::Array{Float32, 2}, y::Array{Float32, 1},
     allPops = Future[]
     # Set up a channel to send finished populations back to head node
     channels = [RemoteChannel(1) for j=1:options.npopulations]
-    bestSubPops = [Population(1, options, nfeatures) for j=1:options.npopulations]
+    bestSubPops = [Population(X, y, baselineMSE, 1, options, nfeatures) for j=1:options.npopulations]
     hallOfFame = HallOfFame(options)
     actualMaxsize = options.maxsize + maxdegree
     frequencyComplexity = ones(Float32, actualMaxsize)
@@ -1092,13 +1093,13 @@ function RunSR(X::Array{Float32, 2}, y::Array{Float32, 1},
     end
 
     for i=1:options.npopulations
-        future = @spawnat :any Population(options.npop, 3, options, nfeatures)
+        future = @spawnat :any Population(X, y, baselineMSE, options.npop, 3, options, nfeatures)
         push!(allPops, future)
     end
 
     # # 2. Start the cycle on every process:
     @sync for i=1:options.npopulations
-        @async allPops[i] = @spawnat :any SRCycle(fetch(allPops[i]), options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+        @async allPops[i] = @spawnat :any SRCycle(X, y, baselineMSE, fetch(allPops[i]), options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
     end
     println("Started!")
     cycles_complete = options.npopulations * niterations
@@ -1148,16 +1149,18 @@ function RunSR(X::Array{Float32, 2}, y::Array{Float32, 1},
                         if hallOfFame.exists[size]
                             member = hallOfFame.members[size]
                             if options.weighted
-                                curMSE = MSE(evalTreeArray(member.tree, options), y, weights)
+                                curMSE = MSE(evalTreeArray(member.tree, X, options), y, weights)
+                                member.score = curMSE
                             else
-                                curMSE = MSE(evalTreeArray(member.tree, options), y)
+                                curMSE = MSE(evalTreeArray(member.tree, X, options), y)
+                                member.score = curMSE
                             end
                             numberSmallerAndBetter = 0
                             for i=1:(size-1)
                                 if options.weighted
-                                    hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, options), y, weights)
+                                    hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, X, options), y, weights)
                                 else
-                                    hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, options), y)
+                                    hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, X, options), y)
                                 end
                                 if (hallOfFame.exists[size] && curMSE > hofMSE)
                                     numberSmallerAndBetter += 1
@@ -1188,7 +1191,7 @@ function RunSR(X::Array{Float32, 2}, y::Array{Float32, 1},
                         # Copy in case one gets used twice
                         to_copy = rand(1:size(dominating)[1])
                         cur_pop.members[k] = PopMember(
-                           copyNode(dominating[to_copy].tree), options
+                           copyNode(dominating[to_copy].tree), dominating[to_copy].score
                         )
                     end
                 end
@@ -1253,16 +1256,16 @@ function RunSR(X::Array{Float32, 2}, y::Array{Float32, 1},
                 if hallOfFame.exists[size]
                     member = hallOfFame.members[size]
                     if options.weighted
-                        curMSE = MSE(evalTreeArray(member.tree, options), y, weights)
+                        curMSE = MSE(evalTreeArray(member.tree, X, options), y, weights)
                     else
-                        curMSE = MSE(evalTreeArray(member.tree, options), y)
+                        curMSE = MSE(evalTreeArray(member.tree, X, options), y)
                     end
                     numberSmallerAndBetter = 0
                     for i=1:(size-1)
                         if options.weighted
-                            hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, options), y, weights)
+                            hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, X, options), y, weights)
                         else
-                            hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, options), y)
+                            hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, X, options), y)
                         end
                         if (hallOfFame.exists[size] && curMSE > hofMSE)
                             numberSmallerAndBetter += 1

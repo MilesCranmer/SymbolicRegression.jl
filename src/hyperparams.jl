@@ -9,7 +9,7 @@ struct Options
     bin_constraints
     binops
     unaops
-    n
+    ns::Integer
     parsimony::Float32
     alpha::Float32
     maxsize::Int
@@ -47,7 +47,7 @@ function Options(;
     bin_constraints=nothing,
     binops=[div, plus, mult],
     unaops=[exp, cos],
-    n=0,
+    ns=10,
     parsimony=0.000100f0,
     alpha=0.100000f0,
     maxsize=20,
@@ -90,35 +90,35 @@ function Options(;
         bin_constraints = [(-1, -1) for i=1:length(binops)]
     end
 
-    Options(una_constraints, bin_constraints, binops, unaops, n, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, nprocs, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate)
+    Options(una_constraints, bin_constraints, binops, unaops, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, nprocs, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate)
 end
 
-# @inline function BINOP!(x::Array{Float32, 1}, y::Array{Float32, 1}, i::Int, clen::Int)
-    # if i === 1
-        # @inbounds @simd for j=1:clen
-            # x[j] = div(x[j], y[j])
-        # end
-    # elseif i === 2
-        # @inbounds @simd for j=1:clen
-            # x[j] = plus(x[j], y[j])
-        # end
-    # elseif i === 3
-        # @inbounds @simd for j=1:clen
-            # x[j] = mult(x[j], y[j])
-        # end
-    # end
-# end
+@inline function BINOP!(x::Array{Float32, 1}, y::Array{Float32, 1}, i::Int, clen::Int)
+    if i === 1
+        @inbounds @simd for j=1:clen
+            x[j] = div(x[j], y[j])
+        end
+    elseif i === 2
+        @inbounds @simd for j=1:clen
+            x[j] = plus(x[j], y[j])
+        end
+    elseif i === 3
+        @inbounds @simd for j=1:clen
+            x[j] = mult(x[j], y[j])
+        end
+    end
+end
 
-# @inline function UNAOP!(x::Array{Float32, 1}, i::Int, clen::Int)
-    # if i === 1
-        # @inbounds @simd for j=1:clen
-            # x[j] = sin(x[j])
-        # end
-    # elseif i === 2
-        # @inbounds @simd for j=1:clen
-            # x[j] = cos(x[j])
-        # end
-    # end
-# end
+@inline function UNAOP!(x::Array{Float32, 1}, i::Int, clen::Int)
+    if i === 1
+        @inbounds @simd for j=1:clen
+            x[j] = sin(x[j])
+        end
+    elseif i === 2
+        @inbounds @simd for j=1:clen
+            x[j] = cos(x[j])
+        end
+    end
+end
 
 
