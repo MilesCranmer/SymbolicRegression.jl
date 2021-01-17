@@ -1,108 +1,72 @@
-# [PySR.jl](https://github.com/MilesCranmer/PySR)
+# [SR.jl](https://github.com/MilesCranmer/SR)
 
-(pronounced like *py* as in python, and then *sur* as in surface)
-
-[![Documentation Status](https://readthedocs.org/projects/pysr/badge/?version=latest)](https://pysr.readthedocs.io/en/latest/?badge=latest)
-[![PyPI version](https://badge.fury.io/py/pysr.svg)](https://badge.fury.io/py/pysr)
-[![Build Status](https://travis-ci.com/MilesCranmer/PySR.svg?branch=master)](https://travis-ci.com/MilesCranmer/PySR)
-
-**Parallelized symbolic regression built on Julia, and interfaced by Python.
-Uses regularized evolution, simulated annealing, and gradient-free optimization.**
+Check out [PySR](https://github.com/MilesCranmer/PySR) for
+a Python frontend.
 
 [Cite this software](https://github.com/MilesCranmer/PySR/blob/master/CITATION.md)
 
-[Documentation](https://pysr.readthedocs.io/en/latest)
+[Python documentation](https://pysr.readthedocs.io/)
 
-Symbolic regression is a very interpretable machine learning algorithm
-for low-dimensional problems: these tools search equation space
-to find algebraic relations that approximate a dataset.
-
-One can also
-extend these approaches to higher-dimensional
-spaces by using a neural network as proxy, as explained in 
-[2006.11287](https://arxiv.org/abs/2006.11287), where we apply
-it to N-body problems. Here, one essentially uses
-symbolic regression to convert a neural net
-to an analytic equation. Thus, these tools simultaneously present
-an explicit and powerful way to interpret deep models.
-
-
-*Backstory:*
-
-Previously, we have used
-[eureqa](https://www.creativemachineslab.com/eureqa.html),
-which is a very efficient and user-friendly tool. However,
-eureqa is GUI-only, doesn't allow for user-defined
-operators, has no distributed capabilities,
-and has become proprietary (and recently been merged into an online
-service). Thus, the goal
-of this package is to have an open-source symbolic regression tool
-as efficient as eureqa, while also exposing a configurable
-python interface.
-
-
-# Installation
-PySR uses both Julia and Python, so you need to have both installed.
-
-Install Julia - see [downloads](https://julialang.org/downloads/), and
-then instructions for [mac](https://julialang.org/downloads/platform/#macos)
-and [linux](https://julialang.org/downloads/platform/#linux_and_freebsd).
-(Don't use the `conda-forge` version; it doesn't seem to work properly.)
-Then, at the command line,
-install and precompile the `Optim` and `SpecialFunctions`
-packages via:
-
-```bash
-julia -e 'using Pkg; pkg"add Optim; add SpecialFunctions; precompile;"'
-```
-
-For python, you need to have Python 3, numpy, sympy, and pandas installed.
-
-You can install this package from PyPI with:
-
-```bash
-pip install pysr
-```
 
 # Quickstart
 
-```python
-import numpy as np
-from pysr import pysr, best, get_hof
-
-# Dataset
-X = 2*np.random.randn(100, 5)
-y = 2*np.cos(X[:, 3]) + X[:, 0]**2 - 2
-
-# Learn equations
-equations = pysr(X, y, niterations=5,
-    binary_operators=["plus", "mult"],
-    unary_operators=[
-      "cos", "exp", "sin", #Pre-defined library of operators (see https://pysr.readthedocs.io/en/latest/docs/operators/)
-      "inv(x) = 1/x"]) # Define your own operator! (Julia syntax)
-
-...# (you can use ctl-c to exit early)
-
-print(best(equations))
+Install with:
+```
+using Pkg
+Pkg.clone("https://github.com/MilesCranmer/SR.jl.git")
 ```
 
-which gives:
 
-```python
-x0**2 + 2.000016*cos(x3) - 1.9999845
+Run distributed on four processes with:
+```
+julia -p 4
 ```
 
-One can also use `best_tex` to get the LaTeX form,
-or `best_callable` to get a function you can call.
-This uses a score which balances complexity and error;
-however, one can see the full list of equations with:
-```python
-print(equations)
+Then,
+```julia
+using SR
+
+X = randn(Float32, 100, 5)
+y = 2 * cos.(X[:, 4]) + X[:, 1] .^ 2 .- 2
+
+RunSR(X, y, 100, Options())
 ```
-This is a pandas table, with additional columns:
 
-- `MSE` - the mean square error of the formula
-- `score` - a metric akin to Occam's razor; you should use this to help select the "true" equation.
-- `sympy_format` - sympy equation.
-- `lambda_format` - a lambda function for that equation, that you can pass values through.
+Default options:
 
+```julia
+    binops=[div, plus, mult],
+    unaops=[exp, cos],
+    una_constraints=nothing,
+    bin_constraints=nothing,
+    ns=10,
+    parsimony=0.000100f0,
+    alpha=0.100000f0,
+    maxsize=20,
+    maxdepth=nothing,
+    fast_cycle=false,
+    migration=true,
+    hofMigration=true,
+    fractionReplacedHof=0.1f0,
+    shouldOptimizeConstants=true,
+    hofFile=nothing,
+    npopulations=nothing,
+    nrestarts=3,
+    perturbationFactor=1.000000f0,
+    annealing=true,
+    weighted=false,
+    batching=false,
+    batchSize=50,
+    useVarMap=false,
+    mutationWeights=[10.000000, 1.000000, 1.000000, 3.000000, 3.000000, 0.010000, 1.000000, 1.000000],
+    warmupMaxsize=0,
+    limitPowComplexity=false,
+    useFrequency=false,
+    npop=1000,
+    ncyclesperiteration=300,
+    fractionReplaced=0.1f0,
+    topn=10,
+    verbosity=convert(Int, 1e9),
+    probNegate=0.01f0,
+    printZeroIndex=false
+```
