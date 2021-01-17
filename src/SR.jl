@@ -12,7 +12,25 @@ export Population,
 
     #Functions:
     RunSR, 
-    SRCycle
+    SRCycle,
+
+    #Operators:
+    plus,
+    sub,
+    mult,
+    square,
+    cube,
+    pow,
+    div,
+    logm,
+    logm2,
+    logm10,
+    sqrtm,
+    neg,
+    greater,
+    relu,
+    logical_or,
+    logical_and
 
 using Optim
 using Printf: @printf

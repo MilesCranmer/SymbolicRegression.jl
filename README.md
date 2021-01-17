@@ -13,7 +13,7 @@ a Python frontend.
 Install with:
 ```
 using Pkg
-Pkg.clone("https://github.com/MilesCranmer/SR.jl.git")
+Pkg.add(url="https://github.com/MilesCranmer/SR.jl.git")
 ```
 
 
