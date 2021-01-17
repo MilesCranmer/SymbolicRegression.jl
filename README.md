@@ -29,17 +29,76 @@ Then,
 X = randn(Float32, 100, 5)
 y = 2 * cos.(X[:, 4]) + X[:, 1] .^ 2 .- 2
 
-options = SR.Options(binops=[plus, mult], unaops=[cos, exp])
+options = SR.Options(
+    binary_operators=[plus, mult],
+    unary_operators=[cos, exp])
 niterations = 100
 
 RunSR(X, y, niterations, options)
 ```
 
+# Options
+
+- `binary_operators` list, List of strings giving the binary operators
+    in Julia's Base, or in `operator.jl`.
+- `unary_operators` list, Same but for operators taking a single `Float32`.
+- `populations` int, Number of populations running; by default=procs.
+- `niterations` int, Number of iterations of the algorithm to run. The best
+    equations are printed, and migrate between populations, at the
+    end of each.
+- `ncyclesperiteration` int, Number of total mutations to run, per 10
+    samples of the population, per iteration.
+- `alpha` float, Initial temperature.
+- `annealing` bool, Whether to use annealing. You should (and it is default).
+- `fractionReplaced` float, How much of population to replace with migrating
+    equations from other populations.
+- `fractionReplacedHof` float, How much of population to replace with migrating
+    equations from hall of fame.
+- `npop` int, Number of individuals in each population
+- `parsimony` float, Multiplicative factor for how much to punish complexity.
+- `migration` bool, Whether to migrate.
+- `hofMigration` bool, Whether to have the hall of fame migrate.
+- `shouldOptimizeConstants` bool, Whether to numerically optimize
+    constants (Nelder-Mead/Newton) at the end of each iteration.
+- `topn` int, How many top individuals migrate from each population.
+- `nrestarts` int, Number of times to restart the constant optimizer
+- `perturbationFactor` float, Constants are perturbed by a max
+    factor of (perturbationFactor*T + 1). Either multiplied by this
+    or divided by this.
+- `mutationWeights` list:
+    - `weightMutateConstant`
+    - `weightMutateOperator`
+    - `weightAddNode`
+    - `weightInsertNode`
+    - `weightDeleteNode`
+    - `weightSimplify`
+    - `weightRandomize`
+    - `weightDoNothing`
+- `timeout` float, Time in seconds to timeout search
+- `hofFile` str, Where to save the files (.csv separated by |)
+- `maxsize` int, Max size of an equation.
+- `maxdepth` int, Max depth of an equation. You can use both maxsize and maxdepth.
+    maxdepth is by default set to = maxsize, which means that it is redundant.
+- `fast_cycle` bool, (experimental) - batch over population subsamples. This
+    is a slightly different algorithm than regularized evolution, but does cycles
+    15% faster. May be algorithmically less efficient.
+- `batching` bool, whether to compare population members on small batches
+    during evolution. Still uses full dataset for comparing against
+    hall of fame.
+- `batchSize` int, the amount of data to use if doing batching.
+- `warmupMaxsize` int, whether to slowly increase max size from
+    a small number up to the maxsize (if greater than 0).
+    If greater than 0, says how many cycles before the maxsize
+    is increased.
+- `useFrequency` bool, whether to measure the frequency of complexities,
+    and use that instead of parsimony to explore equation space. Will
+    naturally find equations of all complexities.
+
 Default options:
 
 ```julia
-    binops=[div, plus, mult],
-    unaops=[exp, cos],
+    binary_operators=[div, plus, mult],
+    unary_operators=[exp, cos],
     una_constraints=nothing,
     bin_constraints=nothing,
     ns=10,

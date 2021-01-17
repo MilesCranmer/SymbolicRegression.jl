@@ -45,11 +45,11 @@ struct Options
 end
 
 function Options(;
-    binops=[div, plus, mult],
-    unaops=[exp, cos],
+    binary_operators=[div, plus, mult],
+    unary_operators=[exp, cos],
     una_constraints=nothing,
     bin_constraints=nothing,
-    ns=10,
+    topn=10,
     parsimony=0.000100f0,
     alpha=0.100000f0,
     maxsize=20,
@@ -86,10 +86,10 @@ function Options(;
     end
 
     if una_constraints == nothing
-        una_constraints = [-1 for i=1:length(unaops)]
+        una_constraints = [-1 for i=1:length(unary_operators)]
     end
     if bin_constraints == nothing
-        bin_constraints = [(-1, -1) for i=1:length(binops)]
+        bin_constraints = [(-1, -1) for i=1:length(binary_operators)]
     end
 
     if maxdepth == nothing
@@ -100,10 +100,10 @@ function Options(;
         npopulations = nworkers()
     end
 
-    nuna = length(unaops)
-    nbin = length(binops)
+    nuna = length(unary_operators)
+    nbin = length(binary_operators)
 
-    Options(una_constraints, bin_constraints, binops, unaops, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, printZeroIndex)
+    Options(una_constraints, bin_constraints, binary_operators, unary_operators, topn, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, printZeroIndex)
 end
 
 
