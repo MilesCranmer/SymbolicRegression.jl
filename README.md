@@ -76,7 +76,6 @@ RunSR(X, y, niterations, options)
     - `weightSimplify`
     - `weightRandomize`
     - `weightDoNothing`
-- `timeout` float, Time in seconds to timeout search
 - `hofFile` str, Where to save the files (.csv separated by |)
 - `maxsize` int, Max size of an equation.
 - `maxdepth` int, Max depth of an equation. You can use both maxsize and maxdepth.
