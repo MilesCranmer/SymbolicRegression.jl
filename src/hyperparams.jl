@@ -20,7 +20,6 @@ struct Options
     fractionReplacedHof::Float32
     shouldOptimizeConstants::Bool
     hofFile::String
-    nprocs::Int
     npopulations::Int
     nrestarts::Int
     perturbationFactor::Float32
@@ -60,7 +59,6 @@ function Options(;
     fractionReplacedHof=0.1f0,
     shouldOptimizeConstants=true,
     hofFile=nothing,
-    nprocs=4,
     npopulations=nothing,
     nrestarts=3,
     perturbationFactor=1.000000f0,
@@ -97,13 +95,13 @@ function Options(;
     end
 
     if npopulations == nothing
-        npopulations = nprocs
+        npopulations = nworkers()
     end
 
     nuna = length(unaops)
     nbin = length(binops)
 
-    Options(una_constraints, bin_constraints, binops, unaops, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, nprocs, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin)
+    Options(una_constraints, bin_constraints, binops, unaops, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin)
 end
 
 
