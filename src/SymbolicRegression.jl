@@ -1,4 +1,4 @@
-module SR
+module SymbolicRegression
 
 include("operators.jl")
 include("hyperparams.jl")

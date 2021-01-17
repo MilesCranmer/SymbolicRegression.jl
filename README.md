@@ -1,4 +1,4 @@
-# [SR.jl](https://github.com/MilesCranmer/SR)
+# [SymbolicRegression.jl](https://github.com/MilesCranmer/SymbolicRegression)
 
 Simple parallelized symbolic regression in Julia.
 
@@ -15,7 +15,7 @@ a Python frontend.
 Install in Julia with:
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/MilesCranmer/SR.jl.git")
+Pkg.add(url="https://github.com/MilesCranmer/SymbolicRegression.jl.git")
 ```
 
 
@@ -26,12 +26,12 @@ julia -p 4
 
 Then,
 ```julia
-@everywhere using SR
+@everywhere using SymbolicRegression
 
 X = randn(Float32, 100, 5)
 y = 2 * cos.(X[:, 4]) + X[:, 1] .^ 2 .- 2
 
-options = SR.Options(
+options = SymbolicRegression.Options(
     binary_operators=[plus, mult],
     unary_operators=[cos, exp])
 niterations = 100
