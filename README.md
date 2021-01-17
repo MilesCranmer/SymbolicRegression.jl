@@ -29,7 +29,10 @@ using SR
 X = randn(Float32, 100, 5)
 y = 2 * cos.(X[:, 4]) + X[:, 1] .^ 2 .- 2
 
-RunSR(X, y, 100, Options())
+options = SR.Options(binops=[plus, mult], unaops=[cos, exp])
+niterations = 100
+
+RunSR(X, y, niterations, options)
 ```
 
 Default options:
