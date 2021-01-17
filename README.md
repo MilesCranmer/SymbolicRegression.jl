@@ -1,5 +1,7 @@
 # [SR.jl](https://github.com/MilesCranmer/SR)
 
+Simple parallelized symbolic regression in Julia.
+
 Check out [PySR](https://github.com/MilesCranmer/PySR) for
 a Python frontend.
 
