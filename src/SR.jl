@@ -14,7 +14,6 @@ export Population,
     RunSR, 
     SRCycle
 
-using Distributed
 using Optim
 using Printf: @printf
 using Random: shuffle!, randperm
