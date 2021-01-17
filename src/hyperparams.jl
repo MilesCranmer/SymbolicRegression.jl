@@ -39,6 +39,8 @@ struct Options
     topn::Integer
     verbosity::Integer
     probNegate::Float32
+    nuna::Integer
+    nbin::Integer
 
 end
 
@@ -51,7 +53,7 @@ function Options(;
     parsimony=0.000100f0,
     alpha=0.100000f0,
     maxsize=20,
-    maxdepth=20,
+    maxdepth=nothing,
     fast_cycle=false,
     migration=true,
     hofMigration=true,
@@ -59,7 +61,7 @@ function Options(;
     shouldOptimizeConstants=true,
     hofFile=nothing,
     nprocs=4,
-    npopulations=4,
+    npopulations=nothing,
     nrestarts=3,
     perturbationFactor=1.000000f0,
     annealing=true,
@@ -68,14 +70,14 @@ function Options(;
     batchSize=50,
     useVarMap=false,
     mutationWeights=[10.000000, 1.000000, 1.000000, 3.000000, 3.000000, 0.010000, 1.000000, 1.000000],
-    warmupMaxsize=1,
+    warmupMaxsize=0,
     limitPowComplexity=false,
-    useFrequency=true,
-    npop=300,
-    ncyclesperiteration=3000,
+    useFrequency=false,
+    npop=1000,
+    ncyclesperiteration=300,
     fractionReplaced=0.1f0,
     topn=10,
-    verbosity=0,
+    verbosity=convert(Int, 1e9),
     probNegate=0.01f0,
    )
 
@@ -90,35 +92,18 @@ function Options(;
         bin_constraints = [(-1, -1) for i=1:length(binops)]
     end
 
-    Options(una_constraints, bin_constraints, binops, unaops, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, nprocs, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate)
-end
-
-@inline function BINOP!(x::Array{Float32, 1}, y::Array{Float32, 1}, i::Int, clen::Int)
-    if i === 1
-        @inbounds @simd for j=1:clen
-            x[j] = div(x[j], y[j])
-        end
-    elseif i === 2
-        @inbounds @simd for j=1:clen
-            x[j] = plus(x[j], y[j])
-        end
-    elseif i === 3
-        @inbounds @simd for j=1:clen
-            x[j] = mult(x[j], y[j])
-        end
+    if maxdepth == nothing
+        maxdepth = maxsize
     end
-end
 
-@inline function UNAOP!(x::Array{Float32, 1}, i::Int, clen::Int)
-    if i === 1
-        @inbounds @simd for j=1:clen
-            x[j] = sin(x[j])
-        end
-    elseif i === 2
-        @inbounds @simd for j=1:clen
-            x[j] = cos(x[j])
-        end
+    if npopulations == nothing
+        npopulations = nprocs
     end
+
+    nuna = length(unaops)
+    nbin = length(binops)
+
+    Options(una_constraints, bin_constraints, binops, unaops, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, nprocs, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin)
 end
 
 

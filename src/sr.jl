@@ -21,6 +21,22 @@ using Distributed
 
 const maxdegree = 2
 
+
+@inline function BINOP!(x::Array{Float32, 1}, y::Array{Float32, 1}, i::Int, clen::Int, options::Options)
+    #TODO: Can this be metaprogrammed?
+    op = options.binops[i]
+    @inbounds @simd for j=1:clen
+        x[j] = op(x[j], y[j])
+    end
+end
+
+@inline function UNAOP!(x::Array{Float32, 1}, i::Int, clen::Int, options::Options)
+    op = options.unaops[i]
+    @inbounds @simd for j=1:clen
+        x[j] = op(x[j])
+    end
+end
+
 # Sum of square error between two arrays
 function SSE(x::Array{Float32}, y::Array{Float32})::Float32
     diff = (x - y)
@@ -214,9 +230,9 @@ function mutateOperator(tree::Node, options::Options)::Node
         node = randomNode(tree)
     end
     if node.degree == 1
-        node.op = rand(1:length(options.unaops))
+        node.op = rand(1:options.nuna)
     else
-        node.op = rand(1:length(options.binops))
+        node.op = rand(1:options.nbin)
     end
     return tree
 end
@@ -280,7 +296,7 @@ function evalTreeArray(tree::Node, cX::Array{Float32, 2}, options::Options)::Uni
             return nothing
         end
         op_idx = tree.op
-        UNAOP!(cumulator, op_idx, clen)
+        UNAOP!(cumulator, op_idx, clen, options)
         @inbounds for i=1:clen
             if isinf(cumulator[i]) || isnan(cumulator[i])
                 return nothing
@@ -297,7 +313,7 @@ function evalTreeArray(tree::Node, cX::Array{Float32, 2}, options::Options)::Uni
             return nothing
         end
         op_idx = tree.op
-        BINOP!(cumulator, array2, op_idx, clen)
+        BINOP!(cumulator, array2, op_idx, clen, options)
         @inbounds for i=1:clen
             if isinf(cumulator[i]) || isnan(cumulator[i])
                 return nothing
@@ -350,7 +366,7 @@ function appendRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
     end
 
     choice = rand()
-    makeNewBinOp = choice < length(options.binops)/(length(options.unaops) + length(options.binops))
+    makeNewBinOp = choice < options.nbin/(options.nuna + options.nbin)
     if rand() > 0.5
         left = Float32(randn())
     else
@@ -364,13 +380,13 @@ function appendRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
 
     if makeNewBinOp
         newnode = Node(
-            rand(1:length(options.binops)),
+            rand(1:options.nbin),
             left,
             right
         )
     else
         newnode = Node(
-            rand(1:length(options.unaops)),
+            rand(1:options.nuna),
             left
         )
     end
@@ -385,21 +401,21 @@ end
 
 # Insert random node
 function insertRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
-    node = randomNode(tree, nfeatures)
+    node = randomNode(tree)
     choice = rand()
-    makeNewBinOp = choice < length(options.binops)/(length(options.unaops) + length(options.binops))
+    makeNewBinOp = choice < options.nbin/(options.nuna + options.nbin)
     left = copyNode(node)
 
     if makeNewBinOp
         right = randomConstantNode(nfeatures)
         newnode = Node(
-            rand(1:length(options.binops)),
+            rand(1:options.nbin),
             left,
             right
         )
     else
         newnode = Node(
-            rand(1:length(options.unaops)),
+            rand(1:options.nuna),
             left
         )
     end
@@ -416,19 +432,19 @@ end
 function prependRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
     node = tree
     choice = rand()
-    makeNewBinOp = choice < length(options.binops)/(length(options.unaops) + length(options.binops))
+    makeNewBinOp = choice < options.nbin/(options.nuna + options.nbin)
     left = copyNode(tree)
 
     if makeNewBinOp
         right = randomConstantNode(nfeatures)
         newnode = Node(
-            rand(1:length(options.binops)),
+            rand(1:options.nbin),
             left,
             right
         )
     else
         newnode = Node(
-            rand(1:length(options.unaops)),
+            rand(1:options.nuna),
             left
         )
     end
@@ -774,12 +790,12 @@ function iterate(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, 
         end
 
         # Check for illegal equations
-        for i=1:length(options.binops)
+        for i=1:options.nbin
             if successful_mutation && flagBinOperatorComplexity(tree, i, options)
                 successful_mutation = false
             end
         end
-        for i=1:length(options.unaops)
+        for i=1:options.nuna
             if successful_mutation && flagUnaOperatorComplexity(tree, i, options)
                 successful_mutation = false
             end
