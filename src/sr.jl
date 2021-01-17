@@ -14,6 +14,7 @@ export Population,
     RunSR, 
     SRCycle
 
+using Distributed
 using Optim
 using Printf: @printf
 using Random: shuffle!, randperm
@@ -152,7 +153,11 @@ function stringTree(tree::Node, options::Options)::String
             if options.useVarMap
                 return varMap[tree.val]
             else
-                return "x$(tree.val - 1)"
+                if options.printZeroIndex
+                    return "x$(tree.val - 1)"
+                else
+                    return "x$(tree.val)"
+                end
             end
         end
     elseif tree.degree == 1
@@ -1027,7 +1032,7 @@ function optimizeConstants(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline:
             end
         end
 
-        if converged(result)
+        if Optim.converged(result)
             setConstants(member.tree, result.minimizer)
             member.score = convert(Float32, result.minimum)
             member.birth = getTime()
@@ -1212,19 +1217,22 @@ function RunSR(X::Array{Float32, 2}, y::Array{Float32, 1},
                     end
                 end
 
+                # TODO: Turn off this async when debugging - any errors in this code
+                #         are silent.
+                # begin
                 @async begin
                     allPops[i] = @spawnat :any let
-                        tmp_pop = SRCycle(cur_pop, options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+                        tmp_pop = SRCycle(X, y, baselineMSE, cur_pop, options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
                         @inbounds @simd for j=1:tmp_pop.n
                             if rand() < 0.1
                                 tmp_pop.members[j].tree = simplifyTree(tmp_pop.members[j].tree, options)
                                 tmp_pop.members[j].tree = combineOperators(tmp_pop.members[j].tree, options)
                                 if options.shouldOptimizeConstants
-                                    tmp_pop.members[j] = optimizeConstants(tmp_pop.members[j], options)
+                                    tmp_pop.members[j] = optimizeConstants(X, y, baselineMSE, tmp_pop.members[j], options)
                                 end
                             end
                         end
-                        tmp_pop = finalizeScores(tmp_pop, options)
+                        tmp_pop = finalizeScores(X, y, baselineMSE, tmp_pop, options)
                         tmp_pop
                     end
                     put!(channels[i], fetch(allPops[i]))

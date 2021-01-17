@@ -40,6 +40,7 @@ struct Options
     probNegate::Float32
     nuna::Integer
     nbin::Integer
+    printZeroIndex::Bool
 
 end
 
@@ -77,6 +78,7 @@ function Options(;
     topn=10,
     verbosity=convert(Int, 1e9),
     probNegate=0.01f0,
+    printZeroIndex=false
    )
 
     if hofFile == nothing
@@ -101,7 +103,7 @@ function Options(;
     nuna = length(unaops)
     nbin = length(binops)
 
-    Options(una_constraints, bin_constraints, binops, unaops, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin)
+    Options(una_constraints, bin_constraints, binops, unaops, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, printZeroIndex)
 end
 
 
