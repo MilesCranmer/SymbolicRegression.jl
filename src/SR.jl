@@ -5,6 +5,8 @@ include("hyperparams.jl")
 
 # Types
 export Population,
+    PopMember,
+    HallOfFame,
     Options,
     evalTreeArray,
     printTree,
@@ -1330,6 +1332,7 @@ function RunSR(X::Array{Float32, 2}, y::Array{Float32, 1},
             num_equations = 0.0
         end
     end
+    return hallOfFame
 end
 
 end #module SR
