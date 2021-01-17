@@ -75,7 +75,6 @@ function Options(;
     npop=1000,
     ncyclesperiteration=300,
     fractionReplaced=0.1f0,
-    topn=10,
     verbosity=convert(Int, 1e9),
     probNegate=0.01f0,
     printZeroIndex=false
