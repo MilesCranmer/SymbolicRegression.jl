@@ -3,12 +3,12 @@
 # into the SR call itself, rather than
 # passing huge options at once.
 
-struct Options{TBin, TUna}
+struct Options{A,B}
 
-    una_constraints
+    binops::A
+    unaops::B
     bin_constraints
-    binops::TBin
-    unaops::TUna
+    una_constraints
     ns::Integer
     parsimony::Float32
     alpha::Float32
@@ -28,7 +28,7 @@ struct Options{TBin, TUna}
     batching::Bool
     batchSize::Int
     useVarMap::Bool
-    mutationWeights::Array{Real}
+    mutationWeights::Array{Real, 1}
     warmupMaxsize::Int
     limitPowComplexity::Bool
     useFrequency::Bool
@@ -47,8 +47,8 @@ end
 function Options(;
     binary_operators=(div, plus, mult),
     unary_operators=(exp, cos),
-    una_constraints=nothing,
     bin_constraints=nothing,
+    una_constraints=nothing,
     topn=10,
     parsimony=0.000100f0,
     alpha=0.100000f0,
@@ -102,7 +102,7 @@ function Options(;
     nuna = length(unary_operators)
     nbin = length(binary_operators)
 
-    Options(una_constraints, bin_constraints, binary_operators, unary_operators, topn, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, printZeroIndex)
+    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, topn, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, printZeroIndex)
 end
 
 

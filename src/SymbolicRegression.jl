@@ -43,12 +43,16 @@ using Distributed
 
 const maxdegree = 2
 
-function BINOP!(x::Array{Float32, 1}, y::Array{Float32, 1}, ::Val{i}, clen::Int, options::Options) where {i}
+# The Val{i} optimizes it into a branching statement (https://discourse.julialang.org/t/meta-programming-an-if-else-statement-of-user-defined-length/53525)
+function BINOP!(x::Array{Float32, 1}, y::Array{Float32, 1}, ::Val{i}, ::Val{clen}, options::Options) where {i,clen}
     op = options.binops[i]
-    broadcast!(op, x, x, y)
+    # broadcast!(op, x, x, y)
+    @inbounds @simd for j=1:clen
+        x[j] = op(x[j], y[j])
+    end
 end
 
-function UNAOP!(x::Array{Float32, 1}, y::Array{Float32, 1}, ::Val{i}, clen::Int, options::Options) where {i}
+function UNAOP!(x::Array{Float32, 1}, ::Val{i}, ::Val{clen}, options::Options) where {i,clen}
     op = options.unaops[i]
     @inbounds @simd for j=1:clen
         x[j] = op(x[j])
@@ -318,7 +322,7 @@ function evalTreeArray(tree::Node, cX::Array{Float32, 2}, options::Options)::Uni
             return nothing
         end
         op_idx = tree.op
-        UNAOP!(cumulator, op_idx, clen, options)
+        UNAOP!(cumulator, Val(op_idx), Val(clen), options)
         @inbounds for i=1:clen
             if isinf(cumulator[i]) || isnan(cumulator[i])
                 return nothing
@@ -335,7 +339,7 @@ function evalTreeArray(tree::Node, cX::Array{Float32, 2}, options::Options)::Uni
             return nothing
         end
         op_idx = tree.op
-        BINOP!(cumulator, array2, op_idx, clen, options)
+        BINOP!(cumulator, array2, Val(op_idx), Val(clen), options)
         @inbounds for i=1:clen
             if isinf(cumulator[i]) || isnan(cumulator[i])
                 return nothing
