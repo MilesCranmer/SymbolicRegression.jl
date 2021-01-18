@@ -57,8 +57,8 @@ end
 
 # Options
 
-- `binary_operators` list, List of strings giving the binary operators
-    in Julia's Base, or in `operator.jl`.
+- `binary_operators` array of Julia operators taking two scalar Float32
+    as arguments. Some are pre-defined in `operator.jl`.
 - `unary_operators` list, Same but for operators taking a single `Float32`.
 - `populations` int, Number of populations running; by default=procs.
 - `niterations` int, Number of iterations of the algorithm to run. The best
