@@ -20,12 +20,9 @@ Pkg.add(url="https://github.com/MilesCranmer/SymbolicRegression.jl.git")
 
 
 Run distributed on four processes with:
-```
-julia -p 4
-```
-
-Then,
 ```julia
+using Distributed
+addprocs(4)
 @everywhere using SymbolicRegression
 
 X = randn(Float32, 100, 5)
