@@ -17,7 +17,7 @@ Install in Julia with:
 using Pkg
 Pkg.add(url="https://github.com/MilesCranmer/SymbolicRegression.jl.git")
 ```
-(you need to repeat this for main Julia environment and target working environment (if any))
+(you need to repeat this for both main Julia environment and target working environment (if any))
 
 Run distributed on four processes with:
 ```julia
