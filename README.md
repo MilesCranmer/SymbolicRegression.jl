@@ -38,17 +38,19 @@ hallOfFame = RunSR(X, y, niterations, options)
 
 Then, we can get the equations in the dominating
 Pareto frontier with:
-```
-dominating = SymbolicRegression.calculateDominatingParetoFrontier(X, y, hallOfFame, options)
+```julia
+dominating = calculateParetoFrontier(X, y, hallOfFame, options)
 ```
 
 and print them out like so:
-```
+```julia
 println("Complexity\tMSE\tEquation")
+
 for member in dominating
-    size = SymbolicRegression.countNodes(member.tree)
+    size = countNodes(member.tree)
     score = member.score
     string = stringTree(member.tree, options)
+
     println("$(size)\t$(score)\t$(string)")
 end
 ```
