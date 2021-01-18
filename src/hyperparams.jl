@@ -3,12 +3,12 @@
 # into the SR call itself, rather than
 # passing huge options at once.
 
-struct Options
+struct Options{TBin, TUna}
 
     una_constraints
     bin_constraints
-    binops
-    unaops
+    binops::TBin
+    unaops::TUna
     ns::Integer
     parsimony::Float32
     alpha::Float32
@@ -45,8 +45,8 @@ struct Options
 end
 
 function Options(;
-    binary_operators=[div, plus, mult],
-    unary_operators=[exp, cos],
+    binary_operators=(div, plus, mult),
+    unary_operators=(exp, cos),
     una_constraints=nothing,
     bin_constraints=nothing,
     topn=10,

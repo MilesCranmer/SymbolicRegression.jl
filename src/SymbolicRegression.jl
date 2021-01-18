@@ -43,16 +43,12 @@ using Distributed
 
 const maxdegree = 2
 
-
-@inline function BINOP!(x::Array{Float32, 1}, y::Array{Float32, 1}, i::Int, clen::Int, options::Options)
-    #TODO: Can this be metaprogrammed?
+function BINOP!(x::Array{Float32, 1}, y::Array{Float32, 1}, ::Val{i}, clen::Int, options::Options) where {i}
     op = options.binops[i]
-    @inbounds @simd for j=1:clen
-        x[j] = op(x[j], y[j])
-    end
+    broadcast!(op, x, x, y)
 end
 
-@inline function UNAOP!(x::Array{Float32, 1}, i::Int, clen::Int, options::Options)
+function UNAOP!(x::Array{Float32, 1}, y::Array{Float32, 1}, ::Val{i}, clen::Int, options::Options) where {i}
     op = options.unaops[i]
     @inbounds @simd for j=1:clen
         x[j] = op(x[j])

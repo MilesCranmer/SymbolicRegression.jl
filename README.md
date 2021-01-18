@@ -29,8 +29,9 @@ X = randn(Float32, 100, 5)
 y = 2 * cos.(X[:, 4]) + X[:, 1] .^ 2 .- 2
 
 options = SymbolicRegression.Options(
-    binary_operators=[plus, mult],
-    unary_operators=[cos, exp])
+    binary_operators=(plus, mult),
+    unary_operators=(cos, exp)
+)
 niterations = 100
 
 hallOfFame = RunSR(X, y, niterations, options)
