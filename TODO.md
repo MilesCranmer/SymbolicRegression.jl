@@ -62,6 +62,16 @@
 - [x] Sympy printing
 - [ ] Sort these todo lists by priority
 
+
+## Pure Julia cleanup
+
+
+- Add back weighted
+    - Use "data" struct?
+- Use SymbolicRegression.jl in Python frontend
+- Use generic types - should pass type to option, and this will set up everything.
+
+
 ## Feature ideas
 
 - [ ] Other default losses (e.g., abs, other likelihoods, or just allow user to pass this as a string).
