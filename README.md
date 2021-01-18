@@ -1,4 +1,4 @@
-# [SymbolicRegression.jl](https://github.com/MilesCranmer/SymbolicRegression)
+# [SymbolicRegression.jl](https://github.com/MilesCranmer/SymbolicRegression.jl)
 
 Simple parallelized symbolic regression in Julia.
 
