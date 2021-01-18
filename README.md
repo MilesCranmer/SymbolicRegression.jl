@@ -33,7 +33,24 @@ options = SymbolicRegression.Options(
     unary_operators=[cos, exp])
 niterations = 100
 
-RunSR(X, y, niterations, options)
+hallOfFame = RunSR(X, y, niterations, options)
+```
+
+Then, we can get the equations in the dominating
+Pareto frontier with:
+```
+dominating = SymbolicRegression.calculateDominatingParetoFrontier(X, y, hallOfFame, options)
+```
+
+and print them out like so:
+```
+println("Complexity\tMSE\tEquation")
+for member in dominating
+    size = SymbolicRegression.countNodes(member.tree)
+    score = member.score
+    string = stringTree(member.tree, options)
+    println("$(size)\t$(score)\t$(string)")
+end
 ```
 
 # Options
