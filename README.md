@@ -30,9 +30,10 @@ y = 2 * cos.(X[:, 4]) + X[:, 1] .^ 2 .- 2
 
 options = SymbolicRegression.Options(
     binary_operators=(plus, mult),
-    unary_operators=(cos, exp)
+    unary_operators=(cos, exp),
+    npopulations=20
 )
-niterations = 100
+niterations = 5
 
 hallOfFame = RunSR(X, y, niterations, options)
 ```
