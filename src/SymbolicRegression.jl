@@ -8,13 +8,15 @@ export Population,
     PopMember,
     HallOfFame,
     Options,
-    evalTreeArray,
-    printTree,
-    stringTree,
 
     #Functions:
     RunSR, 
     SRCycle,
+    calculateParetoFrontier,
+    countNodes,
+    printTree,
+    stringTree,
+    evalTreeArray,
 
     #Operators:
     plus,
@@ -1104,8 +1106,8 @@ function testConfiguration(options::Options)
     end
 end
 
-function calculateDominatingParetoFrontier(X::Array{Float32, 2}, y::Array{Float32, 1},
-                                           hallOfFame::HallOfFame, options::Options)
+function calculateParetoFrontier(X::Array{Float32, 2}, y::Array{Float32, 1},
+                                 hallOfFame::HallOfFame, options::Options)
     # Dominating pareto curve - must be better than all simpler equations
     dominating = PopMember[]
     actualMaxsize = options.maxsize + maxdegree
@@ -1216,7 +1218,7 @@ function RunSR(X::Array{Float32, 2}, y::Array{Float32, 1},
                 end
 
                 # Dominating pareto curve - must be better than all simpler equations
-                dominating = calculateDominatingParetoFrontier(X, y, hallOfFame, options)
+                dominating = calculateParetoFrontier(X, y, hallOfFame, options)
                 open(options.hofFile, "w") do io
                     println(io,"Complexity|MSE|Equation")
                     for member in dominating
