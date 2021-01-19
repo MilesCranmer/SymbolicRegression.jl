@@ -5,7 +5,7 @@ using Random: shuffle!
 function regEvolCycle(X::AbstractMatrix{T}, y::AbstractVector{T},
                       baseline::T, pop::Population, temperature::T, curmaxsize::Integer,
                       frequencyComplexity::AbstractVector{T},
-                      options::Options)::Population where {T<:AbstractFloat}
+                      options::Options)::Population where {T<:Real}
     # Batch over each subsample. Can give 15% improvement in speed; probably moreso for large pops.
     # but is ultimately a different algorithm than regularized evolution, and might not be
     # as good.

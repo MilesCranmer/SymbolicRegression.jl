@@ -1,47 +1,47 @@
 using Random: randperm
 
 # Sum of square error between two arrays
-function SSE(x::AbstractArray{T}, y::AbstractArray{T})::T where {T<:AbstractFloat}
+function SSE(x::AbstractArray{T}, y::AbstractArray{T})::T where {T<:Real}
     diff = (x - y)
     return sum(diff .* diff)
 end
-function SSE(x::Nothing, y::AbstractArray{T})::T where {T<:AbstractFloat}
+function SSE(x::Nothing, y::AbstractArray{T})::T where {T<:Real}
     return 1f9
 end
 
 # Sum of square error between two arrays, with weights
-function SSE(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:AbstractFloat}
+function SSE(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
     diff = (x - y)
     return sum(diff .* diff .* w)
 end
-function SSE(x::Nothing, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:AbstractFloat}
+function SSE(x::Nothing, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
     return Nothing
 end
 
 # Mean of square error between two arrays
-function MSE(x::Nothing, y::AbstractArray{T})::T where {T<:AbstractFloat}
+function MSE(x::Nothing, y::AbstractArray{T})::T where {T<:Real}
     return convert(T, 1f9)
 end
 
 # Mean of square error between two arrays
-function MSE(x::AbstractArray{T}, y::AbstractArray{T})::T where {T<:AbstractFloat}
+function MSE(x::AbstractArray{T}, y::AbstractArray{T})::T where {T<:Real}
     return SSE(x, y)/size(x)[1]
 end
 
 # Mean of square error between two arrays
-function MSE(x::Nothing, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:AbstractFloat}
+function MSE(x::Nothing, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
     return convert(T, 1f9)
 end
 
 # Mean of square error between two arrays
-function MSE(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:AbstractFloat}
+function MSE(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
     return SSE(x, y, w)/sum(w)
 end
 
 # Score an equation
 function scoreFunc(X::AbstractMatrix{T}, y::AbstractVector{T},
                    baseline::T, tree::Node,
-                   options::Options)::T where {T<:AbstractFloat}
+                   options::Options)::T where {T<:Real}
     prediction = evalTreeArray(tree, X, options)
     if prediction === nothing
         return 1f9
@@ -56,7 +56,7 @@ end
 
 # Score an equation with a small batch
 function scoreFuncBatch(X::AbstractMatrix{T}, y::AbstractVector{T},
-                        baseline::T, tree::Node, options::Options)::T where {T<:AbstractFloat}
+                        baseline::T, tree::Node, options::Options)::T where {T<:Real}
     # options.batchSize
     batch_idx = randperm(size(X)[1])[1:options.batchSize]
     batch_X = X[batch_idx, :]

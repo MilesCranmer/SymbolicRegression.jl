@@ -7,7 +7,7 @@ function SRCycle(X::AbstractMatrix{T}, y::AbstractVector{T}, baseline::T,
         frequencyComplexity::AbstractVector{T};
         verbosity::Integer=0,
         options::Options
-        )::Population where {T<:AbstractFloat}
+        )::Population where {T<:Real}
 
     top = convert(T, 1.0)
     allT = LinRange(top, convert(T, 0.0), ncycles)

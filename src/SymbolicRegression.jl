@@ -55,7 +55,7 @@ include("SingleIteration.jl")
 include("ConstantOptimization.jl")
 
 function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T},
-    niterations::Integer, options::Options) where {T<:AbstractFloat}
+    niterations::Integer, options::Options) where {T<:Real}
 
     testConfiguration(options)
 

@@ -1,6 +1,6 @@
 using Printf: @printf
 
-function id(x::T)::T where {T<:AbstractFloat}
+function id(x::T)::T where {T<:Real}
     x
 end
 

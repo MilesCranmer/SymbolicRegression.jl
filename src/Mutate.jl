@@ -3,7 +3,7 @@
 function iterate(X::AbstractMatrix{T}, y::AbstractVector{T},
                  baseline::T, member::PopMember, temperature::T,
                  curmaxsize::Integer, frequencyComplexity::AbstractVector{T},
-                 options::Options)::PopMember where {T<:AbstractFloat}
+                 options::Options)::PopMember where {T<:Real}
 
     prev = member.tree
     tree = prev

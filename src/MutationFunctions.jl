@@ -19,7 +19,7 @@ end
 # Randomly perturb a constant
 function mutateConstant(
         tree::Node, temperature::T,
-        options::Options)::Node where {T<:AbstractFloat}
+        options::Options)::Node where {T<:Real}
     # T is between 0 and 1.
 
     if countConstants(tree) == 0

@@ -13,7 +13,7 @@ end
 
 function calculateParetoFrontier(X::AbstractMatrix{T}, y::AbstractVector{T},
                                  hallOfFame::HallOfFame,
-                                 options::Options) where {T<:AbstractFloat}
+                                 options::Options) where {T<:Real}
     # Dominating pareto curve - must be better than all simpler equations
     dominating = PopMember[]
     actualMaxsize = options.maxsize + maxdegree

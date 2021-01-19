@@ -3,7 +3,7 @@ using Optim
 # Proxy function for optimization
 function optFunc(x::Vector{ConstantType}, X::AbstractMatrix{T},
                  y::AbstractVector{T}, baseline::T,
-                 tree::Node, options::Options)::T where {T<:AbstractFloat}
+                 tree::Node, options::Options)::T where {T<:Real}
     setConstants(tree, x)
     return scoreFunc(X, y, baseline, tree, options)
 end
@@ -11,7 +11,7 @@ end
 # Use Nelder-Mead to optimize the constants in an equation
 function optimizeConstants(X::AbstractMatrix{T}, y::AbstractVector{T},
                            baseline::T, member::PopMember,
-                           options::Options)::PopMember where {T<:AbstractFloat}
+                           options::Options)::PopMember where {T<:Real}
 
     nconst = countConstants(member.tree)
     if nconst == 0
