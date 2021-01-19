@@ -2,22 +2,22 @@
 mutable struct Node
     #Holds operators, variables, constants in a tree
     degree::Integer #0 for constant/variable, 1 for cos/sin, 2 for +/* etc.
-    val::Union{Float32, Integer} #Either const value, or enumerates variable
+    val::Union{ConstantType, Integer} #Either const value, or enumerates variable
     constant::Bool #false if variable
     op::Integer #enumerates operator (separately for degree=1,2)
     l::Union{Node, Nothing}
     r::Union{Node, Nothing}
 
-    Node(val::Float32) = new(0, val, true, 1, nothing, nothing)
+    Node(val::ConstantType) = new(0, val, true, 1, nothing, nothing)
     Node(val::Integer) = new(0, val, false, 1, nothing, nothing)
-    Node(op::Integer, l::Node) = new(1, 0.0f0, false, op, l, nothing)
-    Node(op::Integer, l::Union{Float32, Integer}) = new(1, 0.0f0, false, op, Node(l), nothing)
-    Node(op::Integer, l::Node, r::Node) = new(2, 0.0f0, false, op, l, r)
+    Node(op::Integer, l::Node) = new(1, convert(ConstantType, 0.0), false, op, l, nothing)
+    Node(op::Integer, l::Union{ConstantType, Integer}) = new(1, convert(ConstantType, 0.0), false, op, Node(l), nothing)
+    Node(op::Integer, l::Node, r::Node) = new(2, convert(ConstantType, 0.0), false, op, l, r)
 
     #Allow to pass the leaf value without additional node call:
-    Node(op::Integer, l::Union{Float32, Integer}, r::Node) = new(2, 0.0f0, false, op, Node(l), r)
-    Node(op::Integer, l::Node, r::Union{Float32, Integer}) = new(2, 0.0f0, false, op, l, Node(r))
-    Node(op::Integer, l::Union{Float32, Integer}, r::Union{Float32, Integer}) = new(2, 0.0f0, false, op, Node(l), Node(r))
+    Node(op::Integer, l::Union{ConstantType, Integer}, r::Node) = new(2, convert(ConstantType, 0.0), false, op, Node(l), r)
+    Node(op::Integer, l::Node, r::Union{ConstantType, Integer}) = new(2, convert(ConstantType, 0.0), false, op, l, Node(r))
+    Node(op::Integer, l::Union{ConstantType, Integer}, r::Union{ConstantType, Integer}) = new(2, convert(ConstantType, 0.0), false, op, Node(l), Node(r))
 end
 
 # Copy an equation (faster than deepcopy)
@@ -147,12 +147,12 @@ end
 
 
 # Get all the constants from a tree
-function getConstants(tree::Node)::AbstractArray{T, 1} where {T<:AbstractFloat}
+function getConstants(tree::Node)::AbstractArray{ConstantType, 1}
     if tree.degree == 0
         if tree.constant
             return [tree.val]
         else
-            return Float32[]
+            return ConstantType[]
         end
     elseif tree.degree == 1
         return getConstants(tree.l)
@@ -166,7 +166,7 @@ end
 function setConstants(tree::Node, constants::AbstractArray{T, 1}) where {T<:AbstractFloat}
     if tree.degree == 0
         if tree.constant
-            tree.val = constants[1]
+            tree.val = convert(ConstantType, constants[1])
         end
     elseif tree.degree == 1
         setConstants(tree.l, constants)
