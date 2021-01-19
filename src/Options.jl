@@ -45,8 +45,8 @@ struct Options{A,B}
 end
 
 function Options(;
-    binary_operators::NTuple{nuna, Any}=(div, plus, mult),
-    unary_operators::NTuple{nbin, Any}=(exp, cos),
+    binary_operators::NTuple{nbin, Any}=(div, plus, mult),
+    unary_operators::NTuple{nuna, Any}=(exp, cos),
     bin_constraints=nothing,
     una_constraints=nothing,
     topn=10,
