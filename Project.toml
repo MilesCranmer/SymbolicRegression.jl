@@ -1,7 +1,7 @@
 name = "SymbolicRegression"
 uuid = "8254be44-1295-4e6a-a16d-46603ac705cb"
 authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
@@ -9,8 +9,10 @@ Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 
 [compat]
-julia = "1.2"
 Optim = "0.17, 1.1"
 SpecialFunctions = "0.10.1, 1"
+SymbolicUtils = "0.6"
+julia = "1.2"
