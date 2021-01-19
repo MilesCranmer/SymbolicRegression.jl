@@ -36,8 +36,8 @@ export Population,
 using Printf: @printf
 using Distributed
 
-include("operators.jl")
-include("hyperparams.jl")
+include("Operators.jl")
+include("Options.jl")
 include("Equation.jl")
 include("ProgramConstants.jl")
 include("LossFunctions.jl")
