@@ -11,8 +11,9 @@ function HallOfFame(options::Options)
     HallOfFame([PopMember(Node(1f0), 1f9) for i=1:actualMaxsize], [false for i=1:actualMaxsize])
 end
 
-function calculateParetoFrontier(X::Array{Float32, 2}, y::Array{Float32, 1},
-                                 hallOfFame::HallOfFame, options::Options)
+function calculateParetoFrontier(X::AbstractMatrix{T}, y::AbstractVector{T},
+                                 hallOfFame::HallOfFame,
+                                 options::Options) where {T<:Real}
     # Dominating pareto curve - must be better than all simpler equations
     dominating = PopMember[]
     actualMaxsize = options.maxsize + maxdegree

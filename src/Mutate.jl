@@ -1,6 +1,10 @@
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
-function iterate(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, member::PopMember, T::Float32, curmaxsize::Integer, frequencyComplexity::Array{Float32, 1}, options::Options)::PopMember
+function iterate(X::AbstractMatrix{T}, y::AbstractVector{T},
+                 baseline::T, member::PopMember, temperature::T,
+                 curmaxsize::Integer, frequencyComplexity::AbstractVector{T},
+                 options::Options)::PopMember where {T<:Real}
+
     prev = member.tree
     tree = prev
     #TODO - reconsider this
@@ -41,7 +45,7 @@ function iterate(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, 
         tree = copyNode(prev)
         successful_mutation = true
         if mutationChoice < cweights[1]
-            tree = mutateConstant(tree, T, options)
+            tree = mutateConstant(tree, temperature, options)
 
             is_success_always_possible = true
             # Mutating a constant shouldn't invalidate an already-valid function
@@ -111,7 +115,7 @@ function iterate(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, 
 
     if options.annealing
         delta = afterLoss - beforeLoss
-        probChange = exp(-delta/(T*options.alpha))
+        probChange = exp(-delta/(temperature*options.alpha))
         if options.useFrequency
             oldSize = countNodes(prev)
             newSize = countNodes(tree)

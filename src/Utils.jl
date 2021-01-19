@@ -1,6 +1,6 @@
 using Printf: @printf
 
-function id(x::Float32)::Float32
+function id(x::T)::T where {T<:Real}
     x
 end
 

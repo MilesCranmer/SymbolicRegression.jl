@@ -36,10 +36,10 @@ export Population,
 using Printf: @printf
 using Distributed
 
+include("ProgramConstants.jl")
 include("Operators.jl")
 include("Options.jl")
 include("Equation.jl")
-include("ProgramConstants.jl")
 include("LossFunctions.jl")
 include("Utils.jl")
 include("EvaluateEquation.jl")
@@ -54,8 +54,8 @@ include("RegularizedEvolution.jl")
 include("SingleIteration.jl")
 include("ConstantOptimization.jl")
 
-function RunSR(X::Array{Float32, 2}, y::Array{Float32, 1},
-               niterations::Integer, options::Options)
+function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T},
+    niterations::Integer, options::Options) where {T<:Real}
 
     testConfiguration(options)
 
@@ -67,10 +67,10 @@ function RunSR(X::Array{Float32, 2}, y::Array{Float32, 1},
 
     if options.weighted
         avgy = sum(y .* weights)/sum(weights)
-        baselineMSE = MSE(y, convert(Array{Float32, 1}, ones(size(X)[1]) .* avgy), weights)
+        baselineMSE = MSE(y, ones(T, size(X)[1]) .* avgy, weights)
     else
         avgy = sum(y)/size(X)[1]
-        baselineMSE = MSE(y, convert(Array{Float32, 1}, ones(size(X)[1]) .* avgy))
+        baselineMSE = MSE(y, ones(T, size(X)[1]) .* avgy)
     end
 
     nfeatures = size(X)[2]
@@ -82,7 +82,7 @@ function RunSR(X::Array{Float32, 2}, y::Array{Float32, 1},
     bestSubPops = [Population(X, y, baselineMSE, 1, options, nfeatures) for j=1:options.npopulations]
     hallOfFame = HallOfFame(options)
     actualMaxsize = options.maxsize + maxdegree
-    frequencyComplexity = ones(Float32, actualMaxsize)
+    frequencyComplexity = ones(T, actualMaxsize)
     curmaxsize = 3
     if options.warmupMaxsize == 0
         curmaxsize = options.maxsize

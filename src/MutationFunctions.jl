@@ -18,8 +18,8 @@ end
 
 # Randomly perturb a constant
 function mutateConstant(
-        tree::Node, T::Float32,
-        options::Options)::Node
+        tree::Node, temperature::T,
+        options::Options)::Node where {T<:Real}
     # T is between 0 and 1.
 
     if countConstants(tree) == 0
@@ -30,15 +30,15 @@ function mutateConstant(
         node = randomNode(tree)
     end
 
-    bottom = 0.1f0
-    maxChange = options.perturbationFactor * T + 1.0f0 + bottom
+    bottom = convert(T, 1//10)
+    maxChange = options.perturbationFactor * temperature + convert(T, 1) + bottom
     factor = maxChange^Float32(rand())
     makeConstBigger = rand() > 0.5
 
     if makeConstBigger
-        node.val *= factor
+        node.val *= convert(ConstantType, factor)
     else
-        node.val /= factor
+        node.val /= convert(ConstantType, factor)
     end
 
     if rand() > options.probNegate
@@ -149,7 +149,7 @@ end
 
 function randomConstantNode(nfeatures::Int)::Node
     if rand() > 0.5
-        val = Float32(randn())
+        val = convert(ConstantType, randn())
     else
         val = rand(1:nfeatures)
     end
