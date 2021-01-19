@@ -36,10 +36,10 @@ export Population,
 using Printf: @printf
 using Distributed
 
+include("ProgramConstants.jl")
 include("Operators.jl")
 include("Options.jl")
 include("Equation.jl")
-include("ProgramConstants.jl")
 include("LossFunctions.jl")
 include("Utils.jl")
 include("EvaluateEquation.jl")
