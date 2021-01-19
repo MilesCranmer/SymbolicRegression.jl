@@ -54,7 +54,7 @@ include("Population.jl")
 include("RegularizedEvolution.jl")
 include("SingleIteration.jl")
 include("ConstantOptimization.jl")
-include("Output.jl")
+include("InterfaceSymbolicUtils.jl")
 
 function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T},
     niterations::Integer, options::Options) where {T<:Real}
