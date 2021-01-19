@@ -1,5 +1,7 @@
 # TODO
 
+- [ ] Create mechanism to convert back and forth between Julia expression and Node()
+    - Then, we can use the Julia simplification library!
 - [ ] Sort these todo lists by priority
 
 
