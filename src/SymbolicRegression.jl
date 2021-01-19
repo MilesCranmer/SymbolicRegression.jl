@@ -67,10 +67,10 @@ function RunSR(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
 
     if options.weighted
         avgy = sum(y .* weights)/sum(weights)
-        baselineMSE = MSE(y, convert(AbstractArray{T, 1}, ones(size(X)[1]) .* avgy), weights)
+        baselineMSE = MSE(y, ones(T, size(X)[1]) .* avgy), weights
     else
         avgy = sum(y)/size(X)[1]
-        baselineMSE = MSE(y, convert(AbstractArray{T, 1}, ones(size(X)[1]) .* avgy))
+        baselineMSE = MSE(y, ones(T, size(X)[1]) .* avgy)
     end
 
     nfeatures = size(X)[2]
