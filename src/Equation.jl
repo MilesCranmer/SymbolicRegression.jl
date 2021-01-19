@@ -54,27 +54,31 @@ function countDepth(tree::Node)::Integer
 end
 
 # Convert an equation to a string
-function stringTree(tree::Node)::String
+function stringTree(tree::Node, options::Options)::String
     if tree.degree == 0
         if tree.constant
             return string(tree.val)
         else
-            if useVarMap
+            if options.useVarMap
                 return varMap[tree.val]
             else
-                return "x$(tree.val - 1)"
+                if options.printZeroIndex
+                    return "x$(tree.val - 1)"
+                else
+                    return "x$(tree.val)"
+                end
             end
         end
     elseif tree.degree == 1
-        return "$(unaops[tree.op])($(stringTree(tree.l)))"
+        return "$(options.unaops[tree.op])($(stringTree(tree.l, options)))"
     else
-        return "$(binops[tree.op])($(stringTree(tree.l)), $(stringTree(tree.r)))"
+        return "$(options.binops[tree.op])($(stringTree(tree.l, options)), $(stringTree(tree.r, options)))"
     end
 end
 
 # Print an equation
-function printTree(tree::Node)
-    println(stringTree(tree))
+function printTree(tree::Node, options::Options)
+    println(stringTree(tree, options))
 end
 
 # Return a random node from the tree
@@ -140,6 +144,7 @@ function countConstants(tree::Node)::Integer
         return 0 + countConstants(tree.l) + countConstants(tree.r)
     end
 end
+
 
 # Get all the constants from a tree
 function getConstants(tree::Node)::Array{Float32, 1}

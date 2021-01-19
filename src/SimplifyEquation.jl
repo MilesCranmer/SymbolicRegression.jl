@@ -1,5 +1,6 @@
+
 # Simplify tree
-function combineOperators(tree::Node)::Node
+function combineOperators(tree::Node, options::Options)::Node
     # NOTE: (const (+*-) const) already accounted for. Call simplifyTree before.
     # ((const + var) + const) => (const + var)
     # ((const * var) * const) => (const * var)
@@ -9,14 +10,14 @@ function combineOperators(tree::Node)::Node
     if tree.degree == 0
         return tree
     elseif tree.degree == 1
-        tree.l = combineOperators(tree.l)
+        tree.l = combineOperators(tree.l, options)
     elseif tree.degree == 2
-        tree.l = combineOperators(tree.l)
-        tree.r = combineOperators(tree.r)
+        tree.l = combineOperators(tree.l, options)
+        tree.r = combineOperators(tree.r, options)
     end
 
     top_level_constant = tree.degree == 2 && (tree.l.constant || tree.r.constant)
-    if tree.degree == 2 && (binops[tree.op] === mult || binops[tree.op] === plus) && top_level_constant
+    if tree.degree == 2 && (options.binops[tree.op] === mult || options.binops[tree.op] === plus) && top_level_constant
         op = tree.op
         # Put the constant in r. Need to assume var in left for simplification assumption.
         if tree.l.constant
@@ -30,19 +31,19 @@ function combineOperators(tree::Node)::Node
         if below.degree == 2 && below.op == op
             if below.l.constant
                 tree = below
-                tree.l.val = binops[op](tree.l.val, topconstant)
+                tree.l.val = options.binops[op](tree.l.val, topconstant)
             elseif below.r.constant
                 tree = below
-                tree.r.val = binops[op](tree.r.val, topconstant)
+                tree.r.val = options.binops[op](tree.r.val, topconstant)
             end
         end
     end
 
-    if tree.degree == 2 && binops[tree.op] === sub && top_level_constant
+    if tree.degree == 2 && options.binops[tree.op] === sub && top_level_constant
         # Currently just simplifies subtraction. (can't assume both plus and sub are operators)
         # Not commutative, so use different op.
         if tree.l.constant
-            if tree.r.degree == 2 && binops[tree.r.op] === sub
+            if tree.r.degree == 2 && options.binops[tree.r.op] === sub
                 if tree.r.l.constant
                     #(const - (const - var)) => (var - const)
                     l = tree.l
@@ -61,7 +62,7 @@ function combineOperators(tree::Node)::Node
                 end
             end
         else #tree.r.constant is true
-            if tree.l.degree == 2 && binops[tree.l.op] === sub
+            if tree.l.degree == 2 && options.binops[tree.l.op] === sub
                 if tree.l.l.constant
                     #((const - var) - const) => (const - var)
                     l = tree.l
@@ -85,22 +86,23 @@ function combineOperators(tree::Node)::Node
 end
 
 # Simplify tree
-function simplifyTree(tree::Node)::Node
+function simplifyTree(tree::Node, options::Options)::Node
     if tree.degree == 1
-        tree.l = simplifyTree(tree.l)
+        tree.l = simplifyTree(tree.l, options)
         if tree.l.degree == 0 && tree.l.constant
-            return Node(unaops[tree.op](tree.l.val))
+            return Node(options.unaops[tree.op](tree.l.val))
         end
     elseif tree.degree == 2
-        tree.l = simplifyTree(tree.l)
-        tree.r = simplifyTree(tree.r)
+        tree.l = simplifyTree(tree.l, options)
+        tree.r = simplifyTree(tree.r, options)
         constantsBelow = (
              tree.l.degree == 0 && tree.l.constant &&
              tree.r.degree == 0 && tree.r.constant
         )
         if constantsBelow
-            return Node(binops[tree.op](tree.l.val, tree.r.val))
+            return Node(options.binops[tree.op](tree.l.val, tree.r.val))
         end
     end
     return tree
 end
+

@@ -1,4 +1,4 @@
-import Random: randperm
+using Random: randperm
 
 # Sum of square error between two arrays
 function SSE(x::Array{Float32}, y::Array{Float32})::Float32
@@ -38,45 +38,37 @@ function MSE(x::Array{Float32}, y::Array{Float32}, w::Array{Float32})::Float32
     return SSE(x, y, w)/sum(w)
 end
 
-if weighted
-    const avgy = sum(y .* weights)/sum(weights)
-    const baselineMSE = MSE(y, convert(Array{Float32, 1}, ones(len) .* avgy), weights)
-else
-    const avgy = sum(y)/len
-    const baselineMSE = MSE(y, convert(Array{Float32, 1}, ones(len) .* avgy))
-end
-
 # Score an equation
-function scoreFunc(tree::Node)::Float32
-    prediction = evalTreeArray(tree)
+function scoreFunc(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, tree::Node, options::Options)::Float32
+    prediction = evalTreeArray(tree, X, options)
     if prediction === nothing
         return 1f9
     end
-    if weighted
+    if options.weighted
         mse = MSE(prediction, y, weights)
     else
         mse = MSE(prediction, y)
     end
-    return mse / baselineMSE + countNodes(tree)*parsimony
+    return mse / baseline + countNodes(tree)*options.parsimony
 end
 
 # Score an equation with a small batch
-function scoreFuncBatch(tree::Node)::Float32
-    # batchSize
-    batch_idx = randperm(len)[1:batchSize]
+function scoreFuncBatch(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, tree::Node, options::Options)::Float32
+    # options.batchSize
+    batch_idx = randperm(size(X)[1])[1:options.batchSize]
     batch_X = X[batch_idx, :]
-    prediction = evalTreeArray(tree, batch_X)
+    prediction = evalTreeArray(tree, batch_X, options)
     if prediction === nothing
         return 1f9
     end
     size_adjustment = 1f0
     batch_y = y[batch_idx]
-    if weighted
+    if options.weighted
         batch_w = weights[batch_idx]
         mse = MSE(prediction, batch_y, batch_w)
-        size_adjustment = 1f0 * len / batchSize
+        size_adjustment = 1f0 * size(X)[1] / options.batchSize
     else
         mse = MSE(prediction, batch_y)
     end
-    return size_adjustment * mse / baselineMSE + countNodes(tree)*parsimony
+    return size_adjustment * mse / baseline + countNodes(tree)*options.parsimony
 end

@@ -5,29 +5,36 @@ mutable struct Population
     n::Integer
 
     Population(pop::Array{PopMember, 1}) = new(pop, size(pop)[1])
-    Population(npop::Integer) = new([PopMember(genRandomTree(3)) for i=1:npop], npop)
-    Population(npop::Integer, nlength::Integer) = new([PopMember(genRandomTree(nlength)) for i=1:npop], npop)
+    Population(pop::Array{PopMember, 1}, npop::Integer) = new(pop, npop)
 
 end
 
+function Population(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, npop::Integer, options::Options, nfeatures::Int)
+    Population([PopMember(X, y, baseline, genRandomTree(3, options, nfeatures), options) for i=1:npop], npop)
+end
+
+function Population(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, npop::Integer, nlength::Integer, options::Options, nfeatures::Int)
+    Population([PopMember(X, y, baseline, genRandomTree(nlength, options, nfeatures), options) for i=1:npop], npop)
+end
+
 # Sample 10 random members of the population, and make a new one
-function samplePop(pop::Population)::Population
-    idx = rand(1:pop.n, ns)
+function samplePop(pop::Population, options::Options)::Population
+    idx = rand(1:pop.n, options.ns)
     return Population(pop.members[idx])
 end
 
 # Sample the population, and get the best member from that sample
-function bestOfSample(pop::Population)::PopMember
-    sample = samplePop(pop)
+function bestOfSample(pop::Population, options::Options)::PopMember
+    sample = samplePop(pop, options)
     best_idx = argmin([sample.members[member].score for member=1:sample.n])
     return sample.members[best_idx]
 end
 
-function finalizeScores(pop::Population)::Population
-    need_recalculate = batching
+function finalizeScores(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, pop::Population, options::Options)::Population
+    need_recalculate = options.batching
     if need_recalculate
         @inbounds @simd for member=1:pop.n
-            pop.members[member].score = scoreFunc(pop.members[member].tree)
+            pop.members[member].score = scoreFunc(X, y, baseline, pop.members[member].tree, options)
         end
     end
     return pop
@@ -38,3 +45,4 @@ function bestSubPop(pop::Population; topn::Integer=10)::Population
     best_idx = sortperm([pop.members[member].score for member=1:pop.n])
     return Population(pop.members[best_idx[1:topn]])
 end
+

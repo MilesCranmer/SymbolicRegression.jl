@@ -1,30 +1,30 @@
-import Optim
+using Optim
 
 # Proxy function for optimization
-function optFunc(x::Array{Float32, 1}, tree::Node)::Float32
+function optFunc(x::Array{Float32, 1}, X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, tree::Node, options::Options)::Float32
     setConstants(tree, x)
-    return scoreFunc(tree)
+    return scoreFunc(X, y, baseline, tree, options)
 end
 
 # Use Nelder-Mead to optimize the constants in an equation
-function optimizeConstants(member::PopMember)::PopMember
+function optimizeConstants(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, member::PopMember, options::Options)::PopMember
     nconst = countConstants(member.tree)
     if nconst == 0
         return member
     end
     x0 = getConstants(member.tree)
-    f(x::Array{Float32,1})::Float32 = optFunc(x, member.tree)
+    f(x::Array{Float32,1})::Float32 = optFunc(x, X, y, baseline, member.tree, options)
     if size(x0)[1] == 1
-        algorithm = Optim.Newton
+        algorithm = Newton
     else
-        algorithm = Optim.NelderMead
+        algorithm = NelderMead
     end
 
     try
-        result = Optim.optimize(f, x0, algorithm(), Optim.Options(iterations=100))
+        result = optimize(f, x0, algorithm(), Optim.Options(iterations=100))
         # Try other initial conditions:
-        for i=1:nrestarts
-            tmpresult = Optim.optimize(f, x0 .* (1f0 .+ 5f-1*randn(Float32, size(x0)[1])), algorithm(), Optim.Options(iterations=100))
+        for i=1:options.nrestarts
+            tmpresult = optimize(f, x0 .* (1f0 .+ 5f-1*randn(Float32, size(x0)[1])), algorithm(), Optim.Options(iterations=100))
             if tmpresult.minimum < result.minimum
                 result = tmpresult
             end

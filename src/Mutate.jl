@@ -1,24 +1,27 @@
-# Go through one mutation cycle
-function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyComplexity::Array{Float32, 1})::PopMember
+# Go through one simulated options.annealing mutation cycle
+#  exp(-delta/T) defines probability of accepting a change
+function iterate(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, member::PopMember, T::Float32, curmaxsize::Integer, frequencyComplexity::Array{Float32, 1}, options::Options)::PopMember
     prev = member.tree
     tree = prev
     #TODO - reconsider this
-    if batching
-        beforeLoss = scoreFuncBatch(prev)
+    if options.batching
+        beforeLoss = scoreFuncBatch(X, y, baseline, prev, options)
     else
         beforeLoss = member.score
     end
 
+    nfeatures = size(X)[2]
+
     mutationChoice = rand()
     #More constants => more likely to do constant mutation
     weightAdjustmentMutateConstant = min(8, countConstants(prev))/8.0
-    cur_weights = copy(mutationWeights) .* 1.0
+    cur_weights = copy(options.mutationWeights) .* 1.0
     cur_weights[1] *= weightAdjustmentMutateConstant
     n = countNodes(prev)
     depth = countDepth(prev)
 
     # If equation too big, don't add new operators
-    if n >= curmaxsize || depth >= maxdepth
+    if n >= curmaxsize || depth >= options.maxdepth
         cur_weights[3] = 0.0
         cur_weights[4] = 0.0
     end
@@ -38,34 +41,34 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
         tree = copyNode(prev)
         successful_mutation = true
         if mutationChoice < cweights[1]
-            tree = mutateConstant(tree, T)
+            tree = mutateConstant(tree, T, options)
 
             is_success_always_possible = true
             # Mutating a constant shouldn't invalidate an already-valid function
 
         elseif mutationChoice < cweights[2]
-            tree = mutateOperator(tree)
+            tree = mutateOperator(tree, options)
 
             is_success_always_possible = true
             # Can always mutate to the same operator
 
         elseif mutationChoice < cweights[3]
             if rand() < 0.5
-                tree = appendRandomOp(tree)
+                tree = appendRandomOp(tree, options, nfeatures)
             else
-                tree = prependRandomOp(tree)
+                tree = prependRandomOp(tree, options, nfeatures)
             end
             is_success_always_possible = false
             # Can potentially have a situation without success
         elseif mutationChoice < cweights[4]
-            tree = insertRandomOp(tree)
+            tree = insertRandomOp(tree, options, nfeatures)
             is_success_always_possible = false
         elseif mutationChoice < cweights[5]
-            tree = deleteRandomOp(tree)
+            tree = deleteRandomOp(tree, options, nfeatures)
             is_success_always_possible = true
         elseif mutationChoice < cweights[6]
-            tree = simplifyTree(tree) # Sometimes we simplify tree
-            tree = combineOperators(tree) # See if repeated constants at outer levels
+            tree = simplifyTree(tree, options) # Sometimes we simplify tree
+            tree = combineOperators(tree, options) # See if repeated constants at outer levels
             return PopMember(tree, beforeLoss)
 
             is_success_always_possible = true
@@ -73,7 +76,7 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
             # to commutative operator...
 
         elseif mutationChoice < cweights[7]
-            tree = genRandomTree(5) # Sometimes we generate a new tree completely tree
+            tree = genRandomTree(5, options, nfeatures) # Sometimes we generate a new tree completely tree
 
             is_success_always_possible = true
         else # no mutation applied
@@ -81,13 +84,13 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
         end
 
         # Check for illegal equations
-        for i=1:nbin
-            if successful_mutation && flagBinOperatorComplexity(tree, i)
+        for i=1:options.nbin
+            if successful_mutation && flagBinOperatorComplexity(tree, i, options)
                 successful_mutation = false
             end
         end
-        for i=1:nuna
-            if successful_mutation && flagUnaOperatorComplexity(tree, i)
+        for i=1:options.nuna
+            if successful_mutation && flagUnaOperatorComplexity(tree, i, options)
                 successful_mutation = false
             end
         end
@@ -100,16 +103,16 @@ function iterate(member::PopMember, T::Float32, curmaxsize::Integer, frequencyCo
         return PopMember(copyNode(prev), beforeLoss)
     end
 
-    if batching
-        afterLoss = scoreFuncBatch(tree)
+    if options.batching
+        afterLoss = scoreFuncBatch(X, y, baseline, tree, options)
     else
-        afterLoss = scoreFunc(tree)
+        afterLoss = scoreFunc(X, y, baseline, tree, options)
     end
 
-    if annealing
+    if options.annealing
         delta = afterLoss - beforeLoss
-        probChange = exp(-delta/(T*alpha))
-        if useFrequency
+        probChange = exp(-delta/(T*options.alpha))
+        if options.useFrequency
             oldSize = countNodes(prev)
             newSize = countNodes(tree)
             probChange *= frequencyComplexity[oldSize] / frequencyComplexity[newSize]

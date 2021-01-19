@@ -4,5 +4,9 @@ mutable struct HallOfFame
     exists::Array{Bool, 1} #Whether it has been set
 
     # Arranged by complexity - store one at each.
-    HallOfFame() = new([PopMember(Node(1f0), 1f9) for i=1:actualMaxsize], [false for i=1:actualMaxsize])
+end
+
+function HallOfFame(options::Options)
+    actualMaxsize = options.maxsize + maxdegree
+    HallOfFame([PopMember(Node(1f0), 1f9) for i=1:actualMaxsize], [false for i=1:actualMaxsize])
 end
