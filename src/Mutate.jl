@@ -1,8 +1,8 @@
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
-function iterate(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
+function iterate(X::AbstractMatrix{T}, y::AbstractVector{T},
                  baseline::T, member::PopMember, temperature::T,
-                 curmaxsize::Integer, frequencyComplexity::AbstractArray{T, 1},
+                 curmaxsize::Integer, frequencyComplexity::AbstractVector{T},
                  options::Options)::PopMember where {T<:AbstractFloat}
 
     prev = member.tree

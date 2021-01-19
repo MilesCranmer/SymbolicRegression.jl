@@ -10,7 +10,7 @@ function PopMember(t::Node, score::T) where {T<:AbstractFloat}
     PopMember{T}(t, score, getTime())
 end
 
-function PopMember(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
+function PopMember(X::AbstractMatrix{T}, y::AbstractVector{T},
                    baseline::T, t::Node,
                    options::Options) where {T<:AbstractFloat}
     PopMember(t, scoreFunc(X, y, baseline, t, options))

@@ -13,13 +13,13 @@ function Population(pop::Array{PopMember{T}, 1}, npop::Integer) where {T<:Abstra
     Population{T}(pop, npop)
 end
 
-function Population(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
+function Population(X::AbstractMatrix{T}, y::AbstractVector{T},
                     baseline::T, npop::Integer, options::Options,
                     nfeatures::Int) where {T<:AbstractFloat}
     Population([PopMember(X, y, baseline, genRandomTree(3, options, nfeatures), options) for i=1:npop], npop)
 end
 
-function Population(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
+function Population(X::AbstractMatrix{T}, y::AbstractVector{T},
                     baseline::T, npop::Integer, nlength::Integer,
                     options::Options, nfeatures::Int) where {T<:AbstractFloat}
     Population([PopMember(X, y, baseline, genRandomTree(nlength, options, nfeatures), options) for i=1:npop], npop)
@@ -38,7 +38,7 @@ function bestOfSample(pop::Population, options::Options)::PopMember
     return sample.members[best_idx]
 end
 
-function finalizeScores(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
+function finalizeScores(X::AbstractMatrix{T}, y::AbstractVector{T},
                         baseline::T, pop::Population,
                         options::Options)::Population where {T<:AbstractFloat}
     need_recalculate = options.batching

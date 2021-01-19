@@ -163,7 +163,7 @@ function getConstants(tree::Node)::AbstractArray{ConstantType, 1}
 end
 
 # Set all the constants inside a tree
-function setConstants(tree::Node, constants::AbstractArray{T, 1}) where {T<:AbstractFloat}
+function setConstants(tree::Node, constants::AbstractVector{T}) where {T<:AbstractFloat}
     if tree.degree == 0
         if tree.constant
             tree.val = convert(ConstantType, constants[1])

@@ -54,7 +54,7 @@ include("RegularizedEvolution.jl")
 include("SingleIteration.jl")
 include("ConstantOptimization.jl")
 
-function RunSR(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
+function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T},
     niterations::Integer, options::Options) where {T<:AbstractFloat}
 
     testConfiguration(options)

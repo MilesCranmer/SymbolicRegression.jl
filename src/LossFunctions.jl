@@ -39,7 +39,7 @@ function MSE(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T})::T w
 end
 
 # Score an equation
-function scoreFunc(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
+function scoreFunc(X::AbstractMatrix{T}, y::AbstractVector{T},
                    baseline::T, tree::Node,
                    options::Options)::T where {T<:AbstractFloat}
     prediction = evalTreeArray(tree, X, options)
@@ -55,7 +55,7 @@ function scoreFunc(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
 end
 
 # Score an equation with a small batch
-function scoreFuncBatch(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
+function scoreFuncBatch(X::AbstractMatrix{T}, y::AbstractVector{T},
                         baseline::T, tree::Node, options::Options)::T where {T<:AbstractFloat}
     # options.batchSize
     batch_idx = randperm(size(X)[1])[1:options.batchSize]

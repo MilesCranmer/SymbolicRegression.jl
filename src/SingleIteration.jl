@@ -1,10 +1,10 @@
 # Cycle through regularized evolution many times,
 # printing the fittest equation every 10% through
-function SRCycle(X::AbstractArray{T, 2}, y::AbstractArray{T, 1}, baseline::T, 
+function SRCycle(X::AbstractMatrix{T}, y::AbstractVector{T}, baseline::T, 
         pop::Population,
         ncycles::Integer,
         curmaxsize::Integer,
-        frequencyComplexity::AbstractArray{T, 1};
+        frequencyComplexity::AbstractVector{T};
         verbosity::Integer=0,
         options::Options
         )::Population where {T<:AbstractFloat}

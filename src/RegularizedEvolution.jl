@@ -2,9 +2,9 @@ using Random: shuffle!
 
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample
-function regEvolCycle(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
+function regEvolCycle(X::AbstractMatrix{T}, y::AbstractVector{T},
                       baseline::T, pop::Population, temperature::T, curmaxsize::Integer,
-                      frequencyComplexity::AbstractArray{T, 1},
+                      frequencyComplexity::AbstractVector{T},
                       options::Options)::Population where {T<:AbstractFloat}
     # Batch over each subsample. Can give 15% improvement in speed; probably moreso for large pops.
     # but is ultimately a different algorithm than regularized evolution, and might not be
