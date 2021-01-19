@@ -28,13 +28,13 @@ function div(x::T, y::T)::T where {T<:Real}
 	x / y
 end
 function logm(x::T)::T where {T<:Real}
-	log(abs(x) + 1f-8)
+    log(abs(x) + convert(T, 1f-8))
 end
 function logm2(x::T)::T where {T<:Real}
-	log2(abs(x) + 1f-8)
+    log2(abs(x) + convert(T, 1f-8))
 end
 function logm10(x::T)::T where {T<:Real}
-	log10(abs(x) + 1f-8)
+    log10(abs(x) + convert(T, 1f-8))
 end
 function sqrtm(x::T)::T where {T<:Real}
 	sqrt(abs(x))
