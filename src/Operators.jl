@@ -45,29 +45,29 @@ end
 
 function greater(x::T, y::T)::T where {T<:Real}
     if x > y
-        return 1f0
+        return convert(T, 1)
     end
-    return 0f0
+    return convert(T, 0)
 end
 
-function relu(x::T, y::T)::T where {T<:Real}
-    if x > 0f0
+function relu(x::T)::T where {T<:Real}
+    if x > convert(T, 0)
         return x
     end
-    return 0f0
+    return convert(T, 0)
 end
 
 function logical_or(x::T, y::T)::T where {T<:Real}
-    if x > 0f0 || y > 0f0
-        return 1f0
+    if x > convert(T, 0) || y > convert(T, 0)
+        return convert(T, 1)
     end
-    return 0f0
+    return convert(T, 0)
 end
 
 # (Just use multiplication normally)
 function logical_and(x::T, y::T)::T where {T<:Real}
-    if x > 0f0 && y > 0f0
-        return 1f0
+    if x > convert(T, 0) && y > convert(T, 0)
+        return convert(T, 1)
     end
-    return 0f0
+    return convert(T, 0)
 end
