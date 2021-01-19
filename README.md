@@ -17,7 +17,6 @@ Install in Julia with:
 using Pkg
 Pkg.add(url="https://github.com/MilesCranmer/SymbolicRegression.jl.git")
 ```
-(you need to repeat this for both main Julia environment and target working environment (if any))
 
 Run distributed on four processes with:
 ```julia
@@ -54,6 +53,17 @@ for member in dominating
     string = stringTree(member.tree, options)
 
     println("$(size)\t$(score)\t$(string)")
+end
+```
+
+Note: if you install into a local environment,
+you will need to activate it in each process
+before importing this package:
+```julia
+@everywhere begin
+    import Pkg
+    Pkg.activate(".")
+    using SymbolicRegression
 end
 ```
 
