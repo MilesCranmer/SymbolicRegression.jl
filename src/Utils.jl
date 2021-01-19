@@ -34,38 +34,3 @@ function testConfiguration(options::Options)
     end
 end
 
-function calculateParetoFrontier(X::Array{Float32, 2}, y::Array{Float32, 1},
-                                 hallOfFame::HallOfFame, options::Options)
-    # Dominating pareto curve - must be better than all simpler equations
-    dominating = PopMember[]
-    actualMaxsize = options.maxsize + maxdegree
-    for size=1:actualMaxsize
-        if hallOfFame.exists[size]
-            member = hallOfFame.members[size]
-            if options.weighted
-                curMSE = MSE(evalTreeArray(member.tree, X, options), y, weights)
-                member.score = curMSE
-            else
-                curMSE = MSE(evalTreeArray(member.tree, X, options), y)
-                member.score = curMSE
-            end
-            numberSmallerAndBetter = 0
-            for i=1:(size-1)
-                if options.weighted
-                    hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, X, options), y, weights)
-                else
-                    hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, X, options), y)
-                end
-                if (hallOfFame.exists[size] && curMSE > hofMSE)
-                    numberSmallerAndBetter += 1
-                end
-            end
-            betterThanAllSmaller = (numberSmallerAndBetter == 0)
-            if betterThanAllSmaller
-                push!(dominating, member)
-            end
-        end
-    end
-    return dominating
-end
-
