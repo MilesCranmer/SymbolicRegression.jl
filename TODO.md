@@ -2,16 +2,16 @@
 
 - [ ] Create mechanism to convert back and forth between Julia expression and Node()
     - Then, we can use the Julia simplification library!
+    - Just need to run an eval() on `stringTree`.
 - [ ] Sort these todo lists by priority
 
 
 ## Pure Julia cleanup
 
 
-- Add back weighted
+- [ ] Add back weighted
     - Use "data" struct?
-- Use SymbolicRegression.jl in Python frontend
-- Use generic types - should pass type to option, and this will set up everything.
+- [ ] Use SymbolicRegression.jl in Python frontend
 
 
 ## Feature ideas
@@ -148,3 +148,4 @@ end
 - [x] Record density over complexity. Favor equations that have a density we have not explored yet. Want the final density to be evenly distributed.
 - [x] Do printing from Python side. Then we can do simplification and pretty-printing.
 - [x] Sympy printing
+- [x] Use generic types - should pass type to option, and this will set up everything.
