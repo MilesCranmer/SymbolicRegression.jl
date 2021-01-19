@@ -30,7 +30,7 @@ function cube(x::T)::T where {T}
 end
 
 function powm(x::T, y::T)::T where {T<:Real}
-	powm(abs(x), y)
+	pow(abs(x), y)
 end
 powm(x, y) = pow(abs(x), y)
 
