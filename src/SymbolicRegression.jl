@@ -1146,6 +1146,12 @@ function RunSR(X::Array{Float32, 2}, y::Array{Float32, 1},
 
     testConfiguration(options)
 
+    if length(X) > 10000
+        if !options.batching
+            println("Note: you are running with more than 10,000 datapoints. You should consider turning on batching (`options.batching`), and also if you need that many datapoints. Unless you have a large amount of noise (in which case you should smooth your dataset first), generally < 10,000 datapoints is enough to find a functional form.")
+        end
+    end
+
     if options.weighted
         avgy = sum(y .* weights)/sum(weights)
         baselineMSE = MSE(y, convert(Array{Float32, 1}, ones(size(X)[1]) .* avgy), weights)
