@@ -147,7 +147,7 @@ end
 
 
 # Get all the constants from a tree
-function getConstants(tree::Node)::AbstractArray{ConstantType, 1}
+function getConstants(tree::Node)::AbstractVector{ConstantType}
     if tree.degree == 0
         if tree.constant
             return [tree.val]

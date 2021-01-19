@@ -67,7 +67,7 @@ function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T},
 
     if options.weighted
         avgy = sum(y .* weights)/sum(weights)
-        baselineMSE = MSE(y, ones(T, size(X)[1]) .* avgy), weights
+        baselineMSE = MSE(y, ones(T, size(X)[1]) .* avgy, weights)
     else
         avgy = sum(y)/size(X)[1]
         baselineMSE = MSE(y, ones(T, size(X)[1]) .* avgy)
@@ -82,7 +82,7 @@ function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T},
     bestSubPops = [Population(X, y, baselineMSE, 1, options, nfeatures) for j=1:options.npopulations]
     hallOfFame = HallOfFame(options)
     actualMaxsize = options.maxsize + maxdegree
-    frequencyComplexity = ones(Float32, actualMaxsize)
+    frequencyComplexity = ones(T, actualMaxsize)
     curmaxsize = 3
     if options.warmupMaxsize == 0
         curmaxsize = options.maxsize

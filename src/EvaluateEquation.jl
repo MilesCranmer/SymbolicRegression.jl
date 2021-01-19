@@ -19,7 +19,7 @@ function evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Uni
     clen = size(cX)[1]
     if tree.degree == 0
         if tree.constant
-            return fill(tree.val, clen)
+            return fill(convert(T, tree.val), clen)
         else
             return copy(cX[:, tree.val])
         end

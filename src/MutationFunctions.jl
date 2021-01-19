@@ -36,9 +36,9 @@ function mutateConstant(
     makeConstBigger = rand() > 0.5
 
     if makeConstBigger
-        node.val *= factor
+        node.val *= convert(ConstantType, factor)
     else
-        node.val /= factor
+        node.val /= convert(ConstantType, factor)
     end
 
     if rand() > options.probNegate
@@ -149,7 +149,7 @@ end
 
 function randomConstantNode(nfeatures::Int)::Node
     if rand() > 0.5
-        val = Float32(randn())
+        val = convert(ConstantType, randn())
     else
         val = rand(1:nfeatures)
     end
