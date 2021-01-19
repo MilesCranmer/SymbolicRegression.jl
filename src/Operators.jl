@@ -6,18 +6,42 @@ import SpecialFunctions: gamma, lgamma, erf, erfc, beta
 
 # Use some fast operators from https://github.com/JuliaLang/julia/blob/81597635c4ad1e8c2e1c5753fda4ec0e7397543f/base/fastmath.jl
 # Define allowed operators. Any julia operator can also be used.
-plus(x, y) = x + y #Do not change the name of this operator.
-sub(x, y) = x - y #Do not change the name of this operator.
-mult(x, y) = x * y #Do not change the name of this operator.
-square(x) = x * x
-cube(x) = x ^ 3
-pow(x, y) = pow(abs(x), y)
-div(x, y) = x / y
-logm(x) = log(abs(x) + 1f-8)
-logm2(x) = log2(abs(x) + 1f-8)
-logm10(x) = log10(abs(x) + 1f-8)
-sqrtm(x) = sqrt(abs(x))
-neg(x) = - x
+function plus(x::T, y::T)::T where {T<:AbstractFloat}
+	x + y #Do not change the name of this operator.
+end
+function sub(x::T, y::T)::T where {T<:AbstractFloat}
+	x - y #Do not change the name of this operator.
+end
+function mult(x::T, y::T)::T where {T<:AbstractFloat}
+	x * y #Do not change the name of this operator.
+end
+function square(x::T)::T where {T<:AbstractFloat}
+	x * x
+end
+function cube(x::T)::T where {T<:AbstractFloat}
+	x ^ 3
+end
+function pow(x::T, y::T)::T where {T<:AbstractFloat}
+	pow(abs(x), y)
+end
+function div(x::T, y::T)::T where {T<:AbstractFloat}
+	x / y
+end
+function logm(x::T)::T where {T<:AbstractFloat}
+	log(abs(x) + 1f-8)
+end
+function logm2(x::T)::T where {T<:AbstractFloat}
+	log2(abs(x) + 1f-8)
+end
+function logm10(x::T)::T where {T<:AbstractFloat}
+	log10(abs(x) + 1f-8)
+end
+function sqrtm(x::T)::T where {T<:AbstractFloat}
+	sqrt(abs(x))
+end
+function neg(x::T)::T where {T<:AbstractFloat}
+	- x
+end
 
 function greater(x::T, y::T)::T where {T<:AbstractFloat}
     if x > y
