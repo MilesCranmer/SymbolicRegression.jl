@@ -147,7 +147,7 @@ end
 
 
 # Get all the constants from a tree
-function getConstants(tree::Node)::Array{Float32, 1}
+function getConstants(tree::Node)::AbstractArray{T, 1} where {T<:AbstractFloat}
     if tree.degree == 0
         if tree.constant
             return [tree.val]
@@ -163,7 +163,7 @@ function getConstants(tree::Node)::Array{Float32, 1}
 end
 
 # Set all the constants inside a tree
-function setConstants(tree::Node, constants::Array{Float32, 1})
+function setConstants(tree::Node, constants::AbstractArray{T, 1}) where {T<:AbstractFloat}
     if tree.degree == 0
         if tree.constant
             tree.val = constants[1]

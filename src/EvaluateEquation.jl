@@ -1,5 +1,5 @@
 # The Val{i} optimizes it into a branching statement (https://discourse.julialang.org/t/meta-programming-an-if-else-statement-of-user-defined-length/53525)
-function BINOP!(x::Array{Float32, 1}, y::Array{Float32, 1}, ::Val{i}, ::Val{clen}, options::Options) where {i,clen}
+function BINOP!(x::AbstractArray{T, 1}, y::AbstractArray{T, 1}, ::Val{i}, ::Val{clen}, options::Options) where {i,clen,T<:AbstractFloat}
     op = options.binops[i]
     # broadcast!(op, x, x, y)
     @inbounds @simd for j=1:clen
@@ -7,7 +7,7 @@ function BINOP!(x::Array{Float32, 1}, y::Array{Float32, 1}, ::Val{i}, ::Val{clen
     end
 end
 
-function UNAOP!(x::Array{Float32, 1}, ::Val{i}, ::Val{clen}, options::Options) where {i,clen}
+function UNAOP!(x::AbstractArray{T, 1}, ::Val{i}, ::Val{clen}, options::Options) where {i,clen,T<:AbstractFloat}
     op = options.unaops[i]
     @inbounds @simd for j=1:clen
         x[j] = op(x[j])
@@ -15,7 +15,7 @@ function UNAOP!(x::Array{Float32, 1}, ::Val{i}, ::Val{clen}, options::Options) w
 end
 
 # Evaluate an equation over an array of datapoints
-function evalTreeArray(tree::Node, cX::Array{Float32, 2}, options::Options)::Union{Array{Float32, 1}, Nothing}
+function evalTreeArray(tree::Node, cX::AbstractArray{T, 2}, options::Options)::Union{AbstractArray{T, 1}, Nothing} where {T<:AbstractFloat}
     clen = size(cX)[1]
     if tree.degree == 0
         if tree.constant

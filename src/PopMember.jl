@@ -1,15 +1,18 @@
 # Define a member of population by equation, score, and age
-mutable struct PopMember
+mutable struct PopMember{T<:AbstractFloat}
     tree::Node
-    score::Float32
+    score::T
     birth::Integer
-
-    PopMember(t::Node, score::Float32) = new(t, score, getTime())
 
 end
 
+function PopMember(t::Node, score::T) where {T<:AbstractFloat}
+    PopMember{T}(t, score, getTime())
+end
 
-function PopMember(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, t::Node, options::Options)
+function PopMember(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
+                   baseline::T, t::Node,
+                   options::Options) where {T<:AbstractFloat}
     PopMember(t, scoreFunc(X, y, baseline, t, options))
 end
 

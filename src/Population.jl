@@ -1,19 +1,27 @@
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
-mutable struct Population
-    members::Array{PopMember, 1}
+mutable struct Population{T<:AbstractFloat}
+    members::Array{PopMember{T}, 1}
     n::Integer
-
-    Population(pop::Array{PopMember, 1}) = new(pop, size(pop)[1])
-    Population(pop::Array{PopMember, 1}, npop::Integer) = new(pop, npop)
-
 end
 
-function Population(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, npop::Integer, options::Options, nfeatures::Int)
+function Population(pop::Array{PopMember{T}, 1}) where {T<:AbstractFloat}
+    Population{T}(pop, size(pop)[1])
+end
+
+function Population(pop::Array{PopMember{T}, 1}, npop::Integer) where {T<:AbstractFloat}
+    Population{T}(pop, npop)
+end
+
+function Population(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
+                    baseline::T, npop::Integer, options::Options,
+                    nfeatures::Int) where {T<:AbstractFloat}
     Population([PopMember(X, y, baseline, genRandomTree(3, options, nfeatures), options) for i=1:npop], npop)
 end
 
-function Population(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, npop::Integer, nlength::Integer, options::Options, nfeatures::Int)
+function Population(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
+                    baseline::T, npop::Integer, nlength::Integer,
+                    options::Options, nfeatures::Int) where {T<:AbstractFloat}
     Population([PopMember(X, y, baseline, genRandomTree(nlength, options, nfeatures), options) for i=1:npop], npop)
 end
 
@@ -30,11 +38,15 @@ function bestOfSample(pop::Population, options::Options)::PopMember
     return sample.members[best_idx]
 end
 
-function finalizeScores(X::Array{Float32, 2}, y::Array{Float32, 1}, baseline::Float32, pop::Population, options::Options)::Population
+function finalizeScores(X::AbstractArray{T, 2}, y::AbstractArray{T, 1},
+                        baseline::T, pop::Population,
+                        options::Options)::Population where {T<:AbstractFloat}
     need_recalculate = options.batching
     if need_recalculate
         @inbounds @simd for member=1:pop.n
-            pop.members[member].score = scoreFunc(X, y, baseline, pop.members[member].tree, options)
+            pop.members[member].score = scoreFunc(X, y, baseline,
+                                                  pop.members[member].tree,
+                                                  options)
         end
     end
     return pop

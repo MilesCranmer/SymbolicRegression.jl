@@ -18,8 +18,8 @@ end
 
 # Randomly perturb a constant
 function mutateConstant(
-        tree::Node, T::Float32,
-        options::Options)::Node
+        tree::Node, temperature::T,
+        options::Options)::Node where {T<:AbstractFloat}
     # T is between 0 and 1.
 
     if countConstants(tree) == 0
@@ -30,8 +30,8 @@ function mutateConstant(
         node = randomNode(tree)
     end
 
-    bottom = 0.1f0
-    maxChange = options.perturbationFactor * T + 1.0f0 + bottom
+    bottom = convert(T, 0.1)
+    maxChange = options.perturbationFactor * temperature + convert(T, 1.0) + bottom
     factor = maxChange^Float32(rand())
     makeConstBigger = rand() > 0.5
 
