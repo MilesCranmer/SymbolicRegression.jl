@@ -69,10 +69,11 @@ end
 
 # Options
 
-- `binary_operators` array of Julia operators taking two scalar Float32
+- `binary_operators` **tuple** of Julia operators taking two scalar reals
     as arguments. Some are pre-defined in `operator.jl`.
-- `unary_operators` list, Same but for operators taking a single `Float32`.
-- `populations` int, Number of populations running; by default=procs.
+- `unary_operators` Same but for operators taking a single real as
+    input.
+- `npopulations` int, Number of populations running; by default=procs.
 - `niterations` int, Number of iterations of the algorithm to run. The best
     equations are printed, and migrate between populations, at the
     end of each.
@@ -126,8 +127,8 @@ end
 Default options:
 
 ```julia
-    binary_operators=[div, plus, mult],
-    unary_operators=[exp, cos],
+    binary_operators=(div, plus, mult),
+    unary_operators=(exp, cos),
     una_constraints=nothing,
     bin_constraints=nothing,
     ns=10,
