@@ -45,8 +45,8 @@ struct Options{A,B}
 end
 
 function Options(;
-    binary_operators=(div, plus, mult),
-    unary_operators=(exp, cos),
+    binary_operators::NTuple{nuna, Any}=(div, plus, mult),
+    unary_operators::NTuple{nbin, Any}=(exp, cos),
     bin_constraints=nothing,
     una_constraints=nothing,
     topn=10,
@@ -78,17 +78,17 @@ function Options(;
     verbosity=convert(Int, 1e9),
     probNegate=0.01f0,
     printZeroIndex=false
-   )
+   ) where {nuna,nbin}
 
     if hofFile == nothing
         hofFile = "hall_of_fame.csv" #TODO - put in date/time string here
     end
 
     if una_constraints == nothing
-        una_constraints = [-1 for i=1:length(unary_operators)]
+        una_constraints = [-1 for i=1:nuna]
     end
     if bin_constraints == nothing
-        bin_constraints = [(-1, -1) for i=1:length(binary_operators)]
+        bin_constraints = [(-1, -1) for i=1:nbin]
     end
 
     if maxdepth == nothing
@@ -98,9 +98,6 @@ function Options(;
     if npopulations == nothing
         npopulations = nworkers()
     end
-
-    nuna = length(unary_operators)
-    nbin = length(binary_operators)
 
     Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, topn, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, printZeroIndex)
 end
