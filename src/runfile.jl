@@ -1,5 +1,0 @@
-@everywhere include("hyperparams.jl")
-@everywhere include("dataset.jl")
-@everywhere include("sr.jl")
-# fullRun(5, npop=1000, ncyclesperiteration=1000, fractionReplaced=0.100000f0, verbosity=round(Int32, 1000000000.000000), topn=10)
-# rmprocs(nprocs)
