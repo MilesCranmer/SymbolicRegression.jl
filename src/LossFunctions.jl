@@ -6,7 +6,7 @@ function SSE(x::AbstractArray{T}, y::AbstractArray{T})::T where {T<:Real}
     return sum(diff .* diff)
 end
 function SSE(x::Nothing, y::AbstractArray{T})::T where {T<:Real}
-    return 1f9
+    return 1000000000
 end
 
 # Sum of square error between two arrays, with weights
@@ -20,7 +20,7 @@ end
 
 # Mean of square error between two arrays
 function MSE(x::Nothing, y::AbstractArray{T})::T where {T<:Real}
-    return convert(T, 1f9)
+    return convert(T, 1000000000)
 end
 
 # Mean of square error between two arrays
@@ -30,7 +30,7 @@ end
 
 # Mean of square error between two arrays
 function MSE(x::Nothing, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
-    return convert(T, 1f9)
+    return convert(T, 1000000000)
 end
 
 # Mean of square error between two arrays
@@ -44,7 +44,7 @@ function scoreFunc(X::AbstractMatrix{T}, y::AbstractVector{T},
                    options::Options)::T where {T<:Real}
     prediction = evalTreeArray(tree, X, options)
     if prediction === nothing
-        return 1f9
+        return convert(T, 1000000000)
     end
     if options.weighted
         mse = MSE(prediction, y, weights)
@@ -62,14 +62,14 @@ function scoreFuncBatch(X::AbstractMatrix{T}, y::AbstractVector{T},
     batch_X = X[batch_idx, :]
     prediction = evalTreeArray(tree, batch_X, options)
     if prediction === nothing
-        return convert(T, 1f9)
+        return convert(T, 1000000000)
     end
-    size_adjustment = convert(T, 1f0)
+    size_adjustment = convert(T, 1)
     batch_y = y[batch_idx]
     if options.weighted
         batch_w = weights[batch_idx]
         mse = MSE(prediction, batch_y, batch_w)
-        size_adjustment = convert(T, 1f0) * size(X)[1] / options.batchSize
+        size_adjustment = convert(T, 1) * size(X)[1] / options.batchSize
     else
         mse = MSE(prediction, batch_y)
     end

@@ -9,8 +9,8 @@ function SRCycle(X::AbstractMatrix{T}, y::AbstractVector{T}, baseline::T,
         options::Options
         )::Population where {T<:Real}
 
-    top = convert(T, 1.0)
-    allT = LinRange(top, convert(T, 0.0), ncycles)
+    top = convert(T, 1)
+    allT = LinRange(top, convert(T, 0), ncycles)
     for temperature in 1:size(allT)[1]
         if options.annealing
             pop = regEvolCycle(X, y, baseline, pop, allT[temperature], curmaxsize, frequencyComplexity, options)

@@ -30,8 +30,8 @@ function mutateConstant(
         node = randomNode(tree)
     end
 
-    bottom = convert(T, 0.1)
-    maxChange = options.perturbationFactor * temperature + convert(T, 1.0) + bottom
+    bottom = convert(T, 1//10)
+    maxChange = options.perturbationFactor * temperature + convert(T, 1) + bottom
     factor = maxChange^Float32(rand())
     makeConstBigger = rand() > 0.5
 

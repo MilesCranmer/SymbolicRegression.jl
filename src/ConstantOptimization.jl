@@ -29,7 +29,7 @@ function optimizeConstants(X::AbstractMatrix{T}, y::AbstractVector{T},
         result = optimize(f, x0, algorithm(), Optim.Options(iterations=100))
         # Try other initial conditions:
         for i=1:options.nrestarts
-            new_start = x0 .* (convert(ConstantType, 1.0) .+ convert(ConstantType, 0.5)*randn(ConstantType, size(x0)[1]))
+            new_start = x0 .* (convert(ConstantType, 1) .+ convert(ConstantType, 1//2)*randn(ConstantType, size(x0)[1]))
             tmpresult = optimize(f, new_start, algorithm(), Optim.Options(iterations=100))
 
             if tmpresult.minimum < result.minimum
