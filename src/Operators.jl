@@ -6,17 +6,17 @@ import SpecialFunctions: gamma, lgamma, erf, erfc, beta
 
 # Use some fast operators from https://github.com/JuliaLang/julia/blob/81597635c4ad1e8c2e1c5753fda4ec0e7397543f/base/fastmath.jl
 # Define allowed operators. Any julia operator can also be used.
-function plus(x::T, y::T)::T where {T}
+function plus(x::T, y::T)::T where {T<:Real}
 	x + y #Do not change the name of this operator.
 end
 plus(x, y) = x + y
 
-function sub(x::T, y::T)::T where {T}
+function sub(x::T, y::T)::T where {T<:Real}
 	x - y #Do not change the name of this operator.
 end
 sub(x, y) = x - y
 
-function mult(x::T, y::T)::T where {T}
+function mult(x::T, y::T)::T where {T<:Real}
 	x * y #Do not change the name of this operator.
 end
 mult(x, y) = x * y
@@ -29,12 +29,12 @@ function cube(x::T)::T where {T}
 	x ^ 3
 end
 
-function powm(x::T, y::T)::T where {T}
+function powm(x::T, y::T)::T where {T<:Real}
 	powm(abs(x), y)
 end
 powm(x, y) = pow(abs(x), y)
 
-function div(x::T, y::T)::T where {T}
+function div(x::T, y::T)::T where {T<:Real}
 	x / y
 end
 div(x, y) = x / y
