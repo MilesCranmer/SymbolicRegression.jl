@@ -1,65 +1,5 @@
 # TODO
 
-- [x] Async threading, and have a server of equations. So that threads aren't waiting for others to finish.
-- [x] Print out speed of equation evaluation over time. Measure time it takes per cycle
-- [x] Add ability to pass an operator as an anonymous function string. E.g., `binary_operators=["g(x, y) = x+y"]`.
-- [x] Add error bar capability (thanks Johannes Buchner for suggestion)
-- [x] Why don't the constants continually change? It should optimize them every time the equation appears.
-    - Restart the optimizer to help with this.
-- [x] Add several common unary and binary operators; list these.
-- [x] Try other initial conditions for optimizer
-- [x] Make scaling of changes to constant a hyperparameter
-- [x] Make deletion op join deleted subtree to parent
-- [x] Update hall of fame every iteration?
-    - Seems to overfit early if we do this.
-- [x] Consider adding mutation to pass an operator in through a new binary operator (e.g., exp(x3)->plus(exp(x3), ...))
-    - (Added full insertion operator
-- [x] Add a node at the top of a tree
-- [x] Insert a node at the top of a subtree
-- [x] Record very best individual in each population, and return at end.
-- [x] Write our own tree copy operation; deepcopy() is the slowest operation by far.
-- [x] Hyperparameter tune
-- [x] Create a benchmark for accuracy
-- [x] Add interface for either defining an operation to learn, or loading in arbitrary dataset.
-    - Could just write out the dataset in julia, or load it.
-- [x] Create a Python interface
-- [x] Explicit constant optimization on hall-of-fame
-    - Create method to find and return all constants, from left to right
-    - Create method to find and set all constants, in same order
-    - Pull up some optimization algorithm and add it. Keep the package small!
-- [x] Create a benchmark for speed
-- [x] Simplify subtrees with only constants beneath them. Or should I? Maybe randomly simplify sometimes?
-- [x] Record hall of fame
-- [x] Optionally (with hyperparameter) migrate the hall of fame, rather than current bests
-- [x] Test performance of reduced precision integers
-    - No effect
-- [x] Create struct to pass through all hyperparameters, instead of treating as constants
-    - Make sure doesn't affect performance
-- [x] Rename package to avoid trademark issues
-    - PySR?
-- [x] Put on PyPI
-- [x] Treat baseline as a solution.
-- [x] Print score alongside MSE: \delta \log(MSE)/\delta \log(complexity)
-- [x] Calculating the loss function - there is duplicate calculations happening.
-- [x] Declaration of the weights array every iteration
-- [x] Sympy evaluation
-- [x] Threaded recursion
-- [x] Test suite
-- [x] Performance: - Use an enum for functions instead of storing them?
-    - Gets ~40% speedup on small test.
-- [x] Use @fastmath
-- [x] Try @spawn over each sub-population. Do random sort, compute mutation for each, then replace 10% oldest.
-- [x] Control max depth, rather than max number of nodes?
-- [x] Allow user to pass names for variables - use these when printing
-- [x] Check for domain errors in an equation quickly before actually running the entire array over it. (We do this now recursively - every single equation is checked for nans/infs when being computed.)
-- [x] read the docs page
-- [x] Create backup csv file so always something to copy from for `PySR`. Also use random hall of fame file by default. Call function to read from csv after running, so dont need to run again. Dump scores alongside MSE to .csv (and return with Pandas).
-- [x] Better cleanup of zombie processes after <ctl-c>
-- [x] Consider printing output sorted by score, not by complexity.
-- [x] Increase max complexity slowly over time up to the actual max.
-- [x] Record density over complexity. Favor equations that have a density we have not explored yet. Want the final density to be evenly distributed.
-- [x] Do printing from Python side. Then we can do simplification and pretty-printing.
-- [x] Sympy printing
 - [ ] Sort these todo lists by priority
 
 
@@ -143,3 +83,66 @@ end
 - [ ] Add GPU capability?
      - Not sure if possible, as binary trees are the real bottleneck.
      - Could generate on CPU, evaluate score on GPU?
+
+# Completed
+
+- [x] Async threading, and have a server of equations. So that threads aren't waiting for others to finish.
+- [x] Print out speed of equation evaluation over time. Measure time it takes per cycle
+- [x] Add ability to pass an operator as an anonymous function string. E.g., `binary_operators=["g(x, y) = x+y"]`.
+- [x] Add error bar capability (thanks Johannes Buchner for suggestion)
+- [x] Why don't the constants continually change? It should optimize them every time the equation appears.
+    - Restart the optimizer to help with this.
+- [x] Add several common unary and binary operators; list these.
+- [x] Try other initial conditions for optimizer
+- [x] Make scaling of changes to constant a hyperparameter
+- [x] Make deletion op join deleted subtree to parent
+- [x] Update hall of fame every iteration?
+    - Seems to overfit early if we do this.
+- [x] Consider adding mutation to pass an operator in through a new binary operator (e.g., exp(x3)->plus(exp(x3), ...))
+    - (Added full insertion operator
+- [x] Add a node at the top of a tree
+- [x] Insert a node at the top of a subtree
+- [x] Record very best individual in each population, and return at end.
+- [x] Write our own tree copy operation; deepcopy() is the slowest operation by far.
+- [x] Hyperparameter tune
+- [x] Create a benchmark for accuracy
+- [x] Add interface for either defining an operation to learn, or loading in arbitrary dataset.
+    - Could just write out the dataset in julia, or load it.
+- [x] Create a Python interface
+- [x] Explicit constant optimization on hall-of-fame
+    - Create method to find and return all constants, from left to right
+    - Create method to find and set all constants, in same order
+    - Pull up some optimization algorithm and add it. Keep the package small!
+- [x] Create a benchmark for speed
+- [x] Simplify subtrees with only constants beneath them. Or should I? Maybe randomly simplify sometimes?
+- [x] Record hall of fame
+- [x] Optionally (with hyperparameter) migrate the hall of fame, rather than current bests
+- [x] Test performance of reduced precision integers
+    - No effect
+- [x] Create struct to pass through all hyperparameters, instead of treating as constants
+    - Make sure doesn't affect performance
+- [x] Rename package to avoid trademark issues
+    - PySR?
+- [x] Put on PyPI
+- [x] Treat baseline as a solution.
+- [x] Print score alongside MSE: \delta \log(MSE)/\delta \log(complexity)
+- [x] Calculating the loss function - there is duplicate calculations happening.
+- [x] Declaration of the weights array every iteration
+- [x] Sympy evaluation
+- [x] Threaded recursion
+- [x] Test suite
+- [x] Performance: - Use an enum for functions instead of storing them?
+    - Gets ~40% speedup on small test.
+- [x] Use @fastmath
+- [x] Try @spawn over each sub-population. Do random sort, compute mutation for each, then replace 10% oldest.
+- [x] Control max depth, rather than max number of nodes?
+- [x] Allow user to pass names for variables - use these when printing
+- [x] Check for domain errors in an equation quickly before actually running the entire array over it. (We do this now recursively - every single equation is checked for nans/infs when being computed.)
+- [x] read the docs page
+- [x] Create backup csv file so always something to copy from for `PySR`. Also use random hall of fame file by default. Call function to read from csv after running, so dont need to run again. Dump scores alongside MSE to .csv (and return with Pandas).
+- [x] Better cleanup of zombie processes after <ctl-c>
+- [x] Consider printing output sorted by score, not by complexity.
+- [x] Increase max complexity slowly over time up to the actual max.
+- [x] Record density over complexity. Favor equations that have a density we have not explored yet. Want the final density to be evenly distributed.
+- [x] Do printing from Python side. Then we can do simplification and pretty-printing.
+- [x] Sympy printing
