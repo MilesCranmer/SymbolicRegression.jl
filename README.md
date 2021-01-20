@@ -15,7 +15,7 @@ a Python frontend.
 Install in Julia with:
 ```julia
 using Pkg
-Pkg.add(SymbolicRegression)
+Pkg.add("SymbolicRegression")
 ```
 
 Run distributed on four processes with:
