@@ -1,5 +1,4 @@
 using SymbolicUtils
-using SymbolicUtils.Rewriters
 
 const AllEquationTypes = Union{<:Real,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
 
@@ -18,7 +17,7 @@ function multiply_powers(eqn::T, op::F)::AllEquationTypes where {F<:Function,T<:
 		if n == 1
 			return l
 		elseif n == -1
-			return 1 / l
+			return 1.0 / l
 		elseif n > 1
 			return reduce(*, [l for i=1:n])
 		elseif n < -1
@@ -40,9 +39,6 @@ end
 
 function custom_simplify(eqn::T, options::Options)::AllEquationTypes where {T<:AllEquationTypes}
 
-	# Full number simplifier:
-	# f = Fixpoint(number_simplifier())
-	# eqn = PassThrough(f)(to_symbolic(eqn))
 	eqn = simplify(eqn) #,SymbolicUtils.RuleSet(RULES))
 
 	# Remove power laws
