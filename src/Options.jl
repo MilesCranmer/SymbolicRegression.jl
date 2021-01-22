@@ -46,7 +46,8 @@ function Options(;
     unary_operators::NTuple{nuna, Any}=(exp, cos),
     bin_constraints=nothing,
     una_constraints=nothing,
-    topn=10,
+    ns=10, #1 sampled from every ns per mutation
+    topn=30, #samples to return per population
     parsimony=0.000100f0,
     alpha=0.100000f0,
     maxsize=20,
@@ -93,7 +94,7 @@ function Options(;
         npopulations = nworkers()
     end
 
-    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, topn, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin)
+    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin)
 end
 
 
