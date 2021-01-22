@@ -9,45 +9,46 @@ import SpecialFunctions: gamma, lgamma, erf, erfc, beta
 function plus(x::T, y::T)::T where {T<:Real}
 	x + y #Do not change the name of this operator.
 end
-plus(x, y) = x + y
-
 function sub(x::T, y::T)::T where {T<:Real}
 	x - y #Do not change the name of this operator.
 end
-sub(x, y) = x - y
-
 function mult(x::T, y::T)::T where {T<:Real}
 	x * y #Do not change the name of this operator.
 end
-mult(x, y) = x * y
-
-function square(x::T)::T where {T}
+function square(x::T)::T where {T<:Real}
 	x * x
 end
-
-function cube(x::T)::T where {T}
+function cube(x::T)::T where {T<:Real}
 	x ^ 3
 end
-
 function powm(x::T, y::T)::T where {T<:Real}
 	abs(x)^y
 end
-powm(x, y) = powm(abs(x), y)
-
 function div(x::T, y::T)::T where {T<:Real}
 	x / y
 end
-div(x, y) = x / y
-
-function logm(x::T)::T where {T}
+function logm(x::T)::T where {T<:Real}
     log(abs(x) + convert(T, 1f-8))
 end
-function logm2(x::T)::T where {T}
+function logm2(x::T)::T where {T<:Real}
     log2(abs(x) + convert(T, 1f-8))
 end
-function logm10(x::T)::T where {T}
+function logm10(x::T)::T where {T<:Real}
     log10(abs(x) + convert(T, 1f-8))
 end
+
+# Generics:
+square(x) = x * x
+cube(x) = x * x * x
+plus(x, y) = x + y
+sub(x, y) = x - y
+mult(x, y) = x * y
+powm(x, y) = abs(x)^y
+div(x, y) = x / y
+logm(x) = log(abs(x) + 1f-8)
+logm2(x) = log2(abs(x) + 1f-8)
+logm10(x) = log10(abs(x) + 1f-8)
+
 function sqrtm(x::T)::T where {T}
 	sqrt(abs(x))
 end
