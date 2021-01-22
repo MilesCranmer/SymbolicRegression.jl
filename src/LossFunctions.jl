@@ -5,22 +5,11 @@ function SSE(x::AbstractArray{T}, y::AbstractArray{T})::T where {T<:Real}
     diff = (x - y)
     return sum(diff .* diff)
 end
-function SSE(x::Nothing, y::AbstractArray{T})::T where {T<:Real}
-    return 1000000000
-end
 
 # Sum of square error between two arrays, with weights
 function SSE(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
     diff = (x - y)
     return sum(diff .* diff .* w)
-end
-function SSE(x::Nothing, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
-    return Nothing
-end
-
-# Mean of square error between two arrays
-function MSE(x::Nothing, y::AbstractArray{T})::T where {T<:Real}
-    return convert(T, 1000000000)
 end
 
 # Mean of square error between two arrays
@@ -29,49 +18,54 @@ function MSE(x::AbstractArray{T}, y::AbstractArray{T})::T where {T<:Real}
 end
 
 # Mean of square error between two arrays
-function MSE(x::Nothing, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
-    return convert(T, 1000000000)
-end
-
-# Mean of square error between two arrays
 function MSE(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
     return SSE(x, y, w)/sum(w)
 end
 
+function SSE(x::Nothing, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
+    return convert(T, 1000000000)
+end
+function MSE(x::Nothing, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
+    return convert(T, 1000000000)
+end
+function SSE(x::Nothing, y::AbstractArray{T})::T where {T<:Real}
+    return convert(T, 1000000000)
+end
+function MSE(x::Nothing, y::AbstractArray{T})::T where {T<:Real}
+    return convert(T, 1000000000)
+end
+
+# Loss function. Only MSE implemented right now. TODO
+# Also need to put actual loss function in scoreFuncBatch!
+function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options)::T where {T<:Real}
+    if dataset.weighted
+        return MSE(evalTreeArray(tree, dataset.X, options), dataset.y, dataset.weights)
+    else
+        return MSE(evalTreeArray(tree, dataset.X, options), dataset.y)
+    end
+end
+
 # Score an equation
-function scoreFunc(X::AbstractMatrix{T}, y::AbstractVector{T},
+function scoreFunc(dataset::Dataset{T},
                    baseline::T, tree::Node,
                    options::Options)::T where {T<:Real}
-    prediction = evalTreeArray(tree, X, options)
-    if prediction === nothing
-        return convert(T, 1000000000)
-    end
-    if options.weighted
-        mse = MSE(prediction, y, weights)
-    else
-        mse = MSE(prediction, y)
-    end
+    mse = EvalLoss(tree, dataset, options)
     return mse / baseline + countNodes(tree)*options.parsimony
 end
 
 # Score an equation with a small batch
-function scoreFuncBatch(X::AbstractMatrix{T}, y::AbstractVector{T},
-                        baseline::T, tree::Node, options::Options)::T where {T<:Real}
-    # options.batchSize
-    batch_idx = randperm(size(X)[1])[1:options.batchSize]
-    batch_X = X[batch_idx, :]
+function scoreFuncBatch(dataset::Dataset{T}, baseline::T,
+                        tree::Node, options::Options)::T where {T<:Real}
+    batchSize = options.batchSize
+    batch_idx = randperm(dataset.n)[1:options.batchSize]
+    batch_X = dataset.X[batch_idx, :]
+    batch_y = dataset.y[batch_idx]
     prediction = evalTreeArray(tree, batch_X, options)
-    if prediction === nothing
-        return convert(T, 1000000000)
-    end
-    size_adjustment = convert(T, 1)
-    batch_y = y[batch_idx]
-    if options.weighted
-        batch_w = weights[batch_idx]
-        mse = MSE(prediction, batch_y, batch_w)
-        size_adjustment = convert(T, 1) * size(X)[1] / options.batchSize
-    else
+    if dataset.weighted
         mse = MSE(prediction, batch_y)
+    else
+        batch_w = dataset.weights[batch_idx]
+        mse = MSE(prediction, batch_y, batch_w)
     end
-    return size_adjustment * mse / baseline + countNodes(tree)*options.parsimony
+    return mse / baseline + countNodes(tree) * options.parsimony
 end

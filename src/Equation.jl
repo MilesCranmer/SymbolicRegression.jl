@@ -54,31 +54,27 @@ function countDepth(tree::Node)::Integer
 end
 
 # Convert an equation to a string
-function stringTree(tree::Node, options::Options)::String
+function stringTree(tree::Node, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)::String
     if tree.degree == 0
         if tree.constant
             return string(tree.val)
         else
-            if options.useVarMap
-                return varMap[tree.val]
+            if varMap == nothing
+                return "x$(tree.val)"
             else
-                if options.printZeroIndex
-                    return "x$(tree.val - 1)"
-                else
-                    return "x$(tree.val)"
-                end
+                return varMap[tree.val]
             end
         end
     elseif tree.degree == 1
-        return "$(options.unaops[tree.op])($(stringTree(tree.l, options)))"
+        return "$(options.unaops[tree.op])($(stringTree(tree.l, options, varMap=varMap)))"
     else
-        return "$(options.binops[tree.op])($(stringTree(tree.l, options)), $(stringTree(tree.r, options)))"
+        return "$(options.binops[tree.op])($(stringTree(tree.l, options, varMap=varMap)), $(stringTree(tree.r, options, varMap=varMap)))"
     end
 end
 
 # Print an equation
-function printTree(tree::Node, options::Options)
-    println(stringTree(tree, options))
+function printTree(tree::Node, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
+    println(stringTree(tree, options, varMap=varMap))
 end
 
 # Return a random node from the tree

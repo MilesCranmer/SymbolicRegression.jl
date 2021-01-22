@@ -10,9 +10,9 @@ function PopMember(t::Node, score::T) where {T<:Real}
     PopMember{T}(t, score, getTime())
 end
 
-function PopMember(X::AbstractMatrix{T}, y::AbstractVector{T},
+function PopMember(dataset::Dataset{T},
                    baseline::T, t::Node,
                    options::Options) where {T<:Real}
-    PopMember(t, scoreFunc(X, y, baseline, t, options))
+    PopMember(t, scoreFunc(dataset, baseline, t, options))
 end
 

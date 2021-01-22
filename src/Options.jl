@@ -3,7 +3,7 @@
 # into the SR call itself, rather than
 # passing huge options at once.
 
-struct Options{A,B}
+struct Options{A<:NTuple{N,Any} where {N},B<:NTuple{M,Any} where {M}}
 
     binops::A
     unaops::B
@@ -24,10 +24,8 @@ struct Options{A,B}
     nrestarts::Int
     perturbationFactor::Float32
     annealing::Bool
-    weighted::Bool
     batching::Bool
     batchSize::Int
-    useVarMap::Bool
     mutationWeights::Array{Real, 1}
     warmupMaxsize::Int
     limitPowComplexity::Bool
@@ -40,7 +38,6 @@ struct Options{A,B}
     probNegate::Float32
     nuna::Integer
     nbin::Integer
-    printZeroIndex::Bool
 
 end
 
@@ -64,10 +61,8 @@ function Options(;
     nrestarts=3,
     perturbationFactor=1.000000f0,
     annealing=true,
-    weighted=false,
     batching=false,
     batchSize=50,
-    useVarMap=false,
     mutationWeights=[10.000000, 1.000000, 1.000000, 3.000000, 3.000000, 0.010000, 1.000000, 1.000000],
     warmupMaxsize=0,
     limitPowComplexity=false,
@@ -77,7 +72,6 @@ function Options(;
     fractionReplaced=0.1f0,
     verbosity=convert(Int, 1e9),
     probNegate=0.01f0,
-    printZeroIndex=false
    ) where {nuna,nbin}
 
     if hofFile == nothing
@@ -99,7 +93,7 @@ function Options(;
         npopulations = nworkers()
     end
 
-    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, topn, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, printZeroIndex)
+    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, topn, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin)
 end
 
 

@@ -1,24 +1,23 @@
-struct Dataset{T} where {T<:Real}
+struct Dataset{T<:Real}
 
     X::AbstractMatrix{T}
     y::AbstractVector{T}
     n::Int
     nfeatures::Int
     weighted::Bool
-    weights::Union{AbstractVector{T}, nothing}
+    weights::Union{AbstractVector{T}, Nothing}
     varMap::Array{String, 1}
-    useVarMap::Array{String, 1}
 
 end
 
-function Dataset(;
+function Dataset(
         X::AbstractMatrix{T},
-        y::AbstractVector{T},
-        weights::Union{AbstractVector{T}, nothing}=nothing,
-        varMap=nothing
-   ) where {T<:Real}
+        y::AbstractVector{T};
+        weights::Union{AbstractVector{T}, Nothing}=nothing,
+        varMap::Union{Array{String, 1}, Nothing}=nothing
+       ) where {T<:Real}
 
-    n = length(X)
+    n = size(X)[1]
     nfeatures = size(X)[2]
     weighted = true
     if weights == nothing

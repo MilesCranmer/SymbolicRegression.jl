@@ -1,15 +1,14 @@
 using Optim
 
 # Proxy function for optimization
-function optFunc(x::Vector{ConstantType}, X::AbstractMatrix{T},
-                 y::AbstractVector{T}, baseline::T,
+function optFunc(x::Vector{ConstantType}, dataset::Dataset{T}, baseline::T,
                  tree::Node, options::Options)::T where {T<:Real}
     setConstants(tree, x)
-    return scoreFunc(X, y, baseline, tree, options)
+    return scoreFunc(dataset, baseline, tree, options)
 end
 
 # Use Nelder-Mead to optimize the constants in an equation
-function optimizeConstants(X::AbstractMatrix{T}, y::AbstractVector{T},
+function optimizeConstants(dataset::Dataset{T},
                            baseline::T, member::PopMember,
                            options::Options)::PopMember where {T<:Real}
 
@@ -18,7 +17,7 @@ function optimizeConstants(X::AbstractMatrix{T}, y::AbstractVector{T},
         return member
     end
     x0 = getConstants(member.tree)
-    f(x::Vector{ConstantType})::T = optFunc(x, X, y, baseline, member.tree, options)
+    f(x::Vector{ConstantType})::T = optFunc(x, dataset, baseline, member.tree, options)
     if size(x0)[1] == 1
         algorithm = Newton
     else

@@ -2,7 +2,7 @@ using Random: shuffle!
 
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample
-function regEvolCycle(X::AbstractMatrix{T}, y::AbstractVector{T},
+function regEvolCycle(dataset::Dataset{T},
                       baseline::T, pop::Population, temperature::T, curmaxsize::Integer,
                       frequencyComplexity::AbstractVector{T},
                       options::Options)::Population where {T<:Real}
@@ -26,7 +26,7 @@ function regEvolCycle(X::AbstractMatrix{T}, y::AbstractVector{T},
                 end
             end
             allstar = pop.members[best_idx]
-            babies[i] = iterate(X, y, baseline, allstar, temperature,
+            babies[i] = iterate(dataset, baseline, allstar, temperature,
                                 curmaxsize, frequencyComplexity, options)
         end
 
@@ -38,7 +38,7 @@ function regEvolCycle(X::AbstractMatrix{T}, y::AbstractVector{T},
     else
         for i=1:round(Integer, pop.n/options.ns)
             allstar = bestOfSample(pop, options)
-            baby = iterate(X, y, baseline, allstar, temperature,
+            baby = iterate(dataset, baseline, allstar, temperature,
                            curmaxsize, frequencyComplexity, options)
             #printTree(baby.tree)
             oldest = argmin([pop.members[member].birth for member=1:pop.n])
