@@ -1,9 +1,8 @@
 using SymbolicUtils
 
-const AllSymbolicEquationTypes = Union{SymbolicUtils.Sym{Real},}
-const AllEquationTypes = Union{ConstantType,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
+include("CustomSymbolicUtilsSimplification.jl")
 
-function to_symbolic(tree::Node, options::Options;
+function node_to_symbolic(tree::Node, options::Options;
                      varMap::Union{Array{String, 1}, Nothing}=nothing
                     )::AllEquationTypes
     if tree.degree == 0
@@ -17,23 +16,23 @@ function to_symbolic(tree::Node, options::Options;
             end
         end
     elseif tree.degree == 1
-        left_side = to_symbolic(tree.l, options, varMap=varMap)
+        left_side = node_to_symbolic(tree.l, options, varMap=varMap)
         return options.unaops[tree.op](left_side)
     else
-        left_side = to_symbolic(tree.l, options, varMap=varMap)
-        right_side = to_symbolic(tree.r, options, varMap=varMap)
+        left_side = node_to_symbolic(tree.l, options, varMap=varMap)
+        right_side = node_to_symbolic(tree.r, options, varMap=varMap)
         return options.binops[tree.op](left_side, right_side)
     end
 end
 
 # Just constant
-function from_symbolic(eqn::T, options::Options;
+function symbolic_to_node(eqn::T, options::Options;
                      varMap::Union{Array{String, 1}, Nothing}=nothing)::Node where {T<:Real}
     return Node(convert(ConstantType, eqn))
 end
 
 # Just variable
-function from_symbolic(eqn::T, options::Options;
+function symbolic_to_node(eqn::T, options::Options;
                      varMap::Union{Array{String, 1}, Nothing}=nothing)::Node where {T<:SymbolicUtils.Sym{<:Number}}
     return Node(varMap_to_index(eqn.name, varMap))
 end
@@ -43,11 +42,11 @@ function _multiarg_split(op_idx::Int, eqn::Array{AllEquationTypes, 1},
                        )::Node
     if length(eqn) == 2
         return Node(op_idx,
-                    from_symbolic(eqn[1], options, varMap),
-                    from_symbolic(eqn[2], options, varMap))
+                    symbolic_to_node(eqn[1], options, varMap),
+                    symbolic_to_node(eqn[2], options, varMap))
     elseif length(eqn) == 3
         return Node(op_idx,
-                    from_symbolic(eqn[1], options, varMap),
+                    symbolic_to_node(eqn[1], options, varMap),
                     _multiarg_split(op_idx, eqn[2:3], options, varMap))
     else
         # Minimize depth:
@@ -59,11 +58,11 @@ function _multiarg_split(op_idx::Int, eqn::Array{AllEquationTypes, 1},
 end
 
 # Equation:
-function from_symbolic(eqn::T, options::Options;
+function symbolic_to_node(eqn::T, options::Options;
                        varMap::Union{Array{String, 1}, Nothing}=nothing
                   )::Node where {T<:SymbolicUtils.Term{<:Number}}
     args = SymbolicUtils.arguments(eqn)
-    l = from_symbolic(args[1], options)
+    l = symbolic_to_node(args[1], options)
     nargs = length(args)
     op = SymbolicUtils.operation(eqn)
     if nargs == 1
@@ -72,7 +71,7 @@ function from_symbolic(eqn::T, options::Options;
     else
         op_idx = binop_to_index(op, options)
         if nargs == 2
-            r = from_symbolic(args[2], options)
+            r = symbolic_to_node(args[2], options)
             return Node(op_idx, l, r)
         else
             # TODO: Assert operator is +, *

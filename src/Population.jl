@@ -11,9 +11,9 @@ Population(dataset::Dataset{T}, baseline::T;
            npop::Integer, nlength::Integer=3,
            options::Options,
            nfeatures::Int) where {T<:Real} = Population([PopMember(dataset, baseline, genRandomTree(nlength, options, nfeatures), options) for i=1:npop], npop)
-Population(X::AbstractMatrix{T}, y::AbstractVector{T},
-           baseline::T;
-           npop::Integer, options::Options,
+Population(X::AbstractMatrix{T}, y::AbstractVector{T}, baseline::T;
+           npop::Integer, nlength::Integer=3,
+           options::Options,
            nfeatures::Int) where {T<:Real} = Population(Dataset(X, y), baseline, npop=npop, options=options, nfeatures=nfeatures)
 
 # Sample 10 random members of the population, and make a new one

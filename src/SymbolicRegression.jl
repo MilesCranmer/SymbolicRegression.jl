@@ -14,8 +14,9 @@ export Population,
     printTree,
     stringTree,
     evalTreeArray,
-    to_symbolic,
-    from_symbolic,
+    node_to_symbolic,
+    symbolic_to_node,
+    custom_simplify,
 
     #Operators:
     plus,
