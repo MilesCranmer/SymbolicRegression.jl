@@ -15,6 +15,7 @@ export Population,
     stringTree,
     evalTreeArray,
     to_symbolic,
+    from_symbolic,
 
     #Operators:
     plus,
