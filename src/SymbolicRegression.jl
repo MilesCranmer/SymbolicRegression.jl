@@ -48,6 +48,8 @@ include("LossFunctions.jl")
 include("Utils.jl")
 include("EvaluateEquation.jl")
 include("MutationFunctions.jl")
+include("InterfaceSymbolicUtils.jl")
+include("CustomSymbolicUtilsSimplification.jl")
 include("SimplifyEquation.jl")
 include("PopMember.jl")
 include("HallOfFame.jl")
@@ -57,7 +59,6 @@ include("Population.jl")
 include("RegularizedEvolution.jl")
 include("SingleIteration.jl")
 include("ConstantOptimization.jl")
-include("InterfaceSymbolicUtils.jl")
 
 function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T};
         niterations::Integer=10,
@@ -187,8 +188,9 @@ function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T};
                         tmp_pop = SRCycle(dataset, baselineMSE, cur_pop, options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
                         @inbounds @simd for j=1:tmp_pop.n
                             if rand() < 0.1
-                                tmp_pop.members[j].tree = simplifyTree(tmp_pop.members[j].tree, options)
-                                tmp_pop.members[j].tree = combineOperators(tmp_pop.members[j].tree, options)
+                                # tmp_pop.members[j].tree = simplifyTree(tmp_pop.members[j].tree, options)
+                                # tmp_pop.members[j].tree = combineOperators(tmp_pop.members[j].tree, options)
+                                tmp_pop.members[j].tree = simplifyWithSymbolicUtils(tmp_pop.members[j].tree, options)
                                 if options.shouldOptimizeConstants
                                     tmp_pop.members[j] = optimizeConstants(dataset, baselineMSE, tmp_pop.members[j], options)
                                 end

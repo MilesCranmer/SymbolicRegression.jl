@@ -71,8 +71,9 @@ function iterate(dataset::Dataset{T},
             tree = deleteRandomOp(tree, options, nfeatures)
             is_success_always_possible = true
         elseif mutationChoice < cweights[6]
-            tree = simplifyTree(tree, options) # Sometimes we simplify tree
-            tree = combineOperators(tree, options) # See if repeated constants at outer levels
+            # tree = simplifyTree(tree, options) # Sometimes we simplify tree
+            # tree = combineOperators(tree, options) # See if repeated constants at outer levels
+            tree = simplifyWithSymbolicUtils(tree, options)
             return PopMember(tree, beforeLoss)
 
             is_success_always_possible = true
