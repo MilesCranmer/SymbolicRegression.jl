@@ -53,8 +53,28 @@ function countDepth(tree::Node)::Integer
     end
 end
 
+function stringOp(op::F, tree::Node, options::Options;
+                  bracketed::Bool=false,
+                  varMap::Union{Array{String, 1}, Nothing}=nothing)::String where {F}
+    if op in [+, -, *, /, ^]
+        l = stringTree(tree.l, options, bracketed=false, varMap=varMap)
+        r = stringTree(tree.r, options, bracketed=false, varMap=varMap)
+        if bracketed
+            return "$l $(string(op)) $r"
+        else
+            return "($l $(string(op)) $r)"
+        end
+    else
+        l = stringTree(tree.l, options, bracketed=true, varMap=varMap)
+        r = stringTree(tree.r, options, bracketed=true, varMap=varMap)
+        return "$(string(op))($l, $r)"
+    end
+end
+
 # Convert an equation to a string
-function stringTree(tree::Node, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)::String
+function stringTree(tree::Node, options::Options;
+                    bracketed::Bool=false,
+                    varMap::Union{Array{String, 1}, Nothing}=nothing)::String
     if tree.degree == 0
         if tree.constant
             return string(tree.val)
@@ -66,9 +86,9 @@ function stringTree(tree::Node, options::Options; varMap::Union{Array{String, 1}
             end
         end
     elseif tree.degree == 1
-        return "$(options.unaops[tree.op])($(stringTree(tree.l, options, varMap=varMap)))"
+        return "$(options.unaops[tree.op])($(stringTree(tree.l, options, bracketed=true, varMap=varMap)))"
     else
-        return "$(options.binops[tree.op])($(stringTree(tree.l, options, varMap=varMap)), $(stringTree(tree.r, options, varMap=varMap)))"
+        return stringOp(options.binops[tree.op], tree, options, bracketed=bracketed, varMap=varMap)
     end
 end
 
