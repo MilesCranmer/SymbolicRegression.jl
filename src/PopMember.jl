@@ -3,7 +3,6 @@ mutable struct PopMember{T<:Real}
     tree::Node
     score::T
     birth::Integer
-
 end
 
 function PopMember(t::Node, score::T) where {T<:Real}
@@ -16,3 +15,9 @@ function PopMember(dataset::Dataset{T},
     PopMember(t, scoreFunc(dataset, baseline, t, options))
 end
 
+function copyPopMember(p::PopMember{T}) where {T<:Real}
+    tree = copyNode(p.tree)
+    score = p.score
+    birth = p.birth
+    return PopMember{T}(tree, score, birth)
+end
