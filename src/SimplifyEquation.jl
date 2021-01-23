@@ -108,8 +108,13 @@ end
 
 # Expensive but powerful simplify using SymbolicUtils
 function simplifyWithSymbolicUtils(tree::Node, options::Options)::Node
+    init_node = copyNode(tree)
+    init_size = countNodes(tree)
     symbolic_util_form = node_to_symbolic(tree, options)
     eqn_form = SymbolicRegression.custom_simplify(symbolic_util_form, options)
-    return symbolic_to_node(eqn_form, options)
+    final_node = symbolic_to_node(eqn_form, options)
+    final_size = countNodes(tree)
+    return (final_size <= init_size) ? final_node : init_node
+    # return final_node
 end
 

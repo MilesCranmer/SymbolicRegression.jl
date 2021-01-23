@@ -17,6 +17,7 @@ export Population,
     node_to_symbolic,
     symbolic_to_node,
     custom_simplify,
+    simplifyWithSymbolicUtils,
 
     #Operators:
     plus,
@@ -136,7 +137,8 @@ function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T};
             if isready(channels[i])
                 # Take the fetch operation from the channel since its ready
                 cur_pop = take!(channels[i])
-                bestSubPops[i] = bestSubPop(cur_pop, topn=options.topn)
+                # bestSubPops[i] = bestSubPop(cur_pop, topn=options.topn)
+                bestSubPops[i] = bestSubPopParetoDominating(cur_pop, topn=options.topn)
 
                 #Try normal copy...
                 bestPops = Population([member for pop in bestSubPops for member in pop.members])
@@ -144,8 +146,10 @@ function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T};
                 for member in cur_pop.members
                     size = countNodes(member.tree)
                     frequencyComplexity[size] += 1
-                    if member.score < hallOfFame.members[size].score
-                        hallOfFame.members[size] = deepcopy(member)
+                    # println(member, hallOfFame.members[size])
+                    actualMaxsize = options.maxsize + maxdegree
+                    if size < actualMaxsize && member.score < hallOfFame.members[size].score
+                        hallOfFame.members[size] = copyPopMember(member)
                         hallOfFame.exists[size] = true
                     end
                 end
@@ -187,13 +191,9 @@ function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T};
                     allPops[i] = @spawnat :any let
                         tmp_pop = SRCycle(dataset, baselineMSE, cur_pop, options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
                         @inbounds @simd for j=1:tmp_pop.n
-                            if rand() < 0.1
-                                # tmp_pop.members[j].tree = simplifyTree(tmp_pop.members[j].tree, options)
-                                # tmp_pop.members[j].tree = combineOperators(tmp_pop.members[j].tree, options)
-                                tmp_pop.members[j].tree = simplifyWithSymbolicUtils(tmp_pop.members[j].tree, options)
-                                if options.shouldOptimizeConstants
-                                    tmp_pop.members[j] = optimizeConstants(dataset, baselineMSE, tmp_pop.members[j], options)
-                                end
+                            tmp_pop.members[j].tree = simplifyWithSymbolicUtils(tmp_pop.members[j].tree, options)
+                            if rand() < 0.1 && options.shouldOptimizeConstants
+                                tmp_pop.members[j] = optimizeConstants(dataset, baselineMSE, tmp_pop.members[j], options)
                             end
                         end
                         tmp_pop = finalizeScores(dataset, baselineMSE, tmp_pop, options)
