@@ -47,7 +47,7 @@ function Options(;
     bin_constraints=nothing,
     una_constraints=nothing,
     ns=10, #1 sampled from every ns per mutation
-    topn=30, #samples to return per population
+    topn=10, #samples to return per population
     parsimony=0.000100f0,
     alpha=0.100000f0,
     maxsize=20,
