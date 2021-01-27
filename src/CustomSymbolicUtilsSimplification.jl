@@ -39,7 +39,7 @@ end
 
 function custom_simplify(eqn::T, options::Options)::AllEquationTypes where {T<:AllEquationTypes}
 
-	eqn = simplify(eqn) #,SymbolicUtils.RuleSet(RULES))
+	eqn = simplify(eqn, polynorm=true) #,SymbolicUtils.RuleSet(RULES))
 
 	# Remove power laws
 	if ~((^) in options.binops)
