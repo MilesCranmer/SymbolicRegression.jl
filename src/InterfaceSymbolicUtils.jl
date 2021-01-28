@@ -17,17 +17,29 @@ function node_to_symbolic(tree::Node, options::Options;
         end
     elseif tree.degree == 1
         left_side = node_to_symbolic(tree.l, options, varMap=varMap)
-        return options.unaops[tree.op](left_side)
+        op = options.unaops[tree.op]
+        if op in (cos, sin, exp, cot, tan, csc, sec)
+            return op(left_side)
+        else
+            dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol("_unaop$(tree.op)"))
+            return dummy_op(left_side)
+        end
     else
         left_side = node_to_symbolic(tree.l, options, varMap=varMap)
         right_side = node_to_symbolic(tree.r, options, varMap=varMap)
-        return options.binops[tree.op](left_side, right_side)
+        op = options.binops[tree.op]
+        if op in (+, -, *, /)
+            return op(left_side, right_side)
+        else
+            dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number, Number}, Real}}(Symbol("_binop$(tree.op)"))
+            return dummy_op(left_side, right_side)
+        end
     end
 end
 
 # Just constant
 function symbolic_to_node(eqn::T, options::Options;
-                     varMap::Union{Array{String, 1}, Nothing}=nothing)::Node where {T<:Real}
+                     varMap::Union{Array{String, 1}, Nothing}=nothing)::Node where {T<:Number}
     return Node(convert(ConstantType, eqn))
 end
 
@@ -37,7 +49,7 @@ function symbolic_to_node(eqn::T, options::Options;
     return Node(varMap_to_index(eqn.name, varMap))
 end
 
-function _multiarg_split(op_idx::Int, eqn::Array{AllEquationTypes, 1},
+function _multiarg_split(op_idx::Integer, eqn::Array{Any},
                         options::Options, varMap::Union{Array{String, 1}, Nothing}
                        )::Node
     if length(eqn) == 2
@@ -80,7 +92,17 @@ function symbolic_to_node(eqn::T, options::Options;
     end
 end
 
-function unaop_to_index(op::F, options::Options)::Int where {F}
+function unaop_to_index(op::F, options::Options)::Integer where {F<:SymbolicUtils.Sym}
+    # In format _unaop1
+    parse(Int, string(op.name)[7:end])
+end
+
+function binop_to_index(op::F, options::Options)::Integer where {F<:SymbolicUtils.Sym}
+    # In format _binop1
+    parse(Int, string(op.name)[7:end])
+end
+
+function unaop_to_index(op::F, options::Options)::Integer where {F<:Function}
     for i=1:options.nuna
         if op == options.unaops[i]
             return i
@@ -89,7 +111,7 @@ function unaop_to_index(op::F, options::Options)::Int where {F}
     error("Operator $(op) in simplified expression not found in options $(options.unaops)!")
 end
 
-function binop_to_index(op::F, options::Options)::Int where {F}
+function binop_to_index(op::F, options::Options)::Integer where {F<:Function}
     for i=1:options.nbin
         if op == options.binops[i]
             return i
@@ -98,7 +120,7 @@ function binop_to_index(op::F, options::Options)::Int where {F}
     error("Operator $(op) in simplified expression not found in options $(options.binops)!")
 end
 
-function varMap_to_index(var::Symbol, varMap::Array{String, 1})::Int
+function varMap_to_index(var::Symbol, varMap::Array{String, 1})::Integer
     str = string(var)
     for i=1:length(varMap)
         if str == varMap[i]
@@ -107,6 +129,6 @@ function varMap_to_index(var::Symbol, varMap::Array{String, 1})::Int
     end
 end
 
-function varMap_to_index(var::Symbol, varMap::Nothing)::Int
+function varMap_to_index(var::Symbol, varMap::Nothing)::Integer
     return parse(Int, string(var)[2:end])
 end
