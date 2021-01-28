@@ -73,7 +73,11 @@ function iterate(dataset::Dataset{T},
         elseif mutationChoice < cweights[6]
             tree = simplifyTree(tree, options) # Sometimes we simplify tree
             tree = combineOperators(tree, options) # See if repeated constants at outer levels
-            tree = simplifyWithSymbolicUtils(tree, options)
+            # SymbolicUtils is quite slow, so only rarely
+            #  do we use it for simplification.
+            if rand() < 0.01
+                tree = simplifyWithSymbolicUtils(tree, options)
+            end
             return PopMember(tree, beforeLoss)
 
             is_success_always_possible = true
