@@ -1,5 +1,5 @@
 using SymbolicUtils
-using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, has_trig
+using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, has_trig, <ₑ
 
 mutable struct Node
     #Holds operators, variables, constants in a tree
@@ -117,49 +117,76 @@ end
 
 ## How SymbolicUtils orders:
 
-# <ₑ(a::Real,    b::Real) = abs(a) < abs(b)
-# <ₑ(a::Complex, b::Complex) = (abs(real(a)), abs(imag(a))) < (abs(real(b)), abs(imag(b)))
-# <ₑ(a::Real,    b::Complex) = true
-# <ₑ(a::Complex, b::Real) = false
-# <ₑ(a::Symbolic, b::Number) = false
-# <ₑ(a::Number,   b::Symbolic) = true
-# arglength(a) = length(arguments(a))
-# function <ₑ(a, b)
-    # if !istree(a) && !istree(b)
-        # T = typeof(a)
-        # S = typeof(b)
-        # return T===S ? isless(a, b) : nameof(T) < nameof(S)
-    # elseif istree(b) && !istree(a)
-        # return true
-    # elseif istree(a) && istree(b)
-        # return cmp_term_term(a,b)
-    # else
-        # return !(b <ₑ a)
-    # end
-# end
+arglength(a::Node) = a.degree
 
-# Enforce the order [+,-,\,/,^,*]
-
-Base.isless(x::Node, y::Node)::Bool = begin
-    nx = countNodes(x)
-    ny = countNodes(y)
-    if nx < ny
-        true
-    elseif nx > ny
-        false
-    elseif x.constant && y.constant
-        x.val < y.val
-    elseif x.constant && ~y.constant
-        true
-    elseif ~x.constant && y.constant
-        false
-    #Both are non-constant trees of equal size
-    elseif x.degree != y.degree
-        x.degree < y.degree
+SymbolicUtils.:(<ₑ)(a::Node,    b::Number) = false
+SymbolicUtils.:(<ₑ)(a::Number,  b::Node) = true
+SymbolicUtils.:(<ₑ)(a::Node,    b::Node) = begin
+    if !SymbolicUtils.istree(a) && !SymbolicUtils.istree(b)
+        if a.constant && b.constant
+            return a.val <ₑ b.val
+        elseif a.constant
+            return true
+        elseif b.constant
+            return false
+        else
+            return SymbolicUtils.:(<ₑ)(a.val, b.val)
+        end
+    elseif istree(b) && !istree(a)
+        return true
+    elseif istree(a) && istree(b)
+        return cmp_term_term(a,b)
     else
-        Base.hash(x) < Base.hash(y)
+        return !(SymbolicUtils.:(<ₑ)(b, a))
     end
 end
+
+SymbolicUtils.is_literal_number(x::Node) = x.constant
+
+function cmp_term_term(a, b)
+    la = arglength(a)
+    lb = arglength(b)
+
+    if la == 0 && lb == 0
+        return nameof(SymbolicUtils.operation(a)) <ₑ nameof(SymbolicUtils.operation(b))
+    elseif la === 0
+        return SymbolicUtils.:(<ₑ)(SymbolicUtils.operation(a), b)
+    elseif lb === 0
+        return SymbolicUtils.:(<ₑ)(a, SymbolicUtils.operation(b))
+    end
+
+	aa, ab = SymbolicUtils.arguments(a), SymbolicUtils.arguments(b)
+	if length(aa) !== length(ab)
+		return length(aa) < length(ab)
+	else
+		terms = zip(Iterators.filter(!SymbolicUtils.is_literal_number, aa), Iterators.filter(!SymbolicUtils.is_literal_number, ab))
+
+		for (x,y) in terms
+			if SymbolicUtils.:(<ₑ)(x, y)
+				return true
+			elseif SymbolicUtils.:(<ₑ)(y, x)
+				return false
+			end
+		end
+
+		# compare the numbers
+		nums = zip(Iterators.filter(SymbolicUtils.is_literal_number, aa),
+				   Iterators.filter(SymbolicUtils.is_literal_number, ab))
+
+		for (x,y) in nums
+			if SymbolicUtils.:(<ₑ)(x, y)
+				return true
+			elseif SymbolicUtils.:(<ₑ)(y, x)
+				return false
+			end
+		end
+	end
+    na = nameof(SymbolicUtils.operation(a))
+    nb = nameof(SymbolicUtils.operation(b))
+	return SymbolicUtils.:(<ₑ)(na, nb) # all args are equal, compare the name
+end
+
+Base.isless(a::Node, b::Node) = SymbolicUtils.:(<ₑ)(a, b)
 
 for (op, f) in enumerate(map(Symbol, binops))
     @eval begin
@@ -243,6 +270,20 @@ TRIG_RULES = [
     @acrule(csc(~x)^2 + -1 => cot(~x)^2)
 ]
 
+TRIG_RULES = [
+	@acrule(sin(~x)^2 + cos(~x)^2 => one(~x))
+	@acrule(sin(~x)^2 + -1        => cos(~x)^2)
+	@acrule(cos(~x)^2 + -1        => sin(~x)^2)
+
+	@acrule(tan(~x)^2 + -1*sec(~x)^2 => one(~x))
+	@acrule(tan(~x)^2 +  1 => sec(~x)^2)
+	@acrule(sec(~x)^2 + -1 => tan(~x)^2)
+
+	@acrule(cot(~x)^2 + -1*csc(~x)^2 => one(~x))
+	@acrule(cot(~x)^2 +  1 => csc(~x)^2)
+	@acrule(csc(~x)^2 + -1 => cot(~x)^2)
+]
+
 function number_simplifier()
     rule_tree = [If(istree, Chain(ASSORTED_RULES)),
                  If(is_operation(+),
@@ -258,18 +299,15 @@ end
 trig_simplifier(;kw...) = Chain(TRIG_RULES)
 
 function default_simplifier(; kw...)
-    IfElse(has_trig,
-           Postwalk(Chain((number_simplifier(),
-                           trig_simplifier())),
-                    ; kw...),
-           Postwalk(number_simplifier())
-                    ; kw...)
+	IfElse(has_trig,
+		   Postwalk(Chain((number_simplifier(),
+						   trig_simplifier())),
+					; kw...),
+		   Postwalk(number_simplifier())
+					; kw...)
 end
 
 # reduce overhead of simplify by defining these as constant
 serial_simplifier = If(istree, Fixpoint(default_simplifier()))
-
-threaded_simplifier(cutoff) = Fixpoint(default_simplifier(threaded=true,
-                                                          thread_cutoff=cutoff))
 
 
