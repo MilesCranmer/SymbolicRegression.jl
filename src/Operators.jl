@@ -21,20 +21,20 @@ end
 function cube(x::T)::T where {T<:Real}
 	x ^ 3
 end
-function powm(x::T, y::T)::T where {T<:Real}
+function pow(x::T, y::T)::T where {T<:Real}
 	abs(x)^y
 end
 function div(x::T, y::T)::T where {T<:Real}
 	x / y
 end
 function logm(x::T)::T where {T<:Real}
-    log(abs(x) + convert(T, 1f-8))
+    log(abs(x) + 1//100000000)
 end
 function logm2(x::T)::T where {T<:Real}
-    log2(abs(x) + convert(T, 1f-8))
+    log2(abs(x) + 1//100000000)
 end
 function logm10(x::T)::T where {T<:Real}
-    log10(abs(x) + convert(T, 1f-8))
+    log10(abs(x) + 1//100000000)
 end
 
 # Generics:
@@ -43,11 +43,11 @@ cube(x) = x * x * x
 plus(x, y) = x + y
 sub(x, y) = x - y
 mult(x, y) = x * y
-powm(x, y) = abs(x)^y
+pow(x, y) = abs(x)^y
 div(x, y) = x / y
-logm(x) = log(abs(x) + 1f-8)
-logm2(x) = log2(abs(x) + 1f-8)
-logm10(x) = log10(abs(x) + 1f-8)
+logm(x) = log(abs(x) + 1//100000000)
+logm2(x) = log2(abs(x) + 1//100000000)
+logm10(x) = log10(abs(x) + 1//100000000)
 
 function sqrtm(x::T)::T where {T}
 	sqrt(abs(x))
