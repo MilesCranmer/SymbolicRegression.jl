@@ -2,7 +2,7 @@
 mutable struct Node
     #Holds operators, variables, constants in a tree
     degree::Integer #0 for constant/variable, 1 for cos/sin, 2 for +/* etc.
-    val::Union{ConstantType, Integer} #Either const value, or enumerates variable
+    val::Union{ConstantType, Integer, Nothing} #Either const value, or enumerates variable
     constant::Bool #false if variable
     op::Integer #enumerates operator (separately for degree=1,2)
     l::Union{Node, Nothing}
@@ -10,14 +10,14 @@ mutable struct Node
 
     Node(val::ConstantType) = new(0, val, true, 1, nothing, nothing)
     Node(val::Integer) = new(0, val, false, 1, nothing, nothing)
-    Node(op::Integer, l::Node) = new(1, convert(ConstantType, 0), false, op, l, nothing)
-    Node(op::Integer, l::Union{ConstantType, Integer}) = new(1, convert(ConstantType, 0), false, op, Node(l), nothing)
-    Node(op::Integer, l::Node, r::Node) = new(2, convert(ConstantType, 0), false, op, l, r)
+    Node(op::Integer, l::Node) = new(1, nothing, false, op, l, nothing)
+    Node(op::Integer, l::Union{ConstantType, Integer}) = new(1, nothing, false, op, Node(l), nothing)
+    Node(op::Integer, l::Node, r::Node) = new(2, nothing, false, op, l, r)
 
     #Allow to pass the leaf value without additional node call:
-    Node(op::Integer, l::Union{ConstantType, Integer}, r::Node) = new(2, convert(ConstantType, 0), false, op, Node(l), r)
-    Node(op::Integer, l::Node, r::Union{ConstantType, Integer}) = new(2, convert(ConstantType, 0), false, op, l, Node(r))
-    Node(op::Integer, l::Union{ConstantType, Integer}, r::Union{ConstantType, Integer}) = new(2, convert(ConstantType, 0), false, op, Node(l), Node(r))
+    Node(op::Integer, l::Union{ConstantType, Integer}, r::Node) = new(2, nothing, false, op, Node(l), r)
+    Node(op::Integer, l::Node, r::Union{ConstantType, Integer}) = new(2, nothing, false, op, l, Node(r))
+    Node(op::Integer, l::Union{ConstantType, Integer}, r::Union{ConstantType, Integer}) = new(2, nothing, false, op, Node(l), Node(r))
 end
 
 # Copy an equation (faster than deepcopy)
