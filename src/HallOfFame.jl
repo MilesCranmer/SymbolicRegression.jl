@@ -11,7 +11,8 @@ function HallOfFame(options::Options)
     HallOfFame([PopMember(Node(1f0), 1f9) for i=1:actualMaxsize], [false for i=1:actualMaxsize])
 end
 
-function calculateParetoFrontier(X::AbstractMatrix{T}, y::AbstractVector{T},
+
+function calculateParetoFrontier(dataset::Dataset{T},
                                  hallOfFame::HallOfFame,
                                  options::Options) where {T<:Real}
     # Dominating pareto curve - must be better than all simpler equations
@@ -20,22 +21,14 @@ function calculateParetoFrontier(X::AbstractMatrix{T}, y::AbstractVector{T},
     for size=1:actualMaxsize
         if hallOfFame.exists[size]
             member = hallOfFame.members[size]
-            if options.weighted
-                curMSE = MSE(evalTreeArray(member.tree, X, options), y, weights)
-                member.score = curMSE
-            else
-                curMSE = MSE(evalTreeArray(member.tree, X, options), y)
-                member.score = curMSE
-            end
+            curMSE = EvalLoss(member.tree, dataset, options)
+            member.score = curMSE
             numberSmallerAndBetter = 0
             for i=1:(size-1)
-                if options.weighted
-                    hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, X, options), y, weights)
-                else
-                    hofMSE = MSE(evalTreeArray(hallOfFame.members[i].tree, X, options), y)
-                end
+                hofMSE = EvalLoss(hallOfFame.members[i].tree, dataset, options)
                 if (hallOfFame.exists[size] && curMSE > hofMSE)
                     numberSmallerAndBetter += 1
+                    break
                 end
             end
             betterThanAllSmaller = (numberSmallerAndBetter == 0)
@@ -46,4 +39,11 @@ function calculateParetoFrontier(X::AbstractMatrix{T}, y::AbstractVector{T},
     end
     return dominating
 end
+
+calculateParetoFrontier(X::AbstractMatrix{T},
+                        y::AbstractVector{T},
+                        hallOfFame::HallOfFame,
+                        options::Options;
+                        weights=nothing,
+                        varMap=nothing) where {T<:Real} = calculateParetoFrontier(Dataset(X, y, weights=weights, varMap=varMap), hallOfFame, options)
 

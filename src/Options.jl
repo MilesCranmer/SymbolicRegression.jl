@@ -1,9 +1,34 @@
-
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
 
-struct Options{A,B}
+function binopmap(op)
+    if op == plus
+        return +
+    elseif op == mult
+        return *
+    elseif op == sub
+        return -
+    elseif op == div
+        return /
+    end
+    return op
+end
+
+function unaopmap(op)
+    if op == log
+        return logm
+    elseif op == log10
+        return logm10
+    elseif op == log2
+        return logm2
+    elseif op == sqrt
+        return sqrtm
+    end
+    return op
+end
+
+struct Options{A<:NTuple{N,Any} where {N},B<:NTuple{M,Any} where {M}}
 
     binops::A
     unaops::B
@@ -24,10 +49,8 @@ struct Options{A,B}
     nrestarts::Int
     perturbationFactor::Float32
     annealing::Bool
-    weighted::Bool
     batching::Bool
     batchSize::Int
-    useVarMap::Bool
     mutationWeights::Array{Real, 1}
     warmupMaxsize::Int
     limitPowComplexity::Bool
@@ -40,7 +63,6 @@ struct Options{A,B}
     probNegate::Float32
     nuna::Integer
     nbin::Integer
-    printZeroIndex::Bool
 
 end
 
@@ -49,7 +71,8 @@ function Options(;
     unary_operators::NTuple{nuna, Any}=(exp, cos),
     bin_constraints=nothing,
     una_constraints=nothing,
-    topn=10,
+    ns=10, #1 sampled from every ns per mutation
+    topn=10, #samples to return per population
     parsimony=0.000100f0,
     alpha=0.100000f0,
     maxsize=20,
@@ -64,10 +87,8 @@ function Options(;
     nrestarts=3,
     perturbationFactor=1.000000f0,
     annealing=true,
-    weighted=false,
     batching=false,
     batchSize=50,
-    useVarMap=false,
     mutationWeights=[10.000000, 1.000000, 1.000000, 3.000000, 3.000000, 0.010000, 1.000000, 1.000000],
     warmupMaxsize=0,
     limitPowComplexity=false,
@@ -77,7 +98,6 @@ function Options(;
     fractionReplaced=0.1f0,
     verbosity=convert(Int, 1e9),
     probNegate=0.01f0,
-    printZeroIndex=false
    ) where {nuna,nbin}
 
     if hofFile == nothing
@@ -99,7 +119,10 @@ function Options(;
         npopulations = nworkers()
     end
 
-    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, topn, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, weighted, batching, batchSize, useVarMap, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, printZeroIndex)
+    binary_operators = map(binopmap, binary_operators)
+    unary_operators = map(unaopmap, unary_operators)
+
+    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin)
 end
 
 

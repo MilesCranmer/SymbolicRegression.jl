@@ -32,5 +32,11 @@ function testConfiguration(options::Options)
         @printf("\n\nYour configuration is invalid - one of your operators is not well-defined over the real line.\n\n\n")
         throw(error)
     end
+
+    for binop in options.binops
+        if binop in options.unaops
+            @printf("\n\nYour configuration is invalid - one operator appears in both the binary operators and unary operators.\n\n\n")
+        end
+    end
 end
 

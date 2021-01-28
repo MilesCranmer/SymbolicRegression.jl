@@ -21,20 +21,25 @@ Pkg.add("SymbolicRegression")
 Run distributed on four processes with:
 ```julia
 using Distributed
-addprocs(4)
-@everywhere using SymbolicRegression
+
+addprocs()
+
+@everywhere include("src/SymbolicRegression.jl")
+@everywhere using .SymbolicRegression
 
 X = randn(Float32, 100, 5)
 y = 2 * cos.(X[:, 4]) + X[:, 1] .^ 2 .- 2
 
 options = SymbolicRegression.Options(
-    binary_operators=(+, *),
+    binary_operators=(+, *, /, -),
     unary_operators=(cos, exp),
     npopulations=20
 )
 niterations = 5
 
-hallOfFame = RunSR(X, y, niterations, options)
+hallOfFame = RunSR(X, y, niterations=niterations, options=options)
+
+rmprocs()
 ```
 
 Then, we can get the equations in the dominating

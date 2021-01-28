@@ -22,42 +22,55 @@ function cube(x::T)::T where {T<:Real}
 	x ^ 3
 end
 function pow(x::T, y::T)::T where {T<:Real}
-	pow(abs(x), y)
+	abs(x)^y
 end
 function div(x::T, y::T)::T where {T<:Real}
 	x / y
 end
 function logm(x::T)::T where {T<:Real}
-    log(abs(x) + convert(T, 1f-8))
+    log(abs(x) + 1//100000000)
 end
 function logm2(x::T)::T where {T<:Real}
-    log2(abs(x) + convert(T, 1f-8))
+    log2(abs(x) + 1//100000000)
 end
 function logm10(x::T)::T where {T<:Real}
-    log10(abs(x) + convert(T, 1f-8))
+    log10(abs(x) + 1//100000000)
 end
-function sqrtm(x::T)::T where {T<:Real}
+
+# Generics:
+square(x) = x * x
+cube(x) = x * x * x
+plus(x, y) = x + y
+sub(x, y) = x - y
+mult(x, y) = x * y
+pow(x, y) = abs(x)^y
+div(x, y) = x / y
+logm(x) = log(abs(x) + 1//100000000)
+logm2(x) = log2(abs(x) + 1//100000000)
+logm10(x) = log10(abs(x) + 1//100000000)
+
+function sqrtm(x::T)::T where {T}
 	sqrt(abs(x))
 end
-function neg(x::T)::T where {T<:Real}
+function neg(x::T)::T where {T}
 	- x
 end
 
-function greater(x::T, y::T)::T where {T<:Real}
+function greater(x::T, y::T)::T where {T}
     if x > y
         return convert(T, 1)
     end
     return convert(T, 0)
 end
 
-function relu(x::T)::T where {T<:Real}
+function relu(x::T)::T where {T}
     if x > convert(T, 0)
         return x
     end
     return convert(T, 0)
 end
 
-function logical_or(x::T, y::T)::T where {T<:Real}
+function logical_or(x::T, y::T)::T where {T}
     if x > convert(T, 0) || y > convert(T, 0)
         return convert(T, 1)
     end
@@ -65,7 +78,7 @@ function logical_or(x::T, y::T)::T where {T<:Real}
 end
 
 # (Just use multiplication normally)
-function logical_and(x::T, y::T)::T where {T<:Real}
+function logical_and(x::T, y::T)::T where {T}
     if x > convert(T, 0) && y > convert(T, 0)
         return convert(T, 1)
     end

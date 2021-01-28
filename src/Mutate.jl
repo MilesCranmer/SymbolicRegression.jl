@@ -1,6 +1,6 @@
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
-function iterate(X::AbstractMatrix{T}, y::AbstractVector{T},
+function iterate(dataset::Dataset{T},
                  baseline::T, member::PopMember, temperature::T,
                  curmaxsize::Integer, frequencyComplexity::AbstractVector{T},
                  options::Options)::PopMember where {T<:Real}
@@ -9,12 +9,12 @@ function iterate(X::AbstractMatrix{T}, y::AbstractVector{T},
     tree = prev
     #TODO - reconsider this
     if options.batching
-        beforeLoss = scoreFuncBatch(X, y, baseline, prev, options)
+        beforeLoss = scoreFuncBatch(dataset, baseline, prev, options)
     else
         beforeLoss = member.score
     end
 
-    nfeatures = size(X)[2]
+    nfeatures = dataset.nfeatures
 
     mutationChoice = rand()
     #More constants => more likely to do constant mutation
@@ -73,6 +73,7 @@ function iterate(X::AbstractMatrix{T}, y::AbstractVector{T},
         elseif mutationChoice < cweights[6]
             tree = simplifyTree(tree, options) # Sometimes we simplify tree
             tree = combineOperators(tree, options) # See if repeated constants at outer levels
+            tree = simplifyWithSymbolicUtils(tree, options)
             return PopMember(tree, beforeLoss)
 
             is_success_always_possible = true
@@ -108,9 +109,9 @@ function iterate(X::AbstractMatrix{T}, y::AbstractVector{T},
     end
 
     if options.batching
-        afterLoss = scoreFuncBatch(X, y, baseline, tree, options)
+        afterLoss = scoreFuncBatch(dataset, baseline, tree, options)
     else
-        afterLoss = scoreFunc(X, y, baseline, tree, options)
+        afterLoss = scoreFunc(dataset, baseline, tree, options)
     end
 
     if options.annealing

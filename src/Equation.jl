@@ -2,7 +2,7 @@
 mutable struct Node
     #Holds operators, variables, constants in a tree
     degree::Integer #0 for constant/variable, 1 for cos/sin, 2 for +/* etc.
-    val::Union{ConstantType, Integer} #Either const value, or enumerates variable
+    val::Union{ConstantType, Integer, Nothing} #Either const value, or enumerates variable
     constant::Bool #false if variable
     op::Integer #enumerates operator (separately for degree=1,2)
     l::Union{Node, Nothing}
@@ -10,14 +10,14 @@ mutable struct Node
 
     Node(val::ConstantType) = new(0, val, true, 1, nothing, nothing)
     Node(val::Integer) = new(0, val, false, 1, nothing, nothing)
-    Node(op::Integer, l::Node) = new(1, convert(ConstantType, 0), false, op, l, nothing)
-    Node(op::Integer, l::Union{ConstantType, Integer}) = new(1, convert(ConstantType, 0), false, op, Node(l), nothing)
-    Node(op::Integer, l::Node, r::Node) = new(2, convert(ConstantType, 0), false, op, l, r)
+    Node(op::Integer, l::Node) = new(1, nothing, false, op, l, nothing)
+    Node(op::Integer, l::Union{ConstantType, Integer}) = new(1, nothing, false, op, Node(l), nothing)
+    Node(op::Integer, l::Node, r::Node) = new(2, nothing, false, op, l, r)
 
     #Allow to pass the leaf value without additional node call:
-    Node(op::Integer, l::Union{ConstantType, Integer}, r::Node) = new(2, convert(ConstantType, 0), false, op, Node(l), r)
-    Node(op::Integer, l::Node, r::Union{ConstantType, Integer}) = new(2, convert(ConstantType, 0), false, op, l, Node(r))
-    Node(op::Integer, l::Union{ConstantType, Integer}, r::Union{ConstantType, Integer}) = new(2, convert(ConstantType, 0), false, op, Node(l), Node(r))
+    Node(op::Integer, l::Union{ConstantType, Integer}, r::Node) = new(2, nothing, false, op, Node(l), r)
+    Node(op::Integer, l::Node, r::Union{ConstantType, Integer}) = new(2, nothing, false, op, l, Node(r))
+    Node(op::Integer, l::Union{ConstantType, Integer}, r::Union{ConstantType, Integer}) = new(2, nothing, false, op, Node(l), Node(r))
 end
 
 # Copy an equation (faster than deepcopy)
@@ -53,32 +53,48 @@ function countDepth(tree::Node)::Integer
     end
 end
 
+function stringOp(op::F, tree::Node, options::Options;
+                  bracketed::Bool=false,
+                  varMap::Union{Array{String, 1}, Nothing}=nothing)::String where {F}
+    if op in [+, -, *, /, ^]
+        l = stringTree(tree.l, options, bracketed=false, varMap=varMap)
+        r = stringTree(tree.r, options, bracketed=false, varMap=varMap)
+        if bracketed
+            return "$l $(string(op)) $r"
+        else
+            return "($l $(string(op)) $r)"
+        end
+    else
+        l = stringTree(tree.l, options, bracketed=true, varMap=varMap)
+        r = stringTree(tree.r, options, bracketed=true, varMap=varMap)
+        return "$(string(op))($l, $r)"
+    end
+end
+
 # Convert an equation to a string
-function stringTree(tree::Node, options::Options)::String
+function stringTree(tree::Node, options::Options;
+                    bracketed::Bool=false,
+                    varMap::Union{Array{String, 1}, Nothing}=nothing)::String
     if tree.degree == 0
         if tree.constant
             return string(tree.val)
         else
-            if options.useVarMap
-                return varMap[tree.val]
+            if varMap == nothing
+                return "x$(tree.val)"
             else
-                if options.printZeroIndex
-                    return "x$(tree.val - 1)"
-                else
-                    return "x$(tree.val)"
-                end
+                return varMap[tree.val]
             end
         end
     elseif tree.degree == 1
-        return "$(options.unaops[tree.op])($(stringTree(tree.l, options)))"
+        return "$(options.unaops[tree.op])($(stringTree(tree.l, options, bracketed=true, varMap=varMap)))"
     else
-        return "$(options.binops[tree.op])($(stringTree(tree.l, options)), $(stringTree(tree.r, options)))"
+        return stringOp(options.binops[tree.op], tree, options, bracketed=bracketed, varMap=varMap)
     end
 end
 
 # Print an equation
-function printTree(tree::Node, options::Options)
-    println(stringTree(tree, options))
+function printTree(tree::Node, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
+    println(stringTree(tree, options, varMap=varMap))
 end
 
 # Return a random node from the tree

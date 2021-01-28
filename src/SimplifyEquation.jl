@@ -1,4 +1,3 @@
-
 # Simplify tree
 function combineOperators(tree::Node, options::Options)::Node
     # NOTE: (const (+*-) const) already accounted for. Call simplifyTree before.
@@ -100,9 +99,22 @@ function simplifyTree(tree::Node, options::Options)::Node
              tree.r.degree == 0 && tree.r.constant
         )
         if constantsBelow
-            return Node(options.binops[tree.op](tree.l.val, tree.r.val))
+            return Node(convert(ConstantType, options.binops[tree.op](tree.l.val, tree.r.val)))
         end
     end
     return tree
+end
+
+
+# Expensive but powerful simplify using SymbolicUtils
+function simplifyWithSymbolicUtils(tree::Node, options::Options)::Node
+    init_node = copyNode(tree)
+    init_size = countNodes(tree)
+    symbolic_util_form = node_to_symbolic(tree, options)
+    eqn_form = SymbolicRegression.custom_simplify(symbolic_util_form, options)
+    final_node = symbolic_to_node(eqn_form, options)
+    final_size = countNodes(tree)
+    return (final_size <= init_size) ? final_node : init_node
+    # return final_node
 end
 

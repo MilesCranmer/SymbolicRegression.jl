@@ -18,7 +18,7 @@ end
 function evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Union{AbstractVector{T}, Nothing} where {T<:Real}
     clen = size(cX)[1]
     if tree.degree == 0
-        if tree.constant
+        if tree.constant #TODO: Make this done with types instead
             return fill(convert(T, tree.val), clen)
         else
             return copy(cX[:, tree.val])
