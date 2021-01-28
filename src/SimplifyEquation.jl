@@ -99,7 +99,7 @@ function simplifyTree(tree::Node, options::Options)::Node
              tree.r.degree == 0 && tree.r.constant
         )
         if constantsBelow
-            return Node(options.binops[tree.op](tree.l.val, tree.r.val))
+            return Node(convert(ConstantType, options.binops[tree.op](tree.l.val, tree.r.val)))
         end
     end
     return tree
