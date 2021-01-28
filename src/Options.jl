@@ -1,7 +1,32 @@
-
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
+
+function binopmap(op)
+    if op == plus
+        return +
+    elseif op == mult
+        return *
+    elseif op == sub
+        return -
+    elseif op == div
+        return /
+    end
+    return op
+end
+
+function unaopmap(op)
+    if op == log
+        return logm
+    elseif op == log10
+        return logm10
+    elseif op == log2
+        return logm2
+    elseif op == sqrt
+        return sqrtm
+    end
+    return op
+end
 
 struct Options{A<:NTuple{N,Any} where {N},B<:NTuple{M,Any} where {M}}
 
@@ -93,6 +118,9 @@ function Options(;
     if npopulations == nothing
         npopulations = nworkers()
     end
+
+    binary_operators = map(binopmap, binary_operators)
+    unary_operators = map(unaopmap, unary_operators)
 
     Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin)
 end
