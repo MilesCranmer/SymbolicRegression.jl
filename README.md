@@ -15,7 +15,7 @@ a Python frontend.
 Install in Julia with:
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/MilesCranmer/SymbolicRegression.jl.git")
+Pkg.add("SymbolicRegression")
 ```
 
 Run distributed on four processes with:
@@ -28,7 +28,7 @@ X = randn(Float32, 100, 5)
 y = 2 * cos.(X[:, 4]) + X[:, 1] .^ 2 .- 2
 
 options = SymbolicRegression.Options(
-    binary_operators=(plus, mult),
+    binary_operators=(+, *),
     unary_operators=(cos, exp),
     npopulations=20
 )
