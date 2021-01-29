@@ -1,9 +1,9 @@
 # Check if any binary operator are overly complex
-function flagBinOperatorComplexity(tree::Node, op::Int, options::Options)::Bool
+function flagBinOperatorComplexity(tree::Node, ::Val{op}, options::Options)::Bool where {op}
     if tree.degree == 0
         return false
     elseif tree.degree == 1
-        return flagBinOperatorComplexity(tree.l, op, options)
+        return flagBinOperatorComplexity(tree.l, Val(op), options)
     else
         if tree.op == op
             overly_complex = (
@@ -17,12 +17,12 @@ function flagBinOperatorComplexity(tree::Node, op::Int, options::Options)::Bool
                 return true
             end
         end
-        return (flagBinOperatorComplexity(tree.l, op, options) || flagBinOperatorComplexity(tree.r, op, options))
+        return (flagBinOperatorComplexity(tree.l, Val(op), options) || flagBinOperatorComplexity(tree.r, Val(op), options))
     end
 end
 
 # Check if any unary operators are overly complex
-function flagUnaOperatorComplexity(tree::Node, op::Int, options::Options)::Bool
+function flagUnaOperatorComplexity(tree::Node, ::Val{op}, options::Options)::Bool where {op}
     if tree.degree == 0
         return false
     elseif tree.degree == 1
@@ -35,8 +35,8 @@ function flagUnaOperatorComplexity(tree::Node, op::Int, options::Options)::Bool
                 return true
             end
         end
-        return flagUnaOperatorComplexity(tree.l, op, options)
+        return flagUnaOperatorComplexity(tree.l, Val(op), options)
     else
-        return (flagUnaOperatorComplexity(tree.l, op, options) || flagUnaOperatorComplexity(tree.r, op, options))
+        return (flagUnaOperatorComplexity(tree.l, Val(op), options) || flagUnaOperatorComplexity(tree.r, Val(op), options))
     end
 end

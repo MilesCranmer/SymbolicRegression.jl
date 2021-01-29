@@ -94,12 +94,12 @@ function nextGeneration(dataset::Dataset{T},
 
         # Check for illegal equations
         for i=1:options.nbin
-            if successful_mutation && flagBinOperatorComplexity(tree, i, options)
+            if successful_mutation && flagBinOperatorComplexity(tree, Val(i), options)
                 successful_mutation = false
             end
         end
         for i=1:options.nuna
-            if successful_mutation && flagUnaOperatorComplexity(tree, i, options)
+            if successful_mutation && flagUnaOperatorComplexity(tree, Val(i), options)
                 successful_mutation = false
             end
         end
