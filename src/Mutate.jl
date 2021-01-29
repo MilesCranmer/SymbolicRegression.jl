@@ -1,9 +1,9 @@
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
-function iterate(dataset::Dataset{T},
-                 baseline::T, member::PopMember, temperature::T,
-                 curmaxsize::Integer, frequencyComplexity::AbstractVector{T},
-                 options::Options)::PopMember where {T<:Real}
+function nextGeneration(dataset::Dataset{T},
+                        baseline::T, member::PopMember, temperature::T,
+                        curmaxsize::Integer, frequencyComplexity::AbstractVector{T},
+                        options::Options)::PopMember where {T<:Real}
 
     prev = member.tree
     tree = prev

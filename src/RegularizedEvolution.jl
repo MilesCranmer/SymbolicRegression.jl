@@ -26,8 +26,8 @@ function regEvolCycle(dataset::Dataset{T},
                 end
             end
             allstar = pop.members[best_idx]
-            babies[i] = iterate(dataset, baseline, allstar, temperature,
-                                curmaxsize, frequencyComplexity, options)
+            babies[i] = nextGeneration(dataset, baseline, allstar, temperature,
+                                       curmaxsize, frequencyComplexity, options)
         end
 
         # Replace the n_evol_cycles-oldest members of each population
@@ -38,7 +38,7 @@ function regEvolCycle(dataset::Dataset{T},
     else
         for i=1:round(Integer, pop.n/options.ns)
             allstar = bestOfSample(pop, options)
-            baby = iterate(dataset, baseline, allstar, temperature,
+            baby = nextGeneration(dataset, baseline, allstar, temperature,
                            curmaxsize, frequencyComplexity, options)
             #printTree(baby.tree)
             oldest = argmin([pop.members[member].birth for member=1:pop.n])
