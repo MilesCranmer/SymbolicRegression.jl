@@ -89,15 +89,15 @@ function get_simplifier(binops::A, unaops::B) where {A,B}
     ]
     TRIG_RULES = [
        rule for (required_ops, rule) in [
-       ((sin,cos,*,+,), @acrule(sin(~x)^2 + cos(~x)^2 => one(~x))),
-       ((sin,cos,*,+,), @acrule(sin(~x)^2 + -1        => cos(~x)^2)),
-       ((sin,cos,*,+,), @acrule(cos(~x)^2 + -1        => sin(~x)^2)),
-       ((tan,sec,*,+,), @acrule(tan(~x)^2 + -1*sec(~x)^2 => one(~x))),
-       ((tan,sec,*,+,), @acrule(tan(~x)^2 +  1 => sec(~x)^2)),
-       ((tan,sec,*,+,), @acrule(sec(~x)^2 + -1 => tan(~x)^2)),
-       ((cot,csc,*,+,), @acrule(cot(~x)^2 + -1*csc(~x)^2 => one(~x))),
-       ((cot,csc,*,+,), @acrule(cot(~x)^2 +  1 => csc(~x)^2)),
-       ((cot,csc,*,+,), @acrule(csc(~x)^2 + -1 => cot(~x)^2))]
+       ((sin, cos, *, +,), @acrule(sin(~x)^2 + cos(~x)^2 => one(~x))),
+       ((sin, cos, *, +,), @acrule(sin(~x)^2 + -1        => cos(~x)^2)),
+       ((sin, cos, *, +,), @acrule(cos(~x)^2 + -1        => sin(~x)^2)),
+       ((tan, sec, *, +,), @acrule(tan(~x)^2 + -1*sec(~x)^2 => one(~x))),
+       ((tan, sec, *, +,), @acrule(tan(~x)^2 +  1 => sec(~x)^2)),
+       ((tan, sec, *, +,), @acrule(sec(~x)^2 + -1 => tan(~x)^2)),
+       ((cot, csc, *, +,), @acrule(cot(~x)^2 + -1*csc(~x)^2 => one(~x))),
+       ((cot, csc, *, +,), @acrule(cot(~x)^2 +  1 => csc(~x)^2)),
+       ((cot, csc, *, +,), @acrule(csc(~x)^2 + -1 => cot(~x)^2))]
        if all([(op in binops || op in unaops) for op in required_ops])
     ]
     function number_simplifier()
@@ -138,5 +138,3 @@ function custom_simplify(eqn::T, options::Options)::AllEquationTypes where {T<:A
 	end
 	return eqn
 end
-
-
