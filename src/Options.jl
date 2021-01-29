@@ -34,9 +34,9 @@ struct Options{A<:NTuple{N,Any} where {N},B<:NTuple{M,Any} where {M}}
 
     binops::A
     unaops::B
-    bin_constraints
-    una_constraints
-    ns::Integer
+    bin_constraints::Array{Tuple{Int,Int}, 1}
+    una_constraints::Array{Int, 1}
+    ns::Int
     parsimony::Float32
     alpha::Float32
     maxsize::Int
@@ -57,14 +57,14 @@ struct Options{A<:NTuple{N,Any} where {N},B<:NTuple{M,Any} where {M}}
     warmupMaxsize::Int
     limitPowComplexity::Bool
     useFrequency::Bool
-    npop::Integer
-    ncyclesperiteration::Integer
+    npop::Int
+    ncyclesperiteration::Int
     fractionReplaced::Float32
-    topn::Integer
-    verbosity::Integer
+    topn::Int
+    verbosity::Int
     probNegate::Float32
-    nuna::Integer
-    nbin::Integer
+    nuna::Int
+    nbin::Int
 
 end
 

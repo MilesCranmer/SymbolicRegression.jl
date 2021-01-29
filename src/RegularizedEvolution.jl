@@ -3,7 +3,7 @@ using Random: shuffle!
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample
 function regEvolCycle(dataset::Dataset{T},
-                      baseline::T, pop::Population, temperature::T, curmaxsize::Integer,
+                      baseline::T, pop::Population, temperature::T, curmaxsize::Int,
                       frequencyComplexity::AbstractVector{T},
                       options::Options)::Population where {T<:Real}
     # Batch over each subsample. Can give 15% improvement in speed; probably moreso for large pops.
@@ -11,7 +11,7 @@ function regEvolCycle(dataset::Dataset{T},
     # as good.
     if options.fast_cycle
         shuffle!(pop.members)
-        n_evol_cycles = round(Integer, pop.n/options.ns)
+        n_evol_cycles = round(Int, pop.n/options.ns)
         babies = Array{PopMember}(undef, n_evol_cycles)
 
         # Iterate each ns-member sub-sample
@@ -36,7 +36,7 @@ function regEvolCycle(dataset::Dataset{T},
             pop.members[oldest] = babies[i]
         end
     else
-        for i=1:round(Integer, pop.n/options.ns)
+        for i=1:round(Int, pop.n/options.ns)
             allstar = bestOfSample(pop, options)
             baby = nextGeneration(dataset, baseline, allstar, temperature,
                            curmaxsize, frequencyComplexity, options)

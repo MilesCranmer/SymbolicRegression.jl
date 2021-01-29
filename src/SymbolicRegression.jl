@@ -64,7 +64,7 @@ include("SingleIteration.jl")
 include("ConstantOptimization.jl")
 
 function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T};
-        niterations::Integer=10,
+        niterations::Int=10,
         weights::Union{AbstractVector{T}, Nothing}=nothing,
         varMap::Union{Array{String, 1}, Nothing}=nothing,
         options::Options=Options()) where {T<:Real}
@@ -168,7 +168,7 @@ function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T};
 
                 # Try normal copy otherwise.
                 if options.migration
-                    for k in rand(1:options.npop, round(Integer, options.npop*options.fractionReplaced))
+                    for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplaced))
                         to_copy = rand(1:size(bestPops.members)[1])
                         cur_pop.members[k] = PopMember(
                             copyNode(bestPops.members[to_copy].tree),
@@ -177,7 +177,7 @@ function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T};
                 end
 
                 if options.hofMigration && size(dominating)[1] > 0
-                    for k in rand(1:options.npop, round(Integer, options.npop*options.fractionReplacedHof))
+                    for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplacedHof))
                         # Copy in case one gets used twice
                         to_copy = rand(1:size(dominating)[1])
                         cur_pop.members[k] = PopMember(

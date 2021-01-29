@@ -49,7 +49,7 @@ function symbolic_to_node(eqn::T, options::Options;
     return Node(varMap_to_index(eqn.name, varMap))
 end
 
-function _multiarg_split(op_idx::Integer, eqn::Array{Any},
+function _multiarg_split(op_idx::Int, eqn::Array{Any},
                         options::Options, varMap::Union{Array{String, 1}, Nothing}
                        )::Node
     if length(eqn) == 2
@@ -92,17 +92,17 @@ function symbolic_to_node(eqn::T, options::Options;
     end
 end
 
-function unaop_to_index(op::F, options::Options)::Integer where {F<:SymbolicUtils.Sym}
+function unaop_to_index(op::F, options::Options)::Int where {F<:SymbolicUtils.Sym}
     # In format _unaop1
     parse(Int, string(op.name)[7:end])
 end
 
-function binop_to_index(op::F, options::Options)::Integer where {F<:SymbolicUtils.Sym}
+function binop_to_index(op::F, options::Options)::Int where {F<:SymbolicUtils.Sym}
     # In format _binop1
     parse(Int, string(op.name)[7:end])
 end
 
-function unaop_to_index(op::F, options::Options)::Integer where {F<:Function}
+function unaop_to_index(op::F, options::Options)::Int where {F<:Function}
     for i=1:options.nuna
         if op == options.unaops[i]
             return i
@@ -111,7 +111,7 @@ function unaop_to_index(op::F, options::Options)::Integer where {F<:Function}
     error("Operator $(op) in simplified expression not found in options $(options.unaops)!")
 end
 
-function binop_to_index(op::F, options::Options)::Integer where {F<:Function}
+function binop_to_index(op::F, options::Options)::Int where {F<:Function}
     for i=1:options.nbin
         if op == options.binops[i]
             return i
@@ -120,7 +120,7 @@ function binop_to_index(op::F, options::Options)::Integer where {F<:Function}
     error("Operator $(op) in simplified expression not found in options $(options.binops)!")
 end
 
-function varMap_to_index(var::Symbol, varMap::Array{String, 1})::Integer
+function varMap_to_index(var::Symbol, varMap::Array{String, 1})::Int
     str = string(var)
     for i=1:length(varMap)
         if str == varMap[i]
@@ -129,6 +129,6 @@ function varMap_to_index(var::Symbol, varMap::Array{String, 1})::Integer
     end
 end
 
-function varMap_to_index(var::Symbol, varMap::Nothing)::Integer
+function varMap_to_index(var::Symbol, varMap::Nothing)::Int
     return parse(Int, string(var)[2:end])
 end

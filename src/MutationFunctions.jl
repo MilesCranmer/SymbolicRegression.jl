@@ -232,7 +232,7 @@ end
 
 
 # Create a random equation by appending random operators
-function genRandomTree(length::Integer, options::Options, nfeatures::Int)::Node
+function genRandomTree(length::Int, options::Options, nfeatures::Int)::Node
     tree = Node(1.0f0)
     for i=1:length
         tree = appendRandomOp(tree, options, nfeatures)

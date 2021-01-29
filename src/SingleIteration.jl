@@ -2,10 +2,10 @@
 # printing the fittest equation every 10% through
 function SRCycle(dataset::Dataset{T}, baseline::T, 
         pop::Population,
-        ncycles::Integer,
-        curmaxsize::Integer,
+        ncycles::Int,
+        curmaxsize::Int,
         frequencyComplexity::AbstractVector{T};
-        verbosity::Integer=0,
+        verbosity::Int=0,
         options::Options
         )::Population where {T<:Real}
 

@@ -2,17 +2,17 @@
 #  which allow for random generation of new populations
 mutable struct Population{T<:Real}
     members::Array{PopMember{T}, 1}
-    n::Integer
+    n::Int
 end
 
 Population(pop::Array{PopMember{T}, 1}) where {T<:Real} = Population{T}(pop, size(pop)[1])
-Population(pop::Array{PopMember{T}, 1}, npop::Integer) where {T<:Real} = Population{T}(pop, npop)
+Population(pop::Array{PopMember{T}, 1}, npop::Int) where {T<:Real} = Population{T}(pop, npop)
 Population(dataset::Dataset{T}, baseline::T;
-           npop::Integer, nlength::Integer=3,
+           npop::Int, nlength::Int=3,
            options::Options,
            nfeatures::Int) where {T<:Real} = Population([PopMember(dataset, baseline, genRandomTree(nlength, options, nfeatures), options) for i=1:npop], npop)
 Population(X::AbstractMatrix{T}, y::AbstractVector{T}, baseline::T;
-           npop::Integer, nlength::Integer=3,
+           npop::Int, nlength::Int=3,
            options::Options,
            nfeatures::Int) where {T<:Real} = Population(Dataset(X, y), baseline, npop=npop, options=options, nfeatures=nfeatures)
 
@@ -44,13 +44,13 @@ function finalizeScores(dataset::Dataset{T},
 end
 
 # Return best 10 examples
-function bestSubPop(pop::Population; topn::Integer=10)::Population
+function bestSubPop(pop::Population; topn::Int=10)::Population
     best_idx = sortperm([pop.members[member].score for member=1:pop.n])
     return Population(pop.members[best_idx[1:topn]])
 end
 
 # Return best 10 examples size that are pareto dominating
-function bestSubPopParetoDominating(pop::Population{T}; topn::Integer=10)::Population where {T<:Real}
+function bestSubPopParetoDominating(pop::Population{T}; topn::Int=10)::Population where {T<:Real}
     scores = [pop.members[member].score for member=1:pop.n]
     best_idx = sortperm(scores)
 

@@ -2,7 +2,7 @@
 #  exp(-delta/T) defines probability of accepting a change
 function nextGeneration(dataset::Dataset{T},
                         baseline::T, member::PopMember, temperature::T,
-                        curmaxsize::Integer, frequencyComplexity::AbstractVector{T},
+                        curmaxsize::Int, frequencyComplexity::AbstractVector{T},
                         options::Options)::PopMember where {T<:Real}
 
     prev = member.tree

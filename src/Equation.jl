@@ -1,23 +1,23 @@
 # Define a serialization format for the symbolic equations:
 mutable struct Node
     #Holds operators, variables, constants in a tree
-    degree::Integer #0 for constant/variable, 1 for cos/sin, 2 for +/* etc.
-    val::Union{ConstantType, Integer, Nothing} #Either const value, or enumerates variable
+    degree::Int #0 for constant/variable, 1 for cos/sin, 2 for +/* etc.
+    val::Union{ConstantType, Int, Nothing} #Either const value, or enumerates variable
     constant::Bool #false if variable
-    op::Integer #enumerates operator (separately for degree=1,2)
+    op::Int #enumerates operator (separately for degree=1,2)
     l::Union{Node, Nothing}
     r::Union{Node, Nothing}
 
     Node(val::ConstantType) = new(0, val, true, 1, nothing, nothing)
-    Node(val::Integer) = new(0, val, false, 1, nothing, nothing)
-    Node(op::Integer, l::Node) = new(1, nothing, false, op, l, nothing)
-    Node(op::Integer, l::Union{ConstantType, Integer}) = new(1, nothing, false, op, Node(l), nothing)
-    Node(op::Integer, l::Node, r::Node) = new(2, nothing, false, op, l, r)
+    Node(val::Int) = new(0, val, false, 1, nothing, nothing)
+    Node(op::Int, l::Node) = new(1, nothing, false, op, l, nothing)
+    Node(op::Int, l::Union{ConstantType, Int}) = new(1, nothing, false, op, Node(l), nothing)
+    Node(op::Int, l::Node, r::Node) = new(2, nothing, false, op, l, r)
 
     #Allow to pass the leaf value without additional node call:
-    Node(op::Integer, l::Union{ConstantType, Integer}, r::Node) = new(2, nothing, false, op, Node(l), r)
-    Node(op::Integer, l::Node, r::Union{ConstantType, Integer}) = new(2, nothing, false, op, l, Node(r))
-    Node(op::Integer, l::Union{ConstantType, Integer}, r::Union{ConstantType, Integer}) = new(2, nothing, false, op, Node(l), Node(r))
+    Node(op::Int, l::Union{ConstantType, Int}, r::Node) = new(2, nothing, false, op, Node(l), r)
+    Node(op::Int, l::Node, r::Union{ConstantType, Int}) = new(2, nothing, false, op, l, Node(r))
+    Node(op::Int, l::Union{ConstantType, Int}, r::Union{ConstantType, Int}) = new(2, nothing, false, op, Node(l), Node(r))
 end
 
 # Copy an equation (faster than deepcopy)
@@ -32,7 +32,7 @@ function copyNode(tree::Node)::Node
 end
 
 # Count the operators, constants, variables in an equation
-function countNodes(tree::Node)::Integer
+function countNodes(tree::Node)::Int
     if tree.degree == 0
         return 1
     elseif tree.degree == 1
@@ -43,7 +43,7 @@ function countNodes(tree::Node)::Integer
 end
 
 # Count the max depth of a tree
-function countDepth(tree::Node)::Integer
+function countDepth(tree::Node)::Int
     if tree.degree == 0
         return 1
     elseif tree.degree == 1
@@ -123,7 +123,7 @@ function randomNode(tree::Node)::Node
 end
 
 # Count the number of unary operators in the equation
-function countUnaryOperators(tree::Node)::Integer
+function countUnaryOperators(tree::Node)::Int
     if tree.degree == 0
         return 0
     elseif tree.degree == 1
@@ -134,7 +134,7 @@ function countUnaryOperators(tree::Node)::Integer
 end
 
 # Count the number of binary operators in the equation
-function countBinaryOperators(tree::Node)::Integer
+function countBinaryOperators(tree::Node)::Int
     if tree.degree == 0
         return 0
     elseif tree.degree == 1
@@ -145,15 +145,19 @@ function countBinaryOperators(tree::Node)::Integer
 end
 
 # Count the number of operators in the equation
-function countOperators(tree::Node)::Integer
+function countOperators(tree::Node)::Int
     return countUnaryOperators(tree) + countBinaryOperators(tree)
 end
 
 
 # Count the number of constants in an equation
-function countConstants(tree::Node)::Integer
+function countConstants(tree::Node)::Int
     if tree.degree == 0
-        return convert(Integer, tree.constant)
+        if tree.constant
+            return 1
+        else
+            return 0
+        end
     elseif tree.degree == 1
         return 0 + countConstants(tree.l)
     else

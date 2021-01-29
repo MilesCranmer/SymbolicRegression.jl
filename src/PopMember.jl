@@ -2,7 +2,7 @@
 mutable struct PopMember{T<:Real}
     tree::Node
     score::T
-    birth::Integer
+    birth::Int
 end
 
 function PopMember(t::Node, score::T) where {T<:Real}
