@@ -40,10 +40,12 @@ function calculateParetoFrontier(dataset::Dataset{T},
     return dominating
 end
 
-calculateParetoFrontier(X::AbstractMatrix{T},
-                        y::AbstractVector{T},
-                        hallOfFame::HallOfFame,
-                        options::Options;
-                        weights=nothing,
-                        varMap=nothing) where {T<:Real} = calculateParetoFrontier(Dataset(X, y, weights=weights, varMap=varMap), hallOfFame, options)
+function calculateParetoFrontier(X::AbstractMatrix{T},
+                                 y::AbstractVector{T},
+                                 hallOfFame::HallOfFame,
+                                 options::Options;
+                                 weights=nothing,
+                                 varMap=nothing) where {T<:Real}
+    calculateParetoFrontier(Dataset(X, y, weights=weights, varMap=varMap), hallOfFame, options)
+end
 

@@ -53,7 +53,7 @@ struct Options{A<:NTuple{N,Any} where {N},B<:NTuple{M,Any} where {M}}
     annealing::Bool
     batching::Bool
     batchSize::Int
-    mutationWeights::Array{Real, 1}
+    mutationWeights::Array{Float64, 1}
     warmupMaxsize::Int
     limitPowComplexity::Bool
     useFrequency::Bool
@@ -123,6 +123,11 @@ function Options(;
 
     binary_operators = map(binopmap, binary_operators)
     unary_operators = map(unaopmap, unary_operators)
+
+    mutationWeights = map((x,)->convert(Float64, x), mutationWeights)
+    if length(mutationWeights) != 8
+        error("Not the right number of mutation probabilities given")
+    end
 
     Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin)
 end

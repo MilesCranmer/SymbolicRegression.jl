@@ -3,7 +3,8 @@ mutable struct Node
     #Holds operators, variables, constants in a tree
     degree::Int #0 for constant/variable, 1 for cos/sin, 2 for +/* etc.
     constant::Bool #false if variable
-    val::CONST_TYPE #Under this are possibly undefined:
+    val::CONST_TYPE
+    # ------------------- (possibly undefined below)
     feature::Int #Either const value, or enumerates variable.
     op::Int #enumerates operator (separately for degree=1,2)
     l::Node

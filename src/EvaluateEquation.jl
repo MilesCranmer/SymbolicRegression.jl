@@ -14,44 +14,44 @@ function UNAOP!(x::AbstractVector{T}, ::Val{i}, ::Val{clen}, options::Options) w
     end
 end
 
+
+#isnan(x::AbstractFloat) = (x != x)::Bool
+#isfinite(x::AbstractFloat) = x - x == 0
+
 # Evaluate an equation over an array of datapoints
-function evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Union{AbstractVector{T}, Nothing} where {T<:Real}
+function evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
     clen = size(cX)[1]
     if tree.degree == 0
         if tree.constant #TODO: Make this done with types instead
-            return fill(convert(T, tree.val), clen)
+            return (fill(convert(T, tree.val), clen), true)
         else
-            return copy(cX[:, tree.feature])
+            return (copy(cX[:, tree.feature]), true)
         end
-    elseif tree.degree == 1
-        cumulator = evalTreeArray(tree.l, cX, options)
-        if cumulator === nothing
-            return nothing
-        end
+    end
+
+    (cumulator, complete) = evalTreeArray(tree.l, cX, options)
+    if !complete
+        return (cumulator, false)
+    end
+
+    if tree.degree == 1
         op_idx = tree.op
         UNAOP!(cumulator, Val(op_idx), Val(clen), options)
-        @inbounds for i=1:clen
-            if isinf(cumulator[i]) || isnan(cumulator[i])
-                return nothing
-            end
-        end
-        return cumulator
     else
-        cumulator = evalTreeArray(tree.l, cX, options)
-        if cumulator === nothing
-            return nothing
-        end
-        array2 = evalTreeArray(tree.r, cX, options)
-        if array2 === nothing
-            return nothing
+        (array2, complete2) = evalTreeArray(tree.r, cX, options)
+        if !complete2
+            return (cumulator, false)
         end
         op_idx = tree.op
         BINOP!(cumulator, array2, Val(op_idx), Val(clen), options)
-        @inbounds for i=1:clen
-            if isinf(cumulator[i]) || isnan(cumulator[i])
-                return nothing
-            end
-        end
-        return cumulator
     end
+
+	# TODO - consider checking this at end.
+    @inbounds @simd for i=1:clen
+        if (cumulator[i] != cumulator[i])::Bool || (cumulator[i] - cumulator[i] != convert(T, 0))::Bool
+            return (cumulator, false)
+        end
+    end
+
+    return (cumulator, true)
 end

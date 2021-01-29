@@ -22,26 +22,18 @@ function MSE(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T})::T w
     return SSE(x, y, w)/sum(w)
 end
 
-function SSE(x::Nothing, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
-    return convert(T, 1000000000)
-end
-function MSE(x::Nothing, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
-    return convert(T, 1000000000)
-end
-function SSE(x::Nothing, y::AbstractArray{T})::T where {T<:Real}
-    return convert(T, 1000000000)
-end
-function MSE(x::Nothing, y::AbstractArray{T})::T where {T<:Real}
-    return convert(T, 1000000000)
-end
-
 # Loss function. Only MSE implemented right now. TODO
 # Also need to put actual loss function in scoreFuncBatch!
 function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options)::T where {T<:Real}
+    (prediction, completion) = evalTreeArray(tree, dataset.X, options)
+    if !completion
+        return convert(T, 1000000000)
+    end
+
     if dataset.weighted
-        return MSE(evalTreeArray(tree, dataset.X, options), dataset.y, dataset.weights)
+        return MSE(prediction, dataset.y, dataset.weights)
     else
-        return MSE(evalTreeArray(tree, dataset.X, options), dataset.y)
+        return MSE(prediction, dataset.y)
     end
 end
 
@@ -60,7 +52,11 @@ function scoreFuncBatch(dataset::Dataset{T}, baseline::T,
     batch_idx = randperm(dataset.n)[1:options.batchSize]
     batch_X = dataset.X[batch_idx, :]
     batch_y = dataset.y[batch_idx]
-    prediction = evalTreeArray(tree, batch_X, options)
+    (prediction, completion) = evalTreeArray(tree, batch_X, options)
+    if !completion
+        return convert(T, 1000000000)
+    end
+
     if dataset.weighted
         mse = MSE(prediction, batch_y)
     else
