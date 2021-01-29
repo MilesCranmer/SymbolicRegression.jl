@@ -22,7 +22,7 @@ function multiply_powers(eqn::T, op::F)::AllEquationTypes where {F,T<:SymbolicUt
 		elseif n > 1
 			return reduce(*, [l for i=1:n])
 		elseif n < -1
-			return reduce(/, vcat([1], [l for i=1:n]))
+			return reduce(/, vcat([1], [l for i=1:abs(n)]))
 		else
 			return 1.0
 		end
@@ -128,13 +128,13 @@ function get_simplifier(binops::A, unaops::B) where {A,B}
     return serial_polynormal_simplifier
 end
 
-function custom_simplify(eqn::T, options::Options)::AllEquationTypes where {T<:AllEquationTypes}
+function custom_simplify(init_eqn::T, options::Options)::AllEquationTypes where {T<:AllEquationTypes}
     simplifier = get_simplifier(options.binops, options.unaops)
-    eqn = simplifier(eqn) #simplify(eqn, polynorm=true)
+    eqn = simplifier(init_eqn) #simplify(eqn, polynorm=true)
 
 	# Remove power laws
     if !((^) in options.binops)
-		eqn = multiply_powers(eqn)
+		eqn = multiply_powers(eqn::AllEquationTypes)
 	end
 	return eqn
 end
