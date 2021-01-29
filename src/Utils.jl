@@ -16,7 +16,7 @@ end
 
 
 # Check for errors before they happen
-function testConfiguration(options::Options)
+function testOptionConfiguration(options::Options)
     test_input = LinRange(-100f0, 100f0, 99)
 
     try
@@ -42,3 +42,10 @@ function testConfiguration(options::Options)
     end
 end
 
+# Check for errors before they happen
+function testDatasetConfiguration(dataset::Dataset{T}) where {T<:Real}
+    n = dataset.n
+    if n != size(dataset.X)[2] || n != size(dataset.y)[1]
+        throw(error("Dataset dimensions are invalid. Make sure X is of shape [features, rows], y is of shape [rows] and if there are weights, they are of shape [rows]."))
+    end
+end

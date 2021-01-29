@@ -7,7 +7,7 @@ export Population,
     Options,
 
     #Functions:
-    RunSR,
+    EquationSearch,
     SRCycle,
     calculateParetoFrontier,
     countNodes,
@@ -62,16 +62,17 @@ include("Population.jl")
 include("RegularizedEvolution.jl")
 include("SingleIteration.jl")
 include("ConstantOptimization.jl")
+include("Deprecates.jl")
 
-function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T};
+function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         niterations::Int=10,
         weights::Union{AbstractVector{T}, Nothing}=nothing,
         varMap::Union{Array{String, 1}, Nothing}=nothing,
         options::Options=Options()) where {T<:Real}
 
-    testConfiguration(options)
+    testOptionConfiguration(options)
 
-    if size(X)[1] > 10000
+    if size(X)[2] > 10000
         if !options.batching
             println("Note: you are running with more than 10,000 datapoints. You should consider turning on batching (`options.batching`), and also if you need that many datapoints. Unless you have a large amount of noise (in which case you should smooth your dataset first), generally < 10,000 datapoints is enough to find a functional form.")
         end
@@ -80,6 +81,8 @@ function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T};
     dataset = Dataset(X, y,
                      weights=weights,
                      varMap=varMap)
+
+    testDatasetConfiguration(dataset)
 
     if dataset.weighted
         avgy = sum(dataset.y .* dataset.weights)/sum(dataset.weights)
@@ -277,5 +280,6 @@ function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T};
     end
     return hallOfFame
 end
+
 
 end #module SR

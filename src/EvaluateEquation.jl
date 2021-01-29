@@ -20,12 +20,12 @@ end
 
 # Evaluate an equation over an array of datapoints
 function evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
-    clen = size(cX)[1]
+    clen = size(cX)[2]
     if tree.degree == 0
         if tree.constant #TODO: Make this done with types instead
             return (fill(convert(T, tree.val), clen), true)
         else
-            return (copy(cX[:, tree.feature]), true)
+            return (copy(cX[tree.feature, :]), true)
         end
     end
 

@@ -26,8 +26,8 @@ procs = addprocs()
 
 @everywhere using SymbolicRegression
 
-X = randn(Float32, 100, 5)
-y = 2 * cos.(X[:, 4]) + X[:, 1] .^ 2 .- 2
+X = randn(Float32, 5, 100)
+y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
 
 options = SymbolicRegression.Options(
     binary_operators=(+, *, /, -),
@@ -36,7 +36,7 @@ options = SymbolicRegression.Options(
 )
 niterations = 5
 
-hallOfFame = RunSR(X, y, niterations=niterations, options=options)
+hallOfFame = EquationSearch(X, y, niterations=niterations, options=options)
 
 rmprocs(procs)
 ```

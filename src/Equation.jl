@@ -86,7 +86,7 @@ function stringTree(tree::Node, options::Options;
             if varMap == nothing
                 return "x$(tree.feature)"
             else
-                return varMap[tree.feature::Int]
+                return varMap[tree.feature]
             end
         end
     elseif tree.degree == 1
