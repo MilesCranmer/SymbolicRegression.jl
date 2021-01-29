@@ -3,6 +3,10 @@ using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ord
 
 const AllEquationTypes = Union{<:Real,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
 
+function multiply_powers(eqn::Nothing)::Nothing
+	return eqn
+end
+
 function multiply_powers(eqn::T)::AllEquationTypes where {T<:Union{<:Real,SymbolicUtils.Sym{<:Number}}}
 	return eqn
 end
