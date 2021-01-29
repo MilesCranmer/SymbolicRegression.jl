@@ -2,28 +2,31 @@
 mutable struct Node
     #Holds operators, variables, constants in a tree
     degree::Int #0 for constant/variable, 1 for cos/sin, 2 for +/* etc.
-    val::Union{ConstantType, Int, Nothing} #Either const value, or enumerates variable
     constant::Bool #false if variable
+    val::CONST_TYPE #Under this are possibly undefined:
+    feature::Int #Either const value, or enumerates variable.
     op::Int #enumerates operator (separately for degree=1,2)
-    l::Union{Node, Nothing}
-    r::Union{Node, Nothing}
+    l::Node
+    r::Node
 
-    Node(val::ConstantType) = new(0, val, true, 1, nothing, nothing)
-    Node(val::Int) = new(0, val, false, 1, nothing, nothing)
-    Node(op::Int, l::Node) = new(1, nothing, false, op, l, nothing)
-    Node(op::Int, l::Union{ConstantType, Int}) = new(1, nothing, false, op, Node(l), nothing)
-    Node(op::Int, l::Node, r::Node) = new(2, nothing, false, op, l, r)
-
-    #Allow to pass the leaf value without additional node call:
-    Node(op::Int, l::Union{ConstantType, Int}, r::Node) = new(2, nothing, false, op, Node(l), r)
-    Node(op::Int, l::Node, r::Union{ConstantType, Int}) = new(2, nothing, false, op, l, Node(r))
-    Node(op::Int, l::Union{ConstantType, Int}, r::Union{ConstantType, Int}) = new(2, nothing, false, op, Node(l), Node(r))
+    Node(val::CONST_TYPE) =                                               new(0, true,                       val                                     ) #Leave other values undefined
+    Node(feature::Int) =                                                  new(0, false, convert(CONST_TYPE, 0f0), feature                            )
+    Node(op::Int, l::Node) =                                              new(1, false, convert(CONST_TYPE, 0f0),       0,      op,        l         )
+    Node(op::Int, l::Union{CONST_TYPE, Int}) =                            new(1, false, convert(CONST_TYPE, 0f0),       0,      op,  Node(l)         )
+    Node(op::Int, l::Node, r::Node) =                                     new(2, false, convert(CONST_TYPE, 0f0),       0,      op,        l,       r)
+    Node(op::Int, l::Union{CONST_TYPE, Int}, r::Node) =                   new(2, false, convert(CONST_TYPE, 0f0),       0,      op,  Node(l),       r)
+    Node(op::Int, l::Node, r::Union{CONST_TYPE, Int}) =                   new(2, false, convert(CONST_TYPE, 0f0),       0,      op,        l, Node(r))
+    Node(op::Int, l::Union{CONST_TYPE, Int}, r::Union{CONST_TYPE, Int}) = new(2, false, convert(CONST_TYPE, 0f0),       0,      op,  Node(l), Node(r))
 end
 
 # Copy an equation (faster than deepcopy)
 function copyNode(tree::Node)::Node
    if tree.degree == 0
-       return Node(tree.val)
+       if tree.constant
+           return Node(tree.val)
+        else
+           return Node(tree.feature)
+        end
    elseif tree.degree == 1
        return Node(tree.op, copyNode(tree.l))
     else
@@ -80,9 +83,9 @@ function stringTree(tree::Node, options::Options;
             return string(tree.val)
         else
             if varMap == nothing
-                return "x$(tree.val)"
+                return "x$(tree.feature)"
             else
-                return varMap[tree.val]
+                return varMap[tree.feature::Int]
             end
         end
     elseif tree.degree == 1
@@ -167,12 +170,12 @@ end
 
 
 # Get all the constants from a tree
-function getConstants(tree::Node)::AbstractVector{ConstantType}
+function getConstants(tree::Node)::AbstractVector{CONST_TYPE}
     if tree.degree == 0
         if tree.constant
             return [tree.val]
         else
-            return ConstantType[]
+            return CONST_TYPE[]
         end
     elseif tree.degree == 1
         return getConstants(tree.l)
@@ -186,7 +189,7 @@ end
 function setConstants(tree::Node, constants::AbstractVector{T}) where {T<:Real}
     if tree.degree == 0
         if tree.constant
-            tree.val = convert(ConstantType, constants[1])
+            tree.val = convert(CONST_TYPE, constants[1])
         end
     elseif tree.degree == 1
         setConstants(tree.l, constants)

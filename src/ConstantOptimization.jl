@@ -1,7 +1,7 @@
 using Optim
 
 # Proxy function for optimization
-function optFunc(x::Vector{ConstantType}, dataset::Dataset{T}, baseline::T,
+function optFunc(x::Vector{CONST_TYPE}, dataset::Dataset{T}, baseline::T,
                  tree::Node, options::Options)::T where {T<:Real}
     setConstants(tree, x)
     return scoreFunc(dataset, baseline, tree, options)
@@ -17,8 +17,8 @@ function optimizeConstants(dataset::Dataset{T},
         return member
     end
     x0 = getConstants(member.tree)
-    f(x::Vector{ConstantType})::T = optFunc(x, dataset, baseline, member.tree, options)
-    if size(x0)[1] == 1
+    f(x::Vector{CONST_TYPE})::T = optFunc(x, dataset, baseline, member.tree, options)
+    if nconst == 1
         algorithm = Newton
     else
         algorithm = NelderMead
@@ -28,7 +28,7 @@ function optimizeConstants(dataset::Dataset{T},
         result = optimize(f, x0, algorithm(), Optim.Options(iterations=100))
         # Try other initial conditions:
         for i=1:options.nrestarts
-            new_start = x0 .* (convert(ConstantType, 1) .+ convert(ConstantType, 1//2)*randn(ConstantType, size(x0)[1]))
+            new_start = x0 .* (convert(CONST_TYPE, 1) .+ convert(CONST_TYPE, 1//2)*randn(CONST_TYPE, size(x0)[1]))
             tmpresult = optimize(f, new_start, algorithm(), Optim.Options(iterations=100))
 
             if tmpresult.minimum < result.minimum

@@ -10,9 +10,9 @@ function node_to_symbolic(tree::Node, options::Options;
             return tree.val
         else
             if varMap == nothing
-                return SymbolicUtils.Sym{Real}(Symbol("x$(tree.val)"))
+                return SymbolicUtils.Sym{Real}(Symbol("x$(tree.feature)"))
             else
-                return SymbolicUtils.Sym{Real}(Symbol(varMap[tree.val]))
+                return SymbolicUtils.Sym{Real}(Symbol(varMap[tree.feature]))
             end
         end
     elseif tree.degree == 1
@@ -40,7 +40,7 @@ end
 # Just constant
 function symbolic_to_node(eqn::T, options::Options;
                      varMap::Union{Array{String, 1}, Nothing}=nothing)::Node where {T<:Number}
-    return Node(convert(ConstantType, eqn))
+    return Node(convert(CONST_TYPE, eqn))
 end
 
 # Just variable

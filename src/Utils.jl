@@ -5,7 +5,9 @@ function id(x::T)::T where {T<:Real}
 end
 
 function debug(verbosity, string...)
-    verbosity > 0 ? println(string...) : nothing
+    if verbosity > 0
+        println(string...)
+    end
 end
 
 function getTime()::Int

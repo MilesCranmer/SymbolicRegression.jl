@@ -36,9 +36,9 @@ function mutateConstant(
     makeConstBigger = rand() > 0.5
 
     if makeConstBigger
-        node.val *= convert(ConstantType, factor)
+        node.val *= convert(CONST_TYPE, factor)
     else
-        node.val /= convert(ConstantType, factor)
+        node.val /= convert(CONST_TYPE, factor)
     end
 
     if rand() > options.probNegate
@@ -55,18 +55,20 @@ function appendRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
         node = randomNode(tree)
     end
 
-    choice = rand()
-    makeNewBinOp = choice < options.nbin/(options.nuna + options.nbin)
+    #TODO - clean up type inference here!
     if rand() > 0.5
-        left = Float32(randn())
+        left = randn(CONST_TYPE)
     else
         left = rand(1:nfeatures)
     end
     if rand() > 0.5
-        right = Float32(randn())
+        right = randn(CONST_TYPE)
     else
         right = rand(1:nfeatures)
     end
+
+    choice = rand()
+    makeNewBinOp = choice < options.nbin/(options.nuna + options.nbin)
 
     if makeNewBinOp
         newnode = Node(
@@ -80,12 +82,17 @@ function appendRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
             left
         )
     end
+
+    if newnode.degree == 2
+        node.r = newnode.r
+    end
     node.l = newnode.l
-    node.r = newnode.r
     node.op = newnode.op
     node.degree = newnode.degree
     node.val = newnode.val
+    node.feature = newnode.feature
     node.constant = newnode.constant
+
     return tree
 end
 
@@ -109,11 +116,14 @@ function insertRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
             left
         )
     end
+    if newnode.degree == 2
+        node.r = newnode.r
+    end
     node.l = newnode.l
-    node.r = newnode.r
     node.op = newnode.op
     node.degree = newnode.degree
     node.val = newnode.val
+    node.feature = newnode.feature
     node.constant = newnode.constant
     return tree
 end
@@ -138,23 +148,26 @@ function prependRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
             left
         )
     end
+    if newnode.degree == 2
+        node.r = newnode.r
+    end
     node.l = newnode.l
-    node.r = newnode.r
     node.op = newnode.op
     node.degree = newnode.degree
     node.val = newnode.val
+    node.feature = newnode.feature
     node.constant = newnode.constant
     return node
 end
 
 function randomConstantNode(nfeatures::Int)::Node
     if rand() > 0.5
-        val = convert(ConstantType, randn())
+        val = convert(CONST_TYPE, randn())
+        return Node(val)
     else
-        val = rand(1:nfeatures)
+        feature = rand(1:nfeatures)
+        return Node(feature)
     end
-    newnode = Node(val)
-    return newnode
 end
 
 
@@ -192,12 +205,12 @@ function deleteRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
     if node.degree == 0
         # Replace with new constant
         newnode = randomConstantNode(nfeatures)
-        node.l = newnode.l
-        node.r = newnode.r
-        node.op = newnode.op
         node.degree = newnode.degree
         node.val = newnode.val
         node.constant = newnode.constant
+        if !newnode.constant
+            node.feature = newnode.feature
+        end
     elseif node.degree == 1
         # Join one of the children with the parent
         if isroot
@@ -233,7 +246,7 @@ end
 
 # Create a random equation by appending random operators
 function genRandomTree(length::Int, options::Options, nfeatures::Int)::Node
-    tree = Node(1.0f0)
+    tree = Node(convert(CONST_TYPE, 1))
     for i=1:length
         tree = appendRandomOp(tree, options, nfeatures)
     end

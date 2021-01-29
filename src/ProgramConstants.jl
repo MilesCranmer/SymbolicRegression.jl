@@ -1,2 +1,2 @@
 const maxdegree = 2
-const ConstantType = Float32
+const CONST_TYPE = Float32

@@ -8,7 +8,7 @@ end
 
 function HallOfFame(options::Options)
     actualMaxsize = options.maxsize + maxdegree
-    HallOfFame([PopMember(Node(1f0), 1f9) for i=1:actualMaxsize], [false for i=1:actualMaxsize])
+    HallOfFame([PopMember(Node(convert(CONST_TYPE, 1)), 1f9) for i=1:actualMaxsize], [false for i=1:actualMaxsize])
 end
 
 

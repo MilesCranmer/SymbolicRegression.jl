@@ -21,7 +21,7 @@ function evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Uni
         if tree.constant #TODO: Make this done with types instead
             return fill(convert(T, tree.val), clen)
         else
-            return copy(cX[:, tree.val])
+            return copy(cX[:, tree.feature])
         end
     elseif tree.degree == 1
         cumulator = evalTreeArray(tree.l, cX, options)
