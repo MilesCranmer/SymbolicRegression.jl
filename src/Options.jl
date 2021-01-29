@@ -11,6 +11,8 @@ function binopmap(op)
         return -
     elseif op == div
         return /
+    elseif op == ^
+        return pow
     end
     return op
 end
