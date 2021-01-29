@@ -50,7 +50,7 @@ function scoreFuncBatch(dataset::Dataset{T}, baseline::T,
                         tree::Node, options::Options)::T where {T<:Real}
     batchSize = options.batchSize
     batch_idx = randperm(dataset.n)[1:options.batchSize]
-    batch_X = dataset.X[batch_idx, :]
+    batch_X = dataset.X[:, batch_idx]
     batch_y = dataset.y[batch_idx]
     (prediction, completion) = evalTreeArray(tree, batch_X, options)
     if !completion

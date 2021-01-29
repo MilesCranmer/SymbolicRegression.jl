@@ -18,6 +18,12 @@ using Pkg
 Pkg.add("SymbolicRegression")
 ```
 
+The heart of this package is the
+`EquationSearch` function, which takes
+a 2D array (shape [features, rows]) and attempts
+to model a 1D array (shape [rows])
+using analytic functional forms.
+
 Run distributed on four processes with:
 ```julia
 using Distributed
@@ -26,8 +32,8 @@ procs = addprocs()
 
 @everywhere using SymbolicRegression
 
-X = randn(Float32, 100, 5)
-y = 2 * cos.(X[:, 4]) + X[:, 1] .^ 2 .- 2
+X = randn(Float32, 5, 100)
+y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
 
 options = SymbolicRegression.Options(
     binary_operators=(+, *, /, -),
@@ -36,7 +42,7 @@ options = SymbolicRegression.Options(
 )
 niterations = 5
 
-hallOfFame = RunSR(X, y, niterations=niterations, options=options)
+hallOfFame = EquationSearch(X, y, niterations=niterations, options=options)
 
 rmprocs(procs)
 ```
