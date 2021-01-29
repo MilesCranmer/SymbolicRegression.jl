@@ -55,17 +55,6 @@ function appendRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
         node = randomNode(tree)
     end
 
-    #TODO - clean up type inference here!
-    if rand() > 0.5
-        left = randn(CONST_TYPE)
-    else
-        left = rand(1:nfeatures)
-    end
-    if rand() > 0.5
-        right = randn(CONST_TYPE)
-    else
-        right = rand(1:nfeatures)
-    end
 
     choice = rand()
     makeNewBinOp = choice < options.nbin/(options.nuna + options.nbin)
@@ -73,13 +62,13 @@ function appendRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
     if makeNewBinOp
         newnode = Node(
             rand(1:options.nbin),
-            left,
-            right
+            makeRandomLeaf(nfeatures),
+            makeRandomLeaf(nfeatures)
         )
     else
         newnode = Node(
             rand(1:options.nuna),
-            left
+            makeRandomLeaf(nfeatures)
         )
     end
 
@@ -104,7 +93,7 @@ function insertRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
     left = copyNode(node)
 
     if makeNewBinOp
-        right = randomConstantNode(nfeatures)
+        right = makeRandomLeaf(nfeatures)
         newnode = Node(
             rand(1:options.nbin),
             left,
@@ -136,7 +125,7 @@ function prependRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
     left = copyNode(tree)
 
     if makeNewBinOp
-        right = randomConstantNode(nfeatures)
+        right = makeRandomLeaf(nfeatures)
         newnode = Node(
             rand(1:options.nbin),
             left,
@@ -160,13 +149,11 @@ function prependRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
     return node
 end
 
-function randomConstantNode(nfeatures::Int)::Node
+function makeRandomLeaf(nfeatures::Int)::Node
     if rand() > 0.5
-        val = convert(CONST_TYPE, randn())
-        return Node(val)
+        return Node(randn(CONST_TYPE))
     else
-        feature = rand(1:nfeatures)
-        return Node(feature)
+        return Node(rand(1:nfeatures))
     end
 end
 
@@ -204,7 +191,7 @@ function deleteRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
 
     if node.degree == 0
         # Replace with new constant
-        newnode = randomConstantNode(nfeatures)
+        newnode = makeRandomLeaf(nfeatures)
         node.degree = newnode.degree
         node.val = newnode.val
         node.constant = newnode.constant
