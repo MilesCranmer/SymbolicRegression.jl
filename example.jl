@@ -15,6 +15,6 @@ options = SymbolicRegression.Options(
 )
 niterations = 5
 
-hallOfFame = RunSR(X, y, niterations=niterations, options=options)
+hallOfFame = EquationSearch(X, y, niterations=niterations, options=options)
 
 rmprocs(procs)

@@ -18,6 +18,12 @@ using Pkg
 Pkg.add("SymbolicRegression")
 ```
 
+The heart of this package is the
+`EquationSearch` function, which takes
+a 2D array (shape [features, rows]) and attempts
+to model a 1D array (shape [rows])
+using analytic functional forms.
+
 Run distributed on four processes with:
 ```julia
 using Distributed
