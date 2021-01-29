@@ -7,7 +7,7 @@ export Population,
     Options,
 
     #Functions:
-    RunSR, 
+    RunSR,
     SRCycle,
     calculateParetoFrontier,
     countNodes,
@@ -139,8 +139,8 @@ function RunSR(X::AbstractMatrix{T}, y::AbstractVector{T};
             if isready(channels[i])
                 # Take the fetch operation from the channel since its ready
                 cur_pop = take!(channels[i])
-                # bestSubPops[i] = bestSubPop(cur_pop, topn=options.topn)
-                bestSubPops[i] = bestSubPopParetoDominating(cur_pop, topn=options.topn)
+                bestSubPops[i] = bestSubPop(cur_pop, topn=options.topn)
+                # bestSubPops[i] = bestSubPopParetoDominating(cur_pop, topn=options.topn)
 
                 #Try normal copy...
                 bestPops = Population([member for pop in bestSubPops for member in pop.members])
