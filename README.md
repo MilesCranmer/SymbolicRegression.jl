@@ -22,7 +22,7 @@ Run distributed on four processes with:
 ```julia
 using Distributed
 
-addprocs()
+procs = addprocs()
 
 @everywhere using SymbolicRegression
 
@@ -38,7 +38,7 @@ niterations = 5
 
 hallOfFame = RunSR(X, y, niterations=niterations, options=options)
 
-rmprocs()
+rmprocs(procs)
 ```
 
 Then, we can get the equations in the dominating

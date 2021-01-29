@@ -1,6 +1,6 @@
 using Distributed
 
-addprocs()
+procs = addprocs()
 
 @everywhere include("src/SymbolicRegression.jl")
 @everywhere using .SymbolicRegression
@@ -17,4 +17,4 @@ niterations = 5
 
 hallOfFame = RunSR(X, y, niterations=niterations, options=options)
 
-rmprocs()
+rmprocs(procs)
