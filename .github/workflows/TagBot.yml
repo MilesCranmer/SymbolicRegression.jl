@@ -1,0 +1,3 @@
+- name: Julia TagBot
+  uses: JuliaRegistries/TagBot@v1.10.0
+
