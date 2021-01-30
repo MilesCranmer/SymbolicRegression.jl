@@ -56,9 +56,10 @@ to [SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl)
 with the following function:
 ```julia
 eqn = node_to_symbolic(dominating[end].tree, options)
+println(simplify(eqn*5 + 3))
 ```
 
-and print them out like so:
+We can also print out the full pareto frontier like so:
 ```julia
 println("Complexity\tMSE\tEquation")
 
