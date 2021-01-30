@@ -46,11 +46,16 @@ hallOfFame = EquationSearch(X, y, niterations=niterations, options=options)
 
 rmprocs(procs)
 ```
-
-Then, we can get the equations in the dominating
+We can view the equations in the dominating
 Pareto frontier with:
 ```julia
 dominating = calculateParetoFrontier(X, y, hallOfFame, options)
+```
+We can convert the best equation
+to [SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl)
+with the following function:
+```julia
+eqn = node_to_symbolic(dominating[end].tree, options)
 ```
 
 and print them out like so:
