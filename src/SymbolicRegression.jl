@@ -43,27 +43,27 @@ using Printf: @printf
 using Distributed
 
 include_statements = quote
-	include("ProgramConstants.jl")
-	include("Operators.jl")
-	include("Options.jl")
-	include("Dataset.jl")
-	include("Equation.jl")
-	include("LossFunctions.jl")
-	include("Utils.jl")
-	include("EvaluateEquation.jl")
-	include("MutationFunctions.jl")
-	include("InterfaceSymbolicUtils.jl")
-	include("CustomSymbolicUtilsSimplification.jl")
-	include("SimplifyEquation.jl")
-	include("PopMember.jl")
-	include("HallOfFame.jl")
-	include("CheckConstraints.jl")
-	include("Mutate.jl")
-	include("Population.jl")
-	include("RegularizedEvolution.jl")
-	include("SingleIteration.jl")
-	include("ConstantOptimization.jl")
-	include("Deprecates.jl")
+    include("ProgramConstants.jl")
+    include("Operators.jl")
+    include("Options.jl")
+    include("Dataset.jl")
+    include("Equation.jl")
+    include("LossFunctions.jl")
+    include("Utils.jl")
+    include("EvaluateEquation.jl")
+    include("MutationFunctions.jl")
+    include("InterfaceSymbolicUtils.jl")
+    include("CustomSymbolicUtilsSimplification.jl")
+    include("SimplifyEquation.jl")
+    include("PopMember.jl")
+    include("HallOfFame.jl")
+    include("CheckConstraints.jl")
+    include("Mutate.jl")
+    include("Population.jl")
+    include("RegularizedEvolution.jl")
+    include("SingleIteration.jl")
+    include("ConstantOptimization.jl")
+    include("Deprecates.jl")
 end
 
 # Set up functions on head node
@@ -110,31 +110,31 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         curmaxsize = options.maxsize
     end
 
-	need_remove_procs = false
-	##########################################################################
-	### Distributed code:
-	##########################################################################
-	try # Start workers, remove them after execution
+    need_remove_procs = false
+    ##########################################################################
+    ### Distributed code:
+    ##########################################################################
+    try # Start workers, remove them after execution
     if numprocs == nothing && procs == nothing
         numprocs = 4
         procs = addprocs(4)
-		need_remove_procs = true
-	elseif numprocs == nothing
-		numprocs = length(procs)
+        need_remove_procs = true
+    elseif numprocs == nothing
+        numprocs = length(procs)
     elseif procs == nothing
         procs = addprocs(numprocs)
-		need_remove_procs = true
+        need_remove_procs = true
     end
 
-	cur_proc_idx = 1
-	# Get the next worker process to give a job:
-	function next_worker()::Int
-		idx = ((cur_proc_idx-1) % numprocs) + 1
-		cur_proc_idx += 1
-		return procs[idx]
-	end
-	# Create functions on every worker node
-	@sync for proc in procs
+    cur_proc_idx = 1
+    # Get the next worker process to give a job:
+    function next_worker()::Int
+        idx = ((cur_proc_idx-1) % numprocs) + 1
+        cur_proc_idx += 1
+        return procs[idx]
+    end
+    # Create functions on every worker node
+    @sync for proc in procs
         @async @spawnat proc eval(include_statements)
     end
     for i=1:options.npopulations
@@ -144,7 +144,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
 
     # # 2. Start the cycle on every process:
     @sync for i=1:options.npopulations
-		worker_idx = next_worker()
+        worker_idx = next_worker()
         @async allPops[i] = @spawnat worker_idx SRCycle(dataset, baselineMSE, fetch(allPops[i]), options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
     end
     println("Started!")
@@ -219,7 +219,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                     end
                 end
 
-				worker_idx = next_worker()
+                worker_idx = next_worker()
                 # TODO: Turn off this async when debugging - any errors in this code
                 #         are silent.
                 # begin
@@ -309,14 +309,14 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
             num_equations = 0.0
         end
     end
-	finally
-	if need_remove_procs
-		rmprocs(procs)
-	end
-	end #try
-	##########################################################################
-	### Distributed code^
-	##########################################################################
+    finally
+    if need_remove_procs
+        rmprocs(procs)
+    end
+    end #try
+    ##########################################################################
+    ### Distributed code^
+    ##########################################################################
     return hallOfFame
 end
 
