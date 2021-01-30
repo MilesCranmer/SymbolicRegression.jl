@@ -1,13 +1,9 @@
 using SymbolicUtils
 using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, has_trig, polynormalize
 
-const AllEquationTypes = Union{<:Real,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
+const AllEquationTypes = Union{<:Number,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
 
-function multiply_powers(eqn::Nothing)::Nothing
-	return eqn
-end
-
-function multiply_powers(eqn::T)::AllEquationTypes where {T<:Union{<:Real,SymbolicUtils.Sym{<:Number}}}
+function multiply_powers(eqn::T)::AllEquationTypes where {T<:Union{<:Number,SymbolicUtils.Sym{<:Number}}}
 	return eqn
 end
 
@@ -133,8 +129,11 @@ function get_simplifier(binops::A, unaops::B) where {A,B}
 end
 
 function custom_simplify(init_eqn::T, options::Options)::AllEquationTypes where {T<:AllEquationTypes}
+    if !istree(init_eqn) #simplifier will return nothing if not a tree.
+        return init_eqn
+    end
     simplifier = get_simplifier(options.binops, options.unaops)
-    eqn = simplifier(init_eqn) #simplify(eqn, polynorm=true)
+    eqn = simplifier(init_eqn)::AllEquationTypes #simplify(eqn, polynorm=true)
 
 	# Remove power laws
     if !((^) in options.binops)

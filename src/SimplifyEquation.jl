@@ -108,6 +108,9 @@ end
 
 # Expensive but powerful simplify using SymbolicUtils
 function simplifyWithSymbolicUtils(tree::Node, options::Options)::Node
+    if !(((+) in options.binops) && ((*) in options.binops))
+        return tree
+    end
     init_node = copyNode(tree)
     init_size = countNodes(tree)
     symbolic_util_form = node_to_symbolic(tree, options)
