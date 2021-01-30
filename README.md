@@ -28,7 +28,7 @@ Run distributed on four processes with:
 ```julia
 using Distributed
 
-procs = addprocs()
+procs = addprocs(4)
 
 @everywhere using SymbolicRegression
 
