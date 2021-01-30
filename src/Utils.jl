@@ -43,9 +43,15 @@ function testOptionConfiguration(options::Options)
 end
 
 # Check for errors before they happen
-function testDatasetConfiguration(dataset::Dataset{T}) where {T<:Real}
+function testDatasetConfiguration(dataset::Dataset{T}, options::Options) where {T<:Real}
     n = dataset.n
     if n != size(dataset.X)[2] || n != size(dataset.y)[1]
         throw(error("Dataset dimensions are invalid. Make sure X is of shape [features, rows], y is of shape [rows] and if there are weights, they are of shape [rows]."))
+    end
+
+    if size(dataset.X)[2] > 10000
+        if !options.batching
+            println("Note: you are running with more than 10,000 datapoints. You should consider turning on batching (`options.batching`), and also if you need that many datapoints. Unless you have a large amount of noise (in which case you should smooth your dataset first), generally < 10,000 datapoints is enough to find a functional form.")
+        end
     end
 end

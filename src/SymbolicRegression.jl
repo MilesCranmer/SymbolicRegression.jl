@@ -42,47 +42,49 @@ export Population,
 using Printf: @printf
 using Distributed
 
-include("ProgramConstants.jl")
-include("Operators.jl")
-include("Options.jl")
-include("Dataset.jl")
-include("Equation.jl")
-include("LossFunctions.jl")
-include("Utils.jl")
-include("EvaluateEquation.jl")
-include("MutationFunctions.jl")
-include("InterfaceSymbolicUtils.jl")
-include("CustomSymbolicUtilsSimplification.jl")
-include("SimplifyEquation.jl")
-include("PopMember.jl")
-include("HallOfFame.jl")
-include("CheckConstraints.jl")
-include("Mutate.jl")
-include("Population.jl")
-include("RegularizedEvolution.jl")
-include("SingleIteration.jl")
-include("ConstantOptimization.jl")
-include("Deprecates.jl")
+include_statements = quote
+	include("ProgramConstants.jl")
+	include("Operators.jl")
+	include("Options.jl")
+	include("Dataset.jl")
+	include("Equation.jl")
+	include("LossFunctions.jl")
+	include("Utils.jl")
+	include("EvaluateEquation.jl")
+	include("MutationFunctions.jl")
+	include("InterfaceSymbolicUtils.jl")
+	include("CustomSymbolicUtilsSimplification.jl")
+	include("SimplifyEquation.jl")
+	include("PopMember.jl")
+	include("HallOfFame.jl")
+	include("CheckConstraints.jl")
+	include("Mutate.jl")
+	include("Population.jl")
+	include("RegularizedEvolution.jl")
+	include("SingleIteration.jl")
+	include("ConstantOptimization.jl")
+	include("Deprecates.jl")
+end
+
+# Set up functions on head node
+eval(include_statements)
 
 function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         niterations::Int=10,
         weights::Union{AbstractVector{T}, Nothing}=nothing,
         varMap::Union{Array{String, 1}, Nothing}=nothing,
-        options::Options=Options()) where {T<:Real}
+        options::Options=Options(),
+        numprocs::Union{Int, Nothing}=nothing,
+        procs::Union{Array{Int, 1}, Nothing}=nothing
+       ) where {T<:Real}
 
     testOptionConfiguration(options)
-
-    if size(X)[2] > 10000
-        if !options.batching
-            println("Note: you are running with more than 10,000 datapoints. You should consider turning on batching (`options.batching`), and also if you need that many datapoints. Unless you have a large amount of noise (in which case you should smooth your dataset first), generally < 10,000 datapoints is enough to find a functional form.")
-        end
-    end
 
     dataset = Dataset(X, y,
                      weights=weights,
                      varMap=varMap)
 
-    testDatasetConfiguration(dataset)
+    testDatasetConfiguration(dataset, options)
 
     if dataset.weighted
         avgy = sum(dataset.y .* dataset.weights)/sum(dataset.weights)
@@ -95,7 +97,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     #TODO - remove this as redundant
     nfeatures = dataset.nfeatures
 
-    # 1. Start a population on every process
+    # Start a population on every process
     allPops = Future[]
     # Set up a channel to send finished populations back to head node
     channels = [RemoteChannel(1) for j=1:options.npopulations]
@@ -108,14 +110,42 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         curmaxsize = options.maxsize
     end
 
+	need_remove_procs = false
+	##########################################################################
+	### Distributed code:
+	##########################################################################
+	try # Start workers, remove them after execution
+    if numprocs == nothing && procs == nothing
+        numprocs = 4
+        procs = addprocs(4)
+		need_remove_procs = true
+	elseif numprocs == nothing
+		numprocs = length(procs)
+    elseif procs == nothing
+        procs = addprocs(numprocs)
+		need_remove_procs = true
+    end
+
+	cur_proc_idx = 1
+	# Get the next worker process to give a job:
+	function next_worker()::Int
+		idx = ((cur_proc_idx-1) % numprocs) + 1
+		cur_proc_idx += 1
+		return procs[idx]
+	end
+	# Create functions on every worker node
+	@sync for proc in procs
+        @async @spawnat proc eval(include_statements)
+    end
     for i=1:options.npopulations
-        future = @spawnat :any Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=nfeatures)
+        future = @spawnat next_worker() Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=nfeatures)
         push!(allPops, future)
     end
 
     # # 2. Start the cycle on every process:
     @sync for i=1:options.npopulations
-        @async allPops[i] = @spawnat :any SRCycle(dataset, baselineMSE, fetch(allPops[i]), options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+		worker_idx = next_worker()
+        @async allPops[i] = @spawnat worker_idx SRCycle(dataset, baselineMSE, fetch(allPops[i]), options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
     end
     println("Started!")
     cycles_complete = options.npopulations * niterations
@@ -189,11 +219,12 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                     end
                 end
 
+				worker_idx = next_worker()
                 # TODO: Turn off this async when debugging - any errors in this code
                 #         are silent.
                 # begin
                 @async begin
-                    allPops[i] = @spawnat :any let
+                    allPops[i] = @spawnat worker_idx let
                         tmp_pop = SRCycle(dataset, baselineMSE, cur_pop, options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
                         @inbounds @simd for j=1:tmp_pop.n
                             tmp_pop.members[j].tree = simplifyTree(tmp_pop.members[j].tree, options)
@@ -278,6 +309,14 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
             num_equations = 0.0
         end
     end
+	finally
+	if need_remove_procs
+		rmprocs(procs)
+	end
+	end #try
+	##########################################################################
+	### Distributed code^
+	##########################################################################
     return hallOfFame
 end
 
