@@ -29,45 +29,41 @@ export Population,
     cube,
     pow,
     div,
-    logm,
-    logm2,
-    logm10,
-    sqrtm,
+    log_abs,
+    log2_abs,
+    log10_abs,
+    sqrt_abs,
     neg,
     greater,
     relu,
     logical_or,
     logical_and
 
-using Printf: @printf
 using Distributed
-
-include_statements = quote
-    include("ProgramConstants.jl")
-    include("Operators.jl")
-    include("Options.jl")
-    include("Dataset.jl")
-    include("Equation.jl")
-    include("LossFunctions.jl")
-    include("Utils.jl")
-    include("EvaluateEquation.jl")
-    include("MutationFunctions.jl")
-    include("InterfaceSymbolicUtils.jl")
-    include("CustomSymbolicUtilsSimplification.jl")
-    include("SimplifyEquation.jl")
-    include("PopMember.jl")
-    include("HallOfFame.jl")
-    include("CheckConstraints.jl")
-    include("Mutate.jl")
-    include("Population.jl")
-    include("RegularizedEvolution.jl")
-    include("SingleIteration.jl")
-    include("ConstantOptimization.jl")
-    include("Deprecates.jl")
-end
+using Printf: @printf
+include("ProgramConstants.jl")
+include("Operators.jl")
+include("Options.jl")
+include("Dataset.jl")
+include("Equation.jl")
+include("LossFunctions.jl")
+include("Utils.jl")
+include("EvaluateEquation.jl")
+include("MutationFunctions.jl")
+include("InterfaceSymbolicUtils.jl")
+include("CustomSymbolicUtilsSimplification.jl")
+include("SimplifyEquation.jl")
+include("PopMember.jl")
+include("HallOfFame.jl")
+include("CheckConstraints.jl")
+include("Mutate.jl")
+include("Population.jl")
+include("RegularizedEvolution.jl")
+include("SingleIteration.jl")
+include("ConstantOptimization.jl")
+include("Deprecates.jl")
 
 # Set up functions on head node
-eval(include_statements)
 
 function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         niterations::Int=10,
@@ -110,7 +106,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         curmaxsize = options.maxsize
     end
 
-    need_remove_procs = false
+    we_created_procs = false
     ##########################################################################
     ### Distributed code:
     ##########################################################################
@@ -118,12 +114,12 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     if numprocs == nothing && procs == nothing
         numprocs = 4
         procs = addprocs(4)
-        need_remove_procs = true
+        we_created_procs = true
     elseif numprocs == nothing
         numprocs = length(procs)
     elseif procs == nothing
         procs = addprocs(numprocs)
-        need_remove_procs = true
+        we_created_procs = true
     end
 
     cur_proc_idx = 1
@@ -133,20 +129,23 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         cur_proc_idx += 1
         return procs[idx]
     end
-    # Create functions on every worker node
-    @sync for proc in procs
-        @async @spawnat proc eval(include_statements)
+    if we_created_procs
+        # Parse functions on every worker node
+        @everywhere procs begin
+            Base.MainInclude.eval(include(@__FILE__))
+            Base.MainInclude.eval(using .SymbolicRegression)
+        end
     end
     for i=1:options.npopulations
         future = @spawnat next_worker() Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=nfeatures)
         push!(allPops, future)
     end
-
-    # # 2. Start the cycle on every process:
-    @sync for i=1:options.npopulations
+    # 2. Start the cycle on every process:
+    for i=1:options.npopulations
         worker_idx = next_worker()
-        @async allPops[i] = @spawnat worker_idx SRCycle(dataset, baselineMSE, fetch(allPops[i]), options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+        allPops[i] = @spawnat worker_idx SRCycle(dataset, baselineMSE, fetch(allPops[i]), options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
     end
+
     println("Started!")
     cycles_complete = options.npopulations * niterations
     if options.warmupMaxsize != 0
@@ -310,7 +309,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         end
     end
     finally
-    if need_remove_procs
+    if we_created_procs
         rmprocs(procs)
     end
     end #try
