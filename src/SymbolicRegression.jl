@@ -63,7 +63,6 @@ include("SingleIteration.jl")
 include("ConstantOptimization.jl")
 include("Deprecates.jl")
 
-# Set up functions on head node
 
 function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         niterations::Int=10,
@@ -130,10 +129,39 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         return procs[idx]
     end
     if we_created_procs
-        # Parse functions on every worker node
         @everywhere procs begin
+            # Parse functions on every worker node
             Base.MainInclude.eval(include(@__FILE__))
             Base.MainInclude.eval(using .SymbolicRegression)
+        end
+        # Re-define user created functions on workers
+        for degree=1:2
+            ops = degree == 1 ? options.unaops : options.binops
+            for op in ops
+                try
+                    futures = []
+                    for proc in procs
+                        if degree == 1
+                            push!(futures,
+                                  @spawnat proc op(convert(T, 0)))
+                        else
+                            push!(futures,
+                                  @spawnat proc op(convert(T, 0), convert(T, 0)))
+                        end
+                    end
+                    for future in futures
+                        fetch(future)
+                    end
+                catch
+                    name = nameof(op)
+                    src_ms = methods(op).ms
+                    # Thanks https://discourse.julialang.org/t/easy-way-to-send-custom-function-to-distributed-workers/22118/2
+                    @everywhere procs @eval function $name end
+                    for m in src_ms
+                        @everywhere procs @eval $m
+                    end
+                end
+            end
         end
     end
     for i=1:options.npopulations
