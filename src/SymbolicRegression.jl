@@ -152,13 +152,17 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                     for future in futures
                         fetch(future)
                     end
-                catch
-                    name = nameof(op)
-                    src_ms = methods(op).ms
-                    # Thanks https://discourse.julialang.org/t/easy-way-to-send-custom-function-to-distributed-workers/22118/2
-                    @everywhere procs @eval function $name end
-                    for m in src_ms
-                        @everywhere procs @eval $m
+                catch e
+                    if isa(e.captured.ex, UndefVarError)
+                        name = nameof(op)
+                        src_ms = methods(op).ms
+                        # Thanks https://discourse.julialang.org/t/easy-way-to-send-custom-function-to-distributed-workers/22118/2
+                        @everywhere procs @eval function $name end
+                        for m in src_ms
+                            @everywhere procs @eval $m
+                        end
+                    else
+                        throw(e)
                     end
                 end
             end
