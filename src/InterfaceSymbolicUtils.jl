@@ -2,9 +2,11 @@ using SymbolicUtils
 
 include("CustomSymbolicUtilsSimplification.jl")
 
-function node_to_symbolic(tree::Node, options::Options;
-                     varMap::Union{Array{String, 1}, Nothing}=nothing
-                    )::AllEquationTypes
+function node_to_symbolic(tree::Node, ::Val{OPTIONS};
+                     varMap::Union{Array{String, 1}, Nothing}=nothing,
+                     evaluate_functions::Bool=false,
+                     index_functions::Bool=false
+                     )::AllEquationTypes where {OPTIONS}
     if tree.degree == 0
         if tree.constant
             return tree.val
@@ -16,22 +18,30 @@ function node_to_symbolic(tree::Node, options::Options;
             end
         end
     elseif tree.degree == 1
-        left_side = node_to_symbolic(tree.l, options, varMap=varMap)
+        left_side = node_to_symbolic(tree.l, options, varMap=varMap, evaluate_functions=evaluate_functions, index_functions=index_functions)
         op = options.unaops[tree.op]
-        if op in (cos, sin, exp, cot, tan, csc, sec)
+        if (op in (cos, sin, exp, cot, tan, csc, sec)) || evaluate_functions
             return op(left_side)
         else
-            dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol("_unaop$(tree.op)"))
+            if index_functions
+                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol("_unaop$(tree.op)"))
+            else
+                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol(op))
+            end
             return dummy_op(left_side)
         end
     else
-        left_side = node_to_symbolic(tree.l, options, varMap=varMap)
-        right_side = node_to_symbolic(tree.r, options, varMap=varMap)
+        left_side = node_to_symbolic(tree.l, options, varMap=varMap, evaluate_functions=evaluate_functions, index_functions=index_functions)
+        right_side = node_to_symbolic(tree.r, options, varMap=varMap, evaluate_functions=evaluate_functions, index_functions=index_functions)
         op = options.binops[tree.op]
-        if op in (+, -, *, /)
+        if (op in (+, -, *, /)) || evaluate_functions
             return op(left_side, right_side)
         else
-            dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number, Number}, Real}}(Symbol("_binop$(tree.op)"))
+            if index_functions
+                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol("_binop$(tree.op)"))
+            else
+                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol(op))
+            end
             return dummy_op(left_side, right_side)
         end
     end
