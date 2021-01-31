@@ -19,13 +19,13 @@ end
 
 function unaopmap(op)
     if op == log
-        return logm
+        return log_abs
     elseif op == log10
-        return logm10
+        return log10_abs
     elseif op == log2
-        return logm2
+        return log2_abs
     elseif op == sqrt
-        return sqrtm
+        return sqrt_abs
     end
     return op
 end
