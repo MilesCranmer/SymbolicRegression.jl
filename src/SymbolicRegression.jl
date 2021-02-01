@@ -129,44 +129,9 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         return procs[idx]
     end
     if we_created_procs
-        @everywhere procs begin
-            # Parse functions on every worker node
-            Base.MainInclude.eval(include(@__FILE__))
-            Base.MainInclude.eval(using .SymbolicRegression)
-        end
-        # Re-define user created functions on workers
-        for degree=1:2
-            ops = degree == 1 ? options.unaops : options.binops
-            for op in ops
-                try
-                    futures = []
-                    for proc in procs
-                        if degree == 1
-                            push!(futures,
-                                  @spawnat proc op(convert(T, 0)))
-                        else
-                            push!(futures,
-                                  @spawnat proc op(convert(T, 0), convert(T, 0)))
-                        end
-                    end
-                    for future in futures
-                        fetch(future)
-                    end
-                catch e
-                    if isa(e.captured.ex, UndefVarError)
-                        name = nameof(op)
-                        src_ms = methods(op).ms
-                        # Thanks https://discourse.julialang.org/t/easy-way-to-send-custom-function-to-distributed-workers/22118/2
-                        @everywhere procs @eval function $name end
-                        for m in src_ms
-                            @everywhere procs @eval $m
-                        end
-                    else
-                        throw(e)
-                    end
-                end
-            end
-        end
+        activate_env_on_workers(procs)
+        import_module_on_workers(procs, @__FILE__)
+        move_functions_to_workers(T, procs, options)
     end
     for i=1:options.npopulations
         future = @spawnat next_worker() Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=nfeatures)

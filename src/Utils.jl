@@ -1,4 +1,5 @@
 using Printf: @printf
+using Pkg
 
 function id(x::T)::T where {T<:Real}
     x
@@ -52,6 +53,78 @@ function testDatasetConfiguration(dataset::Dataset{T}, options::Options) where {
     if size(dataset.X)[2] > 10000
         if !options.batching
             println("Note: you are running with more than 10,000 datapoints. You should consider turning on batching (`options.batching`), and also if you need that many datapoints. Unless you have a large amount of noise (in which case you should smooth your dataset first), generally < 10,000 datapoints is enough to find a functional form.")
+        end
+    end
+end
+
+# Re-define user created functions on workers
+function move_functions_to_workers(T, procs, options::Options)
+    for degree=1:2
+        ops = degree == 1 ? options.unaops : options.binops
+        for op in ops
+            try
+                test_function_on_workers(T, degree, op, procs)
+            catch e
+                undefined_on_workers = isa(e.captured.ex, UndefVarError)
+                if undefined_on_workers
+                    name = nameof(op)
+                    println("Copying definition of $op to workers.")
+                    src_ms = methods(op).ms
+                    # Thanks https://discourse.julialang.org/t/easy-way-to-send-custom-function-to-distributed-workers/22118/2
+                    @everywhere procs @eval function $name end
+                    for m in src_ms
+                        @everywhere procs @eval $m
+                    end
+                else
+                    throw(e)
+                end
+            end
+            test_function_on_workers(T, degree, op, procs)
+        end
+    end
+end
+
+function test_function_on_workers(T, degree, op, procs)
+    # Test configuration again! To avoid future errors.
+    futures = []
+    for proc in procs
+        if degree == 1
+            push!(futures,
+                  @spawnat proc op(convert(T, 0)))
+        else
+            push!(futures,
+                  @spawnat proc op(convert(T, 0), convert(T, 0)))
+        end
+    end
+    for future in futures
+        fetch(future)
+    end
+end
+
+function activate_env_on_workers(procs)
+    project_path = splitdir(Pkg.project().path)[1]
+    println("Activating environment on workers.")
+    @everywhere procs begin
+        Base.MainInclude.eval(quote
+            using Pkg
+            Pkg.activate($$project_path)
+        end)
+    end
+end
+
+function import_module_on_workers(procs, filename::String)
+    included_local = !("SymbolicRegression" in [k.name for (k, v) in Base.loaded_modules])
+    if included_local
+        @everywhere procs begin
+            # Parse functions on every worker node
+            Base.MainInclude.eval(quote
+                include($$filename)
+                using .SymbolicRegression
+            end)
+        end
+    else
+        @everywhere procs begin
+            Base.MainInclude.eval(using SymbolicRegression)
         end
     end
 end
