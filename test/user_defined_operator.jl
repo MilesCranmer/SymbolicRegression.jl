@@ -1,7 +1,7 @@
 using SymbolicRegression, SymbolicUtils, Test
 _inv(x::Float32)::Float32 = 1f0/x
 X = randn(Float32, 5, 100)
-y = 2 / (X[:, 3] + 1.5)
+y = 2 ./ (X[:, 3] .+ 1.5f0)
 
 options = SymbolicRegression.Options(
     binary_operators=(+, *),
