@@ -5,11 +5,11 @@ using SymbolicUtils
 X = randn(Float32, 5, 100)
 y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
 
-inv(x) = 1/x
+_inv(x) = 1/x
 
 options = SymbolicRegression.Options(
     binary_operators=(+, *),
-    unary_operators=(cos, exp, inv),
+    unary_operators=(cos, exp, _inv),
     npopulations=2
 )
 niterations = 2
