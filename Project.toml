@@ -14,7 +14,7 @@ SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 
 [compat]
 Optim = "0.17, 1.1"
+Pkg = "1"
 SpecialFunctions = "0.10.1, 1"
 SymbolicUtils = "0.6"
-Pkg = "1"
 julia = "1.2"
