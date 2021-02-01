@@ -32,5 +32,4 @@ residual = simplify(eqn - true_eqn)
 @test best.score < 1e-6
 x3 = 0.1f0
 # Test the actual equation found:
-import SymbolicUtils.Code
-@test abs(eval(SymbolicUtils.Code.toexpr(residual))) < 1e-6
+@test abs(eval(Meta.parse(string(residual)))) < 1e-6
