@@ -137,9 +137,14 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
             test_module_on_workers(procs, options)
         end
     end
+
+    if runtests
+        test_entire_pipeline(procs, dataset, options)
+    end
+
     for i=1:options.npopulations
         worker_idx = next_worker()
-        future = @spawnat worker_idx Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=nfeatures)
+        future = @spawnat worker_idx Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=dataset.nfeatures)
         push!(allPops, future)
     end
     # 2. Start the cycle on every process:

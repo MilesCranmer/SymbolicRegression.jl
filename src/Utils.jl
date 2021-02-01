@@ -15,29 +15,47 @@ function getTime()::Int
 end
 
 
-# Check for errors before they happen
-function testOptionConfiguration(options::Options)
-    test_input = LinRange(-100f0, 100f0, 99)
+function check_numeric(n)
+    return tryparse(Float64, n) !== nothing
+end
 
+function is_anonymous_function(op)
+	op_string = string(nameof(op))
+	return length(op_string) > 1 && op_string[1] == '#' && check_numeric(op_string[2:2])
+end
+
+# Check for errors before they happen
+function testOptionConfiguration(T, options::Options)
+    
+    for op in (options.binops..., options.unaops...)
+		if is_anonymous_function(op)
+			throw(AssertionError("Anonymous functions can't be used as operators for SymbolicRegression.jl"))
+        end
+    end
+
+	test_input = map(x->convert(T, x), LinRange(-100, 100, 99))
+	cur_op = nothing
     try
         for left in test_input
             for right in test_input
                 for binop in options.binops
+					cur_op = binop
                     test_output = binop.(left, right)
                 end
             end
             for unaop in options.unaops
+				cur_op = unaop
                 test_output = unaop.(left)
             end
         end
     catch error
-        @printf("\n\nYour configuration is invalid - one of your operators is not well-defined over the real line.\n\n\n")
+        throw(AssertionError("Your configuration is invalid - one of your operators ($cur_op) is not well-defined over the real line."))
         throw(error)
     end
 
     for binop in options.binops
         if binop in options.unaops
-            @printf("\n\nYour configuration is invalid - one operator appears in both the binary operators and unary operators.\n\n\n")
+            throw(AssertionError("Your configuration is invalid - one operator ($binop) appears in both the binary operators and unary operators."))
         end
     end
 end
@@ -103,7 +121,7 @@ end
 function activate_env_on_workers(procs, project_path)
     println("Activating environment on workers.")
     @everywhere procs begin
-        Main.eval(quote
+        Base.MainInclude.eval(quote
             using Pkg
             Pkg.activate($$project_path)
         end)
@@ -116,7 +134,7 @@ function import_module_on_workers(procs, filename::String)
         println("Importing local module ($filename) on workers.")
         @everywhere procs begin
             # Parse functions on every worker node
-            Main.eval(quote
+            Base.MainInclude.eval(quote
                 include($$filename)
                 using .SymbolicRegression
             end)
@@ -124,7 +142,7 @@ function import_module_on_workers(procs, filename::String)
     else
         println("Importing installed module on workers.")
         @everywhere procs begin
-            Main.eval(using SymbolicRegression)
+            Base.MainInclude.eval(using SymbolicRegression)
         end
     end
 end
@@ -134,7 +152,21 @@ function test_module_on_workers(procs, options::Options)
     futures = []
     for proc in procs
         push!(futures,
-              @spawnat proc genRandomTree(3, options, 5))
+              @spawnat proc SymbolicRegression.genRandomTree(3, options, 5))
+    end
+    for future in futures
+        fetch(future)
+    end
+end
+
+function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) where {T<:Real}
+    futures = []
+    println("Testing entire pipeline on workers")
+    for proc in procs
+        push!(futures, @spawnat proc begin
+            tmp_pop = Population(dataset, convert(T, 1), npop=20, nlength=3, options=options, nfeatures=dataset.nfeatures)
+            SRCycle(dataset, convert(T, 1), tmp_pop, 5, 5, ones(T, dataset.n), verbosity=options.verbosity, options=options)
+        end)
     end
     for future in futures
         fetch(future)
