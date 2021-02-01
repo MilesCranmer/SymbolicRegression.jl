@@ -1,13 +1,11 @@
 using SymbolicUtils
 using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, has_trig, polynormalize
 
-const AllEquationTypes = Union{<:Number,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
-
-function multiply_powers(eqn::T)::AllEquationTypes where {T<:Union{<:Number,SymbolicUtils.Sym{<:Number}}}
+function multiply_powers(eqn::T)::SYMBOLIC_UTILS_TYPES where {T<:Union{<:Number,SymbolicUtils.Sym{<:Number}}}
 	return eqn
 end
 
-function multiply_powers(eqn::T, op::F)::AllEquationTypes where {F,T<:SymbolicUtils.Term{<:Number}}
+function multiply_powers(eqn::T, op::F)::SYMBOLIC_UTILS_TYPES where {F,T<:SymbolicUtils.Term{<:Number}}
 	args = SymbolicUtils.arguments(eqn)
 	nargs = length(args)
 	if nargs == 1
@@ -33,7 +31,7 @@ function multiply_powers(eqn::T, op::F)::AllEquationTypes where {F,T<:SymbolicUt
 	end
 end
 
-function multiply_powers(eqn::T)::AllEquationTypes where {T<:SymbolicUtils.Term{<:Number}}
+function multiply_powers(eqn::T)::SYMBOLIC_UTILS_TYPES where {T<:SymbolicUtils.Term{<:Number}}
 	op = SymbolicUtils.operation(eqn)
 	return multiply_powers(eqn, op)
 end
@@ -128,16 +126,16 @@ function get_simplifier(binops::A, unaops::B) where {A,B}
     return serial_polynormal_simplifier
 end
 
-function custom_simplify(init_eqn::T, options::Options)::AllEquationTypes where {T<:AllEquationTypes}
+function custom_simplify(init_eqn::T, options::Options)::SYMBOLIC_UTILS_TYPES where {T<:SYMBOLIC_UTILS_TYPES}
     if !istree(init_eqn) #simplifier will return nothing if not a tree.
         return init_eqn
     end
     simplifier = get_simplifier(options.binops, options.unaops)
-    eqn = simplifier(init_eqn)::AllEquationTypes #simplify(eqn, polynorm=true)
+    eqn = simplifier(init_eqn)::SYMBOLIC_UTILS_TYPES #simplify(eqn, polynorm=true)
 
 	# Remove power laws
     if !((^) in options.binops)
-		eqn = multiply_powers(eqn::AllEquationTypes)
+		eqn = multiply_powers(eqn::SYMBOLIC_UTILS_TYPES)
 	end
 	return eqn
 end

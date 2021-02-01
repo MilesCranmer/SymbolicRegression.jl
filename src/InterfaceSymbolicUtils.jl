@@ -1,12 +1,12 @@
 using SymbolicUtils
 
-include("CustomSymbolicUtilsSimplification.jl")
+const SYMBOLIC_UTILS_TYPES = Union{<:Number,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
 
 function node_to_symbolic(tree::Node, options::Options; 
                      varMap::Union{Array{String, 1}, Nothing}=nothing,
                      evaluate_functions::Bool=false,
                      index_functions::Bool=false
-                     )::AllEquationTypes
+                     )::SYMBOLIC_UTILS_TYPES
     if tree.degree == 0
         if tree.constant
             return tree.val
