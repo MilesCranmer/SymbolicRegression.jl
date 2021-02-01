@@ -41,6 +41,7 @@ export Population,
 
 using Distributed
 using Printf: @printf
+using Pkg
 include("ProgramConstants.jl")
 include("Operators.jl")
 include("Options.jl")
@@ -129,12 +130,15 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         return procs[idx]
     end
     if we_created_procs
-        activate_env_on_workers(procs)
+        project_path = splitdir(Pkg.project().path)[1]
+        activate_env_on_workers(procs, project_path)
         import_module_on_workers(procs, @__FILE__)
         move_functions_to_workers(T, procs, options)
+        test_module_on_workers(procs, options)
     end
     for i=1:options.npopulations
-        future = @spawnat next_worker() Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=nfeatures)
+        worker_idx = next_worker()
+        future = @spawnat worker_idx Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=nfeatures)
         push!(allPops, future)
     end
     # 2. Start the cycle on every process:

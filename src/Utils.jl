@@ -1,5 +1,4 @@
 using Printf: @printf
-using Pkg
 
 function id(x::T)::T where {T<:Real}
     x
@@ -101,11 +100,10 @@ function test_function_on_workers(T, degree, op, procs)
     end
 end
 
-function activate_env_on_workers(procs)
-    project_path = splitdir(Pkg.project().path)[1]
+function activate_env_on_workers(procs, project_path)
     println("Activating environment on workers.")
     @everywhere procs begin
-        Base.MainInclude.eval(quote
+        Main.eval(quote
             using Pkg
             Pkg.activate($$project_path)
         end)
@@ -115,16 +113,30 @@ end
 function import_module_on_workers(procs, filename::String)
     included_local = !("SymbolicRegression" in [k.name for (k, v) in Base.loaded_modules])
     if included_local
+        println("Importing local module ($filename) on workers.")
         @everywhere procs begin
             # Parse functions on every worker node
-            Base.MainInclude.eval(quote
+            Main.eval(quote
                 include($$filename)
                 using .SymbolicRegression
             end)
         end
     else
+        println("Importing installed module on workers.")
         @everywhere procs begin
-            Base.MainInclude.eval(using SymbolicRegression)
+            Main.eval(using SymbolicRegression)
         end
+    end
+end
+
+function test_module_on_workers(procs, options::Options)
+    println("Testing module on workers")
+    futures = []
+    for proc in procs
+        push!(futures,
+              @spawnat proc genRandomTree(3, options, 5))
+    end
+    for future in futures
+        fetch(future)
     end
 end
