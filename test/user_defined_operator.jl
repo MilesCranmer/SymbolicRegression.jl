@@ -1,20 +1,23 @@
 using SymbolicRegression, SymbolicUtils, Test
+_inv(x::Float32)::Float32 = 1f0/x
 X = randn(Float32, 5, 100)
-y = 2 * cos.(X[4, :])
+y = 2 / (X[:, 3] + 1.5)
 
 options = SymbolicRegression.Options(
     binary_operators=(+, *),
-    unary_operators=(cos,),
+    unary_operators=(_inv,),
     npopulations=4
 )
 niterations = 2
+
 hallOfFame = EquationSearch(X, y, niterations=niterations, options=options)
+
 dominating = calculateParetoFrontier(X, y, hallOfFame, options)
+
 best = dominating[end]
 eqn = node_to_symbolic(best.tree, options, evaluate_functions=true)
-
 @syms x1::Real x2::Real x3::Real x4::Real
-true_eqn = 2*cos(x4)
+true_eqn = 2 / (x3 + 1.5)
 residual = simplify(eqn - true_eqn)
 
 # Test the score

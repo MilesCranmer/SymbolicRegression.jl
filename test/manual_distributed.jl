@@ -1,25 +1,35 @@
-using SymbolicRegression, SymbolicUtils, Test
+using Distributed, Test, SymbolicUtils, Pkg
+procs = addprocs(4)
+project_path = splitdir(Pkg.project().path)[1]
+@everywhere procs begin
+    Base.MainInclude.eval(quote
+        using Pkg
+        Pkg.activate($$project_path)
+    end)
+end
+@everywhere using SymbolicRegression
+@everywhere _inv(x::Float32)::Float32 = 1f0/x
 X = randn(Float32, 5, 100)
-y = 2 * cos.(X[4, :])
+y = 2 / (X[:, 3] + 1.5f0)
 
 options = SymbolicRegression.Options(
     binary_operators=(+, *),
-    unary_operators=(cos,),
+    unary_operators=(_inv,),
     npopulations=4
 )
 niterations = 2
-hallOfFame = EquationSearch(X, y, niterations=niterations, options=options)
+hallOfFame = EquationSearch(X, y, niterations=niterations, options=options, procs=procs)
 dominating = calculateParetoFrontier(X, y, hallOfFame, options)
 best = dominating[end]
 eqn = node_to_symbolic(best.tree, options, evaluate_functions=true)
 
 @syms x1::Real x2::Real x3::Real x4::Real
-true_eqn = 2*cos(x4)
+true_eqn = 2 / (x3 + 1.5)
 residual = simplify(eqn - true_eqn)
 
 # Test the score
 @test best.score < 1e-6
-x4 = 0.1f0
+x3 = 0.1f0
 # Test the actual equation found:
 import SymbolicUtils.Code
 @test abs(eval(SymbolicUtils.Code.toexpr(residual))) < 1e-6
