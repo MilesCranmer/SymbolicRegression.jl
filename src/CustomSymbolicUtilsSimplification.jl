@@ -1,8 +1,6 @@
 using SymbolicUtils
 using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, has_trig, polynormalize
 
-const SYMBOLIC_UTIL_TYPE = Union{<:Number,<:SymbolicUtils.Symbolic}
-
 function multiply_powers(eqn::T, op::F)::SYMBOLIC_UTIL_TYPE where {F,T<:SymbolicUtils.Symbolic}
 	args = SymbolicUtils.arguments(eqn)
 	nargs = length(args)
@@ -29,7 +27,7 @@ function multiply_powers(eqn::T, op::F)::SYMBOLIC_UTIL_TYPE where {F,T<:Symbolic
 	end
 end
 
-function multiply_powers(eqn::T)::SYMBOLIC_UTIL_TYPE where {T<:SymbolicUtils.Symbolic}
+function multiply_powers(eqn::T)::SYMBOLIC_UTIL_TYPE where {T<:SYMBOLIC_UTIL_TYPE}
     if !SymbolicUtils.istree(eqn)
         return eqn
     end
