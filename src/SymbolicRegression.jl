@@ -322,5 +322,9 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     return hallOfFame
 end
 
+function EquationSearch(X::AbstractMatrix{T1}, y::AbstractVector{T2}; kw...) where {T1<:Real,T2<:Real}
+    U = promote_type(T1, T2)
+    EquationSearch(convert(AbstractMatrix{U}, X), convert(AbstractVector{U}, y); kw...)
+end
 
 end #module SR

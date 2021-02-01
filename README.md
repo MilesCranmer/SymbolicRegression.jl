@@ -26,11 +26,7 @@ using analytic functional forms.
 
 Run distributed on four processes with:
 ```julia
-using Distributed
-
-procs = addprocs(4)
-
-@everywhere using SymbolicRegression
+using SymbolicRegression
 
 X = randn(Float32, 5, 100)
 y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
@@ -40,11 +36,8 @@ options = SymbolicRegression.Options(
     unary_operators=(cos, exp),
     npopulations=20
 )
-niterations = 5
 
-hallOfFame = EquationSearch(X, y, niterations=niterations, options=options)
-
-rmprocs(procs)
+hallOfFame = EquationSearch(X, y, niterations=5, options=options, numprocs=4)
 ```
 We can view the equations in the dominating
 Pareto frontier with:
@@ -72,16 +65,7 @@ for member in dominating
 end
 ```
 
-Note: if you install into a local environment,
-you will need to activate it in each process
-before importing this package:
-```julia
-@everywhere begin
-    import Pkg
-    Pkg.activate(".")
-    using SymbolicRegression
-end
-```
+
 
 # Options
 
