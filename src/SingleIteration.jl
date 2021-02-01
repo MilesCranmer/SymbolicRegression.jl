@@ -11,7 +11,7 @@ function SRCycle(dataset::Dataset{T}, baseline::T,
 
     top = convert(T, 1)
     allT = LinRange(top, convert(T, 0), ncycles)
-    for temperature in 1:size(allT)[1]
+    for temperature in 1:size(allT, 1)
         if options.annealing
             pop = regEvolCycle(dataset, baseline, pop, allT[temperature], curmaxsize, frequencyComplexity, options)
         else

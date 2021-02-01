@@ -30,7 +30,7 @@ function unaopmap(op)
     return op
 end
 
-struct Options{A<:NTuple{N,Any} where {N},B<:NTuple{M,Any} where {M}}
+struct Options{A,B}
 
     binops::A
     unaops::B

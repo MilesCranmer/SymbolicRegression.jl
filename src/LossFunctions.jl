@@ -14,7 +14,7 @@ end
 
 # Mean of square error between two arrays
 function MSE(x::AbstractArray{T}, y::AbstractArray{T})::T where {T<:Real}
-    return SSE(x, y)/size(x)[1]
+    return SSE(x, y)/size(x, 1)
 end
 
 # Mean of square error between two arrays

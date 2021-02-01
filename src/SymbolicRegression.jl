@@ -206,17 +206,17 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                 # Try normal copy otherwise.
                 if options.migration
                     for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplaced))
-                        to_copy = rand(1:size(bestPops.members)[1])
+                        to_copy = rand(1:size(bestPops.members, 1))
                         cur_pop.members[k] = PopMember(
                             copyNode(bestPops.members[to_copy].tree),
                             bestPops.members[to_copy].score)
                     end
                 end
 
-                if options.hofMigration && size(dominating)[1] > 0
+                if options.hofMigration && size(dominating, 1) > 0
                     for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplacedHof))
                         # Copy in case one gets used twice
-                        to_copy = rand(1:size(dominating)[1])
+                        to_copy = rand(1:size(dominating, 1))
                         cur_pop.members[k] = PopMember(
                            copyNode(dominating[to_copy].tree), dominating[to_copy].score
                         )

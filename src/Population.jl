@@ -5,7 +5,7 @@ mutable struct Population{T<:Real}
     n::Int
 end
 
-Population(pop::Array{PopMember{T}, 1}) where {T<:Real} = Population{T}(pop, size(pop)[1])
+Population(pop::Array{PopMember{T}, 1}) where {T<:Real} = Population{T}(pop, size(pop, 1))
 Population(pop::Array{PopMember{T}, 1}, npop::Int) where {T<:Real} = Population{T}(pop, npop)
 Population(dataset::Dataset{T}, baseline::T;
            npop::Int, nlength::Int=3,
