@@ -2,8 +2,8 @@ using SymbolicRegression, SymbolicUtils, Test
 function _inv(x::T)::T where {T}
     1f0/x
 end
-X = randn(Float32, 5, 100)
-y = 2 ./ (X[3, :] .+ 1.5f0)
+X = rand(Float32, 5, 100) .+ 1
+y = 1.2 .+ 2 ./ X[3, :]
 
 options = SymbolicRegression.Options(
     binary_operators=(+, *),
