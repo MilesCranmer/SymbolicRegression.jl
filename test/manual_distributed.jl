@@ -1,5 +1,6 @@
-using Distributed, Test, Pkg
+using Distributed
 procs = addprocs(4)
+using Test, Pkg
 project_path = splitdir(Pkg.project().path)[1]
 @everywhere procs begin
     Base.MainInclude.eval(quote
@@ -8,7 +9,7 @@ project_path = splitdir(Pkg.project().path)[1]
     end)
 end
 @everywhere using SymbolicRegression
-_inv(x::Float32)::Float32 = 1f0/x
+@everywhere _inv(x::Float32)::Float32 = 1f0/x
 X = rand(Float32, 5, 100) .+ 1
 y = 1.2f0 .+ 2 ./ X[3, :]
 
