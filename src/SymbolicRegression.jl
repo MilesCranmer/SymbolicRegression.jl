@@ -130,10 +130,10 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         project_path = splitdir(Pkg.project().path)[1]
         activate_env_on_workers(procs, project_path)
         import_module_on_workers(procs, @__FILE__)
-        move_functions_to_workers(T, procs, options)
-        if runtests
-            test_module_on_workers(procs, options)
-        end
+    end
+    move_functions_to_workers(T, procs, options)
+    if runtests
+        test_module_on_workers(procs, options)
     end
 
     if runtests
