@@ -7,8 +7,7 @@ options = SymbolicRegression.Options(
     unary_operators=(cos,),
     npopulations=4
 )
-niterations = 2
-hallOfFame = EquationSearch(X, y, niterations=niterations, options=options)
+hallOfFame = EquationSearch(X, y, niterations=2, options=options)
 dominating = calculateParetoFrontier(X, y, hallOfFame, options)
 best = dominating[end]
 eqn = node_to_symbolic(best.tree, options, evaluate_functions=true)

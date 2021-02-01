@@ -10,15 +10,16 @@ end
 @everywhere using SymbolicRegression
 @everywhere _inv(x::Float32)::Float32 = 1f0/x
 X = randn(Float32, 5, 100)
-y = 2 ./ (X[:, 3] .+ 1.5f0)
+y = 2 ./ (X[3, :] .+ 1.5f0)
 
 options = SymbolicRegression.Options(
     binary_operators=(+, *),
     unary_operators=(_inv,),
     npopulations=4
 )
-niterations = 2
-hallOfFame = EquationSearch(X, y, niterations=niterations, options=options, procs=procs)
+hallOfFame = EquationSearch(X, y, niterations=2, options=options, procs=procs)
+rmprocs(procs)
+
 dominating = calculateParetoFrontier(X, y, hallOfFame, options)
 best = dominating[end]
 eqn = node_to_symbolic(best.tree, options, evaluate_functions=true)
