@@ -2,7 +2,7 @@ using SymbolicUtils
 
 include("CustomSymbolicUtilsSimplification.jl")
 
-function node_to_symbolic(tree::Node, options::Options;
+function node_to_symbolic(tree::Node, options::Options; 
                      varMap::Union{Array{String, 1}, Nothing}=nothing,
                      evaluate_functions::Bool=false,
                      index_functions::Bool=false
