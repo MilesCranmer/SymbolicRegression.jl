@@ -8,7 +8,7 @@ project_path = splitdir(Pkg.project().path)[1]
     end)
 end
 @everywhere using SymbolicRegression
-@everywhere _inv(x::Float32)::Float32 = 1f0/x
+_inv(x::Float32)::Float32 = 1f0/x
 X = randn(Float32, 5, 100)
 y = 2 ./ (X[3, :] .+ 1.5f0)
 
