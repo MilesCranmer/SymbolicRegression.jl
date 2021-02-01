@@ -118,7 +118,7 @@ function test_function_on_workers(T, degree, op, procs)
     end
 end
 
-function activate_env_on_workers(procs, project_path)
+function activate_env_on_workers(procs, project_path::String)
     println("Activating environment on workers.")
     @everywhere procs begin
         Base.MainInclude.eval(quote
@@ -148,7 +148,7 @@ function import_module_on_workers(procs, filename::String)
 end
 
 function test_module_on_workers(procs, options::Options)
-    println("Testing module on workers")
+    print("Testing module on workers...")
     futures = []
     for proc in procs
         push!(futures,
@@ -157,11 +157,12 @@ function test_module_on_workers(procs, options::Options)
     for future in futures
         fetch(future)
     end
+    println("Finished!")
 end
 
 function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) where {T<:Real}
     futures = []
-    println("Testing entire pipeline on workers")
+    print("Testing entire pipeline on workers...")
     for proc in procs
         push!(futures, @spawnat proc begin
             tmp_pop = Population(dataset, convert(T, 1), npop=20, nlength=3, options=options, nfeatures=dataset.nfeatures)
@@ -171,4 +172,5 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
     for future in futures
         fetch(future)
     end
+    println("Finished!")
 end

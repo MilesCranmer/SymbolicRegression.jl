@@ -109,7 +109,6 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     ##########################################################################
     ### Distributed code:
     ##########################################################################
-    try # Start workers, remove them after execution
     if numprocs == nothing && procs == nothing
         numprocs = 4
         procs = addprocs(4)
@@ -120,7 +119,6 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         procs = addprocs(numprocs)
         we_created_procs = true
     end
-
     cur_proc_idx = 1
     # Get the next worker process to give a job:
     function next_worker()::Int
@@ -315,11 +313,9 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
             num_equations = 0.0
         end
     end
-    finally
     if we_created_procs
         rmprocs(procs)
     end
-    end #try
     ##########################################################################
     ### Distributed code^
     ##########################################################################
