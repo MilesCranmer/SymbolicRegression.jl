@@ -1,12 +1,12 @@
 using SymbolicUtils
 
-const SYMBOLIC_UTIL_TYPE = Union{<:Number,<:SymbolicUtils.Symbolic}
+include("CustomSymbolicUtilsSimplification.jl")
 
 function node_to_symbolic(tree::Node, options::Options; 
                      varMap::Union{Array{String, 1}, Nothing}=nothing,
                      evaluate_functions::Bool=false,
                      index_functions::Bool=false
-                     )::SYMBOLIC_UTIL_TYPE
+                     )::AllEquationTypes
     if tree.degree == 0
         if tree.constant
             return tree.val
@@ -82,7 +82,7 @@ end
 # Equation:
 function symbolic_to_node(eqn::T, options::Options;
                        varMap::Union{Array{String, 1}, Nothing}=nothing
-                  )::Node where {T<:SymbolicUtils.Symbolic}
+                  )::Node where {T<:SymbolicUtils.Term{<:Number}}
     args = SymbolicUtils.arguments(eqn)
     l = symbolic_to_node(args[1], options)
     nargs = length(args)
