@@ -14,7 +14,7 @@ end
 
 function calculateParetoFrontier(dataset::Dataset{T},
                                  hallOfFame::HallOfFame,
-                                 options::Options) where {T<:Real}
+                                 options::Options)::Array{PopMember, 1} where {T<:Real}
     # Dominating pareto curve - must be better than all simpler equations
     dominating = PopMember[]
     actualMaxsize = options.maxsize + maxdegree
