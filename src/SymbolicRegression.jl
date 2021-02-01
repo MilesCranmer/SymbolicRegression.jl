@@ -71,16 +71,17 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         varMap::Union{Array{String, 1}, Nothing}=nothing,
         options::Options=Options(),
         numprocs::Union{Int, Nothing}=nothing,
-        procs::Union{Array{Int, 1}, Nothing}=nothing
+        procs::Union{Array{Int, 1}, Nothing}=nothing,
+        runtests::Bool=true
        ) where {T<:Real}
-
-    testOptionConfiguration(options)
 
     dataset = Dataset(X, y,
                      weights=weights,
                      varMap=varMap)
-
-    testDatasetConfiguration(dataset, options)
+    if runtests
+        testOptionConfiguration(T, options)
+        testDatasetConfiguration(dataset, options)
+    end
 
     if dataset.weighted
         avgy = sum(dataset.y .* dataset.weights)/sum(dataset.weights)
@@ -91,13 +92,11 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     end
 
     #TODO - remove this as redundant
-    nfeatures = dataset.nfeatures
-
     # Start a population on every process
     allPops = Future[]
     # Set up a channel to send finished populations back to head node
     channels = [RemoteChannel(1) for j=1:options.npopulations]
-    bestSubPops = [Population(dataset, baselineMSE, npop=1, options=options, nfeatures=nfeatures) for j=1:options.npopulations]
+    bestSubPops = [Population(dataset, baselineMSE, npop=1, options=options, nfeatures=dataset.nfeatures) for j=1:options.npopulations]
     hallOfFame = HallOfFame(options)
     actualMaxsize = options.maxsize + maxdegree
     frequencyComplexity = ones(T, actualMaxsize)
@@ -134,7 +133,9 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         activate_env_on_workers(procs, project_path)
         import_module_on_workers(procs, @__FILE__)
         move_functions_to_workers(T, procs, options)
-        test_module_on_workers(procs, options)
+        if runtests
+            test_module_on_workers(procs, options)
+        end
     end
     for i=1:options.npopulations
         worker_idx = next_worker()
