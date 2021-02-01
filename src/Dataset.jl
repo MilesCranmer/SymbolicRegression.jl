@@ -17,8 +17,8 @@ function Dataset(
         varMap::Union{Array{String, 1}, Nothing}=nothing
        ) where {T<:Real}
 
-    n = size(X)[2]
-    nfeatures = size(X)[1]
+    n = size(X, 2)
+    nfeatures = size(X, 1)
     weighted = true
     if weights == nothing
         weighted = false

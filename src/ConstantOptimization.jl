@@ -24,32 +24,23 @@ function optimizeConstants(dataset::Dataset{T},
         algorithm = NelderMead
     end
 
-    try
-        result = optimize(f, x0, algorithm(), Optim.Options(iterations=100))
-        # Try other initial conditions:
-        for i=1:options.nrestarts
-            new_start = x0 .* (convert(CONST_TYPE, 1) .+ convert(CONST_TYPE, 1//2)*randn(CONST_TYPE, size(x0)[1]))
-            tmpresult = optimize(f, new_start, algorithm(), Optim.Options(iterations=100))
+    result = optimize(f, x0, algorithm(), Optim.Options(iterations=100))
+    # Try other initial conditions:
+    for i=1:options.nrestarts
+        new_start = x0 .* (convert(CONST_TYPE, 1) .+ convert(CONST_TYPE, 1//2)*randn(CONST_TYPE, size(x0, 1)))
+        tmpresult = optimize(f, new_start, algorithm(), Optim.Options(iterations=100))
 
-            if tmpresult.minimum < result.minimum
-                result = tmpresult
-            end
+        if tmpresult.minimum < result.minimum
+            result = tmpresult
         end
+    end
 
-        if Optim.converged(result)
-            setConstants(member.tree, result.minimizer)
-            member.score = convert(T, result.minimum)
-            member.birth = getTime()
-        else
-            setConstants(member.tree, x0)
-        end
-    catch error
-        # Fine if optimization encountered domain error, just return x0
-        if isa(error, AssertionError)
-            setConstants(member.tree, x0)
-        else
-            throw(error)
-        end
+    if Optim.converged(result)
+        setConstants(member.tree, result.minimizer)
+        member.score = convert(T, result.minimum)
+        member.birth = getTime()
+    else
+        setConstants(member.tree, x0)
     end
     return member
 end

@@ -29,19 +29,19 @@ export Population,
     cube,
     pow,
     div,
-    logm,
-    logm2,
-    logm10,
-    sqrtm,
+    log_abs,
+    log2_abs,
+    log10_abs,
+    sqrt_abs,
     neg,
     greater,
     relu,
     logical_or,
     logical_and
 
-using Printf: @printf
 using Distributed
-
+using Printf: @printf
+using Pkg
 include("ProgramConstants.jl")
 include("Operators.jl")
 include("Options.jl")
@@ -64,25 +64,24 @@ include("SingleIteration.jl")
 include("ConstantOptimization.jl")
 include("Deprecates.jl")
 
+
 function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         niterations::Int=10,
         weights::Union{AbstractVector{T}, Nothing}=nothing,
         varMap::Union{Array{String, 1}, Nothing}=nothing,
-        options::Options=Options()) where {T<:Real}
-
-    testOptionConfiguration(options)
-
-    if size(X)[2] > 10000
-        if !options.batching
-            println("Note: you are running with more than 10,000 datapoints. You should consider turning on batching (`options.batching`), and also if you need that many datapoints. Unless you have a large amount of noise (in which case you should smooth your dataset first), generally < 10,000 datapoints is enough to find a functional form.")
-        end
-    end
+        options::Options=Options(),
+        numprocs::Union{Int, Nothing}=nothing,
+        procs::Union{Array{Int, 1}, Nothing}=nothing,
+        runtests::Bool=true
+       ) where {T<:Real}
 
     dataset = Dataset(X, y,
                      weights=weights,
                      varMap=varMap)
-
-    testDatasetConfiguration(dataset)
+    if runtests
+        testOptionConfiguration(T, options)
+        testDatasetConfiguration(dataset, options)
+    end
 
     if dataset.weighted
         avgy = sum(dataset.y .* dataset.weights)/sum(dataset.weights)
@@ -93,13 +92,11 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     end
 
     #TODO - remove this as redundant
-    nfeatures = dataset.nfeatures
-
-    # 1. Start a population on every process
+    # Start a population on every process
     allPops = Future[]
     # Set up a channel to send finished populations back to head node
     channels = [RemoteChannel(1) for j=1:options.npopulations]
-    bestSubPops = [Population(dataset, baselineMSE, npop=1, options=options, nfeatures=nfeatures) for j=1:options.npopulations]
+    bestSubPops = [Population(dataset, baselineMSE, npop=1, options=options, nfeatures=dataset.nfeatures) for j=1:options.npopulations]
     hallOfFame = HallOfFame(options)
     actualMaxsize = options.maxsize + maxdegree
     frequencyComplexity = ones(T, actualMaxsize)
@@ -108,15 +105,52 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         curmaxsize = options.maxsize
     end
 
-    for i=1:options.npopulations
-        future = @spawnat :any Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=nfeatures)
-        push!(allPops, future)
+    we_created_procs = false
+    ##########################################################################
+    ### Distributed code:
+    ##########################################################################
+    if numprocs == nothing && procs == nothing
+        numprocs = 4
+        procs = addprocs(4)
+        we_created_procs = true
+    elseif numprocs == nothing
+        numprocs = length(procs)
+    elseif procs == nothing
+        procs = addprocs(numprocs)
+        we_created_procs = true
+    end
+    cur_proc_idx = 1
+    # Get the next worker process to give a job:
+    function next_worker()::Int
+        idx = ((cur_proc_idx-1) % numprocs) + 1
+        cur_proc_idx += 1
+        return procs[idx]
+    end
+    if we_created_procs
+        project_path = splitdir(Pkg.project().path)[1]
+        activate_env_on_workers(procs, project_path)
+        import_module_on_workers(procs, @__FILE__)
+    end
+    move_functions_to_workers(T, procs, options)
+    if runtests
+        test_module_on_workers(procs, options)
     end
 
-    # # 2. Start the cycle on every process:
-    @sync for i=1:options.npopulations
-        @async allPops[i] = @spawnat :any SRCycle(dataset, baselineMSE, fetch(allPops[i]), options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+    if runtests
+        test_entire_pipeline(procs, dataset, options)
     end
+
+    for i=1:options.npopulations
+        worker_idx = next_worker()
+        future = @spawnat worker_idx Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=dataset.nfeatures)
+        push!(allPops, future)
+    end
+    # 2. Start the cycle on every process:
+    for i=1:options.npopulations
+        worker_idx = next_worker()
+        allPops[i] = @spawnat worker_idx SRCycle(dataset, baselineMSE, fetch(allPops[i]), options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+    end
+
     println("Started!")
     cycles_complete = options.npopulations * niterations
     if options.warmupMaxsize != 0
@@ -172,28 +206,29 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                 # Try normal copy otherwise.
                 if options.migration
                     for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplaced))
-                        to_copy = rand(1:size(bestPops.members)[1])
+                        to_copy = rand(1:size(bestPops.members, 1))
                         cur_pop.members[k] = PopMember(
                             copyNode(bestPops.members[to_copy].tree),
                             bestPops.members[to_copy].score)
                     end
                 end
 
-                if options.hofMigration && size(dominating)[1] > 0
+                if options.hofMigration && size(dominating, 1) > 0
                     for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplacedHof))
                         # Copy in case one gets used twice
-                        to_copy = rand(1:size(dominating)[1])
+                        to_copy = rand(1:size(dominating, 1))
                         cur_pop.members[k] = PopMember(
                            copyNode(dominating[to_copy].tree), dominating[to_copy].score
                         )
                     end
                 end
 
+                worker_idx = next_worker()
                 # TODO: Turn off this async when debugging - any errors in this code
                 #         are silent.
                 # begin
                 @async begin
-                    allPops[i] = @spawnat :any let
+                    allPops[i] = @spawnat worker_idx let
                         tmp_pop = SRCycle(dataset, baselineMSE, cur_pop, options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
                         @inbounds @simd for j=1:tmp_pop.n
                             tmp_pop.members[j].tree = simplifyTree(tmp_pop.members[j].tree, options)
@@ -278,6 +313,12 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
             num_equations = 0.0
         end
     end
+    if we_created_procs
+        rmprocs(procs)
+    end
+    ##########################################################################
+    ### Distributed code^
+    ##########################################################################
     return hallOfFame
 end
 

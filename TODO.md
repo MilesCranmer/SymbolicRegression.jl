@@ -1,40 +1,25 @@
 # TODO
 
-- [ ] Create mechanism to convert back and forth between Julia expression and Node()
-    - Then, we can use the Julia simplification library!
-    - Just need to run an eval() on `stringTree`.
 - [ ] Sort these todo lists by priority
-
-
-## Pure Julia cleanup
-
-
-- [ ] Add back weighted
-    - Use "data" struct?
-- [ ] Use SymbolicRegression.jl in Python frontend
-
+- [ ] Make serial version of code. Also to help benchmarking.
 
 ## Feature ideas
 
 - [ ] Other default losses (e.g., abs, other likelihoods, or just allow user to pass this as a string).
-- [ ] Other dtypes available
 - [ ] NDSA-II
 - [ ] Cross-validation
 - [ ] Hierarchical model, so can re-use functional forms. Output of one equation goes into second equation?
-- [ ] Add function to plot equations
-- [ ] Refresh screen rather than dumping to stdout?
+- [ ] Add function to plot equations?
 - [ ] Add ability to save state from python
 - [ ] Additional degree operators?
 - [ ] Multi targets (vector ops). Idea 1: Node struct contains argument for which registers it is applied to. Then, can work with multiple components simultaneously. Though this may be tricky to get right. Idea 2: each op is defined by input/output space. Some operators are flexible, and the spaces should be adjusted automatically. Otherwise, only consider ops that make a tree possible. But will need additional ops here to get it to work. Idea 3: define each equation in 2 parts: one part that is shared between all outputs, and one that is different between all outputs. Maybe this could be an array of nodes corresponding to each output. And those nodes would define their functions.
     - Much easier option: simply flatten the output vector, and set the index as another input feature. The equation learned will be a single equation containing indices as a feature.
 - [ ] Tree crossover? I.e., can take as input a part of the same equation, so long as it is the same level or below?
-- [ ] Create flexible way of providing "simplification recipes." I.e., plus(plus(T, C), C) => plus(T, +(C, C)). The user could pass these.
 - [ ] Consider allowing multi-threading turned off, for faster testing (cache issue on travis). Or could simply fix the caching issue there.
 - [ ] Consider returning only the equation of interest; rather than all equations.
 - [ ] Enable derivative operators. These would differentiate their right argument wrt their left argument, some input variable.
 
 ## Algorithmic performance ideas:
-
 
 - [ ] Use package compiler and compile sr.jl into a standalone binary that can be used by pysr.
 - [ ] When doing equation warmup, only migrate those equations with almost the same complexity. Rather than having to consider simple equations later in the game.
@@ -54,11 +39,11 @@
 
 ## Code performance ideas:
 
+- [ ] Fuse operations for bin(op; op) triplets! There aren't that many, so probably worth it.
 - [ ] How hard is it to turn the recursive array evaluation into a for loop?
+    - Difficulty in getting efficient allocations... Will try more later
 - [ ] Try defining a binary tree as an array, rather than a linked list. See https://stackoverflow.com/a/6384714/2689923
     - in array branch
-- [ ] Add true multi-node processing, with MPI, or just file sharing. Multiple populations per core.
-    - Ongoing in cluster branch
 - [ ] Performance: try inling things?
 - [ ] Try storing things like number nodes in a tree; then can iterate instead of counting
 
@@ -85,6 +70,8 @@ end
 - [ ] Add GPU capability?
      - Not sure if possible, as binary trees are the real bottleneck.
      - Could generate on CPU, evaluate score on GPU?
+
+
 
 # Completed
 
@@ -149,3 +136,14 @@ end
 - [x] Do printing from Python side. Then we can do simplification and pretty-printing.
 - [x] Sympy printing
 - [x] Use generic types - should pass type to option, and this will set up everything.
+- [x] Create mechanism to convert back and forth between Julia expression and Node()
+    - Then, we can use the Julia simplification library!
+    - Just need to run an eval() on `stringTree`.
+- [x] Add back weighted
+    - Use "data" struct?
+- [x] Use SymbolicRegression.jl in Python frontend
+- [x] Other dtypes available
+- [-] Refresh screen rather than dumping to stdout? (not done)
+- [x] Create flexible way of providing "simplification recipes." I.e., plus(plus(T, C), C) => plus(T, +(C, C)). The user could pass these.
+- [x] Add true multi-node processing, with MPI, or just file sharing. Multiple populations per core.
+    - Ongoing in cluster branch
