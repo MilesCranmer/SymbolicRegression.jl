@@ -2,11 +2,11 @@ using SymbolicUtils
 
 include("CustomSymbolicUtilsSimplification.jl")
 
-function node_to_symbolic(tree::Node, ::Val{OPTIONS};
+function node_to_symbolic(tree::Node, options::Options;
                      varMap::Union{Array{String, 1}, Nothing}=nothing,
                      evaluate_functions::Bool=false,
                      index_functions::Bool=false
-                     )::AllEquationTypes where {OPTIONS}
+                     )::AllEquationTypes
     if tree.degree == 0
         if tree.constant
             return tree.val
