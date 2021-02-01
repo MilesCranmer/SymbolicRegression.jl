@@ -8,3 +8,4 @@ trials*
 **/__pycache__
 build
 dist
+Manifest.toml
