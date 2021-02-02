@@ -28,3 +28,19 @@ function SRCycle(dataset::Dataset{T}, baseline::T,
 
     return pop
 end
+
+function OptimizeAndSimplifyPopulation(
+            dataset::Dataset{T}, baseline::T,
+            pop::Population, options::Options
+        )::Population where {T<:Real}
+    @inbounds @simd for j=1:pop.n
+        pop.members[j].tree = simplifyTree(pop.members[j].tree, options)
+        pop.members[j].tree = combineOperators(pop.members[j].tree, options)
+        pop.members[j].tree = simplifyWithSymbolicUtils(pop.members[j].tree, options)
+        if rand() < 0.1 && options.shouldOptimizeConstants
+            pop.members[j] = optimizeConstants(dataset, baseline, pop.members[j], options)
+        end
+    end
+    pop = finalizeScores(dataset, baseline, pop, options)
+    return pop
+end

@@ -78,6 +78,9 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     dataset = Dataset(X, y,
                      weights=weights,
                      varMap=varMap)
+    serial = (procs == nothing && numprocs == 0)
+    parallel = !serial
+
     if runtests
         testOptionConfiguration(T, options)
         testDatasetConfiguration(dataset, options)
@@ -93,7 +96,8 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
 
     #TODO - remove this as redundant
     # Start a population on every process
-    allPops = Future[]
+    allPopsType = parallel ? Future : Population
+    allPops = allPopsType[]
     # Set up a channel to send finished populations back to head node
     channels = [RemoteChannel(1) for j=1:options.npopulations]
     bestSubPops = [Population(dataset, baselineMSE, npop=1, options=options, nfeatures=dataset.nfeatures) for j=1:options.npopulations]
@@ -109,46 +113,60 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     ##########################################################################
     ### Distributed code:
     ##########################################################################
-    if numprocs == nothing && procs == nothing
-        numprocs = 4
-        procs = addprocs(4)
-        we_created_procs = true
-    elseif numprocs == nothing
-        numprocs = length(procs)
-    elseif procs == nothing
-        procs = addprocs(numprocs)
-        we_created_procs = true
+    if parallel
+        if numprocs == nothing && procs == nothing
+            numprocs = 4
+            procs = addprocs(4)
+            we_created_procs = true
+        elseif numprocs == nothing
+            numprocs = length(procs)
+        elseif procs == nothing
+            procs = addprocs(numprocs)
+            we_created_procs = true
+        end
+        if we_created_procs
+            project_path = splitdir(Pkg.project().path)[1]
+            activate_env_on_workers(procs, project_path)
+            import_module_on_workers(procs, @__FILE__)
+        end
+        move_functions_to_workers(T, procs, options)
+        if runtests
+            test_module_on_workers(procs, options)
+        end
+
+        if runtests
+            test_entire_pipeline(procs, dataset, options)
+        end
     end
     cur_proc_idx = 1
     # Get the next worker process to give a job:
     function next_worker()::Int
-        idx = ((cur_proc_idx-1) % numprocs) + 1
-        cur_proc_idx += 1
-        return procs[idx]
-    end
-    if we_created_procs
-        project_path = splitdir(Pkg.project().path)[1]
-        activate_env_on_workers(procs, project_path)
-        import_module_on_workers(procs, @__FILE__)
-    end
-    move_functions_to_workers(T, procs, options)
-    if runtests
-        test_module_on_workers(procs, options)
-    end
-
-    if runtests
-        test_entire_pipeline(procs, dataset, options)
+        if parallel
+            idx = ((cur_proc_idx-1) % numprocs) + 1
+            cur_proc_idx += 1
+            return procs[idx]
+        else
+            return 0
+        end
     end
 
     for i=1:options.npopulations
         worker_idx = next_worker()
-        future = @spawnat worker_idx Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=dataset.nfeatures)
-        push!(allPops, future)
+        new_pop = if parallel
+            @spawnat worker_idx Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=dataset.nfeatures)
+        else
+            Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=dataset.nfeatures)
+        end
+        push!(allPops, new_pop)
     end
     # 2. Start the cycle on every process:
     for i=1:options.npopulations
         worker_idx = next_worker()
-        allPops[i] = @spawnat worker_idx SRCycle(dataset, baselineMSE, fetch(allPops[i]), options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+        allPops[i] = if parallel
+            @spawnat worker_idx SRCycle(dataset, baselineMSE, fetch(allPops[i]), options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+        else
+            SRCycle(dataset, baselineMSE, allPops[i], options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+        end
     end
 
     println("Started!")
@@ -165,17 +183,20 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     print_every_n_seconds = 5
     equation_speed = Float32[]
 
-    for i=1:options.npopulations
-        # Start listening for each population to finish:
-        @async put!(channels[i], fetch(allPops[i]))
+    if parallel
+        for i=1:options.npopulations
+            # Start listening for each population to finish:
+            @async put!(channels[i], fetch(allPops[i]))
+        end
     end
 
     while cycles_complete > 0
         @inbounds for i=1:options.npopulations
             # Non-blocking check if a population is ready:
-            if isready(channels[i])
+            population_ready = parallel ? isready(channels[i]) : true
+            if population_ready
                 # Take the fetch operation from the channel since its ready
-                cur_pop = take!(channels[i])
+                cur_pop::Population = parallel ? take!(channels[i]) : allPops[i]
                 bestSubPops[i] = bestSubPop(cur_pop, topn=options.topn)
                 # bestSubPops[i] = bestSubPopParetoDominating(cur_pop, topn=options.topn)
 
@@ -224,24 +245,23 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                 end
 
                 worker_idx = next_worker()
-                # TODO: Turn off this async when debugging - any errors in this code
-                #         are silent.
-                # begin
-                @async begin
-                    allPops[i] = @spawnat worker_idx let
-                        tmp_pop = SRCycle(dataset, baselineMSE, cur_pop, options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
-                        @inbounds @simd for j=1:tmp_pop.n
-                            tmp_pop.members[j].tree = simplifyTree(tmp_pop.members[j].tree, options)
-                            tmp_pop.members[j].tree = combineOperators(tmp_pop.members[j].tree, options)
-                            tmp_pop.members[j].tree = simplifyWithSymbolicUtils(tmp_pop.members[j].tree, options)
-                            if rand() < 0.1 && options.shouldOptimizeConstants
-                                tmp_pop.members[j] = optimizeConstants(dataset, baselineMSE, tmp_pop.members[j], options)
-                            end
-                        end
-                        tmp_pop = finalizeScores(dataset, baselineMSE, tmp_pop, options)
-                        tmp_pop
+                allPops[i] = if parallel
+                    @spawnat worker_idx let
+                        tmp_pop = SRCycle(
+                            dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
+                            curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity),
+                            verbosity=options.verbosity, options=options)
+                        OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options)
                     end
-                    put!(channels[i], fetch(allPops[i]))
+                else
+                    tmp_pop = SRCycle(
+                        dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
+                        curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity),
+                        verbosity=options.verbosity, options=options)
+                    OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options)
+                end
+                if parallel
+                    @async put!(channels[i], fetch(allPops[i]))
                 end
 
                 cycles_complete -= 1
