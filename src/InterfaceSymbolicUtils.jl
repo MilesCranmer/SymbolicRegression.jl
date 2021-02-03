@@ -38,9 +38,9 @@ function node_to_symbolic(tree::Node, options::Options;
             return op(left_side, right_side)
         else
             if index_functions
-                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol("_binop$(tree.op)"))
+                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number,Number}, Real}}(Symbol("_binop$(tree.op)"))
             else
-                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol(op))
+                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number,Number}, Real}}(Symbol(op))
             end
             return dummy_op(left_side, right_side)
         end
