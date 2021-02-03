@@ -30,6 +30,23 @@ function unaopmap(op)
     return op
 end
 
+function fastmathmap(op)
+    if op == pow
+        pow_fast
+    elseif op == sqrt_abs
+        sqrt_abs_fast
+    elseif op == log10_abs
+        log10_abs_fast
+    elseif op == log2_abs
+        log2_abs_fast
+    elseif op == log_abs
+        log_abs_fast
+    else
+        eval(Base.FastMath.make_fastmath(Symbol(op)))
+    end
+end
+
+
 struct Options{A,B,C,D}
 
     fast_binops::A
@@ -106,10 +123,6 @@ function Options(;
     seed=nothing
    ) where {nuna,nbin}
 
-    to_fast = x->eval(Base.FastMath.make_fastmath(Symbol(x)))
-    fast_binary_operators = map(to_fast, binary_operators)
-    fast_unary_operators = map(to_fast, unary_operators)
-
     if hofFile == nothing
         hofFile = "hall_of_fame.csv" #TODO - put in date/time string here
     end
@@ -131,6 +144,9 @@ function Options(;
 
     binary_operators = map(binopmap, binary_operators)
     unary_operators = map(unaopmap, unary_operators)
+    fast_binary_operators = map(fastmathmap, binary_operators)
+    fast_unary_operators = map(fastmathmap, unary_operators)
+
 
     mutationWeights = map((x,)->convert(Float64, x), mutationWeights)
     if length(mutationWeights) != 8
