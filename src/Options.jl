@@ -30,10 +30,12 @@ function unaopmap(op)
     return op
 end
 
-struct Options{A,B}
+struct Options{A,B,C,D}
 
-    binops::A
-    unaops::B
+    fast_binops::A
+    fast_unaops::B
+    binops::C
+    unaops::D
     bin_constraints::Array{Tuple{Int,Int}, 1}
     una_constraints::Array{Int, 1}
     ns::Int
@@ -104,6 +106,10 @@ function Options(;
     seed=nothing
    ) where {nuna,nbin}
 
+    to_fast = x->eval(Base.FastMath.make_fastmath(Symbol(x)))
+    fast_binary_operators = map(to_fast, binary_operators)
+    fast_unary_operators = map(to_fast, unary_operators)
+
     if hofFile == nothing
         hofFile = "hall_of_fame.csv" #TODO - put in date/time string here
     end
@@ -131,7 +137,7 @@ function Options(;
         error("Not the right number of mutation probabilities given")
     end
 
-    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed)
+    Options{typeof(fast_binary_operators),typeof(fast_unary_operators),typeof(binary_operators),typeof(unary_operators)}(fast_binary_operators, fast_unary_operators, binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed)
 end
 
 
