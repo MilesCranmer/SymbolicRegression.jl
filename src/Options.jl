@@ -65,6 +65,7 @@ struct Options{A,B}
     probNegate::Float32
     nuna::Int
     nbin::Int
+    seed::Union{Int, Nothing}
 
 end
 
@@ -100,6 +101,7 @@ function Options(;
     fractionReplaced=0.1f0,
     verbosity=convert(Int, 1e9),
     probNegate=0.01f0,
+    seed=nothing
    ) where {nuna,nbin}
 
     if hofFile == nothing
@@ -129,7 +131,7 @@ function Options(;
         error("Not the right number of mutation probabilities given")
     end
 
-    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin)
+    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed)
 end
 
 

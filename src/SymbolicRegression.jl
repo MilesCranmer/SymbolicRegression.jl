@@ -42,6 +42,7 @@ export Population,
 using Distributed
 using Printf: @printf
 using Pkg
+using Random: seed!
 include("ProgramConstants.jl")
 include("Operators.jl")
 include("Options.jl")
@@ -94,7 +95,9 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         baselineMSE = MSE(dataset.y, ones(T, dataset.n) .* avgy)
     end
 
-    #TODO - remove this as redundant
+    if options.seed !== nothing
+        seed!(options.seed)
+    end
     # Start a population on every process
     allPopsType = parallel ? Future : Population
     allPops = allPopsType[]
