@@ -28,7 +28,7 @@ function deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
      if !complete2
          return (cumulator, false)
      end
-     op = options.fast_binops[op_idx]
+     op = options.binops[op_idx]
      @inbounds @simd for j=1:size(cumulator, 1)
          cumulator[j] = op(cumulator[j], array2[j])
      end
@@ -40,7 +40,7 @@ function deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
      if !complete
          return (cumulator, false)
      end
-     op = options.fast_unaops[op_idx]
+     op = options.unaops[op_idx]
      @inbounds @simd for j=1:size(cumulator, 1)
          cumulator[j] = op(cumulator[j])
      end
