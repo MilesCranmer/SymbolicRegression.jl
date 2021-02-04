@@ -131,6 +131,31 @@ function Options(;
         error("Not the right number of mutation probabilities given")
     end
 
+    for (op, f) in enumerate(map(Symbol, binary_operators))
+        _f = if f == Symbol(pow)
+            Symbol(^)
+        else
+            f
+        end
+        if !isdefined(Base, _f)
+            continue
+        end
+        @eval begin
+            Base.$_f(l::Node, r::Node)::Node = (l.constant && r.constant) ? Node($f(l.val, r.val)::AbstractFloat) : Node($op, l, r)
+            Base.$_f(l::Node, r::AbstractFloat)::Node =        l.constant ? Node($f(l.val, r)::AbstractFloat)     : Node($op, l, r)
+            Base.$_f(l::AbstractFloat, r::Node)::Node =        r.constant ? Node($f(l, r.val)::AbstractFloat)     : Node($op, l, r)
+        end
+    end
+
+    for (op, f) in enumerate(map(Symbol, unary_operators))
+        if !isdefined(Base, f)
+            continue
+        end
+        @eval begin
+            Base.$f(l::Node)::Node = l.constant ? Node($f(l.val)::AbstractFloat) : Node($op, l)
+        end
+    end
+
     Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed)
 end
 
