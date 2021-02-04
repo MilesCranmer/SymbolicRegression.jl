@@ -30,29 +30,10 @@ function unaopmap(op)
     return op
 end
 
-function fastmathmap(op)
-    if op == pow
-        pow_fast
-    elseif op == sqrt_abs
-        sqrt_abs_fast
-    elseif op == log10_abs
-        log10_abs_fast
-    elseif op == log2_abs
-        log2_abs_fast
-    elseif op == log_abs
-        log_abs_fast
-    else
-        eval(Base.FastMath.make_fastmath(Symbol(op)))
-    end
-end
+struct Options{A,B}
 
-
-struct Options{A,B,C,D}
-
-    fast_binops::A
-    fast_unaops::B
-    binops::C
-    unaops::D
+    binops::A
+    unaops::B
     bin_constraints::Array{Tuple{Int,Int}, 1}
     una_constraints::Array{Int, 1}
     ns::Int
@@ -144,16 +125,13 @@ function Options(;
 
     binary_operators = map(binopmap, binary_operators)
     unary_operators = map(unaopmap, unary_operators)
-    fast_binary_operators = map(fastmathmap, binary_operators)
-    fast_unary_operators = map(fastmathmap, unary_operators)
-
 
     mutationWeights = map((x,)->convert(Float64, x), mutationWeights)
     if length(mutationWeights) != 8
         error("Not the right number of mutation probabilities given")
     end
 
-    Options{typeof(fast_binary_operators),typeof(fast_unary_operators),typeof(binary_operators),typeof(unary_operators)}(fast_binary_operators, fast_unary_operators, binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed)
+    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, limitPowComplexity, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed)
 end
 
 

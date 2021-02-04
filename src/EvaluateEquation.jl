@@ -54,7 +54,7 @@ function deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
     @return_on_false complete n T
     (array2, complete2) = evalTreeArray(tree.r, cX, options)
     @return_on_false complete2 n T
-    op = options.fast_binops[op_idx]
+    op = options.binops[op_idx]
     finished_loop = true
     @inbounds @simd for j=1:n
         x = op(cumulator[j], array2[j])
@@ -71,9 +71,9 @@ function deg2_l1_r1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val
     @return_on_false complete n T
     (array2, complete2) = evalTreeArray(tree.r.l, cX, options)
     @return_on_false complete2 n T
-    op = options.fast_binops[op_idx]
-    op_l = options.fast_unaops[op_l_idx]
-    op_r = options.fast_unaops[op_r_idx]
+    op = options.binops[op_idx]
+    op_l = options.unaops[op_l_idx]
+    op_r = options.unaops[op_r_idx]
     finished_loop = true
     @inbounds @simd for j=1:n
         x_l = op_l(cumulator[j])
@@ -94,8 +94,8 @@ function deg2_l1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op
     @return_on_false complete n T
     (array2, complete2) = evalTreeArray(tree.r, cX, options)
     @return_on_false complete2 n T
-    op = options.fast_binops[op_idx]
-    op_l = options.fast_unaops[op_l_idx]
+    op = options.binops[op_idx]
+    op_l = options.unaops[op_l_idx]
     finished_loop = true
     @inbounds @simd for j=1:n
         x_l = op_l(cumulator[j])
@@ -114,8 +114,8 @@ function deg2_r1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op
     @return_on_false complete n T
     (array2, complete2) = evalTreeArray(tree.r.l, cX, options)
     @return_on_false complete2 n T
-    op = options.fast_binops[op_idx]
-    op_r = options.fast_unaops[op_r_idx]
+    op = options.binops[op_idx]
+    op_r = options.unaops[op_r_idx]
     finished_loop = true
     @inbounds @simd for j=1:n
         x_r = op_r(array2[j])
@@ -132,7 +132,7 @@ function deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
     n = size(cX, 2)
     (cumulator, complete) = evalTreeArray(tree.l, cX, options)
     @return_on_false complete n T
-    op = options.fast_unaops[op_idx]
+    op = options.unaops[op_idx]
     finished_loop = true
     @inbounds @simd for j=1:n
         x = op(cumulator[j])
@@ -156,8 +156,8 @@ function deg1_l1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op
     n = size(cX, 2)
     (cumulator, complete) = evalTreeArray(tree.l.l, cX, options)
     @return_on_false complete n T
-    op = options.fast_unaops[op_idx]
-    op_l = options.fast_unaops[op_l_idx]
+    op = options.unaops[op_idx]
+    op_l = options.unaops[op_l_idx]
     finished_loop = true
     @inbounds @simd for j=1:n
         x_l = op_l(cumulator[j])
@@ -176,8 +176,8 @@ function deg1_l2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op
     @return_on_false complete n T
     (array2, complete2) = evalTreeArray(tree.l.r, cX, options)
     @return_on_false complete2 n T
-    op = options.fast_unaops[op_idx]
-    op_l = options.fast_binops[op_l_idx]
+    op = options.unaops[op_idx]
+    op_l = options.binops[op_l_idx]
     finished_loop = true
     @inbounds @simd for j=1:n
         x_l = op_l(cumulator[j], array2[j])
