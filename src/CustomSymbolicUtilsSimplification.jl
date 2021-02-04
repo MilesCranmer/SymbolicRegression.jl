@@ -134,7 +134,7 @@ function custom_simplify(init_eqn::T, options::Options)::SYMBOLIC_UTILS_TYPES wh
     eqn = simplifier(init_eqn)::SYMBOLIC_UTILS_TYPES #simplify(eqn, polynorm=true)
 
 	# Remove power laws
-    if !((^) in options.binops)
+    if !((^) in options.binops || pow in options.binops)
 		eqn = multiply_powers(eqn::SYMBOLIC_UTILS_TYPES)
 	end
 	return eqn
