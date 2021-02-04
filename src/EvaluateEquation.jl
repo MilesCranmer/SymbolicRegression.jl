@@ -15,7 +15,9 @@ function evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tup
     if tree.degree == 0
         deg0_eval(tree, cX, options)
     elseif tree.degree == 1
-        if tree.l.degree == 1
+        if tree.l.degree == 2
+            deg1_l2_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+        elseif tree.l.degree == 1
             deg1_l1_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
         else
             deg1_eval(tree, cX, Val(tree.op), options)
@@ -159,6 +161,26 @@ function deg1_l1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op
     finished_loop = true
     @inbounds @simd for j=1:n
         x_l = op_l(cumulator[j])
+        @break_on_check x_l finished_loop T
+        x = op(x_l)
+        @break_on_check x finished_loop T
+        cumulator[j] = x
+    end
+    @return_on_false finished_loop n T
+    return (cumulator, true)
+end
+
+function deg1_l2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx,op_l_idx}
+    n = size(cX, 2)
+    (cumulator, complete) = evalTreeArray(tree.l.l, cX, options)
+    @return_on_false complete n T
+    (array2, complete2) = evalTreeArray(tree.l.r, cX, options)
+    @return_on_false complete2 n T
+    op = options.unaops[op_idx]
+    op_l = options.binops[op_l_idx]
+    finished_loop = true
+    @inbounds @simd for j=1:n
+        x_l = op_l(cumulator[j], array2[j])
         @break_on_check x_l finished_loop T
         x = op(x_l)
         @break_on_check x finished_loop T
