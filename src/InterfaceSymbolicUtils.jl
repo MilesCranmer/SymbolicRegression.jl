@@ -59,16 +59,16 @@ function symbolic_to_node(eqn::T, options::Options;
     return Node(varMap_to_index(eqn.name, varMap))
 end
 
-function _multiarg_split(op_idx::Int, eqn::Array{Any},
+function _multiarg_split(op_idx::Int, eqn::Array{Any, 1},
                         options::Options, varMap::Union{Array{String, 1}, Nothing}
                        )::Node
     if length(eqn) == 2
         return Node(op_idx,
-                    symbolic_to_node(eqn[1], options, varMap),
-                    symbolic_to_node(eqn[2], options, varMap))
+                    symbolic_to_node(eqn[1], options, varMap=varMap),
+                    symbolic_to_node(eqn[2], options, varMap=varMap))
     elseif length(eqn) == 3
         return Node(op_idx,
-                    symbolic_to_node(eqn[1], options, varMap),
+                    symbolic_to_node(eqn[1], options, varMap=varMap),
                     _multiarg_split(op_idx, eqn[2:3], options, varMap))
     else
         # Minimize depth:
@@ -84,7 +84,7 @@ function symbolic_to_node(eqn::T, options::Options;
                        varMap::Union{Array{String, 1}, Nothing}=nothing
                   )::Node where {T<:SymbolicUtils.Term{<:Number}}
     args = SymbolicUtils.arguments(eqn)
-    l = symbolic_to_node(args[1], options)
+    l = symbolic_to_node(args[1], options, varMap=varMap)
     nargs = length(args)
     op = SymbolicUtils.operation(eqn)
     if nargs == 1
@@ -93,7 +93,7 @@ function symbolic_to_node(eqn::T, options::Options;
     else
         op_idx = binop_to_index(op, options)
         if nargs == 2
-            r = symbolic_to_node(args[2], options)
+            r = symbolic_to_node(args[2], options, varMap=varMap)
             return Node(op_idx, l, r)
         else
             # TODO: Assert operator is +, *
