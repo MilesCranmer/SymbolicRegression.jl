@@ -38,7 +38,9 @@
 
 ## Code performance ideas:
 
-- [ ] Fuse operations for bin(op; op) triplets! There aren't that many, so probably worth it.
+- [ ] Compute min-memory traversal of tree before execution.
+    - Should theoretically be possible to do the entire tree with a single array. How hard to get this working?
+        - One option is to traverse the tree from inside a loop over the array. Is that crazy?
 - [ ] How hard is it to turn the recursive array evaluation into a for loop?
     - Difficulty in getting efficient allocations... Will try more later
 - [ ] Try defining a binary tree as an array, rather than a linked list. See https://stackoverflow.com/a/6384714/2689923
@@ -151,3 +153,4 @@ end
 - [x] Add true multi-node processing, with MPI, or just file sharing. Multiple populations per core.
     - Ongoing in cluster branch
 - [-] Use package compiler and compile sr.jl into a standalone binary that can be used by pysr.
+- [x] Fuse operations for bin(op; op) triplets! There aren't that many, so probably worth it.
