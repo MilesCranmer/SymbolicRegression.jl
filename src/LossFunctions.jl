@@ -57,7 +57,7 @@ function scoreFuncBatch(dataset::Dataset{T}, baseline::T,
         return convert(T, 1000000000)
     end
 
-    if dataset.weighted
+    if !dataset.weighted
         mse = MSE(prediction, batch_y)
     else
         batch_w = dataset.weights[batch_idx]

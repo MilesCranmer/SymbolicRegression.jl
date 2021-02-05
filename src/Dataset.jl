@@ -19,10 +19,7 @@ function Dataset(
 
     n = size(X, 2)
     nfeatures = size(X, 1)
-    weighted = true
-    if weights == nothing
-        weighted = false
-    end
+    weighted = weights !== nothing
     if varMap == nothing
         varMap = ["x$(i)" for i=1:nfeatures]
     end
