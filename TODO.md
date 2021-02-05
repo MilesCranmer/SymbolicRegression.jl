@@ -1,7 +1,7 @@
 # TODO
 
 - [ ] Sort these todo lists by priority
-- [ ] Make serial version of code. Also to help benchmarking.
+- [ ] Show speed by # of mutations total, and # mutations per individual.
 
 ## Feature ideas
 
@@ -154,3 +154,4 @@ end
     - Ongoing in cluster branch
 - [-] Use package compiler and compile sr.jl into a standalone binary that can be used by pysr.
 - [x] Fuse operations for bin(op; op) triplets! There aren't that many, so probably worth it.
+- [x] Make serial version of code. Also to help benchmarking.
