@@ -16,7 +16,11 @@ function evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tup
         deg0_eval(tree, cX, options)
     elseif tree.degree == 1
         if tree.l.degree == 2
-            deg1_l2_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+            if tree.l.l.degree == 0 && tree.l.r.degree == 0
+                deg1_l2_ll0_lr0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+            else
+                deg1_l2_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+            end
         elseif tree.l.degree == 1
             deg1_l1_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
         else
@@ -202,6 +206,66 @@ function deg1_l1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op
         x = op(x_l)::T
         @break_on_check x finished_loop
         cumulator[j] = x
+    end
+    return (cumulator, finished_loop)
+end
+
+function deg1_l2_ll0_lr0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx,op_l_idx}
+    n = size(cX, 2)
+    op = options.unaops[op_idx]
+    op_l = options.binops[op_l_idx]
+    finished_loop = true
+    if tree.l.l.constant && tree.l.r.constant
+        val_ll = convert(T, tree.l.l.val)
+        val_lr = convert(T, tree.l.r.val)
+        x_l = op_l(val_ll, val_lr)::T
+        if isnan(x_l) || !isfinite(x_l)
+            return (Array{T, 1}(undef, n), false)
+        end
+        x = op(x_l)::T
+        if isnan(x) || !isfinite(x)
+            return (Array{T, 1}(undef, n), false)
+        end
+        return (fill(x, n), true)
+    elseif tree.l.l.constant
+        val_ll = convert(T, tree.l.l.val)
+        feature_lr = tree.l.r.feature
+        cumulator = Array{T, 1}(undef, n)
+        finished_loop = true
+        @inbounds @simd for j=1:n
+            x_l = op_l(val_ll, cX[feature_lr, j])::T
+            @break_on_check x_l finished_loop
+            x = op(x_l)::T
+            @break_on_check x finished_loop
+            cumulator[j] = x
+        end
+        return (cumulator, finished_loop)
+    elseif tree.l.r.constant
+        feature_ll = tree.l.l.feature
+        val_lr = convert(T, tree.l.r.val)
+        cumulator = Array{T, 1}(undef, n)
+        finished_loop = true
+        @inbounds @simd for j=1:n
+            x_l = op_l(cX[feature_ll, j], val_lr)::T
+            @break_on_check x_l finished_loop
+            x = op(x_l)::T
+            @break_on_check x finished_loop
+            cumulator[j] = x
+        end
+        return (cumulator, finished_loop)
+    else
+        feature_ll = tree.l.l.feature
+        feature_lr = tree.l.r.feature
+        cumulator = Array{T, 1}(undef, n)
+        finished_loop = true
+        @inbounds @simd for j=1:n
+            x_l = op_l(cX[feature_ll, j], cX[feature_lr, j])::T
+            @break_on_check x_l finished_loop
+            x = op(x_l)::T
+            @break_on_check x finished_loop
+            cumulator[j] = x
+        end
+        return (cumulator, finished_loop)
     end
     return (cumulator, finished_loop)
 end
