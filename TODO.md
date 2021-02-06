@@ -38,6 +38,7 @@
 
 ## Code performance ideas:
 
+- [ ] Bottleneck is still the equation evaluation. So: move to the GPU!!
 - [ ] Compute min-memory traversal of tree before execution.
     - Should theoretically be possible to do the entire tree with a single array. How hard to get this working?
         - One option is to traverse the tree from inside a loop over the array. Is that crazy?

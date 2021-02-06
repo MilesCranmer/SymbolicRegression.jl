@@ -12,13 +12,16 @@ mutable struct Node
 
     Node(val::CONST_TYPE) =                                                     new(0, true,                       val                                     ) #Leave other values undefined
     Node(feature::Int) =                                                        new(0, false, convert(CONST_TYPE, 0f0), feature                            )
-    Node(val::AbstractFloat) =                                                  Node(convert(CONST_TYPE, val))
     Node(op::Int, l::Node) =                                                    new(1, false, convert(CONST_TYPE, 0f0),       0,      op,        l         )
     Node(op::Int, l::Union{AbstractFloat, Int}) =                               new(1, false, convert(CONST_TYPE, 0f0),       0,      op,  Node(l)         )
     Node(op::Int, l::Node, r::Node) =                                           new(2, false, convert(CONST_TYPE, 0f0),       0,      op,        l,       r)
     Node(op::Int, l::Union{AbstractFloat, Int}, r::Node) =                      new(2, false, convert(CONST_TYPE, 0f0),       0,      op,  Node(l),       r)
     Node(op::Int, l::Node, r::Union{AbstractFloat, Int}) =                      new(2, false, convert(CONST_TYPE, 0f0),       0,      op,        l, Node(r))
     Node(op::Int, l::Union{AbstractFloat, Int}, r::Union{AbstractFloat, Int}) = new(2, false, convert(CONST_TYPE, 0f0),       0,      op,  Node(l), Node(r))
+
+    Node(val::AbstractFloat) =                                                  Node(convert(CONST_TYPE, val))
+    Node(var_string::String) =                                                  Node(parse(Int, var_string[2:end]))
+    Node(var_string::String, varMap::Array{String, 1}) =                        Node([i for (i, _variable) in enumerate(varMap) if _variable==var_string][1]::Int)
 end
 
 # Copy an equation (faster than deepcopy)
