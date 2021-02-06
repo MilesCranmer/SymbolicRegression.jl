@@ -72,30 +72,20 @@ function neg(x::T)::T where {T}
 end
 
 function greater(x::T, y::T)::T where {T}
-    if x > y
-        return convert(T, 1)
-    end
-    return convert(T, 0)
+    return convert(T, (x > y))
 end
-
+function greater(x, y)
+    return (x > y)
+end
 function relu(x::T)::T where {T}
-    if x > convert(T, 0)
-        return x
-    end
-    return convert(T, 0)
+    return convert(T, (x > 0)) * x
 end
 
 function logical_or(x::T, y::T)::T where {T}
-    if x > convert(T, 0) || y > convert(T, 0)
-        return convert(T, 1)
-    end
-    return convert(T, 0)
+    return convert(T, (x > convert(T, 0) || y > convert(T, 0)))
 end
 
 # (Just use multiplication normally)
 function logical_and(x::T, y::T)::T where {T}
-    if x > convert(T, 0) && y > convert(T, 0)
-        return convert(T, 1)
-    end
-    return convert(T, 0)
+    return convert(T, (x > convert(T, 0) && y > convert(T, 0)))
 end
