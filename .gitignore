@@ -9,3 +9,4 @@ trials*
 build
 dist
 Manifest.toml
+*.cov
