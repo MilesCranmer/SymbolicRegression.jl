@@ -2,6 +2,7 @@ using SymbolicRegression, SymbolicUtils, Test, Random
 using SymbolicRegression: Options, stringTree, evalTreeArray, Dataset
 using SymbolicRegression: printTree, pow, EvalLoss, scoreFunc
 using SymbolicRegression: plus, sub, mult, square, cube, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
+using SymbolicRegression: node_to_symbolic
 
 
 x1 = 2.0
@@ -97,3 +98,19 @@ for T in types_to_test
     @test logical_or(T(0.0), val2) == T(1.0)
     @test logical_and(T(0.0), val2) == T(0.0)
 end
+
+
+# Test SymbolicUtils interface
+tree = Node(5, (Node(3.0) * Node(1, Node("x1"))) ^ 2.0, -1.2)
+_inv(x) = 1/x
+options = Options(
+    binary_operators=(+, *, ^, /, greater),
+    unary_operators=(_inv,),
+    npopulations=4;
+)
+
+eqn = node_to_symbolic(tree, options;
+                       varMap=["energy"], index_functions=true)
+tree2 = symbolic_to_node(eqn, options; varMap=["energy"])
+
+@test stringTree(tree, options) == stringTree(tree2, options)
