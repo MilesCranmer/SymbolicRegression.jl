@@ -24,9 +24,6 @@ end
 function pow(x::T, y::T)::T where {T<:Real}
 	abs(x)^y
 end
-function pow_fast(x::T, y::T)::T where {T<:Real}
-	@fastmath abs(x)^y
-end
 function div(x::T, y::T)::T where {T<:Real}
 	x / y
 end
@@ -38,15 +35,6 @@ function log2_abs(x::T)::T where {T<:Real}
 end
 function log10_abs(x::T)::T where {T<:Real}
     log10(abs(x) + convert(T, 1//100000000))
-end
-function log_abs_fast(x::T)::T where {T<:Real}
-    @fastmath log(abs(x) + convert(T, 1//100000000))
-end
-function log2_abs_fast(x::T)::T where {T<:Real}
-    @fastmath log2(abs(x) + convert(T, 1//100000000))
-end
-function log10_abs_fast(x::T)::T where {T<:Real}
-    @fastmath log10(abs(x) + convert(T, 1//100000000))
 end
 
 # Generics:
@@ -63,9 +51,6 @@ log10_abs(x) = log10(abs(x) + 1//100000000)
 
 function sqrt_abs(x::T)::T where {T}
 	sqrt(abs(x))
-end
-function sqrt_abs_fast(x::T)::T where {T}
-	@fastmath sqrt(abs(x))
 end
 function neg(x::T)::T where {T}
 	- x

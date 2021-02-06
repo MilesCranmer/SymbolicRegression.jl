@@ -1,9 +1,5 @@
 using Printf: @printf
 
-function id(x::T)::T where {T<:Real}
-    x
-end
-
 function debug(verbosity, string...)
     if verbosity > 0
         println(string...)
