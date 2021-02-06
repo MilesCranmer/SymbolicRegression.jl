@@ -6,7 +6,6 @@
 ## Feature ideas
 
 - [ ] Other default losses (e.g., abs, other likelihoods, or just allow user to pass this as a string).
-- [ ] NDSA-II
 - [ ] Cross-validation
 - [ ] Hierarchical model, so can re-use functional forms. Output of one equation goes into second equation?
 - [ ] Add function to plot equations?
@@ -21,6 +20,8 @@
 
 ## Algorithmic performance ideas:
 
+- [ ] When an equation gives NaN or Inf, just skip that generation entirely, rather than duplicating its parent.
+- [ ] NDSA-II
 - [ ] When doing equation warmup, only migrate those equations with almost the same complexity. Rather than having to consider simple equations later in the game.
 - [ ] Right now we only update the score based on some. Need to update score based on entire data! Note that optimizer only is used sometimes.
 - [ ] Idea: use gradient of equation with respect to each operator (perhaps simply add to each operator) to tell which part is the most "sensitive" to changes. Then, perhaps insert/delete/mutate on that part of the tree?
