@@ -168,16 +168,16 @@ function deg2_l0_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, optio
     n = size(cX, 2)
     op = options.binops[op_idx]
     finished_loop = true
-    cumulator = Array{T, 1}(undef, n)
     if tree.l.constant && tree.r.constant
         val_l = convert(T, tree.l.val)
         val_r = convert(T, tree.r.val)
-        @inbounds @simd for j=1:n
-            x = op(val_l, val_r)::T
-            @break_on_check x finished_loop
-            cumulator[j] = x
+        x = op(val_l, val_r)::T
+        if isnan(x) || !isfinite(x)
+            return (Array{T, 1}(undef, n), false)
         end
+        return (fill(x, n), true)
     elseif tree.l.constant
+        cumulator = Array{T, 1}(undef, n)
         val_l = convert(T, tree.l.val)
         feature_r = tree.r.feature
         @inbounds @simd for j=1:n
@@ -186,6 +186,7 @@ function deg2_l0_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, optio
             cumulator[j] = x
         end
     elseif tree.r.constant
+        cumulator = Array{T, 1}(undef, n)
         feature_l = tree.l.feature
         val_r = convert(T, tree.r.val)
         @inbounds @simd for j=1:n
@@ -194,6 +195,7 @@ function deg2_l0_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, optio
             cumulator[j] = x
         end
     else
+        cumulator = Array{T, 1}(undef, n)
         feature_l = tree.l.feature
         feature_r = tree.r.feature
         @inbounds @simd for j=1:n
