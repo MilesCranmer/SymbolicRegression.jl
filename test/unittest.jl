@@ -1,5 +1,3 @@
-##
-
 using SymbolicRegression, SymbolicUtils, Test, Random
 using SymbolicRegression: Options, stringTree, evalTreeArray, Dataset
 using SymbolicRegression: printTree, pow, EvalLoss, scoreFunc
@@ -67,8 +65,8 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu]
             @test scoreFunc(dataset, one(T), tree, make_options(parsimony=1.0)) > 1.0
             @test scoreFunc(dataset, one(T), tree, make_options()) < scoreFunc(dataset, one(T), tree_bad, make_options())
             @test scoreFunc(dataset, one(T)*10, tree_bad, make_options()) < scoreFunc(dataset, one(T), tree_bad, make_options())
+
         end
     end
 end
 
-##
