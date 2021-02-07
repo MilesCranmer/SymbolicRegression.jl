@@ -40,3 +40,31 @@ for batching in [false, true]
         @test abs(eval(Meta.parse(string(residual)))) < 1e-6
     end
 end
+
+_inv(x) = 1/x
+options = SymbolicRegression.Options(
+    binary_operators=(+, *),
+    unary_operators=(cos, _inv),
+    npopulations=4,
+    fast_cycle=true
+)
+X = randn(Float32, 5, 100)
+y = 2 * cos.(X[4, :])
+varMap = ["t1", "t2", "t3", "t4", "t5"]
+hallOfFame = EquationSearch(X, y; varMap=varMap,
+                            niterations=2, options=options)
+dominating = calculateParetoFrontier(X, y, hallOfFame, options)
+
+best = dominating[end]
+eqn = node_to_symbolic(best.tree, options;
+                       evaluate_functions=true, varMap=varMap)
+
+@syms t1::Real t2::Real t3::Real t4::Real
+true_eqn = 2*cos(t4)
+residual = simplify(eqn - true_eqn)
+
+# Test the score
+@test best.score < 1e-6
+t4 = 0.1f0
+# Test the actual equation found:
+@test abs(eval(Meta.parse(string(residual)))) < 1e-6
