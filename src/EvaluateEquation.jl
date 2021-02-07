@@ -100,7 +100,7 @@ function deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{A
     if tree.constant
         return (fill(convert(T, tree.val), n), true)
     else
-        return (copy(cX[tree.feature, :]), true)
+        return (cX[tree.feature, :], true)
     end
 end
 
