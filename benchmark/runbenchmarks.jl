@@ -1,13 +1,15 @@
 using PkgBenchmark
+using DataFrames
+using CSV
+using Statistics: median
 import SymbolicRegression
+config = BenchmarkConfig(;juliacmd=`julia -O3`,
+                          env=Dict("JULIA_NUM_THREADS" => 4))
+_results = benchmarkpkg(SymbolicRegression, config; script="benchmark/benchmarks.jl")
+results = vcat([[["evaluation_"*k, median(v.times)] for (k, v) in bigV]
+      for (bigK, bigV) in _results.benchmarkgroup.data]...)
+df = DataFrame(commit=_results.commit,
+               name=[results[i][1] for i=1:length(results)],
+               time=[results[i][2] for i=1:length(results)])
 
-results = []
-cp("benchmark/benchmarks.jl", "benchmark/.benchmarks.jl"; force=true)
-
-for i=1:10
-    config = BenchmarkConfig(;id=(i == 1 ? nothing : "HEAD~$i"),
-                              juliacmd=`julia -O3`,
-                              env=Dict("JULIA_NUM_THREADS" => 4))
-    push!(results,
-          benchmarkpkg(SymbolicRegression, config; script="benchmark/.benchmarks.jl"))
-end
+CSV.write("output.csv", df; append=true)
