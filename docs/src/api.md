@@ -50,3 +50,19 @@ Options(;
     seed=nothing
    ) where {nuna,nbin}
 ```
+
+## Printing and Evaluation
+
+```@docs
+stringTree(tree::Node, options::Options)::String
+evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
+```
+
+## SymbolicUtils.jl interface
+
+```@docs
+node_to_symbolic(tree::Node, options::Options; 
+                     varMap::Union{Array{String, 1}, Nothing}=nothing,
+                     evaluate_functions::Bool=false,
+                     index_functions::Bool=false)
+```

@@ -79,7 +79,16 @@ function stringOp(op::F, tree::Node, options::Options;
     end
 end
 
-# Convert an equation to a string
+"
+stringTree(tree::Node, options::Options; kws...)
+
+Convert an equation to a string.
+
+# Arguments
+
+- `varMap::Union{Array{String, 1}, Nothing}=nothing`: what variables
+    to print for each feature.
+"
 function stringTree(tree::Node, options::Options;
                     bracketed::Bool=false,
                     varMap::Union{Array{String, 1}, Nothing}=nothing)::String

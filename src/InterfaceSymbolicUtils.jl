@@ -2,6 +2,27 @@ using SymbolicUtils
 
 const SYMBOLIC_UTILS_TYPES = Union{<:Number,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
 
+"""
+    node_to_symbolic(tree::Node, options::Options;
+                varMap::Union{Array{String, 1}, Nothing}=nothing,
+                evaluate_functions::Bool=false,
+                index_functions::Bool=false)
+
+The interface to SymbolicUtils.jl. Passing a tree to this function
+will generate a symbolic equation in SymbolicUtils.jl format.
+
+## Arguments
+
+- `tree::Node`: The equation to convert.
+- `options::Options`: Options, which contains the operators used in the equation.
+- `varMap::Union{Array{String, 1}, Nothing}=nothing`: What variable names to use for
+    each feature. Default is [x1, x2, x3, ...].
+- `evaluate_functions::Bool=false`: Whether to evaluate the operators, or
+    leave them as symbolic.
+- `index_functions::Bool=false`: Whether to generate special names for the
+    operators, which then allows one to convert back to a `Node` format
+    using `symbolic_to_node`.
+"""
 function node_to_symbolic(tree::Node, options::Options; 
                      varMap::Union{Array{String, 1}, Nothing}=nothing,
                      evaluate_functions::Bool=false,
