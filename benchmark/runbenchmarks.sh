@@ -12,6 +12,7 @@ for commit in $(git log --pretty=oneline --since="2 weeks ago" | vims -l 'wd$');
     cp .Manifest.toml    benchmark/Manifest.toml
     cp .runbenchmarks.jl benchmark/runbenchmarks.jl
     cp .benchmarks.jl    benchmark/benchmarks.jl
+    cat $commit >> output.csv
     julia --project=benchmark benchmark/runbenchmarks.jl
     git checkout -f
     rm benchmark/Project.toml
