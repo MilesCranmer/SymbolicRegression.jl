@@ -11,6 +11,10 @@ struct Dataset{T<:Real}
 end
 
 """
+    Dataset(X::AbstractMatrix{T}, y::AbstractVector{T};
+            weights::Union{AbstractVector{T}, Nothing}=nothing,
+            varMap::Union{Array{String, 1}, Nothing}=nothing)
+
 Construct a dataset to pass between internal functions.
 """
 function Dataset(
