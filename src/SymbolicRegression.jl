@@ -67,6 +67,38 @@ include("ConstantOptimization.jl")
 include("Deprecates.jl")
 
 
+"""
+    EquationSearch(X, y[; kws...])
+
+Perform a distributed equation search for functions which
+describe the mapping f(X[:, j]) ≈ y[j]. Options are
+configured using SymbolicRegression.Options(...),
+which should be passed as a keyword argument to options.
+
+# Arguments
+- `X::AbstractMatrix{T}`:  The input dataset to predict `y` from.
+    The first dimension is features, the second dimension is rows.
+- `y::AbstractVector{T}`: The values to predict. Only a single feature
+    is allowed, so `y` is a 1D array.
+- `niterations::Int=10`: The number of iterations to perform the search.
+    More iterations will improve the results.
+- `weights::Union{AbstractVector{T}, Nothing}=nothing`: Optionally
+    weight the loss for each `y` by this value (same shape as `y`).
+- `varMap::Union{Array{String, 1}, Nothing}=nothing`: The names
+    of each feature in `X`, which will be used during printing of equations.
+- `options::Options=Options()`: The options for the search, such as
+    which operators to use, evolution hyperparameters, etc.
+- `numprocs::Union{Int, Nothing}=nothing`:  The number of processes to use,
+    if you want `EquationSearch` to set this up automatically. By default
+    this will be `4`, but can be any number (you should pick a number <=
+    the number of cores available).
+- `procs::Union{Array{Int, 1}, Nothing}=nothing`: If you have set up
+    a distributed run manually with `procs = addprocs()` and `@everywhere`,
+    pass the `procs` to this keyword argument.
+- `runtests::Bool=true`: Whether to run (quick) tests before starting the
+    search, to see if there will be any problems during the equation search
+    related to the host environment.
+"""
 function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         niterations::Int=10,
         weights::Union{AbstractVector{T}, Nothing}=nothing,
