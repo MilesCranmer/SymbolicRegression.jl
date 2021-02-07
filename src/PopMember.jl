@@ -20,9 +20,8 @@ function PopMember(t::Node, score::T) where {T<:Real}
 end
 
 """
-    PopMember(dataset::Dataset{T},
-              baseline::T, t::Node,
-              options::Options)
+    PopMember(dataset::Dataset{T}, baseline::T,
+              t::Node, options::Options)
 
 Create a population member with a birth date at the current time.
 Automatically compute the score for this tree.

@@ -1,3 +1,0 @@
-# Internals
-
-## Fast tree evaluation
