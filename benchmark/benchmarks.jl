@@ -24,8 +24,9 @@ tree = Node(2,
 
 _X = randn(MersenneTwister(0), Float32, 5, 1000)
 
+SUITE["evaluation"] = BenchmarkGroup()
 for T in [Float32, Float64, BigFloat]
     X = map(x->convert(T, x), _X)
-    SUITE["evaluation"][string(T)] = @benchmarkable evalTreeArray(tree, X, options)
+    f = evalTreeArray
+    SUITE["evaluation"][string(T)] = @benchmarkable ($f)(tree, $X, options)
 end
-
