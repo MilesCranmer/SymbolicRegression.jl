@@ -5,7 +5,7 @@ using Statistics: median
 import SymbolicRegression
 config = BenchmarkConfig(;juliacmd=`julia -O3`,
                           env=Dict("JULIA_NUM_THREADS" => 4))
-_results = benchmarkpkg(SymbolicRegression, config; script=".benchmarks.jl")
+_results = benchmarkpkg(SymbolicRegression, config; script="benchmark/.benchmarks.jl")
 results = vcat([[["evaluation_"*k, median(v.times)] for (k, v) in bigV]
       for (bigK, bigV) in _results.benchmarkgroup.data]...)
 df = DataFrame(commit=_results.commit,
