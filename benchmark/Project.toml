@@ -1,0 +1,3 @@
+[deps]
+PkgBenchmark = "32113eaa-f34f-5b0d-bd6c-c81e245fc73d"
+SymbolicRegression = "8254be44-1295-4e6a-a16d-46603ac705cb"
