@@ -19,7 +19,7 @@ and triplets of operations for lower memory usage.
 
 # Returns
 
-- (output, complete)::Tuple{AbstractVector{T}, Bool}`: the result,
+- `(output, complete)::Tuple{AbstractVector{T}, Bool}`: the result,
     which is a 1D array, as well as if the evaluation completed
     successfully (true/false). A `false` complete means an infinity
     or nan was encountered, and a large loss should be assigned
