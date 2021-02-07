@@ -43,7 +43,7 @@ end
 
 options = SymbolicRegression.Options(
     binary_operators=(+, *),
-    unary_operators=(cos),
+    unary_operators=(cos,),
     npopulations=4,
     fast_cycle=true
 )
