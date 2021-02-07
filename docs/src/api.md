@@ -15,7 +15,7 @@ EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
 
 ## Options
 
-```@doc
+```@docs
 Options(;
     binary_operators::NTuple{nbin, Any}=(div, plus, mult),
     unary_operators::NTuple{nuna, Any}=(exp, cos),
@@ -49,14 +49,4 @@ Options(;
     probNegate=0.01f0,
     seed=nothing
    ) where {nuna,nbin}
-```
-
-## Dataset
-
-```@doc
-Dataset(X::AbstractMatrix{T},
-        y::AbstractVector{T};
-        weights::Union{AbstractVector{T}, Nothing}=nothing,
-        varMap::Union{Array{String, 1}, Nothing}=nothing
-       ) where {T<:Real}
 ```
