@@ -41,10 +41,9 @@ for batching in [false, true]
     end
 end
 
-_inv(x) = 1/x
 options = SymbolicRegression.Options(
     binary_operators=(+, *),
-    unary_operators=(cos, _inv),
+    unary_operators=(cos),
     npopulations=4,
     fast_cycle=true
 )
