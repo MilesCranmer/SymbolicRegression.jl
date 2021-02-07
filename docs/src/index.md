@@ -46,5 +46,5 @@ hallOfFame = EquationSearch(X, y, niterations=5, options=options, numprocs=4)
 # Contents
 
 ```@contents
-Pages = ["api.md", "types.md", "internals.md"]
+Pages = ["api.md", "types.md"]
 ```

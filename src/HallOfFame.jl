@@ -6,6 +6,11 @@ mutable struct HallOfFame
     # Arranged by complexity - store one at each.
 end
 
+"""
+    HallOfFame(options::Options)
+
+Create empty HallOfFame
+"""
 function HallOfFame(options::Options)
     actualMaxsize = options.maxsize + maxdegree
     HallOfFame([PopMember(Node(convert(CONST_TYPE, 1)), 1f9) for i=1:actualMaxsize], [false for i=1:actualMaxsize])

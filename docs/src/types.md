@@ -1,23 +1,14 @@
 # Types
 
-## Dataset
-
-```@docs
-Dataset(X::AbstractMatrix{T},
-        y::AbstractVector{T};
-        weights::Union{AbstractVector{T}, Nothing}=nothing,
-        varMap::Union{Array{String, 1}, Nothing}=nothing
-       ) where {T<:Real}
-```
-
 ## Equations
 
-Equations are specified as binary trees with the `Node` type.
+Equations are specified as binary trees with the `Node` type. Operators
+defined in `Base` are re-defined for Node types, so that one can
+use, e.g., `t=Node(1) * 3f0` to create a tree.
 
 ```@docs
-Node(val::Float32)
-Node(feature::Int)
 Node(val::AbstractFloat)
+Node(feature::Int)
 Node(var_string::String)
 Node(var_string::String, varMap::Array{String, 1})
 Node(op::Int, l::Node)
@@ -59,4 +50,14 @@ PopMember(dataset::Dataset{T}, baseline::T, t::Node) where {T<:Real}
 ```@docs
 HallOfFame(options::Options)
 HallOfFame(members::Array{PopMember, 1}, exists::Array{Bool, 1})
+```
+
+## Dataset
+
+```@docs
+Dataset(X::AbstractMatrix{T},
+        y::AbstractVector{T};
+        weights::Union{AbstractVector{T}, Nothing}=nothing,
+        varMap::Union{Array{String, 1}, Nothing}=nothing
+       ) where {T<:Real}
 ```

@@ -10,6 +10,9 @@ struct Dataset{T<:Real}
 
 end
 
+"""
+Construct a dataset to pass between internal functions.
+"""
 function Dataset(
         X::AbstractMatrix{T},
         y::AbstractVector{T};

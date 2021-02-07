@@ -54,8 +54,11 @@ Options(;
 ## Printing and Evaluation
 
 ```@docs
-stringTree(tree::Node, options::Options)::String
-evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
+stringTree(tree::Node, options::Options)
+```
+
+```@docs
+evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options) where {T<:Real}
 ```
 
 ## SymbolicUtils.jl interface
