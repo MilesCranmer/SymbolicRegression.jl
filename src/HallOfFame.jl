@@ -1,4 +1,4 @@
-# List of the best members seen all time
+""" List of the best members seen all time in `.members` """
 mutable struct HallOfFame
     members::Array{PopMember, 1}
     exists::Array{Bool, 1} #Whether it has been set

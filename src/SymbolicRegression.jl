@@ -98,6 +98,13 @@ which should be passed as a keyword argument to options.
 - `runtests::Bool=true`: Whether to run (quick) tests before starting the
     search, to see if there will be any problems during the equation search
     related to the host environment.
+
+# Returns
+- `hallOfFame::HallOfFame`: The best equations seen during the search.
+    hallOfFame.members gives an array of `PopMember` objects, which
+    have their tree (equation) stored in `.tree`. Their score (loss)
+    is given in `.score`. The array of `PopMember` objects
+    is enumerated by size from `1` to `options.maxsize`.
 """
 function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         niterations::Int=10,
