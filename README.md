@@ -69,4 +69,4 @@ end
 
 ## Search options
 
-See https://milescranmer.github.io/SymbolicRegression.jl/dev/api/#Options
+See https://milescranmer.github.io/SymbolicRegression.jl/stable/api/#Options

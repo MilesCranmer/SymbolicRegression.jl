@@ -27,5 +27,8 @@ jobs:
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # For authentication with SSH deploy key
         run: |
             cd docs
+            cat ../README.md | sed '/Search options/,$d' > tmp1.md
+            cat tmp1.md src/index.md > tmp2.md
+            mv tmp2.md src/index.md
             julia --project=. make.jl
 
