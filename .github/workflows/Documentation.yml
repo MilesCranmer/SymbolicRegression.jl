@@ -1,0 +1,36 @@
+name: Documentation
+# Modelled from DiffEqDocs
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'src/**'
+      - 'docs/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'docs/**'
+      - '.github/workflows/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: '1'
+      - name: Install dependencies
+        run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      - name: Build and deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # For authentication with SSH deploy key
+        run: |
+			cd docs
+			julia --project=. make.jl
+
