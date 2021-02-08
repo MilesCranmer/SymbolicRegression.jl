@@ -74,6 +74,8 @@ Perform a distributed equation search for functions which
 describe the mapping f(X[:, j]) ≈ y[j]. Options are
 configured using SymbolicRegression.Options(...),
 which should be passed as a keyword argument to options.
+One can turn off parallelism with `numprocs=0`,
+which is useful for debugging and profiling.
 
 # Arguments
 - `X::AbstractMatrix{T}`:  The input dataset to predict `y` from.
