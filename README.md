@@ -1,10 +1,8 @@
 # [SymbolicRegression.jl](https://github.com/MilesCranmer/SymbolicRegression.jl)
 
-Documentation: [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://milescranmer.github.io/SymbolicRegression.jl/dev/)
-
-Build status:  [![.github/workflows/CI.yml](https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/.github/workflows/CI.yml/badge.svg)](.github/workflows/CI.yml)
-
-Test coverage: [![Coverage Status](https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master)](https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master)
+| Documentation | Build status | Coverage |
+| --- | --- | --- |
+| [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://milescranmer.github.io/SymbolicRegression.jl/dev/) | [![.github/workflows/CI.yml](https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/.github/workflows/CI.yml/badge.svg)](.github/workflows/CI.yml) | [![Coverage Status](https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master)](https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master) |
 
 
 Distributed High-Performance symbolic regression in Julia.
