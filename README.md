@@ -1,4 +1,4 @@
-# [SymbolicRegression.jl](https://github.com/MilesCranmer/SymbolicRegression.jl)
+# SymbolicRegression.jl
 
 | Documentation | Build status | Coverage |
 | --- | --- | --- |
