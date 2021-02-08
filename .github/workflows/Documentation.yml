@@ -9,12 +9,6 @@ on:
       - 'src/**'
       - 'docs/**'
       - '.github/workflows/**'
-  pull_request:
-    branches:
-      - master
-    paths:
-      - 'docs/**'
-      - '.github/workflows/**'
 
 jobs:
   build:
