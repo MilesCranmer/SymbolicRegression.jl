@@ -1,5 +1,6 @@
 # SymbolicRegression.jl
 
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://milescranmer.github.io/SymbolicRegression.jl/dev/)
 ![Github CI.yml](https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/.github/workflows/CI.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master)](https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master)
 
