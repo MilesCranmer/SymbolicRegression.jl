@@ -1,5 +1,6 @@
 using SymbolicRegression, SymbolicUtils, Test
 using SymbolicRegression: stringTree
+using Random
 
 @syms x1::Real x2::Real x3::Real x4::Real t1::Real t2::Real t3::Real t4::Real
 
@@ -9,9 +10,10 @@ for batching in [false, true]
             binary_operators=(+, *),
             unary_operators=(cos,),
             npopulations=4,
-            batching=batching
+            batching=batching,
+            seed=0
         )
-        X = randn(Float32, 5, 100)
+        X = randn(MersenneTwister(0), Float32, 5, 100)
         if weighted
             mask = rand(100) .> 0.5
             weights = map(x->convert(Float32, x), mask)
@@ -50,7 +52,7 @@ options = SymbolicRegression.Options(
     npopulations=4,
     fast_cycle=true
 )
-X = randn(Float32, 5, 100)
+X = randn(MersenneTwister(0), Float32, 5, 100)
 y = 2 * cos.(X[4, :])
 varMap = ["t1", "t2", "t3", "t4", "t5"]
 hallOfFame = EquationSearch(X, y; varMap=varMap,
