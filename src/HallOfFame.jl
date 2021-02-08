@@ -17,6 +17,10 @@ function HallOfFame(options::Options)
 end
 
 
+"""
+    calculateParetoFrontier(dataset::Dataset{T}, hallOfFame::HallOfFame,
+                            options::Options) where {T<:Real}
+"""
 function calculateParetoFrontier(dataset::Dataset{T},
                                  hallOfFame::HallOfFame,
                                  options::Options)::Array{PopMember, 1} where {T<:Real}
@@ -45,6 +49,15 @@ function calculateParetoFrontier(dataset::Dataset{T},
     return dominating
 end
 
+"""
+    calculateParetoFrontier(X::AbstractMatrix{T}, y::AbstractVector{T},
+                            hallOfFame::HallOfFame, options::Options;
+                            weights=nothing, varMap=nothing) where {T<:Real}
+
+Compute the dominating Pareto frontier for a given hallOfFame. This
+is the list of equations where each equation has a better loss than all
+simpler equations.
+"""
 function calculateParetoFrontier(X::AbstractMatrix{T},
                                  y::AbstractVector{T},
                                  hallOfFame::HallOfFame,

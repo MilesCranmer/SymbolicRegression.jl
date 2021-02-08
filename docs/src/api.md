@@ -69,3 +69,14 @@ node_to_symbolic(tree::Node, options::Options;
                      evaluate_functions::Bool=false,
                      index_functions::Bool=false)
 ```
+
+## Pareto frontier
+
+
+```@docs
+calculateParetoFrontier(X::AbstractMatrix{T}, y::AbstractVector{T},
+                        hallOfFame::HallOfFame, options::Options;
+                        weights=nothing, varMap=nothing) where {T<:Real}
+calculateParetoFrontier(dataset::Dataset{T}, hallOfFame::HallOfFame,
+                        options::Options) where {T<:Real}
+```
