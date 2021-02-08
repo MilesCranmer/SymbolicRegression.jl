@@ -1,9 +1,9 @@
-# SymbolicRegression.jl Documentation
+# SymbolicRegression.jl
 
 ![Github CI.yml](https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/.github/workflows/CI.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master)](https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master)
 
-Simple parallelized symbolic regression in Julia.
+Distributed High-Performance symbolic regression in Julia.
 
 Check out [PySR](https://github.com/MilesCranmer/PySR) for
 a Python frontend.
