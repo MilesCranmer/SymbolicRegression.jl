@@ -10,6 +10,10 @@ mutable struct Node
     l::Node
     r::Node
 
+    Node(d::Int, c::Bool, v::CONST_TYPE) = new(d, c, v)
+    Node(d::Int, c::Bool, v::CONST_TYPE, f::Int) = new(d, c, v, f)
+    Node(d::Int, c::Bool, v::CONST_TYPE, f::Int, o::Int, l::Node) = new(d, c, v, f, o, l)
+    Node(d::Int, c::Bool, v::CONST_TYPE, f::Int, o::Int, l::Node, r::Node) = new(d, c, v, f, o, l, r)
 end
 
 Node(val::CONST_TYPE) =                                                     Node(0, true,                       val                                     ) #Leave other values undefined
