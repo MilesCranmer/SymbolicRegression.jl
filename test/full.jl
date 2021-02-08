@@ -1,6 +1,8 @@
 using SymbolicRegression, SymbolicUtils, Test
 using SymbolicRegression: stringTree
 
+@syms x1::Real x2::Real x3::Real x4::Real t1::Real t2::Real t3::Real t4::Real
+
 for batching in [false, true]
     for weighted in [false, true]
         options = SymbolicRegression.Options(
@@ -29,15 +31,16 @@ for batching in [false, true]
         best = dominating[end]
         eqn = node_to_symbolic(best.tree, options, evaluate_functions=true)
 
-        @syms x1::Real x2::Real x3::Real x4::Real
         true_eqn = 2*cos(x4)
         residual = simplify(eqn - true_eqn)
 
         # Test the score
         @test best.score < 1e-6
-        x4 = 0.1f0
-        # Test the actual equation found:
-        @test abs(eval(Meta.parse(string(residual)))) < 1e-6
+        let
+            local x4 = 0.1f0
+            # Test the actual equation found:
+            @test abs(eval(Meta.parse(string(residual)))) < 1e-6
+        end
     end
 end
 
@@ -58,7 +61,6 @@ best = dominating[end]
 eqn = node_to_symbolic(best.tree, options;
                        evaluate_functions=true, varMap=varMap)
 
-@syms t1::Real t2::Real t3::Real t4::Real
 true_eqn = 2*cos(t4)
 residual = simplify(eqn - true_eqn)
 
