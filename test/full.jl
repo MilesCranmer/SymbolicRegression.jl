@@ -48,6 +48,7 @@ options = SymbolicRegression.Options(
     binary_operators=(+, *),
     unary_operators=(cos,),
     npopulations=4,
+    constraints=((*)=>(-1, 10), cos=>(5)),
     fast_cycle=true
 )
 X = randn(MersenneTwister(0), Float32, 5, 100)
