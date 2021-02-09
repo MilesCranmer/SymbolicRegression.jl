@@ -126,7 +126,7 @@ end
 function import_module_on_workers(procs, filename::String)
     included_local = !("SymbolicRegression" in [k.name for (k, v) in Base.loaded_modules])
     if included_local
-        println("Importing local module ($filename) on workers.")
+        print("Importing local module ($filename) on workers...")
         @everywhere procs begin
             # Parse functions on every worker node
             Base.MainInclude.eval(quote
@@ -134,11 +134,13 @@ function import_module_on_workers(procs, filename::String)
                 using .SymbolicRegression
             end)
         end
+        println("Finished!")
     else
-        println("Importing installed module on workers.")
+        print("Importing installed module on workers...")
         @everywhere procs begin
             Base.MainInclude.eval(using SymbolicRegression)
         end
+        println("Finished!")
     end
 end
 
