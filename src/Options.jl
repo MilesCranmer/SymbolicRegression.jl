@@ -15,16 +15,17 @@ function build_constraints(una_constraints, bin_constraints,
     # TODO: Need to disable simplification if (*, -, +, /) are constrained?
     #  Or, just quit simplification is constraints violated.
 
-    if typeof(bin_constraints) <: Array{Pair, 1}
+    if typeof(bin_constraints) <: Array
         bin_constraints = Dict(bin_constraints)
     end
-    if typeof(una_constraints) <: Array{Pair, 1}
+    if typeof(una_constraints) <: Array
         una_constraints = Dict(una_constraints)
     end
 
     if una_constraints == nothing
         una_constraints = [-1 for i=1:nuna]
-    elseif typeof(una_constraints) <: Dict
+    else
+        una_constraints::Dict
         _una_constraints = Int[]
         for (i, op) in enumerate(unary_operators)
             did_user_declare_constraints = haskey(una_constraints, op)
@@ -39,7 +40,8 @@ function build_constraints(una_constraints, bin_constraints,
     end
     if bin_constraints == nothing
         bin_constraints = [(-1, -1) for i=1:nbin]
-    elseif typeof(bin_constraints) <: Dict
+    else
+        bin_constraints::Dict
         _bin_constraints = Tuple{Int,Int}[]
         for (i, op) in enumerate(binary_operators)
             did_user_declare_constraints = haskey(bin_constraints, op)
@@ -238,7 +240,7 @@ function Options(;
         hofFile = "hall_of_fame.csv" #TODO - put in date/time string here
     end
 
-    constraints::Union{Tuple,Array{Pair{Function,Any}, 1},Nothing}
+    constraints::Union{Tuple,Array{Pair{Any,Any}, 1},Nothing}
 
 
     if typeof(constraints) <: Tuple
