@@ -11,7 +11,7 @@ Build constraints on operator-level complexity from a user-passed dict.
 function build_constraints(una_constraints, bin_constraints,
                            unary_operators, binary_operators,
                            nuna, nbin)::Tuple{Array{Int, 1}, Array{Tuple{Int,Int}, 1}}
-    # Expect format Dict(*=>(-1, 3)), etc.
+    # Expect format ((*)=>(-1, 3)), etc.
     # TODO: Need to disable simplification if (*, -, +, /) are constrained?
     #  Or, just quit simplification is constraints violated.
 
