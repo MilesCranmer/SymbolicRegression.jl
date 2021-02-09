@@ -193,8 +193,8 @@ Construct options for `EquationSearch` and other functions.
 - `mutationWeights=[10.000000, 1.000000, 1.000000, 3.000000, 3.000000, 0.010000, 1.000000, 1.000000]`:
 - `annealing=true`: Whether to use simulated annealing.
 - `warmupMaxsize=0`: Whether to slowly increase the max size from 5 up to
-    `maxsize`. If nonzero, specifies how many iterations before increasing
-    by 1.
+    `maxsize`. If nonzero, specifies how many cycles (populations*iterations)
+    before increasing by 1.
 - `verbosity=convert(Int, 1e9)`: Whether to print debugging statements or
     not.
 - `bin_constraints=nothing`:
