@@ -15,16 +15,19 @@ function build_constraints(una_constraints, bin_constraints,
     # TODO: Need to disable simplification if (*, -, +, /) are constrained?
     #  Or, just quit simplification is constraints violated.
 
-    if typeof(bin_constraints) <: Array && !(typeof(bin_constraints) <: Array{Tuple{Int,Int},1})
+    is_bin_constraints_already_done = typeof(bin_constraints) <: Array{Tuple{Int,Int},1}
+    is_una_constraints_already_done = typeof(una_constraints) <: Array{Int,1}
+
+    if typeof(bin_constraints) <: Array && !is_bin_constraints_already_done
         bin_constraints = Dict(bin_constraints)
     end
-    if typeof(una_constraints) <: Array && !(typeof(una_constraints) <: Array{Int,1})
+    if typeof(una_constraints) <: Array && !is_una_constraints_already_done
         una_constraints = Dict(una_constraints)
     end
 
     if una_constraints == nothing
         una_constraints = [-1 for i=1:nuna]
-    else
+    elseif !is_una_constraints_already_done
         una_constraints::Dict
         _una_constraints = Int[]
         for (i, op) in enumerate(unary_operators)
@@ -40,7 +43,7 @@ function build_constraints(una_constraints, bin_constraints,
     end
     if bin_constraints == nothing
         bin_constraints = [(-1, -1) for i=1:nbin]
-    else
+    elseif !is_bin_constraints_already_done
         bin_constraints::Dict
         _bin_constraints = Tuple{Int,Int}[]
         for (i, op) in enumerate(binary_operators)
