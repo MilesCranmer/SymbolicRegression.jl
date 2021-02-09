@@ -15,10 +15,10 @@ function build_constraints(una_constraints, bin_constraints,
     # TODO: Need to disable simplification if (*, -, +, /) are constrained?
     #  Or, just quit simplification is constraints violated.
 
-    if typeof(bin_constraints) <: Array
+    if typeof(bin_constraints) <: Array && !(typeof(bin_constraints) <: Array{Tuple{Int,Int},1})
         bin_constraints = Dict(bin_constraints)
     end
-    if typeof(una_constraints) <: Array
+    if typeof(una_constraints) <: Array && !(typeof(una_constraints) <: Array{Int,1})
         una_constraints = Dict(una_constraints)
     end
 
