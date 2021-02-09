@@ -141,7 +141,7 @@ Construct options for `EquationSearch` and other functions.
     unary operators (one input scalar, gives an output scalar).
 - `constraints=nothing`: Array of pairs specifying size constraints
     for each operator. The constraints for a binary operator should be a 2-tuple
-    (e.g., `(-1, -1)`) and the constraints for a binary operator is an `Int`.
+    (e.g., `(-1, -1)`) and the constraints for a unary operator should be an `Int`.
     A size constraint is a limit to the size of the subtree
     in each argument of an operator. e.g., `[(^)=>(-1, 3)]` means that the
     `^` operator can have arbitrary size (`-1`) in its left argument,
