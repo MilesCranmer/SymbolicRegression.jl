@@ -102,17 +102,7 @@ function nextGeneration(dataset::Dataset{T},
             return PopMember(tree, beforeLoss)
         end
 
-        # Check for illegal equations
-        for i=1:options.nbin
-            if successful_mutation && flagBinOperatorComplexity(tree, Val(i), options)
-                successful_mutation = false
-            end
-        end
-        for i=1:options.nuna
-            if successful_mutation && flagUnaOperatorComplexity(tree, Val(i), options)
-                successful_mutation = false
-            end
-        end
+        successful_mutation = successful_mutation && check_constraints(tree, options)
 
         attempts += 1
     end

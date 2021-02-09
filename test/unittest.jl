@@ -3,6 +3,7 @@ using SymbolicRegression: Options, stringTree, evalTreeArray, Dataset
 using SymbolicRegression: printTree, pow, EvalLoss, scoreFunc, Node
 using SymbolicRegression: plus, sub, mult, square, cube, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
 using SymbolicRegression: node_to_symbolic, symbolic_to_node
+using SymbolicRegression: check_constraints
 
 
 x1 = 2.0
@@ -101,16 +102,24 @@ end
 
 
 # Test SymbolicUtils interface
-tree = Node(5, (Node(3.0) * Node(1, Node("x1"))) ^ 2.0, -1.2)
 _inv(x) = 1/x
 options = Options(
     binary_operators=(+, *, ^, /, greater),
     unary_operators=(_inv,),
-    npopulations=4;
+    constraints=(_inv=>4,),
+    npopulations=4
 )
+tree = Node(5, (Node(3.0) * Node(1, Node("x1"))) ^ 2.0, -1.2)
 
 eqn = node_to_symbolic(tree, options;
                        varMap=["energy"], index_functions=true)
 tree2 = symbolic_to_node(eqn, options; varMap=["energy"])
 
 @test stringTree(tree, options) == stringTree(tree2, options)
+
+# Check constraints
+tree = Node(5, (Node(3.0) * Node(1, Node("x1"))) ^ 2.0, -1.2)
+violating_tree = Node(1, tree)
+
+@test check_constraints(tree, options) == true
+@test check_constraints(violating_tree, options) == false
