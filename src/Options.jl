@@ -2,6 +2,60 @@
 # into the SR call itself, rather than
 # passing huge options at once.
 
+"""
+         build_constraints(una_constraints, bin_constraints,
+                           unary_operators, binary_operators)
+
+Build constraints on operator-level complexity from a user-passed dict.
+"""
+function build_constraints(una_constraints, bin_constraints,
+                           unary_operators, binary_operators,
+                           nuna, nbin)::Tuple{Array{Int, 1}, Array{Tuple{Int,Int}, 1}}
+    # Expect format Dict(*=>(-1, 3)), etc.
+    # TODO: Need to disable simplification if (*, -, +, /) are constrained?
+    #  Or, just quit simplification is constraints violated.
+
+    if typeof(bin_constraints) <: Array{Pair, 1}
+        bin_constraints = Dict(bin_constraints)
+    end
+    if typeof(una_constraints) <: Array{Pair, 1}
+        una_constraints = Dict(una_constraints)
+    end
+
+    if una_constraints == nothing
+        una_constraints = [-1 for i=1:nuna]
+    elseif typeof(una_constraints) <: Dict
+        _una_constraints = Int[]
+        for (i, op) in enumerate(unary_operators)
+            did_user_declare_constraints = haskey(una_constraints, op)
+            if did_user_declare_constraints
+                constraint::Int = una_constraints[op]
+                push!(_una_constraints, constraint)
+            else
+                push!(_una_constraints, -1)
+            end
+        end
+        una_constraints = _una_constraints
+    end
+    if bin_constraints == nothing
+        bin_constraints = [(-1, -1) for i=1:nbin]
+    elseif typeof(bin_constraints) <: Dict
+        _bin_constraints = Tuple{Int,Int}[]
+        for (i, op) in enumerate(binary_operators)
+            did_user_declare_constraints = haskey(bin_constraints, op)
+            if did_user_declare_constraints
+                constraint::Tuple{Int,Int} = bin_constraints[op]
+                push!(_bin_constraints, constraint)
+            else
+                push!(_bin_constraints, (-1, -1))
+            end
+        end
+        bin_constraints = _bin_constraints
+    end
+
+    return una_constraints, bin_constraints
+end
+
 function binopmap(op)
     if op == plus
         return +
@@ -74,7 +128,7 @@ end
 Construct options for `EquationSearch` and other functions.
 
 # Arguments
-- `binary_operators::NTuple{nbin, Any}=(div, plus, mult)`: Tuple of binary
+- `binary_operators=(div, plus, mult)`: Tuple of binary
     operators to use. Each operator should be defined for two input scalars,
     and one output scalar. All operators need to be defined over the entire
     real line (excluding infinity - these are stopped before they are input).
@@ -83,8 +137,16 @@ Construct options for `EquationSearch` and other functions.
     of the same type as input, and outputs the same type. For the SymbolicUtils
     simplification backend, you will need to define a generic method of the
     operator so it takes arbitrary types.
-- `unary_operators::NTuple{nuna, Any}=(exp, cos)`: Same, but for
+- `unary_operators=(exp, cos)`: Same, but for
     unary operators (one input scalar, gives an output scalar).
+- `constraints=nothing`: Array of pairs specifying size constraints
+    for each operator. The constraints for a binary operator should be a 2-tuple
+    (e.g., `(-1, -1)`) and the constraints for a binary operator is an `Int`.
+    A size constraint is a limit to the size of the subtree
+    in each argument of an operator. e.g., `[(^)=>(-1, 3)]` means that the
+    `^` operator can have arbitrary size (`-1`) in its left argument,
+    but a maximum size of `3` in its right argument. Default is
+    no constraints.
 - `batching=false`: Whether to evolve based on small mini-batches of data,
     rather than the entire dataset.
 - `batchSize=50`: What batch size to use if using batching.
@@ -140,8 +202,7 @@ Construct options for `EquationSearch` and other functions.
 function Options(;
     binary_operators::NTuple{nbin, Any}=(div, plus, mult),
     unary_operators::NTuple{nuna, Any}=(exp, cos),
-    bin_constraints=nothing,
-    una_constraints=nothing,
+    constraints=nothing,
     ns=10, #1 sampled from every ns per mutation
     topn=10, #samples to return per population
     parsimony=0.000100f0,
@@ -168,19 +229,38 @@ function Options(;
     fractionReplaced=0.1f0,
     verbosity=convert(Int, 1e9),
     probNegate=0.01f0,
-    seed=nothing
+    seed=nothing,
+    bin_constraints=nothing,
+    una_constraints=nothing
    ) where {nuna,nbin}
 
     if hofFile == nothing
         hofFile = "hall_of_fame.csv" #TODO - put in date/time string here
     end
 
-    if una_constraints == nothing
-        una_constraints = [-1 for i=1:nuna]
+    constraints::Union{Tuple,Array{Pair{Function,Any}, 1},Nothing}
+
+
+    if typeof(constraints) <: Tuple
+        constraints = collect(constraints)
     end
-    if bin_constraints == nothing
-        bin_constraints = [(-1, -1) for i=1:nbin]
+    if constraints !== nothing
+        @assert bin_constraints == nothing
+        @assert una_constraints == nothing
+        # TODO: This is redundant with the checks in EquationSearch
+        for op in binary_operators
+            @assert !(op in unary_operators)
+        end
+        for op in unary_operators
+            @assert !(op in binary_operators)
+        end
+        bin_constraints = constraints
+        una_constraints = constraints
     end
+
+    una_constraints, bin_constraints = build_constraints(una_constraints, bin_constraints,
+                                                         unary_operators, binary_operators,
+                                                         nuna, nbin)
 
     if maxdepth == nothing
         maxdepth = maxsize
