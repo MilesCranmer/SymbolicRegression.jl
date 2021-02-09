@@ -1,4 +1,11 @@
 using Random: shuffle!
+using FromFile
+@from "PopMember.jl" import PopMember
+@from "Population.jl" import Population, bestOfSample
+@from "Mutate.jl" import nextGeneration
+@from "Options.jl" import Options
+@from "Dataset.jl" import Dataset
+@from "MutationFunctions.jl" import genRandomTree
 
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample

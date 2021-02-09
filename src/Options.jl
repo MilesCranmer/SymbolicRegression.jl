@@ -1,6 +1,9 @@
+using FromFile
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
+@from "Equation.jl" import Node
+@from "Operators.jl" import pow, mult, sub, div, log_abs, log10_abs, log2_abs, sqrt_abs
 
 function binopmap(op)
     if op == plus

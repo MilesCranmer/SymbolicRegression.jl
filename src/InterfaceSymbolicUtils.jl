@@ -1,6 +1,10 @@
+using FromFile
 using SymbolicUtils
 
 const SYMBOLIC_UTILS_TYPES = Union{<:Number,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
+@from "ProgramConstants.jl" import CONST_TYPE
+@from "Equation.jl" import Node
+@from "Options.jl" import Options
 
 """
     node_to_symbolic(tree::Node, options::Options;

@@ -1,3 +1,9 @@
+using FromFile
+@from "ProgramConstants.jl" import CONST_TYPE
+@from "PopMember.jl" import PopMember
+@from "Equation.jl" import Node, copyNode, countNodes, countConstants, countDepth, randomNode
+@from "Options.jl" import Options
+
 # Randomly convert an operator into another one (binary->binary;
 # unary->unary)
 function mutateOperator(tree::Node, options::Options)::Node

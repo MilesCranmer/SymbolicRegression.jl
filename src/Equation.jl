@@ -1,3 +1,7 @@
+using FromFile
+@from "ProgramConstants.jl" import CONST_TYPE
+@from "Options.jl" import Options
+
 # Define a serialization format for the symbolic equations:
 mutable struct Node
     #Holds operators, variables, constants in a tree

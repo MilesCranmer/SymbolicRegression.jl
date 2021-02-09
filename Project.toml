@@ -5,6 +5,7 @@ version = "0.4.9"
 
 [deps]
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+FromFile = "ff7dd447-1dcb-4ce3-b8ac-22a812192de7"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"

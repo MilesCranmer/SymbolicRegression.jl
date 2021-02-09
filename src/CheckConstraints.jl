@@ -1,3 +1,7 @@
+using FromFile
+@from "Equation.jl" import Node, countNodes
+@from "Options.jl" import Options
+
 # Check if any binary operator are overly complex
 function flagBinOperatorComplexity(tree::Node, ::Val{op}, options::Options)::Bool where {op}
     if tree.degree == 0

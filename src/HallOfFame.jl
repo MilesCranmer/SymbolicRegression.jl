@@ -1,3 +1,10 @@
+using FromFile
+@from "ProgramConstants.jl" import CONST_TYPE, maxdegree
+@from "PopMember.jl" import PopMember
+@from "Equation.jl" import Node
+@from "Options.jl" import Options
+@from "Dataset.jl" import Dataset
+
 """ List of the best members seen all time in `.members` """
 mutable struct HallOfFame
     members::Array{PopMember, 1}

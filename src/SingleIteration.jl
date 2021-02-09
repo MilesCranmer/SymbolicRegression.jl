@@ -1,3 +1,15 @@
+using FromFile
+@from "Equation.jl" import Node, stringTree
+@from "Population.jl" import Population, finalizeScores, bestSubPop
+@from "EvaluateEquation.jl" import scoreFunc, scoreFuncBatch
+@from "Options.jl" import Options
+@from "Dataset.jl" import Dataset
+@from "SimplifyEquations.jl" import simplifyTree, combineOperators, simplifyWithSymbolicUtils
+@from "ConstantOptimization.jl" import optimizeConstants
+@from "RegularizedEvolution.jl" import regEvolCycle
+@from "Utils.jl" import debug
+
+
 # Cycle through regularized evolution many times,
 # printing the fittest equation every 10% through
 function SRCycle(dataset::Dataset{T}, baseline::T, 

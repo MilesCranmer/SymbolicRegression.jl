@@ -1,3 +1,11 @@
+using FromFile
+@from "ProgramConstants.jl" import CONST_TYPE
+@from "Equation.jl" import Node, copyNode, countNodes
+@from "EvaluateEquation.jl" import scoreFunc, scoreFuncBatch
+@from "Options.jl" import Options
+@from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
+@from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
+
 # Simplify tree
 function combineOperators(tree::Node, options::Options)::Node
     # NOTE: (const (+*-) const) already accounted for. Call simplifyTree before.
