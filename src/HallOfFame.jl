@@ -9,7 +9,11 @@ end
 """
     HallOfFame(options::Options)
 
-Create empty HallOfFame
+Create empty HallOfFame. The HallOfFame stores a list
+of `PopMember` objects in `.members`, which is enumerated
+by size (i.e., `.members[1]` is the constant solution).
+`.exists` is used to determine whether the particular member
+has been instantiated or not.
 """
 function HallOfFame(options::Options)
     actualMaxsize = options.maxsize + maxdegree
