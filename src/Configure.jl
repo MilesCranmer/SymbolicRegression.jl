@@ -1,13 +1,3 @@
-using FromFile
-using Distributed
-@from "Core.jl" import Options, Dataset
-@from "Utils.jl" import is_anonymous_function
-
-# TODO We shouldn't need these; since the workers import them:
-@from "MutationFunctions.jl" import genRandomTree
-@from "Population.jl" import Population
-@from "SingleIteration.jl" import SRCycle
-
 # Check for errors before they happen
 function testOptionConfiguration(T, options::Options)
     

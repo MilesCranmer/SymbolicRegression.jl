@@ -21,6 +21,7 @@ export Population,
     custom_simplify,
     simplifyWithSymbolicUtils,
     combineOperators,
+    genRandomTree,
 
     #Operators:
     plus,
@@ -47,15 +48,16 @@ using Random: seed!
 using FromFile
 
 @from "Core.jl" import CONST_TYPE, maxdegree, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
-@from "Utils.jl" import debug
+@from "Utils.jl" import debug, is_anonymous_function
 @from "EquationUtils.jl" import countNodes, printTree, stringTree
 @from "EvaluateEquation.jl" import evalTreeArray
 @from "CheckConstraints.jl" import check_constraints
+@from "MutationFunctions.jl" import genRandomTree
 @from "LossFunctions.jl" import EvalLoss, MSE, SSE, scoreFunc
 @from "PopMember.jl" import PopMember, copyPopMember
 @from "Population.jl" import Population, bestSubPop
 @from "HallOfFame.jl" import HallOfFame, calculateParetoFrontier
-@from "SingleIteration.jl" import SRCycle
+@from "SingleIteration.jl" import SRCycle, OptimizeAndSimplifyPopulation
 @from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
 @from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
 @from "SimplifyEquation.jl" import simplifyWithSymbolicUtils, combineOperators, simplifyTree
