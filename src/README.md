@@ -1,3 +1,7 @@
+The file system is structured as follows. Indentation
+shows dependencies.
+
+```
 ==============================================
 ProgramConstants.jl (`maxdegree, CONST_TYPE`)
 Operators.jl
@@ -24,3 +28,4 @@ Utils.jl
                             SingleIteration.jl
                                 Configure.jl
                                     SymbolicRegression.jl <= Deprecates.jl
+```
