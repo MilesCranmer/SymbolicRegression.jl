@@ -1,7 +1,8 @@
+using FromFile
+@from "test_params.jl" import maximum_residual
 using SymbolicRegression, SymbolicUtils, Test
 using SymbolicRegression: stringTree
 using Random
-
 
 for batching in [false, true]
     for weighted in [false, true]
@@ -37,10 +38,10 @@ for batching in [false, true]
         residual = simplify(eqn - true_eqn)
 
         # Test the score
-        @test best.score < 1e-4
+        @test best.score < maximum_residual / 10
         x4 = 0.1f0
         # Test the actual equation found:
-        @test abs(eval(Meta.parse(string(residual)))) < 1e-6
+        @test abs(eval(Meta.parse(string(residual)))) < maximum_residual
     end
 end
 
@@ -67,7 +68,7 @@ true_eqn = 2*cos(t4)
 residual = simplify(eqn - true_eqn)
 
 # Test the score
-@test best.score < 1e-4
+@test best.score < maximum_residual / 10
 t4 = 0.1f0
 # Test the actual equation found:
-@test abs(eval(Meta.parse(string(residual)))) < 1e-6
+@test abs(eval(Meta.parse(string(residual)))) < maximum_residual
