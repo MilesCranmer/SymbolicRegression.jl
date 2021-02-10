@@ -214,7 +214,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         end
     end
 
-    println("Started!")
+    debug(options.verbosity, "Started!")
     cycles_complete = options.npopulations * niterations
     if options.warmupMaxsize != 0
         curmaxsize += 1
@@ -251,7 +251,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                 for member in cur_pop.members
                     size = countNodes(member.tree)
                     frequencyComplexity[size] += 1
-                    # println(member, hallOfFame.members[size])
+                    # debug(options.verbosity, member, hallOfFame.members[size])
                     actualMaxsize = options.maxsize + maxdegree
                     if size < actualMaxsize && member.score < hallOfFame.members[size].score
                         hallOfFame.members[size] = copyPopMember(member)
