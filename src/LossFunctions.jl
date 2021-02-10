@@ -11,7 +11,7 @@ function Loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options)::T whe
 end
 
 function Loss(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options)::T where {T<:Real}
-    value(options.loss, y, x, AvgMode.WeightedMean(w))
+    value(options.loss, y, x, AggMode.WeightedMean(w))
 end
 
 # Loss function. Only MSE implemented right now. TODO
