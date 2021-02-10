@@ -1,29 +1,17 @@
 using FromFile
 using Random: randperm
+using LossFunctions
 @from "Core.jl" import Options, Dataset, Node
 @from "EquationUtils.jl" import countNodes
 @from "EvaluateEquation.jl" import evalTreeArray
 
-# Sum of square error between two arrays
-function SSE(x::AbstractArray{T}, y::AbstractArray{T})::T where {T<:Real}
-    diff = (x - y)
-    return sum(diff .* diff)
+
+function Loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options)::T where {T<:Real}
+    value(options.loss, y, x, AggMode.Mean())
 end
 
-# Sum of square error between two arrays, with weights
-function SSE(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
-    diff = (x - y)
-    return sum(diff .* diff .* w)
-end
-
-# Mean of square error between two arrays
-function MSE(x::AbstractArray{T}, y::AbstractArray{T})::T where {T<:Real}
-    return SSE(x, y)/size(x, 1)
-end
-
-# Mean of square error between two arrays
-function MSE(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T})::T where {T<:Real}
-    return SSE(x, y, w)/sum(w)
+function Loss(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options)::T where {T<:Real}
+    value(options.loss, y, x, AvgMode.WeightedMean(w))
 end
 
 # Loss function. Only MSE implemented right now. TODO
@@ -35,9 +23,9 @@ function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options)::T where {T
     end
 
     if dataset.weighted
-        return MSE(prediction, dataset.y, dataset.weights)
+        return Loss(prediction, dataset.y, dataset.weights, options)
     else
-        return MSE(prediction, dataset.y)
+        return Loss(prediction, dataset.y, options)
     end
 end
 
@@ -62,10 +50,10 @@ function scoreFuncBatch(dataset::Dataset{T}, baseline::T,
     end
 
     if !dataset.weighted
-        mse = MSE(prediction, batch_y)
+        mse = Loss(prediction, batch_y, options)
     else
         batch_w = dataset.weights[batch_idx]
-        mse = MSE(prediction, batch_y, batch_w)
+        mse = Loss(prediction, batch_y, batch_w, options)
     end
     return mse / baseline + countNodes(tree) * options.parsimony
 end

@@ -1,5 +1,6 @@
 using FromFile
 using Distributed
+using LossFunctions
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
@@ -128,6 +129,7 @@ struct Options{A,B}
     nuna::Int
     nbin::Int
     seed::Union{Int, Nothing}
+    loss::SupervisedLoss
 
 end
 
@@ -159,6 +161,30 @@ Construct options for `EquationSearch` and other functions.
 - `batching=false`: Whether to evolve based on small mini-batches of data,
     rather than the entire dataset.
 - `batchSize=50`: What batch size to use if using batching.
+- `loss=L2DistLoss()`: What loss function to use. Must be a
+    loss from LossFunctions.jl, or any other loss of type
+    `LossFunctions.SupervisedLoss`. Available ones:
+    Regression:
+        - `LPDistLoss{P}()`,
+        - `L1DistLoss()`,
+        - `L2DistLoss()` (mean square),
+        - `LogitDistLoss()`,
+        - `HuberLoss(d)`,
+        - `L1EpsilonInsLoss(ϵ)`,
+        - `L2EpsilonInsLoss(ϵ)`,
+        - `PeriodicLoss(c)`,
+        - `QuantileLoss(τ)`,
+    Classification:
+        - `ZeroOneLoss()`,
+        - `PerceptronLoss()`,
+        - `L1HingeLoss()`,
+        - `SmoothedL1HingeLoss(γ)`,
+        - `ModifiedHuberLoss()`,
+        - `L2MarginLoss()`,
+        - `ExpLoss()`,
+        - `SigmoidLoss()`,
+        - `DWDMarginLoss(q)`,
+    To implement your own loss, see https://github.com/JuliaML/LossFunctions.jl/blob/672d97bf8789fa86ff72d45dce829e2e7cc5cb02/src/supervised/distance.jl#L16 for an example implementation.
 - `npopulations=nothing`: How many populations of equations to use. By default
     this is set equal to the number of cores
 - `npop=1000`: How many equations in each population.
@@ -212,6 +238,7 @@ function Options(;
     binary_operators::NTuple{nbin, Any}=(div, plus, mult),
     unary_operators::NTuple{nuna, Any}=(exp, cos),
     constraints=nothing,
+    loss=L2DistLoss(),
     ns=10, #1 sampled from every ns per mutation
     topn=10, #samples to return per population
     parsimony=0.000100f0,
@@ -312,7 +339,7 @@ function Options(;
         end
     end
 
-    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed)
+    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss)
 end
 
 

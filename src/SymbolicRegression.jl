@@ -53,7 +53,7 @@ using FromFile
 @from "EvaluateEquation.jl" import evalTreeArray
 @from "CheckConstraints.jl" import check_constraints
 @from "MutationFunctions.jl" import genRandomTree
-@from "LossFunctions.jl" import EvalLoss, MSE, SSE, scoreFunc
+@from "LossFunctions.jl" import EvalLoss, Loss, scoreFunc
 @from "PopMember.jl" import PopMember, copyPopMember
 @from "Population.jl" import Population, bestSubPop
 @from "HallOfFame.jl" import HallOfFame, calculateParetoFrontier
@@ -130,10 +130,10 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
 
     if dataset.weighted
         avgy = sum(dataset.y .* dataset.weights)/sum(dataset.weights)
-        baselineMSE = MSE(dataset.y, ones(T, dataset.n) .* avgy, dataset.weights)
+        baselineMSE = Loss(dataset.y, ones(T, dataset.n) .* avgy, dataset.weights)
     else
         avgy = sum(dataset.y)/dataset.n
-        baselineMSE = MSE(dataset.y, ones(T, dataset.n) .* avgy)
+        baselineMSE = Loss(dataset.y, ones(T, dataset.n) .* avgy)
     end
 
     if options.seed !== nothing
