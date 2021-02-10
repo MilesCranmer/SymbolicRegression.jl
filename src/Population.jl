@@ -1,6 +1,6 @@
 using FromFile
 @from "Core.jl" import Options, Dataset
-@from "EvaluateEquation.jl" import scoreFunc
+@from "LossFunctions.jl" import scoreFunc
 @from "MutationFunctions.jl" import genRandomTree
 @from "PopMember.jl" import PopMember
 # A list of members of the population, with easy constructors,

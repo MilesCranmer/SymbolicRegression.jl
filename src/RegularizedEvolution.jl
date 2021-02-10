@@ -1,5 +1,5 @@
-using Random: shuffle!
 using FromFile
+using Random: shuffle!
 @from "Core.jl" import Options, Dataset
 @from "PopMember.jl" import PopMember
 @from "Population.jl" import Population, bestOfSample

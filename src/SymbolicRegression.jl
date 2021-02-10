@@ -47,18 +47,21 @@ using Random: seed!
 using FromFile
 
 @from "Core.jl" import CONST_TYPE, maxdegree, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
-@from "Utils.jl" import debug, test
+@from "Utils.jl" import debug
+@from "EquationUtils.jl" import countNodes, printTree, stringTree
 @from "EvaluateEquation.jl" import evalTreeArray
-@from "EquationUtils.jl" import countNodes
-@from "Population.jl" import Population, bestSubPop
+@from "CheckConstraints.jl" import check_constraints
+@from "LossFunctions.jl" import EvalLoss, MSE, SSE, scoreFunc
 @from "PopMember.jl" import PopMember, copyPopMember
+@from "Population.jl" import Population, bestSubPop
 @from "HallOfFame.jl" import HallOfFame, calculateParetoFrontier
-@from "Options.jl" import Options
 @from "SingleIteration.jl" import SRCycle
 @from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
 @from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
 @from "SimplifyEquation.jl" import simplifyWithSymbolicUtils, combineOperators, simplifyTree
 @from "Configure.jl" import testOptionConfiguration, testDatasetConfiguration, activate_env_on_workers, import_module_on_workers, move_functions_to_workers, test_module_on_workers, test_entire_pipeline
+
+
 
 include("Deprecates.jl")
 

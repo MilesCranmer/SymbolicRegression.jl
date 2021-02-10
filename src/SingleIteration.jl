@@ -2,7 +2,7 @@ using FromFile
 @from "Core.jl" import Options, Dataset
 @from "Utils.jl" import debug
 @from "EquationUtils.jl" import stringTree
-@from "SimplifyEquations.jl" import simplifyTree, combineOperators, simplifyWithSymbolicUtils
+@from "SimplifyEquation.jl" import simplifyTree, combineOperators, simplifyWithSymbolicUtils
 @from "Population.jl" import Population, finalizeScores, bestSubPop
 @from "RegularizedEvolution.jl" import regEvolCycle
 @from "ConstantOptimization.jl" import optimizeConstants

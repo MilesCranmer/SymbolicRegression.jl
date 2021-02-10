@@ -1,3 +1,4 @@
+using FromFile
 using Distributed
 @from "Core.jl" import Options, Dataset
 @from "Utils.jl" import is_anonymous_function

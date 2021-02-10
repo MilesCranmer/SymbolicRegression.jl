@@ -1,6 +1,5 @@
+# Will be included explicitly
 using Base: @deprecate
-@from "Operators.jl" import sqrt_abs, log_abs, log2_abs, log10_abs
-@from "SymbolicRegression.jl" import EquationSearch
 
 # Now the batch dimension is the last axis!
 @deprecate RunSR(X, y; kw...) EquationSearch(copy(transpose(X)), y; kw...)
