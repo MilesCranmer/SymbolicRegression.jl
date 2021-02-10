@@ -1,13 +1,11 @@
 using FromFile
-@from "Equation.jl" import Node, stringTree
-@from "Population.jl" import Population, finalizeScores, bestSubPop
-@from "EvaluateEquation.jl" import scoreFunc, scoreFuncBatch
-@from "Options.jl" import Options
-@from "Dataset.jl" import Dataset
-@from "SimplifyEquations.jl" import simplifyTree, combineOperators, simplifyWithSymbolicUtils
-@from "ConstantOptimization.jl" import optimizeConstants
-@from "RegularizedEvolution.jl" import regEvolCycle
+@from "Core.jl" import Options, Dataset
 @from "Utils.jl" import debug
+@from "EquationUtils.jl" import stringTree
+@from "SimplifyEquations.jl" import simplifyTree, combineOperators, simplifyWithSymbolicUtils
+@from "Population.jl" import Population, finalizeScores, bestSubPop
+@from "RegularizedEvolution.jl" import regEvolCycle
+@from "ConstantOptimization.jl" import optimizeConstants
 
 
 # Cycle through regularized evolution many times,

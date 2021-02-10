@@ -46,18 +46,21 @@ using Pkg
 using Random: seed!
 using FromFile
 
-@from "Equation.jl" import Node, copyNode, countNodes, printTree, stringTree
+@from "Core.jl" import CONST_TYPE, maxdegree, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
+@from "Utils.jl" import debug, test
 @from "EvaluateEquation.jl" import evalTreeArray
+@from "EquationUtils.jl" import countNodes
 @from "Population.jl" import Population, bestSubPop
-@from "PopMember.jl" import PopMember
+@from "PopMember.jl" import PopMember, copyPopMember
 @from "HallOfFame.jl" import HallOfFame, calculateParetoFrontier
 @from "Options.jl" import Options
 @from "SingleIteration.jl" import SRCycle
 @from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
 @from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
-@from "SimplifyEquation.jl" import simplifyWithSymbolicUtils, combineOperators
-@from "Operators.jl" import plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, relu, logical_or, logical_and
-@from "Utils.jl" import debug, test, testOptionConfiguration, testDatasetConfiguration, activate_env_on_workers, import_module_on_workers, move_functions_to_workers, test_module_on_workers, test_entire_pipeline
+@from "SimplifyEquation.jl" import simplifyWithSymbolicUtils, combineOperators, simplifyTree
+@from "Configure.jl" import testOptionConfiguration, testDatasetConfiguration, activate_env_on_workers, import_module_on_workers, move_functions_to_workers, test_module_on_workers, test_entire_pipeline
+
+include("Deprecates.jl")
 
 
 """

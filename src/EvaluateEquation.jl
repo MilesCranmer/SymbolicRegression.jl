@@ -1,6 +1,5 @@
 using FromFile
-@from "Equation.jl" import Node
-@from "Options.jl" import Options
+@from "Core.jl" import Node, Options
 
 # Evaluate an equation over an array of datapoints
 # This one is just for reference. The fused one should be faster.

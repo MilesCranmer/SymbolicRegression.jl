@@ -1,11 +1,10 @@
 using FromFile
 import Optim
-@from "ProgramConstants.jl" import CONST_TYPE
+@from "Core.jl" import CONST_TYPE, Node, Options, Dataset
+@from "Utils.jl" import getTime
+@from "EquationUtils.jl" import getConstants, setConstants, countConstants
+@from "LossFunctions.jl" import scoreFunc
 @from "PopMember.jl" import PopMember
-@from "Equation.jl" import Node, countNodes, getConstants, setConstants, countConstants
-@from "EvaluateEquation.jl" import scoreFunc
-@from "Options.jl" import Options
-@from "Dataset.jl" import Dataset
 
 # Proxy function for optimization
 function optFunc(x::Vector{CONST_TYPE}, dataset::Dataset{T}, baseline::T,

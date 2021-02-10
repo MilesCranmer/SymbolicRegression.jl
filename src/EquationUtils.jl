@@ -1,21 +1,5 @@
 using FromFile
-@from "Equations.jl" import Node
-@from "Options.jl" import Options
-
-# Copy an equation (faster than deepcopy)
-function copyNode(tree::Node)::Node
-   if tree.degree == 0
-       if tree.constant
-           return Node(tree.val)
-        else
-           return Node(tree.feature)
-        end
-   elseif tree.degree == 1
-       return Node(tree.op, copyNode(tree.l))
-    else
-        return Node(tree.op, copyNode(tree.l), copyNode(tree.r))
-   end
-end
+@from "Core.jl" import CONST_TYPE, Node, copyNode, Options
 
 # Count the operators, constants, variables in an equation
 function countNodes(tree::Node)::Int
@@ -90,31 +74,6 @@ end
 # Print an equation
 function printTree(tree::Node, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
     println(stringTree(tree, options, varMap=varMap))
-end
-
-# Return a random node from the tree
-function randomNode(tree::Node)::Node
-    if tree.degree == 0
-        return tree
-    end
-    a = countNodes(tree)
-    b = 0
-    c = 0
-    if tree.degree >= 1
-        b = countNodes(tree.l)
-    end
-    if tree.degree == 2
-        c = countNodes(tree.r)
-    end
-
-    i = rand(1:1+b+c)
-    if i <= b
-        return randomNode(tree.l)
-    elseif i == b + 1
-        return tree
-    end
-
-    return randomNode(tree.r)
 end
 
 # Count the number of unary operators in the equation

@@ -1,9 +1,7 @@
 using FromFile
-@from "ProgramConstants.jl" import CONST_TYPE, maxdegree
+@from "Core.jl" import CONST_TYPE, maxdegree, Node, Options, Dataset
 @from "PopMember.jl" import PopMember
-@from "Equation.jl" import Node
-@from "Options.jl" import Options
-@from "Dataset.jl" import Dataset
+@from "LossFunctions.jl" import EvalLoss
 
 """ List of the best members seen all time in `.members` """
 mutable struct HallOfFame

@@ -80,3 +80,19 @@ Node(var_string::String) =                                                  Node
 Create a variable node, using a user-passed format
 """
 Node(var_string::String, varMap::Array{String, 1}) =                        Node([i for (i, _variable) in enumerate(varMap) if _variable==var_string][1]::Int)
+
+
+# Copy an equation (faster than deepcopy)
+function copyNode(tree::Node)::Node
+   if tree.degree == 0
+       if tree.constant
+           return Node(tree.val)
+        else
+           return Node(tree.feature)
+        end
+   elseif tree.degree == 1
+       return Node(tree.op, copyNode(tree.l))
+    else
+        return Node(tree.op, copyNode(tree.l), copyNode(tree.r))
+   end
+end

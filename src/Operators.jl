@@ -1,4 +1,3 @@
-using FromFile
 import SpecialFunctions: gamma, lgamma, erf, erfc, beta
 #TODO - actually add these operators to the module!
 

@@ -2,6 +2,8 @@
 
 - [ ] Sort these todo lists by priority
 - [ ] Show speed by # of mutations total, and # mutations per individual.
+- [ ] Is scoreFuncBatch called when creating PopMember, when batching turned on??
+    - Should I run optimizeConstants with batching? e.g., a single little batch.
 
 ## Feature ideas
 

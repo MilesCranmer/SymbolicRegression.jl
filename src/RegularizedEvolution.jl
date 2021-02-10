@@ -1,11 +1,9 @@
 using Random: shuffle!
 using FromFile
+@from "Core.jl" import Options, Dataset
 @from "PopMember.jl" import PopMember
 @from "Population.jl" import Population, bestOfSample
 @from "Mutate.jl" import nextGeneration
-@from "Options.jl" import Options
-@from "Dataset.jl" import Dataset
-@from "MutationFunctions.jl" import genRandomTree
 
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample
@@ -46,7 +44,7 @@ function regEvolCycle(dataset::Dataset{T},
         for i=1:round(Int, pop.n/options.ns)
             allstar = bestOfSample(pop, options)
             baby = nextGeneration(dataset, baseline, allstar, temperature,
-                           curmaxsize, frequencyComplexity, options)
+                                  curmaxsize, frequencyComplexity, options)
             #printTree(baby.tree)
             oldest = argmin([pop.members[member].birth for member=1:pop.n])
             pop.members[oldest] = baby
