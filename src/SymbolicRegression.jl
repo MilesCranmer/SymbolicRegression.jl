@@ -171,8 +171,8 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         end
         if we_created_procs
             project_path = splitdir(Pkg.project().path)[1]
-            activate_env_on_workers(procs, project_path)
-            import_module_on_workers(procs, @__FILE__)
+            activate_env_on_workers(procs, project_path, options)
+            import_module_on_workers(procs, @__FILE__, options)
         end
         move_functions_to_workers(T, procs, options)
         if runtests

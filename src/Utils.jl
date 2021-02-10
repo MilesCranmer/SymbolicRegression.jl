@@ -119,7 +119,7 @@ function test_function_on_workers(T, degree, op, procs)
     end
 end
 
-function activate_env_on_workers(procs, project_path::String)
+function activate_env_on_workers(procs, project_path::String, options::Options)
     debug(options.verbosity, "Activating environment on workers.")
     @everywhere procs begin
         Base.MainInclude.eval(quote
@@ -129,7 +129,7 @@ function activate_env_on_workers(procs, project_path::String)
     end
 end
 
-function import_module_on_workers(procs, filename::String)
+function import_module_on_workers(procs, filename::String, options::Options)
     included_local = !("SymbolicRegression" in [k.name for (k, v) in Base.loaded_modules])
     if included_local
         debug_inline(options.verbosity, "Importing local module ($filename) on workers...")
