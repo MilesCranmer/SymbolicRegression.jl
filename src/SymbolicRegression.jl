@@ -59,10 +59,8 @@ using FromFile
 @from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
 @from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
 @from "SimplifyEquation.jl" import simplifyWithSymbolicUtils, combineOperators, simplifyTree
-@from "Configure.jl" import testOptionConfiguration, testDatasetConfiguration, activate_env_on_workers, import_module_on_workers, move_functions_to_workers, test_module_on_workers, test_entire_pipeline
 
-
-
+include("Configure.jl")
 include("Deprecates.jl")
 
 
