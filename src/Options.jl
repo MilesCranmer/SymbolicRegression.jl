@@ -161,9 +161,9 @@ Construct options for `EquationSearch` and other functions.
 - `batching=false`: Whether to evolve based on small mini-batches of data,
     rather than the entire dataset.
 - `batchSize=50`: What batch size to use if using batching.
-- `loss=L2DistLoss()`: What loss function to use. Must be a
-    loss from LossFunctions.jl, or any other loss of type
-    `LossFunctions.SupervisedLoss`. Available ones:
+- `loss=L2DistLoss()`: What loss function to use. Must be one of
+    the following losses, or any other loss of type
+    `SupervisedLoss`. Available ones:
     Regression:
         - `LPDistLoss{P}()`,
         - `L1DistLoss()`,

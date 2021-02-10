@@ -46,6 +46,8 @@ using Printf: @printf
 using Pkg
 using Random: seed!
 using FromFile
+using Reexport
+@reexport using LossFunctions
 
 @from "Core.jl" import CONST_TYPE, maxdegree, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
 @from "Utils.jl" import debug, debug_inline, is_anonymous_function
