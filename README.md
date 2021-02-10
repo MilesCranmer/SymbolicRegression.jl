@@ -9,6 +9,8 @@ Distributed High-Performance symbolic regression in Julia.
 Check out [PySR](https://github.com/MilesCranmer/PySR) for
 a Python frontend.
 
+<img src="https://astroautomata.com/data/sr_demo_image1.png" alt="demo1" width="700"/> <img src="https://astroautomata.com/data/sr_demo_image2.png" alt="demo2" width="700"/>
+
 [Cite this software](https://github.com/MilesCranmer/PySR/blob/master/CITATION.md)
 
 # Quickstart
