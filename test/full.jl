@@ -3,6 +3,7 @@ using SymbolicRegression: stringTree
 using Random
 
 
+x1=0.1f0; x2=0.1f0; x3=0.1f0; x4=0.1f0; x5=0.1f0
 for batching in [false, true]
     for weighted in [false, true]
         options = SymbolicRegression.Options(
@@ -30,17 +31,18 @@ for batching in [false, true]
         end
 
         best = dominating[end]
-        @syms x1::Real x2::Real x3::Real x4::Real
         eqn = node_to_symbolic(best.tree, options, evaluate_functions=true)
 
+        local x4 = SymbolicUtils.Sym{Real}(Symbol("x4"))
         true_eqn = 2*cos(x4)
-        residual = simplify(eqn - true_eqn)
+        residual = simplify(eqn - true_eqn) + x4 * 1e-10
 
         # Test the score
         @test best.score < 1e-4
-        x4 = 0.1f0
         # Test the actual equation found:
-        @test abs(eval(Meta.parse(string(residual)))) < 1e-6
+        # eval evaluates inside global
+        residual_value = abs(eval(Meta.parse(string(residual))))
+        @test residual_value < 1e-6
     end
 end
 
@@ -59,15 +61,17 @@ hallOfFame = EquationSearch(X, y; varMap=varMap,
 dominating = calculateParetoFrontier(X, y, hallOfFame, options)
 
 best = dominating[end]
-@syms t1::Real t2::Real t3::Real t4::Real
+
 eqn = node_to_symbolic(best.tree, options;
                        evaluate_functions=true, varMap=varMap)
 
+t4 = SymbolicUtils.Sym{Real}(Symbol("t4"))
 true_eqn = 2*cos(t4)
-residual = simplify(eqn - true_eqn)
+residual = simplify(eqn - true_eqn) + t4 * 1e-10
 
 # Test the score
 @test best.score < 1e-4
-t4 = 0.1f0
 # Test the actual equation found:
-@test abs(eval(Meta.parse(string(residual)))) < 1e-6
+t1=0.1f0; t2=0.1f0; t3=0.1f0; t4=0.1f0; t5=0.1f0
+residual_value = abs(eval(Meta.parse(string(residual))))
+@test residual_value < 1e-6

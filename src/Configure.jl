@@ -42,7 +42,7 @@ function testDatasetConfiguration(dataset::Dataset{T}, options::Options) where {
 
     if size(dataset.X, 2) > 10000
         if !options.batching
-            println("Note: you are running with more than 10,000 datapoints. You should consider turning on batching (`options.batching`), and also if you need that many datapoints. Unless you have a large amount of noise (in which case you should smooth your dataset first), generally < 10,000 datapoints is enough to find a functional form.")
+            debug(options.verbosity, "Note: you are running with more than 10,000 datapoints. You should consider turning on batching (`options.batching`), and also if you need that many datapoints. Unless you have a large amount of noise (in which case you should smooth your dataset first), generally < 10,000 datapoints is enough to find a functional form.")
         end
     end
 end
@@ -58,7 +58,7 @@ function move_functions_to_workers(T, procs, options::Options)
                 undefined_on_workers = isa(e.captured.ex, UndefVarError)
                 if undefined_on_workers
                     name = nameof(op)
-                    println("Copying definition of $op to workers.")
+                    debug(options.verbosity, "Copying definition of $op to workers.")
                     src_ms = methods(op).ms
                     # Thanks https://discourse.julialang.org/t/easy-way-to-send-custom-function-to-distributed-workers/22118/2
                     @everywhere procs @eval function $name end
@@ -91,8 +91,8 @@ function test_function_on_workers(T, degree, op, procs)
     end
 end
 
-function activate_env_on_workers(procs, project_path::String)
-    println("Activating environment on workers.")
+function activate_env_on_workers(procs, project_path::String, options::Options)
+    debug(options.verbosity, "Activating environment on workers.")
     @everywhere procs begin
         Base.MainInclude.eval(quote
             using Pkg
@@ -101,10 +101,10 @@ function activate_env_on_workers(procs, project_path::String)
     end
 end
 
-function import_module_on_workers(procs, filename::String)
+function import_module_on_workers(procs, filename::String, options::Options)
     included_local = !("SymbolicRegression" in [k.name for (k, v) in Base.loaded_modules])
     if included_local
-        print("Importing local module ($filename) on workers...")
+        debug_inline(options.verbosity, "Importing local module ($filename) on workers...")
         @everywhere procs begin
             # Parse functions on every worker node
             Base.MainInclude.eval(quote
@@ -112,18 +112,18 @@ function import_module_on_workers(procs, filename::String)
                 using .SymbolicRegression
             end)
         end
-        println("Finished!")
+        debug(options.verbosity, "Finished!")
     else
-        print("Importing installed module on workers...")
+        debug_inline(options.verbosity, "Importing installed module on workers...")
         @everywhere procs begin
             Base.MainInclude.eval(using SymbolicRegression)
         end
-        println("Finished!")
+        debug(options.verbosity, "Finished!")
     end
 end
 
 function test_module_on_workers(procs, options::Options)
-    print("Testing module on workers...")
+    debug_inline(options.verbosity, "Testing module on workers...")
     futures = []
     for proc in procs
         push!(futures,
@@ -132,12 +132,12 @@ function test_module_on_workers(procs, options::Options)
     for future in futures
         fetch(future)
     end
-    println("Finished!")
+    debug(options.verbosity, "Finished!")
 end
 
 function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) where {T<:Real}
     futures = []
-    print("Testing entire pipeline on workers...")
+    debug_inline(options.verbosity, "Testing entire pipeline on workers...")
     for proc in procs
         push!(futures, @spawnat proc begin
             tmp_pop = Population(dataset, convert(T, 1), npop=20, nlength=3, options=options, nfeatures=dataset.nfeatures)
@@ -147,5 +147,5 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
     for future in futures
         fetch(future)
     end
-    println("Finished!")
+    debug(options.verbosity, "Finished!")
 end

@@ -6,6 +6,12 @@ function debug(verbosity, string...)
     end
 end
 
+function debug_inline(verbosity, string...)
+    if verbosity > 0
+        print(string...)
+    end
+end
+
 function getTime()::Int
     return round(Int, 1e3*(time()-1.6e9))
 end
