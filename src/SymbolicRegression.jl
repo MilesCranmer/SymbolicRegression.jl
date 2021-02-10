@@ -130,10 +130,10 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
 
     if dataset.weighted
         avgy = sum(dataset.y .* dataset.weights)/sum(dataset.weights)
-        baselineMSE = Loss(dataset.y, ones(T, dataset.n) .* avgy, dataset.weights)
+        baselineMSE = Loss(dataset.y, ones(T, dataset.n) .* avgy, dataset.weights, options)
     else
         avgy = sum(dataset.y)/dataset.n
-        baselineMSE = Loss(dataset.y, ones(T, dataset.n) .* avgy)
+        baselineMSE = Loss(dataset.y, ones(T, dataset.n) .* avgy, options)
     end
 
     if options.seed !== nothing
