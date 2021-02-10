@@ -48,7 +48,7 @@ using Random: seed!
 using FromFile
 
 @from "Core.jl" import CONST_TYPE, maxdegree, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
-@from "Utils.jl" import debug, is_anonymous_function
+@from "Utils.jl" import debug, debug_inline, is_anonymous_function
 @from "EquationUtils.jl" import countNodes, printTree, stringTree
 @from "EvaluateEquation.jl" import evalTreeArray
 @from "CheckConstraints.jl" import check_constraints
@@ -170,8 +170,8 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         end
         if we_created_procs
             project_path = splitdir(Pkg.project().path)[1]
-            activate_env_on_workers(procs, project_path)
-            import_module_on_workers(procs, @__FILE__)
+            activate_env_on_workers(procs, project_path, options)
+            import_module_on_workers(procs, @__FILE__, options)
         end
         move_functions_to_workers(T, procs, options)
         if runtests
@@ -213,7 +213,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         end
     end
 
-    println("Started!")
+    debug(options.verbosity, "Started!")
     cycles_complete = options.npopulations * niterations
     if options.warmupMaxsize != 0
         curmaxsize += 1
@@ -250,7 +250,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                 for member in cur_pop.members
                     size = countNodes(member.tree)
                     frequencyComplexity[size] += 1
-                    # println(member, hallOfFame.members[size])
+                    # debug(options.verbosity, member, hallOfFame.members[size])
                     actualMaxsize = options.maxsize + maxdegree
                     if size < actualMaxsize && member.score < hallOfFame.members[size].score
                         hallOfFame.members[size] = copyPopMember(member)
