@@ -26,6 +26,5 @@ Utils.jl
                     Mutate.jl
                         RegularizedEvolution.jl
                             SingleIteration.jl
-                                Configure.jl
-                                    SymbolicRegression.jl <= Deprecates.jl
+                                SymbolicRegression.jl <= Deprecates.jl, Configure.jl
 ```
