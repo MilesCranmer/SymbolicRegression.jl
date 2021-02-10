@@ -14,6 +14,7 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 
 [compat]
+FromFile = "0.1.0"
 Optim = "0.17, 1.1"
 Pkg = "1"
 SpecialFunctions = "0.10.1, 1"
