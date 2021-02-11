@@ -7,12 +7,17 @@ using Random
 x1=0.1f0; x2=0.1f0; x3=0.1f0; x4=0.1f0; x5=0.1f0
 for batching in [false, true]
     for weighted in [false, true]
+        numprocs = 4
+        if weighted && batching
+            numprocs = 0 #Try serial computation here.
+        end
         options = SymbolicRegression.Options(
             binary_operators=(+, *),
             unary_operators=(cos,),
             npopulations=4,
             batching=batching,
-            seed=0
+            seed=0,
+            numprocs=numprocs
         )
         X = randn(MersenneTwister(0), Float32, 5, 100)
         if weighted
