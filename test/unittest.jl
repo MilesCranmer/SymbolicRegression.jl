@@ -5,7 +5,6 @@ using SymbolicRegression: plus, sub, mult, square, cube, div, log_abs, log2_abs,
 using SymbolicRegression: node_to_symbolic, symbolic_to_node
 using SymbolicRegression: check_constraints
 
-
 x1 = 2.0
 # Initialize functions in Base....
 for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu]

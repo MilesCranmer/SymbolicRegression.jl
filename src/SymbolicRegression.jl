@@ -21,6 +21,7 @@ export Population,
     custom_simplify,
     simplifyWithSymbolicUtils,
     combineOperators,
+    genRandomTree,
 
     #Operators:
     plus,
@@ -44,26 +45,24 @@ using Distributed
 using Printf: @printf
 using Pkg
 using Random: seed!
-include("ProgramConstants.jl")
-include("Operators.jl")
-include("Options.jl")
-include("Dataset.jl")
-include("Equation.jl")
-include("LossFunctions.jl")
-include("Utils.jl")
-include("EvaluateEquation.jl")
-include("MutationFunctions.jl")
-include("InterfaceSymbolicUtils.jl")
-include("CustomSymbolicUtilsSimplification.jl")
-include("SimplifyEquation.jl")
-include("PopMember.jl")
-include("HallOfFame.jl")
-include("CheckConstraints.jl")
-include("Mutate.jl")
-include("Population.jl")
-include("RegularizedEvolution.jl")
-include("SingleIteration.jl")
-include("ConstantOptimization.jl")
+using FromFile
+
+@from "Core.jl" import CONST_TYPE, maxdegree, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
+@from "Utils.jl" import debug, debug_inline, is_anonymous_function
+@from "EquationUtils.jl" import countNodes, printTree, stringTree
+@from "EvaluateEquation.jl" import evalTreeArray
+@from "CheckConstraints.jl" import check_constraints
+@from "MutationFunctions.jl" import genRandomTree
+@from "LossFunctions.jl" import EvalLoss, MSE, SSE, scoreFunc
+@from "PopMember.jl" import PopMember, copyPopMember
+@from "Population.jl" import Population, bestSubPop
+@from "HallOfFame.jl" import HallOfFame, calculateParetoFrontier
+@from "SingleIteration.jl" import SRCycle, OptimizeAndSimplifyPopulation
+@from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
+@from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
+@from "SimplifyEquation.jl" import simplifyWithSymbolicUtils, combineOperators, simplifyTree
+
+include("Configure.jl")
 include("Deprecates.jl")
 
 

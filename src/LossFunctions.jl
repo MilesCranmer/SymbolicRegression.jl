@@ -1,4 +1,8 @@
+using FromFile
 using Random: randperm
+@from "Core.jl" import Options, Dataset, Node
+@from "EquationUtils.jl" import countNodes
+@from "EvaluateEquation.jl" import evalTreeArray
 
 # Sum of square error between two arrays
 function SSE(x::AbstractArray{T}, y::AbstractArray{T})::T where {T<:Real}

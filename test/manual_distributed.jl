@@ -1,3 +1,6 @@
+using FromFile
+@from "test_params.jl" import maximum_residual
+
 using Distributed
 procs = addprocs(4)
 using Test, Pkg
@@ -24,4 +27,4 @@ rmprocs(procs)
 dominating = calculateParetoFrontier(X, y, hallOfFame, options)
 best = dominating[end]
 # Test the score
-@test best.score < 1e-3
+@test best.score < maximum_residual / 10

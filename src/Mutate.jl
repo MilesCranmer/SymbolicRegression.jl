@@ -1,3 +1,12 @@
+using FromFile
+@from "Core.jl" import Node, copyNode, Options, Dataset
+@from "EquationUtils.jl" import countNodes, countConstants, countDepth
+@from "LossFunctions.jl" import scoreFunc, scoreFuncBatch
+@from "CheckConstraints.jl" import check_constraints
+@from "PopMember.jl" import PopMember
+@from "MutationFunctions.jl" import genRandomTree, mutateConstant, mutateOperator, appendRandomOp, prependRandomOp, insertRandomOp, deleteRandomOp
+@from "SimplifyEquation.jl" import simplifyTree, combineOperators, simplifyWithSymbolicUtils
+
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
 function nextGeneration(dataset::Dataset{T},

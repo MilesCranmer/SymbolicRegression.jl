@@ -1,3 +1,32 @@
+using FromFile
+@from "Core.jl" import CONST_TYPE, Node, copyNode, Options
+@from "EquationUtils.jl" import countNodes, countConstants, countOperators, countDepth
+
+# Return a random node from the tree
+function randomNode(tree::Node)::Node
+    if tree.degree == 0
+        return tree
+    end
+    a = countNodes(tree)
+    b = 0
+    c = 0
+    if tree.degree >= 1
+        b = countNodes(tree.l)
+    end
+    if tree.degree == 2
+        c = countNodes(tree.r)
+    end
+
+    i = rand(1:1+b+c)
+    if i <= b
+        return randomNode(tree.l)
+    elseif i == b + 1
+        return tree
+    end
+
+    return randomNode(tree.r)
+end
+
 # Randomly convert an operator into another one (binary->binary;
 # unary->unary)
 function mutateOperator(tree::Node, options::Options)::Node
@@ -230,7 +259,6 @@ function deleteRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
     return tree
 end
 
-
 # Create a random equation by appending random operators
 function genRandomTree(length::Int, options::Options, nfeatures::Int)::Node
     tree = Node(convert(CONST_TYPE, 1))
@@ -239,5 +267,3 @@ function genRandomTree(length::Int, options::Options, nfeatures::Int)::Node
     end
     return tree
 end
-
-

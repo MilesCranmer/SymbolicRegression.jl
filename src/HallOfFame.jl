@@ -1,3 +1,8 @@
+using FromFile
+@from "Core.jl" import CONST_TYPE, maxdegree, Node, Options, Dataset
+@from "PopMember.jl" import PopMember
+@from "LossFunctions.jl" import EvalLoss
+
 """ List of the best members seen all time in `.members` """
 mutable struct HallOfFame
     members::Array{PopMember, 1}

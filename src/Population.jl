@@ -1,3 +1,8 @@
+using FromFile
+@from "Core.jl" import Options, Dataset
+@from "LossFunctions.jl" import scoreFunc
+@from "MutationFunctions.jl" import genRandomTree
+@from "PopMember.jl" import PopMember
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
 mutable struct Population{T<:Real}

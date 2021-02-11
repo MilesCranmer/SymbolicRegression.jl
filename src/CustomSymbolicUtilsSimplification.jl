@@ -1,5 +1,8 @@
+using FromFile
 using SymbolicUtils
 using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, has_trig, polynormalize
+@from "Core.jl" import Options
+@from "InterfaceSymbolicUtils.jl" import SYMBOLIC_UTILS_TYPES
 
 function multiply_powers(eqn::T)::SYMBOLIC_UTILS_TYPES where {T<:Union{<:Number,SymbolicUtils.Sym{<:Number}}}
 	return eqn

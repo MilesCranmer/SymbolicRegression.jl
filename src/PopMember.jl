@@ -1,3 +1,8 @@
+using FromFile
+@from "Core.jl" import Options, Dataset, Node, copyNode
+@from "Utils.jl" import getTime
+@from "LossFunctions.jl" import scoreFunc
+
 # Define a member of population by equation, score, and age
 mutable struct PopMember{T<:Real}
     tree::Node

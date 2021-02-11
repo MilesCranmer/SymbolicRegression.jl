@@ -1,4 +1,6 @@
+using FromFile
 using SymbolicUtils
+@from "Core.jl" import CONST_TYPE, Node, Options
 
 const SYMBOLIC_UTILS_TYPES = Union{<:Number,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
 

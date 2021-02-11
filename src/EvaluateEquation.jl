@@ -1,3 +1,6 @@
+using FromFile
+@from "Core.jl" import Node, Options
+
 # Evaluate an equation over an array of datapoints
 # This one is just for reference. The fused one should be faster.
 function unfusedEvalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
