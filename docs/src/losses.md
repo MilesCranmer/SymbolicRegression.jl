@@ -15,6 +15,9 @@ options = Options(loss=f)
 
 ## Regression:
 
+Regression losses work on the distance between targets
+and predictions: `r = x - y`.
+
 ### `LPDistLoss{P} <: DistanceLoss`
 
 The P-th power absolute distance loss. It is Lipschitz continuous
@@ -220,6 +223,10 @@ L(r) = \begin{cases} -\left( 1 - \tau  \right) r & \quad \text{if } r < 0 \\ \ta
 ```
 
 ## Classification:
+
+Classifications losses (assuming binary) work on the margin between targets
+and predictions: `r = x y`, assuming the target `y` is either `-1`
+or `+1`.
 
 ### `ZeroOneLoss <: MarginLoss`
 
