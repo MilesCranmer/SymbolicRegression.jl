@@ -3,7 +3,7 @@ using SymbolicRegression: Options, stringTree, evalTreeArray, Dataset
 using SymbolicRegression: printTree, pow, EvalLoss, scoreFunc, Node
 using SymbolicRegression: plus, sub, mult, square, cube, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
 using SymbolicRegression: node_to_symbolic, symbolic_to_node
-using SymbolicRegression: check_constraints
+using SymbolicRegression: check_constraints, Loss
 
 x1 = 2.0
 # Initialize functions in Base....
@@ -51,7 +51,7 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu]
 
             Random.seed!(0)
             N = 100
-            X = map(x->convert(T, x), randn(Float64, 5, N)/3)
+            X = map(x->convert(T, x), randn(MersenneTwister(0), Float64, 5, N)/3)
             X = X + sign.(X) * convert(T, 0.1)
             y = map(x->convert(T, x), f_true.(X[1, :]))
             dataset = Dataset(X, y)
@@ -116,9 +116,29 @@ tree2 = symbolic_to_node(eqn, options; varMap=["energy"])
 
 @test stringTree(tree, options) == stringTree(tree2, options)
 
-# Check constraints
+# Test constraint-checking interface
 tree = Node(5, (Node(3.0) * Node(1, Node("x1"))) ^ 2.0, -1.2)
 violating_tree = Node(1, tree)
 
 @test check_constraints(tree, options) == true
 @test check_constraints(violating_tree, options) == false
+
+# Test different loss functions
+customloss(x, y) = abs(x - y) ^ 2.5
+customloss(x, y, w) = w * (abs(x - y) ^ 2.5)
+testl1(x, y) = abs(x - y)
+testl1(x, y, w) = abs(x - y) * w
+
+for (loss, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
+    options = Options(;
+        binary_operators=(+, *, -, /),
+        unary_operators=(cos, exp),
+        npopulations=4,
+        loss=loss,
+    )
+    x = randn(MersenneTwister(0), Float32, 100)
+    y = randn(MersenneTwister(1), Float32, 100)
+    w = abs.(randn(MersenneTwister(2), Float32, 100))
+    @test abs(Loss(x, y, options) - sum(evaluator.(x, y))/length(x)) < 1e-6
+    @test abs(Loss(x, y, w, options) - sum(evaluator.(x, y, w))/sum(w)) < 1e-6
+end

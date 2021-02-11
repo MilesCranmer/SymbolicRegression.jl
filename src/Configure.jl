@@ -45,45 +45,72 @@ function testDatasetConfiguration(dataset::Dataset{T}, options::Options) where {
             debug(options.verbosity, "Note: you are running with more than 10,000 datapoints. You should consider turning on batching (`options.batching`), and also if you need that many datapoints. Unless you have a large amount of noise (in which case you should smooth your dataset first), generally < 10,000 datapoints is enough to find a functional form.")
         end
     end
-end
 
-# Re-define user created functions on workers
-function move_functions_to_workers(T, procs, options::Options)
-    for degree=1:2
-        ops = degree == 1 ? options.unaops : options.binops
-        for op in ops
-            try
-                test_function_on_workers(T, degree, op, procs)
-            catch e
-                undefined_on_workers = isa(e.captured.ex, UndefVarError)
-                if undefined_on_workers
-                    name = nameof(op)
-                    debug(options.verbosity, "Copying definition of $op to workers.")
-                    src_ms = methods(op).ms
-                    # Thanks https://discourse.julialang.org/t/easy-way-to-send-custom-function-to-distributed-workers/22118/2
-                    @everywhere procs @eval function $name end
-                    for m in src_ms
-                        @everywhere procs @eval $m
-                    end
-                else
-                    throw(e)
-                end
+    if !(typeof(options.loss) <: SupervisedLoss)
+        if dataset.weighted
+            if !(3 in [m.nargs for m in methods(options.loss)])
+                throw(AssertionError("When you create a custom loss function, and are using weights, you need to define your loss function with three scalar arguments: f(prediction, target, weight)."))
             end
-            # Test configuration again to make sure it worked.
-            test_function_on_workers(T, degree, op, procs)
         end
     end
 end
 
-function test_function_on_workers(T, degree, op, procs)
+""" Move custom operators and loss functions to workers, if undefined """
+function move_functions_to_workers(procs, options::Options, dataset::Dataset{T}) where {T}
+    for function_set=1:3
+        if function_set == 1
+            ops = options.unaops
+            nargs = 1
+        elseif function_set == 2
+            ops = options.binops
+            nargs = 2
+        elseif function_set == 3
+            if typeof(options.loss) <: SupervisedLoss
+                continue
+            end
+            ops = (options.loss,)
+            nargs = dataset.weighted ? 3 : 2
+        end
+        for op in ops
+            try
+                test_function_on_workers(T, nargs, op, procs)
+            catch e
+                undefined_on_workers = isa(e.captured.ex, UndefVarError)
+                if undefined_on_workers
+                    copy_definition_to_workers(op, procs, options)
+                else
+                    throw(e)
+                end
+            end
+            test_function_on_workers(T, nargs, op, procs)
+        end
+    end
+end
+
+function copy_definition_to_workers(op, procs, options::Options)
+    name = nameof(op)
+    debug_inline(options.verbosity, "Copying definition of $op to workers...")
+    src_ms = methods(op).ms
+    # Thanks https://discourse.julialang.org/t/easy-way-to-send-custom-function-to-distributed-workers/22118/2
+    @everywhere procs @eval function $name end
+    for m in src_ms
+        @everywhere procs @eval $m
+    end
+    debug(options.verbosity, "Finished!")
+end
+
+function test_function_on_workers(T, nargs, op, procs)
     futures = []
     for proc in procs
-        if degree == 1
+        if nargs == 1
             push!(futures,
                   @spawnat proc op(convert(T, 0)))
-        else
+        elseif nargs == 2 #2D ops, and loss function
             push!(futures,
                   @spawnat proc op(convert(T, 0), convert(T, 0)))
+        elseif nargs == 3 #weighted loss function
+            push!(futures,
+                  @spawnat proc op(convert(T, 0), convert(T, 0), convert(T, 0)))
         end
     end
     for future in futures
