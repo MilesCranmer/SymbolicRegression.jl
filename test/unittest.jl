@@ -51,7 +51,7 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu]
 
             Random.seed!(0)
             N = 100
-            X = map(x->convert(T, x), randn(Float64, 5, N)/3)
+            X = map(x->convert(T, x), randn(MersenneTwister(0), Float64, 5, N)/3)
             X = X + sign.(X) * convert(T, 0.1)
             y = map(x->convert(T, x), f_true.(X[1, :]))
             dataset = Dataset(X, y)
