@@ -17,7 +17,6 @@ for batching in [false, true]
             npopulations=4,
             batching=batching,
             seed=0,
-            numprocs=numprocs
         )
         X = randn(MersenneTwister(0), Float32, 5, 100)
         if weighted
@@ -27,7 +26,9 @@ for batching in [false, true]
             # to use correct weights to figure it out!
             y = (2 .* cos.(X[4, :])) .* weights .+ (1 .- weights) .* (5 .* X[2, :])
             hallOfFame = EquationSearch(X, y, weights=weights,
-                                        niterations=2, options=options)
+                                        niterations=2, options=options,
+                                        numprocs=numprocs
+                                       )
             dominating = calculateParetoFrontier(X, y, hallOfFame,
                                                  options; weights=weights)
         else
