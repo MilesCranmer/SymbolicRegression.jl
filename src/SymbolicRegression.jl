@@ -175,7 +175,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
             activate_env_on_workers(procs, project_path, options)
             import_module_on_workers(procs, @__FILE__, options)
         end
-        move_functions_to_workers(T, procs, options)
+        move_functions_to_workers(procs, options, dataset)
         if runtests
             test_module_on_workers(procs, options)
         end
