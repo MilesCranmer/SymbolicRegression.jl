@@ -6,12 +6,18 @@ using LossFunctions
 @from "EvaluateEquation.jl" import evalTreeArray
 
 
-function Loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options)::T where {T<:Real}
+function Loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,C})::T where {T<:Real,A,B,C<:SupervisedLoss}
     value(options.loss, y, x, AggMode.Mean())
 end
+function Loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,C})::T where {T<:Real,A,B,C<:Function}
+    sum(options.loss.(x, y))/length(y)
+end
 
-function Loss(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options)::T where {T<:Real}
+function Loss(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options{A,B,C})::T where {T<:Real,A,B,C<:SupervisedLoss}
     value(options.loss, y, x, AggMode.WeightedMean(w))
+end
+function Loss(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options{A,B,C})::T where {T<:Real,A,B,C<:Function}
+    sum(options.loss.(x, y, w))/sum(w)
 end
 
 # Loss function. Only MSE implemented right now. TODO

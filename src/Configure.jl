@@ -45,6 +45,14 @@ function testDatasetConfiguration(dataset::Dataset{T}, options::Options) where {
             debug(options.verbosity, "Note: you are running with more than 10,000 datapoints. You should consider turning on batching (`options.batching`), and also if you need that many datapoints. Unless you have a large amount of noise (in which case you should smooth your dataset first), generally < 10,000 datapoints is enough to find a functional form.")
         end
     end
+
+    if !(typeof(options.loss) <: SupervisedLoss)
+        if options.weighted
+            if !(3 in [m.nargs for m in methods(options.loss)])
+                throw(AssertionError("When you create a custom loss function, and are using weights, you need to define your loss function with three scalar arguments: f(prediction, target, weight)."))
+            end
+        end
+    end
 end
 
 # Re-define user created functions on workers

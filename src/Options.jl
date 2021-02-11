@@ -94,7 +94,7 @@ function unaopmap(op)
     return op
 end
 
-struct Options{A,B}
+struct Options{A,B,C<:Union{SupervisedLoss,Function}}
 
     binops::A
     unaops::B
@@ -129,7 +129,7 @@ struct Options{A,B}
     nuna::Int
     nbin::Int
     seed::Union{Int, Nothing}
-    loss::SupervisedLoss
+    loss::C
 
 end
 
@@ -161,30 +161,34 @@ Construct options for `EquationSearch` and other functions.
 - `batching=false`: Whether to evolve based on small mini-batches of data,
     rather than the entire dataset.
 - `batchSize=50`: What batch size to use if using batching.
-- `loss=L2DistLoss()`: What loss function to use. Must be one of
+- `loss=L2DistLoss()`: What loss function to use. Can be one of
     the following losses, or any other loss of type
-    `SupervisedLoss`. Available ones:
-    Regression:
-        - `LPDistLoss{P}()`,
-        - `L1DistLoss()`,
-        - `L2DistLoss()` (mean square),
-        - `LogitDistLoss()`,
-        - `HuberLoss(d)`,
-        - `L1EpsilonInsLoss(ϵ)`,
-        - `L2EpsilonInsLoss(ϵ)`,
-        - `PeriodicLoss(c)`,
-        - `QuantileLoss(τ)`,
-    Classification:
-        - `ZeroOneLoss()`,
-        - `PerceptronLoss()`,
-        - `L1HingeLoss()`,
-        - `SmoothedL1HingeLoss(γ)`,
-        - `ModifiedHuberLoss()`,
-        - `L2MarginLoss()`,
-        - `ExpLoss()`,
-        - `SigmoidLoss()`,
-        - `DWDMarginLoss(q)`,
-    To implement your own loss, see https://github.com/JuliaML/LossFunctions.jl/blob/672d97bf8789fa86ff72d45dce829e2e7cc5cb02/src/supervised/distance.jl#L16 for an example implementation.
+    `SupervisedLoss`. You can also pass a function that takes
+    a scalar target (left argument), and scalar predicted (right
+    argument), and returns a scalar. This will be averaged
+    over the predicted data. If weights are supplied, your
+    function should take a third argument for the weight scalar.
+    Included losses:
+        Regression:
+            - `LPDistLoss{P}()`,
+            - `L1DistLoss()`,
+            - `L2DistLoss()` (mean square),
+            - `LogitDistLoss()`,
+            - `HuberLoss(d)`,
+            - `L1EpsilonInsLoss(ϵ)`,
+            - `L2EpsilonInsLoss(ϵ)`,
+            - `PeriodicLoss(c)`,
+            - `QuantileLoss(τ)`,
+        Classification:
+            - `ZeroOneLoss()`,
+            - `PerceptronLoss()`,
+            - `L1HingeLoss()`,
+            - `SmoothedL1HingeLoss(γ)`,
+            - `ModifiedHuberLoss()`,
+            - `L2MarginLoss()`,
+            - `ExpLoss()`,
+            - `SigmoidLoss()`,
+            - `DWDMarginLoss(q)`.
 - `npopulations=nothing`: How many populations of equations to use. By default
     this is set equal to the number of cores
 - `npop=1000`: How many equations in each population.
@@ -339,7 +343,7 @@ function Options(;
         end
     end
 
-    Options{typeof(binary_operators),typeof(unary_operators)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss)
+    Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss)
 end
 
 
