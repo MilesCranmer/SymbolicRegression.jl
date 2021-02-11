@@ -343,7 +343,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                 @printf("Progress: %d / %d total iterations (%.3f%%)\n", cycles_elapsed, options.npopulations * niterations, 100.0*cycles_elapsed/(options.npopulations*niterations))
                 @printf("Hall of Fame:\n")
                 @printf("-----------------------------------------\n")
-                @printf("%-10s  %-8s   %-8s  %-8s\n", "Complexity", "MSE", "Score", "Equation")
+                @printf("%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation")
                 @printf("%-10d  %-8.3e  %-8.3e  %-.f\n", 0, curMSE, 0f0, avgy)
             end
 
