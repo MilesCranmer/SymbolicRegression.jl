@@ -149,6 +149,11 @@ git-tree-sha1 = "d48a40c0f54f29a5c8748cfb3225719accc72b77"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
 version = "0.10.16"
 
+[[FromFile]]
+git-tree-sha1 = "58edf4740c91df1b739aecc35d73a090d6338f73"
+uuid = "ff7dd447-1dcb-4ce3-b8ac-22a812192de7"
+version = "0.1.0"
+
 [[Future]]
 deps = ["Random"]
 uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
@@ -390,10 +395,10 @@ uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 version = "1.2.3"
 
 [[SymbolicRegression]]
-deps = ["Distributed", "Optim", "Pkg", "Printf", "Random", "SpecialFunctions", "SymbolicUtils"]
+deps = ["Distributed", "FromFile", "Optim", "Pkg", "Printf", "Random", "SpecialFunctions", "SymbolicUtils"]
 path = ".."
 uuid = "8254be44-1295-4e6a-a16d-46603ac705cb"
-version = "0.4.7"
+version = "0.5.0"
 
 [[SymbolicUtils]]
 deps = ["AbstractAlgebra", "Combinatorics", "DataStructures", "NaNMath", "SpecialFunctions", "TimerOutputs"]
