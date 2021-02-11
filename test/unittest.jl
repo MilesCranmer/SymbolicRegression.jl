@@ -130,7 +130,7 @@ testl1(x, y) = abs(x - y)
 testl1(x, y, w) = abs(x - y) * w
 
 for (loss, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
-    options = Options(;
+    local options = Options(;
         binary_operators=(+, *, -, /),
         unary_operators=(cos, exp),
         npopulations=4,
