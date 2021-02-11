@@ -15,7 +15,7 @@ options = Options(loss=f)
 
 ## Regression:
 
-    LPDistLoss{P} <: DistanceLoss
+### `LPDistLoss{P} <: DistanceLoss`
 
 The P-th power absolute distance loss. It is Lipschitz continuous
 iff `P == 1`, convex if and only if `P >= 1`, and strictly convex
@@ -24,7 +24,7 @@ iff `P > 1`.
 ```math
 L(r) = |r|^P
 ```
-    L1DistLoss <: DistanceLoss
+### `L1DistLoss <: DistanceLoss`
 
 The absolute distance loss.
 Special case of the [`LPDistLoss`](@ref) with `P=1`.
@@ -50,7 +50,8 @@ L(r) = |r|
       -3                        3      -3                        3
                  ŷ - y                            ŷ - y
 ```
-    L2DistLoss <: DistanceLoss
+
+### `L2DistLoss <: DistanceLoss`
 
 The least squares loss.
 Special case of the [`LPDistLoss`](@ref) with `P=2`.
@@ -76,7 +77,7 @@ L(r) = |r|^2
       -3                        3      -2                        2
                  ŷ - y                            ŷ - y
 ```
-    PeriodicLoss <: DistanceLoss
+### `PeriodicLoss <: DistanceLoss`
 
 Measures distance on a circle of specified circumference `c`.
 
@@ -110,7 +111,8 @@ L(r) = \begin{cases} \frac{r^2}{2} & \quad \text{if } | r | \le \alpha \\ \alpha
       -2                        2      -2                        2
                  ŷ - y                            ŷ - y
 ```
-    L1EpsilonInsLoss <: DistanceLoss
+
+### `L1EpsilonInsLoss <: DistanceLoss`
 
 The ``ϵ``-insensitive loss. Typically used in linear support vector
 regression. It ignores deviances smaller than ``ϵ``, but penalizes
@@ -137,7 +139,7 @@ L(r) = \max \{ 0, | r | - \epsilon \}
       -3                        3      -2                        2
                  ŷ - y                            ŷ - y
 ```
-    L2EpsilonInsLoss <: DistanceLoss
+### `L2EpsilonInsLoss <: DistanceLoss`
 
 The quadratic ``ϵ``-insensitive loss.
 Typically used in linear support vector regression.
@@ -164,7 +166,7 @@ L(r) = \max \{ 0, | r | - \epsilon \}^2
       -3                        3      -2                        2
                  ŷ - y                            ŷ - y
 ```
-    LogitDistLoss <: DistanceLoss
+### `LogitDistLoss <: DistanceLoss`
 
 The distance-based logistic loss for regression.
 It is strictly convex and Lipschitz continuous.
@@ -189,7 +191,7 @@ L(r) = - \ln \frac{4 e^r}{(1 + e^r)^2}
       -3                        3      -4                        4
                  ŷ - y                            ŷ - y
 ```
-    QuantileLoss <: DistanceLoss
+### `QuantileLoss <: DistanceLoss`
 
 The distance-based quantile loss, also known as pinball loss,
 can be used to estimate conditional τ-quantiles.
@@ -219,7 +221,7 @@ L(r) = \begin{cases} -\left( 1 - \tau  \right) r & \quad \text{if } r < 0 \\ \ta
 
 ## Classification:
 
-    ZeroOneLoss <: MarginLoss
+### `ZeroOneLoss <: MarginLoss`
 
 The classical classification loss. It penalizes every misclassified
 observation with a loss of `1` while every correctly classified
@@ -248,7 +250,7 @@ L(a) = \begin{cases} 1 & \quad \text{if } a < 0 \\ 0 & \quad \text{if } a >= 0\\
       -2                        2      -2                        2
                 y * h(x)                         y * h(x)
 ```
-    PerceptronLoss <: MarginLoss
+### `PerceptronLoss <: MarginLoss`
 
 The perceptron loss linearly penalizes every prediction where the
 resulting `agreement <= 0`.
@@ -274,7 +276,7 @@ L(a) = \max \{ 0, -a \}
       -2                        2      -2                        2
                  y ⋅ ŷ                            y ⋅ ŷ
 ```
-    LogitMarginLoss <: MarginLoss
+### `LogitMarginLoss <: MarginLoss`
 
 The margin version of the logistic loss. It is infinitely many
 times differentiable, strictly convex, and Lipschitz continuous.
@@ -299,7 +301,7 @@ L(a) = \ln (1 + e^{-a})
       -2                        2      -4                        4
                  y ⋅ ŷ                            y ⋅ ŷ
 ```
-    L1HingeLoss <: MarginLoss
+### `L1HingeLoss <: MarginLoss`
 
 The hinge loss linearly penalizes every predicition where the
 resulting `agreement < 1` .
@@ -325,7 +327,7 @@ L(a) = \max \{ 0, 1 - a \}
       -2                        2      -2                        2
                  y ⋅ ŷ                            y ⋅ ŷ
 ```
-    L2HingeLoss <: MarginLoss
+### `L2HingeLoss <: MarginLoss`
 
 The truncated least squares loss quadratically penalizes every
 predicition where the resulting `agreement < 1`.
@@ -352,7 +354,7 @@ L(a) = \max \{ 0, 1 - a \}^2
       -2                        2      -2                        2
                  y ⋅ ŷ                            y ⋅ ŷ
 ```
-    SmoothedL1HingeLoss <: MarginLoss
+### `SmoothedL1HingeLoss <: MarginLoss`
 
 As the name suggests a smoothed version of the L1 hinge loss.
 It is Lipschitz continuous and convex, but not strictly convex.
@@ -377,7 +379,7 @@ L(a) = \begin{cases} \frac{0.5}{\gamma} \cdot \max \{ 0, 1 - a \} ^2 & \quad \te
       -2                        2      -2                        2
                  y ⋅ ŷ                            y ⋅ ŷ
 ```
-    ModifiedHuberLoss <: MarginLoss
+### `ModifiedHuberLoss <: MarginLoss`
 
 A special (4 times scaled) case of the [`SmoothedL1HingeLoss`](@ref)
 with `γ=2`. It is Lipschitz continuous and convex,
@@ -403,7 +405,7 @@ L(a) = \begin{cases} \max \{ 0, 1 - a \} ^2 & \quad \text{if } a \ge -1 \\ - 4 a
       -2                        2      -2                        2
                  y ⋅ ŷ                            y ⋅ ŷ
 ```
-    L2MarginLoss <: MarginLoss
+### `L2MarginLoss <: MarginLoss`
 
 The margin-based least-squares loss for classification,
 which penalizes every prediction where `agreement != 1` quadratically.
@@ -429,7 +431,7 @@ L(a) = {\left( 1 - a \right)}^2
       -2                        2      -2                        2
                  y ⋅ ŷ                            y ⋅ ŷ
 ```
-    ExpLoss <: MarginLoss
+### `ExpLoss <: MarginLoss`
 
 The margin-based exponential loss for classification, which
 penalizes every prediction exponentially. It is infinitely many
@@ -456,7 +458,7 @@ L(a) = e^{-a}
       -2                        2      -2                        2
                  y ⋅ ŷ                            y ⋅ ŷ
 ```
-    SigmoidLoss <: MarginLoss
+### `SigmoidLoss <: MarginLoss`
 
 Continuous loss which penalizes every prediction with a loss
 within in the range (0,2). It is infinitely many times
@@ -482,7 +484,7 @@ L(a) = 1 - \tanh(a)
       -2                        2      -2                        2
                  y ⋅ ŷ                            y ⋅ ŷ
 ```
-    DWDMarginLoss <: MarginLoss
+### `DWDMarginLoss <: MarginLoss`
 
 The distance weighted discrimination margin loss. It is a
 differentiable generalization of the [L1HingeLoss](@ref) that is
