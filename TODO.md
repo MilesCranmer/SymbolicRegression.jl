@@ -7,6 +7,8 @@
 - [ ] Introduce new constraint checker that limits how many times an operator can be nested.
     e.g., it is fine to nest +, *, etc., but BAD to nest cos/sin/etc.
     - Maybe this is too much prior knowledge?
+- [ ] Allow parts of a function to be frozen. Then the mutations will skip them.
+    - [ ] Extend this: allow users to pass a SymbolicUtils equality with some function `f`, and features x0 (y), x1, x2, x3, .... This will allow one to find an equation to fit some pre-defined formula.
 
 ## Feature ideas
 
