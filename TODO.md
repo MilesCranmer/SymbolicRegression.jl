@@ -4,6 +4,9 @@
 - [ ] Show speed by # of mutations total, and # mutations per individual.
 - [ ] Is scoreFuncBatch called when creating PopMember, when batching turned on??
     - Should I run optimizeConstants with batching? e.g., a single little batch.
+- [ ] Introduce new constraint checker that limits how many times an operator can be nested.
+    e.g., it is fine to nest +, *, etc., but BAD to nest cos/sin/etc.
+    - Maybe this is too much prior knowledge?
 
 ## Feature ideas
 
