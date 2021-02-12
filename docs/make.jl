@@ -4,7 +4,7 @@ using SymbolicRegression: Node, PopMember, Population, evalTreeArray, Dataset, H
 makedocs(sitename="SymbolicRegression.jl",
          authors="Miles Cranmer",
          doctest=false, clean=true,
-         format=Documenter.HTML(canonical="https://milescranmer.github.io/SymbolicRegression.jl/stable")
+         format=Documenter.HTML(canonical="https://astroautomata.com/SymbolicRegression.jl/stable")
          )
 
 deploydocs(repo="github.com/MilesCranmer/SymbolicRegression.jl.git")
