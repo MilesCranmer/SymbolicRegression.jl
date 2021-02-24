@@ -216,7 +216,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         end
     end
 
-    debug(options.verbosity, "Started!")
+    debug(options.verbosity > 0 || options.progress, "Started!")
     cycles_complete = options.npopulations * niterations
     if options.progress
         progress_bar = ProgressBar(1:cycles_complete)
