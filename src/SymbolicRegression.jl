@@ -244,7 +244,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     end
 
     while cycles_complete > 0
-        @inbounds for i=1:options.npopulations
+        for i=1:options.npopulations
             # Non-blocking check if a population is ready:
             population_ready = parallel ? isready(channels[i]) : true
             if population_ready
