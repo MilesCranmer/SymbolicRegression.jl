@@ -58,7 +58,7 @@ using Reexport
 @from "LossFunctions.jl" import EvalLoss, Loss, scoreFunc
 @from "PopMember.jl" import PopMember, copyPopMember
 @from "Population.jl" import Population, bestSubPop
-@from "HallOfFame.jl" import HallOfFame, calculateParetoFrontier
+@from "HallOfFame.jl" import HallOfFame, calculateParetoFrontier, string_dominating_pareto_curve
 @from "SingleIteration.jl" import SRCycle, OptimizeAndSimplifyPopulation
 @from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
 @from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
@@ -332,49 +332,19 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
             if length(equation_speed) > average_over_m_measurements
                 deleteat!(equation_speed, 1)
             end
-            average_speed = sum(equation_speed)/length(equation_speed)
-            curMSE = baselineMSE
-            lastMSE = curMSE
-            lastComplexity = 0
             if options.verbosity > 0
                 @printf("\n")
+                average_speed = sum(equation_speed)/length(equation_speed)
                 @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
                 cycles_elapsed = options.npopulations * niterations - cycles_complete
-                @printf("Progress: %d / %d total iterations (%.3f%%)\n", cycles_elapsed, options.npopulations * niterations, 100.0*cycles_elapsed/(options.npopulations*niterations))
-                @printf("Hall of Fame:\n")
-                @printf("-----------------------------------------\n")
-                @printf("%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation")
-                @printf("%-10d  %-8.3e  %-8.3e  %-.f\n", 0, curMSE, 0f0, avgy)
+                @printf("Progress: %d / %d total iterations (%.3f%%)\n",
+                        cycles_elapsed, options.npopulations * niterations,
+                        100.0*cycles_elapsed/(options.npopulations*niterations))
+                equation_strings = string_dominating_pareto_curve(hallOfFame, baselineMSE,
+                                                                  dataset, options,
+                                                                  avgy)
+                print(equation_strings)
             end
-
-            #TODO - call pareto function!
-            actualMaxsize = options.maxsize + maxdegree
-            for size=1:actualMaxsize
-                if hallOfFame.exists[size]
-                    member = hallOfFame.members[size]
-                    curMSE = EvalLoss(member.tree, dataset, options)
-                    numberSmallerAndBetter = 0
-                    for i=1:(size-1)
-                        hofMSE = EvalLoss(hallOfFame.members[i].tree, dataset, options)
-                        if (hallOfFame.exists[size] && curMSE > hofMSE)
-                            numberSmallerAndBetter += 1
-                            break
-                        end
-                    end
-                    betterThanAllSmaller = (numberSmallerAndBetter == 0)
-                    if betterThanAllSmaller
-                        delta_c = size - lastComplexity
-                        delta_l_mse = log(curMSE/lastMSE)
-                        score = convert(Float32, -delta_l_mse/delta_c)
-                        if options.verbosity > 0
-                            @printf("%-10d  %-8.3e  %-8.3e  %-s\n" , size, curMSE, score, stringTree(member.tree, options, varMap=dataset.varMap))
-                        end
-                        lastMSE = curMSE
-                        lastComplexity = size
-                    end
-                end
-            end
-            debug(options.verbosity, "")
             last_print_time = time()
             num_equations = 0.0
         end

@@ -1,7 +1,9 @@
 using FromFile
 @from "Core.jl" import CONST_TYPE, maxdegree, Node, Options, Dataset
+@from "EquationUtils.jl" import stringTree
 @from "PopMember.jl" import PopMember
 @from "LossFunctions.jl" import EvalLoss
+using Printf: @sprintf
 
 """ List of the best members seen all time in `.members` """
 mutable struct HallOfFame
@@ -76,3 +78,43 @@ function calculateParetoFrontier(X::AbstractMatrix{T},
     calculateParetoFrontier(Dataset(X, y, weights=weights, varMap=varMap), hallOfFame, options)
 end
 
+function string_dominating_pareto_curve(hallOfFame, baselineMSE,
+                                        dataset, options,
+                                        avgy)
+    output = ""
+    curMSE = baselineMSE
+    lastMSE = curMSE
+    lastComplexity = 0
+    output *= "Hall of Fame:\n"
+    output *= "-----------------------------------------\n"
+    output *= @sprintf("%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation")
+    output *= @sprintf("%-10d  %-8.3e  %-8.3e  %-.f\n", 0, curMSE, 0f0, avgy)
+
+    #TODO - call pareto function!
+    actualMaxsize = options.maxsize + maxdegree
+    for size=1:actualMaxsize
+        if hallOfFame.exists[size]
+            member = hallOfFame.members[size]
+            curMSE = EvalLoss(member.tree, dataset, options)
+            numberSmallerAndBetter = 0
+            for i=1:(size-1)
+                hofMSE = EvalLoss(hallOfFame.members[i].tree, dataset, options)
+                if (hallOfFame.exists[size] && curMSE > hofMSE)
+                    numberSmallerAndBetter += 1
+                    break
+                end
+            end
+            betterThanAllSmaller = (numberSmallerAndBetter == 0)
+            if betterThanAllSmaller
+                delta_c = size - lastComplexity
+                delta_l_mse = log(curMSE/lastMSE)
+                score = convert(Float32, -delta_l_mse/delta_c)
+                output *= @sprintf("%-10d  %-8.3e  %-8.3e  %-s\n" , size, curMSE, score, stringTree(member.tree, options, varMap=dataset.varMap))
+                lastMSE = curMSE
+                lastComplexity = size
+            end
+        end
+    end
+    output *= "\n"
+    return output
+end
