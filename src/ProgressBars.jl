@@ -187,14 +187,6 @@ function clear_progress(t::ProgressBar)
     erase_line()
 end
 
-function set_description(t::ProgressBar, description::AbstractString)
-    t.description = description
-end
-
-function set_postfix(t::ProgressBar; postfix...)
-    t.postfix = values(postfix)
-end
-
 function set_multiline_postfix(t::ProgressBar, postfix::AbstractString)
     mistakenly_used_newline_at_start = postfix[1] == '\n' && length(postfix) > 1
     if mistakenly_used_newline_at_start
