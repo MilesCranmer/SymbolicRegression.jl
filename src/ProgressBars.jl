@@ -38,6 +38,7 @@ mutable struct ProgressBar
     total::Int
     current::Int
     width::Int
+    fixwidth::Bool
     leave::Bool
     start_time::UInt
     last_print::UInt
@@ -47,10 +48,16 @@ mutable struct ProgressBar
     multilinepostfix::AbstractString
     mutex::Threads.SpinLock
 
-    function ProgressBar(wrapped::Any; total::Int = -2, width = displaysize(stdout)[2], leave=true)
+    function ProgressBar(wrapped::Any; total::Int = -2, width = nothing, leave=true)
         this = new()
         this.wrapped = wrapped
-        this.width = width
+        if width == nothing
+            this.width = displaysize(stdout)[2]
+            this.fixwidth = false
+        else
+            this.width = width
+            this.fixwidth = true
+        end
         this.leave = leave
         this.start_time = time_ns()
         this.last_print = this.start_time - 2 * PRINTING_DELAY
@@ -164,8 +171,9 @@ function display_progress(t::ProgressBar)
         print(status_string)
     end
     multiline_postfix_string = newline_to_spaces(t.multilinepostfix, t.width)
-    t.extra_lines = ceil(Int, length(multiline_postfix_string) / t.width)
+    t.extra_lines = ceil(Int, length(multiline_postfix_string) / t.width) + 1
     print(multiline_postfix_string)
+    println() #Newline is required for Python to read in.
 end
 
 
@@ -200,7 +208,7 @@ function postfix_repr(postfix::NamedTuple)::AbstractString
 end
 
 function Base.iterate(iter::ProgressBar)
-    if displaysize(stdout)[2] != iter.width
+    if displaysize(stdout)[2] != iter.width && !iter.fixwidth
         iter.width = displaysize(stdout)[2]
         print("\n"^(iter.extra_lines + 2))
     end
@@ -211,7 +219,7 @@ function Base.iterate(iter::ProgressBar)
 end
 
 function Base.iterate(iter::ProgressBar,s)
-    if displaysize(stdout)[2] != iter.width
+    if displaysize(stdout)[2] != iter.width && !iter.fixwidth
         iter.width = displaysize(stdout)[2]
         print("\n"^(iter.extra_lines + 2))
     end

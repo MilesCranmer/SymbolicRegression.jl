@@ -131,6 +131,7 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     seed::Union{Int, Nothing}
     loss::C
     progress::Bool
+    terminal_width::Union{Int, Nothing}
 
 end
 
@@ -275,7 +276,8 @@ function Options(;
     seed=nothing,
     bin_constraints=nothing,
     una_constraints=nothing,
-    progress=false
+    progress=false,
+    terminal_width=nothing,
    ) where {nuna,nbin}
 
     if hofFile == nothing
@@ -351,7 +353,7 @@ function Options(;
         verbosity = 0
     end
 
-    Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress)
+    Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width)
 end
 
 
