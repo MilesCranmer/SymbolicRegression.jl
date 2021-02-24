@@ -27,7 +27,7 @@ IDLE = collect("╱   ")
 
 PRINTING_DELAY = 0.05 * 1e9
 
-# export ProgressBar, tqdm, set_description, set_postfix
+# export ProgressBar, tqdm, set_description, set_postfix, set_multiline_postfix
 """
 Decorate an iterable object, returning an iterator which acts exactly
 like the original iterable, but prints a dynamically updating
@@ -208,6 +208,10 @@ function postfix_repr(postfix::NamedTuple)::AbstractString
 end
 
 function Base.iterate(iter::ProgressBar)
+    if displaysize(stdout)[2] != iter.width
+        iter.width = displaysize(stdout)[2]
+        print("\n"^(iter.extra_lines + 2))
+    end
     iter.start_time = time_ns() - PRINTING_DELAY
     iter.current = 0
     display_progress(iter)
@@ -215,6 +219,10 @@ function Base.iterate(iter::ProgressBar)
 end
 
 function Base.iterate(iter::ProgressBar,s)
+    if displaysize(stdout)[2] != iter.width
+        iter.width = displaysize(stdout)[2]
+        print("\n"^(iter.extra_lines + 2))
+    end
     iter.current += 1
     if(time_ns() - iter.last_print > PRINTING_DELAY)
         display_progress(iter)
@@ -301,16 +309,19 @@ function newline_to_spaces(string, terminal_width)
     new_string = ""
     width_cumulator = 0
     for c in string
-        if c != '\n'
-            new_string *= c
-            width_cumulator += 1
-        else
+        if c == '\n'
             spaces_required = terminal_width - width_cumulator
             new_string *= " "^spaces_required
+            width_cumulator = 0
+        else
+            new_string *= c
+            width_cumulator += 1
+        end
+        if width_cumulator == terminal_width
             width_cumulator = 0
         end
     end
     return new_string
 end
 
-# end # module
+# end

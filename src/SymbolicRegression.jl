@@ -47,7 +47,6 @@ using Pkg
 using Random: seed!
 using FromFile
 using Reexport
-@from "ProgressBars.jl" import ProgressBar, set_multiline_postfix, clear_progress, display_progress, move_up_1_line, erase_line
 @reexport using LossFunctions
 
 @from "Core.jl" import CONST_TYPE, maxdegree, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
@@ -64,6 +63,7 @@ using Reexport
 @from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
 @from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
 @from "SimplifyEquation.jl" import simplifyWithSymbolicUtils, combineOperators, simplifyTree
+@from "ProgressBars.jl" import ProgressBar, set_multiline_postfix
 
 include("Configure.jl")
 include("Deprecates.jl")
@@ -220,7 +220,8 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     cycles_complete = options.npopulations * niterations
     if options.progress
         progress_bar = ProgressBar(1:cycles_complete)
-        progress_bar_completed_cycles = []
+        cur_cycle = nothing
+        cur_state = nothing
     end
     if options.warmupMaxsize != 0
         curmaxsize += 1
@@ -324,44 +325,48 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                     end
                 end
                 num_equations += options.ncyclesperiteration * options.npop / 10.0
+
+                if options.progress
+                    # set_postfix(iter, Equations=)
+                    equation_strings = string_dominating_pareto_curve(hallOfFame, baselineMSE,
+                                                                      dataset, options,
+                                                                      avgy)
+                    set_multiline_postfix(progress_bar, equation_strings)
+                    if cur_cycle == nothing
+                        (cur_cycle, cur_state) = iterate(progress_bar)
+                    else
+                        (cur_cycle, cur_state) = iterate(progress_bar, cur_state)
+                    end
+                end
+            end
+            elapsed = time() - last_print_time
+            #Update if time has passed, and some new equations generated.
+            if elapsed > print_every_n_seconds && num_equations > 0.0
+                # Dominating pareto curve - must be better than all simpler equations
+                current_speed = num_equations/elapsed
+                average_over_m_measurements = 10 #for print_every...=5, this gives 50 second running average
+                push!(equation_speed, current_speed)
+                if length(equation_speed) > average_over_m_measurements
+                    deleteat!(equation_speed, 1)
+                end
+                if options.verbosity > 0
+                    @printf("\n")
+                    average_speed = sum(equation_speed)/length(equation_speed)
+                    @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
+                    cycles_elapsed = options.npopulations * niterations - cycles_complete
+                    @printf("Progress: %d / %d total iterations (%.3f%%)\n",
+                            cycles_elapsed, options.npopulations * niterations,
+                            100.0*cycles_elapsed/(options.npopulations*niterations))
+                    equation_strings = string_dominating_pareto_curve(hallOfFame, baselineMSE,
+                                                                      dataset, options,
+                                                                      avgy)
+                    print(equation_strings)
+                end
+                last_print_time = time()
+                num_equations = 0.0
             end
         end
         sleep(1e-3)
-        elapsed = time() - last_print_time
-        #Update if time has passed, and some new equations generated.
-        if options.progress
-            # set_postfix(iter, Equations=)
-            equation_strings = string_dominating_pareto_curve(hallOfFame, baselineMSE,
-                                                              dataset, options,
-                                                              avgy)
-            progress_bar.multilinepostfix = equation_strings
-            cur_cycle, progress_bar = Iterators.peel(progress_bar)
-            push!(progress_bar_completed_cycles, cur_cycle)
-        end
-        if elapsed > print_every_n_seconds && num_equations > 0.0
-            # Dominating pareto curve - must be better than all simpler equations
-            current_speed = num_equations/elapsed
-            average_over_m_measurements = 10 #for print_every...=5, this gives 50 second running average
-            push!(equation_speed, current_speed)
-            if length(equation_speed) > average_over_m_measurements
-                deleteat!(equation_speed, 1)
-            end
-            if options.verbosity > 0
-                @printf("\n")
-                average_speed = sum(equation_speed)/length(equation_speed)
-                @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
-                cycles_elapsed = options.npopulations * niterations - cycles_complete
-                @printf("Progress: %d / %d total iterations (%.3f%%)\n",
-                        cycles_elapsed, options.npopulations * niterations,
-                        100.0*cycles_elapsed/(options.npopulations*niterations))
-                equation_strings = string_dominating_pareto_curve(hallOfFame, baselineMSE,
-                                                                  dataset, options,
-                                                                  avgy)
-                print(equation_strings)
-            end
-            last_print_time = time()
-            num_equations = 0.0
-        end
     end
     if we_created_procs
         rmprocs(procs)
