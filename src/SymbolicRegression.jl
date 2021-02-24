@@ -47,6 +47,7 @@ using Pkg
 using Random: seed!
 using FromFile
 using Reexport
+@from "ProgressBars.jl" import ProgressBar
 @reexport using LossFunctions
 
 @from "Core.jl" import CONST_TYPE, maxdegree, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
@@ -217,6 +218,10 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
 
     debug(options.verbosity, "Started!")
     cycles_complete = options.npopulations * niterations
+    if options.progress
+        progress_bar = ProgressBar(1:cycles_complete)
+        progress_bar_completed_cycles = []
+    end
     if options.warmupMaxsize != 0
         curmaxsize += 1
         if curmaxsize > options.maxsize
@@ -324,6 +329,15 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         sleep(1e-3)
         elapsed = time() - last_print_time
         #Update if time has passed, and some new equations generated.
+        if options.progress
+            # set_postfix(iter, Equations=)
+            equation_strings = string_dominating_pareto_curve(hallOfFame, baselineMSE,
+                                                              dataset, options,
+                                                              avgy)
+            progress_bar.multilinepostfix = equation_strings
+            cur_cycle, progress_bar = Iterators.peel(progress_bar)
+            push!(progress_bar_completed_cycles, cur_cycle)
+        end
         if elapsed > print_every_n_seconds && num_equations > 0.0
             # Dominating pareto curve - must be better than all simpler equations
             current_speed = num_equations/elapsed

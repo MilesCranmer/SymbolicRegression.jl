@@ -1,12 +1,13 @@
 """
 Customisable progressbar decorator for iterators.
+Copied from https://github.com/cloud-oak/ProgressBars.jl to allow for custom modifications.
 Usage:
 > using ProgressBars
 > for i in ProgressBar(1:10)
 > ....
 > end
 """
-module ProgressBars
+# module ProgressBars
 
 using Printf
 
@@ -26,7 +27,7 @@ IDLE = collect("╱   ")
 
 PRINTING_DELAY = 0.05 * 1e9
 
-export ProgressBar, tqdm, set_description, set_postfix
+# export ProgressBar, tqdm, set_description, set_postfix
 """
 Decorate an iterable object, returning an iterator which acts exactly
 like the original iterable, but prints a dynamically updating
@@ -42,6 +43,8 @@ mutable struct ProgressBar
     last_print::UInt
     description::AbstractString
     postfix::NamedTuple
+    extra_lines::Int
+    multilinepostfix::AbstractString
     mutex::Threads.SpinLock
 
     function ProgressBar(wrapped::Any; total::Int = -2, width = displaysize(stdout)[2], leave=true)
@@ -53,6 +56,8 @@ mutable struct ProgressBar
         this.last_print = this.start_time - 2 * PRINTING_DELAY
         this.description = ""
         this.postfix = NamedTuple()
+        this.multilinepostfix = ""
+        this.extra_lines = 0
         this.mutex = Threads.SpinLock()
         this.current = 0
 
@@ -114,6 +119,7 @@ function display_progress(t::ProgressBar)
         print(t.description * " ")
     end
 
+
     if (t.total <= 0)
         status_string = "$(t.current)it $elapsed [$iterations_per_second$postfix_string]"
         barwidth -= length(status_string) + 1
@@ -153,12 +159,27 @@ function display_progress(t::ProgressBar)
         print("┫ ")
         print(status_string)
     end
+    multiline_postfix_string = newline_to_spaces(t.multilinepostfix, t.width)
+    print(multiline_postfix_string)
+end
+
+
+erase_to_end_of_line() = print("\033[K")
+move_up_1_line() = print("\033[1A")
+go_to_start_of_line() = print("\033[100C") #print("\r")
+erase_line() = begin
+    go_to_start_of_line()
+    erase_to_end_of_line()
 end
 
 # Clear the progress bar
 function clear_progress(t::ProgressBar)
     # Reset cursor, fill width with empty spaces, and then reset again
-    print("\r", " "^t.width, "\r")
+    for line in 1:(t.extra_lines)
+        erase_line()
+        move_up_1_line()
+    end
+    erase_line()
 end
 
 function set_description(t::ProgressBar, description::AbstractString)
@@ -167,6 +188,11 @@ end
 
 function set_postfix(t::ProgressBar; postfix...)
     t.postfix = values(postfix)
+end
+
+function set_multiline_postfix(t::ProgressBar, postfix::AbstractString)
+    t.extra_lines = 1 + sum([Int(c == '\n') for c in postfix])
+    t.multilinepostfix = postfix
 end
 
 function postfix_repr(postfix::NamedTuple)::AbstractString
@@ -263,4 +289,20 @@ function Base.getindex(iter::ProgressBar, index::Int64)
     return item
 end
 
-end # module
+function newline_to_spaces(string, terminal_width)
+    new_string = ""
+    width_cumulator = 0
+    for c in string
+        if c != '\n'
+            new_string *= c
+            width_cumulator += 1
+        else
+            spaces_required = terminal_width - width_cumulator
+            new_string *= " "^spaces_required
+            width_cumulator = 0
+        end
+    end
+    return new_string
+end
+
+# end # module
