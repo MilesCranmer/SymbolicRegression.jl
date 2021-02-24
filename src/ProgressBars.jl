@@ -112,7 +112,11 @@ function display_progress(t::ProgressBar)
     postfix_string = postfix_repr(t.postfix)
 
     # Reset Cursor to beginning of the line
-    print("\r")
+    for line in 1:t.extra_lines
+        move_up_1_line()
+    end
+    go_to_start_of_line()
+
 
     if t.description != ""
         barwidth -= length(t.description) + 1
@@ -160,13 +164,14 @@ function display_progress(t::ProgressBar)
         print(status_string)
     end
     multiline_postfix_string = newline_to_spaces(t.multilinepostfix, t.width)
+    t.extra_lines = ceil(Int, length(multiline_postfix_string) / t.width)
     print(multiline_postfix_string)
 end
 
 
 erase_to_end_of_line() = print("\033[K")
 move_up_1_line() = print("\033[1A")
-go_to_start_of_line() = print("\033[100C") #print("\r")
+go_to_start_of_line() = print("\r")
 erase_line() = begin
     go_to_start_of_line()
     erase_to_end_of_line()
@@ -191,7 +196,10 @@ function set_postfix(t::ProgressBar; postfix...)
 end
 
 function set_multiline_postfix(t::ProgressBar, postfix::AbstractString)
-    t.extra_lines = 1 + sum([Int(c == '\n') for c in postfix])
+    mistakenly_used_newline_at_start = postfix[1] == '\n' && length(postfix) > 1
+    if mistakenly_used_newline_at_start
+        postfix = postfix[2:end]
+    end
     t.multilinepostfix = postfix
 end
 

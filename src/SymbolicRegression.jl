@@ -47,7 +47,7 @@ using Pkg
 using Random: seed!
 using FromFile
 using Reexport
-@from "ProgressBars.jl" import ProgressBar
+@from "ProgressBars.jl" import ProgressBar, set_multiline_postfix, clear_progress, display_progress, move_up_1_line, erase_line
 @reexport using LossFunctions
 
 @from "Core.jl" import CONST_TYPE, maxdegree, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
