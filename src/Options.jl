@@ -130,6 +130,7 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     nbin::Int
     seed::Union{Int, Nothing}
     loss::C
+    progress::Bool
 
 end
 
@@ -237,6 +238,8 @@ Construct options for `EquationSearch` and other functions.
 - `bin_constraints=nothing`:
 - `una_constraints=nothing`:
 - `seed=nothing`: What random seed to use. `nothing` uses no seed.
+- `progress=false`: Whether to use a progress bar output (`verbosity` will
+    have no effect).
 """
 function Options(;
     binary_operators::NTuple{nbin, Any}=(div, plus, mult),
@@ -271,7 +274,8 @@ function Options(;
     probNegate=0.01f0,
     seed=nothing,
     bin_constraints=nothing,
-    una_constraints=nothing
+    una_constraints=nothing,
+    progress=false
    ) where {nuna,nbin}
 
     if hofFile == nothing
@@ -343,7 +347,11 @@ function Options(;
         end
     end
 
-    Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss)
+    if progress
+        verbosity = 0
+    end
+
+    Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress)
 end
 
 
