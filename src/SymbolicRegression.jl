@@ -143,7 +143,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         seed!(options.seed)
     end
     # Start a population on every process
-    allPopsType = parallel ? Future : Population
+    allPopsType = parallel ? Future : Tuple{Population,HallOfFame}
     allPops = allPopsType[]
     # Set up a channel to send finished populations back to head node
     channels = [RemoteChannel(1) for j=1:options.npopulations]
@@ -200,9 +200,16 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     for i=1:options.npopulations
         worker_idx = next_worker()
         new_pop = if parallel
-            @spawnat worker_idx Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=dataset.nfeatures)
+            (@spawnat worker_idx Population(dataset, baselineMSE,
+                                            npop=options.npop, nlength=3,
+                                            options=options,
+                                            nfeatures=dataset.nfeatures),
+            HallOfFame(options))
         else
-            Population(dataset, baselineMSE, npop=options.npop, nlength=3, options=options, nfeatures=dataset.nfeatures)
+            (Population(dataset, baselineMSE,
+                        npop=options.npop, nlength=3,
+                        options=options,
+                        nfeatures=dataset.nfeatures), HallOfFame(options))
         end
         push!(allPops, new_pop)
     end
@@ -210,9 +217,9 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     for i=1:options.npopulations
         worker_idx = next_worker()
         allPops[i] = if parallel
-            @spawnat worker_idx SRCycle(dataset, baselineMSE, fetch(allPops[i]), options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+            @spawnat worker_idx SRCycle(dataset, baselineMSE, fetch(allPops[i])[1], options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
         else
-            SRCycle(dataset, baselineMSE, allPops[i], options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+            SRCycle(dataset, baselineMSE, allPops[i][1], options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
         end
     end
 
@@ -249,14 +256,16 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
             population_ready = parallel ? isready(channels[i]) : true
             if population_ready
                 # Take the fetch operation from the channel since its ready
-                cur_pop::Population = parallel ? take!(channels[i]) : allPops[i]
+                (cur_pop, best_seen) = parallel ? take!(channels[i]) : allPops[i]
+                cur_pop::Population
+                best_seen::HallOfFame
                 bestSubPops[i] = bestSubPop(cur_pop, topn=options.topn)
                 # bestSubPops[i] = bestSubPopParetoDominating(cur_pop, topn=options.topn)
 
                 #Try normal copy...
                 bestPops = Population([member for pop in bestSubPops for member in pop.members])
 
-                for member in cur_pop.members
+                for member in Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists]))
                     size = countNodes(member.tree)
                     frequencyComplexity[size] += 1
                     # debug(options.verbosity, member, hallOfFame.members[size])
@@ -300,18 +309,20 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                 worker_idx = next_worker()
                 allPops[i] = if parallel
                     @spawnat worker_idx let
-                        tmp_pop = SRCycle(
+                        tmp_pop, tmp_best_seen = SRCycle(
                             dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
                             curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity),
                             verbosity=options.verbosity, options=options)
-                        OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
+                        tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
+                        (tmp_pop, tmp_best_seen)
                     end
                 else
-                    tmp_pop = SRCycle(
+                    tmp_pop, tmp_best_seen = SRCycle(
                         dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
                         curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity),
                         verbosity=options.verbosity, options=options)
-                    OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
+                    tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
+                    (tmp_pop, tmp_best_seen)
                 end
                 if parallel
                     @async put!(channels[i], fetch(allPops[i]))
