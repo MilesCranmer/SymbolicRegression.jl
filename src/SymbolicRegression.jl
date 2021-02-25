@@ -287,7 +287,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                         frequencyComplexity[size] += 1
                     end
                     actualMaxsize = options.maxsize + maxdegree
-                    if size < actualMaxsize && all([member.score < hallOfFame.members[size2].score*1.001 for size2=1:size])
+                    if size < actualMaxsize && all([member.score < hallOfFame.members[size2].score*1.0001 for size2=1:size])
                         hallOfFame.members[size] = copyPopMember(member)
                         hallOfFame.exists[size] = true
                     end
