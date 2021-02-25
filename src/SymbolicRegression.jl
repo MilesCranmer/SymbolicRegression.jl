@@ -220,7 +220,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
             @spawnat worker_idx let
                 tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, fetch(allPops[i])[1], options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
                 tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
-                if !options.batching
+                if options.batching
                     for i_member=1:(options.maxsize + maxdegree)
                         tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
                     end
@@ -230,7 +230,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         else
             tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, allPops[i][1], options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
             tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
-            if !options.batching
+            if options.batching
                 for i_member=1:(options.maxsize + maxdegree)
                     tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
                 end
@@ -331,7 +331,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                             curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity),
                             verbosity=options.verbosity, options=options)
                         tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
-                        if !options.batching
+                        if options.batching
                             for i_member=1:(options.maxsize + maxdegree)
                                 tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
                             end
@@ -344,7 +344,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                         curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity),
                         verbosity=options.verbosity, options=options)
                     tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
-                    if !options.batching
+                    if options.batching
                         for i_member=1:(options.maxsize + maxdegree)
                             tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
                         end
