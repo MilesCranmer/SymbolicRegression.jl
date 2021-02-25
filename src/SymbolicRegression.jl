@@ -217,9 +217,25 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     for i=1:options.npopulations
         worker_idx = next_worker()
         allPops[i] = if parallel
-            @spawnat worker_idx SRCycle(dataset, baselineMSE, fetch(allPops[i])[1], options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+            @spawnat worker_idx let
+                tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, fetch(allPops[i])[1], options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+                tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
+                if !options.batching
+                    for i_member=1:(options.maxsize + maxdegree)
+                        tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
+                    end
+                end
+                (tmp_pop, tmp_best_seen)
+            end
         else
-            SRCycle(dataset, baselineMSE, allPops[i][1], options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+            tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, allPops[i][1], options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
+            tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
+            if !options.batching
+                for i_member=1:(options.maxsize + maxdegree)
+                    tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
+                end
+            end
+            (tmp_pop, tmp_best_seen)
         end
     end
 
@@ -270,8 +286,6 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                     if part_of_cur_pop
                         frequencyComplexity[size] += 1
                     end
-                    # debug(options.verbosity, member, hallOfFame.members[size])
-                    member.score = EvalLoss(member.tree, dataset, options)
                     actualMaxsize = options.maxsize + maxdegree
                     if size < actualMaxsize && all([member.score < hallOfFame.members[size2].score*1.001 for size2=1:size])
                         hallOfFame.members[size] = copyPopMember(member)
@@ -317,6 +331,11 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                             curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity),
                             verbosity=options.verbosity, options=options)
                         tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
+                        if !options.batching
+                            for i_member=1:(options.maxsize + maxdegree)
+                                tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
+                            end
+                        end
                         (tmp_pop, tmp_best_seen)
                     end
                 else
@@ -325,6 +344,11 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                         curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity),
                         verbosity=options.verbosity, options=options)
                     tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
+                    if !options.batching
+                        for i_member=1:(options.maxsize + maxdegree)
+                            tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
+                        end
+                    end
                     (tmp_pop, tmp_best_seen)
                 end
                 if parallel
