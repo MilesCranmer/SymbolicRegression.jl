@@ -101,7 +101,7 @@ function nextGeneration(dataset::Dataset{T},
             return PopMember(tree, beforeLoss)
         end
 
-        successful_mutation = successful_mutation && check_constraints(tree, options)
+        successful_mutation = successful_mutation && check_constraints(tree, options, curmaxsize)
 
         attempts += 1
     end
