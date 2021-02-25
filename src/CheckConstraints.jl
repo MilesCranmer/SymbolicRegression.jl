@@ -66,3 +66,7 @@ function check_constraints(tree::Node, options::Options, maxsize::Int)::Bool
     end
     return true
 end
+
+function check_constraints(tree::Node, options::Options)::Bool
+    check_constraints(tree, options, options.maxsize)
+end

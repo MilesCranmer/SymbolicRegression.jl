@@ -304,14 +304,14 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                             dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
                             curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity),
                             verbosity=options.verbosity, options=options)
-                        OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options)
+                        OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
                     end
                 else
                     tmp_pop = SRCycle(
                         dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
                         curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity),
                         verbosity=options.verbosity, options=options)
-                    OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options)
+                    OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
                 end
                 if parallel
                     @async put!(channels[i], fetch(allPops[i]))

@@ -85,7 +85,7 @@ function nextGeneration(dataset::Dataset{T},
             # SymbolicUtils is quite slow, so only rarely
             #  do we use it for simplification.
             if rand() < 0.01
-                tree = simplifyWithSymbolicUtils(tree, options)
+                tree = simplifyWithSymbolicUtils(tree, options, curmaxsize)
             end
             return PopMember(tree, beforeLoss)
 

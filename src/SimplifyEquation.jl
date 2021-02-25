@@ -114,7 +114,7 @@ end
 
 
 # Expensive but powerful simplify using SymbolicUtils
-function simplifyWithSymbolicUtils(tree::Node, options::Options)::Node
+function simplifyWithSymbolicUtils(tree::Node, options::Options, curmaxsize::Int)::Node
     if !(((+) in options.binops) && ((*) in options.binops))
         return tree
     end
@@ -124,9 +124,13 @@ function simplifyWithSymbolicUtils(tree::Node, options::Options)::Node
     eqn_form = custom_simplify(symbolic_util_form, options)
     final_node = symbolic_to_node(eqn_form, options)
     final_size = countNodes(tree)
-    did_simplification_improve = (final_size <= init_size) && (check_constraints(final_node, options, options.maxsize))
+    did_simplification_improve = (final_size <= init_size) && (check_constraints(final_node, options, curmaxsize))
     output = did_simplification_improve ? final_node : init_node
 
     return output
+end
+
+function simplifyWithSymbolicUtils(tree::Node, options::Options)::Node
+    simplifyWithSymbolicUtils(tree, options, options.maxsize)
 end
 
