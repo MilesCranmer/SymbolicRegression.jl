@@ -25,10 +25,12 @@ jobs:
         julia-version:
           - '1.5'
           - 'nightly'
+          - '1.6-nightly'
         os:
           - ubuntu-latest
           - windows-latest
-    
+          - macOS-latest
+
     steps:
       - uses: actions/checkout@v1.0.0
       - name: "Set up Julia"
