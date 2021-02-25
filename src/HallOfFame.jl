@@ -45,7 +45,7 @@ function calculateParetoFrontier(dataset::Dataset{T},
             member.score = curMSE
             betterThanAllSmaller = all([
                 (!(hallOfFame.exists[i])
-                 || curMSE < EvalLoss(hallOfFame.members[i].tree, dataset, options)*1.0001)
+                 || curMSE < EvalLoss(hallOfFame.members[i].tree, dataset, options))
                 for i=1:(size-1)
             ])
             if betterThanAllSmaller
@@ -94,7 +94,7 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE,
             betterThanAllSmaller = all([
                     (
                          !(hallOfFame.exists[i])
-                         || curMSE < EvalLoss(hallOfFame.members[i].tree, dataset, options)*1.0001
+                         || curMSE < EvalLoss(hallOfFame.members[i].tree, dataset, options)
                     ) for i=1:(size-1)
                ])
             if betterThanAllSmaller
