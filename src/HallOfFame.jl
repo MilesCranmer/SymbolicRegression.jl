@@ -43,15 +43,11 @@ function calculateParetoFrontier(dataset::Dataset{T},
             member = hallOfFame.members[size]
             curMSE = EvalLoss(member.tree, dataset, options)
             member.score = curMSE
-            numberSmallerAndBetter = 0
-            for i=1:(size-1)
-                hofMSE = EvalLoss(hallOfFame.members[i].tree, dataset, options)
-                if (hallOfFame.exists[size] && curMSE > hofMSE)
-                    numberSmallerAndBetter += 1
-                    break
-                end
-            end
-            betterThanAllSmaller = (numberSmallerAndBetter == 0)
+            betterThanAllSmaller = all([
+                (!(hallOfFame.exists[i])
+                 || curMSE < EvalLoss(hallOfFame.members[i].tree, dataset, options)*1.001)
+                for i=1:(size-1)
+            ])
             if betterThanAllSmaller
                 push!(dominating, member)
             end
@@ -88,7 +84,6 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE,
     output *= "Hall of Fame:\n"
     output *= "-----------------------------------------\n"
     output *= @sprintf("%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation")
-    output *= @sprintf("%-10d  %-8.3e  %-8.3e  %-.f\n", 0, curMSE, 0f0, avgy)
 
     #TODO - call pareto function!
     actualMaxsize = options.maxsize + maxdegree
@@ -96,15 +91,12 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE,
         if hallOfFame.exists[size]
             member = hallOfFame.members[size]
             curMSE = EvalLoss(member.tree, dataset, options)
-            numberSmallerAndBetter = 0
-            for i=1:(size-1)
-                hofMSE = EvalLoss(hallOfFame.members[i].tree, dataset, options)
-                if (hallOfFame.exists[size] && curMSE > hofMSE)
-                    numberSmallerAndBetter += 1
-                    break
-                end
-            end
-            betterThanAllSmaller = (numberSmallerAndBetter == 0)
+            betterThanAllSmaller = all([
+                    (
+                         !(hallOfFame.exists[i])
+                         || curMSE < EvalLoss(hallOfFame.members[i].tree, dataset, options)*1.001
+                    ) for i=1:(size-1)
+               ])
             if betterThanAllSmaller
                 delta_c = size - lastComplexity
                 delta_l_mse = log(curMSE/lastMSE)

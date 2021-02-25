@@ -260,17 +260,20 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                 cur_pop::Population
                 best_seen::HallOfFame
                 bestSubPops[i] = bestSubPop(cur_pop, topn=options.topn)
-                # bestSubPops[i] = bestSubPopParetoDominating(cur_pop, topn=options.topn)
 
                 #Try normal copy...
                 bestPops = Population([member for pop in bestSubPops for member in pop.members])
 
-                for member in Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists]))
+                for (i_member, member) in enumerate(Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists])))
+                    part_of_cur_pop = i_member <= length(cur_pop.members)
                     size = countNodes(member.tree)
-                    frequencyComplexity[size] += 1
+                    if part_of_cur_pop
+                        frequencyComplexity[size] += 1
+                    end
                     # debug(options.verbosity, member, hallOfFame.members[size])
+                    member.score = EvalLoss(member.tree, dataset, options)
                     actualMaxsize = options.maxsize + maxdegree
-                    if size < actualMaxsize && member.score < hallOfFame.members[size].score
+                    if size < actualMaxsize && all([member.score < hallOfFame.members[size2].score*1.001 for size2=1:size])
                         hallOfFame.members[size] = copyPopMember(member)
                         hallOfFame.exists[size] = true
                     end
