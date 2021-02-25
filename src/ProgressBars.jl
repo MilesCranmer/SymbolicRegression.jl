@@ -45,7 +45,6 @@ mutable struct ProgressBar
     description::AbstractString
     postfix::NamedTuple
     extra_lines::Int
-    last_extra_lines::Int
     multilinepostfix::AbstractString
     mutex::Threads.SpinLock
 
@@ -66,7 +65,6 @@ mutable struct ProgressBar
         this.postfix = NamedTuple()
         this.multilinepostfix = ""
         this.extra_lines = 0
-        this.last_extra_lines = 0
         this.mutex = Threads.SpinLock()
         this.current = 0
 
@@ -173,7 +171,6 @@ function display_progress(t::ProgressBar)
         print(status_string)
     end
     multiline_postfix_string = newline_to_spaces(t.multilinepostfix, t.width)
-    t.last_extra_lines = t.extra_lines
     t.extra_lines = ceil(Int, length(multiline_postfix_string) / t.width) + 1
     print(multiline_postfix_string)
     println() #Newline is required for Python to read in.
@@ -182,7 +179,6 @@ end
 
 erase_to_end_of_line() = print("\033[K")
 move_up_1_line() = print("\033[1A")
-move_down_1_line() = print("\033[1B")
 go_to_start_of_line() = print("\r")
 erase_line() = begin
     go_to_start_of_line()
@@ -192,12 +188,7 @@ end
 # Clear the progress bar
 function clear_progress(t::ProgressBar)
     # Reset cursor, fill width with empty spaces, and then reset again
-    if t.last_extra_lines > t.extra_lines
-        for line in 1:(t.last_extra_lines - t.extra_lines)
-            move_down_1_line()
-        end
-    end
-    for line in 1:max(t.extra_lines, t.last_extra_lines)
+    for line in 1:(t.extra_lines)
         erase_line()
         move_up_1_line()
     end
