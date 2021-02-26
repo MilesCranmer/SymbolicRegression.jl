@@ -357,7 +357,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
 
                 cycles_complete -= 1
                 cycles_elapsed = options.npopulations * niterations - cycles_complete
-                if options.warmupMaxsize != 0 && cycles_elapsed % options.warmupMaxsize == 0
+                if options.warmupMaxsize != 0
                     curmaxsize += 1
                     if curmaxsize > options.maxsize
                         curmaxsize = options.maxsize
