@@ -117,19 +117,24 @@ function nextGeneration(dataset::Dataset{T},
         afterLoss = scoreFunc(dataset, baseline, tree, options)
     end
 
+    if isnan(afterLoss)
+        return PopMember(copyNode(prev), beforeLoss)
+    end
+
+    probChange = 1.0
     if options.annealing
         delta = afterLoss - beforeLoss
-        probChange = exp(-delta/(temperature*options.alpha))
-        if options.useFrequency
-            oldSize = countNodes(prev)
-            newSize = countNodes(tree)
-            probChange *= frequencyComplexity[oldSize] / frequencyComplexity[newSize]
-        end
-
-        return_unaltered = (isnan(afterLoss) || probChange < rand())
-        if return_unaltered
-            return PopMember(copyNode(prev), beforeLoss)
-        end
+        probChange *= exp(-delta/(temperature*options.alpha))
     end
-    return PopMember(tree, afterLoss)
+    if options.useFrequency
+        oldSize = countNodes(prev)
+        newSize = countNodes(tree)
+        probChange *= frequencyComplexity[oldSize] / frequencyComplexity[newSize]
+    end
+
+    if probChange < rand()
+        return PopMember(copyNode(prev), beforeLoss)
+    else
+        return PopMember(tree, afterLoss)
+    end
 end
