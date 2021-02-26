@@ -318,6 +318,10 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                     end
                 end
 
+                cycles_remaining -= 1
+                if cycles_remaining == 0
+                    break
+                end
                 worker_idx = next_worker()
                 allPops[i] = if parallel
                     @spawnat worker_idx let
@@ -350,7 +354,6 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                     @async put!(channels[i], fetch(allPops[i]))
                 end
 
-                cycles_remaining -= 1
                 cycles_elapsed = total_cycles - cycles_remaining
                 if options.warmupMaxsizeBy > 0
                     fraction_elapsed = 1f0 * cycles_elapsed / total_cycles
