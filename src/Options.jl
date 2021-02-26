@@ -118,7 +118,7 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     batching::Bool
     batchSize::Int
     mutationWeights::Array{Float64, 1}
-    warmupMaxsize::Int
+    warmupMaxsizeBy::Float32
     useFrequency::Bool
     npop::Int
     ncyclesperiteration::Int
@@ -266,7 +266,7 @@ function Options(;
     batching=false,
     batchSize=50,
     mutationWeights=[10.000000, 1.000000, 1.000000, 3.000000, 3.000000, 0.010000, 1.000000, 1.000000],
-    warmupMaxsize=0,
+    warmupMaxsizeBy=0f0,
     useFrequency=false,
     npop=1000,
     ncyclesperiteration=300,
@@ -278,11 +278,19 @@ function Options(;
     una_constraints=nothing,
     progress=false,
     terminal_width=nothing,
+    warmupMaxsize=nothing,
    ) where {nuna,nbin}
+
+    if warmupMaxsize != nothing
+        error("warmupMaxsize is deprecated. Please use warmupMaxsizeBy, and give the time at which the warmup will end as a fraction of the total search cycles.")
+    end
 
     if hofFile == nothing
         hofFile = "hall_of_fame.csv" #TODO - put in date/time string here
     end
+
+    @assert maxsize > 3
+    @assert warmupMaxsizeBy >= 0f0
 
     constraints::Union{Tuple,Array{Pair{Any,Any}, 1},Nothing}
 
@@ -353,7 +361,7 @@ function Options(;
         verbosity = 0
     end
 
-    Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsize, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width)
+    Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width)
 end
 
 

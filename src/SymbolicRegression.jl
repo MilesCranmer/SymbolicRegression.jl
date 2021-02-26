@@ -152,7 +152,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     actualMaxsize = options.maxsize + maxdegree
     frequencyComplexity = ones(T, actualMaxsize)
     curmaxsize = 3
-    if options.warmupMaxsize == 0
+    if options.warmupMaxsizeBy == 0f0
         curmaxsize = options.maxsize
     end
 
@@ -240,18 +240,13 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
     end
 
     debug(options.verbosity > 0 || options.progress, "Started!")
-    cycles_complete = options.npopulations * niterations
+    total_cycles = options.npopulations * niterations
+    cycles_remaining = total_cycles
     if options.progress
-        progress_bar = ProgressBar(1:cycles_complete;
+        progress_bar = ProgressBar(1:cycles_remaining;
                                    width=options.terminal_width)
         cur_cycle = nothing
         cur_state = nothing
-    end
-    if options.warmupMaxsize != 0
-        curmaxsize += 1
-        if curmaxsize > options.maxsize
-            curmaxsize = options.maxsize
-        end
     end
 
     last_print_time = time()
@@ -266,7 +261,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
         end
     end
 
-    while cycles_complete > 0
+    while cycles_remaining > 0
         for i=1:options.npopulations
             # Non-blocking check if a population is ready:
             population_ready = parallel ? isready(channels[i]) : true
@@ -355,12 +350,14 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                     @async put!(channels[i], fetch(allPops[i]))
                 end
 
-                cycles_complete -= 1
-                cycles_elapsed = options.npopulations * niterations - cycles_complete
-                if options.warmupMaxsize != 0
-                    curmaxsize += 1
-                    if curmaxsize > options.maxsize
+                cycles_remaining -= 1
+                cycles_elapsed = total_cycles - cycles_remaining
+                if options.warmupMaxsizeBy > 0
+                    fraction_elapsed = 1f0 * cycles_elapsed / total_cycles
+                    if fraction_elapsed > options.warmupMaxsizeBy
                         curmaxsize = options.maxsize
+                    else
+                        curmaxsize = 3 + floor(Int, (options.maxsize - 3) * fraction_elapsed / options.warmupMaxsizeBy)
                     end
                 end
                 num_equations += options.ncyclesperiteration * options.npop / 10.0
@@ -392,10 +389,10 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractVector{T};
                     @printf("\n")
                     average_speed = sum(equation_speed)/length(equation_speed)
                     @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
-                    cycles_elapsed = options.npopulations * niterations - cycles_complete
+                    cycles_elapsed = total_cycles - cycles_remaining
                     @printf("Progress: %d / %d total iterations (%.3f%%)\n",
-                            cycles_elapsed, options.npopulations * niterations,
-                            100.0*cycles_elapsed/(options.npopulations*niterations))
+                            cycles_elapsed, total_cycles,
+                            100.0*cycles_elapsed/total_cycles)
                     equation_strings = string_dominating_pareto_curve(hallOfFame, baselineMSE,
                                                                       dataset, options,
                                                                       avgy)
