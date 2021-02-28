@@ -6,6 +6,7 @@ version = "0.5.12"
 [deps]
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 FromFile = "ff7dd447-1dcb-4ce3-b8ac-22a812192de7"
+LineSearches = "d3d80556-e9d4-5f37-9878-2ab0fcc64255"
 LossFunctions = "30fc2ffe-d236-52d8-8643-a9d8f7c094a7"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
@@ -17,6 +18,8 @@ SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 
 [compat]
 FromFile = "0.1.0"
+# Optim.jl will control these:
+LineSearches = "1, 2, 3, 4, 5, 6, 7"
 LossFunctions = "0.6"
 Optim = "0.17, 1.1"
 Pkg = "1"

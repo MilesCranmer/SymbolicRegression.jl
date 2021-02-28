@@ -112,7 +112,6 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     shouldOptimizeConstants::Bool
     hofFile::String
     npopulations::Int
-    nrestarts::Int
     perturbationFactor::Float32
     annealing::Bool
     batching::Bool
@@ -132,7 +131,10 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     loss::C
     progress::Bool
     terminal_width::Union{Int, Nothing}
-    constant_optimizer::String
+    optimizer_algorithm::String
+    optimize_probability::Float32
+    optimizer_nrestarts::Int
+    optimizer_iterations::Int
 
 end
 
@@ -223,7 +225,7 @@ Construct options for `EquationSearch` and other functions.
     equations at the end of each cycle.
 - `shouldOptimizeConstants=true`: Whether to use NelderMead optimization
     to periodically optimize constants in equations.
-- `nrestarts=3`: How many different random starting positions to consider
+- `optimizer_nrestarts=3`: How many different random starting positions to consider
     when using NelderMead optimization.
 - `hofFile=nothing`: What file to store equations to, as a backup.
 - `perturbationFactor=1.000000f0`: When mutating a constant, either
@@ -261,7 +263,6 @@ function Options(;
     shouldOptimizeConstants=true,
     hofFile=nothing,
     npopulations=nothing,
-    nrestarts=3,
     perturbationFactor=1.000000f0,
     annealing=true,
     batching=false,
@@ -280,9 +281,16 @@ function Options(;
     progress=false,
     terminal_width=nothing,
     warmupMaxsize=nothing,
-    constant_optimizer="NelderMead",
+    optimizer_algorithm="NelderMead",
+    optimizer_nrestarts=3,
+    optimize_probability=0.1f0,
+    optimizer_iterations=100,
+    nrestarts=nothing,
    ) where {nuna,nbin}
 
+    if nrestarts != nothing
+        optimizer_nrestarts = nrestarts
+    end
     if warmupMaxsize != nothing
         error("warmupMaxsize is deprecated. Please use warmupMaxsizeBy, and give the time at which the warmup will end as a fraction of the total search cycles.")
     end
@@ -363,7 +371,7 @@ function Options(;
         verbosity = 0
     end
 
-    Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, constant_optimizer)
+    Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations)
 end
 
 

@@ -1,4 +1,5 @@
 using FromFile
+import LineSearches
 import Optim
 @from "Core.jl" import CONST_TYPE, Node, Options, Dataset
 @from "Utils.jl" import getTime
@@ -27,30 +28,29 @@ function optimizeConstants(dataset::Dataset{T},
     differentiable_f(x::Vector{CONST_TYPE})::T = optFunc(x, dataset, baseline, member.tree, options; allow_diff=true)
     use_differentiable = false
     if nconst == 1
-        algorithm = Optim.Newton
+        algorithm = Optim.Newton()
     else
-        if options.constant_optimizer == "NelderMead"
-            algorithm = Optim.NelderMead
-        elseif options.constant_optimizer == "BFGS"
+        if options.optimizer_algorithm == "NelderMead"
+            algorithm = Optim.NelderMead()
+        elseif options.optimizer_algorithm == "BFGS"
             use_differentiable = true
-            algorithm = Optim.BFGS
+            algorithm = Optim.BFGS(linesearch=LineSearches.BackTracking())#order=3))
         else
             error("Optimization function not implemented.")
         end
     end
-
     result = if !use_differentiable
-        Optim.optimize(f, x0, algorithm(), Optim.Options(iterations=100))
+        Optim.optimize(f, x0, algorithm, Optim.Options(iterations=options.optimizer_iterations))
     else
-         Optim.optimize(differentiable_f, x0, algorithm(), Optim.Options(iterations=100))
+         Optim.optimize(differentiable_f, x0, algorithm, Optim.Options(iterations=options.optimizer_iterations))
     end
     # Try other initial conditions:
-    for i=1:options.nrestarts
+    for i=1:options.optimizer_nrestarts
         new_start = x0 .* (convert(CONST_TYPE, 1) .+ convert(CONST_TYPE, 1//2)*randn(CONST_TYPE, size(x0, 1)))
         tmpresult = if !use_differentiable
-             Optim.optimize(f, new_start, algorithm(), Optim.Options(iterations=100))
+             Optim.optimize(f, new_start, algorithm, Optim.Options(iterations=options.optimizer_iterations))
         else
-             Optim.optimize(differentiable_f, new_start, algorithm(), Optim.Options(iterations=100))
+             Optim.optimize(differentiable_f, new_start, algorithm, Optim.Options(iterations=options.optimizer_iterations))
         end
 
         if tmpresult.minimum < result.minimum
