@@ -56,10 +56,13 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu]
             y = map(x->convert(T, x), f_true.(X[1, :]))
             dataset = Dataset(X, y)
             test_y, complete = evalTreeArray(tree, X, make_options())
+            test_y2, complete2 = differentiableEvalTreeArray(tree, X, make_options())
 
             # Test Evaluation
             @test complete == true
-            @test all(abs.(test_y - y)/N .< zero_tolerance)
+            @test all(abs.(test_y .- y)/N .< zero_tolerance)
+            @test complete2 == true
+            @test all(abs.(test_y2 .- y)/N .< zero_tolerance)
 
             #Test Scoring
             @test abs(EvalLoss(tree, dataset, make_options())) < zero_tolerance
