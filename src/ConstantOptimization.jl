@@ -8,9 +8,9 @@ import Optim
 
 # Proxy function for optimization
 function optFunc(x::Vector{CONST_TYPE}, dataset::Dataset{T}, baseline::T,
-                 tree::Node, options::Options)::T where {T<:Real}
+                 tree::Node, options::Options; allow_diff=false)::T where {T<:Real}
     setConstants(tree, x)
-    return scoreFunc(dataset, baseline, tree, options)
+    return scoreFunc(dataset, baseline, tree, options; allow_diff=allow_diff)
 end
 
 # Use Nelder-Mead to optimize the constants in an equation
@@ -23,11 +23,18 @@ function optimizeConstants(dataset::Dataset{T},
         return member
     end
     x0 = getConstants(member.tree)
-    f(x::Vector{CONST_TYPE})::T = optFunc(x, dataset, baseline, member.tree, options)
     if nconst == 1
         algorithm = Optim.Newton
     else
-        algorithm = Optim.NelderMead
+        if options.constant_optimizer == "NelderMead"
+            algorithm = Optim.NelderMead
+            f(x::Vector{CONST_TYPE})::T = optFunc(x, dataset, baseline, member.tree, options; allow_diff=false)
+        elseif options.constant_optimizer == "BFGS"
+            algorithm = Optim.BFGS
+            f(x::Vector{CONST_TYPE})::T = optFunc(x, dataset, baseline, member.tree, options; allow_diff=true)
+        else
+            error("Optimization function not implemented.")
+        end
     end
 
     result = Optim.optimize(f, x0, algorithm(), Optim.Options(iterations=100))

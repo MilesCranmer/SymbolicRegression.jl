@@ -3,7 +3,7 @@ using Random: randperm
 using LossFunctions
 @from "Core.jl" import Options, Dataset, Node
 @from "EquationUtils.jl" import countNodes
-@from "EvaluateEquation.jl" import evalTreeArray
+@from "EvaluateEquation.jl" import evalTreeArray, unfusedEvalTreeArray
 
 
 function Loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,C})::T where {T<:Real,A,B,C<:SupervisedLoss}
@@ -22,8 +22,13 @@ end
 
 # Loss function. Only MSE implemented right now. TODO
 # Also need to put actual loss function in scoreFuncBatch!
-function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options)::T where {T<:Real}
-    (prediction, completion) = evalTreeArray(tree, dataset.X, options)
+function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options;
+                  allow_diff=false)::T where {T<:Real}
+    if !allow_diff
+        (prediction, completion) = evalTreeArray(tree, dataset.X, options)
+    else
+        (prediction, completion) = unfusedEvalTreeArray(tree, dataset.X, options)
+    end
     if !completion
         return convert(T, 1000000000)
     end
@@ -38,8 +43,8 @@ end
 # Score an equation
 function scoreFunc(dataset::Dataset{T},
                    baseline::T, tree::Node,
-                   options::Options)::T where {T<:Real}
-    mse = EvalLoss(tree, dataset, options)
+                   options::Options; allow_diff=false)::T where {T<:Real}
+    mse = EvalLoss(tree, dataset, options; allow_diff=allow_diff)
     return mse / baseline + countNodes(tree)*options.parsimony
 end
 

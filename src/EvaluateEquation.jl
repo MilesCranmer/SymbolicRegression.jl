@@ -1,17 +1,6 @@
 using FromFile
 @from "Core.jl" import Node, Options
 
-# Evaluate an equation over an array of datapoints
-# This one is just for reference. The fused one should be faster.
-function unfusedEvalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
-    if tree.degree == 0
-        deg0_eval(tree, cX, options)
-    elseif tree.degree == 1
-        deg1_eval_unfused(tree, cX, Val(tree.op), options)
-    else
-        deg2_eval_unfused(tree, cX, Val(tree.op), options)
-    end
-end
 
 """
     evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)
@@ -64,22 +53,6 @@ macro return_on_false(flag, retval)
     :(if !$(esc(flag))
           return ($(esc(retval)), false)
     end)
-end
-
-function deg2_eval_unfused(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
-    n = size(cX, 2)
-    (cumulator, complete) = unfusedEvalTreeArray(tree.l, cX, options)
-    @return_on_false complete cumulator
-    (array2, complete2) = unfusedEvalTreeArray(tree.r, cX, options)
-    @return_on_false complete2 cumulator
-    op = options.binops[op_idx]
-    finished_loop = true
-    @inbounds @simd for j=1:n
-        x = op(cumulator[j], array2[j])::T
-        @break_on_check x finished_loop
-        cumulator[j] = x
-    end
-    return (cumulator, finished_loop)
 end
 
 function deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
@@ -270,4 +243,16 @@ function deg2_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
         end
     end
     return (cumulator, finished_loop)
+end
+
+# Evaluate an equation over an array of datapoints
+# This one is just for reference. The fused one should be faster.
+function unfusedEvalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
+    if tree.degree == 0
+        deg0_eval(tree, cX, options)
+    elseif tree.degree == 1
+        deg1_eval_unfused(tree, cX, Val(tree.op), options)
+    else
+        deg2_eval_unfused(tree, cX, Val(tree.op), options)
+    end
 end

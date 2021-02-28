@@ -132,6 +132,7 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     loss::C
     progress::Bool
     terminal_width::Union{Int, Nothing}
+    optimization_function::String
 
 end
 
@@ -279,6 +280,7 @@ function Options(;
     progress=false,
     terminal_width=nothing,
     warmupMaxsize=nothing,
+    optimization_function="NelderMead",
    ) where {nuna,nbin}
 
     if warmupMaxsize != nothing
@@ -361,7 +363,7 @@ function Options(;
         verbosity = 0
     end
 
-    Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width)
+    Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, nrestarts, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimization_function)
 end
 
 
