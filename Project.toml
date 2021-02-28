@@ -1,7 +1,7 @@
 name = "SymbolicRegression"
 uuid = "8254be44-1295-4e6a-a16d-46603ac705cb"
 authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
-version = "0.5.12"
+version = "0.5.13"
 
 [deps]
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
@@ -18,10 +18,9 @@ SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 
 [compat]
 FromFile = "0.1.0"
-# Optim.jl will control these:
-LineSearches = "1, 2, 3, 4, 5, 6, 7"
+LineSearches = "7"
 LossFunctions = "0.6"
-Optim = "0.17, 1.1"
+Optim = "0.19-0, 1.1"
 Pkg = "1"
 Reexport = "1"
 SpecialFunctions = "0.10.1, 1"
