@@ -248,6 +248,7 @@ end
 # Evaluate an equation over an array of datapoints
 # This one is just for reference. The fused one should be faster.
 function differentiableEvalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
+    n = size(cX, 2)
     if tree.degree == 0
         if tree.constant
             return (ones(T, n) .* tree.val, true)
