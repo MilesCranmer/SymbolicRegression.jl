@@ -9,6 +9,7 @@ on:
       - 'test/**'
       - 'src/**'
       - '.github/workflows/**'
+      - 'Project.toml'
   pull_request:
     branches:
       - master
@@ -16,6 +17,7 @@ on:
       - 'test/**'
       - 'src/**'
       - '.github/workflows/**'
+      - 'Project.toml'
 
 jobs:
   test:
