@@ -5,8 +5,8 @@ using SymbolicRegression: stringTree
 using Random
 
 x1=0.1f0; x2=0.1f0; x3=0.1f0; x4=0.1f0; x5=0.1f0
-for batching in [false, true]
-    for weighted in [false, true]
+for batching in [true, false]
+    for weighted in [true, false]
         numprocs = 4
         progress = false
         warmupMaxsizeBy = 0f0
