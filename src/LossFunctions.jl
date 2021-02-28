@@ -30,7 +30,7 @@ function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options;
         (prediction, completion) = differentiableEvalTreeArray(tree, dataset.X, options)
     end
     if !completion
-        return convert(T, 1000000000)
+        return T(1000000000)
     end
 
     if dataset.weighted
@@ -57,7 +57,7 @@ function scoreFuncBatch(dataset::Dataset{T}, baseline::T,
     batch_y = dataset.y[batch_idx]
     (prediction, completion) = evalTreeArray(tree, batch_X, options)
     if !completion
-        return convert(T, 1000000000)
+        return T(1000000000)
     end
 
     if !dataset.weighted
