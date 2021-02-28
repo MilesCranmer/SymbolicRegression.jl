@@ -1,5 +1,5 @@
 using SymbolicRegression, SymbolicUtils, Test, Random
-using SymbolicRegression: Options, stringTree, evalTreeArray, Dataset
+using SymbolicRegression: Options, stringTree, evalTreeArray, Dataset, differentiableEvalTreeArray
 using SymbolicRegression: printTree, pow, EvalLoss, scoreFunc, Node
 using SymbolicRegression: plus, sub, mult, square, cube, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
 using SymbolicRegression: node_to_symbolic, symbolic_to_node

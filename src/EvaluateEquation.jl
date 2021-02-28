@@ -247,12 +247,38 @@ end
 
 # Evaluate an equation over an array of datapoints
 # This one is just for reference. The fused one should be faster.
-function unfusedEvalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
+function differentiableEvalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
     if tree.degree == 0
-        deg0_eval(tree, cX, options)
+        if tree.constant
+            return (ones(T, n) .* tree.val, true)
+        else
+            return (cX[tree.feature, :], true)
+        end
     elseif tree.degree == 1
-        deg1_eval_unfused(tree, cX, Val(tree.op), options)
+        return deg1_diff_eval(tree, cX, Val(tree.op), options)
     else
-        deg2_eval_unfused(tree, cX, Val(tree.op), options)
+        return deg2_diff_eval(tree, cX, Val(tree.op), options)
     end
+end
+
+function deg1_diff_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
+    n = size(cX, 2)
+    (left, complete) = evalTreeArray(tree.l, cX, options)
+    @return_on_false complete left
+    op = options.unaops[op_idx]
+    out = op.(left)
+    no_nans = !any(x -> (isnan(x) || !isfinite(x)), out)
+    return (out, no_nans)
+end
+
+function deg2_diff_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
+    n = size(cX, 2)
+    (left, complete) = evalTreeArray(tree.l, cX, options)
+    @return_on_false complete left
+    (right, complete2) = evalTreeArray(tree.r, cX, options)
+    @return_on_false complete2 left
+    op = options.binops[op_idx]
+    out = op.(left, right)
+    no_nans = !any(x -> (isnan(x) || !isfinite(x)), out)
+    return (out, no_nans)
 end

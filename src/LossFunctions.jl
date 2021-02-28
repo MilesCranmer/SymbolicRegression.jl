@@ -3,7 +3,7 @@ using Random: randperm
 using LossFunctions
 @from "Core.jl" import Options, Dataset, Node
 @from "EquationUtils.jl" import countNodes
-@from "EvaluateEquation.jl" import evalTreeArray, unfusedEvalTreeArray
+@from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
 
 
 function Loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,C})::T where {T<:Real,A,B,C<:SupervisedLoss}
@@ -27,7 +27,7 @@ function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options;
     if !allow_diff
         (prediction, completion) = evalTreeArray(tree, dataset.X, options)
     else
-        (prediction, completion) = unfusedEvalTreeArray(tree, dataset.X, options)
+        (prediction, completion) = differentiableEvalTreeArray(tree, dataset.X, options)
     end
     if !completion
         return convert(T, 1000000000)

@@ -16,6 +16,7 @@ export Population,
     printTree,
     stringTree,
     evalTreeArray,
+    differentiableEvalTreeArray,
     node_to_symbolic,
     symbolic_to_node,
     custom_simplify,
@@ -52,7 +53,7 @@ using Reexport
 @from "Core.jl" import CONST_TYPE, maxdegree, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
 @from "Utils.jl" import debug, debug_inline, is_anonymous_function
 @from "EquationUtils.jl" import countNodes, printTree, stringTree
-@from "EvaluateEquation.jl" import evalTreeArray
+@from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
 @from "CheckConstraints.jl" import check_constraints
 @from "MutationFunctions.jl" import genRandomTree
 @from "LossFunctions.jl" import EvalLoss, Loss, scoreFunc
