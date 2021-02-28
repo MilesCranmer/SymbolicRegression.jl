@@ -26,8 +26,9 @@ SymbolicUtils = "0.6"
 julia = "1.5"
 
 [extras]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "SafeTestsets"]
+test = ["Test", "SafeTestsets", "ForwardDiff"]

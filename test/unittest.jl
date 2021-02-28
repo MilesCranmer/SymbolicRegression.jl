@@ -1,4 +1,4 @@
-using SymbolicRegression, SymbolicUtils, Test, Random
+using SymbolicRegression, SymbolicUtils, Test, Random, ForwardDiff
 using SymbolicRegression: Options, stringTree, evalTreeArray, Dataset, differentiableEvalTreeArray
 using SymbolicRegression: printTree, pow, EvalLoss, scoreFunc, Node
 using SymbolicRegression: plus, sub, mult, square, cube, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
@@ -13,8 +13,7 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu]
         function make_options(;kw...)
             Options(
                 binary_operators=(+, *, ^, /, binop),
-                unary_operators=(unaop,),
-                npopulations=4;
+                unary_operators=(unaop,), npopulations=4;
                 kw...
             )
         end
@@ -51,9 +50,9 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu]
 
             Random.seed!(0)
             N = 100
-            X = map(x->convert(T, x), randn(MersenneTwister(0), Float64, 5, N)/3)
-            X = X + sign.(X) * convert(T, 0.1)
-            y = map(x->convert(T, x), f_true.(X[1, :]))
+            X = T.(randn(MersenneTwister(0), Float64, 5, N)/3)
+            X = X + sign.(X) * T(0.1)
+            y = T.(f_true.(X[1, :]))
             dataset = Dataset(X, y)
             test_y, complete = evalTreeArray(tree, X, make_options())
             test_y2, complete2 = differentiableEvalTreeArray(tree, X, make_options())
@@ -71,6 +70,14 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu]
             @test scoreFunc(dataset, one(T), tree, make_options()) < scoreFunc(dataset, one(T), tree_bad, make_options())
             @test scoreFunc(dataset, one(T)*10, tree_bad, make_options()) < scoreFunc(dataset, one(T), tree_bad, make_options())
 
+            # Test gradients:
+            df_true = x -> ForwardDiff.derivative(f_true, x)
+            dy = T.(df_true.(X[1, :]))
+            test_dy = (x -> ForwardDiff.gradient(
+                 _x -> sum(differentiableEvalTreeArray(tree, _x, make_options())[1]),
+                x)
+            )(X)[1, :]
+            @test all(abs.(test_dy .- dy)/N .< zero_tolerance)
         end
     end
 end
