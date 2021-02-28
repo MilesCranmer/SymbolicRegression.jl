@@ -10,10 +10,12 @@ for batching in [true, false]
         numprocs = 4
         progress = false
         warmupMaxsizeBy = 0f0
+        optimizer_algorithm = "NelderMead"
         if weighted && batching
             numprocs = 0 #Try serial computation here.
             progress = true #Also try the progress bar.
             warmupMaxsizeBy = 0.5f0 #Smaller maxsize at first, build up slowly
+            optimizer_algorithm = "BFGS"
         end
         options = SymbolicRegression.Options(
             binary_operators=(+, *),
@@ -22,7 +24,8 @@ for batching in [true, false]
             batching=batching,
             seed=0,
             progress=progress,
-            warmupMaxsizeBy=warmupMaxsizeBy
+            warmupMaxsizeBy=warmupMaxsizeBy,
+            optimizer_algorithm=optimizer_algorithm
         )
         X = randn(MersenneTwister(0), Float32, 5, 100)
         if weighted
