@@ -47,6 +47,9 @@ end
 function log10_abs(x::T)::T where {T<:Real}
     log10(abs(x) + convert(T, 1//100000000))
 end
+function acosh_abs(x::T)::T where {T<:Real}
+    acosh(abs(x) + convert(T, 1))
+end
 
 # Generics:
 square(x) = x * x
@@ -59,6 +62,7 @@ div(x, y) = x / y
 log_abs(x) = log(abs(x) + 1//100000000)
 log2_abs(x) = log2(abs(x) + 1//100000000)
 log10_abs(x) = log10(abs(x) + 1//100000000)
+acosh_abs(x) = acosh(abs(x) + 1)
 
 function sqrt_abs(x::T)::T where {T}
 	sqrt(abs(x))

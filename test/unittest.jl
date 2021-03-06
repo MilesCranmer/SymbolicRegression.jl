@@ -1,13 +1,13 @@
 using SymbolicRegression, SymbolicUtils, Test, Random, ForwardDiff
 using SymbolicRegression: Options, stringTree, evalTreeArray, Dataset, differentiableEvalTreeArray
 using SymbolicRegression: printTree, pow, EvalLoss, scoreFunc, Node
-using SymbolicRegression: plus, sub, mult, square, cube, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and, gamma
+using SymbolicRegression: plus, sub, mult, square, cube, div, log_abs, log2_abs, log10_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma
 using SymbolicRegression: node_to_symbolic, symbolic_to_node
 using SymbolicRegression: check_constraints, Loss
 
 x1 = 2.0
 # Initialize functions in Base....
-for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma]
+for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
     for binop in [sub]
 
         function make_options(;kw...)
@@ -42,7 +42,7 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma]
             types_to_test = [Float16, types_to_test...]
         end
         for T in types_to_test
-            if T == Float16
+            if T == Float16 || unaop == gamma
                 zero_tolerance = 3e-2
             else
                 zero_tolerance = 1e-6
