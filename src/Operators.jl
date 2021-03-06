@@ -11,7 +11,7 @@ function gamma(x::T)::T where {T<:Real}
 end
 gamma(x) = SpecialFunctions.gamma(x)
 
-atanh_clip(x) = atanh(((x+1)%2) - 1)
+atanh_clip(x) = atanh(mod(x+1, 2) - 1)
 
 # Implicitly defined:
 #binary: mod
