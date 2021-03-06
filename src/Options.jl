@@ -4,7 +4,7 @@ using LossFunctions
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
-@from "Operators.jl" import plus, pow, mult, sub, div, log_abs, log10_abs, log2_abs, sqrt_abs, acosh_abs
+@from "Operators.jl" import plus, pow, mult, sub, div, log_abs, log10_abs, log2_abs, log1p_abs, sqrt_abs, acosh_abs
 @from "Equation.jl" import Node
 
 """
@@ -88,6 +88,8 @@ function unaopmap(op)
         return log10_abs
     elseif op == log2
         return log2_abs
+    elseif op == log1p
+        return log1p_abs
     elseif op == sqrt
         return sqrt_abs
     elseif op == acosh
