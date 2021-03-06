@@ -1,5 +1,15 @@
-import SpecialFunctions: gamma, erf, erfc
+import SpecialFunctions
+import SpecialFunctions: erf, erfc
 #TODO - actually add these operators to the module!
+
+function gamma(x::T)::T where {T<:Real}
+    if x <= T(0) && abs(x % 1) < T(1e-6)
+        T(1//100000000)
+    else
+        SpecialFunctions.gamma(x)
+    end
+end
+gamma(x) = SpecialFunctions.gamma(x)
 
 # Implicitly defined:
 #binary: mod
