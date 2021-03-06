@@ -7,7 +7,7 @@ using SymbolicRegression: check_constraints, Loss
 
 x1 = 2.0
 # Initialize functions in Base....
-for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu]
+for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, lgamma]
     for binop in [sub]
 
         function make_options(;kw...)
