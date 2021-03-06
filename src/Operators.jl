@@ -1,7 +1,5 @@
-import SpecialFunctions: gamma, logabsgamma, erf, erfc, beta
+import SpecialFunctions: gamma, erf, erfc
 #TODO - actually add these operators to the module!
-
-lgamma = logabsgamma
 
 # Implicitly defined:
 #binary: mod

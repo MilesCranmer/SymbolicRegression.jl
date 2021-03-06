@@ -1,13 +1,13 @@
 using SymbolicRegression, SymbolicUtils, Test, Random, ForwardDiff
 using SymbolicRegression: Options, stringTree, evalTreeArray, Dataset, differentiableEvalTreeArray
 using SymbolicRegression: printTree, pow, EvalLoss, scoreFunc, Node
-using SymbolicRegression: plus, sub, mult, square, cube, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and
+using SymbolicRegression: plus, sub, mult, square, cube, div, log_abs, log2_abs, log10_abs, sqrt_abs, neg, greater, greater, relu, logical_or, logical_and, gamma
 using SymbolicRegression: node_to_symbolic, symbolic_to_node
 using SymbolicRegression: check_constraints, Loss
 
 x1 = 2.0
 # Initialize functions in Base....
-for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, lgamma]
+for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma]
     for binop in [sub]
 
         function make_options(;kw...)
