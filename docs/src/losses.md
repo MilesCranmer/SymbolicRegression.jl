@@ -87,7 +87,8 @@ Measures distance on a circle of specified circumference `c`.
 ```math
 L(r) = 1 - \cos \left( \frac{2 r \pi}{c} \right)
 ```
-    HuberLoss <: DistanceLoss
+
+### `HuberLoss <: DistanceLoss`
 
 Loss function commonly used for robustness to outliers.
 For large values of `d` it becomes close to the [`L1DistLoss`](@ref),
