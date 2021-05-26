@@ -28,7 +28,7 @@ function optimizeConstants(dataset::Dataset{T},
     differentiable_f(x::Vector{CONST_TYPE})::T = optFunc(x, dataset, baseline, member.tree, options; allow_diff=true)
     use_differentiable = false
     if nconst == 1
-        algorithm = Optim.Newton()
+        algorithm = Optim.Newton(linesearch=LineSearches.BackTracking())
     else
         if options.optimizer_algorithm == "NelderMead"
             algorithm = Optim.NelderMead(linesearch=LineSearches.BackTracking())
