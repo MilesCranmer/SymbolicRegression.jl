@@ -1,4 +1,5 @@
-@from "ProgramConstants" import BATCH_DIM, FEATURE_DIM
+using FromFile
+@from "ProgramConstants.jl" import BATCH_DIM, FEATURE_DIM
 
 struct Dataset{T<:Real}
 
