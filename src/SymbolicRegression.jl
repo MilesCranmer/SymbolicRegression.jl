@@ -162,7 +162,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
     allPopsType = parallel ? Future : Tuple{Population,HallOfFame}
     allPops = [allPopsType[] for i=1:nout]
     # Set up a channel to send finished populations back to head node
-    channels = [[RemoteChannel(1) for j=1:options.npopulations] for i=1:nout]
+    channels = [[RemoteChannel(1) for i=1:options.npopulations] for j=1:nout]
     bestSubPops = [[Population(datasets[j], baselineMSEs[j], npop=1, options=options, nfeatures=datasets[j].nfeatures)
                     for i=1:options.npopulations]
                     for j=1:nout]
@@ -296,8 +296,12 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
     # This is done so that we do work on all nout equally.
     all_idx = [(j, i) for j=1:nout for i=1:options.npopulations]
     shuffle!(all_idx)
-    kappa = 1
+    kappa = 0
     while sum(cycles_remaining) > 0
+        kappa += 1
+        if kappa > options.npopulations * nout
+            kappa = 1
+        end
         # nout, npopulations:
         j, i = all_idx[kappa]
 
@@ -318,7 +322,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
             curmaxsize = curmaxsizes[j]
 
             #Try normal copy...
-            bestPops = Population([member for pop in bestSubPops for member in pop.members])
+            bestPops = Population([member for pop in bestSubPops[j] for member in pop.members])
 
             for (i_member, member) in enumerate(Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists])))
                 part_of_cur_pop = i_member <= length(cur_pop.members)
@@ -417,8 +421,8 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
             if options.progress && nout == 1
                 # set_postfix(iter, Equations=)
                 equation_strings = string_dominating_pareto_curve(hallOfFame[j], baselineMSE,
-                                                                  dataset, options,
-                                                                  avgy)
+                                                                  datasets[j], options,
+                                                                  avgys[j])
                 set_multiline_postfix(progress_bar, equation_strings)
                 if cur_cycle == nothing
                     (cur_cycle, cur_state) = iterate(progress_bar)
@@ -458,8 +462,8 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
                         @printf("Best equations for output %d\n", j)
                     end
                     equation_strings = string_dominating_pareto_curve(hallOfFame[j], baselineMSE,
-                                                                      dataset, options,
-                                                                      avgy)
+                                                                      dataset[j], options,
+                                                                      avgys[j])
                     print(equation_strings)
                     @printf("==============================\n")
                 end
@@ -468,10 +472,6 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
             num_equations = 0.0
         end
         ################################################################
-        kappa += 1
-        if kappa > options.npopulations * nout
-            kappa = 1
-        end
     end
     if we_created_procs
         rmprocs(procs)
