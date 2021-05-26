@@ -53,7 +53,7 @@ export Population,
 using Distributed
 using Printf: @printf
 using Pkg
-using Random: seed!, shuffle
+using Random: seed!, shuffle!
 using FromFile
 using Reexport
 @reexport using LossFunctions
@@ -130,9 +130,9 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
        ) where {T<:Real}
 
     nout = size(y, FEATURE_DIM)
-    datasets = [Dataset(X, y[i, :],
-                       weights=weights[i, :],
-                       varMap=varMap) for i=1:nout]
+    datasets = [Dataset(X, y[j, :],
+                        weights=(weights == nothing ? weights : weights[j, :]),
+                       varMap=varMap) for j=1:nout]
     example_dataset = datasets[1]
     serial = (procs == nothing && numprocs == 0)
     parallel = !serial
@@ -149,7 +149,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
         baselineMSEs = [Loss(dataset.y, ones(T, dataset.n) .* avgy, dataset.weights, options)
                        for dataset in datasets, avgy in avgys]
     else
-        avgy = [sum(dataset.y)/dataset.n for dataset in datasets]
+        avgys = [sum(dataset.y)/dataset.n for dataset in datasets]
         baselineMSEs = [Loss(dataset.y, ones(T, dataset.n) .* avgy, options)
                        for (dataset, avgy) in zip(datasets, avgys)]
     end
@@ -163,15 +163,15 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
     allPops = [allPopsType[] for i=1:nout]
     # Set up a channel to send finished populations back to head node
     channels = [[RemoteChannel(1) for j=1:options.npopulations] for i=1:nout]
-    bestSubPops = [[Population(datasets[i], baselineMSE[i], npop=1, options=options, nfeatures=dataset.nfeatures)
-                    for j=1:options.npopulations]
-                    for i=1:nout]
+    bestSubPops = [[Population(datasets[j], baselineMSEs[j], npop=1, options=options, nfeatures=datasets[j].nfeatures)
+                    for i=1:options.npopulations]
+                    for j=1:nout]
     hallOfFame = [HallOfFame(options) for j=1:nout]
     actualMaxsize = options.maxsize + maxdegree
     frequencyComplexities = [ones(T, actualMaxsize) for i=1:nout]
-    curmaxsizes = [3 for i=1:nout]
+    curmaxsizes = [3 for j=1:nout]
     if options.warmupMaxsizeBy == 0f0
-        curmaxsizes = [options.maxsize for i=1:nout]
+        curmaxsizes = [options.maxsize for j=1:nout]
     end
 
     we_created_procs = false
@@ -223,15 +223,13 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
                                                 npop=options.npop, nlength=3,
                                                 options=options,
                                                 nfeatures=datasets[j].nfeatures),
-                HallOfFame(options),
-                j)
+                HallOfFame(options))
             else
                 (Population(datasets[j], baselineMSEs[j],
                             npop=options.npop, nlength=3,
                             options=options,
                             nfeatures=datasets[j].nfeatures),
-                 HallOfFame(options),
-                 j)
+                 HallOfFame(options))
             end
             push!(allPops[j], new_pop)
         end
@@ -271,16 +269,17 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
     debug(options.verbosity > 0 || options.progress, "Started!")
     total_cycles = options.npopulations * niterations
     cycles_remaining = [total_cycles for j=1:nout]
-    if options.progress
+    sum_cycle_remaining = sum(cycles_remaining)
+    if options.progress && nout == 1
         #TODO: need to iterate this on the max cycles remaining!
-        progress_bar = ProgressBar(1:cycles_remaining;
+        progress_bar = ProgressBar(1:sum_cycle_remaining;
                                    width=options.terminal_width)
         cur_cycle = nothing
         cur_state = nothing
     end
 
-    last_print_time = [time() for j=1:nout]
-    num_equations = [0.0 for j=1:nout]
+    last_print_time = time()
+    num_equations = 0.0
     print_every_n_seconds = 5
     equation_speed = Float32[]
 
@@ -297,97 +296,84 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
     # This is done so that we do work on all nout equally.
     all_idx = [(j, i) for j=1:nout for i=1:options.npopulations]
     shuffle!(all_idx)
-    while max(cycles_remaining) > 0
-        for kappa=1:(options.npopulations * nout)
-            # nout, npopulations:
-            j, i = all_idx[kappa]
+    kappa = 1
+    while sum(cycles_remaining) > 0
+        # nout, npopulations:
+        j, i = all_idx[kappa]
 
-            # Non-blocking check if a population is ready:
-            population_ready = parallel ? isready(channels[j][i]) : true
-            # Don't start more if this output has finished its cycles:
-            # TODO - this might skip extra cycles?
-            population_ready &= (cycles_remaining[j] > 0)
-            if population_ready
-                # Take the fetch operation from the channel since its ready
-                (cur_pop, best_seen) = parallel ? take!(channels[j][i]) : allPops[j][i]
-                cur_pop::Population
-                best_seen::HallOfFame
-                bestSubPops[j][i] = bestSubPop(cur_pop, topn=options.topn)
+        # Non-blocking check if a population is ready:
+        population_ready = parallel ? isready(channels[j][i]) : true
+        # Don't start more if this output has finished its cycles:
+        # TODO - this might skip extra cycles?
+        population_ready &= (cycles_remaining[j] > 0)
+        if population_ready
+            # Take the fetch operation from the channel since its ready
+            (cur_pop, best_seen) = parallel ? take!(channels[j][i]) : allPops[j][i]
+            cur_pop::Population
+            best_seen::HallOfFame
+            bestSubPops[j][i] = bestSubPop(cur_pop, topn=options.topn)
 
-                dataset = datasets[j]
-                baselineMSE = baselineMSEs[j]
-                curmaxsize = curmaxsizes[j]
+            dataset = datasets[j]
+            baselineMSE = baselineMSEs[j]
+            curmaxsize = curmaxsizes[j]
 
-                #Try normal copy...
-                bestPops = Population([member for pop in bestSubPops for member in pop.members])
+            #Try normal copy...
+            bestPops = Population([member for pop in bestSubPops for member in pop.members])
 
-                for (i_member, member) in enumerate(Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists])))
-                    part_of_cur_pop = i_member <= length(cur_pop.members)
-                    size = countNodes(member.tree)
-                    if part_of_cur_pop
-                        frequencyComplexities[j][size] += 1
-                    end
-                    actualMaxsize = options.maxsize + maxdegree
-                    if size < actualMaxsize && all([member.score < hallOfFame[j].members[size2].score for size2=1:size])
-                        hallOfFame[j].members[size] = copyPopMember(member)
-                        hallOfFame[j].exists[size] = true
-                    end
+            for (i_member, member) in enumerate(Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists])))
+                part_of_cur_pop = i_member <= length(cur_pop.members)
+                size = countNodes(member.tree)
+                if part_of_cur_pop
+                    frequencyComplexities[j][size] += 1
                 end
+                actualMaxsize = options.maxsize + maxdegree
+                if size < actualMaxsize && all([member.score < hallOfFame[j].members[size2].score for size2=1:size])
+                    hallOfFame[j].members[size] = copyPopMember(member)
+                    hallOfFame[j].exists[size] = true
+                end
+            end
 
-                # Dominating pareto curve - must be better than all simpler equations
-                dominating = calculateParetoFrontier(dataset, hallOfFame[j], options)
-                hofFile = options.hofFile
-                if nout > 1
-                    hofFile = "out$j" * "_" *hofFile
+            # Dominating pareto curve - must be better than all simpler equations
+            dominating = calculateParetoFrontier(dataset, hallOfFame[j], options)
+            hofFile = options.hofFile
+            if nout > 1
+                hofFile = "out$j" * "_" *hofFile
+            end
+            open(hofFile, "w") do io
+                println(io,"Complexity|MSE|Equation")
+                for member in dominating
+                    println(io, "$(countNodes(member.tree))|$(member.score)|$(stringTree(member.tree, options, varMap=dataset.varMap))")
                 end
-                open(, "w") do io
-                    println(io,"Complexity|MSE|Equation")
-                    for member in dominating
-                        println(io, "$(countNodes(member.tree))|$(member.score)|$(stringTree(member.tree, options, varMap=dataset.varMap))")
-                    end
-                end
-                cp(options.hofFile, options.hofFile*".bkup", force=true)
+            end
+            cp(hofFile, hofFile*".bkup", force=true)
 
-                # Try normal copy otherwise.
-                if options.migration
-                    for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplaced))
-                        to_copy = rand(1:size(bestPops.members, 1))
-                        cur_pop.members[k] = PopMember(
-                            copyNode(bestPops.members[to_copy].tree),
-                            bestPops.members[to_copy].score)
-                    end
+            # Try normal copy otherwise.
+            if options.migration
+                for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplaced))
+                    to_copy = rand(1:size(bestPops.members, 1))
+                    cur_pop.members[k] = PopMember(
+                        copyNode(bestPops.members[to_copy].tree),
+                        bestPops.members[to_copy].score)
                 end
+            end
 
-                if options.hofMigration && size(dominating, 1) > 0
-                    for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplacedHof))
-                        # Copy in case one gets used twice
-                        to_copy = rand(1:size(dominating, 1))
-                        cur_pop.members[k] = PopMember(
-                           copyNode(dominating[to_copy].tree), dominating[to_copy].score
-                        )
-                    end
+            if options.hofMigration && size(dominating, 1) > 0
+                for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplacedHof))
+                    # Copy in case one gets used twice
+                    to_copy = rand(1:size(dominating, 1))
+                    cur_pop.members[k] = PopMember(
+                       copyNode(dominating[to_copy].tree), dominating[to_copy].score
+                    )
                 end
+            end
 
-                cycles_remaining[j] -= 1
-                if cycles_remaining[j] == 0
-                    break
-                end
-                worker_idx = next_worker()
-                allPops[j][i] = if parallel
-                    @spawnat worker_idx let
-                        tmp_pop, tmp_best_seen = SRCycle(
-                            dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
-                            curmaxsize, copy(frequencyComplexities[j])/sum(frequencyComplexities[j]),
-                            verbosity=options.verbosity, options=options)
-                        tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
-                        if options.batching
-                            for i_member=1:(options.maxsize + maxdegree)
-                                tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
-                            end
-                        end
-                        (tmp_pop, tmp_best_seen)
-                    end
-                else
+            cycles_remaining[j] -= 1
+            if cycles_remaining[j] == 0
+                break
+            end
+            worker_idx = next_worker()
+            allPops[j][i] = if parallel
+                @spawnat worker_idx let
                     tmp_pop, tmp_best_seen = SRCycle(
                         dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
                         curmaxsize, copy(frequencyComplexities[j])/sum(frequencyComplexities[j]),
@@ -400,65 +386,92 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
                     end
                     (tmp_pop, tmp_best_seen)
                 end
-                if parallel
-                    @async put!(channels[j][i], fetch(allPops[j][i]))
-                end
-
-                cycles_elapsed = total_cycles - cycles_remaining[j]
-                if options.warmupMaxsizeBy > 0
-                    fraction_elapsed = 1f0 * cycles_elapsed / total_cycles
-                    if fraction_elapsed > options.warmupMaxsizeBy
-                        curmaxsizes[j] = options.maxsize
-                    else
-                        curmaxsizes[j] = 3 + floor(Int, (options.maxsize - 3) * fraction_elapsed / options.warmupMaxsizeBy)
+            else
+                tmp_pop, tmp_best_seen = SRCycle(
+                    dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
+                    curmaxsize, copy(frequencyComplexities[j])/sum(frequencyComplexities[j]),
+                    verbosity=options.verbosity, options=options)
+                tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
+                if options.batching
+                    for i_member=1:(options.maxsize + maxdegree)
+                        tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
                     end
                 end
-                num_equations[j] += options.ncyclesperiteration * options.npop / 10.0
+                (tmp_pop, tmp_best_seen)
+            end
+            if parallel
+                @async put!(channels[j][i], fetch(allPops[j][i]))
+            end
 
-                if options.progress
-                    # set_postfix(iter, Equations=)
-                    equation_strings = string_dominating_pareto_curve(hallOfFame[j], baselineMSE,
-                                                                      dataset, options,
-                                                                      avgy)
-                    set_multiline_postfix(progress_bar, equation_strings)
-                    if cur_cycle == nothing
-                        (cur_cycle, cur_state) = iterate(progress_bar)
-                    else
-                        (cur_cycle, cur_state) = iterate(progress_bar, cur_state)
-                    end
+            cycles_elapsed = total_cycles - cycles_remaining[j]
+            if options.warmupMaxsizeBy > 0
+                fraction_elapsed = 1f0 * cycles_elapsed / total_cycles
+                if fraction_elapsed > options.warmupMaxsizeBy
+                    curmaxsizes[j] = options.maxsize
+                else
+                    curmaxsizes[j] = 3 + floor(Int, (options.maxsize - 3) * fraction_elapsed / options.warmupMaxsizeBy)
                 end
             end
-            elapsed = time() - last_print_time[j]
-            #Update if time has passed, and some new equations generated.
-            if elapsed > print_every_n_seconds && num_equations[j] > 0.0
-                # Dominating pareto curve - must be better than all simpler equations
-                current_speed = num_equations[j]/elapsed
-                average_over_m_measurements = 10 #for print_every...=5, this gives 50 second running average
-                push!(equation_speed, current_speed)
-                if length(equation_speed) > average_over_m_measurements
-                    deleteat!(equation_speed, 1)
+            num_equations += options.ncyclesperiteration * options.npop / 10.0
+
+            if options.progress && nout == 1
+                # set_postfix(iter, Equations=)
+                equation_strings = string_dominating_pareto_curve(hallOfFame[j], baselineMSE,
+                                                                  dataset, options,
+                                                                  avgy)
+                set_multiline_postfix(progress_bar, equation_strings)
+                if cur_cycle == nothing
+                    (cur_cycle, cur_state) = iterate(progress_bar)
+                else
+                    (cur_cycle, cur_state) = iterate(progress_bar, cur_state)
                 end
-                if options.verbosity > 0
-                    @printf("\n")
-                    average_speed = sum(equation_speed)/length(equation_speed)
+                sum_cycle_remaining = sum(cycles_remaining)
+            end
+        end
+        sleep(1e-6)
+
+
+        ################################################################
+        ## Printing code
+        elapsed = time() - last_print_time
+        #Update if time has passed, and some new equations generated.
+        if elapsed > print_every_n_seconds && num_equations > 0.0
+            # Dominating pareto curve - must be better than all simpler equations
+            current_speed = num_equations/elapsed
+            average_over_m_measurements = 10 #for print_every...=5, this gives 50 second running average
+            push!(equation_speed, current_speed)
+            if length(equation_speed) > average_over_m_measurements
+                deleteat!(equation_speed, 1)
+            end
+            if (options.verbosity > 0) || (options.progress && nout > 1)
+                @printf("\n")
+                average_speed = sum(equation_speed)/length(equation_speed)
+                @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
+                cycles_elapsed = total_cycles - sum(cycles_remaining)/nout
+                @printf("Progress: %d / %d total iterations (%.3f%%)\n",
+                        cycles_elapsed, total_cycles,
+                        100.0*cycles_elapsed/total_cycles)
+
+                @printf("==============================\n")
+                for j=1:nout
                     if nout > 1
-                        @printf("Report for output %d", j)
+                        @printf("Best equations for output %d\n", j)
                     end
-                    @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
-                    cycles_elapsed = total_cycles - cycles_remaining[j]
-                    @printf("Progress: %d / %d total iterations (%.3f%%)\n",
-                            cycles_elapsed, total_cycles,
-                            100.0*cycles_elapsed/total_cycles)
                     equation_strings = string_dominating_pareto_curve(hallOfFame[j], baselineMSE,
                                                                       dataset, options,
                                                                       avgy)
                     print(equation_strings)
+                    @printf("==============================\n")
                 end
-                last_print_time[j] = time()
-                num_equations = 0.0
             end
+            last_print_time = time()
+            num_equations = 0.0
         end
-        sleep(1e-3)
+        ################################################################
+        kappa += 1
+        if kappa > options.npopulations * nout
+            kappa = 1
+        end
     end
     if we_created_procs
         rmprocs(procs)
