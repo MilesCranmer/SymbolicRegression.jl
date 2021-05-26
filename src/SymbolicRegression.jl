@@ -135,9 +135,36 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
         weights = reshape(weights, size(y))
     end
     datasets = [Dataset(X, y[j, :],
-                        weights=(weights == nothing ? weights : weights[j, :]),
-                        varMap=varMap) for j=1:nout]
+                    weights=(weights == nothing ? weights : weights[j, :]),
+                    varMap=varMap)
+                for j=1:nout]
+
+    return EquationSearch(datasets;
+        niterations=niterations, options=options,
+        numprocs=numprocs, procs=procs,
+        runtests=runtests)
+end
+
+function EquationSearch(X::AbstractMatrix{T1}, y::AbstractMatrix{T2}; kw...) where {T1<:Real,T2<:Real}
+    U = promote_type(T1, T2)
+    EquationSearch(convert(AbstractMatrix{U}, X), convert(AbstractMatrix{U}, y); kw...)
+end
+
+function EquationSearch(X::AbstractMatrix{T1}, y::AbstractVector{T2}; kw...) where {T1<:Real,T2<:Real}
+    EquationSearch(X, reshape(y, (1, size(y, 1))); kw...)
+end
+
+function EquationSearch(datasets::Array{Dataset{T}, 1};
+        niterations::Int=10,
+        options::Options=Options(),
+        numprocs::Union{Int, Nothing}=nothing,
+        procs::Union{Array{Int, 1}, Nothing}=nothing,
+        runtests::Bool=true
+       ) where {T<:Real}
+
     example_dataset = datasets[1]
+    nout = size(datasets, 1)
+
     serial = (procs == nothing && numprocs == 0)
     parallel = !serial
 
@@ -490,13 +517,5 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
     end
 end
 
-function EquationSearch(X::AbstractMatrix{T1}, y::AbstractMatrix{T2}; kw...) where {T1<:Real,T2<:Real}
-    U = promote_type(T1, T2)
-    EquationSearch(convert(AbstractMatrix{U}, X), convert(AbstractMatrix{U}, y); kw...)
-end
-
-function EquationSearch(X::AbstractMatrix{T1}, y::AbstractVector{T2}; kw...) where {T1<:Real,T2<:Real}
-    EquationSearch(X, reshape(y, (1, size(y, 1))); kw...)
-end
 
 end #module SR
