@@ -81,8 +81,8 @@ include("Deprecates.jl")
 """
     EquationSearch(X, y[; kws...])
 
-Perform a distributed equation search for functions which
-describe the mapping f(X[:, j]) ≈ y[j]. Options are
+Perform a distributed equation search for functions f_i which
+describe the mapping f_i(X[:, j]) ≈ y[i, j]. Options are
 configured using SymbolicRegression.Options(...),
 which should be passed as a keyword argument to options.
 One can turn off parallelism with `numprocs=0`,
@@ -91,8 +91,9 @@ which is useful for debugging and profiling.
 # Arguments
 - `X::AbstractMatrix{T}`:  The input dataset to predict `y` from.
     The first dimension is features, the second dimension is rows.
-- `y::AbstractMatrix{T}`: The values to predict. Only a single feature
-    is allowed, so `y` is a 1D array.
+- `y::AbstractMatrix{T}`: The values to predict. The first dimension
+    is the output feature to predict with each equation, and the
+    second dimension is rows.
 - `niterations::Int=10`: The number of iterations to perform the search.
     More iterations will improve the results.
 - `weights::Union{AbstractMatrix{T}, Nothing}=nothing`: Optionally
@@ -132,7 +133,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
     nout = size(y, FEATURE_DIM)
     datasets = [Dataset(X, y[j, :],
                         weights=(weights == nothing ? weights : weights[j, :]),
-                       varMap=varMap) for j=1:nout]
+                        varMap=varMap) for j=1:nout]
     example_dataset = datasets[1]
     serial = (procs == nothing && numprocs == 0)
     parallel = !serial
@@ -462,7 +463,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
                         @printf("Best equations for output %d\n", j)
                     end
                     equation_strings = string_dominating_pareto_curve(hallOfFame[j], baselineMSE,
-                                                                      dataset[j], options,
+                                                                      datasets[j], options,
                                                                       avgys[j])
                     print(equation_strings)
                     @printf("==============================\n")
