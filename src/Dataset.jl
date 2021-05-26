@@ -1,3 +1,5 @@
+@from "ProgramConstants" import BATCH_DIM, FEATURE_DIM
+
 struct Dataset{T<:Real}
 
     X::AbstractMatrix{T}
@@ -24,8 +26,8 @@ function Dataset(
         varMap::Union{Array{String, 1}, Nothing}=nothing
        ) where {T<:Real}
 
-    n = size(X, 2)
-    nfeatures = size(X, 1)
+    n = size(X, BATCH_DIM)
+    nfeatures = size(X, FEATURE_DIM)
     weighted = weights !== nothing
     if varMap == nothing
         varMap = ["x$(i)" for i=1:nfeatures]
