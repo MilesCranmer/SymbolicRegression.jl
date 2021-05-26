@@ -455,17 +455,17 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
                 @printf("\n")
                 average_speed = sum(equation_speed)/length(equation_speed)
                 @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
-                cycles_elapsed = total_cycles - sum(cycles_remaining)/nout
+                cycles_elapsed = total_cycles * nout - sum(cycles_remaining)
                 @printf("Progress: %d / %d total iterations (%.3f%%)\n",
-                        cycles_elapsed, total_cycles,
-                        100.0*cycles_elapsed/total_cycles)
+                        cycles_elapsed, total_cycles * nout,
+                        100.0*cycles_elapsed/total_cycles/nout)
 
                 @printf("==============================\n")
                 for j=1:nout
                     if nout > 1
                         @printf("Best equations for output %d\n", j)
                     end
-                    equation_strings = string_dominating_pareto_curve(hallOfFame[j], baselineMSE,
+                    equation_strings = string_dominating_pareto_curve(hallOfFame[j], baselineMSEs[j],
                                                                       datasets[j], options,
                                                                       avgys[j])
                     print(equation_strings)
