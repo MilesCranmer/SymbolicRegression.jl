@@ -91,12 +91,12 @@ which is useful for debugging and profiling.
 # Arguments
 - `X::AbstractMatrix{T}`:  The input dataset to predict `y` from.
     The first dimension is features, the second dimension is rows.
-- `y::AbstractMatrix{T}`: The values to predict. The first dimension
+- `y::Union{AbstractMatrix{T}, AbstractVector{T}}`: The values to predict. The first dimension
     is the output feature to predict with each equation, and the
     second dimension is rows.
 - `niterations::Int=10`: The number of iterations to perform the search.
     More iterations will improve the results.
-- `weights::Union{AbstractMatrix{T}, Nothing}=nothing`: Optionally
+- `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
     weight the loss for each `y` by this value (same shape as `y`).
 - `varMap::Union{Array{String, 1}, Nothing}=nothing`: The names
     of each feature in `X`, which will be used during printing of equations.
@@ -122,7 +122,7 @@ which is useful for debugging and profiling.
 """
 function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
         niterations::Int=10,
-        weights::Union{AbstractMatrix{T}, Nothing}=nothing,
+        weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing,
         varMap::Union{Array{String, 1}, Nothing}=nothing,
         options::Options=Options(),
         numprocs::Union{Int, Nothing}=nothing,
@@ -131,6 +131,9 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
        ) where {T<:Real}
 
     nout = size(y, FEATURE_DIM)
+    if weights != nothing
+        weights = reshape(weights, size(y))
+    end
     datasets = [Dataset(X, y[j, :],
                         weights=(weights == nothing ? weights : weights[j, :]),
                         varMap=varMap) for j=1:nout]
