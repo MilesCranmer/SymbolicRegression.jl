@@ -31,7 +31,7 @@ function optimizeConstants(dataset::Dataset{T},
         algorithm = Optim.Newton()
     else
         if options.optimizer_algorithm == "NelderMead"
-            algorithm = Optim.NelderMead()
+            algorithm = Optim.NelderMead(linesearch=LineSearches.BackTracking())
         elseif options.optimizer_algorithm == "BFGS"
             use_differentiable = true
             algorithm = Optim.BFGS(linesearch=LineSearches.BackTracking())#order=3))
