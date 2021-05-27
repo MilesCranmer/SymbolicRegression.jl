@@ -510,7 +510,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     ##########################################################################
     ### Distributed code^
     ##########################################################################
-    if nout > 1
+    if nout == 1
         return hallOfFame[1]
     else
         return hallOfFame
