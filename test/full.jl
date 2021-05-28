@@ -38,36 +38,28 @@ for batching in [true, false]
             # Completely different function superimposed - need
             # to use correct weights to figure it out!
             y = (2 .* cos.(X[4, :])) .* weights .+ (1 .- weights) .* (5 .* X[2, :])
-            if multi
-                y = repeat(y, 1, 2)
-                y = transpose(y)
-            end
             hallOfFame = EquationSearch(X, y, weights=weights,
                                         niterations=2, options=options,
                                         numprocs=numprocs
                                        )
-            if multi
-                dominating = [calculateParetoFrontier(X, y, hof,
-                                                     options; weights=weights)
-                              for hof in hallOfFame]
-            else
-                dominating = calculateParetoFrontier(X, y, hallOfFame,
-                                                     options; weights=weights)
-            end
+            dominating = [calculateParetoFrontier(X, y, hallOfFame,
+                                                  options; weights=weights)]
         else
             y = 2 * cos.(X[4, :])
+            if multi
+                # Copy the same output twice; make sure we can find it twice
+                y = repeat(y, 1, 2)
+                y = transpose(y)
+            end
             hallOfFame = EquationSearch(X, y, niterations=2, options=options)
             if multi
-                dominating = [calculateParetoFrontier(X, y, hof, options)
-                              for hof in hallOfFame]
+                dominating = [calculateParetoFrontier(X, y[j, :], hallOfFame[j], options)
+                              for j=1:2]
             else
-                dominating = calculateParetoFrontier(X, y, hallOfFame, options)
+                dominating = [calculateParetoFrontier(X, y, hallOfFame, options)]
             end
         end
 
-        if !multi
-            dominating = [dominating]
-        end
         
         # Always assume multi
         for dom in dominating
