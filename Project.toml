@@ -6,7 +6,7 @@ version = "0.6.0"
 [deps]
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 FromFile = "ff7dd447-1dcb-4ce3-b8ac-22a812192de7"
-JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 LineSearches = "d3d80556-e9d4-5f37-9878-2ab0fcc64255"
 LossFunctions = "30fc2ffe-d236-52d8-8643-a9d8f7c094a7"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
@@ -19,7 +19,6 @@ SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 
 [compat]
 FromFile = "0.1.0"
-JSON = "0.20, 0.21"
 LineSearches = "7"
 LossFunctions = "0.6, 0.7"
 Optim = "0.19, 1.1"
