@@ -1,6 +1,7 @@
 using FromFile
 using Random: shuffle!
 @from "Core.jl" import Options, Dataset, RecordType
+@from "EquationUtils.jl" import stringTree
 @from "PopMember.jl" import PopMember
 @from "Population.jl" import Population, bestOfSample
 @from "Mutate.jl" import nextGeneration
@@ -16,6 +17,10 @@ function regEvolCycle(dataset::Dataset{T},
     # but is ultimately a different algorithm than regularized evolution, and might not be
     # as good.
     if options.fast_cycle
+
+        #No recording allowed here:
+        @assert !options.recorder
+
         shuffle!(pop.members)
         n_evol_cycles = round(Int, pop.n/options.ns)
         babies = Array{PopMember}(undef, n_evol_cycles)
@@ -44,28 +49,34 @@ function regEvolCycle(dataset::Dataset{T},
     else
         for i=1:round(Int, pop.n/options.ns)
             allstar = bestOfSample(pop, options)
+            mutation_recorder = RecordType()
             baby = nextGeneration(dataset, baseline, allstar, temperature,
-                                  curmaxsize, frequencyComplexity, options)
+                                  curmaxsize, frequencyComplexity, options,
+                                  tmp_recorder=mutation_recorder)
+
             oldest = argmin([pop.members[member].birth for member=1:pop.n])
 
             if options.recorder
                 if !haskey(record, "mutations")
-                    record["mutations"] = RecordType
+                    record["mutations"] = RecordType()
                 end
                 for member in [allstar, baby, pop.members[oldest]]
                     if !haskey(record["mutations"], "$(member.ref)")
-                        record["mutations"]["$(member.ref)"] = RecordType("events"=>Array{RecordType, 1},
+                        record["mutations"]["$(member.ref)"] = RecordType("events"=>RecordType(),
                                                                           "tree"=>stringTree(member.tree, options),
                                                                           "score"=>member.score,
                                                                           "parent"=>member.parent)
                     end
                 end
-                #TODO: Add type of mutation to mutate event!
-                mutate_event = RecordType("type"=>"mutate", "time"=>time(), "child"=>baby.ref)
+                mutate_event = RecordType("type"=>"mutate",
+                                          "time"=>time(),
+                                          "child"=>baby.ref,
+                                          "mutation"=>mutation_recorder)
                 death_event  = RecordType("type"=>"death",  "time"=>time())
 
-                push!(record["mutations"]["$(allstar.ref)"]["events"], mutate_event)
-                push!(record["mutations"]["$(pop.members[oldest])"]["events"], death_event)
+                # Put in random key rather than vector; otherwise there are collisions!
+                record["mutations"]["$(allstar.ref)"]["events"]["$(abs(rand(Int)))"] = mutate_event
+                record["mutations"]["$(pop.members[oldest].ref)"]["events"]["$(abs(rand(Int)))"] = death_event
             end
 
             pop.members[oldest] = baby

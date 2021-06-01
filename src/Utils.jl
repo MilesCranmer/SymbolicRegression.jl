@@ -25,3 +25,7 @@ function is_anonymous_function(op)
 	op_string = string(nameof(op))
 	return length(op_string) > 1 && op_string[1] == '#' && check_numeric(op_string[2:2])
 end
+
+function recursive_merge(x::AbstractDict...)
+    merge(recursive_merge, x...)
+end

@@ -60,7 +60,7 @@ using Reexport
 @reexport using LossFunctions
 
 @from "Core.jl" import CONST_TYPE, maxdegree, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip
-@from "Utils.jl" import debug, debug_inline, is_anonymous_function
+@from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge
 @from "EquationUtils.jl" import countNodes, printTree, stringTree
 @from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
 @from "CheckConstraints.jl" import check_constraints
@@ -279,6 +279,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         frequencyComplexity = frequencyComplexities[j]
         curmaxsize = curmaxsizes[j]
         for i=1:options.npopulations
+            record["out$(j)_pop$(i)"] = RecordType()
             worker_idx = next_worker()
             allPops[j][i] = if parallel
                 @spawnat worker_idx let
@@ -367,7 +368,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
             cur_record::RecordType
             bestSubPops[j][i] = bestSubPop(cur_pop, topn=options.topn)
             if options.recorder
-                merge!(record, cur_record)
+                record = recursive_merge(record, cur_record)
             end
 
             dataset = datasets[j]
@@ -437,7 +438,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                         while haskey(record["out$(j)_pop$(i)"], "iteration$(iteration)")
                             iteration += 1
                         end
-                        cur_record["out$(j)_pop$(i)"]["iteration$(iteration)"] = record_population(cur_pop, options)
+                        cur_record["out$(j)_pop$(i)"] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
                     end
                     tmp_pop, tmp_best_seen = SRCycle(
                         dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
@@ -458,7 +459,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                     while haskey(record["out$(j)_pop$(i)"], "iteration$(iteration)")
                         iteration += 1
                     end
-                    cur_record["out$(j)_pop$(i)"]["iteration$(iteration)"] = record_population(cur_pop, options)
+                    cur_record["out$(j)_pop$(i)"] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
                 end
                 tmp_pop, tmp_best_seen = SRCycle(
                     dataset, baselineMSE, cur_pop, options.ncyclesperiteration,

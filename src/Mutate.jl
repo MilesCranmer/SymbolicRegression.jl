@@ -1,5 +1,5 @@
 using FromFile
-@from "Core.jl" import Node, copyNode, Options, Dataset
+@from "Core.jl" import Node, copyNode, Options, Dataset, RecordType
 @from "EquationUtils.jl" import countNodes, countConstants, countDepth
 @from "LossFunctions.jl" import scoreFunc, scoreFuncBatch
 @from "CheckConstraints.jl" import check_constraints
@@ -12,10 +12,10 @@ using FromFile
 function nextGeneration(dataset::Dataset{T},
                         baseline::T, member::PopMember, temperature::T,
                         curmaxsize::Int, frequencyComplexity::AbstractVector{T},
-                        options::Options)::PopMember where {T<:Real}
+                        options::Options; tmp_recorder::RecordType=RecordType())::PopMember where {T<:Real}
 
     prev = member.tree
-    parent_ref = prev.ref
+    parent_ref = member.ref
     tree = prev
     #TODO - reconsider this
     if options.batching
@@ -56,6 +56,9 @@ function nextGeneration(dataset::Dataset{T},
         successful_mutation = true
         if mutationChoice < cweights[1]
             tree = mutateConstant(tree, temperature, options)
+            if options.recorder
+                tmp_recorder["type"] = "constant"
+            end
 
             is_success_always_possible = true
             # Mutating a constant shouldn't invalidate an already-valid function
@@ -63,22 +66,38 @@ function nextGeneration(dataset::Dataset{T},
         elseif mutationChoice < cweights[2]
             tree = mutateOperator(tree, options)
 
+            if options.recorder
+                tmp_recorder["type"] = "operator"
+            end
+
             is_success_always_possible = true
             # Can always mutate to the same operator
 
         elseif mutationChoice < cweights[3]
             if rand() < 0.5
                 tree = appendRandomOp(tree, options, nfeatures)
+                if options.recorder
+                    tmp_recorder["type"] = "append_op"
+                end
             else
                 tree = prependRandomOp(tree, options, nfeatures)
+                if options.recorder
+                    tmp_recorder["type"] = "prepend_op"
+                end
             end
             is_success_always_possible = false
             # Can potentially have a situation without success
         elseif mutationChoice < cweights[4]
             tree = insertRandomOp(tree, options, nfeatures)
+            if options.recorder
+                tmp_recorder["type"] = "insert_op"
+            end
             is_success_always_possible = false
         elseif mutationChoice < cweights[5]
             tree = deleteRandomOp(tree, options, nfeatures)
+            if options.recorder
+                tmp_recorder["type"] = "delete_op"
+            end
             is_success_always_possible = true
         elseif mutationChoice < cweights[6]
             tree = simplifyTree(tree, options) # Sometimes we simplify tree
@@ -87,6 +106,13 @@ function nextGeneration(dataset::Dataset{T},
             #  do we use it for simplification.
             if rand() < 0.01
                 tree = simplifyWithSymbolicUtils(tree, options, curmaxsize)
+                if options.recorder
+                    tmp_recorder["type"] = "full_simplify"
+                end
+            else
+                if options.recorder
+                    tmp_recorder["type"] = "partial_simplify"
+                end
             end
             return PopMember(tree, beforeLoss, parent=parent_ref)
 
@@ -96,9 +122,17 @@ function nextGeneration(dataset::Dataset{T},
 
         elseif mutationChoice < cweights[7]
             tree = genRandomTree(5, options, nfeatures) # Sometimes we generate a new tree completely tree
+            if options.recorder
+                tmp_recorder["type"] = "regenerate"
+            end
 
             is_success_always_possible = true
         else # no mutation applied
+            if options.recorder
+                tmp_recorder["type"] = "identity"
+                tmp_recorder["result"] = "accept"
+                tmp_recorder["reason"] = "identity"
+            end
             return PopMember(tree, beforeLoss, parent=parent_ref)
         end
 
@@ -109,6 +143,10 @@ function nextGeneration(dataset::Dataset{T},
     #############################################
 
     if !successful_mutation
+        if options.recorder
+            tmp_recorder["result"] = "reject"
+            tmp_recorder["reason"] = "failed_constraint_check"
+        end
         return PopMember(copyNode(prev), beforeLoss, parent=parent_ref)
     end
 
@@ -119,6 +157,10 @@ function nextGeneration(dataset::Dataset{T},
     end
 
     if isnan(afterLoss)
+        if options.recorder
+            tmp_recorder["result"] = "reject"
+            tmp_recorder["reason"] = "nan_loss"
+        end
         return PopMember(copyNode(prev), beforeLoss, parent=parent_ref)
     end
 
@@ -134,8 +176,16 @@ function nextGeneration(dataset::Dataset{T},
     end
 
     if probChange < rand()
+        if options.recorder
+            tmp_recorder["result"] = "reject"
+            tmp_recorder["reason"] = "annealing_or_frequency"
+        end
         return PopMember(copyNode(prev), beforeLoss, parent=parent_ref)
     else
+        if options.recorder
+            tmp_recorder["result"] = "accept"
+            tmp_recorder["reason"] = "pass"
+        end
         return PopMember(tree, afterLoss, parent=parent_ref)
     end
 end

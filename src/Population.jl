@@ -106,7 +106,7 @@ function record_population(pop::Population{T}, options::Options)::RecordType whe
     RecordType("population"=>[RecordType("tree"=>stringTree(member.tree, options),
                                          "loss"=>member.score,
                                          "complexity"=>countNodes(member.tree),
-                                         "age"=>member.age,
+                                         "birth"=>member.birth,
                                          "ref"=>member.ref,
                                          "parent"=>member.parent)
                              for member in pop.members],
