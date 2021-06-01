@@ -26,6 +26,15 @@ function is_anonymous_function(op)
 	return length(op_string) > 1 && op_string[1] == '#' && check_numeric(op_string[2:2])
 end
 
+function recursive_merge(x::AbstractVector...)
+    cat(x...; dims=1)
+end
+
 function recursive_merge(x::AbstractDict...)
     merge(recursive_merge, x...)
 end
+
+function recursive_merge(x...)
+    x[end]
+end
+

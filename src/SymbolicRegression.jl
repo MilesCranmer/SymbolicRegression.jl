@@ -51,7 +51,7 @@ export Population,
     atanh_clip
 
 using Distributed
-import JSON
+import JSON3
 using Printf: @printf
 using Pkg
 using Random: seed!, shuffle!
@@ -551,9 +551,8 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     ##########################################################################
 
     if options.recorder
-        recorder_data = JSON.json(record)
-        open(options.recorder_file, "w") do f
-            write(f, recorder_data)
+        open(options.recorder_file, "w") do io
+            JSON3.write(io, record)
         end
     end
 

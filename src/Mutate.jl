@@ -12,7 +12,7 @@ using FromFile
 function nextGeneration(dataset::Dataset{T},
                         baseline::T, member::PopMember, temperature::T,
                         curmaxsize::Int, frequencyComplexity::AbstractVector{T},
-                        options::Options; tmp_recorder::RecordType=RecordType())::PopMember where {T<:Real}
+                        options::Options; tmp_recorder::RecordType)::PopMember where {T<:Real}
 
     prev = member.tree
     parent_ref = member.ref

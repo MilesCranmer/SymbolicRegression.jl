@@ -62,21 +62,18 @@ function regEvolCycle(dataset::Dataset{T},
                 end
                 for member in [allstar, baby, pop.members[oldest]]
                     if !haskey(record["mutations"], "$(member.ref)")
-                        record["mutations"]["$(member.ref)"] = RecordType("events"=>RecordType(),
+                        record["mutations"]["$(member.ref)"] = RecordType("events"=>Vector{RecordType}(),
                                                                           "tree"=>stringTree(member.tree, options),
                                                                           "score"=>member.score,
                                                                           "parent"=>member.parent)
                     end
                 end
-                mutate_event = RecordType("type"=>"mutate",
-                                          "time"=>time(),
-                                          "child"=>baby.ref,
-                                          "mutation"=>mutation_recorder)
+                mutate_event = RecordType("type"=>"mutate", "time"=>time(), "child"=>baby.ref, "mutation"=>mutation_recorder)
                 death_event  = RecordType("type"=>"death",  "time"=>time())
 
                 # Put in random key rather than vector; otherwise there are collisions!
-                record["mutations"]["$(allstar.ref)"]["events"]["$(abs(rand(Int)))"] = mutate_event
-                record["mutations"]["$(pop.members[oldest].ref)"]["events"]["$(abs(rand(Int)))"] = death_event
+                push!(record["mutations"]["$(allstar.ref)"]["events"], mutate_event)
+                push!(record["mutations"]["$(pop.members[oldest].ref)"]["events"], death_event)
             end
 
             pop.members[oldest] = baby
