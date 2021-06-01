@@ -15,6 +15,7 @@ function nextGeneration(dataset::Dataset{T},
                         options::Options)::PopMember where {T<:Real}
 
     prev = member.tree
+    parent_ref = prev.ref
     tree = prev
     #TODO - reconsider this
     if options.batching
@@ -87,7 +88,7 @@ function nextGeneration(dataset::Dataset{T},
             if rand() < 0.01
                 tree = simplifyWithSymbolicUtils(tree, options, curmaxsize)
             end
-            return PopMember(tree, beforeLoss)
+            return PopMember(tree, beforeLoss, parent=parent_ref)
 
             is_success_always_possible = true
             # Simplification shouldn't hurt complexity; unless some non-symmetric constraint
@@ -98,7 +99,7 @@ function nextGeneration(dataset::Dataset{T},
 
             is_success_always_possible = true
         else # no mutation applied
-            return PopMember(tree, beforeLoss)
+            return PopMember(tree, beforeLoss, parent=parent_ref)
         end
 
         successful_mutation = successful_mutation && check_constraints(tree, options, curmaxsize)
@@ -108,7 +109,7 @@ function nextGeneration(dataset::Dataset{T},
     #############################################
 
     if !successful_mutation
-        return PopMember(copyNode(prev), beforeLoss)
+        return PopMember(copyNode(prev), beforeLoss, parent=parent_ref)
     end
 
     if options.batching
@@ -118,7 +119,7 @@ function nextGeneration(dataset::Dataset{T},
     end
 
     if isnan(afterLoss)
-        return PopMember(copyNode(prev), beforeLoss)
+        return PopMember(copyNode(prev), beforeLoss, parent=parent_ref)
     end
 
     probChange = 1.0
@@ -133,8 +134,8 @@ function nextGeneration(dataset::Dataset{T},
     end
 
     if probChange < rand()
-        return PopMember(copyNode(prev), beforeLoss)
+        return PopMember(copyNode(prev), beforeLoss, parent=parent_ref)
     else
-        return PopMember(tree, afterLoss)
+        return PopMember(tree, afterLoss, parent=parent_ref)
     end
 end

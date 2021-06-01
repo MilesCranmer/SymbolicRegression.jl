@@ -1,5 +1,6 @@
 using FromFile
-@from "Core.jl" import Options, Dataset
+@from "Core.jl" import Options, Dataset, RecordType
+@from "EquationUtils.jl" import stringTree, countNodes
 @from "LossFunctions.jl" import scoreFunc
 @from "MutationFunctions.jl" import genRandomTree
 @from "PopMember.jl" import PopMember
@@ -100,3 +101,15 @@ function bestSubPopParetoDominating(pop::Population{T}; topn::Int=10)::Populatio
 end
 
 
+
+function record_population(pop::Population{T}, options::Options)::RecordType where {T<:Real}
+    RecordType("population"=>[RecordType("tree"=>stringTree(member.tree, options),
+                                         "loss"=>member.score,
+                                         "complexity"=>countNodes(member.tree),
+                                         "age"=>member.age,
+                                         "ref"=>member.ref,
+                                         "parent"=>member.parent)
+                             for member in pop.members],
+               "time"=>time()
+    )
+end

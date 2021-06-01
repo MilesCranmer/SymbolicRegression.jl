@@ -1,5 +1,5 @@
 using FromFile
-@from "Core.jl" import Options, Dataset
+@from "Core.jl" import Options, Dataset, RecordType
 @from "EquationUtils.jl" import countNodes
 @from "Utils.jl" import debug
 @from "EquationUtils.jl" import stringTree
@@ -19,7 +19,8 @@ function SRCycle(dataset::Dataset{T}, baseline::T,
         curmaxsize::Int,
         frequencyComplexity::AbstractVector{T};
         verbosity::Int=0,
-        options::Options
+        options::Options,
+        record::RecordType
         )::Tuple{Population, HallOfFame} where {T<:Real}
 
     top = convert(T, 1)
@@ -28,9 +29,9 @@ function SRCycle(dataset::Dataset{T}, baseline::T,
 
     for temperature in 1:size(allT, 1)
         if options.annealing
-            pop = regEvolCycle(dataset, baseline, pop, allT[temperature], curmaxsize, frequencyComplexity, options)
+            pop = regEvolCycle(dataset, baseline, pop, allT[temperature], curmaxsize, frequencyComplexity, options, record)
         else
-            pop = regEvolCycle(dataset, baseline, pop, top, curmaxsize, frequencyComplexity, options)
+            pop = regEvolCycle(dataset, baseline, pop, top, curmaxsize, frequencyComplexity, options, record)
         end
         for member in pop.members
             size = countNodes(member.tree)
@@ -55,7 +56,8 @@ end
 function OptimizeAndSimplifyPopulation(
             dataset::Dataset{T}, baseline::T,
             pop::Population, options::Options,
-            curmaxsize::Int
+            curmaxsize::Int,
+            record::RecordType
         )::Population where {T<:Real}
     @inbounds @simd for j=1:pop.n
         pop.members[j].tree = simplifyTree(pop.members[j].tree, options)

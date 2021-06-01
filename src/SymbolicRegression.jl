@@ -51,6 +51,7 @@ export Population,
     atanh_clip
 
 using Distributed
+import JSON
 using Printf: @printf
 using Pkg
 using Random: seed!, shuffle!
@@ -58,7 +59,7 @@ using FromFile
 using Reexport
 @reexport using LossFunctions
 
-@from "Core.jl" import CONST_TYPE, maxdegree, BATCH_DIM, FEATURE_DIM, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip
+@from "Core.jl" import CONST_TYPE, maxdegree, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip
 @from "Utils.jl" import debug, debug_inline, is_anonymous_function
 @from "EquationUtils.jl" import countNodes, printTree, stringTree
 @from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
@@ -66,7 +67,7 @@ using Reexport
 @from "MutationFunctions.jl" import genRandomTree
 @from "LossFunctions.jl" import EvalLoss, Loss, scoreFunc
 @from "PopMember.jl" import PopMember, copyPopMember
-@from "Population.jl" import Population, bestSubPop
+@from "Population.jl" import Population, bestSubPop, record_population
 @from "HallOfFame.jl" import HallOfFame, calculateParetoFrontier, string_dominating_pareto_curve
 @from "SingleIteration.jl" import SRCycle, OptimizeAndSimplifyPopulation
 @from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
@@ -190,10 +191,12 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     end
     # Start a population on every process
     #    Store the population, hall of fame
-    allPopsType = parallel ? Future : Tuple{Population,HallOfFame}
+    allPopsType = parallel ? Future : Tuple{Population,HallOfFame,RecordType}
     allPops = [allPopsType[] for i=1:nout]
     # Set up a channel to send finished populations back to head node
     channels = [[RemoteChannel(1) for i=1:options.npopulations] for j=1:nout]
+
+    # These initial populations are discarded:
     bestSubPops = [[Population(datasets[j], baselineMSEs[j], npop=1, options=options, nfeatures=datasets[j].nfeatures)
                     for i=1:options.npopulations]
                     for j=1:nout]
@@ -201,6 +204,8 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     actualMaxsize = options.maxsize + maxdegree
     frequencyComplexities = [ones(T, actualMaxsize) for i=1:nout]
     curmaxsizes = [3 for j=1:nout]
+    record = RecordType("options"=>"$(options)")
+
     if options.warmupMaxsizeBy == 0f0
         curmaxsizes = [options.maxsize for j=1:nout]
     end
@@ -254,13 +259,15 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                                                 npop=options.npop, nlength=3,
                                                 options=options,
                                                 nfeatures=datasets[j].nfeatures),
-                HallOfFame(options))
+                HallOfFame(options),
+                RecordType())
             else
                 (Population(datasets[j], baselineMSEs[j],
                             npop=options.npop, nlength=3,
                             options=options,
                             nfeatures=datasets[j].nfeatures),
-                 HallOfFame(options))
+                 HallOfFame(options),
+                 RecordType())
             end
             push!(allPops[j], new_pop)
         end
@@ -275,25 +282,36 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
             worker_idx = next_worker()
             allPops[j][i] = if parallel
                 @spawnat worker_idx let
-                    tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, fetch(allPops[j][i])[1], options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
-                    tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
+                    in_pop = fetch(allPops[j][i])[1]
+                    cur_record = RecordType()#copy(record)
+                    if options.recorder
+                        cur_record["out$(j)_pop$(i)"] = RecordType("iteration0"=>record_population(in_pop, options))
+                    end
+                    tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, in_pop, options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options, record=cur_record)
+                    tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
                     if options.batching
                         for i_member=1:(options.maxsize + maxdegree)
                             tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
                         end
                     end
-                    (tmp_pop, tmp_best_seen)
+                    (tmp_pop, tmp_best_seen, cur_record)
                 end
             else
-                tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, allPops[j][i][1], options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options)
-                tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
+                in_pop = allPops[j][i][1]
+                cur_record = RecordType()#copy(record)
+                if options.recorder
+                    cur_record["out$(j)_pop$(i)"] = RecordType("iteration0"=>record_population(in_pop, options))
+                end
+                tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, in_pop, options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options, record=cur_record)
+                tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
                 if options.batching
                     for i_member=1:(options.maxsize + maxdegree)
                         tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
                     end
                 end
-                (tmp_pop, tmp_best_seen)
-            end
+                (tmp_pop, tmp_best_seen, cur_record)
+            end # if parallel
+
         end
     end
 
@@ -343,10 +361,14 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         population_ready &= (cycles_remaining[j] > 0)
         if population_ready
             # Take the fetch operation from the channel since its ready
-            (cur_pop, best_seen) = parallel ? take!(channels[j][i]) : allPops[j][i]
+            (cur_pop, best_seen, cur_record) = parallel ? take!(channels[j][i]) : allPops[j][i]
             cur_pop::Population
             best_seen::HallOfFame
+            cur_record::RecordType
             bestSubPops[j][i] = bestSubPop(cur_pop, topn=options.topn)
+            if options.recorder
+                merge!(record, cur_record)
+            end
 
             dataset = datasets[j]
             baselineMSE = baselineMSEs[j]
@@ -409,30 +431,46 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
             worker_idx = next_worker()
             allPops[j][i] = if parallel
                 @spawnat worker_idx let
+                    cur_record = RecordType()#copy(record)
+                    if options.recorder
+                        iteration = 0
+                        while haskey(record["out$(j)_pop$(i)"], "iteration$(iteration)")
+                            iteration += 1
+                        end
+                        cur_record["out$(j)_pop$(i)"]["iteration$(iteration)"] = record_population(cur_pop, options)
+                    end
                     tmp_pop, tmp_best_seen = SRCycle(
                         dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
                         curmaxsize, copy(frequencyComplexities[j])/sum(frequencyComplexities[j]),
-                        verbosity=options.verbosity, options=options)
-                    tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
+                        verbosity=options.verbosity, options=options, record=cur_record)
+                    tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
                     if options.batching
                         for i_member=1:(options.maxsize + maxdegree)
                             tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
                         end
                     end
-                    (tmp_pop, tmp_best_seen)
+                    (tmp_pop, tmp_best_seen, cur_record)
                 end
             else
+                cur_record = RecordType()#copy(record)
+                if options.recorder
+                    iteration = 0
+                    while haskey(record["out$(j)_pop$(i)"], "iteration$(iteration)")
+                        iteration += 1
+                    end
+                    cur_record["out$(j)_pop$(i)"]["iteration$(iteration)"] = record_population(cur_pop, options)
+                end
                 tmp_pop, tmp_best_seen = SRCycle(
                     dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
                     curmaxsize, copy(frequencyComplexities[j])/sum(frequencyComplexities[j]),
-                    verbosity=options.verbosity, options=options)
-                tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize)
+                    verbosity=options.verbosity, options=options, record=cur_record)
+                tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
                 if options.batching
                     for i_member=1:(options.maxsize + maxdegree)
                         tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
                     end
                 end
-                (tmp_pop, tmp_best_seen)
+                (tmp_pop, tmp_best_seen, cur_record)
             end
             if parallel
                 @async put!(channels[j][i], fetch(allPops[j][i]))
@@ -510,6 +548,14 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     ##########################################################################
     ### Distributed code^
     ##########################################################################
+
+    if options.recorder
+        recorder_data = JSON.json(record)
+        open(options.recorder_file, "w") do f
+            write(f, recorder_data)
+        end
+    end
+
     if nout == 1
         return hallOfFame[1]
     else
