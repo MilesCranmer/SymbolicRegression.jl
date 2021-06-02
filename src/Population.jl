@@ -48,8 +48,23 @@ end
 # Sample the population, and get the best member from that sample
 function bestOfSample(pop::Population, options::Options)::PopMember
     sample = samplePop(pop, options)
-    best_idx = argmin([sample.members[member].score for member=1:sample.n])
-    return sample.members[best_idx]
+    if options.probPickFirst == 1.0
+        best_idx = argmin([sample.members[member].score for member=1:options.ns])
+        return sample.members[best_idx]
+    else
+        sort_idx = sortperm([sample.members[member].score for member=1:options.ns])
+        # Lowest comes first
+        k = range(0.0, stop=options.ns-1, step=1.0) |> collect
+        p = options.probPickFirst
+
+        # Weighted choice:
+        prob_each = p * (1 - p) .^ k
+        prob_each /= sum(prob_each)
+        cumprob = cumsum(prob_each)
+        chosen_idx = findfirst(cumprob .> rand(Float32))
+
+        return sample.members[chosen_idx]
+    end
 end
 
 function finalizeScores(dataset::Dataset{T},

@@ -18,8 +18,9 @@ function regEvolCycle(dataset::Dataset{T},
     # as good.
     if options.fast_cycle
 
-        #No recording allowed here:
+        # These options are not implemented for fast_cycle:
         @assert !options.recorder
+        @assert options.probPickFirst == 1.0
 
         shuffle!(pop.members)
         n_evol_cycles = round(Int, pop.n/options.ns)

@@ -143,6 +143,7 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     optimizer_iterations::Int
     recorder::Bool
     recorder_file::String
+    probPickFirst::Float32
 
 end
 
@@ -252,6 +253,10 @@ Construct options for `EquationSearch` and other functions.
 - `seed=nothing`: What random seed to use. `nothing` uses no seed.
 - `progress=false`: Whether to use a progress bar output (`verbosity` will
     have no effect).
+
+
+- `probPickFirst=1.0`: Expressions in subsample are chosen based on, for
+    p=probPickFirst: p, p*(1-p), p*(1-p)^2, and so on.
 """
 function Options(;
     binary_operators::NTuple{nbin, Any}=(div, plus, mult),
@@ -295,7 +300,8 @@ function Options(;
     optimizer_iterations=100,
     nrestarts=nothing,
     recorder=false,
-    recorder_file="pysr_recorder.json"
+    recorder_file="pysr_recorder.json",
+    probPickFirst=1.0,
    ) where {nuna,nbin}
 
     if nrestarts != nothing
@@ -381,7 +387,7 @@ function Options(;
         verbosity = 0
     end
 
-    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file)
+    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst)
     return options
 end
 
