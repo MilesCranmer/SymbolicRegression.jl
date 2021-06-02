@@ -1,3 +1,6 @@
+using FromFile
+@from "Core.jl" import RecordType
+
 "Assumes that `options` holds the user options::Options"
 macro recorder(ex)
     quote
