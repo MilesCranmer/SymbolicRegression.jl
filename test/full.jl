@@ -20,10 +20,10 @@ for batching in [true, false]
             progress = true #Also try the progress bar.
             warmupMaxsizeBy = 0.5f0 #Smaller maxsize at first, build up slowly
             optimizer_algorithm = "BFGS"
-            recorder = true
             probPickFirst = 0.8
         end
         if !weighted && !batching
+            recorder = true
             multi = true
         end
         options = SymbolicRegression.Options(
@@ -97,7 +97,7 @@ X = randn(MersenneTwister(0), Float32, 5, 100)
 y = 2 * cos.(X[4, :])
 varMap = ["t1", "t2", "t3", "t4", "t5"]
 hallOfFame = EquationSearch(X, y; varMap=varMap,
-                            niterations=2, options=options, numprocs=0)
+                            niterations=2, options=options)
 dominating = calculateParetoFrontier(X, y, hallOfFame, options)
 
 best = dominating[end]
