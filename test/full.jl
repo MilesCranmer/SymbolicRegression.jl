@@ -97,7 +97,7 @@ X = randn(MersenneTwister(0), Float32, 5, 100)
 y = 2 * cos.(X[4, :])
 varMap = ["t1", "t2", "t3", "t4", "t5"]
 hallOfFame = EquationSearch(X, y; varMap=varMap,
-                            niterations=2, options=options)
+                            niterations=2, options=options, numprocs=0)
 dominating = calculateParetoFrontier(X, y, hallOfFame, options)
 
 best = dominating[end]

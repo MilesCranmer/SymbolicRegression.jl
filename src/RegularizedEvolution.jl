@@ -39,8 +39,10 @@ function regEvolCycle(dataset::Dataset{T},
                 end
             end
             allstar = pop.members[best_idx]
+            mutation_recorder = RecordType()
             babies[i] = nextGeneration(dataset, baseline, allstar, temperature,
-                                       curmaxsize, frequencyComplexity, options)
+                                       curmaxsize, frequencyComplexity, options,
+                                       tmp_recorder=mutation_recorder)
         end
 
         # Replace the n_evol_cycles-oldest members of each population
