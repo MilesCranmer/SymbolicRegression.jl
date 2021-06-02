@@ -87,35 +87,6 @@ function bestSubPop(pop::Population; topn::Int=10)::Population
     return Population(pop.members[best_idx[1:topn]])
 end
 
-# Return best 10 examples size that are pareto dominating
-function bestSubPopParetoDominating(pop::Population{T}; topn::Int=10)::Population where {T<:Real}
-    scores = [pop.members[member].score for member=1:pop.n]
-    best_idx = sortperm(scores)
-
-    sorted = pop.members[best_idx]
-    score_sorted = scores[best_idx]
-    sizes = [countNodes(sorted[i].tree) for i=1:pop.n]
-
-    best = [1]
-    for i=2:pop.n
-        better_than_all_smaller = true
-        for j=i-1:1
-            if sizes[j] < sizes[i] #Another model is smaller AND better
-                better_than_all_smaller = false
-                break
-            end
-        end
-        if better_than_all_smaller
-            best = vcat(best, [i])
-        end
-        if length(best) == topn
-            break
-        end
-    end
-    return Population(sorted[best])
-end
-
-
 
 function record_population(pop::Population{T}, options::Options)::RecordType where {T<:Real}
     RecordType("population"=>[RecordType("tree"=>stringTree(member.tree, options),
