@@ -74,6 +74,7 @@ using Reexport
 @from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
 @from "SimplifyEquation.jl" import simplifyWithSymbolicUtils, combineOperators, simplifyTree
 @from "ProgressBars.jl" import ProgressBar, set_multiline_postfix
+@from "Recorder.jl" import @recorder, find_iteration_from_record
 
 include("Configure.jl")
 include("Deprecates.jl")
@@ -279,17 +280,13 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         frequencyComplexity = frequencyComplexities[j]
         curmaxsize = curmaxsizes[j]
         for i=1:options.npopulations
-            if options.recorder
-                record["out$(j)_pop$(i)"] = RecordType()
-            end
+            @recorder record["out$(j)_pop$(i)"] = RecordType()
             worker_idx = next_worker()
             allPops[j][i] = if parallel
                 @spawnat worker_idx let
                     in_pop = fetch(allPops[j][i])[1]
-                    cur_record = RecordType()#copy(record)
-                    if options.recorder
-                        cur_record["out$(j)_pop$(i)"] = RecordType("iteration0"=>record_population(in_pop, options))
-                    end
+                    cur_record = RecordType()
+                    @recorder cur_record["out$(j)_pop$(i)"] = RecordType("iteration0"=>record_population(in_pop, options))
                     tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, in_pop, options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options, record=cur_record)
                     tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
                     if options.batching
@@ -301,10 +298,8 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                 end
             else
                 in_pop = allPops[j][i][1]
-                cur_record = RecordType()#copy(record)
-                if options.recorder
-                    cur_record["out$(j)_pop$(i)"] = RecordType("iteration0"=>record_population(in_pop, options))
-                end
+                cur_record = RecordType()
+                @recorder cur_record["out$(j)_pop$(i)"] = RecordType("iteration0"=>record_population(in_pop, options))
                 tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, in_pop, options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options, record=cur_record)
                 tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
                 if options.batching
@@ -369,9 +364,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
             best_seen::HallOfFame
             cur_record::RecordType
             bestSubPops[j][i] = bestSubPop(cur_pop, topn=options.topn)
-            if options.recorder
-                record = recursive_merge(record, cur_record)
-            end
+            @recorder record = recursive_merge(record, cur_record)
 
             dataset = datasets[j]
             baselineMSE = baselineMSEs[j]
@@ -434,13 +427,11 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
             worker_idx = next_worker()
             allPops[j][i] = if parallel
                 @spawnat worker_idx let
-                    cur_record = RecordType()#copy(record)
-                    if options.recorder
-                        iteration = 0
-                        while haskey(record["out$(j)_pop$(i)"], "iteration$(iteration)")
-                            iteration += 1
-                        end
-                        cur_record["out$(j)_pop$(i)"] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
+                    cur_record = RecordType()
+                    @recorder begin
+                        key = "out$(j)_pop$(i)"
+                        iteration = find_iteration_from_record(key, record) + 1
+                        cur_record[key] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
                     end
                     tmp_pop, tmp_best_seen = SRCycle(
                         dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
@@ -456,12 +447,10 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                 end
             else
                 cur_record = RecordType()#copy(record)
-                if options.recorder
-                    iteration = 0
-                    while haskey(record["out$(j)_pop$(i)"], "iteration$(iteration)")
-                        iteration += 1
-                    end
-                    cur_record["out$(j)_pop$(i)"] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
+                @recorder begin
+                    key = "out$(j)_pop$(i)"
+                    iteration = find_iteration_from_record(key, record) + 1
+                    cur_record[key] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
                 end
                 tmp_pop, tmp_best_seen = SRCycle(
                     dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
@@ -552,7 +541,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     ### Distributed code^
     ##########################################################################
 
-    if options.recorder
+    @recorder begin
         open(options.recorder_file, "w") do io
             JSON3.write(io, record)
         end
