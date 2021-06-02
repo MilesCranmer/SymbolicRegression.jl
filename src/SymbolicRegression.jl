@@ -279,7 +279,9 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         frequencyComplexity = frequencyComplexities[j]
         curmaxsize = curmaxsizes[j]
         for i=1:options.npopulations
-            record["out$(j)_pop$(i)"] = RecordType()
+            if options.recorder
+                record["out$(j)_pop$(i)"] = RecordType()
+            end
             worker_idx = next_worker()
             allPops[j][i] = if parallel
                 @spawnat worker_idx let
