@@ -19,6 +19,7 @@ SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 
 [compat]
 FromFile = "0.1.0"
+JSON3 = "1"
 LineSearches = "7"
 LossFunctions = "0.6, 0.7"
 Optim = "0.19, 1.1"
