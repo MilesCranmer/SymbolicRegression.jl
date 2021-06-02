@@ -4,7 +4,7 @@ using FromFile
 "Assumes that `options` holds the user options::Options"
 macro recorder(ex)
     quote
-        if options.recorder
+        if $(esc(:options)).recorder
             $(esc(ex))
         end
     end

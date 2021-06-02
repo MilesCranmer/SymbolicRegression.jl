@@ -226,6 +226,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
             procs = addprocs(numprocs)
             we_created_procs = true
         end
+
         if we_created_procs
             project_path = splitdir(Pkg.project().path)[1]
             activate_env_on_workers(procs, project_path, options)

@@ -1,6 +1,7 @@
 using FromFile
 @from "test_params.jl" import maximum_residual
-using SymbolicRegression, SymbolicUtils, Test
+using SymbolicRegression, SymbolicUtils
+using Test
 using SymbolicRegression: stringTree
 using Random
 

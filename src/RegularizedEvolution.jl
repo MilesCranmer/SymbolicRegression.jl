@@ -5,6 +5,7 @@ using Random: shuffle!
 @from "PopMember.jl" import PopMember
 @from "Population.jl" import Population, bestOfSample
 @from "Mutate.jl" import nextGeneration
+@from "Recorder.jl" import @recorder
 
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample
@@ -19,7 +20,7 @@ function regEvolCycle(dataset::Dataset{T},
     if options.fast_cycle
 
         # These options are not implemented for fast_cycle:
-        @assert !options.recorder
+        @recorder error("You cannot have the recorder and fast_cycle set to true at the same time!")
         @assert options.probPickFirst == 1.0
 
         shuffle!(pop.members)
@@ -57,7 +58,7 @@ function regEvolCycle(dataset::Dataset{T},
 
             oldest = argmin([pop.members[member].birth for member=1:pop.n])
 
-            if options.recorder
+            @recorder begin
                 if !haskey(record, "mutations")
                     record["mutations"] = RecordType()
                 end
