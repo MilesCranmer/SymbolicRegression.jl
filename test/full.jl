@@ -1,6 +1,7 @@
 using FromFile
 @from "test_params.jl" import maximum_residual
-using SymbolicRegression, SymbolicUtils, Test
+using SymbolicRegression, SymbolicUtils
+using Test
 using SymbolicRegression: stringTree
 using Random
 
@@ -12,13 +13,17 @@ for batching in [true, false]
         warmupMaxsizeBy = 0f0
         optimizer_algorithm = "NelderMead"
         multi = false
+        recorder = false
+        probPickFirst = 1.0
         if weighted && batching
             numprocs = 0 #Try serial computation here.
             progress = true #Also try the progress bar.
             warmupMaxsizeBy = 0.5f0 #Smaller maxsize at first, build up slowly
             optimizer_algorithm = "BFGS"
+            probPickFirst = 0.8
         end
         if !weighted && !batching
+            recorder = true
             multi = true
         end
         options = SymbolicRegression.Options(
@@ -29,7 +34,9 @@ for batching in [true, false]
             seed=0,
             progress=progress,
             warmupMaxsizeBy=warmupMaxsizeBy,
-            optimizer_algorithm=optimizer_algorithm
+            optimizer_algorithm=optimizer_algorithm,
+            recorder=recorder,
+            probPickFirst=probPickFirst
         )
         X = randn(MersenneTwister(0), Float32, 5, 100)
         if weighted

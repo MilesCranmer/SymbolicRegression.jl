@@ -8,6 +8,10 @@ mutable struct PopMember{T<:Real}
     tree::Node
     score::T
     birth::Int
+
+    # For recording history:
+    ref::Int
+    parent::Int
 end
 
 """
@@ -20,8 +24,11 @@ Create a population member with a birth date at the current time.
 - `t::Node`: The tree for the population member.
 - `score::T`: The loss to assign this member.
 """
-function PopMember(t::Node, score::T) where {T<:Real}
-    PopMember{T}(t, score, getTime())
+function PopMember(t::Node, score::T; ref::Int=-1, parent::Int=-1) where {T<:Real}
+    if ref == -1
+        ref = abs(rand(Int))
+    end
+    PopMember{T}(t, score, getTime(), ref, parent)
 end
 
 """
@@ -40,13 +47,15 @@ Automatically compute the score for this tree.
 """
 function PopMember(dataset::Dataset{T},
                    baseline::T, t::Node,
-                   options::Options) where {T<:Real}
-    PopMember(t, scoreFunc(dataset, baseline, t, options))
+                   options::Options; ref::Int=-1, parent::Int=-1) where {T<:Real}
+    PopMember(t, scoreFunc(dataset, baseline, t, options), ref=ref, parent=parent)
 end
 
 function copyPopMember(p::PopMember{T}) where {T<:Real}
     tree = copyNode(p.tree)
     score = p.score
     birth = p.birth
-    return PopMember{T}(tree, score, birth)
+    ref = p.ref
+    parent = p.parent
+    return PopMember{T}(tree, score, birth, ref, parent)
 end

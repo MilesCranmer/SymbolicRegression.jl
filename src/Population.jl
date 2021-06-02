@@ -1,5 +1,6 @@
 using FromFile
-@from "Core.jl" import Options, Dataset
+@from "Core.jl" import Options, Dataset, RecordType
+@from "EquationUtils.jl" import stringTree, countNodes
 @from "LossFunctions.jl" import scoreFunc
 @from "MutationFunctions.jl" import genRandomTree
 @from "PopMember.jl" import PopMember
@@ -47,8 +48,23 @@ end
 # Sample the population, and get the best member from that sample
 function bestOfSample(pop::Population, options::Options)::PopMember
     sample = samplePop(pop, options)
-    best_idx = argmin([sample.members[member].score for member=1:sample.n])
-    return sample.members[best_idx]
+    if options.probPickFirst == 1.0
+        best_idx = argmin([sample.members[member].score for member=1:options.ns])
+        return sample.members[best_idx]
+    else
+        sort_idx = sortperm([sample.members[member].score for member=1:options.ns])
+        # Lowest comes first
+        k = range(0.0, stop=options.ns-1, step=1.0) |> collect
+        p = options.probPickFirst
+
+        # Weighted choice:
+        prob_each = p * (1 - p) .^ k
+        prob_each /= sum(prob_each)
+        cumprob = cumsum(prob_each)
+        chosen_idx = findfirst(cumprob .> rand(Float32))
+
+        return sample.members[chosen_idx]
+    end
 end
 
 function finalizeScores(dataset::Dataset{T},
@@ -71,32 +87,15 @@ function bestSubPop(pop::Population; topn::Int=10)::Population
     return Population(pop.members[best_idx[1:topn]])
 end
 
-# Return best 10 examples size that are pareto dominating
-function bestSubPopParetoDominating(pop::Population{T}; topn::Int=10)::Population where {T<:Real}
-    scores = [pop.members[member].score for member=1:pop.n]
-    best_idx = sortperm(scores)
 
-    sorted = pop.members[best_idx]
-    score_sorted = scores[best_idx]
-    sizes = [countNodes(sorted[i].tree) for i=1:pop.n]
-
-    best = [1]
-    for i=2:pop.n
-        better_than_all_smaller = true
-        for j=i-1:1
-            if sizes[j] < sizes[i] #Another model is smaller AND better
-                better_than_all_smaller = false
-                break
-            end
-        end
-        if better_than_all_smaller
-            best = vcat(best, [i])
-        end
-        if length(best) == topn
-            break
-        end
-    end
-    return Population(sorted[best])
+function record_population(pop::Population{T}, options::Options)::RecordType where {T<:Real}
+    RecordType("population"=>[RecordType("tree"=>stringTree(member.tree, options),
+                                         "loss"=>member.score,
+                                         "complexity"=>countNodes(member.tree),
+                                         "birth"=>member.birth,
+                                         "ref"=>member.ref,
+                                         "parent"=>member.parent)
+                             for member in pop.members],
+               "time"=>time()
+    )
 end
-
-
