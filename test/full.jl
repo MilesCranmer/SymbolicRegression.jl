@@ -21,7 +21,7 @@ for batching in [true, false]
             warmupMaxsizeBy = 0.5f0 #Smaller maxsize at first, build up slowly
             optimizer_algorithm = "BFGS"
             recorder = true
-            probPickFirst = 0.5
+            probPickFirst = 0.8
         end
         if !weighted && !batching
             multi = true
