@@ -3,38 +3,68 @@ using SymbolicUtils
 using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, has_trig, polynormalize
 @from "Core.jl" import Options
 @from "InterfaceSymbolicUtils.jl" import SYMBOLIC_UTILS_TYPES
-
-function multiply_powers(eqn::T)::SYMBOLIC_UTILS_TYPES where {T<:Union{<:Number,SymbolicUtils.Sym{<:Number}}}
-	return eqn
+@from "EvaluateEquation.jl" import @return_on_false
+ 
+function isgood(x::T)::Bool where {T<:Number}
+    !(isnan(x) || !isfinite(x))
 end
 
-function multiply_powers(eqn::T, op::F)::SYMBOLIC_UTILS_TYPES where {F,T<:SymbolicUtils.Term{<:Number}}
+function isgood(x)::Bool
+    true
+end
+
+function multiply_powers(eqn::T)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {T<:Union{<:Number,SymbolicUtils.Sym{<:Number}}}
+	return eqn, true
+end
+
+function multiply_powers(eqn::T, op::F)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {F,T<:SymbolicUtils.Term{<:Number}}
 	args = SymbolicUtils.arguments(eqn)
 	nargs = length(args)
 	if nargs == 1
-		return op(multiply_powers(args[1]))
+        l, complete = multiply_powers(args[1])
+        @return_on_false complete eqn
+        @return_on_false isgood(l) eqn
+		return op(l), true
 	elseif op == ^
-		l = multiply_powers(args[1])
+		l, complete = multiply_powers(args[1])
+        @return_on_false complete eqn
+        @return_on_false isgood(l) eqn
 		n::Int = args[2]
 		if n == 1
-			return l
+			return l, true
 		elseif n == -1
-			return 1.0 / l
+			return 1.0 / l, true
 		elseif n > 1
-			return reduce(*, [l for i=1:n])
+			return reduce(*, [l for i=1:n]), true
 		elseif n < -1
-			return reduce(/, vcat([1], [l for i=1:abs(n)]))
+			return reduce(/, vcat([1], [l for i=1:abs(n)])), true
 		else
-			return 1.0
+			return 1.0, true
 		end
 	elseif nargs == 2
-		return op(multiply_powers(args[1]), multiply_powers(args[2]))
+        l, complete = multiply_powers(args[1])
+        @return_on_false complete eqn
+        @return_on_false isgood(l) eqn
+        r, complete2 = multiply_powers(args[2])
+        @return_on_false complete2 eqn
+        @return_on_false isgood(r) eqn
+		return op(l, r), true
 	else
-		return mapreduce(multiply_powers, op, args)
+		# return mapreduce(multiply_powers, op, args)
+        # ## reduce(op, map(multiply_powers, args))
+        out = map(multiply_powers, args) #vector of tuples
+        @return_on_false isgood(out[1][2]) eqn
+        cumulator = out[1][1]
+        for i=2:size(out, 1)
+            @return_on_false isgood(out[i][2]) eqn
+            cumulator = op(cumulator, out[i][1])
+            @return_on_false isgood(cumulator) eqn
+        end
+        return cumulator, true
 	end
 end
 
-function multiply_powers(eqn::T)::SYMBOLIC_UTILS_TYPES where {T<:SymbolicUtils.Term{<:Number}}
+function multiply_powers(eqn::T)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {T<:SymbolicUtils.Term{<:Number}}
 	op = SymbolicUtils.operation(eqn)
 	return multiply_powers(eqn, op)
 end
@@ -137,10 +167,10 @@ function custom_simplify(init_eqn::T, options::Options)::SYMBOLIC_UTILS_TYPES wh
     eqn = simplifier(init_eqn)::SYMBOLIC_UTILS_TYPES #simplify(eqn, polynorm=true)
 
 	# Remove power laws
-    try
-        eqn = multiply_powers(eqn::SYMBOLIC_UTILS_TYPES)
-    catch
+    eqn, complete = multiply_powers(eqn::SYMBOLIC_UTILS_TYPES)
+    if !complete
         return init_eqn
+    else
+        return eqn
     end
-	return eqn
 end
