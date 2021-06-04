@@ -83,8 +83,8 @@ include("Deprecates.jl")
 """
     EquationSearch(X, y[; kws...])
 
-Perform a distributed equation search for functions f_i which
-describe the mapping f_i(X[:, j]) ≈ y[i, j]. Options are
+Perform a distributed equation search for functions `f_i` which
+describe the mapping `f_i(X[:, j]) ≈ y[i, j]`. Options are
 configured using SymbolicRegression.Options(...),
 which should be passed as a keyword argument to options.
 One can turn off parallelism with `numprocs=0`,
