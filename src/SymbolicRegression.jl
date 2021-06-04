@@ -52,7 +52,7 @@ export Population,
 
 using Distributed
 import JSON3
-using Printf: @printf
+using Printf: @printf, @sprintf
 using Pkg
 using Random: seed!, shuffle!
 using FromFile
@@ -345,6 +345,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     all_idx = [(j, i) for j=1:nout for i=1:options.npopulations]
     shuffle!(all_idx)
     kappa = 0
+    head_node_time = Dict("occupied"=>0, "start"=>time())
     while sum(cycles_remaining) > 0
         kappa += 1
         if kappa > options.npopulations * nout
@@ -359,6 +360,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         # TODO - this might skip extra cycles?
         population_ready &= (cycles_remaining[j] > 0)
         if population_ready
+            head_node_start_work = time()
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record) = parallel ? take!(channels[j][i]) : allPops[j][i]
             cur_pop::Population
@@ -485,6 +487,8 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                 equation_strings = string_dominating_pareto_curve(hallOfFame[j], baselineMSE,
                                                                   datasets[j], options,
                                                                   avgys[j])
+                load_string = @sprintf("Head node load: %.3e\n", head_node_time["occupied"]/(time() - head_node_time["start"]))
+                equation_strings = load_string * equation_strings
                 set_multiline_postfix(progress_bar, equation_strings)
                 if cur_cycle == nothing
                     (cur_cycle, cur_state) = iterate(progress_bar)
@@ -493,6 +497,8 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                 end
                 sum_cycle_remaining = sum(cycles_remaining)
             end
+            head_node_end_work = time()
+            head_node_time["occupied"] += (head_node_end_work - head_node_start_work)
         end
         sleep(1e-6)
 
@@ -513,6 +519,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                 @printf("\n")
                 average_speed = sum(equation_speed)/length(equation_speed)
                 @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
+                @printf("Head node load: %.3e\n", head_node_time["occupied"]/(time() - head_node_time["start"]))
                 cycles_elapsed = total_cycles * nout - sum(cycles_remaining)
                 @printf("Progress: %d / %d total iterations (%.3f%%)\n",
                         cycles_elapsed, total_cycles * nout,
