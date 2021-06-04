@@ -159,9 +159,9 @@ function get_simplifier(binops::A, unaops::B) where {A,B}
     return serial_polynormal_simplifier
 end
 
-function custom_simplify(init_eqn::T, options::Options)::SYMBOLIC_UTILS_TYPES where {T<:SYMBOLIC_UTILS_TYPES}
+function custom_simplify(init_eqn::T, options::Options)::Tuple{SYMBOLIC_UTILS_TYPES, Bool} where {T<:SYMBOLIC_UTILS_TYPES}
     if !istree(init_eqn) #simplifier will return nothing if not a tree.
-        return init_eqn
+        return init_eqn, false
     end
     simplifier = get_simplifier(options.binops, options.unaops)
     eqn = simplifier(init_eqn)::SYMBOLIC_UTILS_TYPES #simplify(eqn, polynorm=true)
@@ -169,8 +169,8 @@ function custom_simplify(init_eqn::T, options::Options)::SYMBOLIC_UTILS_TYPES wh
 	# Remove power laws
     eqn, complete = multiply_powers(eqn::SYMBOLIC_UTILS_TYPES)
     if !complete
-        return init_eqn
+        return init_eqn, false
     else
-        return eqn
+        return eqn, true
     end
 end

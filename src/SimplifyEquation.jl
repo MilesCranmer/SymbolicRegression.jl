@@ -121,7 +121,10 @@ function simplifyWithSymbolicUtils(tree::Node, options::Options, curmaxsize::Int
     init_node = copyNode(tree)
     init_size = countNodes(tree)
     symbolic_util_form = node_to_symbolic(tree, options, index_functions=true)
-    eqn_form = custom_simplify(symbolic_util_form, options)
+    eqn_form, complete = custom_simplify(symbolic_util_form, options)
+    if !complete
+        return tree
+    end
     final_node = symbolic_to_node(eqn_form, options)
     final_size = countNodes(tree)
     did_simplification_improve = (final_size <= init_size) && (check_constraints(final_node, options, curmaxsize))
