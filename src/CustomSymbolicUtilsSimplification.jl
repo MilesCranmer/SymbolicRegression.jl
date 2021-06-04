@@ -29,18 +29,24 @@ function multiply_powers(eqn::T, op::F)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where 
 		l, complete = multiply_powers(args[1])
         @return_on_false complete eqn
         @return_on_false isgood(l) eqn
-		n::Int = args[2]
-		if n == 1
-			return l, true
-		elseif n == -1
-			return 1.0 / l, true
-		elseif n > 1
-			return reduce(*, [l for i=1:n]), true
-		elseif n < -1
-			return reduce(/, vcat([1], [l for i=1:abs(n)])), true
-		else
-			return 1.0, true
-		end
+		n = args[2]
+        if typeof(n) <: Int
+            if n == 1
+                return l, true
+            elseif n == -1
+                return 1.0 / l, true
+            elseif n > 1
+                return reduce(*, [l for i=1:n]), true
+            elseif n < -1
+                return reduce(/, vcat([1], [l for i=1:abs(n)])), true
+            else
+                return 1.0, true
+            end
+        else
+            r, complete2 = multiply_powers(args[2])
+            @return_on_false complete2 eqn
+            return l ^ r, true
+        end
 	elseif nargs == 2
         l, complete = multiply_powers(args[1])
         @return_on_false complete eqn
@@ -53,10 +59,12 @@ function multiply_powers(eqn::T, op::F)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where 
 		# return mapreduce(multiply_powers, op, args)
         # ## reduce(op, map(multiply_powers, args))
         out = map(multiply_powers, args) #vector of tuples
-        @return_on_false isgood(out[1][2]) eqn
+        for i=1:size(out, 1)
+            @return_on_false out[i][2] eqn
+            @return_on_false isgood(out[i][1]) eqn
+        end
         cumulator = out[1][1]
         for i=2:size(out, 1)
-            @return_on_false isgood(out[i][2]) eqn
             cumulator = op(cumulator, out[i][1])
             @return_on_false isgood(cumulator) eqn
         end
@@ -167,10 +175,5 @@ function custom_simplify(init_eqn::T, options::Options)::Tuple{SYMBOLIC_UTILS_TY
     eqn = simplifier(init_eqn)::SYMBOLIC_UTILS_TYPES #simplify(eqn, polynorm=true)
 
 	# Remove power laws
-    eqn, complete = multiply_powers(eqn::SYMBOLIC_UTILS_TYPES)
-    if !complete
-        return init_eqn, false
-    else
-        return eqn, true
-    end
+    return multiply_powers(eqn::SYMBOLIC_UTILS_TYPES)
 end

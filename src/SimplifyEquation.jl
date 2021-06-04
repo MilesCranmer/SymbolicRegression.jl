@@ -123,7 +123,7 @@ function simplifyWithSymbolicUtils(tree::Node, options::Options, curmaxsize::Int
     symbolic_util_form = node_to_symbolic(tree, options, index_functions=true)
     eqn_form, complete = custom_simplify(symbolic_util_form, options)
     if !complete
-        return tree
+        return init_node
     end
     final_node = symbolic_to_node(eqn_form, options)
     final_size = countNodes(tree)
