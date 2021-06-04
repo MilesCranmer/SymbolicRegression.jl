@@ -487,7 +487,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                 equation_strings = string_dominating_pareto_curve(hallOfFame[j], baselineMSE,
                                                                   datasets[j], options,
                                                                   avgys[j])
-                load_string = @sprintf("Head node occupation: %.3e", 100*head_node_time["occupied"]/(time() - head_node_time["start"])) * "%\n"
+                load_string = @sprintf("Head worker occupation: %.1f", 100*head_node_time["occupied"]/(time() - head_node_time["start"])) * "%\n"
                 equation_strings = load_string * equation_strings
                 set_multiline_postfix(progress_bar, equation_strings)
                 if cur_cycle == nothing
@@ -519,7 +519,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                 @printf("\n")
                 average_speed = sum(equation_speed)/length(equation_speed)
                 @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
-                @printf("Head node occupation: %.3e%%\n", 100 * head_node_time["occupied"]/(time() - head_node_time["start"]))
+                @printf("Head worker occupation: %.1f%%\n", 100 * head_node_time["occupied"]/(time() - head_node_time["start"]))
                 cycles_elapsed = total_cycles * nout - sum(cycles_remaining)
                 @printf("Progress: %d / %d total iterations (%.3f%%)\n",
                         cycles_elapsed, total_cycles * nout,
