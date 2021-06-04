@@ -3,89 +3,38 @@ using SymbolicUtils
 using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, has_trig, polynormalize
 @from "Core.jl" import Options
 @from "InterfaceSymbolicUtils.jl" import SYMBOLIC_UTILS_TYPES
-@from "EvaluateEquation.jl" import @return_on_false
 
-function isbad(x::T)::Bool where {T<:Number}
-    isnan(x) || !isfinite(x)
+function multiply_powers(eqn::T)::SYMBOLIC_UTILS_TYPES where {T<:Union{<:Number,SymbolicUtils.Sym{<:Number}}}
+	return eqn
 end
 
-function multiply_powers(eqn::T)::Tuple{T, Bool} where {T<:Number}
-    if isbad(eqn)
-        return eqn, false
-    else
-        return eqn, true
-    end
-end
-
-function multiply_powers(eqn::T)::Tuple{T, Bool} where {T<:SymbolicUtils.Sym{<:Number}}
-	return eqn, true
-end
-
-function multiply_powers(eqn::T, op::F)::Tuple{SYMBOLIC_UTILS_TYPES, Bool} where {F,T<:SymbolicUtils.Term{<:Number}}
+function multiply_powers(eqn::T, op::F)::SYMBOLIC_UTILS_TYPES where {F,T<:SymbolicUtils.Term{<:Number}}
 	args = SymbolicUtils.arguments(eqn)
 	nargs = length(args)
 	if nargs == 1
-        l, complete = multiply_powers(args[1])
-        @return_on_false complete l
-
-        if typeof(l) <: Number
-            @return_on_false isbad(l) l
-            out = op(l)
-            @return_on_false isbad(out) out
-            return out, true
-        else
-            return op(l), true
-        end
+		return op(multiply_powers(args[1]))
 	elseif op == ^
-		l, complete = multiply_powers(args[1])
-        @return_on_false complete l
-		power = args[2]
-        if typeof(power) <: Int
-            n = power
-            if n == 1
-                return l
-            elseif n == -1
-                return 1.0 / l
-            elseif n > 1
-                return reduce(*, [l for i=1:n])
-            elseif n < -1
-                return reduce(/, vcat([1], [l for i=1:abs(n)]))
-            else
-                return 1.0
-            end
-        else
-            if typeof(l) <: Number
-                @return_on_false isbad(l) l
-                out = op(l, power)
-                if typeof(out) <: Number
-                    @return_on_false isbad(out) out
-                end
-                return out, true
-            else
-                return op(l, power), true
-            end
-        end
+		l = multiply_powers(args[1])
+		n::Int = args[2]
+		if n == 1
+			return l
+		elseif n == -1
+			return 1.0 / l
+		elseif n > 1
+			return reduce(*, [l for i=1:n])
+		elseif n < -1
+			return reduce(/, vcat([1], [l for i=1:abs(n)]))
+		else
+			return 1.0
+		end
 	elseif nargs == 2
-        l, complete = multiply_powers(args[1])
-        @return_on_false complete l
-        r, complete2 = multiply_powers(args[2])
-        @return_on_false complete2 r
-        out = op(l, r)
-        if typeof(out) <: Number
-            @return_on_false isbad(out) out
-        end
-        return out, true
+		return op(multiply_powers(args[1]), multiply_powers(args[2]))
 	else
-        #TODO: Need to check for Infs here.
-        map_out = map(multiply_powers, args)
-        for (k, flag) in map_out
-            @return_on_false flag k
-        end
 		return mapreduce(multiply_powers, op, args)
 	end
 end
 
-function multiply_powers(eqn::T)::Tuple{SYMBOLIC_UTILS_TYPES, Bool} where {T<:SymbolicUtils.Term{<:Number}}
+function multiply_powers(eqn::T)::SYMBOLIC_UTILS_TYPES where {T<:SymbolicUtils.Term{<:Number}}
 	op = SymbolicUtils.operation(eqn)
 	return multiply_powers(eqn, op)
 end
@@ -188,11 +137,6 @@ function custom_simplify(init_eqn::T, options::Options)::SYMBOLIC_UTILS_TYPES wh
     eqn = simplifier(init_eqn)::SYMBOLIC_UTILS_TYPES #simplify(eqn, polynorm=true)
 
 	# Remove power laws
-    #TODO: What happens when ^ is used as an operator??
-    eqn, success = multiply_powers(eqn::SYMBOLIC_UTILS_TYPES)
-    if success
-        return eqn
-    else
-        return init_eqn
-    end
+    eqn = multiply_powers(eqn::SYMBOLIC_UTILS_TYPES)
+	return eqn
 end
