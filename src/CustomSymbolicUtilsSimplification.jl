@@ -3,15 +3,7 @@ using SymbolicUtils
 using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, has_trig, polynormalize
 @from "Core.jl" import Options
 @from "InterfaceSymbolicUtils.jl" import SYMBOLIC_UTILS_TYPES
-@from "EvaluateEquation.jl" import @return_on_false
- 
-function isgood(x::T)::Bool where {T<:Number}
-    !(isnan(x) || !isfinite(x))
-end
-
-function isgood(x)::Bool
-    true
-end
+@from "Utils.jl" import isgood, @return_on_false
 
 function multiply_powers(eqn::T)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {T<:Union{<:Number,SymbolicUtils.Sym{<:Number}}}
 	return eqn, true

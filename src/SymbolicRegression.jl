@@ -193,9 +193,10 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     # Start a population on every process
     #    Store the population, hall of fame
     allPopsType = parallel ? Future : Tuple{Population,HallOfFame,RecordType}
-    allPops = [allPopsType[] for i=1:nout]
+    allPops = [allPopsType[] for j=1:nout]
     # Set up a channel to send finished populations back to head node
     channels = [[RemoteChannel(1) for i=1:options.npopulations] for j=1:nout]
+    tasks = [Task[] for j=1:nout]
 
     # These initial populations are discarded:
     bestSubPops = [[Population(datasets[j], baselineMSEs[j], npop=1, options=options, nfeatures=datasets[j].nfeatures)
@@ -335,7 +336,8 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         for j=1:nout
             for i=1:options.npopulations
                 # Start listening for each population to finish:
-                @async put!(channels[j][i], fetch(allPops[j][i]))
+                t = @async put!(channels[j][i], fetch(allPops[j][i]))
+                push!(tasks[j], t)
             end
         end
     end
@@ -354,6 +356,13 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         # nout, npopulations:
         j, i = all_idx[kappa]
 
+        # Check if error on population:
+        if parallel
+            if istaskfailed(tasks[j][i])
+                fetch(tasks[j][i])
+                error("Task failed for population")
+            end
+        end
         # Non-blocking check if a population is ready:
         population_ready = parallel ? isready(channels[j][i]) : true
         # Don't start more if this output has finished its cycles:
@@ -468,7 +477,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                 (tmp_pop, tmp_best_seen, cur_record)
             end
             if parallel
-                @async put!(channels[j][i], fetch(allPops[j][i]))
+                tasks[j][i] = @async put!(channels[j][i], fetch(allPops[j][i]))
             end
 
             cycles_elapsed = total_cycles - cycles_remaining[j]
@@ -507,7 +516,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         ## Printing code
         elapsed = time() - last_print_time
         #Update if time has passed, and some new equations generated.
-        if elapsed > print_every_n_seconds && num_equations > 0.0
+        if elapsed > print_every_n_seconds# && num_equations > 0.0
             # Dominating pareto curve - must be better than all simpler equations
             current_speed = num_equations/elapsed
             average_over_m_measurements = 10 #for print_every...=5, this gives 50 second running average

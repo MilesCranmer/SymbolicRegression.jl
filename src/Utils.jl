@@ -38,3 +38,12 @@ function recursive_merge(x...)
     x[end]
 end
 
+isgood(x::T) where {T<:Number} = !(isnan(x) || !isfinite(x))
+isgood(x) = true
+isbad(x) = !isgood(x)
+
+macro return_on_false(flag, retval)
+    :(if !$(esc(flag))
+          return ($(esc(retval)), false)
+    end)
+end

@@ -2,8 +2,9 @@ using FromFile
 @from "Core.jl" import CONST_TYPE, Node, copyNode, Options
 @from "EquationUtils.jl" import countNodes
 @from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
-@from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
+@from "InterfaceSymbolicUtils.jl" import node_to_symbolic_safe, symbolic_to_node
 @from "CheckConstraints.jl" import check_constraints
+@from "Utils.jl" import isbad, isgood
 
 # Simplify tree
 function combineOperators(tree::Node, options::Options)::Node
@@ -95,8 +96,13 @@ end
 function simplifyTree(tree::Node, options::Options)::Node
     if tree.degree == 1
         tree.l = simplifyTree(tree.l, options)
-        if tree.l.degree == 0 && tree.l.constant
-            return Node(convert(CONST_TYPE, options.unaops[tree.op](tree.l.val)))
+        l = tree.l.val
+        if tree.l.degree == 0 && tree.l.constant && isgood(l)
+            out = options.unaops[tree.op](l)
+            if isbad(out)
+                return tree
+            end
+            return Node(convert(CONST_TYPE, out))
         end
     elseif tree.degree == 2
         tree.l = simplifyTree(tree.l, options)
@@ -106,7 +112,19 @@ function simplifyTree(tree::Node, options::Options)::Node
              tree.r.degree == 0 && tree.r.constant
         )
         if constantsBelow
-            return Node(convert(CONST_TYPE, options.binops[tree.op](tree.l.val, tree.r.val)))
+            # NaN checks:
+            l = tree.l.val
+            r = tree.r.val
+            if isbad(l) || isbad(r)
+                return tree
+            end
+
+            # Actually compute:
+            out = options.binops[tree.op](l, r)
+            if isbad(out)
+                return tree
+            end
+            return Node(convert(CONST_TYPE, out))
         end
     end
     return tree
@@ -120,9 +138,12 @@ function simplifyWithSymbolicUtils(tree::Node, options::Options, curmaxsize::Int
     end
     init_node = copyNode(tree)
     init_size = countNodes(tree)
-    symbolic_util_form = node_to_symbolic(tree, options, index_functions=true)
-    eqn_form, complete = custom_simplify(symbolic_util_form, options)
+    symbolic_util_form, complete = node_to_symbolic_safe(tree, options, index_functions=true)
     if !complete
+        return init_node
+    end
+    eqn_form, complete2 = custom_simplify(symbolic_util_form, options)
+    if !complete2
         return init_node
     end
     final_node = symbolic_to_node(eqn_form, options)

@@ -1,6 +1,7 @@
 using FromFile
 using SymbolicUtils
 @from "Core.jl" import CONST_TYPE, Node, Options
+@from "Utils.jl" import isgood, isbad, @return_on_false
 
 const SYMBOLIC_UTILS_TYPES = Union{<:Number,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
 
@@ -66,6 +67,67 @@ function node_to_symbolic(tree::Node, options::Options;
                 dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number,Number}, Real}}(Symbol(op))
             end
             return dummy_op(left_side, right_side)
+        end
+    end
+end
+
+function node_to_symbolic_safe(tree::Node, options::Options; 
+                     varMap::Union{Array{String, 1}, Nothing}=nothing,
+                     evaluate_functions::Bool=false,
+                     index_functions::Bool=false
+                     )::Tuple{SYMBOLIC_UTILS_TYPES,Bool}
+    if tree.degree == 0
+        if tree.constant
+            return tree.val, true
+        else
+            if varMap == nothing
+                return SymbolicUtils.Sym{Real}(Symbol("x$(tree.feature)")), true
+            else
+                return SymbolicUtils.Sym{Real}(Symbol(varMap[tree.feature])), true
+            end
+        end
+    elseif tree.degree == 1
+        left_side, complete = node_to_symbolic_safe(tree.l, options, varMap=varMap, evaluate_functions=evaluate_functions, index_functions=index_functions)
+        @return_on_false complete Inf
+        @return_on_false isgood(left_side) Inf
+        op = options.unaops[tree.op]
+        if (op in (cos, sin, exp, cot, tan, csc, sec)) || evaluate_functions
+            out = op(left_side)
+            @return_on_false isgood(out) Inf
+            return out, true
+        else
+            if index_functions
+                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol("_unaop$(tree.op)"))
+            else
+                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol(op))
+            end
+            out = dummy_op(left_side)
+            #TODO: Can probably delete this check:
+            @return_on_false isgood(out) Inf
+            return out, true
+        end
+    else
+        left_side, complete  = node_to_symbolic_safe(tree.l, options, varMap=varMap, evaluate_functions=evaluate_functions, index_functions=index_functions)
+        @return_on_false complete Inf
+        @return_on_false isgood(left_side) Inf
+        right_side, complete2 = node_to_symbolic_safe(tree.r, options, varMap=varMap, evaluate_functions=evaluate_functions, index_functions=index_functions)
+        @return_on_false complete2 Inf
+        @return_on_false isgood(right_side) Inf
+        op = options.binops[tree.op]
+        if (op in (+, -, *, /)) || evaluate_functions
+            out = op(left_side, right_side)
+            @return_on_false isgood(out) Inf
+            return out, true
+        else
+            if index_functions
+                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number,Number}, Real}}(Symbol("_binop$(tree.op)"))
+            else
+                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number,Number}, Real}}(Symbol(op))
+            end
+            out = dummy_op(left_side, right_side)
+            # Can probably delete this check TODO
+            @return_on_false isgood(out) Inf
+            return out, true
         end
     end
 end

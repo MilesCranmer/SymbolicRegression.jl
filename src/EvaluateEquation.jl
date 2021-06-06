@@ -1,6 +1,6 @@
 using FromFile
 @from "Core.jl" import Node, Options
-
+@from "Utils.jl" import @return_on_false
 
 """
     evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)
@@ -46,12 +46,6 @@ macro break_on_check(val, flag)
     :(if isnan($(esc(val))) || !isfinite($(esc(val)))
           $(esc(flag)) = false
           break
-    end)
-end
-
-macro return_on_false(flag, retval)
-    :(if !$(esc(flag))
-          return ($(esc(retval)), false)
     end)
 end
 
