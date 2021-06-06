@@ -58,6 +58,8 @@ function deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
     op = options.binops[op_idx]
     finished_loop = true
     @inbounds @simd for j=1:n
+        @break_on_check cumulator[j] finished_loop
+        @break_on_check array2[j] finished_loop
         x = op(cumulator[j], array2[j])::T
         @break_on_check x finished_loop
         cumulator[j] = x
@@ -72,6 +74,7 @@ function deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
     op = options.unaops[op_idx]
     finished_loop = true
     @inbounds @simd for j=1:n
+        @break_on_check cumulator[j] finished_loop
         x = op(cumulator[j])::T
         @break_on_check x finished_loop
         cumulator[j] = x
@@ -200,6 +203,7 @@ function deg2_l0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
     if tree.l.constant
         val = convert(T, tree.l.val)
         @inbounds @simd for j=1:n
+            @break_on_check cumulator[j] finished_loop
             x = op(val, cumulator[j])::T
             @break_on_check x finished_loop
             cumulator[j] = x
@@ -207,6 +211,7 @@ function deg2_l0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
     else
         feature = tree.l.feature
         @inbounds @simd for j=1:n
+            @break_on_check cumulator[j] finished_loop
             x = op(cX[feature, j], cumulator[j])::T
             @break_on_check x finished_loop
             cumulator[j] = x
@@ -224,6 +229,7 @@ function deg2_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
     if tree.r.constant
         val = convert(T, tree.r.val)
         @inbounds @simd for j=1:n
+            @break_on_check cumulator[j] finished_loop
             x = op(cumulator[j], val)::T
             @break_on_check x finished_loop
             cumulator[j] = x
@@ -231,6 +237,7 @@ function deg2_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
     else
         feature = tree.r.feature
         @inbounds @simd for j=1:n
+            @break_on_check cumulator[j] finished_loop
             x = op(cumulator[j], cX[feature, j])::T
             @break_on_check x finished_loop
             cumulator[j] = x
