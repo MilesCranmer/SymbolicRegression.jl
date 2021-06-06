@@ -402,7 +402,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
             dominating = calculateParetoFrontier(dataset, hallOfFame[j], options)
             hofFile = options.hofFile
             if nout > 1
-                hofFile = "out$j" * "_" *hofFile
+                hofFile = hofFile * ".out$j"
             end
             open(hofFile, "w") do io
                 println(io,"Complexity|MSE|Equation")
