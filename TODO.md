@@ -1,6 +1,7 @@
 # TODO
 
-- [ ] Sort these todo lists by priority
+- [ ] Create quantitative profiler - measure profiler over time.
+- [ ] Are some workers getting too many populations, and other not enough? Is this why the load is low?
 - [ ] Show speed by # of mutations total, and # mutations per individual.
 - [ ] Is scoreFuncBatch called when creating PopMember, when batching turned on??
     - Should I run optimizeConstants with batching? e.g., a single little batch.
@@ -12,7 +13,7 @@
 
 ## Feature ideas
 
-- [ ] Other default losses (e.g., abs, other likelihoods, or just allow user to pass this as a string).
+- [x] Other default losses (e.g., abs, other likelihoods, or just allow user to pass this as a string).
 - [ ] Cross-validation
 - [ ] Hierarchical model, so can re-use functional forms. Output of one equation goes into second equation?
 - [ ] Add function to plot equations?
@@ -21,8 +22,6 @@
 - [ ] Multi targets (vector ops). Idea 1: Node struct contains argument for which registers it is applied to. Then, can work with multiple components simultaneously. Though this may be tricky to get right. Idea 2: each op is defined by input/output space. Some operators are flexible, and the spaces should be adjusted automatically. Otherwise, only consider ops that make a tree possible. But will need additional ops here to get it to work. Idea 3: define each equation in 2 parts: one part that is shared between all outputs, and one that is different between all outputs. Maybe this could be an array of nodes corresponding to each output. And those nodes would define their functions.
     - Much easier option: simply flatten the output vector, and set the index as another input feature. The equation learned will be a single equation containing indices as a feature.
 - [ ] Tree crossover? I.e., can take as input a part of the same equation, so long as it is the same level or below?
-- [ ] Consider allowing multi-threading turned off, for faster testing (cache issue on travis). Or could simply fix the caching issue there.
-- [ ] Consider returning only the equation of interest; rather than all equations.
 - [ ] Enable derivative operators. These would differentiate their right argument wrt their left argument, some input variable.
 
 ## Algorithmic performance ideas:
@@ -164,3 +163,7 @@ end
 - [-] Use package compiler and compile sr.jl into a standalone binary that can be used by pysr.
 - [x] Fuse operations for bin(op; op) triplets! There aren't that many, so probably worth it.
 - [x] Make serial version of code. Also to help benchmarking.
+- [x] Consider allowing multi-threading turned off, for faster testing (cache issue on travis). Or could simply fix the caching issue there.
+- [x] Consider returning only the equation of interest; rather than all equations.
+- [x] Sort these todo lists by priority
+    - Not done.
