@@ -33,7 +33,7 @@ function optimizeConstants(dataset::Dataset{T},
         if options.optimizer_algorithm == "NelderMead"
             algorithm = Optim.NelderMead(linesearch=LineSearches.BackTracking())
         elseif options.optimizer_algorithm == "BFGS"
-            use_differentiable = true
+            use_differentiable = false #true #Not working with autodiff yet TODO
             algorithm = Optim.BFGS(linesearch=LineSearches.BackTracking())#order=3))
         else
             error("Optimization function not implemented.")
