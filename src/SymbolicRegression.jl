@@ -516,7 +516,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         ## Printing code
         elapsed = time() - last_print_time
         #Update if time has passed, and some new equations generated.
-        if elapsed > print_every_n_seconds# && num_equations > 0.0
+        if elapsed > print_every_n_seconds && num_equations > 0.0
             # Dominating pareto curve - must be better than all simpler equations
             current_speed = num_equations/elapsed
             average_over_m_measurements = 10 #for print_every...=5, this gives 50 second running average
