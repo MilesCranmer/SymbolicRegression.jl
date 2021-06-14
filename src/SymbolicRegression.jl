@@ -542,7 +542,6 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                     print(equation_strings)
                     @printf("==============================\n")
                 end
-                println("Worker Assignments:", worker_assignment)
             end
             last_print_time = time()
             num_equations = 0.0
