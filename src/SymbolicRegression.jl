@@ -248,6 +248,9 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     for j=1:nout
         for i=1:options.npopulations
             worker_idx = next_worker(worker_assignment, procs)
+            if parallel
+                worker_assignment[(j, i)] = worker_idx
+            end
             new_pop = if parallel
                 (@spawnat worker_idx Population(datasets[j], baselineMSEs[j],
                                                 npop=options.npop, nlength=3,
