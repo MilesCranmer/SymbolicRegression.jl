@@ -47,3 +47,22 @@ macro return_on_false(flag, retval)
           return ($(esc(retval)), false)
     end)
 end
+
+function next_worker(worker_assignment::Dict{Tuple{Int,Int}, Int}, procs::Vector{Int})::Int
+    job_counts = Dict(proc=>0 for proc in procs)
+    for (key, value) in worker_assignment
+        @assert haskey(job_counts, value)
+        job_counts[value] += 1
+    end
+    least_busy_worker = reduce(
+        (proc1, proc2) -> (
+            job_counts[proc1] <= job_counts[proc2] ? proc1 : proc2
+        ),
+        procs
+    )
+    return least_busy_worker
+end
+
+function next_worker(worker_assignment::Dict{Tuple{Int,Int}, Int}, procs::Nothing)::Int
+    return 0
+end

@@ -60,7 +60,7 @@ using Reexport
 @reexport using LossFunctions
 
 @from "Core.jl" import CONST_TYPE, maxdegree, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip
-@from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge
+@from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge, next_worker
 @from "EquationUtils.jl" import countNodes, printTree, stringTree
 @from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
 @from "CheckConstraints.jl" import check_constraints
@@ -242,21 +242,12 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
             test_entire_pipeline(procs, example_dataset, options)
         end
     end
-    cur_proc_idx = 1
     # Get the next worker process to give a job:
-    function next_worker()::Int
-        if parallel
-            idx = ((cur_proc_idx-1) % numprocs) + 1
-            cur_proc_idx += 1
-            return procs[idx]
-        else
-            return 0
-        end
-    end
+    worker_assignment = Dict{Tuple{Int,Int}, Int}()
 
     for j=1:nout
         for i=1:options.npopulations
-            worker_idx = next_worker()
+            worker_idx = next_worker(worker_assignment, procs)
             new_pop = if parallel
                 (@spawnat worker_idx Population(datasets[j], baselineMSEs[j],
                                                 npop=options.npop, nlength=3,
@@ -283,7 +274,10 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         curmaxsize = curmaxsizes[j]
         for i=1:options.npopulations
             @recorder record["out$(j)_pop$(i)"] = RecordType()
-            worker_idx = next_worker()
+            worker_idx = next_worker(worker_assignment, procs)
+            if parallel
+                worker_assignment[(j, i)] = worker_idx
+            end
             allPops[j][i] = if parallel
                 @spawnat worker_idx let
                     in_pop = fetch(allPops[j][i])[1]
@@ -436,7 +430,10 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
             if cycles_remaining[j] == 0
                 break
             end
-            worker_idx = next_worker()
+            worker_idx = next_worker(worker_assignment, procs)
+            if parallel
+                worker_assignment[(j, i)] = worker_idx
+            end
             allPops[j][i] = if parallel
                 @spawnat worker_idx let
                     cur_record = RecordType()
@@ -545,6 +542,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                     print(equation_strings)
                     @printf("==============================\n")
                 end
+                println("Worker Assignments:", worker_assignment)
             end
             last_print_time = time()
             num_equations = 0.0
