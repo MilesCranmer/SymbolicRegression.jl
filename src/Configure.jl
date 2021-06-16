@@ -170,7 +170,7 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
     for proc in procs
         push!(futures, @spawnat proc begin
             tmp_pop = Population(dataset, convert(T, 1), npop=20, nlength=3, options=options, nfeatures=dataset.nfeatures)
-            tmp_pop = SRCycle(dataset, convert(T, 1), tmp_pop, 5, 5, ones(T, dataset.n), verbosity=options.verbosity, options=options, record=RecordType())[1]
+            tmp_pop = SRCycle(dataset, convert(T, 1), tmp_pop, 5, 5, ones(T, options.maxsize), verbosity=options.verbosity, options=options, record=RecordType())[1]
             tmp_pop = OptimizeAndSimplifyPopulation(dataset, T(1.0), tmp_pop, options, options.maxsize, RecordType())
         end)
     end
