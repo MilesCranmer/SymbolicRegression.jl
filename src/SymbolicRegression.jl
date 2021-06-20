@@ -437,14 +437,13 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
             if parallel
                 worker_assignment[(j, i)] = worker_idx
             end
+            key = "out$(j)_pop$(i)"
+            iteration = find_iteration_from_record(key, record) + 1
+
             allPops[j][i] = if parallel
                 @spawnat worker_idx let
                     cur_record = RecordType()
-                    @recorder begin
-                        key = "out$(j)_pop$(i)"
-                        iteration = find_iteration_from_record(key, record) + 1
-                        cur_record[key] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
-                    end
+                    @recorder cur_record[key] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
                     tmp_pop, tmp_best_seen = SRCycle(
                         dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
                         curmaxsize, copy(frequencyComplexities[j])/sum(frequencyComplexities[j]),
@@ -459,11 +458,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                 end
             else
                 cur_record = RecordType()#copy(record)
-                @recorder begin
-                    key = "out$(j)_pop$(i)"
-                    iteration = find_iteration_from_record(key, record) + 1
-                    cur_record[key] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
-                end
+                @recorder cur_record[key] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
                 tmp_pop, tmp_best_seen = SRCycle(
                     dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
                     curmaxsize, copy(frequencyComplexities[j])/sum(frequencyComplexities[j]),
