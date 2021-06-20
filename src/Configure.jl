@@ -1,4 +1,5 @@
 @from "Core.jl" import RecordType
+import Distributed: @spawnat, @everywhere
 
 # Check for errors before they happen
 function testOptionConfiguration(T, options::Options)

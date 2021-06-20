@@ -1,4 +1,5 @@
-using Printf: @printf
+import Printf: @printf
+import Distributed: @spawnat
 
 function debug(verbosity, string...)
     if verbosity > 0
@@ -65,4 +66,14 @@ end
 
 function next_worker(worker_assignment::Dict{Tuple{Int,Int}, Int}, procs::Nothing)::Int
     return 0
+end
+
+macro maybespawnat(is_parallel, p, expr)
+    quote
+        if $(esc(is_parallel))
+            @spawnat($(esc(p)), $(esc(expr)))
+        else
+            $(esc(expr))
+        end
+    end
 end
