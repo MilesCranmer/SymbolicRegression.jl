@@ -15,7 +15,9 @@ for batching in [true, false]
         multi = false
         recorder = false
         probPickFirst = 1.0
+        multithreading = false
         if weighted && batching
+            println("Serial & progress bar & warmup & BFGS")
             numprocs = 0 #Try serial computation here.
             progress = true #Also try the progress bar.
             warmupMaxsizeBy = 0.5f0 #Smaller maxsize at first, build up slowly
@@ -23,8 +25,14 @@ for batching in [true, false]
             probPickFirst = 0.8
         end
         if !weighted && !batching
+            println("Recorder & multi-output.")
             recorder = true
             multi = true
+        end
+        if !weighted && batching
+            println("Multi-threading")
+            multithreading = true
+            numprocs = 0
         end
         options = SymbolicRegression.Options(
             binary_operators=(+, *),
@@ -47,7 +55,8 @@ for batching in [true, false]
             y = (2 .* cos.(X[4, :])) .* weights .+ (1 .- weights) .* (5 .* X[2, :])
             hallOfFame = EquationSearch(X, y, weights=weights,
                                         niterations=2, options=options,
-                                        numprocs=numprocs
+                                        numprocs=numprocs,
+                                        multithreading=multithreading
                                        )
             dominating = [calculateParetoFrontier(X, y, hallOfFame,
                                                   options; weights=weights)]
@@ -58,7 +67,7 @@ for batching in [true, false]
                 y = repeat(y, 1, 2)
                 y = transpose(y)
             end
-            hallOfFame = EquationSearch(X, y, niterations=2, options=options)
+            hallOfFame = EquationSearch(X, y, niterations=2, options=options, multithreading=multithreading)
             if multi
                 dominating = [calculateParetoFrontier(X, y[j, :], hallOfFame[j], options)
                               for j=1:2]
@@ -85,6 +94,8 @@ for batching in [true, false]
         end
     end
 end
+
+println("fast-cycle and custom variable names")
 
 options = SymbolicRegression.Options(
     binary_operators=(+, *),
