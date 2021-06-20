@@ -23,7 +23,7 @@ for batching in [true, false]
             probPickFirst = 0.8
         end
         if !weighted && !batching
-            # recorder = true
+            recorder = true
             multi = true
         end
         options = SymbolicRegression.Options(
