@@ -310,6 +310,8 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             if ConcurrencyType == SRDistributed
                 worker_assignment[(j, i)] = worker_idx
             end
+
+            # TODO - why is this needed??
             # Multi-threaded doesn't like to fetch within a new task:
             in_pop = if ConcurrencyType == SRThreaded
                 fetch(allPops[j][i])[1]
