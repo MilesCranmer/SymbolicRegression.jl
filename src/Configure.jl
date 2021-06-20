@@ -1,5 +1,4 @@
 @from "Core.jl" import RecordType
-using Distributed
 
 # Check for errors before they happen
 function testOptionConfiguration(T, options::Options)
