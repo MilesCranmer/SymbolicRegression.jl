@@ -59,8 +59,8 @@ using FromFile
 using Reexport
 @reexport using LossFunctions
 
-@from "Core.jl" import CONST_TYPE, maxdegree, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip
-@from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge, next_worker
+@from "Core.jl" import CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, SRConcurrency, SRSerial, SRThreaded, SRDistributed
+@from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
 @from "EquationUtils.jl" import countNodes, printTree, stringTree
 @from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
 @from "CheckConstraints.jl" import check_constraints
@@ -129,6 +129,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
         options::Options=Options(),
         numprocs::Union{Int, Nothing}=nothing,
         procs::Union{Array{Int, 1}, Nothing}=nothing,
+        multithreading::Bool=false,
         runtests::Bool=true
        ) where {T<:Real}
 
@@ -143,7 +144,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
 
     return EquationSearch(datasets;
         niterations=niterations, options=options,
-        numprocs=numprocs, procs=procs,
+        numprocs=numprocs, procs=procs, multithreading=multithreading,
         runtests=runtests)
 end
 
@@ -161,14 +162,38 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         options::Options=Options(),
         numprocs::Union{Int, Nothing}=nothing,
         procs::Union{Array{Int, 1}, Nothing}=nothing,
+        multithreading::Bool=false,
         runtests::Bool=true
        ) where {T<:Real}
 
+    noprocs = (procs == nothing && numprocs == 0)
+    someprocs = !noprocs
+
+    concurrency = if multithreading
+        @assert procs == nothing && numprocs in [0, nothing]
+        SRThreaded()
+    elseif someprocs
+        SRDistributed()
+    else #noprocs, multithreading=false
+        SRSerial()
+    end
+
+    return _EquationSearch(concurrency, datasets;
+        niterations=niterations, options=options,
+        numprocs=numprocs, procs=procs,
+        runtests=runtests)
+end
+
+function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
+        niterations::Int=10,
+        options::Options=Options(),
+        numprocs::Union{Int, Nothing}=nothing,
+        procs::Union{Array{Int, 1}, Nothing}=nothing,
+        runtests::Bool=true,
+       ) where {T<:Real,ConcurrencyType<:SRConcurrency}
+
     example_dataset = datasets[1]
     nout = size(datasets, 1)
-
-    serial = (procs == nothing && numprocs == 0)
-    parallel = !serial
 
     if runtests
         testOptionConfiguration(T, options)
@@ -192,18 +217,32 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     end
     # Start a population on every process
     #    Store the population, hall of fame
-    allPopsType = parallel ? Future : Tuple{Population,HallOfFame,RecordType}
+    allPopsType = if ConcurrencyType == SRSerial
+        Tuple{Population,HallOfFame,RecordType}
+    elseif ConcurrencyType == SRDistributed
+        Future
+    else
+        Task
+    end
+
     allPops = [allPopsType[] for j=1:nout]
+    init_pops = [allPopsType[] for j=1:nout]
     # Set up a channel to send finished populations back to head node
-    channels = [[RemoteChannel(1) for i=1:options.npopulations] for j=1:nout]
-    tasks = [Task[] for j=1:nout]
+    if ConcurrencyType in [SRDistributed, SRThreaded]
+        if ConcurrencyType == SRDistributed
+            channels = [[RemoteChannel(1) for i=1:options.npopulations] for j=1:nout]
+        else
+            channels = [[Channel(1) for i=1:options.npopulations] for j=1:nout]
+        end
+        tasks = [Task[] for j=1:nout]
+    end
 
     # These initial populations are discarded:
     bestSubPops = [[Population(datasets[j], baselineMSEs[j], npop=1, options=options, nfeatures=datasets[j].nfeatures)
                     for i=1:options.npopulations]
                     for j=1:nout]
     hallOfFame = [HallOfFame(options) for j=1:nout]
-    actualMaxsize = options.maxsize + maxdegree
+    actualMaxsize = options.maxsize + MAX_DEGREE
     frequencyComplexities = [ones(T, actualMaxsize) for i=1:nout]
     curmaxsizes = [3 for j=1:nout]
     record = RecordType("options"=>"$(options)")
@@ -216,7 +255,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     ##########################################################################
     ### Distributed code:
     ##########################################################################
-    if parallel
+    if ConcurrencyType == SRDistributed
         if numprocs == nothing && procs == nothing
             numprocs = 4
             procs = addprocs(4)
@@ -248,25 +287,16 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     for j=1:nout
         for i=1:options.npopulations
             worker_idx = next_worker(worker_assignment, procs)
-            if parallel
+            if ConcurrencyType == SRDistributed
                 worker_assignment[(j, i)] = worker_idx
             end
-            new_pop = if parallel
-                (@spawnat worker_idx Population(datasets[j], baselineMSEs[j],
-                                                npop=options.npop, nlength=3,
-                                                options=options,
-                                                nfeatures=datasets[j].nfeatures),
+            new_pop = @sr_spawner ConcurrencyType worker_idx (
+                Population(datasets[j], baselineMSEs[j], npop=options.npop,
+                           nlength=3, options=options, nfeatures=datasets[j].nfeatures),
                 HallOfFame(options),
-                RecordType())
-            else
-                (Population(datasets[j], baselineMSEs[j],
-                            npop=options.npop, nlength=3,
-                            options=options,
-                            nfeatures=datasets[j].nfeatures),
-                 HallOfFame(options),
-                 RecordType())
-            end
-            push!(allPops[j], new_pop)
+                RecordType()
+            )
+            push!(init_pops[j], new_pop)
         end
     end
     # 2. Start the cycle on every process:
@@ -278,37 +308,35 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         for i=1:options.npopulations
             @recorder record["out$(j)_pop$(i)"] = RecordType()
             worker_idx = next_worker(worker_assignment, procs)
-            if parallel
+            if ConcurrencyType == SRDistributed
                 worker_assignment[(j, i)] = worker_idx
             end
-            allPops[j][i] = if parallel
-                @spawnat worker_idx let
-                    in_pop = fetch(allPops[j][i])[1]
-                    cur_record = RecordType()
-                    @recorder cur_record["out$(j)_pop$(i)"] = RecordType("iteration0"=>record_population(in_pop, options))
-                    tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, in_pop, options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options, record=cur_record)
-                    tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
-                    if options.batching
-                        for i_member=1:(options.maxsize + maxdegree)
-                            tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
-                        end
-                    end
-                    (tmp_pop, tmp_best_seen, cur_record)
+
+            # TODO - why is this needed??
+            # Multi-threaded doesn't like to fetch within a new task:
+            updated_pop = @sr_spawner ConcurrencyType worker_idx let
+                in_pop = if ConcurrencyType in [SRDistributed, SRThreaded]
+                    fetch(init_pops[j][i])[1]
+                else
+                    init_pops[j][i][1]
                 end
-            else
-                in_pop = allPops[j][i][1]
+
                 cur_record = RecordType()
                 @recorder cur_record["out$(j)_pop$(i)"] = RecordType("iteration0"=>record_population(in_pop, options))
-                tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, in_pop, options.ncyclesperiteration, curmaxsize, copy(frequencyComplexity)/sum(frequencyComplexity), verbosity=options.verbosity, options=options, record=cur_record)
+                tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, in_pop,
+                                                 options.ncyclesperiteration, curmaxsize,
+                                                 copy(frequencyComplexity)/sum(frequencyComplexity),
+                                                 verbosity=options.verbosity, options=options,
+                                                 record=cur_record)
                 tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
                 if options.batching
-                    for i_member=1:(options.maxsize + maxdegree)
+                    for i_member=1:(options.maxsize + MAX_DEGREE)
                         tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
                     end
                 end
                 (tmp_pop, tmp_best_seen, cur_record)
-            end # if parallel
-
+            end
+            push!(allPops[j], updated_pop)
         end
     end
 
@@ -329,7 +357,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     print_every_n_seconds = 5
     equation_speed = Float32[]
 
-    if parallel
+    if ConcurrencyType in [SRDistributed, SRThreaded]
         for j=1:nout
             for i=1:options.npopulations
                 # Start listening for each population to finish:
@@ -354,21 +382,21 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         j, i = all_idx[kappa]
 
         # Check if error on population:
-        if parallel
+        if ConcurrencyType in [SRDistributed, SRThreaded]
             if istaskfailed(tasks[j][i])
                 fetch(tasks[j][i])
                 error("Task failed for population")
             end
         end
         # Non-blocking check if a population is ready:
-        population_ready = parallel ? isready(channels[j][i]) : true
+        population_ready = ConcurrencyType in [SRDistributed, SRThreaded] ? isready(channels[j][i]) : true
         # Don't start more if this output has finished its cycles:
         # TODO - this might skip extra cycles?
         population_ready &= (cycles_remaining[j] > 0)
         if population_ready
             head_node_start_work = time()
             # Take the fetch operation from the channel since its ready
-            (cur_pop, best_seen, cur_record) = parallel ? take!(channels[j][i]) : allPops[j][i]
+            (cur_pop, best_seen, cur_record) = ConcurrencyType in [SRDistributed, SRThreaded] ? take!(channels[j][i]) : allPops[j][i]
             cur_pop::Population
             best_seen::HallOfFame
             cur_record::RecordType
@@ -388,7 +416,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                 if part_of_cur_pop
                     frequencyComplexities[j][size] += 1
                 end
-                actualMaxsize = options.maxsize + maxdegree
+                actualMaxsize = options.maxsize + MAX_DEGREE
                 if size < actualMaxsize && all([member.score < hallOfFame[j].members[size2].score for size2=1:size])
                     hallOfFame[j].members[size] = copyPopMember(member)
                     hallOfFame[j].exists[size] = true
@@ -434,49 +462,30 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
                 break
             end
             worker_idx = next_worker(worker_assignment, procs)
-            if parallel
+            if ConcurrencyType == SRDistributed
                 worker_assignment[(j, i)] = worker_idx
             end
-            allPops[j][i] = if parallel
-                @spawnat worker_idx let
-                    cur_record = RecordType()
-                    @recorder begin
-                        key = "out$(j)_pop$(i)"
-                        iteration = find_iteration_from_record(key, record) + 1
-                        cur_record[key] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
-                    end
-                    tmp_pop, tmp_best_seen = SRCycle(
-                        dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
-                        curmaxsize, copy(frequencyComplexities[j])/sum(frequencyComplexities[j]),
-                        verbosity=options.verbosity, options=options, record=cur_record)
-                    tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
-                    if options.batching
-                        for i_member=1:(options.maxsize + maxdegree)
-                            tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
-                        end
-                    end
-                    (tmp_pop, tmp_best_seen, cur_record)
-                end
-            else
-                cur_record = RecordType()#copy(record)
-                @recorder begin
-                    key = "out$(j)_pop$(i)"
-                    iteration = find_iteration_from_record(key, record) + 1
-                    cur_record[key] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
-                end
+            @recorder begin
+                key = "out$(j)_pop$(i)"
+                iteration = find_iteration_from_record(key, record) + 1
+            end
+
+            allPops[j][i] = @sr_spawner ConcurrencyType worker_idx let
+                cur_record = RecordType()
+                @recorder cur_record[key] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
                 tmp_pop, tmp_best_seen = SRCycle(
                     dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
                     curmaxsize, copy(frequencyComplexities[j])/sum(frequencyComplexities[j]),
                     verbosity=options.verbosity, options=options, record=cur_record)
                 tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
                 if options.batching
-                    for i_member=1:(options.maxsize + maxdegree)
+                    for i_member=1:(options.maxsize + MAX_DEGREE)
                         tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
                     end
                 end
                 (tmp_pop, tmp_best_seen, cur_record)
             end
-            if parallel
+            if ConcurrencyType in [SRDistributed, SRThreaded]
                 tasks[j][i] = @async put!(channels[j][i], fetch(allPops[j][i]))
             end
 

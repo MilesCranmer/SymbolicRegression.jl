@@ -1,6 +1,6 @@
 using FromFile
 
-@from "ProgramConstants.jl" import CONST_TYPE, maxdegree, BATCH_DIM, FEATURE_DIM, RecordType
+@from "ProgramConstants.jl" import CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, SRConcurrency, SRSerial, SRThreaded, SRDistributed
 @from "Dataset.jl" import Dataset
 @from "Equation.jl" import Node, copyNode
 @from "Options.jl" import Options

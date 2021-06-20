@@ -1,4 +1,7 @@
-using Printf: @printf
+import Printf: @printf
+using Distributed
+using FromFile
+@from "Core.jl" import SRThreaded, SRSerial, SRDistributed
 
 function debug(verbosity, string...)
     if verbosity > 0
@@ -65,4 +68,16 @@ end
 
 function next_worker(worker_assignment::Dict{Tuple{Int,Int}, Int}, procs::Nothing)::Int
     return 0
+end
+
+macro sr_spawner(parallel, p, expr)
+    quote
+        if $(esc(parallel)) == SRSerial
+            $(esc(expr))
+        elseif $(esc(parallel)) == SRDistributed
+            @spawnat($(esc(p)), $(esc(expr)))
+        else
+            Threads.@spawn($(esc(expr)))
+        end
+    end
 end
