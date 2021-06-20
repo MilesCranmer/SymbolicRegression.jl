@@ -60,7 +60,7 @@ using Reexport
 @reexport using LossFunctions
 
 @from "Core.jl" import CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, SRConcurrency, SRSerial, SRThreaded, SRDistributed
-@from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @maybespawnat
+@from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @pysr_spawner
 @from "EquationUtils.jl" import countNodes, printTree, stringTree
 @from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
 @from "CheckConstraints.jl" import check_constraints
@@ -289,7 +289,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             if ConcurrencyType == SRDistributed
                 worker_assignment[(j, i)] = worker_idx
             end
-            new_pop = @maybespawnat ConcurrencyType worker_idx (
+            new_pop = @pysr_spawner ConcurrencyType worker_idx (
                 Population(datasets[j], baselineMSEs[j], npop=options.npop,
                            nlength=3, options=options, nfeatures=datasets[j].nfeatures),
                 HallOfFame(options),
@@ -318,7 +318,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             else
                 allPops[j][i][1]
             end
-            allPops[j][i] = @maybespawnat ConcurrencyType worker_idx let
+            allPops[j][i] = @pysr_spawner ConcurrencyType worker_idx let
                 in_pop = if ConcurrencyType == SRDistributed
                     fetch(allPops[j][i])[1]
                 else
@@ -473,7 +473,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 iteration = find_iteration_from_record(key, record) + 1
             end
 
-            allPops[j][i] = @maybespawnat ConcurrencyType worker_idx let
+            allPops[j][i] = @pysr_spawner ConcurrencyType worker_idx let
                 cur_record = RecordType()
                 @recorder cur_record[key] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
                 tmp_pop, tmp_best_seen = SRCycle(
