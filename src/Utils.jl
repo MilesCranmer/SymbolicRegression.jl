@@ -70,7 +70,7 @@ function next_worker(worker_assignment::Dict{Tuple{Int,Int}, Int}, procs::Nothin
     return 0
 end
 
-macro pysr_spawner(parallel, p, expr)
+macro sr_spawner(parallel, p, expr)
     quote
         if $(esc(parallel)) == SRSerial
             $(esc(expr))
