@@ -226,6 +226,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
     end
 
     allPops = [allPopsType[] for j=1:nout]
+    init_pops = [allPopsType[] for j=1:nout]
     # Set up a channel to send finished populations back to head node
     if ConcurrencyType in [SRDistributed, SRThreaded]
         if ConcurrencyType == SRDistributed
@@ -295,7 +296,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 HallOfFame(options),
                 RecordType()
             )
-            push!(allPops[j], new_pop)
+            push!(init_pops[j], new_pop)
         end
     end
     # 2. Start the cycle on every process:
@@ -313,16 +314,11 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
 
             # TODO - why is this needed??
             # Multi-threaded doesn't like to fetch within a new task:
-            in_pop = if ConcurrencyType == SRThreaded
-                fetch(allPops[j][i])[1]
-            else
-                allPops[j][i][1]
-            end
-            allPops[j][i] = @pysr_spawner ConcurrencyType worker_idx let
-                in_pop = if ConcurrencyType == SRDistributed
-                    fetch(allPops[j][i])[1]
+            updated_pop = @pysr_spawner ConcurrencyType worker_idx let
+                in_pop = if ConcurrencyType in [SRDistributed, SRThreaded]
+                    fetch(init_pops[j][i])[1]
                 else
-                    in_pop
+                    init_pops[j][i][1]
                 end
 
                 cur_record = RecordType()
@@ -340,6 +336,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 end
                 (tmp_pop, tmp_best_seen, cur_record)
             end
+            push!(allPops[j], updated_pop)
         end
     end
 
