@@ -168,15 +168,14 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
 
     noprocs = (procs == nothing && numprocs == 0)
     someprocs = !noprocs
-    if someprocs
-        @assert !multithreaded
-    end
-    concurrency = if noprocs
-        SRSerial()
-    elseif !multithreaded
-        SRDistributed()
-    else
+
+    concurrency = if multithreaded
+        @assert procs == nothing && numprocs in [0, nothing]
         SRThreaded()
+    elseif someprocs
+        SRDistributed()
+    else #noprocs, multithreaded=false
+        SRSerial()
     end
 
     return _EquationSearch(concurrency, datasets;
@@ -311,11 +310,17 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             if ConcurrencyType == SRDistributed
                 worker_assignment[(j, i)] = worker_idx
             end
+            # Multi-threaded doesn't like to fetch within a new task:
+            in_pop = if ConcurrencyType == SRThreaded
+                fetch(allPops[j][i])[1]
+            else
+                allPops[j][i][1]
+            end
             allPops[j][i] = @maybespawnat ConcurrencyType worker_idx let
-                in_pop = if ConcurrencyType in [SRDistributed, SRThreaded]
+                in_pop = if ConcurrencyType == SRDistributed
                     fetch(allPops[j][i])[1]
                 else
-                    allPops[j][i][1]
+                    in_pop
                 end
 
                 cur_record = RecordType()
