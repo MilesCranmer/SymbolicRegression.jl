@@ -129,7 +129,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
         options::Options=Options(),
         numprocs::Union{Int, Nothing}=nothing,
         procs::Union{Array{Int, 1}, Nothing}=nothing,
-        multithreaded::Bool=false,
+        multithreading::Bool=false,
         runtests::Bool=true
        ) where {T<:Real}
 
@@ -144,7 +144,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
 
     return EquationSearch(datasets;
         niterations=niterations, options=options,
-        numprocs=numprocs, procs=procs, multithreaded=multithreaded,
+        numprocs=numprocs, procs=procs, multithreading=multithreading,
         runtests=runtests)
 end
 
@@ -162,19 +162,19 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         options::Options=Options(),
         numprocs::Union{Int, Nothing}=nothing,
         procs::Union{Array{Int, 1}, Nothing}=nothing,
-        multithreaded::Bool=false,
+        multithreading::Bool=false,
         runtests::Bool=true
        ) where {T<:Real}
 
     noprocs = (procs == nothing && numprocs == 0)
     someprocs = !noprocs
 
-    concurrency = if multithreaded
+    concurrency = if multithreading
         @assert procs == nothing && numprocs in [0, nothing]
         SRThreaded()
     elseif someprocs
         SRDistributed()
-    else #noprocs, multithreaded=false
+    else #noprocs, multithreading=false
         SRSerial()
     end
 
