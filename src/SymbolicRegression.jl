@@ -59,7 +59,7 @@ using FromFile
 using Reexport
 @reexport using LossFunctions
 
-@from "Core.jl" import CONST_TYPE, maxdegree, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, SRConcurrency, SRSerial, SRThreaded, SRDistributed
+@from "Core.jl" import CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, SRConcurrency, SRSerial, SRThreaded, SRDistributed
 @from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @maybespawnat
 @from "EquationUtils.jl" import countNodes, printTree, stringTree
 @from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
@@ -242,7 +242,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                     for i=1:options.npopulations]
                     for j=1:nout]
     hallOfFame = [HallOfFame(options) for j=1:nout]
-    actualMaxsize = options.maxsize + maxdegree
+    actualMaxsize = options.maxsize + MAX_DEGREE
     frequencyComplexities = [ones(T, actualMaxsize) for i=1:nout]
     curmaxsizes = [3 for j=1:nout]
     record = RecordType("options"=>"$(options)")
@@ -327,7 +327,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                                                  record=cur_record)
                 tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
                 if options.batching
-                    for i_member=1:(options.maxsize + maxdegree)
+                    for i_member=1:(options.maxsize + MAX_DEGREE)
                         tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
                     end
                 end
@@ -412,7 +412,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 if part_of_cur_pop
                     frequencyComplexities[j][size] += 1
                 end
-                actualMaxsize = options.maxsize + maxdegree
+                actualMaxsize = options.maxsize + MAX_DEGREE
                 if size < actualMaxsize && all([member.score < hallOfFame[j].members[size2].score for size2=1:size])
                     hallOfFame[j].members[size] = copyPopMember(member)
                     hallOfFame[j].exists[size] = true
@@ -475,7 +475,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                     verbosity=options.verbosity, options=options, record=cur_record)
                 tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
                 if options.batching
-                    for i_member=1:(options.maxsize + maxdegree)
+                    for i_member=1:(options.maxsize + MAX_DEGREE)
                         tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
                     end
                 end

@@ -1,5 +1,5 @@
 using FromFile
-@from "Core.jl" import CONST_TYPE, maxdegree, Node, Options, Dataset
+@from "Core.jl" import CONST_TYPE, MAX_DEGREE, Node, Options, Dataset
 @from "EquationUtils.jl" import stringTree
 @from "PopMember.jl" import PopMember
 @from "LossFunctions.jl" import EvalLoss
@@ -23,7 +23,7 @@ by size (i.e., `.members[1]` is the constant solution).
 has been instantiated or not.
 """
 function HallOfFame(options::Options)
-    actualMaxsize = options.maxsize + maxdegree
+    actualMaxsize = options.maxsize + MAX_DEGREE
     HallOfFame([PopMember(Node(convert(CONST_TYPE, 1)), 1f9) for i=1:actualMaxsize], [false for i=1:actualMaxsize])
 end
 
@@ -37,7 +37,7 @@ function calculateParetoFrontier(dataset::Dataset{T},
                                  options::Options)::Array{PopMember, 1} where {T<:Real}
     # Dominating pareto curve - must be better than all simpler equations
     dominating = PopMember[]
-    actualMaxsize = options.maxsize + maxdegree
+    actualMaxsize = options.maxsize + MAX_DEGREE
     for size=1:actualMaxsize
         if hallOfFame.exists[size]
             member = hallOfFame.members[size]
@@ -86,7 +86,7 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE,
     output *= @sprintf("%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation")
 
     #TODO - call pareto function!
-    actualMaxsize = options.maxsize + maxdegree
+    actualMaxsize = options.maxsize + MAX_DEGREE
     for size=1:actualMaxsize
         if hallOfFame.exists[size]
             member = hallOfFame.members[size]
