@@ -13,7 +13,6 @@ for batching in [true, false]
         warmupMaxsizeBy = 0f0
         optimizer_algorithm = "NelderMead"
         multi = false
-        recorder = false
         probPickFirst = 1.0
         multithreading = false
         if weighted && batching
@@ -25,8 +24,7 @@ for batching in [true, false]
             probPickFirst = 0.8
         end
         if !weighted && !batching
-            println("Recorder & multi-output.")
-            recorder = true
+            println("Multi-output.")
             multi = true
         end
         if !weighted && batching
@@ -43,7 +41,6 @@ for batching in [true, false]
             progress=progress,
             warmupMaxsizeBy=warmupMaxsizeBy,
             optimizer_algorithm=optimizer_algorithm,
-            recorder=recorder,
             probPickFirst=probPickFirst
         )
         X = randn(MersenneTwister(0), Float32, 5, 100)
