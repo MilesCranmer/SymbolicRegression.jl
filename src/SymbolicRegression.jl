@@ -569,7 +569,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
 
     @recorder begin
         open(options.recorder_file, "w") do io
-            JSON3.write(io, record)
+            JSON3.write(io, record, allow_inf = true)
         end
     end
 

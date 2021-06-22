@@ -89,9 +89,8 @@ end
 
 
 function record_population(pop::Population{T}, options::Options)::RecordType where {T<:Real}
-    inf_to_num = x -> isinf(x) ? convert(T, 1e9) : x
     RecordType("population"=>[RecordType("tree"=>stringTree(member.tree, options),
-                                         "loss"=>inf_to_num(member.score),
+                                         "loss"=>member.score,
                                          "complexity"=>countNodes(member.tree),
                                          "birth"=>member.birth,
                                          "ref"=>member.ref,
