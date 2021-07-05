@@ -26,52 +26,51 @@ will generate a symbolic equation in SymbolicUtils.jl format.
     operators, which then allows one to convert back to a `Node` format
     using `symbolic_to_node`.
 """
-function node_to_symbolic(tree::Node, options::Options; 
+
+
+
+const SUPPORTED_OPS = (cos, sin, exp, cot, tan, csc, sec, +, -, *, /)
+
+function parse_tree_to_eqs(tree::Node, opts, index_functions = false, evaluate_functions = false)
+    if tree.degree == 0
+        # Return constant if needed
+        tree.constant && return tree.val
+        return SymbolicUtils.Sym{Real}(Symbol("x$(tree.feature)"))
+    end
+    # Collect the next children
+    children = tree.degree >= 2 ? (tree.l, tree.r) : (tree.l,)
+    # Get the operation
+    op = tree.degree > 1 ? opts.binops[tree.op] : opts.unaops[tree.op]
+    # Create an N tuple of Numbers for each argument
+    dtypes = map(x->Number, 1:tree.degree)
+    #
+    if index_functions
+        symname = tree.degree > 1 ? "_binops$(op)" : "_unaops$(op)"
+        op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{dtypes...}, Real}}(Symbol(symname))
+    else
+        op = (op ∈ SUPPORTED_OPS) || evaluate_functions ? op : SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{dtypes...}, Real}}(Symbol(op))
+    end
+    return op(map(x->parse_tree_to_eqs(x, opts, index_functions, evaluate_functions), children)...)
+end
+
+
+function node_to_symbolic(tree::Node, options::Options;
                      varMap::Union{Array{String, 1}, Nothing}=nothing,
                      evaluate_functions::Bool=false,
                      index_functions::Bool=false
-                     )::SYMBOLIC_UTILS_TYPES
-    if tree.degree == 0
-        if tree.constant
-            return tree.val
-        else
-            if varMap == nothing
-                return SymbolicUtils.Sym{Real}(Symbol("x$(tree.feature)"))
-            else
-                return SymbolicUtils.Sym{Real}(Symbol(varMap[tree.feature]))
-            end
-        end
-    elseif tree.degree == 1
-        left_side = node_to_symbolic(tree.l, options, varMap=varMap, evaluate_functions=evaluate_functions, index_functions=index_functions)
-        op = options.unaops[tree.op]
-        if (op in (cos, sin, exp, cot, tan, csc, sec)) || evaluate_functions
-            return op(left_side)
-        else
-            if index_functions
-                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol("_unaop$(tree.op)"))
-            else
-                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol(op))
-            end
-            return dummy_op(left_side)
-        end
-    else
-        left_side = node_to_symbolic(tree.l, options, varMap=varMap, evaluate_functions=evaluate_functions, index_functions=index_functions)
-        right_side = node_to_symbolic(tree.r, options, varMap=varMap, evaluate_functions=evaluate_functions, index_functions=index_functions)
-        op = options.binops[tree.op]
-        if (op in (+, -, *, /)) || evaluate_functions
-            return op(left_side, right_side)
-        else
-            if index_functions
-                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number,Number}, Real}}(Symbol("_binop$(tree.op)"))
-            else
-                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number,Number}, Real}}(Symbol(op))
-            end
-            return dummy_op(left_side, right_side)
-        end
-    end
+                     )
+    expr = parse_tree_to_eqs(tree, options, index_functions, evaluate_functions)
+    isnothing(varMap) && return expr
+    # Create a substitution tuple
+    subs = Dict(
+        [SymbolicUtils.Sym{Real}(Symbol("x$(i)")) => SymbolicUtils.Sym{Real}(Symbol(varMap[i])) for i in 1:length(varMap)]...
+    )
+    return substitute(expr, subs)
 end
 
-function node_to_symbolic_safe(tree::Node, options::Options; 
+
+
+function node_to_symbolic_safe(tree::Node, options::Options;
                      varMap::Union{Array{String, 1}, Nothing}=nothing,
                      evaluate_functions::Bool=false,
                      index_functions::Bool=false
