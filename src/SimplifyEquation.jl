@@ -140,19 +140,19 @@ function simplifyWithSymbolicUtils(tree::Node, options::Options, curmaxsize::Int
     init_size = countNodes(tree)
     try
         symbolic_util_form = node_to_symbolic(tree, options, index_functions=true)
+        eqn_form, complete2 = custom_simplify(symbolic_util_form, options)
+        if !complete2
+            return init_node
+        end
+        final_node = symbolic_to_node(eqn_form, options)
+        final_size = countNodes(tree)
+        did_simplification_improve = (final_size <= init_size) && (check_constraints(final_node, options, curmaxsize))
+        output = did_simplification_improve ? final_node : init_node
+
+        return output
     catch e
         return init_node
     end
-    eqn_form, complete2 = custom_simplify(symbolic_util_form, options)
-    if !complete2
-        return init_node
-    end
-    final_node = symbolic_to_node(eqn_form, options)
-    final_size = countNodes(tree)
-    did_simplification_improve = (final_size <= init_size) && (check_constraints(final_node, options, curmaxsize))
-    output = did_simplification_improve ? final_node : init_node
-
-    return output
 end
 
 function simplifyWithSymbolicUtils(tree::Node, options::Options)::Node
