@@ -31,10 +31,13 @@ will generate a symbolic equation in SymbolicUtils.jl format.
 
 const SUPPORTED_OPS = (cos, sin, exp, cot, tan, csc, sec, +, -, *, /)
 
+isgood(x::SymbolicUtils.Symbolic) = SymbolicUtils.istree(x) ? all(isgood.([SymbolicUtils.operation(x);SymbolicUtils.arguments(x)])) : true
+subs_bad(x) = isgood(x) ? x : Inf
+
 function parse_tree_to_eqs(tree::Node, opts, index_functions = false, evaluate_functions = false)
     if tree.degree == 0
         # Return constant if needed
-        tree.constant && return tree.val
+        tree.constant && return subs_bad(tree.val)
         return SymbolicUtils.Sym{Real}(Symbol("x$(tree.feature)"))
     end
     # Collect the next children
@@ -50,7 +53,7 @@ function parse_tree_to_eqs(tree::Node, opts, index_functions = false, evaluate_f
     else
         op = (op ∈ SUPPORTED_OPS) || evaluate_functions ? op : SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{dtypes...}, Real}}(Symbol(op))
     end
-    return op(map(x->parse_tree_to_eqs(x, opts, index_functions, evaluate_functions), children)...)
+    return subs_bad(op(map(x->parse_tree_to_eqs(x, opts, index_functions, evaluate_functions), children)...))
 end
 
 
@@ -59,7 +62,10 @@ function node_to_symbolic(tree::Node, options::Options;
                      evaluate_functions::Bool=false,
                      index_functions::Bool=false
                      )
-    expr = parse_tree_to_eqs(tree, options, index_functions, evaluate_functions)
+    expr = subs_bad(parse_tree_to_eqs(tree, options, index_functions, evaluate_functions))
+    # Check for NaN and Inf
+    @assert isgood(expr) "The recovered equation contains NaN or Inf."
+    # Return if no varMap is given
     isnothing(varMap) && return expr
     # Create a substitution tuple
     subs = Dict(
@@ -69,67 +75,6 @@ function node_to_symbolic(tree::Node, options::Options;
 end
 
 
-
-function node_to_symbolic_safe(tree::Node, options::Options;
-                     varMap::Union{Array{String, 1}, Nothing}=nothing,
-                     evaluate_functions::Bool=false,
-                     index_functions::Bool=false
-                     )::Tuple{SYMBOLIC_UTILS_TYPES,Bool}
-    if tree.degree == 0
-        if tree.constant
-            return tree.val, true
-        else
-            if varMap == nothing
-                return SymbolicUtils.Sym{Real}(Symbol("x$(tree.feature)")), true
-            else
-                return SymbolicUtils.Sym{Real}(Symbol(varMap[tree.feature])), true
-            end
-        end
-    elseif tree.degree == 1
-        left_side, complete = node_to_symbolic_safe(tree.l, options, varMap=varMap, evaluate_functions=evaluate_functions, index_functions=index_functions)
-        @return_on_false complete Inf
-        @return_on_false isgood(left_side) Inf
-        op = options.unaops[tree.op]
-        if (op in (cos, sin, exp, cot, tan, csc, sec)) || evaluate_functions
-            out = op(left_side)
-            @return_on_false isgood(out) Inf
-            return out, true
-        else
-            if index_functions
-                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol("_unaop$(tree.op)"))
-            else
-                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number}, Real}}(Symbol(op))
-            end
-            out = dummy_op(left_side)
-            #TODO: Can probably delete this check:
-            @return_on_false isgood(out) Inf
-            return out, true
-        end
-    else
-        left_side, complete  = node_to_symbolic_safe(tree.l, options, varMap=varMap, evaluate_functions=evaluate_functions, index_functions=index_functions)
-        @return_on_false complete Inf
-        @return_on_false isgood(left_side) Inf
-        right_side, complete2 = node_to_symbolic_safe(tree.r, options, varMap=varMap, evaluate_functions=evaluate_functions, index_functions=index_functions)
-        @return_on_false complete2 Inf
-        @return_on_false isgood(right_side) Inf
-        op = options.binops[tree.op]
-        if (op in (+, -, *, /)) || evaluate_functions
-            out = op(left_side, right_side)
-            @return_on_false isgood(out) Inf
-            return out, true
-        else
-            if index_functions
-                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number,Number}, Real}}(Symbol("_binop$(tree.op)"))
-            else
-                dummy_op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{Number,Number}, Real}}(Symbol(op))
-            end
-            out = dummy_op(left_side, right_side)
-            # Can probably delete this check TODO
-            @return_on_false isgood(out) Inf
-            return out, true
-        end
-    end
-end
 
 # Just constant
 function symbolic_to_node(eqn::T, options::Options;
