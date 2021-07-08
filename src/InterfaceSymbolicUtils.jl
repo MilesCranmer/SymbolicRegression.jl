@@ -10,7 +10,7 @@ const SUPPORTED_OPS = (cos, sin, exp, cot, tan, csc, sec, +, -, *, /)
 isgood(x::SymbolicUtils.Symbolic) = SymbolicUtils.istree(x) ? all(isgood.([SymbolicUtils.operation(x);SymbolicUtils.arguments(x)])) : true
 subs_bad(x) = isgood(x) ? x : Inf
 
-function parse_tree_to_eqs(tree::Node, opts, index_functions = false, evaluate_functions = false)
+function parse_tree_to_eqs(tree::Node, options::Options, index_functions = false, evaluate_functions = false)
     if tree.degree == 0
         # Return constant if needed
         tree.constant && return subs_bad(tree.val)
@@ -19,7 +19,7 @@ function parse_tree_to_eqs(tree::Node, opts, index_functions = false, evaluate_f
     # Collect the next children
     children = tree.degree >= 2 ? (tree.l, tree.r) : (tree.l,)
     # Get the operation
-    op = tree.degree > 1 ? opts.binops[tree.op] : opts.unaops[tree.op]
+    op = tree.degree > 1 ? options.binops[tree.op] : options.unaops[tree.op]
     # Create an N tuple of Numbers for each argument
     dtypes = map(x->Number, 1:tree.degree)
     #
@@ -28,36 +28,36 @@ function parse_tree_to_eqs(tree::Node, opts, index_functions = false, evaluate_f
     else
         op = ((op ∈ SUPPORTED_OPS) || evaluate_functions) ? op : SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{dtypes...}, Number}}(Symbol(op))
     end
-    return subs_bad(op(map(x->parse_tree_to_eqs(x, opts, index_functions, evaluate_functions), children)...))
+    return subs_bad(op(map(x->parse_tree_to_eqs(x, options, index_functions, evaluate_functions), children)...))
 end
 
 ## Convert symbolic function back
 convert_to_function(x, args...) = x
 
-function convert_to_function(x::SymbolicUtils.Sym{SymbolicUtils.FnType{T, Number}}, opts) where {T <: Tuple}
-    ariety = length(T.types)
-    if ariety == 1
-        ind = findoperation(x.name, opts.unaops)
-        return opts.unaops[ind]
-    elseif ariety == 2
-        ind = findoperation(x.name, opts.binops)
-        return opts.binops[ind]
+function convert_to_function(x::SymbolicUtils.Sym{SymbolicUtils.FnType{T, Number}}, options::Options) where {T <: Tuple}
+    degree = length(T.types)
+    if degree == 1
+        ind = findoperation(x.name, options.unaops)
+        return options.unaops[ind]
+    elseif degree == 2
+        ind = findoperation(x.name, options.binops)
+        return options.binops[ind]
     else
         throw(AssertionError("Function $(String(x.name)) has ariety > 2 !"))
     end
 end
 
 # Split equation
-function split_eq(op, args, opt)
+function split_eq(op, args, options::Options)
     !(op ∈ (sum, prod, +, *)) && throw(error("Unsupported operation $op in expression!"))
     if Symbol(op) == Symbol(sum)
-        ind = findoperation(+, opt.binops)
+        ind = findoperation(+, options.binops)
     elseif Symbol(op) === Symbol(prod)
-        ind = findoperation(*, opt.binops)
+        ind = findoperation(*, options.binops)
     else
-        ind = findoperation(op, opt.binops)
+        ind = findoperation(op, options.binops)
     end
-    return Node(ind, convert(Node, args[1], opt), convert(Node, op(args[2:end]...), opt))
+    return Node(ind, convert(Node, args[1], options), convert(Node, op(args[2:end]...), options))
 end
 
 function findoperation(op, ops)
@@ -66,23 +66,23 @@ function findoperation(op, ops)
     end
 end
 
-function Base.convert(::typeof(Node), x::Number, opts)
+function Base.convert(::typeof(Node), x::Number, options::Options)
     return Node(x)
 end
 
-function Base.convert(::typeof(Node), x::Symbol, opts)
+function Base.convert(::typeof(Node), x::Symbol, options::Options)
     return Node(String(x))
 end
 
-function Base.convert(::typeof(Node), x::SymbolicUtils.Symbolic, opts)
+function Base.convert(::typeof(Node), x::SymbolicUtils.Symbolic, options::Options)
     !SymbolicUtils.istree(x) && return Node(String(x.name))
     op = convert_to_function(SymbolicUtils.operation(x))
     args = SymbolicUtils.arguments(x)
 
-    length(args) > 2 && return split_eq(op, args, opts)
-    ind = length(args) == 2 ? findoperation(op, opts.binops) : findoperation(op, opts.unaops)
+    length(args) > 2 && return split_eq(op, args, options)
+    ind = length(args) == 2 ? findoperation(op, options.binops) : findoperation(op, options.unaops)
 
-    return Node(ind, map(x->convert(Node, x, opts), args)...)
+    return Node(ind, map(x->convert(Node, x, options), args)...)
 end
 
 """
