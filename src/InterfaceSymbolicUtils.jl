@@ -43,7 +43,7 @@ function convert_to_function(x::SymbolicUtils.Sym{SymbolicUtils.FnType{T, Number
         ind = findoperation(x.name, options.binops)
         return options.binops[ind]
     else
-        throw(AssertionError("Function $(String(x.name)) has ariety > 2 !"))
+        throw(AssertionError("Function $(String(x.name)) has degree > 2 !"))
     end
 end
 
@@ -76,7 +76,11 @@ function Base.convert(::typeof(Node), x::Symbol, options::Options; varMap::Union
 end
 
 function Base.convert(::typeof(Node), x::SymbolicUtils.Symbolic, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
-    !SymbolicUtils.istree(x) && return Node(String(x.name))
+    if !SymbolicUtils.istree(x)
+        varMap == nothing && return Node(String(x.name))
+        return Node(String(x.name), varMap)
+    end
+
     op = convert_to_function(SymbolicUtils.operation(x))
     args = SymbolicUtils.arguments(x)
 
