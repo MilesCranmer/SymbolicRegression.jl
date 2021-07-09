@@ -10,7 +10,7 @@ const SUPPORTED_OPS = (cos, sin, exp, cot, tan, csc, sec, +, -, *, /)
 isgood(x::SymbolicUtils.Symbolic) = SymbolicUtils.istree(x) ? all(isgood.([SymbolicUtils.operation(x);SymbolicUtils.arguments(x)])) : true
 subs_bad(x) = isgood(x) ? x : Inf
 
-function parse_tree_to_eqs(tree::Node, options::Options, index_functions = false, evaluate_functions = false)
+function parse_tree_to_eqs(tree::Node, options::Options, index_functions::Bool=false, evaluate_functions::Bool=false)
     if tree.degree == 0
         # Return constant if needed
         tree.constant && return subs_bad(tree.val)
@@ -66,15 +66,16 @@ function findoperation(op, ops)
     end
 end
 
-function Base.convert(::typeof(Node), x::Number, options::Options)
+function Base.convert(::typeof(Node), x::Number, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
     return Node(x)
 end
 
-function Base.convert(::typeof(Node), x::Symbol, options::Options)
-    return Node(String(x))
+function Base.convert(::typeof(Node), x::Symbol, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
+    varMap == nothing && return Node(String(x))
+    return Node(String(x), varMap=varMap)
 end
 
-function Base.convert(::typeof(Node), x::SymbolicUtils.Symbolic, options::Options)
+function Base.convert(::typeof(Node), x::SymbolicUtils.Symbolic, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
     !SymbolicUtils.istree(x) && return Node(String(x.name))
     op = convert_to_function(SymbolicUtils.operation(x))
     args = SymbolicUtils.arguments(x)
@@ -82,7 +83,7 @@ function Base.convert(::typeof(Node), x::SymbolicUtils.Symbolic, options::Option
     length(args) > 2 && return split_eq(op, args, options)
     ind = length(args) == 2 ? findoperation(op, options.binops) : findoperation(op, options.unaops)
 
-    return Node(ind, map(x->convert(Node, x, options), args)...)
+    return Node(ind, map(x->convert(Node, x, options, varMap=varMap), args)...)
 end
 
 """
@@ -115,7 +116,7 @@ function node_to_symbolic(tree::Node, options::Options;
     # Check for NaN and Inf
     @assert isgood(expr) "The recovered equation contains NaN or Inf."
     # Return if no varMap is given
-    isnothing(varMap) && return expr
+    varMap == nothing && return expr
     # Create a substitution tuple
     subs = Dict(
         [SymbolicUtils.Sym{Number}(Symbol("x$(i)")) => SymbolicUtils.Sym{Number}(Symbol(varMap[i])) for i in 1:length(varMap)]...
@@ -126,10 +127,5 @@ end
 function symbolic_to_node(eqn::T, options::Options;
                      varMap::Union{Array{String, 1}, Nothing}=nothing)::Node where {T<:SymbolicUtils.Symbolic}
 
-    isnothing(varMap) && return convert(Node, eqn, options)
-    # Create a substitution tuple
-    subs = Dict(
-        [SymbolicUtils.Sym{Number}(Symbol(varMap[i])) => SymbolicUtils.Sym{Number}(Symbol("x$i")) for i in 1:length(varMap)]...
-    )
-    convert(Node, substitute(eqn, subs), options)
+    convert(Node, eqn, options; varMap=varMap)
 end
