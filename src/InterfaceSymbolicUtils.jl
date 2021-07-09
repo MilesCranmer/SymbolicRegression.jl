@@ -48,7 +48,7 @@ function convert_to_function(x::SymbolicUtils.Sym{SymbolicUtils.FnType{T, Number
 end
 
 # Split equation
-function split_eq(op, args, options::Options)
+function split_eq(op, args, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
     !(op ∈ (sum, prod, +, *)) && throw(error("Unsupported operation $op in expression!"))
     if Symbol(op) == Symbol(sum)
         ind = findoperation(+, options.binops)
@@ -57,7 +57,7 @@ function split_eq(op, args, options::Options)
     else
         ind = findoperation(op, options.binops)
     end
-    return Node(ind, convert(Node, args[1], options), convert(Node, op(args[2:end]...), options))
+    return Node(ind, convert(Node, args[1], options; varMap=varMap), convert(Node, op(args[2:end]...), options; varMap=varMap))
 end
 
 function findoperation(op, ops)
@@ -80,7 +80,7 @@ function Base.convert(::typeof(Node), x::SymbolicUtils.Symbolic, options::Option
     op = convert_to_function(SymbolicUtils.operation(x))
     args = SymbolicUtils.arguments(x)
 
-    length(args) > 2 && return split_eq(op, args, options)
+    length(args) > 2 && return split_eq(op, args, options; varMap=varMap)
     ind = length(args) == 2 ? findoperation(op, options.binops) : findoperation(op, options.unaops)
 
     return Node(ind, map(x->convert(Node, x, options, varMap=varMap), args)...)
@@ -125,7 +125,7 @@ function node_to_symbolic(tree::Node, options::Options;
 end
 
 function symbolic_to_node(eqn::T, options::Options;
-                     varMap::Union{Array{String, 1}, Nothing}=nothing)::Node where {T<:SymbolicUtils.Symbolic}
+                          varMap::Union{Array{String, 1}, Nothing}=nothing)::Node where {T<:SymbolicUtils.Symbolic}
 
     convert(Node, eqn, options; varMap=varMap)
 end
