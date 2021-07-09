@@ -64,6 +64,7 @@ function findoperation(op, ops)
     for (i,oi) in enumerate(ops)
         Symbol(oi) == Symbol(op) && return i
     end
+    throw(error("Operation $op in expression not found in operationrs $ops!"))
 end
 
 function Base.convert(::typeof(Node), x::Number, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
