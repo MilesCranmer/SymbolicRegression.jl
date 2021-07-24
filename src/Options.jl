@@ -364,7 +364,7 @@ function Options(;
         push!(diff_binary_operators, diff_op)
     end
 
-    for un in unary_operators
+    for op in unary_operators
        diff_op(x) = sum(gradient(op,x))
        push!(diff_unary_operators, diff_op)
     end
