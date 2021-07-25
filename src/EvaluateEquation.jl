@@ -1,4 +1,5 @@
 using FromFile
+using LinearAlgebra
 @from "Core.jl" import Node, Options
 @from "Utils.jl" import @return_on_false
 
