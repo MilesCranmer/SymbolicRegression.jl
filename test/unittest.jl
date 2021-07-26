@@ -152,3 +152,8 @@ for (loss, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
     @test abs(Loss(x, y, options) - sum(evaluator.(x, y))/length(x)) < 1e-6
     @test abs(Loss(x, y, w, options) - sum(evaluator.(x, y, w))/sum(w)) < 1e-6
 end
+
+
+
+# Test derivatives
+include("derivative_test.jl")

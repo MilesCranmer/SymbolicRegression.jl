@@ -290,7 +290,7 @@ end
 ### Derivative of a graph
 ################################
 
-function evaldiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction=Int)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
+function evaldiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
     if tree.degree == 0
         diff_deg0_eval(tree, cX, options, direction)
     elseif tree.degree == 1
@@ -300,7 +300,7 @@ function evaldiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, 
     end
 end
 
-function diff_deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options, direction=Int)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
+function diff_deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
     n = size(cX, 2)
     if tree.feature == direction
         return (fill(convert(T, 1), n), true)
@@ -310,7 +310,7 @@ function diff_deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options, dir
 
 end
 
-function diff_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction=Int)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
+function diff_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     (cumulator, complete) = evalTreeArray(tree.l, cX, options)
     @return_on_false complete cumulator
@@ -327,7 +327,7 @@ function diff_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
     return (cumulator, finished_loop)
 end
 
-function diff_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction=Int)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
+function diff_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     (cumulator, complete) = evalTreeArray(tree.l, cX, options)
     (darray1, complete2) = evaldiffTreeArray(tree.l, cX, options,direction)
