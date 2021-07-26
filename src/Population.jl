@@ -27,7 +27,7 @@ Create random population from number of population, need to initialize score.
 
 Population(npop::Int,
            options::Options,
-           nfeatures::Int, nlength::Int=3,) where {T<:Real} = Population([PopMember(genRandomTree(nlength, options, nfeatures), 0) for i=1:npop], npop)
+           nfeatures::Int, nlength::Int=3,) where {T<:Real} = Population([PopMember(genRandomTree(nlength, options, nfeatures), 0.0) for i=1:npop], npop)
 
 
 
