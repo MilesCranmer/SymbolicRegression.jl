@@ -22,6 +22,20 @@ Population(pop::Array{PopMember{T}, 1}) where {T<:Real} = Population{T}(pop, siz
                npop::Int, nlength::Int=3, options::Options,
                nfeatures::Int)
 
+Create random population from number of population, need to initialize score.
+"""
+
+Population(npop::Int,
+           options::Options,
+           nfeatures::Int, nlength::Int=3,) where {T<:Real} = Population([PopMember(genRandomTree(nlength, options, nfeatures), 0) for i=1:npop], npop)
+
+
+
+"""
+    Population(dataset::Dataset{T}, baseline::T;
+               npop::Int, nlength::Int=3, options::Options,
+               nfeatures::Int)
+
 Create random population and with baseline score.
 """
 
