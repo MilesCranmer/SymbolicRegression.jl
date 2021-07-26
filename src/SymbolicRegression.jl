@@ -24,17 +24,6 @@ export Population,
     simplifyWithSymbolicUtils,
     combineOperators,
     genRandomTree,
-    mutateConstant,
-    mutateOperator,
-    appendRandomOp,
-    prependRandomOp,
-    insertRandomOp, 
-    deleteRandomOp,
-    countConstants,
-    countDepth,
-    bestOfSample,
-    simplifyTree,
-    OptimizeAndSimplifyPopulation,
 
     #Operators:
     plus,
@@ -74,12 +63,12 @@ using Reexport
 @from "Core.jl" import CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, SRConcurrency, SRSerial, SRThreaded, SRDistributed
 @from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
 @from "EquationUtils.jl" import countNodes, printTree, stringTree
-@from "EvaluateEquation.jl" import evalTreeArray, evaldiffTreeArray, differentiableEvalTreeArray
+@from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
 @from "CheckConstraints.jl" import check_constraints
-@from "MutationFunctions.jl" import genRandomTree, mutateConstant, mutateOperator, appendRandomOp, prependRandomOp, insertRandomOp, deleteRandomOp
+@from "MutationFunctions.jl" import genRandomTree
 @from "LossFunctions.jl" import EvalLoss, Loss, scoreFunc
 @from "PopMember.jl" import PopMember, copyPopMember
-@from "Population.jl" import Population, bestSubPop, record_population, bestOfSample
+@from "Population.jl" import Population, bestSubPop, record_population
 @from "HallOfFame.jl" import HallOfFame, calculateParetoFrontier, string_dominating_pareto_curve
 @from "SingleIteration.jl" import SRCycle, OptimizeAndSimplifyPopulation
 @from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
@@ -87,7 +76,6 @@ using Reexport
 @from "SimplifyEquation.jl" import simplifyWithSymbolicUtils, combineOperators, simplifyTree
 @from "ProgressBars.jl" import ProgressBar, set_multiline_postfix
 @from "Recorder.jl" import @recorder, find_iteration_from_record
-@from "EquationUtils.jl" import countNodes, countConstants, countDepth
 
 include("Configure.jl")
 include("Deprecates.jl")
