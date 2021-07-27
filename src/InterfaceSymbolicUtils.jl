@@ -3,7 +3,7 @@ using SymbolicUtils
 @from "Core.jl" import CONST_TYPE, Node, Options
 @from "Utils.jl" import isgood, isbad, @return_on_false
 
-const SYMBOLIC_UTILS_TYPES = Union{<:Number,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
+const SYMBOLIC_UTILS_TYPES = Union{<:Number,SymbolicUtils.Symbolic{<:Number}}
 
 const SUPPORTED_OPS = (cos, sin, exp, cot, tan, csc, sec, +, -, *, /)
 
@@ -23,11 +23,10 @@ function parse_tree_to_eqs(tree::Node, options::Options, index_functions::Bool=f
     # Create an N tuple of Numbers for each argument
     dtypes = map(x->Number, 1:tree.degree)
     #
-    if index_functions
+    if !(op ∈ SUPPORTED_OPS) && index_functions
         op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{dtypes...}, Number}}(Symbol(op))
-    else
-        op = ((op ∈ SUPPORTED_OPS) || evaluate_functions) ? op : SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{dtypes...}, Number}}(Symbol(op))
     end
+
     return subs_bad(op(map(x->parse_tree_to_eqs(x, options, index_functions, evaluate_functions), children)...))
 end
 
