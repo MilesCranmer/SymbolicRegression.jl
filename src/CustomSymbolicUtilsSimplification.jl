@@ -9,7 +9,7 @@ function multiply_powers(eqn::T)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {T<:Uni
 	return eqn, true
 end
 
-function multiply_powers(eqn::T, op::F)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {F,T<:SymbolicUtils.Term{<:Number}}
+function multiply_powers(eqn::T, op::F)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {F,T<:Union{SymbolicUtils.Term{<:Number},SymbolicUtils.Symbolic{<:Number}}}
 	args = SymbolicUtils.arguments(eqn)
 	nargs = length(args)
 	if nargs == 1
@@ -64,7 +64,7 @@ function multiply_powers(eqn::T, op::F)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where 
 	end
 end
 
-function multiply_powers(eqn::T)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {T<:SymbolicUtils.Term{<:Number}}
+function multiply_powers(eqn::T)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {T<:Union{SymbolicUtils.Term{<:Number},SymbolicUtils.Symbolic{<:Number}}}
 	op = SymbolicUtils.operation(eqn)
 	return multiply_powers(eqn, op)
 end
