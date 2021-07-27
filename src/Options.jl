@@ -365,7 +365,7 @@ function Options(;
     end
 
     for op in unary_operators
-       diff_op(x) = sum(gradient(op,x))
+       diff_op(x) = gradient(op,x)[1]
        push!(diff_unary_operators, diff_op)
     end
 
