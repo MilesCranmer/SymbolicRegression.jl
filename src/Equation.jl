@@ -9,14 +9,16 @@ mutable struct Node
     val::CONST_TYPE
     # ------------------- (possibly undefined below)
     feature::Int #Either const value, or enumerates variable.
+    constant_index::Int # The index of constant in the entire equation
     op::Int #enumerates operator (separately for degree=1,2)
     l::Node
     r::Node
 
     Node(d::Int, c::Bool, v::CONST_TYPE) = new(d, c, v)
     Node(d::Int, c::Bool, v::CONST_TYPE, f::Int) = new(d, c, v, f)
-    Node(d::Int, c::Bool, v::CONST_TYPE, f::Int, o::Int, l::Node) = new(d, c, v, f, o, l)
-    Node(d::Int, c::Bool, v::CONST_TYPE, f::Int, o::Int, l::Node, r::Node) = new(d, c, v, f, o, l, r)
+    Node(d::Int, c::Bool, v::CONST_TYPE, f::Int, ci::Int) = new(d, c, v, f, ci)
+    Node(d::Int, c::Bool, v::CONST_TYPE, f::Int, ci::Int, o::Int, l::Node) = new(d, c, v, f, ci, o, l)
+    Node(d::Int, c::Bool, v::CONST_TYPE, f::Int, ci::Int, o::Int, l::Node, r::Node) = new(d, c, v, f, ci, o, l, r)
 end
 
 Node(val::CONST_TYPE) =                                                     Node(0, true,                       val                                     ) #Leave other values undefined
@@ -25,43 +27,43 @@ Node(val::CONST_TYPE) =                                                     Node
 
 Create a variable node using feature `feature::Int`
 """
-Node(feature::Int) =                                                        Node(0, false, convert(CONST_TYPE, 0f0), feature                            )
+Node(feature::Int) =                                                        Node(0, false, convert(CONST_TYPE, 0f0), feature, 0                            )
 """
     Node(op::Int, l::Node)
 
 Apply unary operator `op` (enumerating over the order given) to `Node` `l`
 """
-Node(op::Int, l::Node) =                                                    Node(1, false, convert(CONST_TYPE, 0f0),       0,      op,        l         )
+Node(op::Int, l::Node) =                                                    Node(1, false, convert(CONST_TYPE, 0f0),       0, 0,      op,        l         )
 """
     Node(op::Int, l::Union{AbstractFloat, Int})
 
 Short-form for creating a scalar/variable node, and applying a unary operator
 """
-Node(op::Int, l::Union{AbstractFloat, Int}) =                               Node(1, false, convert(CONST_TYPE, 0f0),       0,      op,  Node(l)         )
+Node(op::Int, l::Union{AbstractFloat, Int}) =                               Node(1, false, convert(CONST_TYPE, 0f0),       0, 0,     op,  Node(l)         )
 """
     Node(op::Int, l::Node, r::Node)
 
 Apply binary operator `op` (enumerating over the order given) to `Node`s `l` and `r`
 """
-Node(op::Int, l::Node, r::Node) =                                           Node(2, false, convert(CONST_TYPE, 0f0),       0,      op,        l,       r)
+Node(op::Int, l::Node, r::Node) =                                           Node(2, false, convert(CONST_TYPE, 0f0),       0, 0,     op,        l,       r)
 """
     Node(op::Int, l::Union{AbstractFloat, Int}, r::Node)
 
 Short-form to create a scalar/variable node, and apply a binary operator
 """
-Node(op::Int, l::Union{AbstractFloat, Int}, r::Node) =                      Node(2, false, convert(CONST_TYPE, 0f0),       0,      op,  Node(l),       r)
+Node(op::Int, l::Union{AbstractFloat, Int}, r::Node) =                      Node(2, false, convert(CONST_TYPE, 0f0),       0, 0,     op,  Node(l),       r)
 """
     Node(op::Int, l::Node, r::Union{AbstractFloat, Int})
 
 Short-form to create a scalar/variable node, and apply a binary operator
 """
-Node(op::Int, l::Node, r::Union{AbstractFloat, Int}) =                      Node(2, false, convert(CONST_TYPE, 0f0),       0,      op,        l, Node(r))
+Node(op::Int, l::Node, r::Union{AbstractFloat, Int}) =                      Node(2, false, convert(CONST_TYPE, 0f0),       0, 0,     op,        l, Node(r))
 """
     Node(op::Int, l::Union{AbstractFloat, Int}, r::Union{AbstractFloat, Int})
 
 Short-form for creating two scalar/variable node, and applying a binary operator
 """
-Node(op::Int, l::Union{AbstractFloat, Int}, r::Union{AbstractFloat, Int}) = Node(2, false, convert(CONST_TYPE, 0f0),       0,      op,  Node(l), Node(r))
+Node(op::Int, l::Union{AbstractFloat, Int}, r::Union{AbstractFloat, Int}) = Node(2, false, convert(CONST_TYPE, 0f0),       0, 0,     op,  Node(l), Node(r))
 """
     Node(val::AbstractFloat)
 

@@ -119,6 +119,23 @@ function countConstants(tree::Node)::Int
     end
 end
 
+# Count how many constants to the left of this node
+function indexConstants(tree::Node,left_index::Int)
+    if tree.degree == 0
+        if tree.constant
+            tree.constant_index = left_index+1
+        end
+    elseif tree.degree == 1
+        tree.constant_index = countConstants(tree.l)
+        indexConstants(tree.l,left_index)
+    else
+        indexConstants(tree.l,left_index)
+        tree.constant_index = countConstants(tree.l)
+        left_index_here = left_index+tree.constant_index
+        indexConstants(tree.r,left_index_here)
+    end
+
+end
 
 # Get all the constants from a tree
 function getConstants(tree::Node)::AbstractVector{CONST_TYPE}
