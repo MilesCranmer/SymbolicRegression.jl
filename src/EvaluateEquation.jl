@@ -1,7 +1,7 @@
 using FromFile
 using LinearAlgebra
 @from "Core.jl" import Node, Options
-@from "Utils.jl" import @return_on_false
+@from "Utils.jl" import @return_on_false, @return_on_false2
 
 """
     evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)
@@ -290,7 +290,7 @@ end
 ### Derivative of a graph
 ################################
 
-function evaldiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
+function evaldiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real}
     if tree.degree == 0
         diff_deg0_eval(tree, cX, options, direction)
     elseif tree.degree == 1
@@ -300,54 +300,69 @@ function evaldiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, 
     end
 end
 
-function diff_deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
+function diff_deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real}
     n = size(cX, 2)
-    if tree.feature == direction
-        return (fill(convert(T, 1), n), true)
-    else
-        return (fill(convert(T, 0), n), true)
-    end
-
+    const_part = deg0_eval(tree, cX, options)[1]
+    derivative_part = (tree.feature == direction) ? ones(T, n) : zeros(T, n)
+    return (const_part, derivative_part, true)
 end
 
-function diff_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
+function diff_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
-    (cumulator, complete) = evalTreeArray(tree.l, cX, options)
-    @return_on_false complete cumulator
-    (dcumulator, complete2) = evaldiffTreeArray(tree.l, cX, options,direction)
-    @return_on_false complete2 cumulator
-    op = options.diff_unaops[op_idx]
+    (cumulator, dcumulator, complete) = evaldiffTreeArray(tree.l, cX, options, direction)
+    @return_on_false2 complete cumulator dcumulator
+
+    op = options.unaops[op_idx]
+    diff_op = options.diff_unaops[op_idx]
+
     finished_loop = true
     @inbounds @simd for j=1:n
         @break_on_check cumulator[j] finished_loop
+        @break_on_check dcumulator[j] finished_loop
+
         x = op(cumulator[j])::T
+        dx = diff_op(cumulator[j])::T * dcumulator[j]
+
         @break_on_check x finished_loop
-        cumulator[j] = x*dcumulator[j]
+        @break_on_check dx finished_loop
+
+        cumulator[j] = x
+        dcumulator[j] = dx
     end
-    return (cumulator, finished_loop)
+    return (cumulator, dcumulator, finished_loop)
 end
 
-function diff_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
+function diff_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
-    (cumulator, complete) = evalTreeArray(tree.l, cX, options)
-    (darray1, complete2) = evaldiffTreeArray(tree.l, cX, options,direction)
-    @return_on_false complete cumulator
-    @return_on_false complete2 cumulator
-    (array2, complete3) = evalTreeArray(tree.r, cX, options)
-    (darray2, complete4) = evaldiffTreeArray(tree.r, cX, options,direction)
-    @return_on_false complete3 cumulator
-    @return_on_false complete4 cumulator
-    op = options.diff_binops[op_idx]
+    (cumulator, dcumulator, complete) = evaldiffTreeArray(tree.l, cX, options,direction)
+
+    @return_on_false2 complete cumulator dcumulator
+
+    (array2, dcumulator2, complete2) = evaldiffTreeArray(tree.r, cX, options,direction)
+    @return_on_false2 complete2 array2 dcumulator2
+
+    op = options.binops[op_idx]
+    diff_op = options.diff_binops[op_idx]
+
     finished_loop = true
     @inbounds @simd for j=1:n
         @break_on_check cumulator[j] finished_loop
         @break_on_check array2[j] finished_loop
+
         x = op(cumulator[j], array2[j])
-        x = dot(x,[darray1[j],darray2[j]])
+
         @break_on_check x finished_loop
+
+        dx = dot(
+                 diff_op(cumulator[j], array2[j]),
+                        [dcumulator[j], dcumulator2[j]]
+                )
+
+        @break_on_check dx finished_loop
+
         cumulator[j] = x
+        dcumulator[j] = dx
     end
-    return (cumulator, finished_loop)
+    return (cumulator, dcumulator, finished_loop)
 end
 
-~

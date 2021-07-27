@@ -16,5 +16,5 @@ input_data = transpose([1.0 2.0 3.0])
 true_grad = gradient(equation, 1.0, 2.0, 3.0)
 
 for i=1:3
-    @test evaldiffTreeArray(tree, input_data, options, i)[1][1] ≈ true_grad[i]
+    @test evaldiffTreeArray(tree, input_data, options, i)[2][1] ≈ true_grad[i]
 end
