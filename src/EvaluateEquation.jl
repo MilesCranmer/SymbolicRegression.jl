@@ -287,7 +287,7 @@ function deg2_diff_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
 end
 
 ################################
-### Derivative of a graph
+### Forward derivative of a graph
 ################################
 
 function evaldiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real}
@@ -365,4 +365,91 @@ function diff_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
     end
     return (cumulator, dcumulator, finished_loop)
 end
+
+################################
+### Backward derivative of a graph
+################################
+
+function evalgradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractMatrix{T}, Bool} where {T<:Real}
+    if isempty(gradient_list)
+        if variable
+            n_variables = size(cX,1)
+            gradient_list = zeros(n_variables,size(cX,2))
+        else
+            n_constants = SymbolicRegression.countConstants(tree)
+            SymbolicRegression.indexConstants(tree,0)
+            gradient_list = zeros(n_constants,size(cX,2))
+        end
+    end
+    if tree.degree == 0
+        grad_deg0_eval(tree, cX, options, gradient_list, variable)
+    elseif tree.degree == 1
+        grad_deg1_eval(tree, cX, Val(tree.op), options, gradient_list, variable)
+    else
+        grad_deg2_eval(tree, cX, Val(tree.op), options, gradient_list, variable)
+    end
+end
+
+function grad_deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractMatrix{T}, Bool} where {T<:Real}
+    n = size(cX, 2)
+    if variable
+        if tree.constant
+            output = zeros(size(gradient_list))
+            return (output,true)
+        else
+            index = tree.feature
+            output = deepcopy(gradient_list)
+            output[index,:] = ones(size(gradient_list[index,:]))
+            return (output,true)
+        end
+    else
+        if tree.constant
+            constant_index = tree.constant_index
+            output = deepcopy(gradient_list)
+            output[constant_index,:] = ones(size(gradient_list[constant_index,:]))
+            return (output,true)
+        else
+            output = zeros(size(gradient_list))
+            return (output,true)
+        end
+    end
+end
+
+function grad_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
+    n = size(cX, 2)
+    output = deepcopy(gradient_list)
+    (cumulator, complete) = evalTreeArray(tree.l, cX, options)
+    @return_on_false complete cumulator
+    (dcumulator, complete2) = evalgradTreeArray(tree.l, cX, options, gradient_list, variable)
+    @return_on_false complete2 cumulator
+    op = options.diff_unaops[op_idx]
+    finished_loop = true
+    @inbounds @simd for j=1:n
+        x = op(cumulator[j])::T
+        output[:,j] = x*dcumulator[:,j]
+    end
+    return (output, finished_loop)
+end
+
+function grad_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
+    n = size(cX, 2)
+    output = deepcopy(gradient_list)
+    (cumulator, complete) = evalTreeArray(tree.l, cX, options)
+    (darray1, complete2) = evalgradTreeArray(tree.l, cX, options, gradient_list, variable)
+    @return_on_false complete cumulator
+    @return_on_false complete2 cumulator
+    (array2, complete3) = evalTreeArray(tree.r, cX, options)
+    (darray2, complete4) = evalgradTreeArray(tree.r, cX, options, gradient_list, variable)
+    @return_on_false complete3 cumulator
+    @return_on_false complete4 cumulator
+
+    op = options.diff_binops[op_idx]
+    finished_loop = true
+    @inbounds @simd for j=1:n
+        x = op(cumulator[j], array2[j])
+        output[:,j] = x[1]*darray1[:,j]+x[2]*darray2[:,j]
+    end
+    return (output, finished_loop)
+end
+
 
