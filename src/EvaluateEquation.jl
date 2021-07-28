@@ -2,6 +2,7 @@ using FromFile
 using LinearAlgebra
 @from "Core.jl" import Node, Options
 @from "Utils.jl" import @return_on_false, @return_on_false2
+@from "EquationUtils.jl" import countConstants, indexConstants
 
 """
     evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)
@@ -376,8 +377,8 @@ function evalgradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, 
             n_variables = size(cX,1)
             gradient_list = zeros(n_variables,size(cX,2))
         else
-            n_constants = SymbolicRegression.countConstants(tree)
-            SymbolicRegression.indexConstants(tree,0)
+            n_constants = countConstants(tree)
+            indexConstants(tree,0)
             gradient_list = zeros(n_constants,size(cX,2))
         end
     end

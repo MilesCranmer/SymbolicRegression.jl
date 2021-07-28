@@ -64,7 +64,7 @@ using Reexport
 @from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
 @from "EquationUtils.jl" import countNodes, printTree, stringTree, countConstants, indexConstants, getConstants, setConstants
 @from "MutationFunctions.jl" import genRandomTree, mutateConstant, mutateOperator, appendRandomOp, prependRandomOp, insertRandomOp, deleteRandomOp
-@from "EvaluateEquation.jl" import evalTreeArray, evaldiffTreeArray, differentiableEvalTreeArray
+@from "EvaluateEquation.jl" import evalTreeArray, evaldiffTreeArray, evalgradTreeArray, differentiableEvalTreeArray
 @from "CheckConstraints.jl" import check_constraints
 @from "MutationFunctions.jl" import genRandomTree
 @from "LossFunctions.jl" import EvalLoss, Loss, scoreFunc
