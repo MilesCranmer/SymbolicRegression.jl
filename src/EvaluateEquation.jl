@@ -371,7 +371,7 @@ end
 ### Backward derivative of a graph
 ################################
 
-function evalgradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractMatrix{T}, Bool} where {T<:Real}
+function evalgradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real}
     if isempty(gradient_list)
         if variable
             n_variables = size(cX,1)
@@ -391,66 +391,72 @@ function evalgradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, 
     end
 end
 
-function grad_deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractMatrix{T}, Bool} where {T<:Real}
+function grad_deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real}
     n = size(cX, 2)
+    const_part = deg0_eval(tree, cX, options)[1]
     if variable
         if tree.constant
-            output = zeros(size(gradient_list))
-            return (output,true)
+            derivative_part = zeros(size(gradient_list))
+            return (const_part, derivative_part, true)
         else
             index = tree.feature
-            output = deepcopy(gradient_list)
-            output[index,:] = ones(size(gradient_list[index,:]))
-            return (output,true)
+            derivative_part = deepcopy(gradient_list)
+            derivative_part[index,:] = ones(size(gradient_list[index,:]))
+            return (const_part, derivative_part, true)
         end
     else
         if tree.constant
             constant_index = tree.constant_index
-            output = deepcopy(gradient_list)
-            output[constant_index,:] = ones(size(gradient_list[constant_index,:]))
-            return (output,true)
+            derivative_part = deepcopy(gradient_list)
+            derivative_part[constant_index,:] = ones(size(gradient_list[constant_index,:]))
+            return (const_part, derivative_part, true)
         else
-            output = zeros(size(gradient_list))
-            return (output,true)
+            derivative_part = zeros(size(gradient_list))
+            return (const_part, derivative_part, true)
         end
     end
 end
 
-function grad_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
+function grad_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
-    output = deepcopy(gradient_list)
-    (cumulator, complete) = evalTreeArray(tree.l, cX, options)
+    (cumulator, dcumulator, complete) = evalgradTreeArray(tree.l, cX, options, gradient_list, variable)
     @return_on_false complete cumulator
-    (dcumulator, complete2) = evalgradTreeArray(tree.l, cX, options, gradient_list, variable)
-    @return_on_false complete2 cumulator
-    op = options.diff_unaops[op_idx]
+
+    op = options.unaops[op_idx]
+    diff_op = options.diff_unaops[op_idx]
+
     finished_loop = true
     @inbounds @simd for j=1:n
         x = op(cumulator[j])::T
-        output[:,j] = x*dcumulator[:,j]
+        dx = diff_op(cumulator[j])::T*dcumulator[j]
+
+        cumulator[j] = x 
+        dcumulator[:,j] = dx 
     end
-    return (output, finished_loop)
+    return (cumulator, dcumulator, finished_loop)
 end
 
-function grad_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
+function grad_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
-    output = deepcopy(gradient_list)
-    (cumulator, complete) = evalTreeArray(tree.l, cX, options)
-    (darray1, complete2) = evalgradTreeArray(tree.l, cX, options, gradient_list, variable)
-    @return_on_false complete cumulator
-    @return_on_false complete2 cumulator
-    (array2, complete3) = evalTreeArray(tree.r, cX, options)
-    (darray2, complete4) = evalgradTreeArray(tree.r, cX, options, gradient_list, variable)
-    @return_on_false complete3 cumulator
-    @return_on_false complete4 cumulator
 
-    op = options.diff_binops[op_idx]
+    derivative_part = deepcopy(gradient_list)
+    (cumulator1, dcumulator1, complete) = evalgradTreeArray(tree.l, cX, options, gradient_list, variable)
+    @return_on_false complete cumulator1
+    (cumulator2, dcumulator2, complete2) = evalgradTreeArray(tree.r, cX, options, gradient_list, variable)
+    @return_on_false complete2 cumulator2
+
+    op = options.binops[op_idx]
+    diff_op = options.diff_binops[op_idx]
+
     finished_loop = true
     @inbounds @simd for j=1:n
-        x = op(cumulator[j], array2[j])
-        output[:,j] = x[1]*darray1[:,j]+x[2]*darray2[:,j]
+        x = op(cumulator1[j], cumulator2[j])
+        dx = diff_op(cumulator1[j],cumulator2[j])
+
+        cumulator1[j] = x
+        derivative_part[:,j] = dx[1]*dcumulator1[:,j]+dx[2]*dcumulator2[:,j]
     end
-    return (output, finished_loop)
+    return (cumulator1, derivative_part, finished_loop)
 end
 
 
