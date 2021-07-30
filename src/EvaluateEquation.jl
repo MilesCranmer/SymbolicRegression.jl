@@ -411,19 +411,27 @@ end
 function grad_deg1_eval(tree::Node, index_tree::NodeIndex, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T}; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     (cumulator, dcumulator, complete) = evalGradTreeArray(tree.l, index_tree.l, cX, options, gradient_list; variable=variable)
-    @return_on_false complete cumulator
+    @return_on_false2 complete cumulator dcumulator
 
     op = options.unaops[op_idx]
     diff_op = options.diff_unaops[op_idx]
 
     finished_loop = true
     @inbounds @simd for j=1:n
+        # TODO(miles): Do these breaks slow down the computation?
+        @break_on_check cumulator[j] finished_loop
         x = op(cumulator[j])::T
+        @break_on_check x finished_loop
         dx = diff_op(cumulator[j])
+        @break_on_check dx finished_loop
 
         cumulator[j] = x 
         @inbounds @simd for k=1:size(dcumulator, 1)
+            @break_on_check dcumulator[k, j] finished_loop
             dcumulator[k, j] = dx * dcumulator[k, j]
+        end
+        if !finished_loop
+            break
         end
     end
     return (cumulator, dcumulator, finished_loop)
@@ -434,21 +442,30 @@ function grad_deg2_eval(tree::Node, index_tree::NodeIndex, cX::AbstractMatrix{T}
 
     derivative_part = copy(gradient_list)
     (cumulator1, dcumulator1, complete) = evalGradTreeArray(tree.l, index_tree.l, cX, options, gradient_list; variable=variable)
-    @return_on_false complete cumulator1
+    @return_on_false2 complete cumulator1 dcumulator1
     (cumulator2, dcumulator2, complete2) = evalGradTreeArray(tree.r, index_tree.r, cX, options, gradient_list; variable=variable)
-    @return_on_false complete2 cumulator2
+    @return_on_false2 complete2 cumulator1 dcumulator1
 
     op = options.binops[op_idx]
     diff_op = options.diff_binops[op_idx]
 
     finished_loop = true
     @inbounds @simd for j=1:n
+        @break_on_check cumulator1[j] finished_loop
+        @break_on_check cumulator2[j] finished_loop
         x = op(cumulator1[j], cumulator2[j])
+        @break_on_check x finished_loop
         dx = diff_op(cumulator1[j], cumulator2[j])
+        @break_on_check dx finished_loop
 
         cumulator1[j] = x
         @inbounds @simd for k=1:size(dcumulator1, 1)
+            @break_on_check dcumulator1[k, j] finished_loop
+            @break_on_check dcumulator2[k, j] finished_loop
             derivative_part[k, j] = dx[1]*dcumulator1[k, j]+dx[2]*dcumulator2[k, j]
+        end
+        if !finished_loop
+            break
         end
     end
     return (cumulator1, derivative_part, finished_loop)
