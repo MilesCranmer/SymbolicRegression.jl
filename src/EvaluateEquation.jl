@@ -41,14 +41,14 @@ function evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tup
     end
 end
 
-# Break whenever there is a nan or inf. Since so many equations give
-# such numbers, it saves a lot of computation to just skip computation,
-# and return a large loss!
-macro break_on_check(val, flag)
-    :(if isnan($(esc(val))) || !isfinite($(esc(val)))
-          $(esc(flag)) = false
-          break
-    end)
+# Flag whenever there is a nan or inf, and skip.
+# This is 10x more efficient than evaluating within a try-catch.
+macro skip_on_bad_value(val, record, expr)
+    :(if !isnan($(esc(val))) && isfinite($(esc(val)))
+        $(esc(expr))
+      else
+        $(esc(record)) = Inf
+      end)
 end
 
 function deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
@@ -58,15 +58,15 @@ function deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
     (array2, complete2) = evalTreeArray(tree.r, cX, options)
     @return_on_false complete2 cumulator
     op = options.binops[op_idx]
-    finished_loop = true
     @inbounds @simd for j=1:n
-        @break_on_check cumulator[j] finished_loop
-        @break_on_check array2[j] finished_loop
+        @skip_on_bad_value cumulator[j] cumulator[j] begin
+        @skip_on_bad_value array2[j] cumulator[j] begin
         x = op(cumulator[j], array2[j])::T
-        @break_on_check x finished_loop
-        cumulator[j] = x
+        @skip_on_bad_value x cumulator[j] begin
+            cumulator[j] = x
+        end; end; end
     end
-    return (cumulator, finished_loop)
+    return (cumulator, !any(isinf, cumulator))
 end
 
 function deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
@@ -74,14 +74,14 @@ function deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
     (cumulator, complete) = evalTreeArray(tree.l, cX, options)
     @return_on_false complete cumulator
     op = options.unaops[op_idx]
-    finished_loop = true
     @inbounds @simd for j=1:n
-        @break_on_check cumulator[j] finished_loop
+        @skip_on_bad_value cumulator[j] cumulator[j] begin
         x = op(cumulator[j])::T
-        @break_on_check x finished_loop
+        @skip_on_bad_value x cumulator[j] begin
         cumulator[j] = x
+        end; end
     end
-    return (cumulator, finished_loop)
+    return (cumulator, !any(isinf, cumulator))
 end
 
 function deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
@@ -97,7 +97,6 @@ function deg1_l2_ll0_lr0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, 
     n = size(cX, 2)
     op = options.unaops[op_idx]
     op_l = options.binops[op_l_idx]
-    finished_loop = true
     if tree.l.l.constant && tree.l.r.constant
         val_ll = convert(T, tree.l.l.val)
         val_lr = convert(T, tree.l.r.val)
@@ -114,49 +113,48 @@ function deg1_l2_ll0_lr0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, 
         val_ll = convert(T, tree.l.l.val)
         feature_lr = tree.l.r.feature
         cumulator = Array{T, 1}(undef, n)
-        finished_loop = true
         @inbounds @simd for j=1:n
             x_l = op_l(val_ll, cX[feature_lr, j])::T
-            @break_on_check x_l finished_loop
+            @skip_on_bad_value x_l cumulator[j] begin
             x = op(x_l)::T
-            @break_on_check x finished_loop
+            @skip_on_bad_value x cumulator[j] begin
             cumulator[j] = x
+            end; end
         end
-        return (cumulator, finished_loop)
+        return (cumulator, !any(isinf, cumulator))
     elseif tree.l.r.constant
         feature_ll = tree.l.l.feature
         val_lr = convert(T, tree.l.r.val)
         cumulator = Array{T, 1}(undef, n)
-        finished_loop = true
         @inbounds @simd for j=1:n
             x_l = op_l(cX[feature_ll, j], val_lr)::T
-            @break_on_check x_l finished_loop
+            @skip_on_bad_value x_l cumulator[j] begin
             x = op(x_l)::T
-            @break_on_check x finished_loop
+            @skip_on_bad_value x cumulator[j] begin
             cumulator[j] = x
+            end; end
         end
-        return (cumulator, finished_loop)
+        return (cumulator, !any(isinf, cumulator))
     else
         feature_ll = tree.l.l.feature
         feature_lr = tree.l.r.feature
         cumulator = Array{T, 1}(undef, n)
-        finished_loop = true
         @inbounds @simd for j=1:n
             x_l = op_l(cX[feature_ll, j], cX[feature_lr, j])::T
-            @break_on_check x_l finished_loop
+            @skip_on_bad_value x_l cumulator[j] begin
             x = op(x_l)::T
-            @break_on_check x finished_loop
+            @skip_on_bad_value x cumulator[j] begin
             cumulator[j] = x
+            end; end
         end
-        return (cumulator, finished_loop)
+        return (cumulator, !any(isinf, cumulator))
     end
-    return (cumulator, finished_loop)
+    return (cumulator, !any(isinf, cumulator))
 end
 
 function deg2_l0_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     op = options.binops[op_idx]
-    finished_loop = true
     if tree.l.constant && tree.r.constant
         val_l = convert(T, tree.l.val)
         val_r = convert(T, tree.r.val)
@@ -171,8 +169,9 @@ function deg2_l0_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, optio
         feature_r = tree.r.feature
         @inbounds @simd for j=1:n
             x = op(val_l, cX[feature_r, j])::T
-            @break_on_check x finished_loop
+            @skip_on_bad_value x cumulator[j] begin
             cumulator[j] = x
+            end
         end
     elseif tree.r.constant
         cumulator = Array{T, 1}(undef, n)
@@ -180,8 +179,9 @@ function deg2_l0_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, optio
         val_r = convert(T, tree.r.val)
         @inbounds @simd for j=1:n
             x = op(cX[feature_l, j], val_r)::T
-            @break_on_check x finished_loop
+            @skip_on_bad_value x cumulator[j] begin
             cumulator[j] = x
+            end
         end
     else
         cumulator = Array{T, 1}(undef, n)
@@ -189,11 +189,12 @@ function deg2_l0_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, optio
         feature_r = tree.r.feature
         @inbounds @simd for j=1:n
             x = op(cX[feature_l, j], cX[feature_r, j])::T
-            @break_on_check x finished_loop
+            @skip_on_bad_value x cumulator[j] begin
             cumulator[j] = x
+            end
         end
     end
-    return (cumulator, finished_loop)
+    return (cumulator, !any(isinf, cumulator))
 end
 
 function deg2_l0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
@@ -201,25 +202,26 @@ function deg2_l0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
     (cumulator, complete) = evalTreeArray(tree.r, cX, options)
     @return_on_false complete cumulator
     op = options.binops[op_idx]
-    finished_loop = true
     if tree.l.constant
         val = convert(T, tree.l.val)
         @inbounds @simd for j=1:n
-            @break_on_check cumulator[j] finished_loop
+            @skip_on_bad_value cumulator[j] cumulator[j] begin
             x = op(val, cumulator[j])::T
-            @break_on_check x finished_loop
+            @skip_on_bad_value x cumulator[j] begin
             cumulator[j] = x
+            end; end
         end
     else
         feature = tree.l.feature
         @inbounds @simd for j=1:n
-            @break_on_check cumulator[j] finished_loop
+            @skip_on_bad_value cumulator[j] cumulator[j] begin
             x = op(cX[feature, j], cumulator[j])::T
-            @break_on_check x finished_loop
+            @skip_on_bad_value x cumulator[j] begin
             cumulator[j] = x
+            end; end
         end
     end
-    return (cumulator, finished_loop)
+    return (cumulator, !any(isinf, cumulator))
 end
 
 function deg2_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
@@ -227,25 +229,26 @@ function deg2_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
     (cumulator, complete) = evalTreeArray(tree.l, cX, options)
     @return_on_false complete cumulator
     op = options.binops[op_idx]
-    finished_loop = true
     if tree.r.constant
         val = convert(T, tree.r.val)
         @inbounds @simd for j=1:n
-            @break_on_check cumulator[j] finished_loop
+            @skip_on_bad_value cumulator[j] cumulator[j] begin
             x = op(cumulator[j], val)::T
-            @break_on_check x finished_loop
+            @skip_on_bad_value x cumulator[j] begin
             cumulator[j] = x
+            end; end
         end
     else
         feature = tree.r.feature
         @inbounds @simd for j=1:n
-            @break_on_check cumulator[j] finished_loop
+            @skip_on_bad_value cumulator[j] cumulator[j] begin
             x = op(cumulator[j], cX[feature, j])::T
-            @break_on_check x finished_loop
+            @skip_on_bad_value x cumulator[j] begin
             cumulator[j] = x
+            end; end
         end
     end
-    return (cumulator, finished_loop)
+    return (cumulator, !any(isinf, cumulator))
 end
 
 # Evaluate an equation over an array of datapoints
@@ -316,21 +319,21 @@ function diff_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
     op = options.unaops[op_idx]
     diff_op = options.diff_unaops[op_idx]
 
-    finished_loop = true
     @inbounds @simd for j=1:n
-        @break_on_check cumulator[j] finished_loop
-        @break_on_check dcumulator[j] finished_loop
+        @skip_on_bad_value cumulator[j] cumulator[j] begin
+        @skip_on_bad_value dcumulator[j] cumulator[j] begin
 
         x = op(cumulator[j])::T
         dx = diff_op(cumulator[j])::T * dcumulator[j]
 
-        @break_on_check x finished_loop
-        @break_on_check dx finished_loop
+        @skip_on_bad_value x cumulator[j] begin
+        @skip_on_bad_value dx cumulator[j] begin
 
         cumulator[j] = x
         dcumulator[j] = dx
+        end; end; end; end
     end
-    return (cumulator, dcumulator, finished_loop)
+    return (cumulator, dcumulator, !any(isinf, cumulator))
 end
 
 function diff_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real,op_idx}
@@ -345,26 +348,27 @@ function diff_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
     op = options.binops[op_idx]
     diff_op = options.diff_binops[op_idx]
 
-    finished_loop = true
     @inbounds @simd for j=1:n
-        @break_on_check cumulator[j] finished_loop
-        @break_on_check array2[j] finished_loop
+        @skip_on_bad_value cumulator[j] cumulator[j] begin
+        @skip_on_bad_value array2[j] cumulator[j] begin
 
         x = op(cumulator[j], array2[j])
 
-        @break_on_check x finished_loop
+        @skip_on_bad_value x cumulator[j] begin
 
-        dx = dot(
-                 diff_op(cumulator[j], array2[j]),
-                        [dcumulator[j], dcumulator2[j]]
-                )
+            dx = dot(
+                     diff_op(cumulator[j], array2[j]),
+                            [dcumulator[j], dcumulator2[j]]
+                    )
 
-        @break_on_check dx finished_loop
-
-        cumulator[j] = x
-        dcumulator[j] = dx
+            @skip_on_bad_value dx cumulator[j] begin
+            cumulator[j] = x
+            dcumulator[j] = dx
+            end
+        end
+        end; end
     end
-    return (cumulator, dcumulator, finished_loop)
+    return (cumulator, dcumulator, !any(isinf, cumulator))
 end
 
 ################################
@@ -416,25 +420,24 @@ function grad_deg1_eval(tree::Node, index_tree::NodeIndex, cX::AbstractMatrix{T}
     op = options.unaops[op_idx]
     diff_op = options.diff_unaops[op_idx]
 
-    finished_loop = true
     @inbounds @simd for j=1:n
         # TODO(miles): Do these breaks slow down the computation?
-        @break_on_check cumulator[j] finished_loop
+        @skip_on_bad_value cumulator[j] cumulator[j] begin
         x = op(cumulator[j])::T
-        @break_on_check x finished_loop
+        @skip_on_bad_value x cumulator[j] begin
         dx = diff_op(cumulator[j])
-        @break_on_check dx finished_loop
+        @skip_on_bad_value dx[1] cumulator[j] begin
+        @skip_on_bad_value dx[2] cumulator[j] begin
 
         cumulator[j] = x 
         @inbounds @simd for k=1:size(dcumulator, 1)
-            @break_on_check dcumulator[k, j] finished_loop
+            @skip_on_bad_value dcumulator[k, j] cumulator[j] begin
             dcumulator[k, j] = dx * dcumulator[k, j]
+            end
         end
-        if !finished_loop
-            break
-        end
+        end; end; end; end
     end
-    return (cumulator, dcumulator, finished_loop)
+    return (cumulator, dcumulator, !any(isinf, cumulator))
 end
 
 function grad_deg2_eval(tree::Node, index_tree::NodeIndex, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T}; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
@@ -449,26 +452,25 @@ function grad_deg2_eval(tree::Node, index_tree::NodeIndex, cX::AbstractMatrix{T}
     op = options.binops[op_idx]
     diff_op = options.diff_binops[op_idx]
 
-    finished_loop = true
     @inbounds @simd for j=1:n
-        @break_on_check cumulator1[j] finished_loop
-        @break_on_check cumulator2[j] finished_loop
+        @skip_on_bad_value cumulator1[j] cumulator1[j] begin
+        @skip_on_bad_value cumulator2[j] cumulator1[j] begin
         x = op(cumulator1[j], cumulator2[j])
-        @break_on_check x finished_loop
+        @skip_on_bad_value x cumulator1[j] begin
         dx = diff_op(cumulator1[j], cumulator2[j])
-        @break_on_check dx finished_loop
+        @skip_on_bad_value dx[1] cumulator1[j] begin
+        @skip_on_bad_value dx[2] cumulator1[j] begin
 
         cumulator1[j] = x
         @inbounds @simd for k=1:size(dcumulator1, 1)
-            @break_on_check dcumulator1[k, j] finished_loop
-            @break_on_check dcumulator2[k, j] finished_loop
+            @skip_on_bad_value dcumulator1[k, j] cumulator1[j] begin
+            @skip_on_bad_value dcumulator2[k, j] cumulator1[j] begin
             derivative_part[k, j] = dx[1]*dcumulator1[k, j]+dx[2]*dcumulator2[k, j]
+            end; end
         end
-        if !finished_loop
-            break
-        end
+        end; end; end; end; end
     end
-    return (cumulator1, derivative_part, finished_loop)
+    return (cumulator1, derivative_part, !any(isinf, cumulator1))
 end
 
 
