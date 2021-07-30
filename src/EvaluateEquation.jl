@@ -63,7 +63,7 @@ function deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
         @skip_on_bad_value array2[j] cumulator[j] begin
         x = op(cumulator[j], array2[j])::T
         @skip_on_bad_value x cumulator[j] begin
-            cumulator[j] = x
+        cumulator[j] = x
         end; end; end
     end
     return (cumulator, !any(isinf, cumulator))
@@ -356,17 +356,15 @@ function diff_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
 
         @skip_on_bad_value x cumulator[j] begin
 
-            dx = dot(
-                     diff_op(cumulator[j], array2[j]),
-                            [dcumulator[j], dcumulator2[j]]
-                    )
+        dx = dot(
+                 diff_op(cumulator[j], array2[j]),
+                        [dcumulator[j], dcumulator2[j]]
+                )
 
-            @skip_on_bad_value dx cumulator[j] begin
-            cumulator[j] = x
-            dcumulator[j] = dx
-            end
-        end
-        end; end
+        @skip_on_bad_value dx cumulator[j] begin
+        cumulator[j] = x
+        dcumulator[j] = dx
+        end; end; end; end
     end
     return (cumulator, dcumulator, !any(isinf, cumulator))
 end
@@ -427,17 +425,16 @@ function grad_deg1_eval(tree::Node, index_tree::NodeIndex, cX::AbstractMatrix{T}
         @skip_on_bad_value x cumulator[j] begin
         dx = diff_op(cumulator[j])
         @skip_on_bad_value dx[1] cumulator[j] begin
-        @skip_on_bad_value dx[2] cumulator[j] begin
 
         cumulator[j] = x 
         @inbounds @simd for k=1:size(dcumulator, 1)
-            @skip_on_bad_value dcumulator[k, j] cumulator[j] begin
+            @skip_on_bad_value dcumulator[k, j] dcumulator[k, j] begin
             dcumulator[k, j] = dx * dcumulator[k, j]
             end
         end
-        end; end; end; end
+        end; end; end
     end
-    return (cumulator, dcumulator, !any(isinf, cumulator))
+    return (cumulator, dcumulator, !any(isinf, cumulator) && !any(isinf, dcumulator))
 end
 
 function grad_deg2_eval(tree::Node, index_tree::NodeIndex, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T}; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
@@ -463,14 +460,14 @@ function grad_deg2_eval(tree::Node, index_tree::NodeIndex, cX::AbstractMatrix{T}
 
         cumulator1[j] = x
         @inbounds @simd for k=1:size(dcumulator1, 1)
-            @skip_on_bad_value dcumulator1[k, j] cumulator1[j] begin
-            @skip_on_bad_value dcumulator2[k, j] cumulator1[j] begin
+            @skip_on_bad_value dcumulator1[k, j] dcumulator1[k, j] begin
+            @skip_on_bad_value dcumulator2[k, j] dcumulator1[k, j] begin
             derivative_part[k, j] = dx[1]*dcumulator1[k, j]+dx[2]*dcumulator2[k, j]
             end; end
         end
         end; end; end; end; end
     end
-    return (cumulator1, derivative_part, !any(isinf, cumulator1))
+    return (cumulator1, derivative_part, !any(isinf, cumulator1) && !any(isinf, dcumulator1))
 end
 
 
