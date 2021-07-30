@@ -1,6 +1,6 @@
 using Test
 using SymbolicRegression
-using SymbolicRegression: evaldiffTreeArray, evalgradTreeArray
+using SymbolicRegression: evalDiffTreeArray, evalGradTreeArray
 using Zygote
 using LinearAlgebra
 
@@ -16,5 +16,9 @@ input_data = transpose([1.0 2.0 3.0])
 true_grad = gradient(equation, 1.0, 2.0, 3.0)
 
 for i=1:3
-    @test evaldiffTreeArray(tree, input_data, options, i)[2][1] ≈ true_grad[i]
+    @test evalDiffTreeArray(tree, input_data, options, i)[2][1] ≈ true_grad[i]
+end
+
+for i=1:3
+    @test evalGradTreeArray(tree, input_data, options; variable=true)[2][i, 1] ≈ true_grad[i]
 end

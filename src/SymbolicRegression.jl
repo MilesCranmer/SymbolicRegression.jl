@@ -16,8 +16,8 @@ export Population,
     printTree,
     stringTree,
     evalTreeArray,
-    evaldiffTreeArray,
-    evalgradTreeArray,
+    evalDiffTreeArray,
+    evalGradTreeArray,
     differentiableEvalTreeArray,
     node_to_symbolic,
     symbolic_to_node,
@@ -65,7 +65,7 @@ using Reexport
 @from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
 @from "EquationUtils.jl" import countNodes, printTree, stringTree, countConstants, indexConstants, getConstants, setConstants
 @from "MutationFunctions.jl" import genRandomTree, mutateConstant, mutateOperator, appendRandomOp, prependRandomOp, insertRandomOp, deleteRandomOp
-@from "EvaluateEquation.jl" import evalTreeArray, evaldiffTreeArray, evalgradTreeArray, differentiableEvalTreeArray
+@from "EvaluateEquation.jl" import evalTreeArray, evalDiffTreeArray, evalGradTreeArray, differentiableEvalTreeArray
 @from "CheckConstraints.jl" import check_constraints
 @from "MutationFunctions.jl" import genRandomTree
 @from "LossFunctions.jl" import EvalLoss, Loss, scoreFunc
