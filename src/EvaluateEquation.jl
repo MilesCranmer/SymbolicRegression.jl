@@ -379,11 +379,11 @@ function evalgradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, 
     if isempty(gradient_list)
         if variable
             n_variables = size(cX, 1)
-            gradient_list = zeros(n_variables, size(cX, 2))
+            gradient_list = zeros(T, n_variables, size(cX, 2))
         else
             n_constants = countConstants(tree)
             indexConstants(tree, 0)
-            gradient_list = zeros(n_constants, size(cX, 2))
+            gradient_list = zeros(T, n_constants, size(cX, 2))
         end
     end
     if tree.degree == 0
@@ -398,27 +398,15 @@ end
 function grad_deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options, gradient_list::AbstractMatrix{T}; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real}
     n = size(cX, 2)
     const_part = deg0_eval(tree, cX, options)[1]
-    if variable
-        if tree.constant
-            derivative_part = zeros(size(gradient_list))
-            return (const_part, derivative_part, true)
-        else
-            index = tree.feature
-            derivative_part = copy(gradient_list)
-            derivative_part[index, :] .= ones(size(gradient_list[index, :]))
-            return (const_part, derivative_part, true)
-        end
-    else
-        if tree.constant
-            constant_index = tree.constant_index
-            derivative_part = copy(gradient_list)
-            derivative_part[constant_index, :] .= ones(size(gradient_list[constant_index, :]))
-            return (const_part, derivative_part, true)
-        else
-            derivative_part = zeros(size(gradient_list))
-            return (const_part, derivative_part, true)
-        end
+
+    if variable == tree.constant
+        return (const_part, zeros(T, size(gradient_list)), true)
     end
+
+    index = variable ? tree.feature : tree.constant_index
+    derivative_part = copy(gradient_list)
+    derivative_part[index, :] .= ones(T, size(gradient_list[index, :]))
+    return (const_part, derivative_part, true)
 end
 
 function grad_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T}; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
