@@ -335,11 +335,11 @@ end
 
 function diff_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
-    (cumulator, dcumulator, complete) = evaldiffTreeArray(tree.l, cX, options,direction)
+    (cumulator, dcumulator, complete) = evaldiffTreeArray(tree.l, cX, options, direction)
 
     @return_on_false2 complete cumulator dcumulator
 
-    (array2, dcumulator2, complete2) = evaldiffTreeArray(tree.r, cX, options,direction)
+    (array2, dcumulator2, complete2) = evaldiffTreeArray(tree.r, cX, options, direction)
     @return_on_false2 complete2 array2 dcumulator2
 
     op = options.binops[op_idx]
@@ -370,28 +370,32 @@ end
 ################################
 ### Backward derivative of a graph
 ################################
+function evalgradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real}
+    return evalgradTreeArray(tree, cX, options, Array{T}(undef, 0, 2); variable=variable)
+end
 
-function evalgradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real}
+
+function evalgradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, gradient_list::AbstractMatrix{T}; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real}
     if isempty(gradient_list)
         if variable
-            n_variables = size(cX,1)
-            gradient_list = zeros(n_variables,size(cX,2))
+            n_variables = size(cX, 1)
+            gradient_list = zeros(n_variables, size(cX, 2))
         else
             n_constants = countConstants(tree)
-            indexConstants(tree,0)
-            gradient_list = zeros(n_constants,size(cX,2))
+            indexConstants(tree, 0)
+            gradient_list = zeros(n_constants, size(cX, 2))
         end
     end
     if tree.degree == 0
-        grad_deg0_eval(tree, cX, options, gradient_list, variable)
+        grad_deg0_eval(tree, cX, options, gradient_list; variable=variable)
     elseif tree.degree == 1
-        grad_deg1_eval(tree, cX, Val(tree.op), options, gradient_list, variable)
+        grad_deg1_eval(tree, cX, Val(tree.op), options, gradient_list; variable=variable)
     else
-        grad_deg2_eval(tree, cX, Val(tree.op), options, gradient_list, variable)
+        grad_deg2_eval(tree, cX, Val(tree.op), options, gradient_list; variable=variable)
     end
 end
 
-function grad_deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real}
+function grad_deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options, gradient_list::AbstractMatrix{T}; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real}
     n = size(cX, 2)
     const_part = deg0_eval(tree, cX, options)[1]
     if variable
@@ -400,15 +404,15 @@ function grad_deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options, gra
             return (const_part, derivative_part, true)
         else
             index = tree.feature
-            derivative_part = deepcopy(gradient_list)
-            derivative_part[index,:] = ones(size(gradient_list[index,:]))
+            derivative_part = copy(gradient_list)
+            derivative_part[index, :] .= ones(size(gradient_list[index, :]))
             return (const_part, derivative_part, true)
         end
     else
         if tree.constant
             constant_index = tree.constant_index
-            derivative_part = deepcopy(gradient_list)
-            derivative_part[constant_index,:] = ones(size(gradient_list[constant_index,:]))
+            derivative_part = copy(gradient_list)
+            derivative_part[constant_index, :] .= ones(size(gradient_list[constant_index, :]))
             return (const_part, derivative_part, true)
         else
             derivative_part = zeros(size(gradient_list))
@@ -417,9 +421,9 @@ function grad_deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options, gra
     end
 end
 
-function grad_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
+function grad_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T}; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
-    (cumulator, dcumulator, complete) = evalgradTreeArray(tree.l, cX, options, gradient_list, variable)
+    (cumulator, dcumulator, complete) = evalgradTreeArray(tree.l, cX, options, gradient_list; variable=variable)
     @return_on_false complete cumulator
 
     op = options.unaops[op_idx]
@@ -431,18 +435,20 @@ function grad_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
         dx = diff_op(cumulator[j])::T*dcumulator[j]
 
         cumulator[j] = x 
-        dcumulator[:,j] = dx 
+        @inbounds @simd for k=1:size(dcumulator, 1)
+            dcumulator[k, j] = dx
+        end
     end
     return (cumulator, dcumulator, finished_loop)
 end
 
-function grad_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T},variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
+function grad_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T}; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
 
-    derivative_part = deepcopy(gradient_list)
-    (cumulator1, dcumulator1, complete) = evalgradTreeArray(tree.l, cX, options, gradient_list, variable)
+    derivative_part = copy(gradient_list)
+    (cumulator1, dcumulator1, complete) = evalgradTreeArray(tree.l, cX, options, gradient_list; variable=variable)
     @return_on_false complete cumulator1
-    (cumulator2, dcumulator2, complete2) = evalgradTreeArray(tree.r, cX, options, gradient_list, variable)
+    (cumulator2, dcumulator2, complete2) = evalgradTreeArray(tree.r, cX, options, gradient_list; variable=variable)
     @return_on_false complete2 cumulator2
 
     op = options.binops[op_idx]
@@ -451,10 +457,12 @@ function grad_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
     finished_loop = true
     @inbounds @simd for j=1:n
         x = op(cumulator1[j], cumulator2[j])
-        dx = diff_op(cumulator1[j],cumulator2[j])
+        dx = diff_op(cumulator1[j], cumulator2[j])
 
         cumulator1[j] = x
-        derivative_part[:,j] = dx[1]*dcumulator1[:,j]+dx[2]*dcumulator2[:,j]
+        @inbounds @simd for k=1:size(dcumulator1, 1)
+            derivative_part[k, j] = dx[1]*dcumulator1[k, j]+dx[2]*dcumulator2[k, j]
+        end
     end
     return (cumulator1, derivative_part, finished_loop)
 end

@@ -1,6 +1,6 @@
 using Test
 using SymbolicRegression
-using SymbolicRegression: evaldiffTreeArray
+using SymbolicRegression: evaldiffTreeArray, evalgradTreeArray
 using Zygote
 using LinearAlgebra
 
