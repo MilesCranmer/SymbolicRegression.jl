@@ -67,12 +67,12 @@ function findoperation(op, ops)
 end
 
 function Base.convert(::typeof(Node), x::Number, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
-    return Node(x)
+    return Node(CONST_TYPE(x))
 end
 
 function Base.convert(::typeof(Node), x::Symbol, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
     varMap == nothing && return Node(String(x))
-    return Node(String(x), varMap=varMap)
+    return Node(String(x), varMap)
 end
 
 function Base.convert(::typeof(Node), x::SymbolicUtils.Symbolic, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
