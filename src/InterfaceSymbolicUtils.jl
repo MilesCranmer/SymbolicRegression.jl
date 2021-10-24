@@ -71,13 +71,13 @@ function Base.convert(::typeof(Node), x::Number, options::Options; varMap::Union
 end
 
 function Base.convert(::typeof(Node), x::Symbol, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
-    varMap == nothing && return Node(String(x))
+    varMap === nothing && return Node(String(x))
     return Node(String(x), varMap)
 end
 
 function Base.convert(::typeof(Node), x::SymbolicUtils.Symbolic, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
     if !SymbolicUtils.istree(x)
-        varMap == nothing && return Node(String(x.name))
+        varMap === nothing && return Node(String(x.name))
         return Node(String(x.name), varMap)
     end
 
@@ -120,7 +120,7 @@ function node_to_symbolic(tree::Node, options::Options;
     # Check for NaN and Inf
     @assert isgood(expr) "The recovered equation contains NaN or Inf."
     # Return if no varMap is given
-    varMap == nothing && return expr
+    varMap === nothing && return expr
     # Create a substitution tuple
     subs = Dict(
         [SymbolicUtils.Sym{Number}(Symbol("x$(i)")) => SymbolicUtils.Sym{Number}(Symbol(varMap[i])) for i in 1:length(varMap)]...

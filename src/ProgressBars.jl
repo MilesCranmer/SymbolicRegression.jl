@@ -52,7 +52,7 @@ mutable struct ProgressBar
     function ProgressBar(wrapped::Any; total::Int = -2, width = nothing, leave=true)
         this = new()
         this.wrapped = wrapped
-        if width == nothing
+        if width === nothing
             this.width = displaysize(stdout)[2]
             this.fixwidth = false
         else
@@ -238,7 +238,7 @@ function Base.iterate(iter::ProgressBar,s)
         iter.last_print = time_ns()
     end
     state = iterate(iter.wrapped,s)
-    if state == nothing
+    if state === nothing
         if iter.total > 0
             iter.current = iter.total
         end

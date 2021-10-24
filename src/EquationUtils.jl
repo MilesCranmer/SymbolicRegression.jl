@@ -58,7 +58,7 @@ function stringTree(tree::Node, options::Options;
         if tree.constant
             return string(tree.val)
         else
-            if varMap == nothing
+            if varMap === nothing
                 return "x$(tree.feature)"
             else
                 return varMap[tree.feature]

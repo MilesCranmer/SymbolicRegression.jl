@@ -134,11 +134,11 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
        ) where {T<:Real}
 
     nout = size(y, FEATURE_DIM)
-    if weights != nothing
+    if weights !== nothing
         weights = reshape(weights, size(y))
     end
     datasets = [Dataset(X, y[j, :],
-                    weights=(weights == nothing ? weights : weights[j, :]),
+                    weights=(weights === nothing ? weights : weights[j, :]),
                     varMap=varMap)
                 for j=1:nout]
 
@@ -166,11 +166,11 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         runtests::Bool=true
        ) where {T<:Real}
 
-    noprocs = (procs == nothing && numprocs == 0)
+    noprocs = (procs === nothing && numprocs == 0)
     someprocs = !noprocs
 
     concurrency = if multithreading
-        @assert procs == nothing && numprocs in [0, nothing]
+        @assert procs === nothing && numprocs in [0, nothing]
         SRThreaded()
     elseif someprocs
         SRDistributed()
@@ -256,13 +256,13 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
     ### Distributed code:
     ##########################################################################
     if ConcurrencyType == SRDistributed
-        if numprocs == nothing && procs == nothing
+        if numprocs === nothing && procs === nothing
             numprocs = 4
             procs = addprocs(4)
             we_created_procs = true
-        elseif numprocs == nothing
+        elseif numprocs === nothing
             numprocs = length(procs)
-        elseif procs == nothing
+        elseif procs === nothing
             procs = addprocs(numprocs)
             we_created_procs = true
         end
@@ -508,7 +508,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 load_string = @sprintf("Head worker occupation: %.1f", 100*head_node_time["occupied"]/(time() - head_node_time["start"])) * "%\n"
                 equation_strings = load_string * equation_strings
                 set_multiline_postfix(progress_bar, equation_strings)
-                if cur_cycle == nothing
+                if cur_cycle === nothing
                     (cur_cycle, cur_state) = iterate(progress_bar)
                 else
                     (cur_cycle, cur_state) = iterate(progress_bar, cur_state)
