@@ -11,3 +11,8 @@ dist
 Manifest.toml
 *.cov
 .coveralls.yml
+**/*tmp*.jl
+**/*tmp*.py
+build
+*.csv.out*
+pysr_recorder.json
