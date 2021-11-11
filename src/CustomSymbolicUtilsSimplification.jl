@@ -1,6 +1,14 @@
 using FromFile
 using SymbolicUtils
-using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, has_trig_exp, expand
+using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, expand
+
+try
+    using SymbolicUtils: has_trig_exp
+catch
+    using SymbolicUtils: has_trig
+    has_trig_exp = has_trig
+end
+
 @from "Core.jl" import Options
 @from "InterfaceSymbolicUtils.jl" import SYMBOLIC_UTILS_TYPES
 @from "Utils.jl" import isgood, @return_on_false
