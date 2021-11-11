@@ -31,7 +31,7 @@ function build_constraints(una_constraints, bin_constraints,
         una_constraints = Dict(una_constraints)
     end
 
-    if una_constraints == nothing
+    if una_constraints === nothing
         una_constraints = [-1 for i=1:nuna]
     elseif !is_una_constraints_already_done
         una_constraints::Dict
@@ -47,7 +47,7 @@ function build_constraints(una_constraints, bin_constraints,
         end
         una_constraints = _una_constraints
     end
-    if bin_constraints == nothing
+    if bin_constraints === nothing
         bin_constraints = [(-1, -1) for i=1:nbin]
     elseif !is_bin_constraints_already_done
         bin_constraints::Dict
@@ -307,14 +307,14 @@ function Options(;
     probPickFirst=1.0,
    ) where {nuna,nbin}
 
-    if nrestarts != nothing
+    if nrestarts !== nothing
         optimizer_nrestarts = nrestarts
     end
-    if warmupMaxsize != nothing
+    if warmupMaxsize !== nothing
         error("warmupMaxsize is deprecated. Please use warmupMaxsizeBy, and give the time at which the warmup will end as a fraction of the total search cycles.")
     end
 
-    if hofFile == nothing
+    if hofFile === nothing
         hofFile = "hall_of_fame.csv" #TODO - put in date/time string here
     end
 
@@ -328,8 +328,8 @@ function Options(;
         constraints = collect(constraints)
     end
     if constraints !== nothing
-        @assert bin_constraints == nothing
-        @assert una_constraints == nothing
+        @assert bin_constraints === nothing
+        @assert una_constraints === nothing
         # TODO: This is redundant with the checks in EquationSearch
         for op in binary_operators
             @assert !(op in unary_operators)
@@ -345,11 +345,11 @@ function Options(;
                                                          unary_operators, binary_operators,
                                                          nuna, nbin)
 
-    if maxdepth == nothing
+    if maxdepth === nothing
         maxdepth = maxsize
     end
 
-    if npopulations == nothing
+    if npopulations === nothing
         npopulations = nworkers()
     end
 
@@ -406,7 +406,7 @@ function Options(;
         verbosity = 0
     end
 
-    if recorder == nothing
+    if recorder === nothing
         recorder = haskey(ENV, "PYSR_RECORDER") && (ENV["PYSR_RECORDER"] == "1")
     end
 

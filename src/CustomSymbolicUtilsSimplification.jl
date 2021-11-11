@@ -1,6 +1,14 @@
 using FromFile
 using SymbolicUtils
-using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, has_trig, expand
+using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, expand
+
+try
+    using SymbolicUtils: has_trig_exp
+catch
+    using SymbolicUtils: has_trig
+    has_trig_exp = has_trig
+end
+
 @from "Core.jl" import Options
 @from "InterfaceSymbolicUtils.jl" import SYMBOLIC_UTILS_TYPES
 @from "Utils.jl" import isgood, @return_on_false
@@ -105,7 +113,8 @@ function get_simplifier(binops::A, unaops::B) where {A,B}
        ((*,), @rule((((~x)^(~p::_isinteger))^(~q::_isinteger)) => (~x)^((~p)*(~q)))),
        ((*,), @rule(^(~x, ~z::_iszero) => 1)),
        ((*,), @rule(^(~x, ~z::_isone) => ~x)),
-       ((*, /,), @rule(inv(~x) => ~x ^ -1))]
+       ((*, /,), @rule(inv(~x) => ^(~x, -1) ))
+       ]
        if all([(op in binops || op in unaops) for op in required_ops])
     ]
     ASSORTED_RULES =[
@@ -144,7 +153,7 @@ function get_simplifier(binops::A, unaops::B) where {A,B}
     end
     trig_simplifier(;kw...) = Chain(TRIG_RULES)
     function default_simplifier(; kw...)
-        IfElse(has_trig,
+        IfElse(has_trig_exp,
                Postwalk(Chain((number_simplifier(),
                                trig_simplifier())),
                         ; kw...),

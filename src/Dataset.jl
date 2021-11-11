@@ -30,7 +30,7 @@ function Dataset(
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
     weighted = weights !== nothing
-    if varMap == nothing
+    if varMap === nothing
         varMap = ["x$(i)" for i=1:nfeatures]
     end
 
