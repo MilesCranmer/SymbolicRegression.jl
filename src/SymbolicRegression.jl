@@ -566,14 +566,14 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             # Check if all nout are below stopping condition.
             all_below = true
             for j=1:nout
-                dominating = calculateParetoFrontier(dataset, hallOfFame[j], options)
+                dominating = calculateParetoFrontier(datasets[j], hallOfFame[j], options)
                 # Check if zero size:
                 if length(dominating) == 0
                     all_below = false
                 elseif dominating[end].score > options.earlyStopCondition
                     all_below = false
                 end
-                
+
                 if !all_below
                     break
                 end
