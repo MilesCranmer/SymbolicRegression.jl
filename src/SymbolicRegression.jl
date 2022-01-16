@@ -559,10 +559,36 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             num_equations = 0.0
         end
         ################################################################
+
+        ################################################################
+        ## Early stopping code
+        if options.earlyStopCondition !== nothing
+            # Check if all nout are below stopping condition.
+            all_below = true
+            for j=1:nout
+                dominating = calculateParetoFrontier(dataset, hallOfFame[j], options)
+                # Check if zero size:
+                if length(dominating) == 0
+                    all_below = false
+                elseif dominating[end].score > options.earlyStopCondition
+                    all_below = false
+                end
+                
+                if !all_below
+                    break
+                end
+            end
+            if all_below # Early stop!
+                break
+            end
+        end
+        ################################################################
     end
     if we_created_procs
         rmprocs(procs)
     end
+    # TODO - also stop threads here.
+
     ##########################################################################
     ### Distributed code^
     ##########################################################################
