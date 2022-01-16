@@ -144,7 +144,7 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     recorder::Bool
     recorder_file::String
     probPickFirst::Float32
-    earlyStopCondition::Union{Float32, Nothing}
+    earlyStopCondition::Union{Function, Nothing}
 
 end
 
@@ -256,7 +256,8 @@ Construct options for `EquationSearch` and other functions.
     have no effect).
 - `probPickFirst=1.0`: Expressions in subsample are chosen based on, for
     p=probPickFirst: p, p*(1-p), p*(1-p)^2, and so on.
-- `earlyStopCondition=nothing`: Whether to stop early if the mean loss gets below this value.
+- `earlyStopCondition=nothing`: Float - whether to stop early if the mean loss gets below this value.
+    Function - a function taking (loss, complexity) as arguments and returning true or false.
 """
 function Options(;
     binary_operators::NTuple{nbin, Any}=(div, plus, mult),
@@ -302,7 +303,7 @@ function Options(;
     recorder=nothing,
     recorder_file="pysr_recorder.json",
     probPickFirst=1.0,
-    earlyStopCondition=nothing,
+    earlyStopCondition::Union{Function, Float32, Nothing}=nothing,
    ) where {nuna,nbin}
 
     if nrestarts !== nothing
@@ -390,6 +391,10 @@ function Options(;
 
     if recorder === nothing
         recorder = haskey(ENV, "PYSR_RECORDER") && (ENV["PYSR_RECORDER"] == "1")
+    end
+
+    if typeof(earlyStopCondition) == Float32
+        earlyStopCondition = (loss, complexity) -> loss < earlyStopCondition
     end
 
     options = Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition)
