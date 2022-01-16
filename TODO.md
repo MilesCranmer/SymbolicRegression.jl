@@ -1,7 +1,9 @@
 # TODO
 
+- [ ] Randomly create a new tree once in a while.
+- [ ] Kill tasks if exited early.
+- [ ] Generate populations in parallel.
 - [ ] Create quantitative profiler - measure profiler over time.
-- [ ] Are some workers getting too many populations, and other not enough? Is this why the load is low?
 - [ ] Show speed by # of mutations total, and # mutations per individual.
 - [ ] Is scoreFuncBatch called when creating PopMember, when batching turned on??
     - Should I run optimizeConstants with batching? e.g., a single little batch.
@@ -167,3 +169,4 @@ end
 - [x] Consider returning only the equation of interest; rather than all equations.
 - [x] Sort these todo lists by priority
     - Not done.
+- [x] Are some workers getting too many populations, and other not enough? Is this why the load is low?
