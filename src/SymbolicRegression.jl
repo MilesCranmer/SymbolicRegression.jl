@@ -79,6 +79,7 @@ using Reexport
 include("Configure.jl")
 include("Deprecates.jl")
 
+StateType = Tuple{Array{Population, 2},Array{HallOfFame, 1}}
 
 """
     EquationSearch(X, y[; kws...])
@@ -114,6 +115,12 @@ which is useful for debugging and profiling.
 - `runtests::Bool=true`: Whether to run (quick) tests before starting the
     search, to see if there will be any problems during the equation search
     related to the host environment.
+- `saved_state::Union{StateType, Nothing}=nothing`: If you have already
+    run `EquationSearch` and want to resume it, pass the state here.
+    To get this to work, you need to have stateReturn=true in the options,
+    which will cause `EquationSearch` to return the state. Note that
+    you cannot change the operators or dataset, but most other options
+    should be changeable.
 
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
@@ -130,7 +137,8 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
         numprocs::Union{Int, Nothing}=nothing,
         procs::Union{Array{Int, 1}, Nothing}=nothing,
         multithreading::Bool=false,
-        runtests::Bool=true
+        runtests::Bool=true,
+        saved_state::Union{StateType, Nothing}=nothing,
        ) where {T<:Real}
 
     nout = size(y, FEATURE_DIM)
@@ -145,7 +153,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
     return EquationSearch(datasets;
         niterations=niterations, options=options,
         numprocs=numprocs, procs=procs, multithreading=multithreading,
-        runtests=runtests)
+        runtests=runtests, saved_state=saved_state)
 end
 
 function EquationSearch(X::AbstractMatrix{T1}, y::AbstractMatrix{T2}; kw...) where {T1<:Real,T2<:Real}
@@ -163,8 +171,13 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         numprocs::Union{Int, Nothing}=nothing,
         procs::Union{Array{Int, 1}, Nothing}=nothing,
         multithreading::Bool=false,
-        runtests::Bool=true
+        runtests::Bool=true,
+        saved_state::Union{StateType, Nothing}=nothing,
        ) where {T<:Real}
+
+                # Population(datasets[j], baselineMSEs[j], npop=options.npop,
+                #            nlength=3, options=options, nfeatures=datasets[j].nfeatures),
+                # HallOfFame(options),
 
     noprocs = (procs === nothing && numprocs == 0)
     someprocs = !noprocs
@@ -181,7 +194,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     return _EquationSearch(concurrency, datasets;
         niterations=niterations, options=options,
         numprocs=numprocs, procs=procs,
-        runtests=runtests)
+        runtests=runtests, saved_state=saved_state)
 end
 
 function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
@@ -190,6 +203,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         numprocs::Union{Int, Nothing}=nothing,
         procs::Union{Array{Int, 1}, Nothing}=nothing,
         runtests::Bool=true,
+        saved_state::Union{StateType, Nothing}=nothing,
        ) where {T<:Real,ConcurrencyType<:SRConcurrency}
 
     Base.start_reading(stdin)
@@ -244,11 +258,21 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         tasks = [Task[] for j=1:nout]
     end
 
+    # This is a recorder for populations, but is not actually used for processing, just
+    # for the final return.
+    returnPops = [[Population(dataset, baselineMSEs[j], npop=1,
+                              options=options, nfeatures=dataset[j].nfeatures)
+                    for i=1:options.npopulations]
+                    for j=1:nout]
     # These initial populations are discarded:
     bestSubPops = [[Population(datasets[j], baselineMSEs[j], npop=1, options=options, nfeatures=datasets[j].nfeatures)
                     for i=1:options.npopulations]
                     for j=1:nout]
-    hallOfFame = [HallOfFame(options) for j=1:nout]
+    if saved_state === nothing
+        hallOfFame = [HallOfFame(options) for j=1:nout]
+    else
+        hallOfFame = saved_state[2]::Array{HallOfFame, 1}
+    end
     actualMaxsize = options.maxsize + MAX_DEGREE
     frequencyComplexities = [ones(T, actualMaxsize) for i=1:nout]
     curmaxsizes = [3 for j=1:nout]
@@ -297,12 +321,20 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             if ConcurrencyType == SRDistributed
                 worker_assignment[(j, i)] = worker_idx
             end
-            new_pop = @sr_spawner ConcurrencyType worker_idx (
-                Population(datasets[j], baselineMSEs[j], npop=options.npop,
-                           nlength=3, options=options, nfeatures=datasets[j].nfeatures),
-                HallOfFame(options),
-                RecordType()
-            )
+            if saved_state === nothing
+                new_pop = @sr_spawner ConcurrencyType worker_idx (
+                    Population(datasets[j], baselineMSEs[j], npop=options.npop,
+                            nlength=3, options=options, nfeatures=datasets[j].nfeatures),
+                    HallOfFame(options),
+                    RecordType()
+                )
+            else
+                new_pop = @sr_spawner ConcurrencyType worker_idx (
+                    saved_state[1][j][i],
+                    HallOfFame(options),
+                    RecordType()
+                )
+            end
             push!(init_pops[j], new_pop)
         end
     end
@@ -404,6 +436,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             head_node_start_work = time()
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record) = ConcurrencyType in [SRDistributed, SRThreaded] ? take!(channels[j][i]) : allPops[j][i]
+            returnPops[j][i] = cur_pop
             cur_pop::Population
             best_seen::HallOfFame
             cur_record::RecordType
@@ -625,10 +658,16 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         end
     end
 
-    if nout == 1
-        return hallOfFame[1]
+    if options.stateReturn
+        state = (returnPops, hallOfFame)
+        state::StateType
+        return state
     else
-        return hallOfFame
+        if nout == 1
+            return hallOfFame[1]
+        else
+            return hallOfFame
+        end
     end
 end
 
