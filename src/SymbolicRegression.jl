@@ -192,6 +192,13 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         runtests::Bool=true,
        ) where {T<:Real,ConcurrencyType<:SRConcurrency}
 
+    Base.start_reading(stdin)
+    bytes = bytesavailable(stdin)
+    if bytes > 0
+        # Clear out initial data
+        data = read(stdin, bytes)
+    end
+
     example_dataset = datasets[1]
     nout = size(datasets, 1)
 
@@ -506,6 +513,8 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                                                                   datasets[j], options,
                                                                   avgys[j])
                 load_string = @sprintf("Head worker occupation: %.1f", 100*head_node_time["occupied"]/(time() - head_node_time["start"])) * "%\n"
+                # TODO - include command about "q" here.
+                load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
                 equation_strings = load_string * equation_strings
                 set_multiline_postfix(progress_bar, equation_strings)
                 if cur_cycle === nothing
@@ -554,6 +563,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                     print(equation_strings)
                     @printf("==============================\n")
                 end
+                @printf("Press 'q' and then <enter> to stop execution early.\n")
             end
             last_print_time = time()
             num_equations = 0.0
@@ -587,22 +597,19 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
 
         ################################################################
         ## Signal stopping code
-        if options.signal_file !== nothing && isfile(options.signal_file)
-            signal = open(options.signal_file, "r") do f
-                try
-                    raw_output = read(f, String)
-                    Int(raw_output)
-                catch
-                    0
-                end
-            end
-            # Check if this file contain a 1. If so, we quit early.
-            if signal == 1
+        bytes = bytesavailable(stdin)
+        if bytes > 0
+            # Read:
+            data = read(stdin, bytes)
+            control_c = 0x03
+            quit = 0x71
+            if length(data) > 1 && (data[end] == control_c || data[end - 1] == quit)
                 break
             end
         end
         ################################################################
     end
+    Base.stop_reading(stdin)
     if we_created_procs
         rmprocs(procs)
     end
