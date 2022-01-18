@@ -584,6 +584,24 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             end
         end
         ################################################################
+
+        ################################################################
+        ## Signal stopping code
+        if options.signal_file !== nothing && isfile(options.signal_file)
+            signal = open(options.signal_file, "r") do f
+                try
+                    raw_output = read(f, String)
+                    Int(raw_output)
+                catch
+                    0
+                end
+            end
+            # Check if this file contain a 1. If so, we quit early.
+            if signal == 1
+                break
+            end
+        end
+        ################################################################
     end
     if we_created_procs
         rmprocs(procs)

@@ -145,6 +145,7 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     recorder_file::String
     probPickFirst::Float32
     earlyStopCondition::Union{Function, Nothing}
+    signal_file::Union{String, Nothing}
 
 end
 
@@ -304,6 +305,7 @@ function Options(;
     recorder_file="pysr_recorder.json",
     probPickFirst=1.0,
     earlyStopCondition::Union{Function, Float32, Nothing}=nothing,
+    signal_file::Union{String,Nothing}=nothing,
    ) where {nuna,nbin}
 
     if nrestarts !== nothing
@@ -397,7 +399,7 @@ function Options(;
         earlyStopCondition = (loss, complexity) -> loss < earlyStopCondition
     end
 
-    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition)
+    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition, signal_file)
     return options
 end
 
