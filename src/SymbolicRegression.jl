@@ -260,8 +260,8 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
 
     # This is a recorder for populations, but is not actually used for processing, just
     # for the final return.
-    returnPops = [[Population(dataset, baselineMSEs[j], npop=1,
-                              options=options, nfeatures=dataset[j].nfeatures)
+    returnPops = [[Population(datasets[j], baselineMSEs[j], npop=1,
+                              options=options, nfeatures=datasets[j].nfeatures)
                     for i=1:options.npopulations]
                     for j=1:nout]
     # These initial populations are discarded:
