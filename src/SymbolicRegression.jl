@@ -206,11 +206,20 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         saved_state::Union{StateType, Nothing}=nothing,
        ) where {T<:Real,ConcurrencyType<:SRConcurrency}
 
-    Base.start_reading(stdin)
-    bytes = bytesavailable(stdin)
-    if bytes > 0
-        # Clear out initial data
-        data = read(stdin, bytes)
+    can_read_input = true
+    try
+        Base.start_reading(stdin)
+        bytes = bytesavailable(stdin)
+        if bytes > 0
+            # Clear out initial data
+            read(stdin, bytes)
+        end
+    catch err
+        if isa(err, MethodError)
+            can_read_input = false
+        else
+            throw(err)
+        end
     end
 
     example_dataset = datasets[1]
@@ -630,19 +639,23 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
 
         ################################################################
         ## Signal stopping code
-        bytes = bytesavailable(stdin)
-        if bytes > 0
-            # Read:
-            data = read(stdin, bytes)
-            control_c = 0x03
-            quit = 0x71
-            if length(data) > 1 && (data[end] == control_c || data[end - 1] == quit)
-                break
+        if can_read_input
+            bytes = bytesavailable(stdin)
+            if bytes > 0
+                # Read:
+                data = read(stdin, bytes)
+                control_c = 0x03
+                quit = 0x71
+                if length(data) > 1 && (data[end] == control_c || data[end - 1] == quit)
+                    break
+                end
             end
         end
         ################################################################
     end
-    Base.stop_reading(stdin)
+    if can_read_input
+        Base.stop_reading(stdin)
+    end
     if we_created_procs
         rmprocs(procs)
     end
