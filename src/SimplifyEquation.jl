@@ -1,9 +1,8 @@
 using FromFile
-import Logging: @warn
 @from "Core.jl" import CONST_TYPE, Node, copyNode, Options
-@from "EquationUtils.jl" import countNodes, stringTree
+@from "EquationUtils.jl" import countNodes
 @from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
-@from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
+@from "InterfaceSymbolicUtils.jl" import node_to_symbolic_safe, symbolic_to_node
 @from "CheckConstraints.jl" import check_constraints
 @from "Utils.jl" import isbad, isgood
 
@@ -139,21 +138,20 @@ function simplifyWithSymbolicUtils(tree::Node, options::Options, curmaxsize::Int
     end
     init_node = copyNode(tree)
     init_size = countNodes(tree)
-    try
-        symbolic_util_form = node_to_symbolic(tree, options, index_functions=true)
-        eqn_form, complete2 = custom_simplify(symbolic_util_form, options)
-        if !complete2
-            return init_node
-        end
-        final_node = symbolic_to_node(eqn_form, options)
-        final_size = countNodes(tree)
-        did_simplification_improve = (final_size <= init_size) && (check_constraints(final_node, options, curmaxsize))
-        output = did_simplification_improve ? final_node : init_node
-        return output
-    catch e
-        @warn "Error in symbolic_util simplify: $(e)\nFrom initial equation: $(stringTree(init_node, options))"
+    symbolic_util_form, complete = node_to_symbolic_safe(tree, options, index_functions=true)
+    if !complete
         return init_node
     end
+    eqn_form, complete2 = custom_simplify(symbolic_util_form, options)
+    if !complete2
+        return init_node
+    end
+    final_node = symbolic_to_node(eqn_form, options)
+    final_size = countNodes(tree)
+    did_simplification_improve = (final_size <= init_size) && (check_constraints(final_node, options, curmaxsize))
+    output = did_simplification_improve ? final_node : init_node
+
+    return output
 end
 
 function simplifyWithSymbolicUtils(tree::Node, options::Options)::Node
