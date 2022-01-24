@@ -1,6 +1,7 @@
 using FromFile
+import Logging: @warn
 @from "Core.jl" import CONST_TYPE, Node, copyNode, Options
-@from "EquationUtils.jl" import countNodes
+@from "EquationUtils.jl" import countNodes, stringTree
 @from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
 @from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
 @from "CheckConstraints.jl" import check_constraints
@@ -148,9 +149,9 @@ function simplifyWithSymbolicUtils(tree::Node, options::Options, curmaxsize::Int
         final_size = countNodes(tree)
         did_simplification_improve = (final_size <= init_size) && (check_constraints(final_node, options, curmaxsize))
         output = did_simplification_improve ? final_node : init_node
-
         return output
     catch e
+        @warn "Error in symbolic_util simplify: $(e)\nFrom initial equation: $(stringTree(init_node, options))"
         return init_node
     end
 end
