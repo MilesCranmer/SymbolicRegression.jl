@@ -19,3 +19,8 @@ simple_tree = simplifyWithSymbolicUtils(tree, options, 5)
 
 # Check that the first operator is *, for 2 * x1:
 @test simple_tree.op == index_of_mult
+
+tree = Node("x1") * Node("x1") + Node("x1") * Node("x1")
+
+# Should not convert this to power:
+@test !occursin("^", stringTree(simplifyWithSymbolicUtils(tree, options), options))
