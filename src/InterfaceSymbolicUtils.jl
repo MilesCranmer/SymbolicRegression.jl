@@ -51,7 +51,7 @@ function split_eq(op, args, options::Options; varMap::Union{Array{String, 1}, No
     !(op ∈ (sum, prod, +, *)) && throw(error("Unsupported operation $op in expression!"))
     if Symbol(op) == Symbol(sum)
         ind = findoperation(+, options.binops)
-    elseif Symbol(op) === Symbol(prod)
+    elseif Symbol(op) == Symbol(prod)
         ind = findoperation(*, options.binops)
     else
         ind = findoperation(op, options.binops)
@@ -63,7 +63,7 @@ function findoperation(op, ops)
     for (i,oi) in enumerate(ops)
         Symbol(oi) == Symbol(op) && return i
     end
-    throw(error("Operation $op in expression not found in operationrs $ops!"))
+    throw(error("Operation $(op) in expression not found in operations $(ops)!"))
 end
 
 function Base.convert(::typeof(Node), x::Number, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
