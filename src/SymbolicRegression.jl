@@ -24,7 +24,7 @@ export Population,
     combineOperators,
     genRandomTree,
 
-    #Operators:
+    #Operators
     plus,
     sub,
     mult,
