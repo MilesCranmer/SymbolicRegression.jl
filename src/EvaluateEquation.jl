@@ -21,12 +21,24 @@ function evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tup
     if tree.degree == 0
         deg0_eval(tree, cX, options)
     elseif tree.degree == 1
+        # We fuse (and compile) the following:
+        #  - op(op2(x, y)), where x, y, z are constants or variables.
+        #  - op(op2(x)), where x is a constant or variable.
+        #  - op(x), for any x.
         if tree.l.degree == 2 && tree.l.l.degree == 0 && tree.l.r.degree == 0
             deg1_l2_ll0_lr0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+        elseif tree.l.degree == 1 && tree.l.l.degree == 0
+            deg1_l1_ll0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
         else
             deg1_eval(tree, cX, Val(tree.op), options)
         end
     else
+        # We fuse (and compile) the following:
+        #  - op(x, y), where x, y are constants or variables.
+        #  - op(x, y), where x is a constant or variable but y is not.
+        #  - op(x, y), where y is a constant or variable but x is not.
+        #  - op(x, y), for any x or y
+        # TODO - add op(op2(x, y), z) and op(x, op2(y, z))
         if tree.l.degree == 0 && tree.r.degree == 0
             deg2_l0_r0_eval(tree, cX, Val(tree.op), options)
         elseif tree.l.degree == 0
@@ -151,6 +163,40 @@ function deg1_l2_ll0_lr0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, 
     return (cumulator, finished_loop)
 end
 
+
+# op(op2(x)) for x variable or constant
+function deg1_l1_ll0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx,op_l_idx}
+    n = size(cX, 2)
+    op = options.unaops[op_idx]
+    op_l = options.unaops[op_l_idx]
+    finished_loop = true
+    if tree.l.l.constant
+        val_ll = convert(T, tree.l.l.val)
+        x_l = op_l(val_ll)::T
+        if isnan(x_l) || !isfinite(x_l)
+            return (Array{T, 1}(undef, n), false)
+        end
+        x = op(x_l)::T
+        if isnan(x) || !isfinite(x)
+            return (Array{T, 1}(undef, n), false)
+        end
+        return (fill(x, n), true)
+    else
+        feature_ll = tree.l.l.feature
+        cumulator = Array{T, 1}(undef, n)
+        finished_loop = true
+        @inbounds @simd for j=1:n
+            x_l = op_l(cX[feature_ll, j])::T
+            @break_on_check x_l finished_loop
+            x = op(x_l)::T
+            @break_on_check x finished_loop
+            cumulator[j] = x
+        end
+        return (cumulator, finished_loop)
+    end
+    return (cumulator, finished_loop)
+end
+
 function deg2_l0_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     op = options.binops[op_idx]
@@ -245,6 +291,7 @@ function deg2_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
     end
     return (cumulator, finished_loop)
 end
+
 
 # Evaluate an equation over an array of datapoints
 # This one is just for reference. The fused one should be faster.
