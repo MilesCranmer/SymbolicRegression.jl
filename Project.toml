@@ -25,7 +25,7 @@ LossFunctions = "0.6, 0.7"
 Optim = "0.19, 1.1"
 Pkg = "1"
 Reexport = "1"
-SpecialFunctions = "0.10.1, 1"
+SpecialFunctions = "0.10.1, 1, 2"
 SymbolicUtils = "0.6"
 julia = "1.5"
 
