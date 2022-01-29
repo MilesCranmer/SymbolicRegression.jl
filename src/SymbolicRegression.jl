@@ -180,7 +180,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         procs::Union{Array{Int, 1}, Nothing}=nothing,
         multithreading::Bool=false,
         runtests::Bool=true,
-        saved_state::Union{StateType, Nothing}=nothing,
+        saved_state::Union{StateType{T}, Nothing}=nothing,
        ) where {T<:Real}
 
                 # Population(datasets[j], baselineMSEs[j], npop=options.npop,
