@@ -79,7 +79,14 @@ using Reexport
 include("Configure.jl")
 include("Deprecates.jl")
 
-StateType = Tuple{Array{Population, 2},Array{HallOfFame, 1}}
+StateType{T} = Tuple{
+    Vector{Vector{Population{T}}},
+    Union{
+        HallOfFame,
+        Vector{HallOfFame}
+    }
+}
+
 
 """
     EquationSearch(X, y[; kws...])
@@ -138,7 +145,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
         procs::Union{Array{Int, 1}, Nothing}=nothing,
         multithreading::Bool=false,
         runtests::Bool=true,
-        saved_state::Union{StateType, Nothing}=nothing,
+        saved_state::Union{StateType{T}, Nothing}=nothing,
        ) where {T<:Real}
 
     nout = size(y, FEATURE_DIM)
@@ -203,7 +210,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         numprocs::Union{Int, Nothing}=nothing,
         procs::Union{Array{Int, 1}, Nothing}=nothing,
         runtests::Bool=true,
-        saved_state::Union{StateType, Nothing}=nothing,
+        saved_state::Union{StateType{T}, Nothing}=nothing,
        ) where {T<:Real,ConcurrencyType<:SRConcurrency}
 
     can_read_input = true
@@ -280,7 +287,11 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
     if saved_state === nothing
         hallOfFame = [HallOfFame(options) for j=1:nout]
     else
-        hallOfFame = saved_state[2]::Array{HallOfFame, 1}
+        hallOfFame = saved_state[2]::Union{HallOfFame, Vector{HallOfFame}}
+        if !isa(hallOfFame, Vector{HallOfFame})
+            hallOfFame = [hallOfFame]
+        end
+        hallOfFame::Vector{HallOfFame}
     end
     actualMaxsize = options.maxsize + MAX_DEGREE
     frequencyComplexities = [ones(T, actualMaxsize) for i=1:nout]
@@ -672,8 +683,8 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
     end
 
     if options.stateReturn
-        state = (returnPops, hallOfFame)
-        state::StateType
+        state = (returnPops, (nout == 1 ? hallOfFame[1] : hallOfFame))
+        state::StateType{T}
         return state
     else
         if nout == 1

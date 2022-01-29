@@ -15,20 +15,19 @@ for batching in [true, false]
         multi = false
         probPickFirst = 1.0
         multithreading = false
+        print("Testing with batching=$(batching) and weighted=$(weighted), ")
         if weighted && batching
-            println("Serial & progress bar & warmup & BFGS")
+            println("with serial & progress bar & warmup & BFGS")
             numprocs = 0 #Try serial computation here.
             progress = true #Also try the progress bar.
             warmupMaxsizeBy = 0.5f0 #Smaller maxsize at first, build up slowly
             optimizer_algorithm = "BFGS"
             probPickFirst = 0.8
-        end
-        if !weighted && !batching
-            println("Multi-output.")
+        elseif !weighted && !batching
+            println("with multi-output.")
             multi = true
-        end
-        if !weighted && batching
-            println("Multi-threading")
+        elseif !weighted && batching
+            println("with multi-threading")
             multithreading = true
             numprocs = 0
         end
@@ -89,22 +88,25 @@ for batching in [true, false]
             # eval evaluates inside global
             @test abs(eval(Meta.parse(string(residual)))) < maximum_residual
         end
+
+        println("Passed.")
     end
 end
 
-println("fast-cycle and custom variable names")
+println("Testing fast-cycle and custom variable names")
 
 options = SymbolicRegression.Options(
     binary_operators=(+, *),
     unary_operators=(cos,),
     npopulations=4,
     constraints=((*)=>(-1, 10), cos=>(5)),
-    fast_cycle=true
+    fast_cycle=true,
+    stateReturn=true,
 )
 X = randn(MersenneTwister(0), Float32, 5, 100)
 y = 2 * cos.(X[4, :])
 varMap = ["t1", "t2", "t3", "t4", "t5"]
-hallOfFame = EquationSearch(X, y; varMap=varMap,
+state, hallOfFame = EquationSearch(X, y; varMap=varMap,
                             niterations=2, options=options)
 dominating = calculateParetoFrontier(X, y, hallOfFame, options)
 
@@ -123,3 +125,21 @@ residual = simplify(eqn - true_eqn) + t4 * 1e-10
 t1=0.1f0; t2=0.1f0; t3=0.1f0; t4=0.1f0; t5=0.1f0
 residual_value = abs(eval(Meta.parse(string(residual))))
 @test residual_value < maximum_residual
+
+# Do search again, but with saved state:
+# We do 0 iterations to make sure the state is used.
+println("Passed.")
+println("Testing whether state saving works.")
+state, hallOfFame = EquationSearch(X, y; varMap=varMap,
+                                   niterations=0, options=options,
+                                   saved_state=(state, hallOfFame))
+
+dominating = calculateParetoFrontier(X, y, hallOfFame, options)
+best = dominating[end]
+printTree(best.tree, options)
+eqn = node_to_symbolic(best.tree, options;
+                       evaluate_functions=true, varMap=varMap)
+residual = simplify(eqn - true_eqn) + t4 * 1e-10
+@test best.score < maximum_residual / 10
+
+println("Passed.")
