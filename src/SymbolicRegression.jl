@@ -23,6 +23,7 @@ export Population,
     simplifyWithSymbolicUtils,
     combineOperators,
     genRandomTree,
+    genRandomTreeFixedSize,
 
     #Operators
     plus,
@@ -64,7 +65,7 @@ using Reexport
 @from "EquationUtils.jl" import countNodes, printTree, stringTree
 @from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
 @from "CheckConstraints.jl" import check_constraints
-@from "MutationFunctions.jl" import genRandomTree
+@from "MutationFunctions.jl" import genRandomTree, genRandomTreeFixedSize
 @from "LossFunctions.jl" import EvalLoss, Loss, scoreFunc
 @from "PopMember.jl" import PopMember, copyPopMember
 @from "Population.jl" import Population, bestSubPop, record_population

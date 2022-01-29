@@ -263,6 +263,15 @@ end
 function genRandomTree(length::Int, options::Options, nfeatures::Int)::Node
     tree = Node(convert(CONST_TYPE, 1))
     for i=1:length
+        # TODO: This can be larger number of nodes than length.
+        tree = appendRandomOp(tree, options, nfeatures)
+    end
+    return tree
+end
+
+function genRandomTreeFixedSize(node_count::Int, options::Options, nfeatures::Int)::Node
+    tree = Node(convert(CONST_TYPE, 1))
+    while countNodes(tree) < node_count
         tree = appendRandomOp(tree, options, nfeatures)
     end
     return tree
