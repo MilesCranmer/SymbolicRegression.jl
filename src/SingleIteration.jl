@@ -1,8 +1,7 @@
 using FromFile
-@from "Core.jl" import Options, Dataset, RecordType
+@from "Core.jl" import Options, Dataset, RecordType, stringTree
 @from "EquationUtils.jl" import countNodes
 @from "Utils.jl" import debug
-@from "EquationUtils.jl" import stringTree
 @from "SimplifyEquation.jl" import simplifyTree, combineOperators, simplifyWithSymbolicUtils
 @from "PopMember.jl" import copyPopMember
 @from "Population.jl" import Population, finalizeScores, bestSubPop

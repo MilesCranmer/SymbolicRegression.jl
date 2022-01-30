@@ -1,5 +1,6 @@
 using FromFile
 @from "ProgramConstants.jl" import CONST_TYPE
+@from "OptionsStruct.jl" import Options
 
 # Define a serialization format for the symbolic equations:
 mutable struct Node
@@ -95,4 +96,61 @@ function copyNode(tree::Node)::Node
     else
         return Node(tree.op, copyNode(tree.l), copyNode(tree.r))
    end
+end
+
+function stringOp(op::F, tree::Node, options::Options;
+                  bracketed::Bool=false,
+                  varMap::Union{Array{String, 1}, Nothing}=nothing)::String where {F}
+    if op in [+, -, *, /, ^]
+        l = stringTree(tree.l, options, bracketed=false, varMap=varMap)
+        r = stringTree(tree.r, options, bracketed=false, varMap=varMap)
+        if bracketed
+            return "$l $(string(op)) $r"
+        else
+            return "($l $(string(op)) $r)"
+        end
+    else
+        l = stringTree(tree.l, options, bracketed=true, varMap=varMap)
+        r = stringTree(tree.r, options, bracketed=true, varMap=varMap)
+        return "$(string(op))($l, $r)"
+    end
+end
+
+"""
+    stringTree(tree::Node, options::Options; kws...)
+
+Convert an equation to a string.
+
+# Arguments
+
+- `varMap::Union{Array{String, 1}, Nothing}=nothing`: what variables
+    to print for each feature.
+"""
+function stringTree(tree::Node, options::Options;
+                    bracketed::Bool=false,
+                    varMap::Union{Array{String, 1}, Nothing}=nothing)::String
+    if tree.degree == 0
+        if tree.constant
+            return string(tree.val)
+        else
+            if varMap === nothing
+                return "x$(tree.feature)"
+            else
+                return varMap[tree.feature]
+            end
+        end
+    elseif tree.degree == 1
+        return "$(options.unaops[tree.op])($(stringTree(tree.l, options, bracketed=true, varMap=varMap)))"
+    else
+        return stringOp(options.binops[tree.op], tree, options, bracketed=bracketed, varMap=varMap)
+    end
+end
+
+# Print an equation
+function printTree(io::IO, tree::Node, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
+    println(io, stringTree(tree, options, varMap=varMap))
+end
+
+function printTree(tree::Node, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
+    println(stringTree(tree, options, varMap=varMap))
 end

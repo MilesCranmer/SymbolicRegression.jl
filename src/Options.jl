@@ -5,7 +5,8 @@ using LossFunctions
 # into the SR call itself, rather than
 # passing huge options at once.
 @from "Operators.jl" import plus, pow, mult, sub, div, log_abs, log10_abs, log2_abs, log1p_abs, sqrt_abs, acosh_abs, atanh_clip
-@from "Equation.jl" import Node
+@from "Equation.jl" import Node, stringTree
+@from "OptionsStruct.jl" import Options
 
 """
          build_constraints(una_constraints, bin_constraints,
@@ -100,54 +101,6 @@ function unaopmap(op)
     return op
 end
 
-struct Options{A,B,C<:Union{SupervisedLoss,Function}}
-
-    binops::A
-    unaops::B
-    bin_constraints::Array{Tuple{Int,Int}, 1}
-    una_constraints::Array{Int, 1}
-    ns::Int
-    parsimony::Float32
-    alpha::Float32
-    maxsize::Int
-    maxdepth::Int
-    fast_cycle::Bool
-    migration::Bool
-    hofMigration::Bool
-    fractionReplacedHof::Float32
-    shouldOptimizeConstants::Bool
-    hofFile::String
-    npopulations::Int
-    perturbationFactor::Float32
-    annealing::Bool
-    batching::Bool
-    batchSize::Int
-    mutationWeights::Array{Float64, 1}
-    warmupMaxsizeBy::Float32
-    useFrequency::Bool
-    npop::Int
-    ncyclesperiteration::Int
-    fractionReplaced::Float32
-    topn::Int
-    verbosity::Int
-    probNegate::Float32
-    nuna::Int
-    nbin::Int
-    seed::Union{Int, Nothing}
-    loss::C
-    progress::Bool
-    terminal_width::Union{Int, Nothing}
-    optimizer_algorithm::String
-    optimize_probability::Float32
-    optimizer_nrestarts::Int
-    optimizer_iterations::Int
-    recorder::Bool
-    recorder_file::String
-    probPickFirst::Float32
-    earlyStopCondition::Union{Function, Nothing}
-    stateReturn::Bool
-
-end
 
 """
     Options(;kws...)
@@ -378,6 +331,7 @@ function Options(;
         end
     end
 
+    # Redefine Base operations:
     for (op, f) in enumerate(map(Symbol, unary_operators))
         if !isdefined(Base, f)
             continue
@@ -400,7 +354,12 @@ function Options(;
     end
 
     options = Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition, stateReturn)
+
+    @eval begin
+        Base.print(io::IO, tree::Node) = print(io, stringTree(tree, $options))
+        Base.show(io::IO, tree::Node) = print(io, stringTree(tree, $options))
+    end
+    
     return options
 end
-
 

@@ -1,6 +1,6 @@
 using FromFile
-@from "Core.jl" import Options, Dataset, RecordType
-@from "EquationUtils.jl" import stringTree, countNodes
+@from "Core.jl" import Options, Dataset, RecordType, stringTree
+@from "EquationUtils.jl" import countNodes
 @from "LossFunctions.jl" import scoreFunc
 @from "MutationFunctions.jl" import genRandomTree
 @from "PopMember.jl" import PopMember

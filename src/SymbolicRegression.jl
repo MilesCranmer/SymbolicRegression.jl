@@ -60,9 +60,9 @@ using FromFile
 using Reexport
 @reexport using LossFunctions
 
-@from "Core.jl" import CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, SRConcurrency, SRSerial, SRThreaded, SRDistributed
+@from "Core.jl" import CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, SRConcurrency, SRSerial, SRThreaded, SRDistributed, stringTree, printTree
 @from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
-@from "EquationUtils.jl" import countNodes, printTree, stringTree
+@from "EquationUtils.jl" import countNodes
 @from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
 @from "CheckConstraints.jl" import check_constraints
 @from "MutationFunctions.jl" import genRandomTree, genRandomTreeFixedSize
@@ -228,6 +228,12 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         else
             throw(err)
         end
+    end
+
+    # Redefine print, show:
+    @eval begin
+        Base.print(io::IO, tree::Node) = print(io, stringTree(tree, $options; varMap=$(datasets[1].varMap)))
+        Base.show(io::IO, tree::Node) = print(io, stringTree(tree, $options; varMap=$(datasets[1].varMap)))
     end
 
     example_dataset = datasets[1]

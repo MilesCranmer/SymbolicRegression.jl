@@ -1,7 +1,6 @@
 using FromFile
 using Random: shuffle!
-@from "Core.jl" import Options, Dataset, RecordType
-@from "EquationUtils.jl" import stringTree
+@from "Core.jl" import Options, Dataset, RecordType, stringTree
 @from "PopMember.jl" import PopMember
 @from "Population.jl" import Population, bestOfSample
 @from "Mutate.jl" import nextGeneration
