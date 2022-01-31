@@ -81,7 +81,10 @@ include("Configure.jl")
 include("Deprecates.jl")
 
 StateType{T} = Tuple{
-    Vector{Vector{Population{T}}},
+    Union{
+        Vector{Vector{Population{T}}},
+        Matrix{Population{T}}
+    },
     Union{
         HallOfFame,
         Vector{HallOfFame}
@@ -356,11 +359,19 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                     RecordType()
                 )
             else
-                new_pop = @sr_spawner ConcurrencyType worker_idx (
-                    saved_state[1][j][i],
-                    HallOfFame(options),
-                    RecordType()
-                )
+                if saved_state[1] <: Vector{Vector{Population{T}}}
+                    new_pop = @sr_spawner ConcurrencyType worker_idx (
+                        saved_state[1][j][i],
+                        HallOfFame(options),
+                        RecordType()
+                    )
+                else
+                    new_pop = @sr_spawner ConcurrencyType worker_idx (
+                        saved_state[1][j, i],
+                        HallOfFame(options),
+                        RecordType()
+                    )
+                end
             end
             push!(init_pops[j], new_pop)
         end
