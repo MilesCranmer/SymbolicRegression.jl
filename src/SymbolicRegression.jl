@@ -359,7 +359,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                     RecordType()
                 )
             else
-                if saved_state[1] <: Vector{Vector{Population{T}}}
+                if typeof(saved_state[1]) <: Vector{Vector{Population{T}}}
                     new_pop = @sr_spawner ConcurrencyType worker_idx (
                         saved_state[1][j][i],
                         HallOfFame(options),
