@@ -359,15 +359,21 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                     RecordType()
                 )
             else
-                if typeof(saved_state[1]) <: Vector{Vector{Population{T}}}
+                is_vector = typeof(saved_state[1]) <: Vector{Vector{Population{T}}}
+                cur_saved_state = is_vector ? saved_state[1][j][i] : saved_state[1][j, i]
+
+                if length(cur_saved_state.members) >= options.npop
                     new_pop = @sr_spawner ConcurrencyType worker_idx (
-                        saved_state[1][j][i],
+                        cur_saved_state,
                         HallOfFame(options),
                         RecordType()
                     )
                 else
+                    # If population has not yet been created (e.g., exited too early)
+                    println("Warning: recreating population (output=$(j), population=$(i)), as the saved one only has $(length(cur_saved_state.members)) members.")
                     new_pop = @sr_spawner ConcurrencyType worker_idx (
-                        saved_state[1][j, i],
+                        Population(datasets[j], baselineMSEs[j], npop=options.npop,
+                                nlength=3, options=options, nfeatures=datasets[j].nfeatures),
                         HallOfFame(options),
                         RecordType()
                     )
