@@ -494,18 +494,29 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             #Try normal copy...
             bestPops = Population([member for pop in bestSubPops[j] for member in pop.members])
 
+            ###################################################################
+            # Hall Of Fame updating ###########################################
             for (i_member, member) in enumerate(Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists])))
                 part_of_cur_pop = i_member <= length(cur_pop.members)
                 size = countNodes(member.tree)
+
                 if part_of_cur_pop
                     frequencyComplexities[j][size] += 1
                 end
                 actualMaxsize = options.maxsize + MAX_DEGREE
-                if size < actualMaxsize && all([member.score < hallOfFame[j].members[size2].score for size2=1:size])
-                    hallOfFame[j].members[size] = copyPopMember(member)
-                    hallOfFame[j].exists[size] = true
+
+
+                valid_size = size < actualMaxsize
+                if valid_size
+                    already_filled = hallOfFame[j].exists[size]
+                    better_than_current = member.score < hallOfFame[j].members[size].score
+                    if !already_filled || better_than_current
+                        hallOfFame[j].members[size] = copyPopMember(member)
+                        hallOfFame[j].exists[size] = true
+                    end
                 end
             end
+            ###################################################################
 
             # Dominating pareto curve - must be better than all simpler equations
             dominating = calculateParetoFrontier(dataset, hallOfFame[j], options)
@@ -521,13 +532,15 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             end
             cp(hofFile, hofFile*".bkup", force=true)
 
+            ###################################################################
+            # Migration #######################################################
             # Try normal copy otherwise.
             if options.migration
                 for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplaced))
                     to_copy = rand(1:size(bestPops.members, 1))
                     cur_pop.members[k] = PopMember(
                         copyNode(bestPops.members[to_copy].tree),
-                        bestPops.members[to_copy].score)
+                        copy(bestPops.members[to_copy].score))
                 end
             end
 
@@ -536,10 +549,11 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                     # Copy in case one gets used twice
                     to_copy = rand(1:size(dominating, 1))
                     cur_pop.members[k] = PopMember(
-                       copyNode(dominating[to_copy].tree), dominating[to_copy].score
+                       copyNode(dominating[to_copy].tree), copy(dominating[to_copy].score)
                     )
                 end
             end
+            ###################################################################
 
             cycles_remaining[j] -= 1
             if cycles_remaining[j] == 0

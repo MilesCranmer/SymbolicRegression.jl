@@ -53,9 +53,9 @@ end
 
 function copyPopMember(p::PopMember{T}) where {T<:Real}
     tree = copyNode(p.tree)
-    score = p.score
-    birth = p.birth
-    ref = p.ref
-    parent = p.parent
+    score = copy(p.score)
+    birth = copy(p.birth)
+    ref = copy(p.ref)
+    parent = copy(p.parent)
     return PopMember{T}(tree, score, birth, ref, parent)
 end

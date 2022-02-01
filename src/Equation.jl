@@ -87,14 +87,14 @@ Node(var_string::String, varMap::Array{String, 1}) =                        Node
 function copyNode(tree::Node)::Node
    if tree.degree == 0
        if tree.constant
-           return Node(tree.val)
+           return Node(copy(tree.val))
         else
-           return Node(tree.feature)
+           return Node(copy(tree.feature))
         end
    elseif tree.degree == 1
-       return Node(tree.op, copyNode(tree.l))
+       return Node(copy(tree.op), copyNode(tree.l))
     else
-        return Node(tree.op, copyNode(tree.l), copyNode(tree.r))
+        return Node(copy(tree.op), copyNode(tree.l), copyNode(tree.r))
    end
 end
 
