@@ -527,7 +527,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             open(hofFile, "w") do io
                 println(io, "Complexity|MSE|Equation")
                 for member in dominating
-                    adjusted_score = member.score - countNodes(member.tree)*options.parsimony
+                    adjusted_score = (member.score - countNodes(member.tree)*options.parsimony) * baselineMSE
                     println(io, "$(countNodes(member.tree))|$(adjusted_score)|$(stringTree(member.tree, options, varMap=dataset.varMap))")
                 end
             end
