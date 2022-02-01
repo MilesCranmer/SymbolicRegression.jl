@@ -50,7 +50,7 @@ function calculateParetoFrontier(dataset::Dataset{T},
                 continue
             end
             simpler_member = hallOfFame.members[i]
-            if member.score >= simpler_member.score
+            if (member.score - size*options.parsimony) >= (simpler_member.score - i*options.parsimony)
                 betterThanAllSmaller = false
                 break
             end
@@ -91,27 +91,16 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE,
     output *= "-----------------------------------------\n"
     output *= @sprintf("%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation")
 
-    #TODO - call pareto function!
-    actualMaxsize = options.maxsize + MAX_DEGREE
-    for size=1:actualMaxsize
-        if hallOfFame.exists[size]
-            member = hallOfFame.members[size]
-            curMSE = EvalLoss(member.tree, dataset, options)
-            betterThanAllSmaller = all([
-                    (
-                         !(hallOfFame.exists[i])
-                         || curMSE < EvalLoss(hallOfFame.members[i].tree, dataset, options)
-                    ) for i=1:(size-1)
-               ])
-            if betterThanAllSmaller
-                delta_c = size - lastComplexity
-                delta_l_mse = log(curMSE/lastMSE)
-                score = convert(Float32, -delta_l_mse/delta_c)
-                output *= @sprintf("%-10d  %-8.3e  %-8.3e  %-s\n" , size, curMSE, score, stringTree(member.tree, options, varMap=dataset.varMap))
-                lastMSE = curMSE
-                lastComplexity = size
-            end
-        end
+    dominating = calculateParetoFrontier(dataset, hallOfFame, options)
+    for member in dominating
+        complexity = countNodes(member.tree)
+        curMSE = (member.score - complexity * options.parsimony) * baselineMSE
+        delta_c = complexity - lastComplexity
+        delta_l_mse = log(curMSE/lastMSE)
+        score = convert(Float32, -delta_l_mse/delta_c)
+        output *= @sprintf("%-10d  %-8.3e  %-8.3e  %-s\n" , complexity, curMSE, score, stringTree(member.tree, options, varMap=dataset.varMap))
+        lastMSE = curMSE
+        lastComplexity = complexity
     end
     output *= "\n"
     return output

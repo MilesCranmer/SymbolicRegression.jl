@@ -525,9 +525,10 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 hofFile = hofFile * ".out$j"
             end
             open(hofFile, "w") do io
-                println(io,"Complexity|MSE|Equation")
+                println(io, "Complexity|MSE|Equation")
                 for member in dominating
-                    println(io, "$(countNodes(member.tree))|$(member.score)|$(stringTree(member.tree, options, varMap=dataset.varMap))")
+                    adjusted_score = member.score - countNodes(member.tree)*options.parsimony
+                    println(io, "$(countNodes(member.tree))|$(adjusted_score)|$(stringTree(member.tree, options, varMap=dataset.varMap))")
                 end
             end
             cp(hofFile, hofFile*".bkup", force=true)
