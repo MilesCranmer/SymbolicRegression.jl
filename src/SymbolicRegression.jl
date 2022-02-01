@@ -576,11 +576,16 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                     curmaxsize, copy(frequencyComplexities[j])/sum(frequencyComplexities[j]),
                     verbosity=options.verbosity, options=options, record=cur_record)
                 tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
+
+                # Update scores if using batching:
                 if options.batching
                     for i_member=1:(options.maxsize + MAX_DEGREE)
-                        tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
+                        if tmp_best_seen.exists[i_member]
+                            tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
+                        end
                     end
                 end
+
                 (tmp_pop, tmp_best_seen, cur_record)
             end
             if ConcurrencyType in [SRDistributed, SRThreaded]

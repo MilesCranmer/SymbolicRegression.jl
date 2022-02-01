@@ -35,7 +35,7 @@ function SRCycle(dataset::Dataset{T}, baseline::T,
         for member in pop.members
             size = countNodes(member.tree)
             score = member.score
-            if score < best_examples_seen.members[size].score
+            if !best_examples_seen.exists[size] || score < best_examples_seen.members[size].score
                 best_examples_seen.exists[size] = true
                 best_examples_seen.members[size] = copyPopMember(member)
             end

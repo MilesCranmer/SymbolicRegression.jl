@@ -1,6 +1,6 @@
 using FromFile
 @from "Core.jl" import CONST_TYPE, MAX_DEGREE, Node, Options, Dataset, stringTree
-@from "PopMember.jl" import PopMember
+@from "PopMember.jl" import PopMember, copyPopMember
 @from "LossFunctions.jl" import EvalLoss
 using Printf: @sprintf
 
@@ -38,18 +38,25 @@ function calculateParetoFrontier(dataset::Dataset{T},
     dominating = PopMember[]
     actualMaxsize = options.maxsize + MAX_DEGREE
     for size=1:actualMaxsize
-        if hallOfFame.exists[size]
-            member = hallOfFame.members[size]
-            curMSE = EvalLoss(member.tree, dataset, options)
-            member.score = curMSE
-            betterThanAllSmaller = all([
-                (!(hallOfFame.exists[i])
-                 || curMSE < EvalLoss(hallOfFame.members[i].tree, dataset, options))
-                for i=1:(size-1)
-            ])
-            if betterThanAllSmaller
-                push!(dominating, member)
+        if !hallOfFame.exists[size]
+            continue
+        end
+        member = hallOfFame.members[size]
+        # We check if this member is better than all members which are smaller than it and
+        # also exist.
+        betterThanAllSmaller = true
+        for i=1:(size-1)
+            if !hallOfFame.exists[i]
+                continue
             end
+            simpler_member = hallOfFame.members[i]
+            if member.score >= simpler_member.score
+                betterThanAllSmaller = false
+                break
+            end
+        end
+        if betterThanAllSmaller
+            push!(dominating, copyPopMember(member))
         end
     end
     return dominating
