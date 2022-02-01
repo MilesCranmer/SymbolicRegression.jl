@@ -1,5 +1,6 @@
 using FromFile
 @from "Core.jl" import CONST_TYPE, MAX_DEGREE, Node, Options, Dataset, stringTree
+@from "EquationUtils.jl" import countNodes
 @from "PopMember.jl" import PopMember, copyPopMember
 @from "LossFunctions.jl" import EvalLoss
 using Printf: @sprintf
