@@ -97,7 +97,8 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE,
         complexity = countNodes(member.tree)
         curMSE = (member.score - complexity * options.parsimony) * baselineMSE
         delta_c = complexity - lastComplexity
-        delta_l_mse = log(curMSE/lastMSE)
+        ZERO_POINT = 1f-10
+        delta_l_mse = log(abs(curMSE/lastMSE) + ZERO_POINT)
         score = convert(Float32, -delta_l_mse/delta_c)
         output *= @sprintf("%-10d  %-8.3e  %-8.3e  %-s\n" , complexity, curMSE, score, stringTree(member.tree, options, varMap=dataset.varMap))
         lastMSE = curMSE
