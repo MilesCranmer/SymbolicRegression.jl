@@ -61,7 +61,9 @@ function OptimizeAndSimplifyPopulation(
     @inbounds @simd for j=1:pop.n
         pop.members[j].tree = simplifyTree(pop.members[j].tree, options)
         pop.members[j].tree = combineOperators(pop.members[j].tree, options)
-        pop.members[j].tree = simplifyWithSymbolicUtils(pop.members[j].tree, options, curmaxsize)
+        if options.use_symbolic_utils
+            pop.members[j].tree = simplifyWithSymbolicUtils(pop.members[j].tree, options, curmaxsize)
+        end
         if rand() < options.optimize_probability && options.shouldOptimizeConstants
             pop.members[j] = optimizeConstants(dataset, baseline, pop.members[j], options)
         end

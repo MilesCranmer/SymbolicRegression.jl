@@ -46,5 +46,6 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     probPickFirst::Float32
     earlyStopCondition::Union{Function, Nothing}
     stateReturn::Bool
+    use_symbolic_utils::Bool
 
 end
