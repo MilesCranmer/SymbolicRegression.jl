@@ -85,7 +85,7 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE,
                                         dataset, options,
                                         avgy)
     output = ""
-    curMSE = baselineMSE
+    curMSE = Float64(baselineMSE)
     lastMSE = curMSE
     lastComplexity = 0
     output *= "Hall of Fame:\n"
@@ -95,9 +95,15 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE,
     dominating = calculateParetoFrontier(dataset, hallOfFame, options)
     for member in dominating
         complexity = countNodes(member.tree)
-        curMSE = (member.score - complexity * options.parsimony) * baselineMSE
+        if member.score < 0.0
+            throw(DomainError(member.score, "Your loss function must be non-negative."))
+        end
+        # User higher precision when finding the original loss:
+        relu(x) = x < 0 ? 0 : x
+        curMSE = relu(Float64(member.score) - Float64(complexity * options.parsimony)) * Float64(baselineMSE)
+        
         delta_c = complexity - lastComplexity
-        ZERO_POINT = 1f-10
+        ZERO_POINT = 1e-10
         delta_l_mse = log(abs(curMSE/lastMSE) + ZERO_POINT)
         score = convert(Float32, -delta_l_mse/delta_c)
         output *= @sprintf("%-10d  %-8.3e  %-8.3e  %-s\n" , complexity, curMSE, score, stringTree(member.tree, options, varMap=dataset.varMap))
