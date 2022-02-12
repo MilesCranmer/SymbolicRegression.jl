@@ -1,3 +1,4 @@
+using Random
 using FromFile
 @from "Core.jl" import Options, Dataset, RecordType, stringTree
 @from "EquationUtils.jl" import countNodes
@@ -41,30 +42,30 @@ Population(X::AbstractMatrix{T}, y::AbstractVector{T}, baseline::T;
 
 # Sample 10 random members of the population, and make a new one
 function samplePop(pop::Population, options::Options)::Population
-    idx = rand(1:pop.n, options.ns)
+    idx = randperm(pop.n)[1:options.ns]
     return Population(pop.members[idx])
 end
 
 # Sample the population, and get the best member from that sample
 function bestOfSample(pop::Population, options::Options)::PopMember
     sample = samplePop(pop, options)
-    if options.probPickFirst == 1.0
-        best_idx = argmin([sample.members[member].score for member=1:options.ns])
-        return sample.members[best_idx]
-    else
-        sort_idx = sortperm([sample.members[member].score for member=1:options.ns])
-        # Lowest comes first
-        k = range(0.0, stop=options.ns-1, step=1.0) |> collect
-        p = options.probPickFirst
 
-        # Weighted choice:
+    scores = [sample.members[member].score for member=1:options.ns]
+    p = options.probPickFirst
+
+    if p == 1.0
+        chosen_idx = argmin(scores)
+    else
+        sort_idx = sortperm(scores)
+        # scores[sort_idx] would put smallest first.
+
+        k = collect(0:(options.ns - 1))
         prob_each = p * (1 - p) .^ k
         prob_each /= sum(prob_each)
         cumprob = cumsum(prob_each)
-        chosen_idx = findfirst(cumprob .> rand(Float32))
-
-        return sample.members[chosen_idx]
+        chosen_idx = sort_idx[findfirst(cumprob .> rand())]
     end
+    return sample.members[chosen_idx]
 end
 
 function finalizeScores(dataset::Dataset{T},

@@ -228,3 +228,8 @@ for fnc in [
     zero_tolerance = 1e-6
     @test all(abs.(test_y .- true_y)/N .< zero_tolerance)
 end
+
+
+println("Testing whether probPickFirst works.")
+include("test_prob_pick_first.jl")
+println("Passed.")
