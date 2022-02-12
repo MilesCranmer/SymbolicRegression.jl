@@ -1,3 +1,4 @@
+using Random
 using FromFile
 @from "Core.jl" import Options, Dataset, RecordType, stringTree
 @from "EquationUtils.jl" import countNodes
@@ -41,7 +42,7 @@ Population(X::AbstractMatrix{T}, y::AbstractVector{T}, baseline::T;
 
 # Sample 10 random members of the population, and make a new one
 function samplePop(pop::Population, options::Options)::Population
-    idx = rand(1:pop.n, options.ns)
+    idx = randperm(pop.n)[1:options.ns]
     return Population(pop.members[idx])
 end
 
