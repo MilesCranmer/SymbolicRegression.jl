@@ -68,7 +68,7 @@ using Reexport
 @from "MutationFunctions.jl" import genRandomTree, genRandomTreeFixedSize
 @from "LossFunctions.jl" import EvalLoss, Loss, scoreFunc
 @from "PopMember.jl" import PopMember, copyPopMember
-@from "Population.jl" import Population, bestSubPop, record_population
+@from "Population.jl" import Population, bestSubPop, record_population, bestOfSample
 @from "HallOfFame.jl" import HallOfFame, calculateParetoFrontier, string_dominating_pareto_curve
 @from "SingleIteration.jl" import SRCycle, OptimizeAndSimplifyPopulation
 @from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
