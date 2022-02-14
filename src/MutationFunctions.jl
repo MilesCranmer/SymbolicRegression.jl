@@ -187,10 +187,10 @@ function makeRandomLeaf(nfeatures::Int)::Node
 end
 
 
-# Return a random node from the tree with parent
-function randomNodeAndParent(tree::Node, parent::Union{Node, Nothing})::Tuple{Node, Union{Node, Nothing}}
+# Return a random node from the tree with parent, and side ('n' for no parent)
+function randomNodeAndParent(tree::Node, parent::Union{Node, Nothing}; side::Char)::Tuple{Node, Union{Node, Nothing}, Char}
     if tree.degree == 0
-        return tree, parent
+        return tree, parent, side
     end
     a = countNodes(tree)
     b = 0
@@ -204,18 +204,22 @@ function randomNodeAndParent(tree::Node, parent::Union{Node, Nothing})::Tuple{No
 
     i = rand(1:1+b+c)
     if i <= b
-        return randomNodeAndParent(tree.l, tree)
+        return randomNodeAndParent(tree.l, tree; side='l')
     elseif i == b + 1
-        return tree, parent
+        return tree, parent, side
     end
 
-    return randomNodeAndParent(tree.r, tree)
+    return randomNodeAndParent(tree.r, tree; side='r')
+end
+
+function randomNodeAndParent(tree::Node)::Tuple{Node, Union{Node, Nothing}, Char}
+    return randomNodeAndParent(tree, nothing; side='n')
 end
 
 # Select a random node, and replace it an the subtree
 # with a variable or constant
 function deleteRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
-    node, parent = randomNodeAndParent(tree, nothing)
+    node, parent, side = randomNodeAndParent(tree)
     isroot = (parent === nothing)
 
     if node.degree == 0
@@ -275,4 +279,35 @@ function genRandomTreeFixedSize(node_count::Int, options::Options, nfeatures::In
         tree = appendRandomOp(tree, options, nfeatures)
     end
     return tree
+end
+
+"""Crossover between two expressions"""
+function crossoverTrees(tree1::Node, tree2::Node)::Tuple{Node, Node}
+    tree1 = copyNode(tree1)
+    tree2 = copyNode(tree2)
+
+    node1, parent1, side1 = randomNodeAndParent(tree1)
+    node2, parent2, side2 = randomNodeAndParent(tree2)
+
+    node1 = copyNode(node1)
+
+    if side1 == 'l'
+        parent1.l = copyNode(node2)
+        # tree1 now contains this.
+    elseif side1 == 'r'
+        parent1.r = copyNode(node2)
+        # tree1 now contains this.
+    else # 'n'
+        # This means that there is no parent2.
+        tree1 = copyNode(node2)
+    end
+
+    if side2 == 'l'
+        parent2.l = node1
+    elseif side2 == 'r'
+        parent2.r = node1
+    else # 'n'
+        tree2 = node1
+    end
+    return tree1, tree2
 end
