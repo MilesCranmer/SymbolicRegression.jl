@@ -233,7 +233,6 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         end
     end
 
-    start_time = time()
 
     # Redefine print, show:
     @eval begin
@@ -426,6 +425,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
     end
 
     debug(options.verbosity > 0 || options.progress, "Started!")
+    start_time = time()
     total_cycles = options.npopulations * niterations
     cycles_remaining = [total_cycles for j=1:nout]
     sum_cycle_remaining = sum(cycles_remaining)
