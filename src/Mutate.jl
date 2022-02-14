@@ -190,7 +190,7 @@ function crossoverGeneration(member1::PopMember, member2::PopMember, dataset::Da
             break
         end
         if num_tries > max_tries
-            return pop  # Fail.
+            return member1, member2  # Fail.
         end
         child_tree1, child_tree2 = crossoverTrees(tree1, tree2)
         num_tries += 1
