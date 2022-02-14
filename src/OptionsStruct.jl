@@ -23,6 +23,7 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     batching::Bool
     batchSize::Int
     mutationWeights::Array{Float64, 1}
+    crossoverProbability::Float32
     warmupMaxsizeBy::Float32
     useFrequency::Bool
     npop::Int

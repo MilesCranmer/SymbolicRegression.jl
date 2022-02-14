@@ -15,6 +15,7 @@ for batching in [true, false]
         multi = false
         probPickFirst = 1.0
         multithreading = false
+        crossoverProbability = 0f0
         print("Testing with batching=$(batching) and weighted=$(weighted), ")
         if weighted && batching
             println("with serial & progress bar & warmup & BFGS")
@@ -27,15 +28,17 @@ for batching in [true, false]
             println("with multi-output.")
             multi = true
         elseif !weighted && batching
-            println("with multi-threading")
+            println("with multi-threading and crossover")
             multithreading = true
             numprocs = 0
+            crossoverProbability = 0.02f0
         end
         options = SymbolicRegression.Options(
             binary_operators=(+, *),
             unary_operators=(cos,),
             npopulations=4,
             batching=batching,
+            crossoverProbability=crossoverProbability,
             seed=0,
             progress=progress,
             warmupMaxsizeBy=warmupMaxsizeBy,
