@@ -65,7 +65,7 @@ using Reexport
 @from "EquationUtils.jl" import countNodes
 @from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
 @from "CheckConstraints.jl" import check_constraints
-@from "MutationFunctions.jl" import genRandomTree, genRandomTreeFixedSize
+@from "MutationFunctions.jl" import genRandomTree, genRandomTreeFixedSize, randomNode, randomNodeAndParent, crossoverTrees
 @from "LossFunctions.jl" import EvalLoss, Loss, scoreFunc
 @from "PopMember.jl" import PopMember, copyPopMember
 @from "Population.jl" import Population, bestSubPop, record_population, bestOfSample
