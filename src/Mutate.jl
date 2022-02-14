@@ -4,7 +4,7 @@ using FromFile
 @from "LossFunctions.jl" import scoreFunc, scoreFuncBatch
 @from "CheckConstraints.jl" import check_constraints
 @from "PopMember.jl" import PopMember
-@from "MutationFunctions.jl" import genRandomTree, mutateConstant, mutateOperator, appendRandomOp, prependRandomOp, insertRandomOp, deleteRandomOp
+@from "MutationFunctions.jl" import genRandomTree, mutateConstant, mutateOperator, appendRandomOp, prependRandomOp, insertRandomOp, deleteRandomOp, crossoverTrees
 @from "SimplifyEquation.jl" import simplifyTree, combineOperators, simplifyWithSymbolicUtils
 @from "Recorder.jl" import @recorder
 
@@ -171,4 +171,40 @@ function nextGeneration(dataset::Dataset{T},
         end
         return PopMember(tree, afterLoss, parent=parent_ref)
     end
+end
+
+
+"""Generate a generation via crossover of two members."""
+function crossoverGeneration(member1::PopMember, member2::PopMember, dataset::Dataset{T},
+                             baseline::T, curmaxsize::Int, options::Options)::Tuple{PopMember, PopMember} where {T<:Real}
+    tree1 = member1.tree
+    tree2 = member2.tree
+
+    # We breed these until constraints are no longer violated:
+    child_tree1, child_tree2 = crossoverTrees(tree1, tree2)
+    num_tries = 1
+    max_tries = 10
+    while true 
+        # Both trees satisfy constraints
+        if check_constraints(child_tree1, options, curmaxsize) && check_constraints(child_tree2, options, curmaxsize)
+            break
+        end
+        if num_tries > max_tries
+            return pop  # Fail.
+        end
+        child_tree1, child_tree2 = crossoverTrees(tree1, tree2)
+        num_tries += 1
+    end
+    if options.batching
+        afterLoss1 = scoreFuncBatch(dataset, baseline, child_tree1, options)
+        afterLoss2 = scoreFuncBatch(dataset, baseline, child_tree2, options)
+    else
+        afterLoss1 = scoreFunc(dataset, baseline, child_tree1, options)
+        afterLoss2 = scoreFunc(dataset, baseline, child_tree2, options)
+    end
+
+    baby1 = PopMember(child_tree1, afterLoss1, parent=allstar1.ref)
+    baby2 = PopMember(child_tree2, afterLoss2, parent=allstar2.ref)
+
+    return baby1, baby2
 end

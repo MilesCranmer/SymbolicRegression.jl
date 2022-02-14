@@ -1,12 +1,9 @@
 using FromFile
 using Random: shuffle!
 @from "Core.jl" import Options, Dataset, RecordType, stringTree
-@from "LossFunctions.jl" import scoreFunc, scoreFuncBatch
 @from "PopMember.jl" import PopMember
 @from "Population.jl" import Population, bestOfSample
-@from "CheckConstraints.jl" import check_constraints
-@from "Mutate.jl" import nextGeneration
-@from "MutationFunctions.jl" import crossoverTrees
+@from "Mutate.jl" import nextGeneration, crossoverGeneration
 @from "Recorder.jl" import @recorder
 
 # Pass through the population several times, replacing the oldest
@@ -88,38 +85,13 @@ function regEvolCycle(dataset::Dataset{T},
                 end
 
                 pop.members[oldest] = baby
-                
+
             else # Crossover
                 allstar1 = bestOfSample(pop, options)
                 allstar2 = bestOfSample(pop, options)
-                tree1 = allstar1.tree
-                tree2 = allstar2.tree
 
-                # We breed these until constraints are no longer violated:
-                child_tree1, child_tree2 = crossoverTrees(tree1, tree2)
-                num_tries = 1
-                max_tries = 10
-                while true 
-                    # Both trees satisfy constraints
-                    if check_constraints(child_tree1, options, curmaxsize) && check_constraints(child_tree2, options, curmaxsize)
-                        break
-                    end
-                    if num_tries > max_tries
-                        return pop  # Fail.
-                    end
-                    child_tree1, child_tree2 = crossoverTrees(tree1, tree2)
-                    num_tries += 1
-                end
-                if options.batching
-                    afterLoss1 = scoreFuncBatch(dataset, baseline, child_tree1, options)
-                    afterLoss2 = scoreFuncBatch(dataset, baseline, child_tree2, options)
-                else
-                    afterLoss1 = scoreFunc(dataset, baseline, child_tree1, options)
-                    afterLoss2 = scoreFunc(dataset, baseline, child_tree2, options)
-                end
-
-                baby1 = PopMember(child_tree1, afterLoss1, parent=allstar1.ref)
-                baby2 = PopMember(child_tree2, afterLoss2, parent=allstar2.ref)
+                baby1, baby2 = crossoverGeneration(allstar1, allstar2, dataset, baseline,
+                                                   curmaxsize, options)
 
                 # Replace old members with new ones:
                 oldest = argmin([pop.members[member].birth for member=1:pop.n])
