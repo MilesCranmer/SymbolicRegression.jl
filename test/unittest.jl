@@ -216,7 +216,7 @@ for fnc in [
         nodefnc = fnc
     end
 
-    tree = nodefnc(Node("x1"), Node("x2"), Node("x3"))
+    global tree = nodefnc(Node("x1"), Node("x2"), Node("x3"))
 
     N = 100
     nfeatures = 3
@@ -254,14 +254,14 @@ for i=1:1000
     child_tree1, child_tree2 = crossoverTrees(tree1, tree2)
     if occursin("cos", repr(child_tree2))
         # Moved cosine to tree2
-        cos_flip_to_tree2 = true
+        global cos_flip_to_tree2 = true
     end
     if occursin("exp", repr(child_tree1))
         # Moved exp to tree1
-        exp_flip_to_tree1 = true
+        global exp_flip_to_tree1 = true
     end
     if occursin("cos", repr(child_tree2)) && occursin("exp", repr(child_tree1))
-        swapped_cos_with_exp = true
+        global swapped_cos_with_exp = true
         # Moved exp with cos
         @assert !occursin("cos", repr(child_tree1))
         @assert !occursin("exp", repr(child_tree2))
