@@ -203,8 +203,8 @@ function crossoverGeneration(member1::PopMember, member2::PopMember, dataset::Da
         afterLoss2 = scoreFunc(dataset, baseline, child_tree2, options)
     end
 
-    baby1 = PopMember(child_tree1, afterLoss1, parent=allstar1.ref)
-    baby2 = PopMember(child_tree2, afterLoss2, parent=allstar2.ref)
+    baby1 = PopMember(child_tree1, afterLoss1, parent=member1.ref)
+    baby2 = PopMember(child_tree2, afterLoss2, parent=member2.ref)
 
     return baby1, baby2
 end
