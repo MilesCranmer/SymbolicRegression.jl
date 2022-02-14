@@ -233,6 +233,8 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         end
     end
 
+    start_time = time()
+
     # Redefine print, show:
     @eval begin
         Base.print(io::IO, tree::Node) = print(io, stringTree(tree, $options; varMap=$(datasets[1].varMap)))
@@ -704,6 +706,15 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 if length(data) > 1 && (data[end] == control_c || data[end - 1] == quit)
                     break
                 end
+            end
+        end
+        ################################################################
+
+        ################################################################
+        ## Timeout stopping code
+        if options.timeout_in_seconds !== nothing
+            if time() - start_time > options.timeout_in_seconds
+                break
             end
         end
         ################################################################

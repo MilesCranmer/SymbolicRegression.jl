@@ -47,5 +47,6 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     earlyStopCondition::Union{Function, Nothing}
     stateReturn::Bool
     use_symbolic_utils::Bool
+    timeout_in_seconds::Union{Float64, Nothing}
 
 end

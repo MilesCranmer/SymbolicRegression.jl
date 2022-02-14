@@ -212,6 +212,7 @@ Construct options for `EquationSearch` and other functions.
     p=probPickFirst: p, p*(1-p), p*(1-p)^2, and so on.
 - `earlyStopCondition=nothing`: Float - whether to stop early if the mean loss gets below this value.
     Function - a function taking (loss, complexity) as arguments and returning true or false.
+- `timeout_in_seconds=nothing`: Float64 - the time in seconds after which to exit (as an alternative to the number of iterations).
 """
 function Options(;
     binary_operators::NTuple{nbin, Any}=(div, plus, mult),
@@ -260,6 +261,7 @@ function Options(;
     earlyStopCondition::Union{Function, Float32, Nothing}=nothing,
     stateReturn::Bool=false,
     use_symbolic_utils::Bool=false,
+    timeout_in_seconds=nothing,
    ) where {nuna,nbin}
 
     if nrestarts !== nothing
@@ -354,7 +356,7 @@ function Options(;
         earlyStopCondition = (loss, complexity) -> loss < earlyStopCondition
     end
 
-    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition, stateReturn, use_symbolic_utils)
+    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition, stateReturn, use_symbolic_utils, timeout_in_seconds)
 
     @eval begin
         Base.print(io::IO, tree::Node) = print(io, stringTree(tree, $options))

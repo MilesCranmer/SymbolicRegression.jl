@@ -143,3 +143,12 @@ residual = simplify(eqn - true_eqn) + t4 * 1e-10
 @test best.score < maximum_residual / 10
 
 println("Passed.")
+
+
+println("Testing whether we can stop based on clock time.")
+options = Options(timeout_in_seconds=1)
+start_time = time()
+EquationSearch(X, y; niterations=10000000, options=options, multithreading=true)
+end_time = time()
+@test end_time - start_time < 100
+println("Passed.")
