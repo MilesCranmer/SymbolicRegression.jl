@@ -1,3 +1,4 @@
+using LoopVectorization
 using FromFile
 @from "Core.jl" import Node, Options
 @from "Utils.jl" import @return_on_false
@@ -10,6 +11,30 @@ macro return_on_check(val, T, n)
     # end
 
     :(if !isfinite($(esc(val)))
+        return (Array{$(esc(T)), 1}(undef, $(esc(n))), false)
+    end)
+end
+
+"""Efficiently compute whether an array contains any non-finite values.
+
+This also implements early exit should a non-finite value be found, so it quite fast.
+Solution thanks to oscardssmith:
+https://discourse.julialang.org/t/fastest-way-to-check-for-inf-or-nan-in-an-array/76954/20
+"""
+function isfinite_array(x::Array{T, 1})::Bool where {T<:Real}
+    for i in firstindex(x):64:(lastindex(x)-63)
+        s = zero(T)
+        @turbo for j in 0:63
+            s += x[i+j]*0
+        end
+        !isfinite(s) && return false
+    end
+    return all(isfinite, @view x[max(end-64,begin):end])
+end
+
+macro return_on_nonfinite_array(array, T, n)
+    :(if !isfinite_array($(esc(array)))
+    # :(if !isfinite(sum(y -> y * 0, $(esc(array)))) # Other solution. *0 because of potential for overflow.
         return (Array{$(esc(T)), 1}(undef, $(esc(n))), false)
     end)
 end
@@ -33,7 +58,7 @@ and triplets of operations for lower memory usage.
 function evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
     n = size(cX, 2)
     result, finished = _evalTreeArray(tree, cX, options)
-    @return_on_check sum(result) T n
+    @return_on_nonfinite_array result T n
     return result, finished
 end
 
@@ -79,10 +104,10 @@ function deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
     n = size(cX, 2)
     (cumulator, complete) = _evalTreeArray(tree.l, cX, options)
     @return_on_false complete cumulator
-    @return_on_check sum(cumulator) T n
+    @return_on_nonfinite_array cumulator T n
     (array2, complete2) = _evalTreeArray(tree.r, cX, options)
     @return_on_false complete2 cumulator
-    @return_on_check sum(array2) T n
+    @return_on_nonfinite_array array2 T n
     op = options.binops[op_idx]
 
     # We check inputs (and intermediates), not outputs.
@@ -98,7 +123,7 @@ function deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
     n = size(cX, 2)
     (cumulator, complete) = _evalTreeArray(tree.l, cX, options)
     @return_on_false complete cumulator
-    @return_on_check sum(cumulator) T n
+    @return_on_nonfinite_array cumulator T n
     op = options.unaops[op_idx]
     finished_loop = true #
     @inbounds @simd for j=1:n
@@ -237,7 +262,7 @@ function deg2_l0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
     n = size(cX, 2)
     (cumulator, complete) = _evalTreeArray(tree.r, cX, options)
     @return_on_false complete cumulator
-    @return_on_check sum(cumulator) T n
+    @return_on_nonfinite_array cumulator T n
     op = options.binops[op_idx]
     if tree.l.constant
         val = convert(T, tree.l.val)
@@ -260,7 +285,7 @@ function deg2_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
     n = size(cX, 2)
     (cumulator, complete) = _evalTreeArray(tree.l, cX, options)
     @return_on_false complete cumulator
-    @return_on_check sum(cumulator) T n
+    @return_on_nonfinite_array cumulator T n
     op = options.binops[op_idx]
     if tree.r.constant
         val = convert(T, tree.r.val)
