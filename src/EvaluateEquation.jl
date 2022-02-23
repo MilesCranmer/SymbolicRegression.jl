@@ -1,4 +1,3 @@
-using LoopVectorization
 using FromFile
 @from "Core.jl" import Node, Options
 @from "Utils.jl" import @return_on_false
@@ -15,26 +14,8 @@ macro return_on_check(val, T, n)
     end)
 end
 
-"""Efficiently compute whether an array contains any non-finite values.
-
-This also implements early exit should a non-finite value be found, so it quite fast.
-Solution thanks to oscardssmith:
-https://discourse.julialang.org/t/fastest-way-to-check-for-inf-or-nan-in-an-array/76954/20
-"""
-function isfinite_array(x::Array{T, 1})::Bool where {T<:Real}
-    for i in firstindex(x):64:(lastindex(x)-63)
-        s = zero(T)
-        @turbo for j in 0:63
-            s += x[i+j]*0
-        end
-        !isfinite(s) && return false
-    end
-    return all(isfinite, @view x[max(end-64,begin):end])
-end
-
 macro return_on_nonfinite_array(array, T, n)
-    :(if !isfinite_array($(esc(array)))
-    # :(if !isfinite(sum(y -> y * 0, $(esc(array)))) # Other solution. *0 because of potential for overflow.
+    :(if !isfinite(sum(y -> y * 0, $(esc(array)))) # Other solution. *0 because of potential for overflow.
         return (Array{$(esc(T)), 1}(undef, $(esc(n))), false)
     end)
 end
