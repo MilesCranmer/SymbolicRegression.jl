@@ -111,7 +111,6 @@ options = SymbolicRegression.Options(
     npopulations=4,
     constraints=((*)=>(-1, 10), cos=>(5)),
     fast_cycle=true,
-    crossoverProbability=0.02f0,
     skip_mutation_failures=true,
     stateReturn=true,
 )
