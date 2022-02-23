@@ -15,7 +15,7 @@ macro return_on_check(val, T, n)
 end
 
 macro return_on_nonfinite_array(array, T, n)
-    :(if !isfinite(sum(y -> y * 0, $(esc(array)))) # Other solution. *0 because of potential for overflow.
+    :(if !isfinite(sum(ys -> ys * T(0), $(esc(array)))) # Other solution. *0 because of potential for overflow.
         return (Array{$(esc(T)), 1}(undef, $(esc(n))), false)
     end)
 end
@@ -39,6 +39,7 @@ and triplets of operations for lower memory usage.
 function evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
     n = size(cX, 2)
     result, finished = _evalTreeArray(tree, cX, options)
+    @return_on_false finished result
     @return_on_nonfinite_array result T n
     return result, finished
 end
@@ -106,12 +107,11 @@ function deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
     @return_on_false complete cumulator
     @return_on_nonfinite_array cumulator T n
     op = options.unaops[op_idx]
-    finished_loop = true #
     @inbounds @simd for j=1:n
         x = op(cumulator[j])::T
         cumulator[j] = x
     end
-    return (cumulator, finished_loop) #
+    return (cumulator, true) #
 end
 
 function deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
