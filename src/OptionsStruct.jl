@@ -49,5 +49,6 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     stateReturn::Bool
     use_symbolic_utils::Bool
     timeout_in_seconds::Union{Float64, Nothing}
+    skip_mutation_failures::Bool
 
 end

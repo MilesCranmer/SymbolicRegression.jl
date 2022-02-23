@@ -30,6 +30,7 @@ function regEvolCycle(dataset::Dataset{T},
         shuffle!(pop.members)
         n_evol_cycles = round(Int, pop.n/options.ns)
         babies = Array{PopMember}(undef, n_evol_cycles)
+        accepted = Array{Bool}(undef, n_evol_cycles)
 
         # Iterate each ns-member sub-sample
         @inbounds Threads.@threads for i=1:n_evol_cycles
@@ -44,24 +45,32 @@ function regEvolCycle(dataset::Dataset{T},
             end
             allstar = pop.members[best_idx]
             mutation_recorder = RecordType()
-            babies[i] = nextGeneration(dataset, baseline, allstar, temperature,
-                                       curmaxsize, frequencyComplexity, options,
-                                       tmp_recorder=mutation_recorder)
+            babies[i], accepted[i] = nextGeneration(dataset, baseline, allstar, temperature,
+                                                    curmaxsize, frequencyComplexity, options,
+                                                    tmp_recorder=mutation_recorder)
         end
 
         # Replace the n_evol_cycles-oldest members of each population
         @inbounds for i=1:n_evol_cycles
             oldest = argmin([pop.members[member].birth for member=1:pop.n])
-            pop.members[oldest] = babies[i]
+            if accepted[i] || !options.skip_mutation_failures
+                pop.members[oldest] = babies[i]
+            end
         end
     else
         for i=1:round(Int, pop.n/options.ns)
             if rand() > options.crossoverProbability
                 allstar = bestOfSample(pop, options)
                 mutation_recorder = RecordType()
-                baby = nextGeneration(dataset, baseline, allstar, temperature,
-                                    curmaxsize, frequencyComplexity, options,
-                                    tmp_recorder=mutation_recorder)
+                baby, mutation_accepted = nextGeneration(dataset, baseline, allstar, temperature,
+                                                         curmaxsize, frequencyComplexity, options,
+                                                         tmp_recorder=mutation_recorder)
+
+                if !mutation_accepted && options.skip_mutation_failures
+                    # Skip this mutation rather than replacing oldest member with unchanged member
+                    continue
+                end
+
                 oldest = argmin([pop.members[member].birth for member=1:pop.n])
 
                 @recorder begin
@@ -90,8 +99,12 @@ function regEvolCycle(dataset::Dataset{T},
                 allstar1 = bestOfSample(pop, options)
                 allstar2 = bestOfSample(pop, options)
 
-                baby1, baby2 = crossoverGeneration(allstar1, allstar2, dataset, baseline,
+                baby1, baby2, crossover_accepted = crossoverGeneration(allstar1, allstar2, dataset, baseline,
                                                    curmaxsize, options)
+                
+                if !crossover_accepted && options.skip_mutation_failures
+                    continue
+                end
 
                 # Replace old members with new ones:
                 oldest = argmin([pop.members[member].birth for member=1:pop.n])

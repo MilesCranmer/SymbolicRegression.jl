@@ -13,11 +13,13 @@ using FromFile
 function nextGeneration(dataset::Dataset{T},
                         baseline::T, member::PopMember, temperature::T,
                         curmaxsize::Int, frequencyComplexity::AbstractVector{T},
-                        options::Options; tmp_recorder::RecordType)::PopMember where {T<:Real}
+                        options::Options; tmp_recorder::RecordType)::Tuple{PopMember,Bool} where {T<:Real}
 
     prev = member.tree
     parent_ref = member.ref
     tree = prev
+    mutation_accepted = false
+
     #TODO - reconsider this
     if options.batching
         beforeLoss = scoreFuncBatch(dataset, baseline, prev, options)
@@ -99,7 +101,8 @@ function nextGeneration(dataset::Dataset{T},
             else
                 @recorder tmp_recorder["type"] = "partial_simplify"
             end
-            return PopMember(tree, beforeLoss, parent=parent_ref)
+            mutation_accepted = true
+            return PopMember(tree, beforeLoss, parent=parent_ref), mutation_accepted
 
             is_success_always_possible = true
             # Simplification shouldn't hurt complexity; unless some non-symmetric constraint
@@ -116,7 +119,8 @@ function nextGeneration(dataset::Dataset{T},
                 tmp_recorder["result"] = "accept"
                 tmp_recorder["reason"] = "identity"
             end
-            return PopMember(tree, beforeLoss, parent=parent_ref)
+            mutation_accepted = true
+            return PopMember(tree, beforeLoss, parent=parent_ref), mutation_accepted
         end
 
         successful_mutation = successful_mutation && check_constraints(tree, options, curmaxsize)
@@ -130,7 +134,8 @@ function nextGeneration(dataset::Dataset{T},
             tmp_recorder["result"] = "reject"
             tmp_recorder["reason"] = "failed_constraint_check"
         end
-        return PopMember(copyNode(prev), beforeLoss, parent=parent_ref)
+        mutation_accepted = false
+        return PopMember(copyNode(prev), beforeLoss, parent=parent_ref), mutation_accepted
     end
 
     if options.batching
@@ -144,7 +149,8 @@ function nextGeneration(dataset::Dataset{T},
             tmp_recorder["result"] = "reject"
             tmp_recorder["reason"] = "nan_loss"
         end
-        return PopMember(copyNode(prev), beforeLoss, parent=parent_ref)
+        mutation_accepted = false
+        return PopMember(copyNode(prev), beforeLoss, parent=parent_ref), mutation_accepted
     end
 
     probChange = 1.0
@@ -163,22 +169,25 @@ function nextGeneration(dataset::Dataset{T},
             tmp_recorder["result"] = "reject"
             tmp_recorder["reason"] = "annealing_or_frequency"
         end
-        return PopMember(copyNode(prev), beforeLoss, parent=parent_ref)
+        mutation_accepted = false
+        return PopMember(copyNode(prev), beforeLoss, parent=parent_ref), mutation_accepted
     else
         @recorder begin
             tmp_recorder["result"] = "accept"
             tmp_recorder["reason"] = "pass"
         end
-        return PopMember(tree, afterLoss, parent=parent_ref)
+        mutation_accepted = true
+        return PopMember(tree, afterLoss, parent=parent_ref), mutation_accepted
     end
 end
 
 
 """Generate a generation via crossover of two members."""
 function crossoverGeneration(member1::PopMember, member2::PopMember, dataset::Dataset{T},
-                             baseline::T, curmaxsize::Int, options::Options)::Tuple{PopMember, PopMember} where {T<:Real}
+                             baseline::T, curmaxsize::Int, options::Options)::Tuple{PopMember, PopMember, Bool} where {T<:Real}
     tree1 = member1.tree
     tree2 = member2.tree
+    crossover_accepted = false
 
     # We breed these until constraints are no longer violated:
     child_tree1, child_tree2 = crossoverTrees(tree1, tree2)
@@ -190,7 +199,8 @@ function crossoverGeneration(member1::PopMember, member2::PopMember, dataset::Da
             break
         end
         if num_tries > max_tries
-            return member1, member2  # Fail.
+            crossover_accepted = false
+            return member1, member2, crossover_accepted  # Fail.
         end
         child_tree1, child_tree2 = crossoverTrees(tree1, tree2)
         num_tries += 1
@@ -206,5 +216,6 @@ function crossoverGeneration(member1::PopMember, member2::PopMember, dataset::Da
     baby1 = PopMember(child_tree1, afterLoss1, parent=member1.ref)
     baby2 = PopMember(child_tree2, afterLoss2, parent=member2.ref)
 
-    return baby1, baby2
+    crossover_accepted = true
+    return baby1, baby2, crossover_accepted
 end

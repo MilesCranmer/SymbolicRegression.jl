@@ -213,6 +213,8 @@ Construct options for `EquationSearch` and other functions.
 - `earlyStopCondition=nothing`: Float - whether to stop early if the mean loss gets below this value.
     Function - a function taking (loss, complexity) as arguments and returning true or false.
 - `timeout_in_seconds=nothing`: Float64 - the time in seconds after which to exit (as an alternative to the number of iterations).
+- `skip_mutation_failures=false`: Whether to simply skip over mutations that fail or are rejected, rather than to replace the mutated
+    expression with the original expression and proceed normally.
 """
 function Options(;
     binary_operators::NTuple{nbin, Any}=(div, plus, mult),
@@ -263,6 +265,7 @@ function Options(;
     stateReturn::Bool=false,
     use_symbolic_utils::Bool=false,
     timeout_in_seconds=nothing,
+    skip_mutation_failures::Bool=false,
    ) where {nuna,nbin}
 
     if nrestarts !== nothing
@@ -357,7 +360,7 @@ function Options(;
         earlyStopCondition = (loss, complexity) -> loss < earlyStopCondition
     end
 
-    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, crossoverProbability, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition, stateReturn, use_symbolic_utils, timeout_in_seconds)
+    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, crossoverProbability, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition, stateReturn, use_symbolic_utils, timeout_in_seconds, skip_mutation_failures)
 
     @eval begin
         Base.print(io::IO, tree::Node) = print(io, stringTree(tree, $options))
