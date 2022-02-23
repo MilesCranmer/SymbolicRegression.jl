@@ -15,7 +15,7 @@ macro return_on_check(val, T, n)
 end
 
 macro return_on_nonfinite_array(array, T, n)
-    :(if !isfinite(sum(ys -> ys * $(esc(T))(0), $(esc(array)))) # Other solution. *0 because of potential for overflow.
+    :(if !isfinite(sum($(esc(array)))) # Other solution. *0 because of potential for overflow.
         return (Array{$(esc(T)), 1}(undef, $(esc(n))), false)
     end)
 end
