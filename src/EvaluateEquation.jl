@@ -5,11 +5,11 @@ using FromFile
 
 macro return_on_check(val, T, n)
     # This will generate the following code:
-    # if isnan(val) || !isfinite(val)
+    # if !isfinite(val)
     #     return (Array{T, 1}(undef, n), false)
     # end
 
-    :(if isnan($(esc(val))) || !isfinite($(esc(val)))
+    :(if !isfinite($(esc(val)))
         return (Array{$(esc(T)), 1}(undef, $(esc(n))), false)
     end)
 end
@@ -303,7 +303,7 @@ function deg1_diff_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
     @return_on_false complete left
     op = options.unaops[op_idx]
     out = op.(left)
-    no_nans = !any(x -> (isnan(x) || !isfinite(x)), out)
+    no_nans = !any(x -> (!isfinite(x)), out)
     return (out, no_nans)
 end
 
@@ -315,6 +315,6 @@ function deg2_diff_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
     @return_on_false complete2 left
     op = options.binops[op_idx]
     out = op.(left, right)
-    no_nans = !any(x -> (isnan(x) || !isfinite(x)), out)
+    no_nans = !any(x -> (!isfinite(x)), out)
     return (out, no_nans)
 end
