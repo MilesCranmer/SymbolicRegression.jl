@@ -64,6 +64,17 @@ macro break_on_check(val, flag)
     end)
 end
 
+macro return_on_check(val, T, n)
+    # This will generate the following code:
+    # if isnan(val) || !isfinite(val)
+    #     return (Array{T, 1}(undef, n), false)
+    # end
+
+    :(if isnan($(esc(val))) || !isfinite($(esc(val)))
+        return (Array{$(esc(T)), 1}(undef, $(esc(n))), false)
+    end)
+end
+
 function deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     (cumulator, complete) = evalTreeArray(tree.l, cX, options)
@@ -114,26 +125,16 @@ function deg1_l2_ll0_lr0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, 
     if tree.l.l.constant && tree.l.r.constant
         val_ll = convert(T, tree.l.l.val)
         val_lr = convert(T, tree.l.r.val)
-        if isnan(val_ll) || !isfinite(val_ll)
-            return (Array{T, 1}(undef, n), false)
-        end
-        if isnan(val_lr) || !isfinite(val_lr)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check val_ll T n
+        @return_on_check val_lr T n
         x_l = op_l(val_ll, val_lr)::T
-        if isnan(x_l) || !isfinite(x_l)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check x_l T n
         x = op(x_l)::T
-        if isnan(x) || !isfinite(x)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check x T n
         return (fill(x, n), true)
     elseif tree.l.l.constant
         val_ll = convert(T, tree.l.l.val)
-        if isnan(val_ll) || !isfinite(val_ll)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check val_ll T n
         feature_lr = tree.l.r.feature
         cumulator = Array{T, 1}(undef, n)
         finished_loop = true
@@ -148,9 +149,7 @@ function deg1_l2_ll0_lr0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, 
     elseif tree.l.r.constant
         feature_ll = tree.l.l.feature
         val_lr = convert(T, tree.l.r.val)
-        if isnan(val_lr) || !isfinite(val_lr)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check val_lr T n
         cumulator = Array{T, 1}(undef, n)
         finished_loop = true
         @inbounds @simd for j=1:n
@@ -187,17 +186,11 @@ function deg1_l1_ll0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Va
     finished_loop = true
     if tree.l.l.constant
         val_ll = convert(T, tree.l.l.val)
-        if isnan(val_ll) || !isfinite(val_ll)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check val_ll T n
         x_l = op_l(val_ll)::T
-        if isnan(x_l) || !isfinite(x_l)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check x_l T n
         x = op(x_l)::T
-        if isnan(x) || !isfinite(x)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check x T n
         return (fill(x, n), true)
     else
         feature_ll = tree.l.l.feature
@@ -221,24 +214,16 @@ function deg2_l0_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, optio
     finished_loop = true
     if tree.l.constant && tree.r.constant
         val_l = convert(T, tree.l.val)
+        @return_on_check val_l T n
         val_r = convert(T, tree.r.val)
-        if isnan(val_l) || !isfinite(val_l)
-            return (Array{T, 1}(undef, n), false)
-        end
-        if isnan(val_r) || !isfinite(val_r)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check val_r T n
         x = op(val_l, val_r)::T
-        if isnan(x) || !isfinite(x)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check x T n
         return (fill(x, n), true)
     elseif tree.l.constant
         cumulator = Array{T, 1}(undef, n)
         val_l = convert(T, tree.l.val)
-        if isnan(val_l) || !isfinite(val_l)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check val_l T n
         feature_r = tree.r.feature
         @inbounds @simd for j=1:n
             x = op(val_l, cX[feature_r, j])::T
@@ -249,9 +234,7 @@ function deg2_l0_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, optio
         cumulator = Array{T, 1}(undef, n)
         feature_l = tree.l.feature
         val_r = convert(T, tree.r.val)
-        if isnan(val_r) || !isfinite(val_r)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check val_r T n
         @inbounds @simd for j=1:n
             x = op(cX[feature_l, j], val_r)::T
             @break_on_check x finished_loop
@@ -278,9 +261,7 @@ function deg2_l0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
     finished_loop = true
     if tree.l.constant
         val = convert(T, tree.l.val)
-        if isnan(val) || !isfinite(val)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check val T n
         @inbounds @simd for j=1:n
             @break_on_check cumulator[j] finished_loop
             x = op(val, cumulator[j])::T
@@ -307,9 +288,7 @@ function deg2_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
     finished_loop = true
     if tree.r.constant
         val = convert(T, tree.r.val)
-        if isnan(val) || !isfinite(val)
-            return (Array{T, 1}(undef, n), false)
-        end
+        @return_on_check val T n
         @inbounds @simd for j=1:n
             @break_on_check cumulator[j] finished_loop
             x = op(cumulator[j], val)::T
