@@ -279,3 +279,27 @@ end
 @test exp_flip_to_tree1
 @test swapped_cos_with_exp
 println("Passed.")
+
+
+println("Testing NaN detection.")
+
+# Creating a NaN via computation.
+tree = cos(exp(exp(exp(exp(Node("x1"))))))
+X = randn(MersenneTwister(0), Float32, 1, 100) * 100f0
+output, flag = evalTreeArray(tree, X, options)
+@test !flag
+
+# Creating a NaN/Inf via division by constant zero.
+tree = cos(Node("x1") / 0f0)
+output, flag = evalTreeArray(tree, X, options)
+@test !flag
+
+# Having a NaN/Inf constants:
+tree = cos(Node("x1") + Inf)
+output, flag = evalTreeArray(tree, X, options)
+@test !flag
+tree = cos(Node("x1") + NaN)
+output, flag = evalTreeArray(tree, X, options)
+@test !flag
+
+println("Passed.")
