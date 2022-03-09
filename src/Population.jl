@@ -63,7 +63,15 @@ function bestOfSample(pop::Population, options::Options)::PopMember
         prob_each = p * (1 - p) .^ k
         prob_each /= sum(prob_each)
         cumprob = cumsum(prob_each)
-        chosen_idx = sort_idx[findfirst(cumprob .> rand())]
+        raw_chosen_idx = findfirst(cumprob .> rand())
+        
+        # Sometimes, due to precision issues, we might have cumprob[end] < 1,
+        # so we must check for nothing returned:
+        if raw_chosen_idx === nothing
+            chosen_idx = sort_idx[end]
+        else
+            chosen_idx = sort_idx[raw_chosen_idx]
+        end
     end
     return sample.members[chosen_idx]
 end
