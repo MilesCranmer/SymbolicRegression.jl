@@ -4,7 +4,7 @@ using FromFile
 @from "LossFunctions.jl" import scoreFunc, scoreFuncBatch
 @from "CheckConstraints.jl" import check_constraints
 @from "PopMember.jl" import PopMember
-@from "MutationFunctions.jl" import genRandomTree, mutateConstant, mutateOperator, appendRandomOp, prependRandomOp, insertRandomOp, deleteRandomOp, crossoverTrees
+@from "MutationFunctions.jl" import genRandomTreeFixedSize, mutateConstant, mutateOperator, appendRandomOp, prependRandomOp, insertRandomOp, deleteRandomOp, crossoverTrees
 @from "SimplifyEquation.jl" import simplifyTree, combineOperators, simplifyWithSymbolicUtils
 @from "Recorder.jl" import @recorder
 
@@ -110,7 +110,11 @@ function nextGeneration(dataset::Dataset{T},
             # to commutative operator...
 
         elseif mutationChoice < cweights[7]
-            tree = genRandomTree(5, options, nfeatures) # Sometimes we generate a new tree completely tree
+            # Sometimes we generate a new tree completely tree
+            # We select a random size, though the generated tree
+            # may have fewer nodes than we request.
+            tree_size_to_generate = rand(1:curmaxsize)
+            tree = genRandomTreeFixedSize(tree_size_to_generate, options, nfeatures)
             @recorder tmp_recorder["type"] = "regenerate"
 
             is_success_always_possible = true
