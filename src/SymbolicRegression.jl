@@ -309,6 +309,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
     # Make frequencyComplexities a moving average, rather than over all time:
     n_cycles_before_frequency_refresh = 10
     window_size = options.npopulations * options.npop * n_cycles_before_frequency_refresh
+    smallest_frequency_allowed = 1
     # 3 here means this will last 3 cycles before being "refreshed"
     # We start out with even numbers at all frequencies.
     frequencyComplexities = [ones(T, actualMaxsize) * window_size / actualMaxsize for i=1:nout]
@@ -649,8 +650,19 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             cur_size_frequency_complexities = sum(frequencyComplexities[j])
             if cur_size_frequency_complexities > window_size
                 difference_in_size = cur_size_frequency_complexities - window_size
-                frequencyComplexities[j] .-= difference_in_size / actualMaxsize
+                # We need frequencyComplexities to be positive, but also sum to a number.
+                # min(frequencyComplexities[j])
+                while difference_in_size > 0
+                    indices_to_subtract = findall(frequencyComplexities[j] .> smallest_frequency_allowed)
+                    amount_to_subtract = min(
+                        difference_in_size / actualMaxsize,
+                        min(frequencyComplexities[j][indices_to_subtract]...) - smallest_frequency_allowed
+                    )
+                    frequencyComplexities[j][indices_to_subtract] .-= amount_to_subtract
+                    difference_in_size -= amount_to_subtract * actualMaxsize
+                end
             end
+
         end
         sleep(1e-6)
 
