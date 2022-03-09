@@ -305,7 +305,14 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         hallOfFame::Vector{HallOfFame}
     end
     actualMaxsize = options.maxsize + MAX_DEGREE
-    frequencyComplexities = [ones(T, actualMaxsize) for i=1:nout]
+
+    # Make frequencyComplexities a moving average, rather than over all time:
+    window_size = 100000
+    smallest_frequency_allowed = 1
+    # 3 here means this will last 3 cycles before being "refreshed"
+    # We start out with even numbers at all frequencies.
+    frequencyComplexities = [ones(T, actualMaxsize) * window_size / actualMaxsize for i=1:nout]
+
     curmaxsizes = [3 for j=1:nout]
     record = RecordType("options"=>"$(options)")
 
@@ -415,7 +422,9 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
                 if options.batching
                     for i_member=1:(options.maxsize + MAX_DEGREE)
-                        tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
+                        score, loss = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
+                        tmp_best_seen.members[i_member].score = score
+                        tmp_best_seen.members[i_member].loss = loss
                     end
                 end
                 (tmp_pop, tmp_best_seen, cur_record)
@@ -529,8 +538,8 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             open(hofFile, "w") do io
                 println(io, "Complexity|MSE|Equation")
                 for member in dominating
-                    adjusted_score = (member.score - countNodes(member.tree)*options.parsimony) * baselineMSE
-                    println(io, "$(countNodes(member.tree))|$(adjusted_score)|$(stringTree(member.tree, options, varMap=dataset.varMap))")
+                    loss = member.loss
+                    println(io, "$(countNodes(member.tree))|$(loss)|$(stringTree(member.tree, options, varMap=dataset.varMap))")
                 end
             end
             cp(hofFile, hofFile*".bkup", force=true)
@@ -541,9 +550,14 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             if options.migration
                 for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplaced))
                     to_copy = rand(1:size(bestPops.members, 1))
+
+                    # Explicit copy here resets the birth. 
                     cur_pop.members[k] = PopMember(
                         copyNode(bestPops.members[to_copy].tree),
-                        copy(bestPops.members[to_copy].score))
+                        copy(bestPops.members[to_copy].score),
+                        copy(bestPops.members[to_copy].loss)
+                    )
+                    # TODO: Clean this up using copyPopMember.
                 end
             end
 
@@ -552,8 +566,11 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                     # Copy in case one gets used twice
                     to_copy = rand(1:size(dominating, 1))
                     cur_pop.members[k] = PopMember(
-                       copyNode(dominating[to_copy].tree), copy(dominating[to_copy].score)
+                       copyNode(dominating[to_copy].tree),
+                       copy(dominating[to_copy].score),
+                       copy(dominating[to_copy].loss)
                     )
+                    # TODO: Clean this up with copyPopMember.
                 end
             end
             ###################################################################
@@ -584,7 +601,9 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 if options.batching
                     for i_member=1:(options.maxsize + MAX_DEGREE)
                         if tmp_best_seen.exists[i_member]
-                            tmp_best_seen.members[i_member].score = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
+                            score, loss = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
+                            tmp_best_seen.members[i_member].score = score
+                            tmp_best_seen.members[i_member].loss = loss
                         end
                     end
                 end
@@ -625,6 +644,25 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             end
             head_node_end_work = time()
             head_node_time["occupied"] += (head_node_end_work - head_node_start_work)
+        
+            # Move moving window along frequencyComplexities:
+            cur_size_frequency_complexities = sum(frequencyComplexities[j])
+            if cur_size_frequency_complexities > window_size
+                difference_in_size = cur_size_frequency_complexities - window_size
+                # We need frequencyComplexities to be positive, but also sum to a number.
+                # min(frequencyComplexities[j])
+                while difference_in_size > 0
+                    indices_to_subtract = findall(frequencyComplexities[j] .> smallest_frequency_allowed)
+                    num_remaining = size(indices_to_subtract, 1)
+                    amount_to_subtract = min(
+                        difference_in_size / num_remaining,
+                        min(frequencyComplexities[j][indices_to_subtract]...) - smallest_frequency_allowed
+                    )
+                    frequencyComplexities[j][indices_to_subtract] .-= amount_to_subtract
+                    difference_in_size -= amount_to_subtract * num_remaining
+                end
+            end
+
         end
         sleep(1e-6)
 
@@ -661,6 +699,11 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                                                                       avgys[j])
                     print(equation_strings)
                     @printf("==============================\n")
+                    
+                    # Debugging code for frequencyComplexities:
+                    # for size_i=1:actualMaxsize
+                    #     @printf("frequencyComplexities size %d = %.2f\n", size_i, frequencyComplexities[j][size_i])
+                    # end
                 end
                 @printf("Press 'q' and then <enter> to stop execution early.\n")
             end
@@ -679,7 +722,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 # Check if zero size:
                 if length(dominating) == 0
                     all_below = false
-                elseif !any([options.earlyStopCondition(member.score, member.complexity) for member in dominating])
+                elseif !any([options.earlyStopCondition(member.loss, member.complexity) for member in dominating])
                     # None of the equations meet the stop condition.
                     all_below = false
                 end

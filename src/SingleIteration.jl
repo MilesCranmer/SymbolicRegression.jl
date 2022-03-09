@@ -40,13 +40,6 @@ function SRCycle(dataset::Dataset{T}, baseline::T,
                 best_examples_seen.members[size] = copyPopMember(member)
             end
         end
-
-        if verbosity > 0 && (temperature % verbosity == 0) # TODO: Remove this
-            bestPops = bestSubPop(pop)
-            bestCurScoreIdx = argmin([bestPops.members[member].score for member=1:bestPops.n])
-            bestCurScore = bestPops.members[bestCurScoreIdx].score
-            debug(verbosity, bestCurScore, " is the score for ", stringTree(bestPops.members[bestCurScoreIdx].tree, options, varMap=dataset.varMap))
-        end
     end
 
     return (pop, best_examples_seen)

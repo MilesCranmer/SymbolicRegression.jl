@@ -63,12 +63,15 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
             @test complete2 == true
             @test all(abs.(test_y2 .- y)/N .< zero_tolerance)
 
-            #Test Scoring
+            # Test loss:
             @test abs(EvalLoss(tree, dataset, make_options())) < zero_tolerance
-            @test abs(scoreFunc(dataset, one(T), tree, make_options(parsimony=0.0))) < zero_tolerance
-            @test scoreFunc(dataset, one(T), tree, make_options(parsimony=1.0)) > 1.0
-            @test scoreFunc(dataset, one(T), tree, make_options()) < scoreFunc(dataset, one(T), tree_bad, make_options())
-            @test scoreFunc(dataset, one(T)*10, tree_bad, make_options()) < scoreFunc(dataset, one(T), tree_bad, make_options())
+            @test EvalLoss(tree, dataset, make_options()) == scoreFunc(dataset, one(T), tree, make_options())[2]
+
+            #Test Scoring
+            @test abs(scoreFunc(dataset, one(T), tree, make_options(parsimony=0.0))[1]) < zero_tolerance
+            @test scoreFunc(dataset, one(T), tree, make_options(parsimony=1.0))[1] > 1.0
+            @test scoreFunc(dataset, one(T), tree, make_options())[1] < scoreFunc(dataset, one(T), tree_bad, make_options())[1]
+            @test scoreFunc(dataset, one(T)*10, tree_bad, make_options())[1] < scoreFunc(dataset, one(T), tree_bad, make_options())[1]
 
             # Test gradients:
             df_true = x -> ForwardDiff.derivative(f_true, x)

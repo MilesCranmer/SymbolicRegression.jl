@@ -60,7 +60,7 @@ function regEvolCycle(dataset::Dataset{T},
     else
         for i=1:round(Int, pop.n/options.ns)
             if rand() > options.crossoverProbability
-                allstar = bestOfSample(pop, options)
+                allstar = bestOfSample(pop, frequencyComplexity, options)
                 mutation_recorder = RecordType()
                 baby, mutation_accepted = nextGeneration(dataset, baseline, allstar, temperature,
                                                          curmaxsize, frequencyComplexity, options,
@@ -82,6 +82,7 @@ function regEvolCycle(dataset::Dataset{T},
                             record["mutations"]["$(member.ref)"] = RecordType("events"=>Vector{RecordType}(),
                                                                             "tree"=>stringTree(member.tree, options),
                                                                             "score"=>member.score,
+                                                                            "loss"=>member.loss,
                                                                             "parent"=>member.parent)
                         end
                     end
@@ -96,8 +97,8 @@ function regEvolCycle(dataset::Dataset{T},
                 pop.members[oldest] = baby
 
             else # Crossover
-                allstar1 = bestOfSample(pop, options)
-                allstar2 = bestOfSample(pop, options)
+                allstar1 = bestOfSample(pop, frequencyComplexity, options)
+                allstar2 = bestOfSample(pop, frequencyComplexity, options)
 
                 baby1, baby2, crossover_accepted = crossoverGeneration(allstar1, allstar2, dataset, baseline,
                                                    curmaxsize, options)

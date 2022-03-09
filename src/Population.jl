@@ -47,10 +47,23 @@ function samplePop(pop::Population, options::Options)::Population
 end
 
 # Sample the population, and get the best member from that sample
-function bestOfSample(pop::Population, options::Options)::PopMember
+function bestOfSample(pop::Population, frequencyComplexity::AbstractVector{T}, options::Options)::PopMember where {T<:Real}
     sample = samplePop(pop, options)
 
-    scores = [sample.members[member].score for member=1:options.ns]
+    if options.useFrequencyInTournament
+        # Score based on frequency of that size occuring.
+        # In the end, all sizes should be just as common in the population.
+        frequency_scaling = 20 
+        # e.g., for 100% occupied at one size, exp(-20*1) = 2.061153622438558e-9; which seems like a good punishment for dominating the population.
+
+        scores = [
+            sample.members[member].score * exp(frequency_scaling * frequencyComplexity[countNodes(sample.members[member].tree)])
+            for member=1:options.ns
+        ]
+    else
+        scores = [sample.members[member].score for member=1:options.ns]
+    end
+
     p = options.probPickFirst
 
     if p == 1.0
@@ -82,9 +95,11 @@ function finalizeScores(dataset::Dataset{T},
     need_recalculate = options.batching
     if need_recalculate
         @inbounds @simd for member=1:pop.n
-            pop.members[member].score = scoreFunc(dataset, baseline,
-                                                  pop.members[member].tree,
-                                                  options)
+            score, loss = scoreFunc(dataset, baseline,
+                                    pop.members[member].tree,
+                                    options)
+            pop.members[member].score = score
+            pop.members[member].loss = loss
         end
     end
     return pop
@@ -99,7 +114,8 @@ end
 
 function record_population(pop::Population{T}, options::Options)::RecordType where {T<:Real}
     RecordType("population"=>[RecordType("tree"=>stringTree(member.tree, options),
-                                         "loss"=>member.score,
+                                         "loss"=>member.loss,
+                                         "score"=>member.score,
                                          "complexity"=>countNodes(member.tree),
                                          "birth"=>member.birth,
                                          "ref"=>member.ref,

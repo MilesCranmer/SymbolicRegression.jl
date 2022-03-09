@@ -26,6 +26,7 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     crossoverProbability::Float32
     warmupMaxsizeBy::Float32
     useFrequency::Bool
+    useFrequencyInTournament::Bool
     npop::Int
     ncyclesperiteration::Int
     fractionReplaced::Float32
