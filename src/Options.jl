@@ -248,7 +248,7 @@ function Options(;
     useFrequency=true,
     npop=33,
     ncyclesperiteration=550,
-    fractionReplaced=0.035f0,
+    fractionReplaced=0.00036f0,
     verbosity=convert(Int, 1e9),
     probNegate=0.01f0,
     seed=nothing,
