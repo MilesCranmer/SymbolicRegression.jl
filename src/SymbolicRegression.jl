@@ -701,9 +701,9 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                     @printf("==============================\n")
                     
                     # Debugging code for frequencyComplexities:
-                    for size_i=1:actualMaxsize
-                        @printf("frequencyComplexities size %d = %.2f\n", size_i, frequencyComplexities[j][size_i])
-                    end
+                    # for size_i=1:actualMaxsize
+                    #     @printf("frequencyComplexities size %d = %.2f\n", size_i, frequencyComplexities[j][size_i])
+                    # end
                 end
                 @printf("Press 'q' and then <enter> to stop execution early.\n")
             end
