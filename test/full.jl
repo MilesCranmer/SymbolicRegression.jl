@@ -19,6 +19,8 @@ for i=0:4
     multithreading = false
     crossoverProbability = 0f0
     skip_mutation_failures = false
+    useFrequency = false
+    useFrequencyInTournament = false
     print("Testing with batching=$(batching) and weighted=$(weighted), ")
     if i == 0
         println("with serial & progress bar & warmup & BFGS")
@@ -28,17 +30,21 @@ for i=0:4
         optimizer_algorithm = "BFGS"
         probPickFirst = 0.8
     elseif i == 1
-        println("with multi-output.")
+        println("with multi-output and useFrequency.")
         multi = true
+        useFrequency = true
     elseif i == 3
-        println("with multi-threading and crossover")
+        println("with multi-threading and crossover and useFrequencyInTournament")
         multithreading = true
         numprocs = 0
         crossoverProbability = 0.02f0
+        useFrequencyInTournament = true
     elseif i == 4
-        println("with crossover and skip mutation failures")
+        println("with crossover and skip mutation failures and both frequencies options")
         crossoverProbability = 0.02f0
         skip_mutation_failures = true
+        useFrequency = true
+        useFrequencyInTournament = true
     end
     options = SymbolicRegression.Options(
         binary_operators=(+, *),
@@ -51,7 +57,9 @@ for i=0:4
         progress=progress,
         warmupMaxsizeBy=warmupMaxsizeBy,
         optimizer_algorithm=optimizer_algorithm,
-        probPickFirst=probPickFirst
+        probPickFirst=probPickFirst,
+        useFrequency=useFrequency,
+        useFrequencyInTournament=useFrequencyInTournament,
     )
     X = randn(MersenneTwister(0), Float32, 5, 100)
     if weighted
