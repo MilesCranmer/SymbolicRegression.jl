@@ -82,6 +82,7 @@ function regEvolCycle(dataset::Dataset{T},
                             record["mutations"]["$(member.ref)"] = RecordType("events"=>Vector{RecordType}(),
                                                                             "tree"=>stringTree(member.tree, options),
                                                                             "score"=>member.score,
+                                                                            "loss"=>member.loss,
                                                                             "parent"=>member.parent)
                         end
                     end

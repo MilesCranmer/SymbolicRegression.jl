@@ -94,7 +94,7 @@ for i=0:4
         residual = simplify(eqn - true_eqn) + x4 * 1e-10
 
         # Test the score
-        @test best.score < maximum_residual / 10
+        @test best.loss < maximum_residual / 10
         # Test the actual equation found:
         # eval evaluates inside global
         @test abs(eval(Meta.parse(string(residual)))) < maximum_residual
@@ -131,7 +131,7 @@ true_eqn = 2*cos(t4)
 residual = simplify(eqn - true_eqn) + t4 * 1e-10
 
 # Test the score
-@test best.score < maximum_residual / 10
+@test best.loss < maximum_residual / 10
 # Test the actual equation found:
 t1=0.1f0; t2=0.1f0; t3=0.1f0; t4=0.1f0; t5=0.1f0
 residual_value = abs(eval(Meta.parse(string(residual))))
@@ -151,7 +151,7 @@ printTree(best.tree, options)
 eqn = node_to_symbolic(best.tree, options;
                        evaluate_functions=true, varMap=varMap)
 residual = simplify(eqn - true_eqn) + t4 * 1e-10
-@test best.score < maximum_residual / 10
+@test best.loss < maximum_residual / 10
 
 println("Passed.")
 

@@ -74,9 +74,11 @@ function finalizeScores(dataset::Dataset{T},
     need_recalculate = options.batching
     if need_recalculate
         @inbounds @simd for member=1:pop.n
-            pop.members[member].score = scoreFunc(dataset, baseline,
-                                                  pop.members[member].tree,
-                                                  options)
+            score, loss = scoreFunc(dataset, baseline,
+                                    pop.members[member].tree,
+                                    options)
+            pop.members[member].score = score
+            pop.members[member].loss = loss
         end
     end
     return pop
@@ -91,7 +93,8 @@ end
 
 function record_population(pop::Population{T}, options::Options)::RecordType where {T<:Real}
     RecordType("population"=>[RecordType("tree"=>stringTree(member.tree, options),
-                                         "loss"=>member.score,
+                                         "loss"=>member.loss,
+                                         "score"=>member.score,
                                          "complexity"=>countNodes(member.tree),
                                          "birth"=>member.birth,
                                          "ref"=>member.ref,

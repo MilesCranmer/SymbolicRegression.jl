@@ -11,7 +11,8 @@ import Optim
 function optFunc(x::Vector{CONST_TYPE}, dataset::Dataset{T}, baseline::T,
                  tree::Node, options::Options; allow_diff=false)::T where {T<:Real}
     setConstants(tree, x)
-    return scoreFunc(dataset, baseline, tree, options; allow_diff=allow_diff)
+    loss = scoreFunc(dataset, baseline, tree, options; allow_diff=allow_diff)[2]
+    return loss
 end
 
 # Use Nelder-Mead to optimize the constants in an equation
@@ -60,7 +61,7 @@ function optimizeConstants(dataset::Dataset{T},
 
     if Optim.converged(result)
         setConstants(member.tree, result.minimizer)
-        member.score = convert(T, result.minimum)
+        member.score, member.loss = scoreFunc(dataset, baseline, member.tree, options)
         member.birth = getTime()
     else
         setConstants(member.tree, x0)

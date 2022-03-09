@@ -22,7 +22,7 @@ Node(op::Int, l::Union{AbstractFloat, Int}, r::Union{AbstractFloat, Int})
 ## Population
 
 Groups of equations are given as a population, which is
-an array of trees tagged with score and birthdate---these
+an array of trees tagged with score, loss, and birthdate---these
 values are given in the `PopMember`.
 
 ```@docs
@@ -39,7 +39,7 @@ Population(X::AbstractMatrix{T}, y::AbstractVector{T}, baseline::T;
 
 ## Population members
 ```@docs
-PopMember(t::Node, score::T) where {T<:Real}
+PopMember(t::Node, score::T, loss::T) where {T<:Real}
 PopMember(dataset::Dataset{T}, baseline::T, t::Node, options::Options) where {T<:Real}
 ```
 

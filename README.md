@@ -61,10 +61,10 @@ println("Complexity\tMSE\tEquation")
 
 for member in dominating
     size = countNodes(member.tree)
-    score = member.score
+    loss = member.loss
     string = stringTree(member.tree, options)
 
-    println("$(size)\t$(score)\t$(string)")
+    println("$(size)\t$(loss)\t$(string)")
 end
 ```
 

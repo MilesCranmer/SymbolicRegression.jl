@@ -18,7 +18,8 @@ for reverse in [false, true]
         if reverse
             score = 1 - score
         end
-        push!(members, PopMember(tree, score))
+        loss = 1f0  # (arbitrary for this test)
+        push!(members, PopMember(tree, score, loss))
     end
 
     pop = Population(members, n)

@@ -24,7 +24,7 @@ has been instantiated or not.
 """
 function HallOfFame(options::Options)
     actualMaxsize = options.maxsize + MAX_DEGREE
-    HallOfFame([PopMember(Node(convert(CONST_TYPE, 1)), 1f9) for i=1:actualMaxsize], [false for i=1:actualMaxsize])
+    HallOfFame([PopMember(Node(convert(CONST_TYPE, 1)), 1f9, 1f9) for i=1:actualMaxsize], [false for i=1:actualMaxsize])
 end
 
 
@@ -51,7 +51,7 @@ function calculateParetoFrontier(dataset::Dataset{T},
                 continue
             end
             simpler_member = hallOfFame.members[i]
-            if (member.score - size*options.parsimony) >= (simpler_member.score - i*options.parsimony)
+            if member.loss >= simpler_member.loss
                 betterThanAllSmaller = false
                 break
             end
@@ -95,12 +95,12 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE,
     dominating = calculateParetoFrontier(dataset, hallOfFame, options)
     for member in dominating
         complexity = countNodes(member.tree)
-        if member.score < 0.0
-            throw(DomainError(member.score, "Your loss function must be non-negative."))
+        if member.loss < 0.0
+            throw(DomainError(member.loss, "Your loss function must be non-negative."))
         end
         # User higher precision when finding the original loss:
         relu(x) = x < 0 ? 0 : x
-        curMSE = relu(Float64(member.score) - Float64(complexity * options.parsimony)) * Float64(baselineMSE)
+        curMSE = member.loss
         
         delta_c = complexity - lastComplexity
         ZERO_POINT = 1e-10
