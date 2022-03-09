@@ -28,4 +28,4 @@ rmprocs(procs)
 dominating = calculateParetoFrontier(X, y, hallOfFame, options)
 best = dominating[end]
 # Test the score
-@test best.score < maximum_residual / 10
+@test best.loss < maximum_residual / 10

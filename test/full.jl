@@ -19,6 +19,8 @@ for i=0:5
     multithreading = false
     crossoverProbability = 0f0
     skip_mutation_failures = false
+    useFrequency = false
+    useFrequencyInTournament = false
     print("Testing with batching=$(batching) and weighted=$(weighted), ")
     if i == 0
         println("with serial & progress bar & warmup & BFGS")
@@ -28,17 +30,21 @@ for i=0:5
         optimizer_algorithm = "BFGS"
         probPickFirst = 0.8
     elseif i == 1
-        println("with multi-output.")
+        println("with multi-output and useFrequency.")
         multi = true
+        useFrequency = true
     elseif i == 3
-        println("with multi-threading and crossover")
+        println("with multi-threading and crossover and useFrequencyInTournament")
         multithreading = true
         numprocs = 0
         crossoverProbability = 0.02f0
+        useFrequencyInTournament = true
     elseif i == 4
-        println("with crossover and skip mutation failures")
+        println("with crossover and skip mutation failures and both frequencies options")
         crossoverProbability = 0.02f0
         skip_mutation_failures = true
+        useFrequency = true
+        useFrequencyInTournament = true
     elseif i == 5
         println("with default hyperparameters")
     end
@@ -63,8 +69,11 @@ for i=0:5
             optimizer_algorithm=optimizer_algorithm,
             probPickFirst=probPickFirst,
             parsimony=0.0f0,
+            useFrequency=useFrequency,
+            useFrequencyInTournament=useFrequencyInTournament,
         )
     end
+
     X = randn(MersenneTwister(0), Float32, 5, 100)
     if weighted
         mask = rand(100) .> 0.5
@@ -106,7 +115,7 @@ for i=0:5
         residual = simplify(eqn - true_eqn) + x4 * 1e-10
 
         # Test the score
-        @test best.score < maximum_residual / 10
+        @test best.loss < maximum_residual / 10
         # Test the actual equation found:
         # eval evaluates inside global
         @test abs(eval(Meta.parse(string(residual)))) < maximum_residual
@@ -144,7 +153,7 @@ true_eqn = 2*cos(t4)
 residual = simplify(eqn - true_eqn) + t4 * 1e-10
 
 # Test the score
-@test best.score < maximum_residual / 10
+@test best.loss < maximum_residual / 10
 # Test the actual equation found:
 t1=0.1f0; t2=0.1f0; t3=0.1f0; t4=0.1f0; t5=0.1f0
 residual_value = abs(eval(Meta.parse(string(residual))))
@@ -164,7 +173,7 @@ printTree(best.tree, options)
 eqn = node_to_symbolic(best.tree, options;
                        evaluate_functions=true, varMap=varMap)
 residual = simplify(eqn - true_eqn) + t4 * 1e-10
-@test best.score < maximum_residual / 10
+@test best.loss < maximum_residual / 10
 
 println("Passed.")
 

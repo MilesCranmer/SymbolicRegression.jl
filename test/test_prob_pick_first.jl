@@ -22,13 +22,15 @@ for reverse in [false, true]
         if reverse
             score = 1 - score
         end
-        push!(members, PopMember(tree, score))
+        loss = 1f0  # (arbitrary for this test)
+        push!(members, PopMember(tree, score, loss))
     end
 
     pop = Population(members, n)
 
+    dummy_frequencies = [0f-10 for i=1:100]
     best_pop_member = [
-        SymbolicRegression.bestOfSample(pop, options).score
+        SymbolicRegression.bestOfSample(pop, dummy_frequencies, options).score
         for j=1:100
     ]
 

@@ -179,6 +179,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     relative proportion of equations at each complexity; this will
     ensure that there are a balanced number of equations considered
     for every complexity.
+- `useFrequencyInTournament`: Whether to use the adaptive parsimony described
+    above inside the score, rather than just at the mutation accept/reject stage.
 - `fast_cycle`: Whether to thread over subsamples of equations during
     regularized evolution. Slightly improves performance, but is a different
     algorithm.
@@ -246,6 +248,7 @@ function Options(;
     crossoverProbability=0.066f0,
     warmupMaxsizeBy=0f0,
     useFrequency=true,
+    useFrequencyInTournament=true,
     npop=33,
     ncyclesperiteration=550,
     fractionReplaced=0.00036f0,
@@ -360,7 +363,7 @@ function Options(;
         earlyStopCondition = (loss, complexity) -> loss < earlyStopCondition
     end
 
-    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, crossoverProbability, warmupMaxsizeBy, useFrequency, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition, stateReturn, use_symbolic_utils, timeout_in_seconds, skip_mutation_failures)
+    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, crossoverProbability, warmupMaxsizeBy, useFrequency, useFrequencyInTournament, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition, stateReturn, use_symbolic_utils, timeout_in_seconds, skip_mutation_failures)
 
     @eval begin
         Base.print(io::IO, tree::Node) = print(io, stringTree(tree, $options))
