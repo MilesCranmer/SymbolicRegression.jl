@@ -24,8 +24,9 @@ for reverse in [false, true]
 
     pop = Population(members, n)
 
+    dummy_frequencies = [0f-10 for i=1:100]
     best_pop_member = [
-        SymbolicRegression.bestOfSample(pop, options).score
+        SymbolicRegression.bestOfSample(pop, dummy_frequencies, options).score
         for j=1:100
     ]
 
