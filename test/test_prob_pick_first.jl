@@ -6,6 +6,7 @@ options = Options(
     binary_operators=(+, -, *, /),
     unary_operators=(cos, sin),
     probPickFirst=0.999,
+    ns=n,
 )
 
 for reverse in [false, true]
