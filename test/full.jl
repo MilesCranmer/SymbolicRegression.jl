@@ -6,7 +6,7 @@ using SymbolicRegression: stringTree
 using Random
 
 x1=0.1f0; x2=0.1f0; x3=0.1f0; x4=0.1f0; x5=0.1f0
-for i=0:4
+for i=0:5
     batching = i in [0, 1]
     weighted = i in [0, 2]
 
@@ -39,21 +39,32 @@ for i=0:4
         println("with crossover and skip mutation failures")
         crossoverProbability = 0.02f0
         skip_mutation_failures = true
+    elseif i == 5
+        println("with default hyperparameters")
     end
-    options = SymbolicRegression.Options(;
-        default_params...,
-        binary_operators=(+, *),
-        unary_operators=(cos,),
-        npopulations=4,
-        batching=batching,
-        crossoverProbability=crossoverProbability,
-        skip_mutation_failures=skip_mutation_failures,
-        seed=0,
-        progress=progress,
-        warmupMaxsizeBy=warmupMaxsizeBy,
-        optimizer_algorithm=optimizer_algorithm,
-        probPickFirst=probPickFirst
-    )
+    if i == 5
+        options = SymbolicRegression.Options(
+            unary_operators=(cos,),
+            batching=batching,
+            parsimony=0.0f0, # Required for scoring
+        )
+    else
+        options = SymbolicRegression.Options(;
+            default_params...,
+            binary_operators=(+, *),
+            unary_operators=(cos,),
+            npopulations=4,
+            batching=batching,
+            crossoverProbability=crossoverProbability,
+            skip_mutation_failures=skip_mutation_failures,
+            seed=0,
+            progress=progress,
+            warmupMaxsizeBy=warmupMaxsizeBy,
+            optimizer_algorithm=optimizer_algorithm,
+            probPickFirst=probPickFirst,
+            parsimony=0.0f0,
+        )
+    end
     X = randn(MersenneTwister(0), Float32, 5, 100)
     if weighted
         mask = rand(100) .> 0.5
