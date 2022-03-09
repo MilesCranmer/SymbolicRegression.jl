@@ -40,12 +40,16 @@ function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options;
     end
 end
 
+function lossToScore(loss::T, baseline::T, tree::Node, options::Options)::T where {T<:Real}
+    return loss / baseline + countNodes(tree)*options.parsimony
+end
+
 # Score an equation
 function scoreFunc(dataset::Dataset{T},
                    baseline::T, tree::Node,
                    options::Options; allow_diff=false)::Tuple{T,T} where {T<:Real}
     loss = EvalLoss(tree, dataset, options; allow_diff=allow_diff)
-    score = loss / baseline + countNodes(tree)*options.parsimony
+    score = lossToScore(loss, baseline, tree, options)
     return score, loss
 end
 
@@ -67,6 +71,6 @@ function scoreFuncBatch(dataset::Dataset{T}, baseline::T,
         batch_w = dataset.weights[batch_idx]
         loss = Loss(prediction, batch_y, batch_w, options)
     end
-    score = loss / baseline + countNodes(tree) * options.parsimony
+    score = lossToScore(loss, baseline, tree, options)
     return score, loss
 end
