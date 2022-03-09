@@ -307,8 +307,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
     actualMaxsize = options.maxsize + MAX_DEGREE
 
     # Make frequencyComplexities a moving average, rather than over all time:
-    n_cycles_before_frequency_refresh = 10
-    window_size = options.npopulations * options.npop * n_cycles_before_frequency_refresh
+    window_size = 100000
     smallest_frequency_allowed = 1
     # 3 here means this will last 3 cycles before being "refreshed"
     # We start out with even numbers at all frequencies.
@@ -654,12 +653,13 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 # min(frequencyComplexities[j])
                 while difference_in_size > 0
                     indices_to_subtract = findall(frequencyComplexities[j] .> smallest_frequency_allowed)
+                    num_remaining = size(indices_to_subtract, 1)
                     amount_to_subtract = min(
-                        difference_in_size / actualMaxsize,
+                        difference_in_size / num_remaining,
                         min(frequencyComplexities[j][indices_to_subtract]...) - smallest_frequency_allowed
                     )
                     frequencyComplexities[j][indices_to_subtract] .-= amount_to_subtract
-                    difference_in_size -= amount_to_subtract * actualMaxsize
+                    difference_in_size -= amount_to_subtract * num_remaining
                 end
             end
 
@@ -701,9 +701,9 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                     @printf("==============================\n")
                     
                     # Debugging code for frequencyComplexities:
-                    # for size_i=1:actualMaxsize
-                    #     @printf("frequencyComplexities size %d = %.2f\n", size_i, frequencyComplexities[j][size_i])
-                    # end
+                    for size_i=1:actualMaxsize
+                        @printf("frequencyComplexities size %d = %.2f\n", size_i, frequencyComplexities[j][size_i])
+                    end
                 end
                 @printf("Press 'q' and then <enter> to stop execution early.\n")
             end
