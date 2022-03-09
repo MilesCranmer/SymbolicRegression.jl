@@ -257,7 +257,7 @@ function Options(;
     progress=true,
     terminal_width=nothing,
     warmupMaxsize=nothing,
-    optimizer_algorithm="NelderMead",
+    optimizer_algorithm="BFGS",
     optimizer_nrestarts=2,
     optimize_probability=0.14f0,
     optimizer_iterations=8,
