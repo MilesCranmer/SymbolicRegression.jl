@@ -254,7 +254,7 @@ function Options(;
     seed=nothing,
     bin_constraints=nothing,
     una_constraints=nothing,
-    progress=false,
+    progress=true,
     terminal_width=nothing,
     warmupMaxsize=nothing,
     optimizer_algorithm="NelderMead",
