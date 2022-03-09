@@ -1,12 +1,14 @@
 using Test
 using SymbolicRegression
 
+@from "test_params.jl" import default_params
+
 ## Test Base.print
-options = Options(
+options = Options(;
+    default_params...,
     binary_operators=(+, *, /, -),
     unary_operators=(cos, sin),
 )
-
 
 f = (x1, x2, x3) -> (sin(cos(sin(cos(x1) * x3) * 3.0) * -0.5) + 2.0) * 5.0
 

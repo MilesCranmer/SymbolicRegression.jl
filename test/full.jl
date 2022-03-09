@@ -1,5 +1,5 @@
 using FromFile
-@from "test_params.jl" import maximum_residual
+@from "test_params.jl" import maximum_residual, default_params
 using SymbolicRegression, SymbolicUtils
 using Test
 using SymbolicRegression: stringTree
@@ -40,7 +40,8 @@ for i=0:4
         crossoverProbability = 0.02f0
         skip_mutation_failures = true
     end
-    options = SymbolicRegression.Options(
+    options = SymbolicRegression.Options(;
+        default_params...,
         binary_operators=(+, *),
         unary_operators=(cos,),
         npopulations=4,
@@ -105,7 +106,8 @@ end # for i=1...
 
 println("Testing fast-cycle and custom variable names, with mutations")
 
-options = SymbolicRegression.Options(
+options = SymbolicRegression.Options(;
+    default_params...,
     binary_operators=(+, *),
     unary_operators=(cos,),
     npopulations=4,
@@ -157,7 +159,7 @@ println("Passed.")
 
 
 println("Testing whether we can stop based on clock time.")
-options = Options(timeout_in_seconds=1)
+options = Options(;default_params..., timeout_in_seconds=1)
 start_time = time()
 EquationSearch(X, y; niterations=10000000, options=options, multithreading=true)
 end_time = time()
