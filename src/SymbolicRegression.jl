@@ -305,7 +305,14 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         hallOfFame::Vector{HallOfFame}
     end
     actualMaxsize = options.maxsize + MAX_DEGREE
-    frequencyComplexities = [ones(T, actualMaxsize) for i=1:nout]
+
+    # Make frequencyComplexities a moving average, rather than over all time:
+    n_cycles_before_frequency_refresh = 10
+    window_size = options.npopulations * options.npop * n_cycles_before_frequency_refresh
+    # 3 here means this will last 3 cycles before being "refreshed"
+    # We start out with even numbers at all frequencies.
+    frequencyComplexities = [ones(T, actualMaxsize) * window_size / actualMaxsize for i=1:nout]
+
     curmaxsizes = [3 for j=1:nout]
     record = RecordType("options"=>"$(options)")
 
@@ -637,6 +644,13 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             end
             head_node_end_work = time()
             head_node_time["occupied"] += (head_node_end_work - head_node_start_work)
+        
+            # Move moving window along frequencyComplexities:
+            cur_size_frequency_complexities = sum(frequencyComplexities[j])
+            if cur_size_frequency_complexities > window_size
+                difference_in_size = cur_size_frequency_complexities - window_size
+                frequencyComplexities[j] .-= difference_in_size / actualMaxsize
+            end
         end
         sleep(1e-6)
 
@@ -673,6 +687,11 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                                                                       avgys[j])
                     print(equation_strings)
                     @printf("==============================\n")
+                    
+                    # Debugging code for frequencyComplexities:
+                    # for size_i=1:actualMaxsize
+                    #     @printf("frequencyComplexities size %d = %.2f\n", size_i, frequencyComplexities[j][size_i])
+                    # end
                 end
                 @printf("Press 'q' and then <enter> to stop execution early.\n")
             end
