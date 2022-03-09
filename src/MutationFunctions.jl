@@ -78,15 +78,17 @@ function mutateConstant(
 end
 
 # Add a random unary/binary operation to the end of a tree
-function appendRandomOp(tree::Node, options::Options, nfeatures::Int)::Node
+function appendRandomOp(tree::Node, options::Options, nfeatures::Int; makeNewBinOp::Union{Bool,Nothing}=nothing)::Node
     node = randomNode(tree)
     while node.degree != 0
         node = randomNode(tree)
     end
 
 
-    choice = rand()
-    makeNewBinOp = choice < options.nbin/(options.nuna + options.nbin)
+    if makeNewBinOp === nothing
+        choice = rand()
+        makeNewBinOp = choice < options.nbin/(options.nuna + options.nbin)
+    end
 
     if makeNewBinOp
         newnode = Node(
@@ -265,6 +267,7 @@ end
 
 # Create a random equation by appending random operators
 function genRandomTree(length::Int, options::Options, nfeatures::Int)::Node
+    # Note that this base tree is just a placeholder; it will be replaced.
     tree = Node(convert(CONST_TYPE, 1))
     for i=1:length
         # TODO: This can be larger number of nodes than length.
@@ -274,9 +277,16 @@ function genRandomTree(length::Int, options::Options, nfeatures::Int)::Node
 end
 
 function genRandomTreeFixedSize(node_count::Int, options::Options, nfeatures::Int)::Node
-    tree = Node(convert(CONST_TYPE, 1))
-    while countNodes(tree) < node_count
-        tree = appendRandomOp(tree, options, nfeatures)
+    tree = makeRandomLeaf(nfeatures)
+    cur_size = countNodes(tree)
+    while cur_size < node_count
+        if cur_size == node_count - 1  # only unary operator allowed.
+            options.nuna == 0 && break # We will go over the requested amount, so we must break.
+            tree = appendRandomOp(tree, options, nfeatures; makeNewBinOp=false)
+        else
+            tree = appendRandomOp(tree, options, nfeatures)
+        end
+        cur_size = countNodes(tree)
     end
     return tree
 end
