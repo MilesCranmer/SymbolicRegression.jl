@@ -41,7 +41,9 @@ function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options;
 end
 
 function lossToScore(loss::T, baseline::T, tree::Node, options::Options)::T where {T<:Real}
-    return loss / baseline + countNodes(tree)*options.parsimony
+    normalized_loss_term = loss / baseline
+    parsimony_term = countNodes(tree)*options.parsimony
+    return normalized_loss_term + parsimony_term
 end
 
 # Score an equation
