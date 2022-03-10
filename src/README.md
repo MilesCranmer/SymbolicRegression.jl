@@ -6,6 +6,7 @@ shows dependencies.
 ```
 ==============================================
 ProgramConstants.jl (`maxdegree, CONST_TYPE`)
+OptionsStruct.jl
 Operators.jl
 Equation.jl (`Node`)
 Dataset.jl (`Dataset`)
