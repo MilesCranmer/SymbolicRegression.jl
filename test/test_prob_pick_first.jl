@@ -1,11 +1,15 @@
+using FromFile
+@from "test_params.jl" import default_params
 using SymbolicRegression, Test
 
 n = 10
 
-options = Options(
+options = Options(;
+    default_params...,
     binary_operators=(+, -, *, /),
     unary_operators=(cos, sin),
     probPickFirst=0.999,
+    ns=n,
 )
 
 for reverse in [false, true]

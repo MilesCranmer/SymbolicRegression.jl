@@ -1,12 +1,12 @@
 using FromFile
-@from "test_params.jl" import maximum_residual
+@from "test_params.jl" import maximum_residual, default_params
 using SymbolicRegression, SymbolicUtils
 using Test
 using SymbolicRegression: stringTree
 using Random
 
 x1=0.1f0; x2=0.1f0; x3=0.1f0; x4=0.1f0; x5=0.1f0
-for i=0:4
+for i=0:5
     batching = i in [0, 1]
     weighted = i in [0, 2]
 
@@ -45,22 +45,35 @@ for i=0:4
         skip_mutation_failures = true
         useFrequency = true
         useFrequencyInTournament = true
+    elseif i == 5
+        println("with default hyperparameters")
     end
-    options = SymbolicRegression.Options(
-        binary_operators=(+, *),
-        unary_operators=(cos,),
-        npopulations=4,
-        batching=batching,
-        crossoverProbability=crossoverProbability,
-        skip_mutation_failures=skip_mutation_failures,
-        seed=0,
-        progress=progress,
-        warmupMaxsizeBy=warmupMaxsizeBy,
-        optimizer_algorithm=optimizer_algorithm,
-        probPickFirst=probPickFirst,
-        useFrequency=useFrequency,
-        useFrequencyInTournament=useFrequencyInTournament,
-    )
+    if i == 5
+        options = SymbolicRegression.Options(
+            unary_operators=(cos,),
+            batching=batching,
+            parsimony=0.0f0, # Required for scoring
+        )
+    else
+        options = SymbolicRegression.Options(;
+            default_params...,
+            binary_operators=(+, *),
+            unary_operators=(cos,),
+            npopulations=4,
+            batching=batching,
+            crossoverProbability=crossoverProbability,
+            skip_mutation_failures=skip_mutation_failures,
+            seed=0,
+            progress=progress,
+            warmupMaxsizeBy=warmupMaxsizeBy,
+            optimizer_algorithm=optimizer_algorithm,
+            probPickFirst=probPickFirst,
+            parsimony=0.0f0,
+            useFrequency=useFrequency,
+            useFrequencyInTournament=useFrequencyInTournament,
+        )
+    end
+
     X = randn(MersenneTwister(0), Float32, 5, 100)
     if weighted
         mask = rand(100) .> 0.5
@@ -113,7 +126,8 @@ end # for i=1...
 
 println("Testing fast-cycle and custom variable names, with mutations")
 
-options = SymbolicRegression.Options(
+options = SymbolicRegression.Options(;
+    default_params...,
     binary_operators=(+, *),
     unary_operators=(cos,),
     npopulations=4,
@@ -165,7 +179,7 @@ println("Passed.")
 
 
 println("Testing whether we can stop based on clock time.")
-options = Options(timeout_in_seconds=1)
+options = Options(;default_params..., timeout_in_seconds=1)
 start_time = time()
 EquationSearch(X, y; niterations=10000000, options=options, multithreading=true)
 end_time = time()

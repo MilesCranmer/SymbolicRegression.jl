@@ -1,3 +1,5 @@
+using FromFile
+@from "test_params.jl" import default_params
 using SymbolicRegression, SymbolicUtils, Test, Random, ForwardDiff
 using SymbolicRegression: Options, stringTree, evalTreeArray, Dataset, differentiableEvalTreeArray
 using SymbolicRegression: printTree, pow, EvalLoss, scoreFunc, Node
@@ -11,9 +13,10 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
     for binop in [sub]
 
         function make_options(;kw...)
-            Options(
+            Options(;
+                default_params...,
                 binary_operators=(+, *, ^, /, binop),
-                unary_operators=(unaop,), npopulations=4;
+                unary_operators=(unaop,), npopulations=4,
                 kw...
             )
         end
@@ -115,7 +118,8 @@ end
 
 # Test SymbolicUtils interface
 _inv(x) = 1/x
-options = Options(
+options = Options(;
+    default_params...,
     binary_operators=(+, *, ^, /, greater),
     unary_operators=(_inv,),
     constraints=(_inv=>4,),
@@ -144,6 +148,7 @@ testl1(x, y, w) = abs(x - y) * w
 
 for (loss, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
     local options = Options(;
+        default_params...,
         binary_operators=(+, *, -, /),
         unary_operators=(cos, exp),
         npopulations=4,
@@ -164,7 +169,8 @@ include("test_print.jl")
 
 
 # Test simple evaluations:
-options = Options(
+options = Options(;
+    default_params...,
     binary_operators=(+, *, /, -),
     unary_operators=(cos, sin),
 )
@@ -241,7 +247,8 @@ println("Testing crossover function.")
 using SymbolicRegression
 using Test
 using SymbolicRegression: crossoverTrees
-options = SymbolicRegression.Options(
+options = SymbolicRegression.Options(;
+    default_params...,
     binary_operators = (+, *, /, -),
     unary_operators = (cos, exp),
     npopulations = 8

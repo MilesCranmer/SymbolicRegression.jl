@@ -1,10 +1,12 @@
+using FromFile
+@from "test_params.jl" import default_params
 using SymbolicRegression, Test
 
 binary_operators = (+, -, /, *)
 
 index_of_mult = [i for (i, op) in enumerate(binary_operators) if op == *][1]
 
-options = Options(binary_operators=binary_operators)
+options = Options(; default_params..., binary_operators=binary_operators)
 
 tree = Node("x1") + Node("x1")
 
