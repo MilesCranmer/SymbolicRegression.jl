@@ -28,6 +28,20 @@ Evaluate a binary tree (equation) over a given input data matrix. The
 options contain all of the operators used. This function fuses doublets
 and triplets of operations for lower memory usage.
 
+This function can be represented by the following pseudocode:
+
+```
+function eval(current_node)
+    if current_node is leaf
+        return current_node.value
+    elif current_node is degree 1
+        return current_node.operator(eval(current_node.left_child))
+    else
+        return current_node.operator(eval(current_node.left_child), eval(current_node.right_child))
+```
+The bulk of the code is for optimizations and pre-emptive NaN/Inf checks,
+which speed up evaluation significantly.
+
 # Returns
 
 - `(output, complete)::Tuple{AbstractVector{T}, Bool}`: the result,
