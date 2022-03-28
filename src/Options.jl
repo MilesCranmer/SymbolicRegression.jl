@@ -285,8 +285,6 @@ function Options(;
     @assert maxsize > 3
     @assert warmupMaxsizeBy >= 0f0
 
-    constraints::Union{Tuple,Array{Pair{Any,Any}, 1},Nothing}
-
 
     if typeof(constraints) <: Tuple
         constraints = collect(constraints)
