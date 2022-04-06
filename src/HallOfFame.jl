@@ -96,7 +96,7 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE,
     for member in dominating
         complexity = countNodes(member.tree)
         if member.loss < 0.0
-            throw(DomainError(member.loss, "Your loss function must be non-negative."))
+            throw(DomainError(member.loss, "Your loss function must be non-negative. To do this, consider wrapping your loss inside an exponential, which will not affect the search (unless you are using annealing)."))
         end
         # User higher precision when finding the original loss:
         relu(x) = x < 0 ? 0 : x
