@@ -1,9 +1,21 @@
 using FromFile
 using SymbolicUtils
-using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, has_trig, polynormalize
+using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, expand, operation, arguments
 @from "Core.jl" import Options
 @from "InterfaceSymbolicUtils.jl" import SYMBOLIC_UTILS_TYPES
 @from "Utils.jl" import isgood, @return_on_false
+
+function has_trig(term)
+    !istree(term) && return false
+    fns = (sin, cos, tan, cot, sec, csc, exp)
+    op = operation(term)
+
+    if Base.@nany 7 i -> fns[i] === op
+        return true
+    else
+        return any(has_trig, arguments(term))
+    end
+end
 
 function multiply_powers(eqn::T)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {T<:Union{<:Number,SymbolicUtils.Sym{<:Number}}}
 	return eqn, true
@@ -154,8 +166,8 @@ function get_simplifier(binops::A, unaops::B) where {A,B}
     # reduce overhead of simplify by defining these as constant
     serial_simplifier = If(istree, Fixpoint(default_simplifier()))
     serial_polynormal_simplifier = If(istree,
-                                      Fixpoint(Chain((polynormalize,
-                                                      Fixpoint(default_simplifier())))))
+                                      Fixpoint(Chain((expand,
+                                      Fixpoint(default_simplifier())))))
     return serial_polynormal_simplifier
 end
 
