@@ -101,8 +101,10 @@ end
 
 
 ## Assign index to nodes of a tree
+# This will mirror a Node struct, rather
+# than adding a new attribute to Node.
 mutable struct NodeIndex
-    constant_index::Int
+    constant_index::Int  # Index of this constant (if a constant exists here)
     l::NodeIndex
     r::NodeIndex
 
