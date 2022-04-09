@@ -1,9 +1,11 @@
 using LossFunctions
 
-struct Options{A,B,C<:Union{SupervisedLoss,Function}}
+struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
 
     binops::A
     unaops::B
+    diff_binops::dA
+    diff_unaops::dB
     bin_constraints::Array{Tuple{Int,Int}, 1}
     una_constraints::Array{Int, 1}
     ns::Int
