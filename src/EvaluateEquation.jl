@@ -16,19 +16,13 @@ macro return_on_check(val, T, n)
     end)
 end
 
-macro return_on_nonfinite_array(array, T, n)
-    :(if !isfinite(sum($(esc(array)))) # Other solution. *0 because of potential for overflow.
-        return (Array{$(esc(T)), 1}(undef, $(esc(n))), false)
-    end)
-end
+# Fastest way to check for NaN in an array.
+# (due to optimizations in sum())
+is_bad_array(array) = !isfinite(sum(array))
 
-macro return_on_nonfinite_array2(array, T, n)
-    :(if !isfinite(sum($(esc(array)))) # Other solution. *0 because of potential for overflow.
-        return (
-            Array{$(esc(T)), 1}(undef, $(esc(n))),
-            Array{$(esc(T)), 1}(undef, $(esc(n))),
-            false
-        )
+macro return_on_nonfinite_array(array, T, n)
+    :(if is_bad_array($(esc(array)))
+        return (Array{$(esc(T)), 1}(undef, $(esc(n))), false)
     end)
 end
 
