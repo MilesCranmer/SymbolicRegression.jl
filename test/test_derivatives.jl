@@ -25,8 +25,8 @@ for seed=1:3
         # Define these custom functions for Node data types:
         custom_cos(x::Node)::Node = x.constant ? Node(custom_cos(x.val)::AbstractFloat) : Node(1, x)
         pow_abs(l::Node, r::Node)::Node = (l.constant && r.constant) ? Node(pow_abs(l.val, r.val)::AbstractFloat) : Node(5, l, r)
-        pow_abs(l::Node, r::AbstractFloat)::Node =        l.constant ? Node(pow_abs(l.val, r)::AbstractFloat)     : Node(5, l, r)
-        pow_abs(l::AbstractFloat, r::Node)::Node =        r.constant ? Node(pow_abs(l, r.val)::AbstractFloat)     : Node(5, l, r)
+        pow_abs(l::Node, r::AbstractFloat)::Node = l.constant ? Node(pow_abs(l.val, r)::AbstractFloat) : Node(5, l, r)
+        pow_abs(l::AbstractFloat, r::Node)::Node = r.constant ? Node(pow_abs(l, r.val)::AbstractFloat) : Node(5, l, r)
 
         # Equations to test gradients on:
         equation1(x1, x2, x3) = x1 + x2 + x3 + 3.2f0
