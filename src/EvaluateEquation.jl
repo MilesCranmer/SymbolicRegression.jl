@@ -451,8 +451,14 @@ function evalGradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options; 
     return evalGradTreeArray(tree, index_tree, cX, options, gradient_list; variable=variable)
 end
 
-
 function evalGradTreeArray(tree::Node, index_tree::NodeIndex, cX::AbstractMatrix{T}, options::Options, gradient_list::AbstractMatrix{T}; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real}
+    evaluation, gradient, complete = _evalGradTreeArray(tree, index_tree, cX, options, gradient_list; variable=variable)
+    @return_on_false2 complete evaluation gradient
+    return evaluation, gradient, !(is_bad_array(evaluation) || is_bad_array(gradient))
+end
+
+
+function _evalGradTreeArray(tree::Node, index_tree::NodeIndex, cX::AbstractMatrix{T}, options::Options, gradient_list::AbstractMatrix{T}; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real}
     if tree.degree == 0
         grad_deg0_eval(tree, index_tree, cX, options, gradient_list; variable=variable)
     elseif tree.degree == 1
@@ -487,21 +493,15 @@ function grad_deg1_eval(tree::Node, index_tree::NodeIndex, cX::AbstractMatrix{T}
 
     @inbounds @simd for j=1:n
         # TODO(miles): Do these breaks slow down the computation?
-        @skip_on_bad_value cumulator[j] cumulator[j] begin
         x = op(cumulator[j])::T
-        @skip_on_bad_value x cumulator[j] begin
         dx = diff_op(cumulator[j])
-        @skip_on_bad_value dx[1] cumulator[j] begin
 
         cumulator[j] = x 
         @inbounds @simd for k=1:size(dcumulator, 1)
-            @skip_on_bad_value dcumulator[k, j] dcumulator[k, j] begin
             dcumulator[k, j] = dx * dcumulator[k, j]
-            end
         end
-        end; end; end
     end
-    return (cumulator, dcumulator, !any(isinf, cumulator) && !any(isinf, dcumulator))
+    return (cumulator, dcumulator, true)
 end
 
 function grad_deg2_eval(tree::Node, index_tree::NodeIndex, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, gradient_list::AbstractMatrix{T}; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real,op_idx}
@@ -517,24 +517,15 @@ function grad_deg2_eval(tree::Node, index_tree::NodeIndex, cX::AbstractMatrix{T}
     diff_op = options.diff_binops[op_idx]
 
     @inbounds @simd for j=1:n
-        @skip_on_bad_value cumulator1[j] cumulator1[j] begin
-        @skip_on_bad_value cumulator2[j] cumulator1[j] begin
         x = op(cumulator1[j], cumulator2[j])
-        @skip_on_bad_value x cumulator1[j] begin
         dx = diff_op(cumulator1[j], cumulator2[j])
-        @skip_on_bad_value dx[1] cumulator1[j] begin
-        @skip_on_bad_value dx[2] cumulator1[j] begin
 
         cumulator1[j] = x
         @inbounds @simd for k=1:size(dcumulator1, 1)
-            @skip_on_bad_value dcumulator1[k, j] dcumulator1[k, j] begin
-            @skip_on_bad_value dcumulator2[k, j] dcumulator1[k, j] begin
-            derivative_part[k, j] = dx[1]*dcumulator1[k, j]+dx[2]*dcumulator2[k, j]
-            end; end
+            derivative_part[k, j] = dx[1] * dcumulator1[k, j] + dx[2] * dcumulator2[k, j]
         end
-        end; end; end; end; end
     end
-    return (cumulator1, derivative_part, !any(isinf, cumulator1) && !any(isinf, dcumulator1))
+    return (cumulator1, derivative_part, true)
 end
 
 

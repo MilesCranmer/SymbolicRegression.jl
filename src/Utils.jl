@@ -51,6 +51,7 @@ macro return_on_false(flag, retval)
     end)
 end
 
+# Returns two arrays
 macro return_on_false2(flag, retval, retval2)
     :(if !$(esc(flag))
           return ($(esc(retval)), $(esc(retval2)), false)
