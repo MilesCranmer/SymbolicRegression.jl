@@ -354,16 +354,13 @@ constant in the expression. (See `indexConstants` for how order is calculated.)
 
 # Returns
 
-- `(evaluation, derivative, complete)::Tuple{AbstractVector{T}, Bool}`: the normal evaluation,
+- `(evaluation, derivative, complete)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool}`: the normal evaluation,
     the derivative, and whether the evaluation completed as normal (or encountered a nan or inf).
 """
 function evalDiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real}
-    n = size(cX, 2)
     evaluation, derivative, complete = _evalTreeArray(tree, cX, options)
     @return_on_false2 complete evaluation derivative
-    @return_on_nonfinite_array2 evaluation T n
-    @return_on_nonfinite_array2 derivative T n
-    return evaluation, derivative, complete
+    return evaluation, derivative, !(is_bad_array(evaluation) || is_bad_array(derivative))
 end
 
 function _evalDiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real}
