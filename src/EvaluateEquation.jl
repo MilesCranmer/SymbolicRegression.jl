@@ -426,9 +426,19 @@ end
 
 
 
-################################
-### Backward derivative of a graph
-################################
+"""
+    evalGradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options; variable::Bool=false)
+
+Compute the backward gradients of an expression, using a similar
+structure and optimization to evalTreeArray. `variable` specifies whether
+we should take derivatives with respect to features (i.e., cX), or with respect
+to every constant in the expression.
+
+# Returns
+
+- `(evaluation, gradient, complete)::Tuple{AbstractVector{T}, AbstractMatrix{T}, Bool}`: the normal evaluation,
+    the gradient, and whether the evaluation completed as normal (or encountered a nan or inf).
+"""
 function evalGradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options; variable::Bool=false)::Tuple{AbstractVector{T},AbstractMatrix{T}, Bool} where {T<:Real}
     if variable
         n_variables = size(cX, 1)
