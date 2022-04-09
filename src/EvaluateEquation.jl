@@ -107,11 +107,13 @@ function deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
     @return_on_false complete2 cumulator
     @return_on_nonfinite_array array2 T n
     op = options.binops[op_idx]
+
     # We check inputs (and intermediates), not outputs.
     @inbounds @simd for j=1:n
         x = op(cumulator[j], array2[j])::T
         cumulator[j] = x
     end
+    # return (cumulator, finished_loop) #
     return (cumulator, true)
 end
 
@@ -125,7 +127,7 @@ function deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
         x = op(cumulator[j])::T
         cumulator[j] = x
     end
-    return (cumulator, true)
+    return (cumulator, true) #
 end
 
 function deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}

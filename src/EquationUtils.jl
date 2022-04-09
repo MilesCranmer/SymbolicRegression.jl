@@ -67,6 +67,7 @@ function countConstants(tree::Node)::Int
     end
 end
 
+
 # Get all the constants from a tree
 function getConstants(tree::Node)::AbstractVector{CONST_TYPE}
     if tree.degree == 0
