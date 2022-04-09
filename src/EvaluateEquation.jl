@@ -22,6 +22,16 @@ macro return_on_nonfinite_array(array, T, n)
     end)
 end
 
+macro return_on_nonfinite_array2(array, T, n)
+    :(if !isfinite(sum($(esc(array)))) # Other solution. *0 because of potential for overflow.
+        return (
+            Array{$(esc(T)), 1}(undef, $(esc(n))),
+            Array{$(esc(T)), 1}(undef, $(esc(n))),
+            false
+        )
+    end)
+end
+
 
 """
     evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)
@@ -341,11 +351,28 @@ function deg2_diff_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
     return (out, no_nans)
 end
 
-################################
-### Forward derivative of a graph
-################################
+"""
+    evalDiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)
 
+Compute the forward derivative of an expression, using a similar
+structure and optimization to evalTreeArray. `direction` is the index of a particular
+constant in the expression. (See `indexConstants` for how order is calculated.)
+
+# Returns
+
+- `(evaluation, derivative, complete)::Tuple{AbstractVector{T}, Bool}`: the normal evaluation,
+    the derivative, and whether the evaluation completed as normal (or encountered a nan or inf).
+"""
 function evalDiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real}
+    n = size(cX, 2)
+    evaluation, derivative, complete = _evalTreeArray(tree, cX, options)
+    @return_on_false2 complete evaluation derivative
+    @return_on_nonfinite_array2 evaluation T n
+    @return_on_nonfinite_array2 derivative T n
+    return evaluation, derivative, complete
+end
+
+function _evalDiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real}
     if tree.degree == 0
         diff_deg0_eval(tree, cX, options, direction)
     elseif tree.degree == 1
@@ -371,28 +398,19 @@ function diff_deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
     diff_op = options.diff_unaops[op_idx]
 
     @inbounds @simd for j=1:n
-        @skip_on_bad_value cumulator[j] cumulator[j] begin
-        @skip_on_bad_value dcumulator[j] cumulator[j] begin
-
         x = op(cumulator[j])::T
         dx = diff_op(cumulator[j])::T * dcumulator[j]
 
-        @skip_on_bad_value x cumulator[j] begin
-        @skip_on_bad_value dx cumulator[j] begin
-
         cumulator[j] = x
         dcumulator[j] = dx
-        end; end; end; end
     end
-    return (cumulator, dcumulator, !any(isinf, cumulator))
+    return (cumulator, dcumulator, true)
 end
 
 function diff_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     (cumulator, dcumulator, complete) = evalDiffTreeArray(tree.l, cX, options, direction)
-
     @return_on_false2 complete cumulator dcumulator
-
     (array2, dcumulator2, complete2) = evalDiffTreeArray(tree.r, cX, options, direction)
     @return_on_false2 complete2 array2 dcumulator2
 
@@ -400,25 +418,22 @@ function diff_deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
     diff_op = options.diff_binops[op_idx]
 
     @inbounds @simd for j=1:n
-        @skip_on_bad_value cumulator[j] cumulator[j] begin
-        @skip_on_bad_value array2[j] cumulator[j] begin
-
         x = op(cumulator[j], array2[j])
-
-        @skip_on_bad_value x cumulator[j] begin
 
         dx = dot(
                  diff_op(cumulator[j], array2[j]),
                         [dcumulator[j], dcumulator2[j]]
                 )
 
-        @skip_on_bad_value dx cumulator[j] begin
         cumulator[j] = x
         dcumulator[j] = dx
-        end; end; end; end
     end
-    return (cumulator, dcumulator, !any(isinf, cumulator))
+    return (cumulator, dcumulator, true)
 end
+
+
+
+
 
 ################################
 ### Backward derivative of a graph
