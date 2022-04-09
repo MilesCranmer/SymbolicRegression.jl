@@ -358,7 +358,7 @@ constant in the expression. (See `indexConstants` for how order is calculated.)
     the derivative, and whether the evaluation completed as normal (or encountered a nan or inf).
 """
 function evalDiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real}
-    evaluation, derivative, complete = _evalTreeArray(tree, cX, options)
+    evaluation, derivative, complete = _evalDiffTreeArray(tree, cX, options, direction)
     @return_on_false2 complete evaluation derivative
     return evaluation, derivative, !(is_bad_array(evaluation) || is_bad_array(derivative))
 end
