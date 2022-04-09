@@ -1,6 +1,7 @@
+using Random
 using FromFile
-@from "Core.jl" import Options, Dataset, RecordType
-@from "EquationUtils.jl" import stringTree, countNodes
+@from "Core.jl" import Options, Dataset, RecordType, stringTree
+@from "EquationUtils.jl" import countNodes
 @from "LossFunctions.jl" import scoreFunc
 @from "MutationFunctions.jl" import genRandomTree
 @from "PopMember.jl" import PopMember
@@ -70,30 +71,51 @@ Population(X::AbstractMatrix{T}, y::AbstractVector{T}, baseline::T;
 
 # Sample 10 random members of the population, and make a new one
 function samplePop(pop::Population, options::Options)::Population
-    idx = rand(1:pop.n, options.ns)
+    idx = randperm(pop.n)[1:options.ns]
     return Population(pop.members[idx])
 end
 
 # Sample the population, and get the best member from that sample
-function bestOfSample(pop::Population, options::Options)::PopMember
+function bestOfSample(pop::Population, frequencyComplexity::AbstractVector{T}, options::Options)::PopMember where {T<:Real}
     sample = samplePop(pop, options)
-    if options.probPickFirst == 1.0
-        best_idx = argmin([sample.members[member].score for member=1:options.ns])
-        return sample.members[best_idx]
-    else
-        sort_idx = sortperm([sample.members[member].score for member=1:options.ns])
-        # Lowest comes first
-        k = range(0.0, stop=options.ns-1, step=1.0) |> collect
-        p = options.probPickFirst
 
-        # Weighted choice:
+    if options.useFrequencyInTournament
+        # Score based on frequency of that size occuring.
+        # In the end, all sizes should be just as common in the population.
+        frequency_scaling = 20 
+        # e.g., for 100% occupied at one size, exp(-20*1) = 2.061153622438558e-9; which seems like a good punishment for dominating the population.
+
+        scores = [
+            sample.members[member].score * exp(frequency_scaling * frequencyComplexity[countNodes(sample.members[member].tree)])
+            for member=1:options.ns
+        ]
+    else
+        scores = [sample.members[member].score for member=1:options.ns]
+    end
+
+    p = options.probPickFirst
+
+    if p == 1.0
+        chosen_idx = argmin(scores)
+    else
+        sort_idx = sortperm(scores)
+        # scores[sort_idx] would put smallest first.
+
+        k = collect(0:(options.ns - 1))
         prob_each = p * (1 - p) .^ k
         prob_each /= sum(prob_each)
         cumprob = cumsum(prob_each)
-        chosen_idx = findfirst(cumprob .> rand(Float32))
-
-        return sample.members[chosen_idx]
+        raw_chosen_idx = findfirst(cumprob .> rand())
+        
+        # Sometimes, due to precision issues, we might have cumprob[end] < 1,
+        # so we must check for nothing returned:
+        if raw_chosen_idx === nothing
+            chosen_idx = sort_idx[end]
+        else
+            chosen_idx = sort_idx[raw_chosen_idx]
+        end
     end
+    return sample.members[chosen_idx]
 end
 
 function finalizeScores(dataset::Dataset{T},
@@ -102,9 +124,11 @@ function finalizeScores(dataset::Dataset{T},
     need_recalculate = options.batching
     if need_recalculate
         @inbounds @simd for member=1:pop.n
-            pop.members[member].score = scoreFunc(dataset, baseline,
-                                                  pop.members[member].tree,
-                                                  options)
+            score, loss = scoreFunc(dataset, baseline,
+                                    pop.members[member].tree,
+                                    options)
+            pop.members[member].score = score
+            pop.members[member].loss = loss
         end
     end
     return pop
@@ -119,7 +143,8 @@ end
 
 function record_population(pop::Population{T}, options::Options)::RecordType where {T<:Real}
     RecordType("population"=>[RecordType("tree"=>stringTree(member.tree, options),
-                                         "loss"=>member.score,
+                                         "loss"=>member.loss,
+                                         "score"=>member.score,
                                          "complexity"=>countNodes(member.tree),
                                          "birth"=>member.birth,
                                          "ref"=>member.ref,

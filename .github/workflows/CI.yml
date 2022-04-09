@@ -23,10 +23,12 @@ jobs:
     name: Julia ${{ matrix.julia-version }} - ${{ matrix.os }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         julia-version:
-          - '1.5'
-          - '1.6'
+          - '1.5.0'
+          - '1.6.1'
+          - '1.7.1'
         os:
           - ubuntu-latest
           - windows-latest

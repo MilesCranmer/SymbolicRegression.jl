@@ -1,3 +1,5 @@
+using FromFile
+@from "test_params.jl" import default_params
 using SymbolicRegression, SymbolicUtils, Test, Random, ForwardDiff
 using SymbolicRegression: Options, stringTree, evalTreeArray, Dataset, differentiableEvalTreeArray
 using SymbolicRegression: printTree, pow, EvalLoss, scoreFunc, Node
@@ -11,9 +13,10 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
     for binop in [sub]
 
         function make_options(;kw...)
-            Options(
+            Options(;
+                default_params...,
                 binary_operators=(+, *, ^, /, binop),
-                unary_operators=(unaop,), npopulations=4;
+                unary_operators=(unaop,), npopulations=4,
                 kw...
             )
         end
@@ -63,12 +66,15 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
             @test complete2 == true
             @test all(abs.(test_y2 .- y)/N .< zero_tolerance)
 
-            #Test Scoring
+            # Test loss:
             @test abs(EvalLoss(tree, dataset, make_options())) < zero_tolerance
-            @test abs(scoreFunc(dataset, one(T), tree, make_options(parsimony=0.0))) < zero_tolerance
-            @test scoreFunc(dataset, one(T), tree, make_options(parsimony=1.0)) > 1.0
-            @test scoreFunc(dataset, one(T), tree, make_options()) < scoreFunc(dataset, one(T), tree_bad, make_options())
-            @test scoreFunc(dataset, one(T)*10, tree_bad, make_options()) < scoreFunc(dataset, one(T), tree_bad, make_options())
+            @test EvalLoss(tree, dataset, make_options()) == scoreFunc(dataset, one(T), tree, make_options())[2]
+
+            #Test Scoring
+            @test abs(scoreFunc(dataset, one(T), tree, make_options(parsimony=0.0))[1]) < zero_tolerance
+            @test scoreFunc(dataset, one(T), tree, make_options(parsimony=1.0))[1] > 1.0
+            @test scoreFunc(dataset, one(T), tree, make_options())[1] < scoreFunc(dataset, one(T), tree_bad, make_options())[1]
+            @test scoreFunc(dataset, one(T)*10, tree_bad, make_options())[1] < scoreFunc(dataset, one(T), tree_bad, make_options())[1]
 
             # Test gradients:
             df_true = x -> ForwardDiff.derivative(f_true, x)
@@ -112,7 +118,8 @@ end
 
 # Test SymbolicUtils interface
 _inv(x) = 1/x
-options = Options(
+options = Options(;
+    default_params...,
     binary_operators=(+, *, ^, /, greater),
     unary_operators=(_inv,),
     constraints=(_inv=>4,),
@@ -141,6 +148,7 @@ testl1(x, y, w) = abs(x - y) * w
 
 for (loss, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
     local options = Options(;
+        default_params...,
         binary_operators=(+, *, -, /),
         unary_operators=(cos, exp),
         npopulations=4,
@@ -156,5 +164,155 @@ end
 # Test derivatives
 include("derivative_test.jl")
 
-# Test simplification
+# Test simplification:
 include("test_simplification.jl")
+
+# Test `print`:
+include("test_print.jl")
+
+
+# Test simple evaluations:
+options = Options(;
+    default_params...,
+    binary_operators=(+, *, /, -),
+    unary_operators=(cos, sin),
+)
+
+# Here, we unittest the fast function evaluation scheme
+# We need to trigger all possible fused functions, with all their logic.
+# These are as follows:
+
+## We fuse (and compile) the following:
+##  - op(op2(x, y)), where x, y, z are constants or variables.
+##  - op(op2(x)), where x is a constant or variable.
+##  - op(x), for any x.
+## We fuse (and compile) the following:
+##  - op(x, y), where x, y are constants or variables.
+##  - op(x, y), where x is a constant or variable but y is not.
+##  - op(x, y), where y is a constant or variable but x is not.
+##  - op(x, y), for any x or y
+for fnc in [
+        # deg2_l0_r0_eval
+        (x1, x2, x3) -> x1 * x2,
+        (x1, x2, x3) -> x1 * 3f0,
+        (x1, x2, x3) -> 3f0 * x2,
+        (((x1, x2, x3) -> 3f0 * 6f0), ((x1, x2, x3) -> Node(3f0) * 6f0)),
+        # deg2_l0_eval
+        (x1, x2, x3) -> x1 * sin(x2),
+        (x1, x2, x3) -> 3f0 * sin(x2),
+
+        # deg2_r0_eval
+        (x1, x2, x3) -> sin(x1) * x2,
+        (x1, x2, x3) -> sin(x1) * 3f0,
+
+        # deg1_l2_ll0_lr0_eval
+        (x1, x2, x3) -> cos(x1 * x2),
+        (x1, x2, x3) -> cos(x1 * 3f0),
+        (x1, x2, x3) -> cos(3f0 * x2),
+        (((x1, x2, x3) -> cos(3f0 * -0.5f0)), ((x1, x2, x3) -> cos(Node(3f0) * -0.5f0))),
+
+        # deg1_l1_ll0_eval
+        (x1, x2, x3) -> cos(sin(x1)),
+        (((x1, x2, x3) -> cos(sin(3f0))), ((x1, x2, x3) -> cos(sin(Node(3f0))))),
+
+        # everything else:
+        (x1, x2, x3) -> (sin(cos(sin(cos(x1) * x3) * 3f0) * -0.5f0) + 2f0) * 5f0,
+    ]
+
+    # check if fnc is tuple
+    if typeof(fnc) <: Tuple
+        realfnc = fnc[1]
+        nodefnc = fnc[2]
+    else
+        realfnc = fnc
+        nodefnc = fnc
+    end
+
+    global tree = nodefnc(Node("x1"), Node("x2"), Node("x3"))
+
+    N = 100
+    nfeatures = 3
+    X = randn(MersenneTwister(0), Float32, nfeatures, N)
+    
+    test_y = evalTreeArray(tree, X, options)[1]
+    true_y = realfnc.(X[1, :], X[2, :], X[3, :])
+
+    zero_tolerance = 1e-6
+    @test all(abs.(test_y .- true_y)/N .< zero_tolerance)
+end
+
+
+println("Testing whether probPickFirst works.")
+include("test_prob_pick_first.jl")
+println("Passed.")
+
+println("Testing crossover function.")
+using SymbolicRegression
+using Test
+using SymbolicRegression: crossoverTrees
+options = SymbolicRegression.Options(;
+    default_params...,
+    binary_operators = (+, *, /, -),
+    unary_operators = (cos, exp),
+    npopulations = 8
+)
+tree1 = cos(Node("x1")) + (3f0 + Node("x2"))
+tree2 = exp(Node("x1") - Node("x2") * Node("x2")) + 10f0 * Node("x3")
+
+# See if we can observe operators flipping sides:
+cos_flip_to_tree2 = false
+exp_flip_to_tree1 = false
+swapped_cos_with_exp = false
+for i=1:1000
+    child_tree1, child_tree2 = crossoverTrees(tree1, tree2)
+    if occursin("cos", repr(child_tree2))
+        # Moved cosine to tree2
+        global cos_flip_to_tree2 = true
+    end
+    if occursin("exp", repr(child_tree1))
+        # Moved exp to tree1
+        global exp_flip_to_tree1 = true
+    end
+    if occursin("cos", repr(child_tree2)) && occursin("exp", repr(child_tree1))
+        global swapped_cos_with_exp = true
+        # Moved exp with cos
+        @assert !occursin("cos", repr(child_tree1))
+        @assert !occursin("exp", repr(child_tree2))
+    end
+    
+    # Check that exact same operators, variables, numbers before and after:
+    rep_tree_final = sort([a for a in repr(child_tree1) * repr(child_tree2)])
+    rep_tree_final = strip(String(rep_tree_final), ['(', ')', ' '])
+    rep_tree_initial = sort([a for a in repr(tree1) * repr(tree2)])
+    rep_tree_initial = strip(String(rep_tree_initial), ['(', ')', ' '])
+    @test rep_tree_final == rep_tree_initial
+end
+
+@test cos_flip_to_tree2
+@test exp_flip_to_tree1
+@test swapped_cos_with_exp
+println("Passed.")
+
+
+println("Testing NaN detection.")
+
+# Creating a NaN via computation.
+tree = cos(exp(exp(exp(exp(Node("x1"))))))
+X = randn(MersenneTwister(0), Float32, 1, 100) * 100f0
+output, flag = evalTreeArray(tree, X, options)
+@test !flag
+
+# Creating a NaN/Inf via division by constant zero.
+tree = cos(Node("x1") / 0f0)
+output, flag = evalTreeArray(tree, X, options)
+@test !flag
+
+# Having a NaN/Inf constants:
+tree = cos(Node("x1") + Inf)
+output, flag = evalTreeArray(tree, X, options)
+@test !flag
+tree = cos(Node("x1") + NaN)
+output, flag = evalTreeArray(tree, X, options)
+@test !flag
+
+println("Passed.")
