@@ -162,7 +162,7 @@ for (loss, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
 end
 
 # Test derivatives
-include("derivative_test.jl")
+include("test_derivatives.jl")
 
 # Test simplification:
 include("test_simplification.jl")
