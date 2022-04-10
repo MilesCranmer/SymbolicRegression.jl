@@ -16,13 +16,18 @@ function optFunc(x::Vector{CONST_TYPE}, dataset::Dataset{T},
     return loss
 end
 
-function doptFunc!(gradient::Vector{CONST_TYPE},
+function doptFunc!(function_eval::F, gradient::G,
                    x::Vector{CONST_TYPE}, dataset::Dataset{T},
-                   tree::Node, options::Options) where {T<:Real}
+                   tree::Node, options::Options) where {F,G,T<:Real}
     setConstants(tree, x)
     # loss = EvalLoss(tree, dataset, options)
-    dloss_dconstants = dEvalLoss(tree, dataset, options)
-    copyto!(gradient, dloss_dconstants)  # = dloss_dconstants
+    loss, dloss_dconstants = dEvalLoss(tree, dataset, options)
+    if gradient !== nothing
+        copyto!(gradient, dloss_dconstants)
+    end
+    if function_eval !== nothing
+        return loss
+    end
 end
 
 # Use Nelder-Mead to optimize the constants in an equation
@@ -37,7 +42,7 @@ function optimizeConstants(dataset::Dataset{T},
     x0 = getConstants(member.tree)
 
     f(x::Vector{CONST_TYPE})::T = optFunc(x, dataset, member.tree, options)
-    df!(gradient::Vector{CONST_TYPE}, x::Vector{CONST_TYPE}) = doptFunc!(gradient, x, dataset, member.tree, options)
+    fg!(function_eval, gradient, x::Vector{CONST_TYPE}) = doptFunc!(function_eval, gradient, x, dataset, member.tree, options)
 
     if nconst == 1
         algorithm = Optim.Newton(linesearch=LineSearches.BackTracking())
@@ -52,7 +57,9 @@ function optimizeConstants(dataset::Dataset{T},
     end
 
     get_result(init_x) = if options.enable_autodiff
-        Optim.optimize(f, df!, init_x, algorithm, Optim.Options(iterations=options.optimizer_iterations))
+        Optim.optimize(Optim.only_fg!(fg!), init_x, algorithm, Optim.Options(iterations=options.optimizer_iterations))
+        # The Optim.only_fg! allows use of both function eval and gradient in one go:
+        # https://julianlsolvers.github.io/Optim.jl/stable/#user/tipsandtricks/#avoid-repeating-computations
     else
         Optim.optimize(f, init_x, algorithm, Optim.Options(iterations=options.optimizer_iterations))
     end

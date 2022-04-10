@@ -41,24 +41,24 @@ function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options)::T where {T
 end
 
 # Gradients with respect to constants::
-function dEvalLoss(tree::Node, dataset::Dataset{T}, options::Options{A,B,dA,dB,C})::AbstractVector{T} where {T<:Real,A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
+function dEvalLoss(tree::Node, dataset::Dataset{T}, options::Options{A,B,dA,dB,C})::Tuple{T,AbstractVector{T}} where {T<:Real,A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
     prediction, dprediction_dconstants, completion = evalGradTreeArray(tree, dataset.X, options)
     # prediction: [nrows]
     # dprediction_dconstants: [nconstants, nrows]
     if !completion
-        return fill(T(0), size(dprediction_dconstants, 1))
+        return T(1000000000), fill(T(0), size(dprediction_dconstants, 1))
     end
 
-    dloss_dprediction = if dataset.weighted
-        gradient((x) -> Loss(x, dataset.y, dataset.weights, options), prediction)[1]
+    loss, dloss_dprediction = if dataset.weighted
+        Loss(prediction, dataset.y, dataset.weights, options), gradient((x) -> Loss(x, dataset.y, dataset.weights, options), prediction)[1]
     else
-        gradient((x) -> Loss(x, dataset.y, options), prediction)[1]
+        Loss(prediction, dataset.y, options), gradient((x) -> Loss(x, dataset.y, options), prediction)[1]
     end
     # dloss_dprediction: [nrows]
 
     dloss_dconstants = dprediction_dconstants * dloss_dprediction
     # dloss_dconstants: [nconstants]
-    return dloss_dconstants
+    return loss, dloss_dconstants
 end
 
 
