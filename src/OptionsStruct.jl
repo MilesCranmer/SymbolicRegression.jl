@@ -53,5 +53,6 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
     use_symbolic_utils::Bool
     timeout_in_seconds::Union{Float64, Nothing}
     skip_mutation_failures::Bool
+    enable_autodiff::Bool
 
 end
