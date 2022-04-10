@@ -53,3 +53,31 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     skip_mutation_failures::Bool
 
 end
+
+Base.print(io::IO, options::Options) = print(io, """Options(
+# Operators:
+    binops=$(options.binops), unaops=$(options.unaops),
+# Loss:
+    loss=$(options.loss),
+# Complexity Management:
+    bin_constraints=$(options.bin_constraints), una_constraints=$(options.una_constraints), maxsize=$(options.maxsize), maxdepth=$(options.maxdepth), useFrequency=$(options.useFrequency), useFrequencyInTournament=$(options.useFrequencyInTournament), parsimony=$(options.parsimony), warmupMaxsizeBy=$(options.warmupMaxsizeBy), 
+# Search Size:
+    npopulations=$(options.npopulations), ncyclesperiteration=$(options.ncyclesperiteration), npop=$(options.npop), 
+# Migration:
+    migration=$(options.migration), hofMigration=$(options.hofMigration), fractionReplaced=$(options.fractionReplaced), fractionReplacedHof=$(options.fractionReplacedHof),
+# Tournaments:
+    probPickFirst=$(options.probPickFirst), ns=$(options.ns), topn=$(options.topn), 
+# Constant tuning:
+    perturbationFactor=$(options.perturbationFactor), probNegate=$(options.probNegate), shouldOptimizeConstants=$(options.shouldOptimizeConstants), optimizer_algorithm=$(options.optimizer_algorithm), optimize_probability=$(options.optimize_probability), optimizer_nrestarts=$(options.optimizer_nrestarts), optimizer_iterations=$(options.optimizer_iterations),
+# Mutations:
+    mutationWeights=$(options.mutationWeights), crossoverProbability=$(options.crossoverProbability), skip_mutation_failures=$(options.skip_mutation_failures)
+# Annealing:
+    annealing=$(options.annealing), alpha=$(options.alpha), 
+# Speed Tweaks:
+    batching=$(options.batching), batchSize=$(options.batchSize), fast_cycle=$(options.fast_cycle), 
+# Logistics:
+    hofFile=$(options.hofFile), verbosity=$(options.verbosity), seed=$(options.seed), progress=$(options.progress), use_symbolic_utils=$(options.use_symbolic_utils),
+# Early Exit:
+    earlyStopCondition=$(options.earlyStopCondition), timeout_in_seconds=$(options.timeout_in_seconds),
+)""")
+Base.show(io::IO, options::Options) = Base.print(io, options)
