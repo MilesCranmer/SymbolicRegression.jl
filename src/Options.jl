@@ -1,7 +1,7 @@
 using FromFile
 using Distributed
 using LossFunctions
-using Zygote
+using Zygote: gradient
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
