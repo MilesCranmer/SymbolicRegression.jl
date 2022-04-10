@@ -1,11 +1,15 @@
 using FromFile
 using Random: randperm
 using LossFunctions
+using Zygote: gradient
 @from "Core.jl" import Options, Dataset, Node
 @from "EquationUtils.jl" import countNodes
-@from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
+@from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray, evalGradTreeArray
 
 
+###############################################################################
+# x is prediction, y is target. ###############################################
+###############################################################################
 function Loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C})::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss}
     value(options.loss, y, x, AggMode.Mean())
 end
@@ -34,6 +38,28 @@ function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options)::T where {T
         return Loss(prediction, dataset.y, options)
     end
 end
+
+# Gradients with respect to constants::
+function dEvalLoss(tree::Node, dataset::Dataset{T}, options::Options{A,B,dA,dB,C})::AbstractVector{T} where {T<:Real,A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
+    prediction, dprediction_dconstants, completion = evalGradTreeArray(tree, dataset.X, options)
+    # prediction: [nrows]
+    # dprediction_dconstants: [nconstants, nrows]
+    if !completion
+        return T(1000000000), fill(T(0), size(dprediction_dconstants, 1))
+    end
+
+    dloss_dprediction = if dataset.weighted
+        gradient((x) -> Loss(x, dataset.y, dataset.weights, options), prediction)[1]
+    else
+        gradient((x) -> Loss(x, dataset.y, options), prediction)[1]
+    end
+    # dloss_dprediction: [nrows]
+
+    dloss_dconstants = dprediction_dconstants * dloss_dprediction
+    # dloss_dconstants: [nconstants]
+    return dloss_dconstants
+end
+
 
 # Compute a score which includes a complexity penalty in the loss
 function lossToScore(loss::T, baseline::T, tree::Node, options::Options)::T where {T<:Real}
