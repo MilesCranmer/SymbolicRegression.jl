@@ -17,6 +17,7 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
                 default_params...,
                 binary_operators=(+, *, ^, /, binop),
                 unary_operators=(unaop,), npopulations=4,
+                verbosity = (unaop == gamma) ? 0 : Int(1e9),
                 kw...
             )
         end

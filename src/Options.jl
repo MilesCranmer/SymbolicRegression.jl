@@ -359,7 +359,9 @@ function Options(;
             # it is defined in Base.
             push!(diff_unary_operators, cos)
             if enable_autodiff
-                @warn "Automatic differentiation has been turned off, since operator $(op) does not have well-defined gradients."
+                if verbosity > 0
+                    @warn "Automatic differentiation has been turned off, since operator $(op) does not have well-defined gradients."
+                end
                 enable_autodiff = false
             end
         end
