@@ -60,7 +60,7 @@ Base.print(io::IO, options::Options) = print(io, """Options(
 # Loss:
     loss=$(options.loss),
 # Complexity Management:
-    bin_constraints=$(options.bin_constraints), una_constraints=$(options.una_constraints), maxsize=$(options.maxsize), maxdepth=$(options.maxdepth), useFrequency=$(options.useFrequency), useFrequencyInTournament=$(options.useFrequencyInTournament), parsimony=$(options.parsimony), warmupMaxsizeBy=$(options.warmupMaxsizeBy), 
+    maxsize=$(options.maxsize), maxdepth=$(options.maxdepth), bin_constraints=$(options.bin_constraints), una_constraints=$(options.una_constraints), useFrequency=$(options.useFrequency), useFrequencyInTournament=$(options.useFrequencyInTournament), parsimony=$(options.parsimony), warmupMaxsizeBy=$(options.warmupMaxsizeBy), 
 # Search Size:
     npopulations=$(options.npopulations), ncyclesperiteration=$(options.ncyclesperiteration), npop=$(options.npop), 
 # Migration:
