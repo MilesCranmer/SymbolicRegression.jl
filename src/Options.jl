@@ -1,6 +1,7 @@
 using FromFile
 using Distributed
 using LossFunctions
+using Zygote: gradient
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
@@ -221,6 +222,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `timeout_in_seconds`: Float64 - the time in seconds after which to exit (as an alternative to the number of iterations).
 - `skip_mutation_failures`: Whether to simply skip over mutations that fail or are rejected, rather than to replace the mutated
     expression with the original expression and proceed normally.
+- `enable_autodiff`: Whether to enable automatic differentiation functionality. This will be turned on by default,
+    but turn off if any operator does not have well-defined gradients.
 """
 function Options(;
     binary_operators::NTuple{nbin, Any}=(+, -, /, *),
@@ -272,6 +275,7 @@ function Options(;
     use_symbolic_utils::Bool=false,
     timeout_in_seconds=nothing,
     skip_mutation_failures::Bool=true,
+    enable_autodiff::Bool=true,
    ) where {nuna,nbin}
 
     if warmupMaxsize !== nothing
@@ -318,6 +322,52 @@ function Options(;
     binary_operators = map(binopmap, binary_operators)
     unary_operators = map(unaopmap, unary_operators)
 
+    diff_binary_operators = Any[]
+    diff_unary_operators = Any[]
+
+    test_inputs = map(x->convert(Float32, x), LinRange(-100, 100, 99))
+    # Create grid over [-100, 100]^2:
+    test_inputs_xy = reduce(hcat, reduce(hcat, (
+        [[[x, y] for x ∈ test_inputs] for y ∈ test_inputs]
+    )))
+    for op in binary_operators
+        diff_op(x, y) = gradient(op, x, y)
+        
+        test_output = diff_op.(test_inputs_xy[1, :], test_inputs_xy[2, :])
+        gradient_exists = all((x) -> x!==nothing, Iterators.flatten(test_output))
+        if gradient_exists
+            push!(diff_binary_operators, diff_op)
+        else
+            # Add a dummy gradient function; we choose plus since
+            # it is defined in Base.
+            push!(diff_binary_operators, plus)
+            if enable_autodiff
+                @warn "Automatic differentiation has been turned off, since operator $(op) does not have well-defined gradients."
+                enable_autodiff = false
+            end
+        end
+    end
+
+    for op in unary_operators
+        diff_op(x) = gradient(op, x)[1]
+        test_output = diff_op.(test_inputs)
+        gradient_exists = all((x) -> x!==nothing, test_output)
+        if gradient_exists
+            push!(diff_unary_operators, diff_op)
+        else
+            # Add a dummy gradient function; we choose cos since
+            # it is defined in Base.
+            push!(diff_unary_operators, cos)
+            if enable_autodiff
+                @warn "Automatic differentiation has been turned off, since operator $(op) does not have well-defined gradients."
+                enable_autodiff = false
+            end
+        end
+    end
+
+    diff_binary_operators = Tuple(diff_binary_operators)
+    diff_unary_operators = Tuple(diff_unary_operators)
+
     mutationWeights = map((x,)->convert(Float64, x), mutationWeights)
     if length(mutationWeights) != 8
         error("Not the right number of mutation probabilities given")
@@ -361,7 +411,7 @@ function Options(;
         earlyStopCondition = (loss, complexity) -> loss < earlyStopCondition
     end
 
-    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(loss)}(binary_operators, unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, crossoverProbability, warmupMaxsizeBy, useFrequency, useFrequencyInTournament, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition, stateReturn, use_symbolic_utils, timeout_in_seconds, skip_mutation_failures)
+    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(diff_binary_operators), typeof(diff_unary_operators), typeof(loss)}(binary_operators, unary_operators, diff_binary_operators, diff_unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, crossoverProbability, warmupMaxsizeBy, useFrequency, useFrequencyInTournament, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition, stateReturn, use_symbolic_utils, timeout_in_seconds, skip_mutation_failures, enable_autodiff)
 
     @eval begin
         Base.print(io::IO, tree::Node) = print(io, stringTree(tree, $options))
