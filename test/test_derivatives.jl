@@ -38,6 +38,8 @@ for seed=1:3
         nx3 = Node("x3")
 
         function array_test(ar1, ar2; rtol=1e-4)
+            ar1 = Float64.(ar1)
+            ar2 = Float64.(ar2)
             all(abs.(ar1 .- ar2) ./ (1e-4 .+ abs.(ar1) .+ abs.(ar2)) .< rtol)
         end
 
@@ -49,7 +51,7 @@ for seed=1:3
             true_output = equation.([X[i, :] for i=1:nfeatures]...)
 
             # First, check if the predictions are approximately equal:
-            rtol = j == 3 ? 1e-1 : 1e-4  # Last equation is hard to get perfect equality
+            rtol = j == 3 ? 0.2 : 1e-3  # Last equation is hard to get perfect equality
             @test array_test(predicted_output, true_output; rtol=rtol)
 
             true_grad = gradient((x1, x2, x3) -> sum(equation.(x1, x2, x3)), [X[i, :] for i=1:nfeatures]...)
