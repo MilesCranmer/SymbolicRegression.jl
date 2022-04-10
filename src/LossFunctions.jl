@@ -22,13 +22,8 @@ end
 
 # Loss function. Only MSE implemented right now. TODO
 # Also need to put actual loss function in scoreFuncBatch!
-function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options;
-                  allow_diff=false)::T where {T<:Real}
-    if !allow_diff
-        (prediction, completion) = evalTreeArray(tree, dataset.X, options)
-    else
-        (prediction, completion) = differentiableEvalTreeArray(tree, dataset.X, options)
-    end
+function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options)::T where {T<:Real}
+    (prediction, completion) = evalTreeArray(tree, dataset.X, options)
     if !completion
         return T(1000000000)
     end
@@ -52,8 +47,8 @@ end
 # Score an equation
 function scoreFunc(dataset::Dataset{T},
                    baseline::T, tree::Node,
-                   options::Options; allow_diff=false)::Tuple{T,T} where {T<:Real}
-    loss = EvalLoss(tree, dataset, options; allow_diff=allow_diff)
+                   options::Options)::Tuple{T,T} where {T<:Real}
+    loss = EvalLoss(tree, dataset, options)
     score = lossToScore(loss, baseline, tree, options)
     return score, loss
 end
