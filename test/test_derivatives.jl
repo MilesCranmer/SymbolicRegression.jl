@@ -24,6 +24,15 @@ nx1 = Node("x1")
 nx2 = Node("x2")
 nx3 = Node("x3")
 
+# Equations to test gradients on:
+
+default_zero_point = 0.1
+
+function array_test(ar1, ar2; rtol=1e-4, zero_point=default_zero_point)
+    ar1 = Float64.(ar1)
+    ar2 = Float64.(ar2)
+    all(abs.(ar1 .- ar2) ./ (zero_point .+ abs.(ar1) .+ abs.(ar2)) .< rtol)
+end
 
 for type ∈ [Float32, Float64]
     println("Testing derivatives with respect to variables, with type=$(type).")
@@ -39,15 +48,6 @@ for type ∈ [Float32, Float64]
     )
 
 
-    # Equations to test gradients on:
-
-    default_zero_point = 1e-2
-
-    function array_test(ar1, ar2; rtol=1e-4, zero_point=default_zero_point)
-        ar1 = Float64.(ar1)
-        ar2 = Float64.(ar2)
-        all(abs.(ar1 .- ar2) ./ (zero_point .+ abs.(ar1) .+ abs.(ar2)) .< rtol)
-    end
 
     for j=1:3
         equation = [equation1, equation2, equation3][j]
@@ -57,7 +57,7 @@ for type ∈ [Float32, Float64]
         true_output = equation.([X[i, :] for i=1:nfeatures]...)
 
         # First, check if the predictions are approximately equal:
-        rtol = j == 3 ? 0.5 : 1e-3  # Last equation is hard to get perfect.
+        rtol = j == 3 ? 0.5 : 1e-2  # Last equation is hard to get perfect.
         @test array_test(predicted_output, true_output; rtol=rtol)
 
         true_grad = gradient((x1, x2, x3) -> sum(equation.(x1, x2, x3)), [X[i, :] for i=1:nfeatures]...)
@@ -81,7 +81,7 @@ for type ∈ [Float32, Float64]
     # The gradient should be: (C * x1) => x1 is gradient with respect to C.
     tree = equation4(nx1, nx2, nx3)
     predicted_grad = evalGradTreeArray(tree, X, options; variable=false)[2]
-    @test array_test(predicted_grad[1, :], X[1, :])
+    @test array_test(predicted_grad[1, :], X[1, :]; rtol=1e-3)
 
 
     # More complex expression:
@@ -101,7 +101,7 @@ for type ∈ [Float32, Float64]
     true_grad = reduce(hcat, true_grad)'
     predicted_grad = evalGradTreeArray(tree, X, options; variable=false)[2]
 
-    @test array_test(predicted_grad, true_grad)
+    @test array_test(predicted_grad, true_grad; rtol=1e-3)
     println("Done.")
 end
 
