@@ -11,7 +11,8 @@ import Optim
 function optFunc(x::Vector{CONST_TYPE}, dataset::Dataset{T}, baseline::T,
                  tree::Node, options::Options)::T where {T<:Real}
     setConstants(tree, x)
-    loss = scoreFunc(dataset, baseline, tree, options)[2]
+    # TODO(mcranmer): This should use scoreFunc batching.
+    loss = EvalLoss(tree, dataset, options)
     return loss
 end
 
