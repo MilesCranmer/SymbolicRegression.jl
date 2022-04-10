@@ -4,16 +4,25 @@ import Optim
 @from "Core.jl" import CONST_TYPE, Node, Options, Dataset
 @from "Utils.jl" import getTime
 @from "EquationUtils.jl" import getConstants, setConstants, countConstants
-@from "LossFunctions.jl" import scoreFunc, EvalLoss
+@from "LossFunctions.jl" import scoreFunc, EvalLoss, dEvalLoss
 @from "PopMember.jl" import PopMember
 
 # Proxy function for optimization
-function optFunc(x::Vector{CONST_TYPE}, dataset::Dataset{T}, baseline::T,
+function optFunc(x::Vector{CONST_TYPE}, dataset::Dataset{T},
                  tree::Node, options::Options)::T where {T<:Real}
     setConstants(tree, x)
     # TODO(mcranmer): This should use scoreFunc batching.
     loss = EvalLoss(tree, dataset, options)
     return loss
+end
+
+function doptFunc!(gradient::Vector{CONST_TYPE},
+                   x::Vector{CONST_TYPE}, dataset::Dataset{T},
+                   tree::Node, options::Options) where {T<:Real}
+    setConstants(tree, x)
+    # loss = EvalLoss(tree, dataset, options)
+    dloss_dconstants = dEvalLoss(tree, dataset, options)
+    copyto!(gradient, dloss_dconstants)  # = dloss_dconstants
 end
 
 # Use Nelder-Mead to optimize the constants in an equation
@@ -26,7 +35,10 @@ function optimizeConstants(dataset::Dataset{T},
         return member
     end
     x0 = getConstants(member.tree)
-    f(x::Vector{CONST_TYPE})::T = optFunc(x, dataset, baseline, member.tree, options)
+
+    f(x::Vector{CONST_TYPE})::T = optFunc(x, dataset, member.tree, options)
+    df!(gradient::Vector{CONST_TYPE}, x::Vector{CONST_TYPE}) = doptFunc!(gradient, x, dataset, member.tree, options)
+
     if nconst == 1
         algorithm = Optim.Newton(linesearch=LineSearches.BackTracking())
     else
@@ -38,11 +50,18 @@ function optimizeConstants(dataset::Dataset{T},
             error("Optimization function not implemented.")
         end
     end
-    result = Optim.optimize(f, x0, algorithm, Optim.Options(iterations=options.optimizer_iterations))
+
+    get_result(init_x) = if options.enable_autodiff
+        Optim.optimize(f, df!, init_x, algorithm, Optim.Options(iterations=options.optimizer_iterations))
+    else
+        Optim.optimize(f, init_x, algorithm, Optim.Options(iterations=options.optimizer_iterations))
+    end
+
+    result = get_result(x0)
     # Try other initial conditions:
     for i=1:options.optimizer_nrestarts
         new_start = x0 .* (convert(CONST_TYPE, 1) .+ convert(CONST_TYPE, 1//2)*randn(CONST_TYPE, size(x0, 1)))
-        tmpresult = Optim.optimize(f, new_start, algorithm, Optim.Options(iterations=options.optimizer_iterations))
+        tmpresult = get_result(new_start)
 
         if tmpresult.minimum < result.minimum
             result = tmpresult

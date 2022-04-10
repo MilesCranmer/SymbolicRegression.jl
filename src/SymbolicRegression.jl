@@ -19,6 +19,8 @@ export Population,
     evalDiffTreeArray,
     evalGradTreeArray,
     differentiableEvalTreeArray,
+    EvalLoss,
+    dEvalLoss,
     node_to_symbolic,
     symbolic_to_node,
     custom_simplify,
@@ -69,7 +71,7 @@ using Reexport
 @from "EvaluateEquationDerivative.jl" import evalDiffTreeArray, evalGradTreeArray
 @from "CheckConstraints.jl" import check_constraints
 @from "MutationFunctions.jl" import genRandomTree, genRandomTreeFixedSize, randomNode, randomNodeAndParent, crossoverTrees
-@from "LossFunctions.jl" import EvalLoss, Loss, scoreFunc
+@from "LossFunctions.jl" import EvalLoss, dEvalLoss, Loss, scoreFunc
 @from "PopMember.jl" import PopMember, copyPopMember
 @from "Population.jl" import Population, bestSubPop, record_population, bestOfSample
 @from "HallOfFame.jl" import HallOfFame, calculateParetoFrontier, string_dominating_pareto_curve

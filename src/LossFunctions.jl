@@ -45,7 +45,7 @@ function dEvalLoss(tree::Node, dataset::Dataset{T}, options::Options{A,B,dA,dB,C
     # prediction: [nrows]
     # dprediction_dconstants: [nconstants, nrows]
     if !completion
-        return T(1000000000), fill(T(0), size(dprediction_dconstants, 1))
+        return fill(T(0), size(dprediction_dconstants, 1))
     end
 
     dloss_dprediction = if dataset.weighted
