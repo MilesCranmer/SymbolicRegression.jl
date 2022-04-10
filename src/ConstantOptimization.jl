@@ -4,7 +4,7 @@ import Optim
 @from "Core.jl" import CONST_TYPE, Node, Options, Dataset
 @from "Utils.jl" import getTime
 @from "EquationUtils.jl" import getConstants, setConstants, countConstants
-@from "LossFunctions.jl" import scoreFunc
+@from "LossFunctions.jl" import scoreFunc, EvalLoss
 @from "PopMember.jl" import PopMember
 
 # Proxy function for optimization
