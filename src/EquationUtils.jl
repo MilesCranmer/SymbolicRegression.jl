@@ -111,6 +111,10 @@ mutable struct NodeIndex
     NodeIndex() = new()
 end
 
+function indexConstants(tree::Node)::NodeIndex
+    indexConstants(tree, 0)
+end
+
 function indexConstants(tree::Node, left_index::Int)::NodeIndex
     index_tree = NodeIndex()
     indexConstants(tree, index_tree, left_index)

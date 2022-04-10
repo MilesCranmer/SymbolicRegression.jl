@@ -7,36 +7,39 @@ using LinearAlgebra
 
 
 seed = 0
+pow_abs(x::T, y::T) where {T<:Real} = abs(x) ^ y
+custom_cos(x::T) where {T<:Real} = cos(x)^2
+
+# Define these custom functions for Node data types:
+pow_abs(l::Node, r::Node)::Node = (l.constant && r.constant) ? Node(pow_abs(l.val, r.val)::AbstractFloat) : Node(5, l, r)
+pow_abs(l::Node, r::AbstractFloat)::Node = l.constant ? Node(pow_abs(l.val, r)::AbstractFloat) : Node(5, l, r)
+pow_abs(l::AbstractFloat, r::Node)::Node = r.constant ? Node(pow_abs(l, r.val)::AbstractFloat) : Node(5, l, r)
+custom_cos(x::Node)::Node = x.constant ? Node(custom_cos(x.val)::AbstractFloat) : Node(1, x)
+
+equation1(x1, x2, x3) = x1 + x2 + x3 + 3.2f0
+equation2(x1, x2, x3) = pow_abs(x1, x2) + x3 + custom_cos(1f0 + x3) + 3f0 / x1
+equation3(x1, x2, x3) = (((x2 + x2) * ((-0.5982493 / pow_abs(x1, x2)) / -0.54734415)) + (sin(custom_cos(sin(1.2926733 - 1.6606787) / sin(((0.14577048 * x1) + ((0.111149654 + x1) - -0.8298334)) - -1.2071426)) * (custom_cos(x3 - 2.3201916) + ((x1 - (x1 * x2)) / x2))) / (0.14854191 - ((custom_cos(x2) * -1.6047639) - 0.023943262))))
+
+nx1 = Node("x1")
+nx2 = Node("x2")
+nx3 = Node("x3")
+
 
 for type ∈ [Float32, Float64]
+    println("Testing derivatives with respect to variables, with type=$(type).")
     rng = MersenneTwister(seed)
     nfeatures = 3
     N = 100
 
     X = rand(rng, type, nfeatures, N) * 10
 
-    pow_abs(x::T, y::T) where {T<:Real} = abs(x) ^ y
-    custom_cos(x::T) where {T<:Real} = cos(x)^2
-
     options = Options(;
         binary_operators=(+, *, -, /, pow_abs),
         unary_operators=(custom_cos, exp, sin),
     )
 
-    # Define these custom functions for Node data types:
-    custom_cos(x::Node)::Node = x.constant ? Node(custom_cos(x.val)::AbstractFloat) : Node(1, x)
-    pow_abs(l::Node, r::Node)::Node = (l.constant && r.constant) ? Node(pow_abs(l.val, r.val)::AbstractFloat) : Node(5, l, r)
-    pow_abs(l::Node, r::AbstractFloat)::Node = l.constant ? Node(pow_abs(l.val, r)::AbstractFloat) : Node(5, l, r)
-    pow_abs(l::AbstractFloat, r::Node)::Node = r.constant ? Node(pow_abs(l, r.val)::AbstractFloat) : Node(5, l, r)
 
     # Equations to test gradients on:
-    equation1(x1, x2, x3) = x1 + x2 + x3 + 3.2f0
-    equation2(x1, x2, x3) = pow_abs(x1, x2) + x3 + custom_cos(1f0 + x3) + 3f0 / x1
-    equation3(x1, x2, x3) = (((x2 + x2) * ((-0.5982493 / pow_abs(x1, x2)) / -0.54734415)) + (sin(custom_cos(sin(1.2926733 - 1.6606787) / sin(((0.14577048 * x1) + ((0.111149654 + x1) - -0.8298334)) - -1.2071426)) * (custom_cos(x3 - 2.3201916) + ((x1 - (x1 * x2)) / x2))) / (0.14854191 - ((custom_cos(x2) * -1.6047639) - 0.023943262))))
-
-    nx1 = Node("x1")
-    nx2 = Node("x2")
-    nx3 = Node("x3")
 
     default_zero_point = 1e-2
 
@@ -70,6 +73,8 @@ for type ∈ [Float32, Float64]
         @test array_test(predicted_grad2, true_grad; rtol=rtol)
 
     end
+    println("Done.")
+    println("Testing derivatives with respect to constants, with type=$(type).")
 
     # Test gradient with respect to constants:
     equation4(x1, x2, x3) = 3.2f0 * x1
@@ -97,4 +102,31 @@ for type ∈ [Float32, Float64]
     predicted_grad = evalGradTreeArray(tree, X, options; variable=false)[2]
 
     @test array_test(predicted_grad, true_grad)
+    println("Done.")
 end
+
+
+println("Testing NodeIndex.")
+
+import SymbolicRegression: getConstants, NodeIndex, indexConstants
+
+options = Options(;
+    binary_operators=(+, *, -, /, pow_abs),
+    unary_operators=(custom_cos, exp, sin),
+)
+tree = equation3(nx1, nx2, nx3)
+
+"""Check whether the ordering of constant_list is the same as the ordering of node_index."""
+function check_tree(tree::Node, node_index::NodeIndex, constant_list::AbstractVector)
+    if tree.degree == 0
+        (!tree.constant) || tree.val == constant_list[node_index.constant_index]
+    elseif tree.degree == 1
+        check_tree(tree.l, node_index.l, constant_list)
+    else
+        check_tree(tree.l, node_index.l, constant_list) && check_tree(tree.r, node_index.r, constant_list)
+    end
+end
+
+@test check_tree(tree, indexConstants(tree), getConstants(tree))
+
+println("Done.")
