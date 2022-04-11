@@ -4,7 +4,8 @@ using LossFunctions
 using Zygote: gradient
 @from "Core.jl" import Options, Dataset, Node
 @from "EquationUtils.jl" import countNodes
-@from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray, evalGradTreeArray
+@from "EvaluateEquation.jl" import evalTreeArray
+@from "EvaluateEquationDerivative.jl" import evalGradTreeArray
 
 
 ###############################################################################
