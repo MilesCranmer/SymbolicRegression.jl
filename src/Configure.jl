@@ -67,9 +67,15 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
             ops = options.binops
             nargs = 2
         elseif function_set == 3
+            if !options.enable_autodiff
+                continue
+            end
             ops = options.diff_unaops
             nargs = 1
         elseif function_set == 4
+            if !options.enable_autodiff
+                continue
+            end
             ops = options.diff_binops
             nargs = 2
         elseif function_set == 5

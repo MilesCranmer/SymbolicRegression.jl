@@ -331,7 +331,7 @@ function Options(;
         test_inputs_xy = reduce(hcat, reduce(hcat, (
             [[[x, y] for x ∈ test_inputs] for y ∈ test_inputs]
         )))
-        for op in binary_operators
+        for op ∈ binary_operators
             diff_op(x, y) = gradient(op, x, y)
             
             test_output = diff_op.(test_inputs_xy[1, :], test_inputs_xy[2, :])
@@ -339,32 +339,26 @@ function Options(;
             if gradient_exists
                 push!(diff_binary_operators, diff_op)
             else
-                # Add a dummy gradient function; we choose plus since
-                # it is defined in Base.
-                push!(diff_binary_operators, plus)
-                if enable_autodiff
+                if verbosity > 0
                     @warn "Automatic differentiation has been turned off, since operator $(op) does not have well-defined gradients."
-                    enable_autodiff = false
                 end
+                enable_autodiff = false
+                break
             end
         end
 
-        for op in unary_operators
+        for op ∈ unary_operators
             diff_op(x) = gradient(op, x)[1]
             test_output = diff_op.(test_inputs)
             gradient_exists = all((x) -> x!==nothing, test_output)
             if gradient_exists
                 push!(diff_unary_operators, diff_op)
             else
-                # Add a dummy gradient function; we choose cos since
-                # it is defined in Base.
-                push!(diff_unary_operators, cos)
-                if enable_autodiff
-                    if verbosity > 0
-                        @warn "Automatic differentiation has been turned off, since operator $(op) does not have well-defined gradients."
-                    end
-                    enable_autodiff = false
+                if verbosity > 0
+                    @warn "Automatic differentiation has been turned off, since operator $(op) does not have well-defined gradients."
                 end
+                enable_autodiff = false
+                break
             end
         end
         diff_binary_operators = Tuple(diff_binary_operators)
