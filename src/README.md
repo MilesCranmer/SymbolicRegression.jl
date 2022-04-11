@@ -18,16 +18,19 @@ Utils.jl
         EvaluateEquation.jl
             CheckConstraints.jl
             MutationFunctions.jl
-            LossFunctions.jl
-                PopMember.jl
-                    Population.jl
-                    HallOfFame.jl
-                    ConstantOptimization.jl
+            EvaluateEquationDerivative.jl
+                LossFunctions.jl
+                    PopMember.jl
+                        Population.jl
+                        HallOfFame.jl
+                        ConstantOptimization.jl
+
         InterfaceSymbolicUtils.jl
             CustomSymbolicUtilsSimplification.jl
-                SimplifyEquation.jl
-                    Mutate.jl
-                        RegularizedEvolution.jl
-                            SingleIteration.jl
-                                SymbolicRegression.jl <= Deprecates.jl, Configure.jl
+
+                    SimplifyEquation.jl
+                        Mutate.jl
+                            RegularizedEvolution.jl
+                                SingleIteration.jl
+                                    SymbolicRegression.jl <= Deprecates.jl, Configure.jl
 ```
