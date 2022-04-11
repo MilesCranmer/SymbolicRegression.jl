@@ -275,7 +275,7 @@ function Options(;
     use_symbolic_utils::Bool=false,
     timeout_in_seconds=nothing,
     skip_mutation_failures::Bool=true,
-    enable_autodiff::Bool=true,
+    enable_autodiff::Bool=false,
    ) where {nuna,nbin}
 
     if warmupMaxsize !== nothing
@@ -322,53 +322,60 @@ function Options(;
     binary_operators = map(binopmap, binary_operators)
     unary_operators = map(unaopmap, unary_operators)
 
-    diff_binary_operators = Any[]
-    diff_unary_operators = Any[]
+    if enable_autodiff
+        diff_binary_operators = Any[]
+        diff_unary_operators = Any[]
 
-    test_inputs = map(x->convert(Float32, x), LinRange(-100, 100, 99))
-    # Create grid over [-100, 100]^2:
-    test_inputs_xy = reduce(hcat, reduce(hcat, (
-        [[[x, y] for x ∈ test_inputs] for y ∈ test_inputs]
-    )))
-    for op in binary_operators
-        diff_op(x, y) = gradient(op, x, y)
-        
-        test_output = diff_op.(test_inputs_xy[1, :], test_inputs_xy[2, :])
-        gradient_exists = all((x) -> x!==nothing, Iterators.flatten(test_output))
-        if gradient_exists
-            push!(diff_binary_operators, diff_op)
-        else
-            # Add a dummy gradient function; we choose plus since
-            # it is defined in Base.
-            push!(diff_binary_operators, plus)
-            if enable_autodiff
-                @warn "Automatic differentiation has been turned off, since operator $(op) does not have well-defined gradients."
-                enable_autodiff = false
-            end
-        end
-    end
-
-    for op in unary_operators
-        diff_op(x) = gradient(op, x)[1]
-        test_output = diff_op.(test_inputs)
-        gradient_exists = all((x) -> x!==nothing, test_output)
-        if gradient_exists
-            push!(diff_unary_operators, diff_op)
-        else
-            # Add a dummy gradient function; we choose cos since
-            # it is defined in Base.
-            push!(diff_unary_operators, cos)
-            if enable_autodiff
-                if verbosity > 0
+        test_inputs = map(x->convert(Float32, x), LinRange(-100, 100, 99))
+        # Create grid over [-100, 100]^2:
+        test_inputs_xy = reduce(hcat, reduce(hcat, (
+            [[[x, y] for x ∈ test_inputs] for y ∈ test_inputs]
+        )))
+        for op in binary_operators
+            diff_op(x, y) = gradient(op, x, y)
+            
+            test_output = diff_op.(test_inputs_xy[1, :], test_inputs_xy[2, :])
+            gradient_exists = all((x) -> x!==nothing, Iterators.flatten(test_output))
+            if gradient_exists
+                push!(diff_binary_operators, diff_op)
+            else
+                # Add a dummy gradient function; we choose plus since
+                # it is defined in Base.
+                push!(diff_binary_operators, plus)
+                if enable_autodiff
                     @warn "Automatic differentiation has been turned off, since operator $(op) does not have well-defined gradients."
+                    enable_autodiff = false
                 end
-                enable_autodiff = false
             end
         end
+
+        for op in unary_operators
+            diff_op(x) = gradient(op, x)[1]
+            test_output = diff_op.(test_inputs)
+            gradient_exists = all((x) -> x!==nothing, test_output)
+            if gradient_exists
+                push!(diff_unary_operators, diff_op)
+            else
+                # Add a dummy gradient function; we choose cos since
+                # it is defined in Base.
+                push!(diff_unary_operators, cos)
+                if enable_autodiff
+                    if verbosity > 0
+                        @warn "Automatic differentiation has been turned off, since operator $(op) does not have well-defined gradients."
+                    end
+                    enable_autodiff = false
+                end
+            end
+        end
+        diff_binary_operators = Tuple(diff_binary_operators)
+        diff_unary_operators = Tuple(diff_unary_operators)
     end
 
-    diff_binary_operators = Tuple(diff_binary_operators)
-    diff_unary_operators = Tuple(diff_unary_operators)
+    if !enable_autodiff
+        diff_binary_operators = nothing
+        diff_unary_operators = nothing
+    end
+
 
     mutationWeights = map((x,)->convert(Float64, x), mutationWeights)
     if length(mutationWeights) != 8

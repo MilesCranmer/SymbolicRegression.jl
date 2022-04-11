@@ -45,6 +45,7 @@ for type ∈ [Float32, Float64]
     options = Options(;
         binary_operators=(+, *, -, /, pow_abs),
         unary_operators=(custom_cos, exp, sin),
+        enable_autodiff=true,
     )
 
 
@@ -116,6 +117,7 @@ import SymbolicRegression: getConstants, NodeIndex, indexConstants
 options = Options(;
     binary_operators=(+, *, -, /, pow_abs),
     unary_operators=(custom_cos, exp, sin),
+    enable_autodiff=true,
 )
 tree = equation3(nx1, nx2, nx3)
 
