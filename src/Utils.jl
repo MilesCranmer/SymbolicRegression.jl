@@ -88,3 +88,7 @@ macro sr_spawner(parallel, p, expr)
         end
     end
 end
+
+# Fastest way to check for NaN in an array.
+# (due to optimizations in sum())
+is_bad_array(array) = !isfinite(sum(array))
