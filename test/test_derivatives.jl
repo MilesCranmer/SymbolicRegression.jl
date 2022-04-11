@@ -26,12 +26,8 @@ nx3 = Node("x3")
 
 # Equations to test gradients on:
 
-default_zero_point = 0.1
-
-function array_test(ar1, ar2; rtol=1e-4, zero_point=default_zero_point)
-    ar1 = Float64.(ar1)
-    ar2 = Float64.(ar2)
-    all((abs.(ar1 .- ar2) ./ (zero_point .+ abs.(ar1) .+ abs.(ar2))) .< rtol)
+function array_test(ar1, ar2; rtol=1e-4)
+    isapprox(ar1, ar2, rtol=rtol)
 end
 
 for type ∈ [Float32, Float64]
@@ -58,8 +54,7 @@ for type ∈ [Float32, Float64]
         true_output = equation.([X[i, :] for i=1:nfeatures]...)
 
         # First, check if the predictions are approximately equal:
-        rtol = j == 3 ? 0.2 : 0.1  # Last equation is hard to get perfect.
-        @test array_test(predicted_output, true_output; rtol=rtol)
+        @test array_test(predicted_output, true_output)
 
         true_grad = gradient((x1, x2, x3) -> sum(equation.(x1, x2, x3)), [X[i, :] for i=1:nfeatures]...)
         # Convert tuple of vectors to matrix:
@@ -68,13 +63,8 @@ for type ∈ [Float32, Float64]
         predicted_grad2 = reduce(hcat, [evalDiffTreeArray(tree, X, options, i)[2] for i=1:nfeatures])'
 
         # Print largest difference between predicted_grad, true_grad:
-        idx_big_diff = argmax(abs.(predicted_grad .- true_grad) ./ (default_zero_point .+ abs.(predicted_grad) .+ abs.(true_grad)))
-        println("Largest difference between predicted_grad and true_grad: predicted=$(predicted_grad[idx_big_diff]) true=$(true_grad[idx_big_diff])")
-        @test array_test(predicted_grad, true_grad; rtol=rtol)
-        
-        if j != 3 # For some reason, forward diff isn't nearly as accurate, so skip this.
-            @test array_test(predicted_grad2, true_grad; rtol=rtol)
-        end
+        @test array_test(predicted_grad, true_grad)
+        @test array_test(predicted_grad2, true_grad)
 
     end
     println("Done.")
@@ -85,7 +75,7 @@ for type ∈ [Float32, Float64]
     # The gradient should be: (C * x1) => x1 is gradient with respect to C.
     tree = equation4(nx1, nx2, nx3)
     predicted_grad = evalGradTreeArray(tree, X, options; variable=false)[2]
-    @test array_test(predicted_grad[1, :], X[1, :]; rtol=1e-2)
+    @test array_test(predicted_grad[1, :], X[1, :])
 
 
     # More complex expression:
@@ -105,7 +95,7 @@ for type ∈ [Float32, Float64]
     true_grad = reduce(hcat, true_grad)'
     predicted_grad = evalGradTreeArray(tree, X, options; variable=false)[2]
 
-    @test array_test(predicted_grad, true_grad; rtol=1e-2)
+    @test array_test(predicted_grad, true_grad)
     println("Done.")
 end
 
