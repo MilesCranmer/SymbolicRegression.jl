@@ -222,8 +222,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `timeout_in_seconds`: Float64 - the time in seconds after which to exit (as an alternative to the number of iterations).
 - `skip_mutation_failures`: Whether to simply skip over mutations that fail or are rejected, rather than to replace the mutated
     expression with the original expression and proceed normally.
-- `enable_autodiff`: Whether to enable automatic differentiation functionality. This will be turned on by default,
-    but turn off if any operator does not have well-defined gradients.
+- `enable_autodiff`: Whether to enable automatic differentiation functionality. This is turned off by default.
+    If turned on, this will be turned off if one of the operators does not have well-defined gradients.
 """
 function Options(;
     binary_operators::NTuple{nbin, Any}=(+, -, /, *),
