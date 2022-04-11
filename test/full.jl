@@ -21,6 +21,7 @@ for i=0:5
     skip_mutation_failures = false
     useFrequency = false
     useFrequencyInTournament = false
+    enable_autodiff = true
     print("Testing with batching=$(batching) and weighted=$(weighted), ")
     if i == 0
         println("with serial & progress bar & warmup & BFGS")
@@ -30,9 +31,10 @@ for i=0:5
         optimizer_algorithm = "BFGS"
         probPickFirst = 0.8
     elseif i == 1
-        println("with multi-output and useFrequency.")
+        println("with multi-output and useFrequency & no autodiff.")
         multi = true
         useFrequency = true
+        enable_autodiff = false
     elseif i == 3
         println("with multi-threading and crossover and useFrequencyInTournament")
         multithreading = true
@@ -71,6 +73,7 @@ for i=0:5
             parsimony=0.0f0,
             useFrequency=useFrequency,
             useFrequencyInTournament=useFrequencyInTournament,
+            enable_autodiff = enable_autodiff,
         )
     end
 
