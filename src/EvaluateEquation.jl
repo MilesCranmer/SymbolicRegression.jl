@@ -429,7 +429,7 @@ end
 """
     evalGradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options; variable::Bool=false)
 
-Compute the backward gradients of an expression, using a similar
+Compute the forward-mode derivative of an expression, using a similar
 structure and optimization to evalTreeArray. `variable` specifies whether
 we should take derivatives with respect to features (i.e., cX), or with respect
 to every constant in the expression.
