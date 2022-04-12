@@ -36,7 +36,7 @@ for type ∈ [Float32, Float64]
     nfeatures = 3
     N = 100
 
-    X = rand(rng, type, nfeatures, N) * 10 .+ 0.1
+    X = rand(rng, type, nfeatures, N) * 10
 
     options = Options(;
         binary_operators=(+, *, -, /, pow_abs),
