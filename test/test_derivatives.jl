@@ -26,7 +26,7 @@ nx3 = Node("x3")
 
 # Equations to test gradients on:
 
-function array_test(ar1, ar2; rtol=1e-4)
+function array_test(ar1, ar2; rtol=0.1)
     isapprox(ar1, ar2, rtol=rtol)
 end
 
@@ -43,8 +43,6 @@ for type ∈ [Float32, Float64]
         unary_operators=(custom_cos, exp, sin),
         enable_autodiff=true,
     )
-
-
 
     for j=1:3
         equation = [equation1, equation2, equation3][j]
