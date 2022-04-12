@@ -66,6 +66,10 @@ for type ∈ [Float32, Float64]
         @test array_test(predicted_grad, true_grad)
         @test array_test(predicted_grad2, true_grad)
 
+        # Make sure that the array_test actually works:
+        @test !array_test(predicted_grad .* 0, true_grad)
+        @test !array_test(predicted_grad2 .* 0, true_grad)
+
     end
     println("Done.")
     println("Testing derivatives with respect to constants, with type=$(type).")
