@@ -1,7 +1,8 @@
 using FromFile
 using LinearAlgebra
-@from "Core.jl" import Node, Options
+@from "Core.jl" import Node, Options, Dx
 @from "Utils.jl" import @return_on_false, is_bad_array
+@from "EvaluateEquationDerivative.jl" import diff_deg1_eval
 
 macro return_on_check(val, T, n)
     # This will generate the following code:
@@ -116,16 +117,24 @@ function deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
 end
 
 function deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
+    op = options.unaops[op_idx]
+    if typeof(op) <: Dx
+        return deg1_eval_Dx_handler(tree, cX, Val(op_idx), op, options)
+    end
     n = size(cX, 2)
     (cumulator, complete) = _evalTreeArray(tree.l, cX, options)
     @return_on_false complete cumulator
     @return_on_nonfinite_array cumulator T n
-    op = options.unaops[op_idx]
     @inbounds @simd for j=1:n
         x = op(cumulator[j])::T
         cumulator[j] = x
     end
     return (cumulator, true) #
+end
+
+function deg1_eval_Dx_handler(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, op::Dx{feature}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx,feature}
+    result, derivative, complete = diff_deg1_eval(tree, cX, Val(op_idx), options, feature)
+    return (derivative, complete)
 end
 
 function deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
