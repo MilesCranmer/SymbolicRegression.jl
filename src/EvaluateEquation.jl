@@ -69,13 +69,13 @@ function _evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tu
         #  - op(op2(x, y)), where x, y, z are constants or variables.
         #  - op(op2(x)), where x is a constant or variable.
         #  - op(x), for any x.
-        if tree.l.degree == 2 && tree.l.l.degree == 0 && tree.l.r.degree == 0
-            deg1_l2_ll0_lr0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
-        elseif tree.l.degree == 1 && tree.l.l.degree == 0
-            deg1_l1_ll0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
-        else
-            deg1_eval(tree, cX, Val(tree.op), options)
-        end
+        # if tree.l.degree == 2 && tree.l.l.degree == 0 && tree.l.r.degree == 0
+        #     deg1_l2_ll0_lr0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+        # elseif tree.l.degree == 1 && tree.l.l.degree == 0
+        #     deg1_l1_ll0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+        # else
+        deg1_eval(tree, cX, Val(tree.op), options)
+        # end
     else
         # We fuse (and compile) the following:
         #  - op(x, y), where x, y are constants or variables.
@@ -83,15 +83,15 @@ function _evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tu
         #  - op(x, y), where y is a constant or variable but x is not.
         #  - op(x, y), for any x or y
         # TODO - add op(op2(x, y), z) and op(x, op2(y, z))
-        if tree.l.degree == 0 && tree.r.degree == 0
-            deg2_l0_r0_eval(tree, cX, Val(tree.op), options)
-        elseif tree.l.degree == 0
-            deg2_l0_eval(tree, cX, Val(tree.op), options)
-        elseif tree.r.degree == 0
-            deg2_r0_eval(tree, cX, Val(tree.op), options)
-        else
-            deg2_eval(tree, cX, Val(tree.op), options)
-        end
+        # if tree.l.degree == 0 && tree.r.degree == 0
+        #     deg2_l0_r0_eval(tree, cX, Val(tree.op), options)
+        # elseif tree.l.degree == 0
+        #     deg2_l0_eval(tree, cX, Val(tree.op), options)
+        # elseif tree.r.degree == 0
+        #     deg2_r0_eval(tree, cX, Val(tree.op), options)
+        # else
+        deg2_eval(tree, cX, Val(tree.op), options)
+        # end
     end
 end
 
