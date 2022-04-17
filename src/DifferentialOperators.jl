@@ -1,8 +1,7 @@
-struct Dx
-    feature::Int
-
-    Dx(feature::Int) = new(feature)
+struct Dx{feature}
 end
+
+Dx(feature::Int) = Dx{feature}()
 
 """Create differential operator from string (e.g., `Dx("x1")`)"""
 function Dx(var_string::String; varMap::Union{Array{String, 1}, Nothing}=nothing)
@@ -11,5 +10,5 @@ function Dx(var_string::String; varMap::Union{Array{String, 1}, Nothing}=nothing
     else
         feature = findfirst(i->varMap[i]==var_string, 1:length(varMap))
     end
-    return Dx(feature)
+    return Dx{feature}()
 end
