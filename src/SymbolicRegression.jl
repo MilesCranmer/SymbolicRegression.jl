@@ -51,7 +51,10 @@ export Population,
     gamma,
     erf,
     erfc,
-    atanh_clip
+    atanh_clip,
+
+    # Differential operators
+    Dx
 
 using Distributed
 import JSON3
@@ -62,7 +65,7 @@ using FromFile
 using Reexport
 @reexport using LossFunctions
 
-@from "Core.jl" import CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, SRConcurrency, SRSerial, SRThreaded, SRDistributed, stringTree, printTree
+@from "Core.jl" import CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, Dx, SRConcurrency, SRSerial, SRThreaded, SRDistributed, stringTree, printTree
 @from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
 @from "EquationUtils.jl" import countNodes, getConstants, setConstants, indexConstants, NodeIndex
 @from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
