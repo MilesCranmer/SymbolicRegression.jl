@@ -330,12 +330,12 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
     if ConcurrencyType == SRDistributed
         if numprocs === nothing && procs === nothing
             numprocs = 4
-            procs = addprocs(4)
+            procs = addprocs(4, lazy=false)
             we_created_procs = true
         elseif numprocs === nothing
             numprocs = length(procs)
         elseif procs === nothing
-            procs = addprocs(numprocs)
+            procs = addprocs(numprocs, lazy=false)
             we_created_procs = true
         end
 
