@@ -20,8 +20,7 @@ function Loss(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, opt
     sum(options.loss.(x, y, w))/sum(w)
 end
 
-# Loss function. Only MSE implemented right now. TODO
-# Also need to put actual loss function in scoreFuncBatch!
+# Evaluate the loss of a particular expression on the input dataset.
 function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options)::T where {T<:Real}
     (prediction, completion) = evalTreeArray(tree, dataset.X, options)
     if !completion
