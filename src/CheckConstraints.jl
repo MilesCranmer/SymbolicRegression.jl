@@ -63,9 +63,15 @@ end
 
 """Check if there are any illegal combinations of operators"""
 function flag_illegal_nests(tree::Node, ::Val{degree}, ::Val{op}, options::Options)::Bool where {degree,op}
+    if degree == 0 || tree.degree == 0
+        return false
+    end
+
+    # No checking binary operators, so skip it:
     if degree == 2
         return false
     end
+
     if options.unaops[op] in [sin, cos]
         count_of_nested_sin_cos = 0
         if sin in options.unaops
@@ -81,6 +87,7 @@ function flag_illegal_nests(tree::Node, ::Val{degree}, ::Val{op}, options::Optio
             return true # flag!
         end
     end
+    return false
 end
 
 
