@@ -45,6 +45,45 @@ function flagUnaOperatorComplexity(tree::Node, ::Val{op}, options::Options)::Boo
     end
 end
 
+
+"""Count number of a specific operator in a tree"""
+function count_operators(tree::Node, ::Val{degree}, ::Val{op}, options::Options)::Int where {op,degree}
+    if tree.degree == 0
+        return 0
+    end
+
+    count = Int(tree.degree == degree && op == tree.op)
+    count += count_operators(tree.l, Val(degree), Val(op), options)
+    if tree.degree == 2
+        count += count_operators(tree.r, Val(degree), Val(op), options)
+    end
+    return count
+end
+
+
+"""Check if there are any illegal combinations of operators"""
+function flag_illegal_nests(tree::Node, ::Val{degree}, ::Val{op}, options::Options)::Bool where {degree,op}
+    if degree == 2
+        return false
+    end
+    if options.unaops[op] in [sin, cos]
+        count_of_nested_sin_cos = 0
+        if sin in options.unaops
+            idx_of_sin = findfirst(isequal(sin), options.unaops)
+            count_of_nested_sin_cos += count_operators(tree.l, Val(1), Val(idx_of_sin), options)
+        end
+        if cos in options.unaops
+            idx_of_cos = findfirst(isequal(cos), options.unaops)
+            count_of_nested_sin_cos += count_operators(tree.l, Val(1), Val(idx_of_cos), options)
+        end
+
+        if count_of_nested_sin_cos > 0
+            return true # flag!
+        end
+    end
+end
+
+
 """Check if user-passed constraints are violated or not"""
 function check_constraints(tree::Node, options::Options, maxsize::Int)::Bool
     if countNodes(tree) > maxsize
@@ -64,6 +103,12 @@ function check_constraints(tree::Node, options::Options, maxsize::Int)::Bool
             return false
         end
     end
+    for i=1:options.nuna
+        if flag_illegal_nests(tree, Val(1), Val(i), options)
+            return false
+        end
+    end
+
     return true
 end
 
