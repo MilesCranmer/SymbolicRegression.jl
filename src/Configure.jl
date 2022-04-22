@@ -50,7 +50,7 @@ function testDatasetConfiguration(dataset::Dataset{T}, options::Options) where {
 
     if !(typeof(options.loss) <: SupervisedLoss)
         if dataset.weighted
-            if !(3 in [m.nargs for m in methods(options.loss)])
+            if !(3 in [m.nargs - 1 for m in methods(options.loss)])
                 throw(AssertionError("When you create a custom loss function, and are using weights, you need to define your loss function with three scalar arguments: f(prediction, target, weight)."))
             end
         end
