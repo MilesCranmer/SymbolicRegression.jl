@@ -1,6 +1,7 @@
-using FromFile
-@from "Core.jl" import Node, Options
-@from "EquationUtils.jl" import countNodes
+module CheckConstraintsModule
+
+import ..CoreModule: Node, Options
+import ..EquationUtilsModule: countNodes
 
 # Check if any binary operator are overly complex
 function flagBinOperatorComplexity(tree::Node, ::Val{op}, options::Options)::Bool where {op}
@@ -121,4 +122,6 @@ end
 
 function check_constraints(tree::Node, options::Options)::Bool
     check_constraints(tree, options, options.maxsize)
+end
+
 end

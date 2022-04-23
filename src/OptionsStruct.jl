@@ -1,3 +1,5 @@
+module OptionsStructModule
+
 using LossFunctions
 
 struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
@@ -84,3 +86,5 @@ Base.print(io::IO, options::Options) = print(io, """Options(
     earlyStopCondition=$(options.earlyStopCondition), timeout_in_seconds=$(options.timeout_in_seconds),
 )""")
 Base.show(io::IO, options::Options) = Base.print(io, options)
+
+end

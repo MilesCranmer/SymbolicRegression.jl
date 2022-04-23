@@ -1,3 +1,5 @@
+module OperatorsModule
+
 import SpecialFunctions
 import SpecialFunctions: erf, erfc
 #TODO - actually add these operators to the module!
@@ -94,4 +96,6 @@ end
 # (Just use multiplication normally)
 function logical_and(x::T, y::T)::T where {T}
     return convert(T, (x > convert(T, 0) && y > convert(T, 0)))
+end
+
 end

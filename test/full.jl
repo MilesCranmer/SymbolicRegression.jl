@@ -1,5 +1,4 @@
-using FromFile
-@from "test_params.jl" import maximum_residual, default_params
+include("test_params.jl")
 using SymbolicRegression, SymbolicUtils
 using Test
 using SymbolicRegression: stringTree

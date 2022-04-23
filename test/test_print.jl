@@ -1,7 +1,7 @@
 using Test
 using SymbolicRegression
 
-@from "test_params.jl" import default_params
+include("test_params.jl")
 
 ## Test Base.print
 options = Options(;
