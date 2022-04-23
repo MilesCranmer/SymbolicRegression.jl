@@ -7,7 +7,7 @@ FILES=$@
 # Loop through files:
 for file in $FILES; do
     base=$(basename ${file%.*})
-    cat $file | vims -t '%g/^@from/s/@from "\(.\{-}\)\.jl" import/import .._\1:/g' -e 'using FromFile' 'dd' -s "Omodule _${base}\<enter>" 'Go\<enter>end' | sed "s/^ $//g" > tmp.jl
+    cat $file | vims -t '%g/^@from/s/@from "\(.\{-}\)\.jl" import/import .._\1:/g' -e 'using FromFile' 'dd' -s "Omodule ${base}Module\<enter>" 'Go\<enter>end' | sed "s/^ $//g" > tmp.jl
     mv tmp.jl $file
 done
 
