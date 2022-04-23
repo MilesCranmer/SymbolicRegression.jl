@@ -8,10 +8,7 @@ using Zygote: gradient
 # passing huge options at once.
 import ..OperatorsModule: plus, pow, mult, sub, div, log_abs, log10_abs, log2_abs, log1p_abs, sqrt_abs, acosh_abs, atanh_clip
 import ..EquationModule: Node, stringTree
-
-
-include("OptionsStruct.jl")
-import .OptionsStructModule: Options
+import ..OptionsStructModule: Options
 
 """
          build_constraints(una_constraints, bin_constraints,

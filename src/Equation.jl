@@ -1,9 +1,7 @@
 module EquationModule
 
 import ..ProgramConstantsModule: CONST_TYPE
-
-include("OptionsStruct.jl")
-import .OptionsStructModule: Options
+import ..OptionsStructModule: Options
 
 # Define a serialization format for the symbolic equations:
 mutable struct Node
