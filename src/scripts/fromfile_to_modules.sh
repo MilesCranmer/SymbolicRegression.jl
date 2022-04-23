@@ -10,3 +10,10 @@ for file in $FILES; do
     cat $file | vims -t '%g/^@from/s/@from "\(.\{-}\)\.jl" import/import ..\1:/g' -e 'using FromFile' 'dd' -s "Omodule ${base}\<enter>" 'Go\<enter>end' > tmp.jl
     mv tmp.jl $file
 done
+
+
+# Changes to make:
+# - Run this file on everything.
+# - Change `import ..` to `import .` in SymbolicRegression.jl
+# - Rename module that have same name as existing variables:
+    # - All files are mapped to _{file}.jl, and modules as well.
