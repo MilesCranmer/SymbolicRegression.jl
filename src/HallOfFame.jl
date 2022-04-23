@@ -1,8 +1,9 @@
-using FromFile
-@from "Core.jl" import CONST_TYPE, MAX_DEGREE, Node, Options, Dataset, stringTree
-@from "EquationUtils.jl" import countNodes
-@from "PopMember.jl" import PopMember, copyPopMember
-@from "LossFunctions.jl" import EvalLoss
+module HallOfFameModule
+
+import ..CoreModule: CONST_TYPE, MAX_DEGREE, Node, Options, Dataset, stringTree
+import ..EquationUtilsModule: countNodes
+import ..PopMemberModule: PopMember, copyPopMember
+import ..LossFunctionsModule: EvalLoss
 using Printf: @sprintf
 
 """ List of the best members seen all time in `.members` """
@@ -112,4 +113,6 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE,
     end
     output *= "\n"
     return output
+end
+
 end

@@ -1,6 +1,9 @@
-using FromFile
-@from "ProgramConstants.jl" import CONST_TYPE
-@from "OptionsStruct.jl" import Options
+module EquationModule
+
+import ..ProgramConstantsModule: CONST_TYPE
+
+include("OptionsStruct.jl")
+import .OptionsStructModule: Options
 
 # Define a serialization format for the symbolic equations:
 mutable struct Node
@@ -153,4 +156,6 @@ end
 
 function printTree(tree::Node, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
     println(stringTree(tree, options, varMap=varMap))
+end
+
 end

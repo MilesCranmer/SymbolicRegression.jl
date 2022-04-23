@@ -1,5 +1,6 @@
-using FromFile
-@from "Core.jl" import RecordType
+module RecorderModule
+
+import ..CoreModule: RecordType
 
 "Assumes that `options` holds the user options::Options"
 macro recorder(ex)
@@ -16,4 +17,6 @@ function find_iteration_from_record(key::String, record::RecordType)
         iteration += 1
     end
     return iteration - 1
+end
+
 end
