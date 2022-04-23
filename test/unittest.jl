@@ -1,5 +1,4 @@
-using FromFile
-@from "test_params.jl" import default_params
+include("test_params.jl")
 using SymbolicRegression, SymbolicUtils, Test, Random, ForwardDiff
 using SymbolicRegression: Options, stringTree, evalTreeArray, Dataset, differentiableEvalTreeArray
 using SymbolicRegression: printTree, pow, EvalLoss, scoreFunc, Node
