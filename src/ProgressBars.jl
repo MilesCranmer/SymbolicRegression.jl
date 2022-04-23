@@ -1,3 +1,5 @@
+module ProgressBarsModule
+
 """
 Customisable progressbar decorator for iterators.
 Copied from https://github.com/cloud-oak/ProgressBars.jl to allow for custom modifications.
@@ -334,3 +336,5 @@ function newline_to_spaces(string, terminal_width)
 end
 
 # end
+
+end

@@ -1,7 +1,8 @@
-using FromFile
+module InterfaceSymbolicUtilsModule
+
 using SymbolicUtils
-@from "Core.jl" import CONST_TYPE, Node, Options
-@from "Utils.jl" import isgood, isbad, @return_on_false
+import ..CoreModule: CONST_TYPE, Node, Options
+import ..UtilsModule: isgood, isbad, @return_on_false
 
 const SYMBOLIC_UTILS_TYPES = Union{<:Number,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
 
@@ -226,4 +227,6 @@ end
 
 function varMap_to_index(var::Symbol, varMap::Nothing)::Int
     return parse(Int, string(var)[2:end])
+end
+
 end

@@ -1,5 +1,6 @@
-using FromFile
-@from "Core.jl" import CONST_TYPE, Node, copyNode, Options
+module EquationUtilsModule
+
+import ..CoreModule: CONST_TYPE, Node, copyNode, Options
 
 # Count the operators, constants, variables in an equation
 function countNodes(tree::Node)::Int
@@ -139,4 +140,6 @@ function indexConstants(tree::Node, index_tree::NodeIndex, left_index::Int)
         left_index_here = left_index + index_tree.constant_index
         indexConstants(tree.r, index_tree.r, left_index_here)
     end
+end
+
 end

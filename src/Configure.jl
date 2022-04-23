@@ -1,4 +1,4 @@
-@from "Core.jl" import RecordType
+import ..CoreModule: RecordType
 
 # Check for errors before they happen
 function testOptionConfiguration(T, options::Options)

@@ -1,13 +1,14 @@
-using FromFile
+module OptionsModule
+
 using Distributed
 using LossFunctions
 using Zygote: gradient
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
-@from "Operators.jl" import plus, pow, mult, sub, div, log_abs, log10_abs, log2_abs, log1p_abs, sqrt_abs, acosh_abs, atanh_clip
-@from "Equation.jl" import Node, stringTree
-@from "OptionsStruct.jl" import Options
+import ..OperatorsModule: plus, pow, mult, sub, div, log_abs, log10_abs, log2_abs, log1p_abs, sqrt_abs, acosh_abs, atanh_clip
+import ..EquationModule: Node, stringTree
+import ..OptionsStructModule: Options
 
 """
          build_constraints(una_constraints, bin_constraints,
@@ -424,3 +425,5 @@ function Options(;
     return options
 end
 
+
+end

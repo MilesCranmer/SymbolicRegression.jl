@@ -1,12 +1,13 @@
-using FromFile
-@from "Core.jl" import Node, copyNode, Options, Dataset, RecordType
-@from "EquationUtils.jl" import countNodes, countConstants, countDepth
-@from "LossFunctions.jl" import scoreFunc, scoreFuncBatch
-@from "CheckConstraints.jl" import check_constraints
-@from "PopMember.jl" import PopMember
-@from "MutationFunctions.jl" import genRandomTreeFixedSize, mutateConstant, mutateOperator, appendRandomOp, prependRandomOp, insertRandomOp, deleteRandomOp, crossoverTrees
-@from "SimplifyEquation.jl" import simplifyTree, combineOperators, simplifyWithSymbolicUtils
-@from "Recorder.jl" import @recorder
+module MutateModule
+
+import ..CoreModule: Node, copyNode, Options, Dataset, RecordType
+import ..EquationUtilsModule: countNodes, countConstants, countDepth
+import ..LossFunctionsModule: scoreFunc, scoreFuncBatch
+import ..CheckConstraintsModule: check_constraints
+import ..PopMemberModule: PopMember
+import ..MutationFunctionsModule: genRandomTreeFixedSize, mutateConstant, mutateOperator, appendRandomOp, prependRandomOp, insertRandomOp, deleteRandomOp, crossoverTrees
+import ..SimplifyEquationModule: simplifyTree, combineOperators, simplifyWithSymbolicUtils
+import ..RecorderModule: @recorder
 
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
@@ -223,4 +224,6 @@ function crossoverGeneration(member1::PopMember, member2::PopMember, dataset::Da
 
     crossover_accepted = true
     return baby1, baby2, crossover_accepted
+end
+
 end

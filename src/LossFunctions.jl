@@ -1,9 +1,10 @@
-using FromFile
+module LossFunctionsModule
+
 using Random: randperm
 using LossFunctions
-@from "Core.jl" import Options, Dataset, Node
-@from "EquationUtils.jl" import countNodes
-@from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
+import ..CoreModule: Options, Dataset, Node
+import ..EquationUtilsModule: countNodes
+import ..EvaluateEquationModule: evalTreeArray, differentiableEvalTreeArray
 
 
 function Loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C})::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss}
@@ -72,4 +73,6 @@ function scoreFuncBatch(dataset::Dataset{T}, baseline::T,
     end
     score = lossToScore(loss, baseline, tree, options)
     return score, loss
+end
+
 end

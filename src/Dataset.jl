@@ -1,5 +1,6 @@
-using FromFile
-@from "ProgramConstants.jl" import BATCH_DIM, FEATURE_DIM
+module DatasetModule
+
+import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM
 
 struct Dataset{T<:Real}
 
@@ -38,3 +39,5 @@ function Dataset(
 
 end
 
+
+end

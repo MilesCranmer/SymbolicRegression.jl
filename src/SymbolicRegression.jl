@@ -58,27 +58,47 @@ import JSON3
 using Printf: @printf, @sprintf
 using Pkg
 using Random: seed!, shuffle!
-using FromFile
 using Reexport
 @reexport using LossFunctions
 
-@from "Core.jl" import CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, SRConcurrency, SRSerial, SRThreaded, SRDistributed, stringTree, printTree
-@from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
-@from "EquationUtils.jl" import countNodes, getConstants, setConstants, indexConstants, NodeIndex
-@from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
-@from "EvaluateEquationDerivative.jl" import evalDiffTreeArray, evalGradTreeArray
-@from "CheckConstraints.jl" import check_constraints
-@from "MutationFunctions.jl" import genRandomTree, genRandomTreeFixedSize, randomNode, randomNodeAndParent, crossoverTrees
-@from "LossFunctions.jl" import EvalLoss, Loss, scoreFunc
-@from "PopMember.jl" import PopMember, copyPopMember
-@from "Population.jl" import Population, bestSubPop, record_population, bestOfSample
-@from "HallOfFame.jl" import HallOfFame, calculateParetoFrontier, string_dominating_pareto_curve
-@from "SingleIteration.jl" import SRCycle, OptimizeAndSimplifyPopulation
-@from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
-@from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
-@from "SimplifyEquation.jl" import simplifyWithSymbolicUtils, combineOperators, simplifyTree
-@from "ProgressBars.jl" import ProgressBar, set_multiline_postfix
-@from "Recorder.jl" import @recorder, find_iteration_from_record
+include("Core.jl")
+include("Recorder.jl")
+include("Utils.jl")
+include("EquationUtils.jl")
+include("EvaluateEquation.jl")
+include("EvaluateEquationDerivative.jl")
+include("CheckConstraints.jl")
+include("MutationFunctions.jl")
+include("LossFunctions.jl")
+include("PopMember.jl")
+include("ConstantOptimization.jl")
+include("Population.jl")
+include("HallOfFame.jl")
+include("InterfaceSymbolicUtils.jl")
+include("CustomSymbolicUtilsSimplification.jl")
+include("SimplifyEquation.jl")
+include("Mutate.jl")
+include("RegularizedEvolution.jl")
+include("SingleIteration.jl")
+include("ProgressBars.jl")
+
+import .CoreModule: CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, SRConcurrency, SRSerial, SRThreaded, SRDistributed, stringTree, printTree
+import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
+import .EquationUtilsModule: countNodes, getConstants, setConstants, indexConstants, NodeIndex
+import .EvaluateEquationModule: evalTreeArray, differentiableEvalTreeArray
+import .EvaluateEquationDerivativeModule: evalDiffTreeArray, evalGradTreeArray
+import .CheckConstraintsModule: check_constraints
+import .MutationFunctionsModule: genRandomTree, genRandomTreeFixedSize, randomNode, randomNodeAndParent, crossoverTrees
+import .LossFunctionsModule: EvalLoss, Loss, scoreFunc
+import .PopMemberModule: PopMember, copyPopMember
+import .PopulationModule: Population, bestSubPop, record_population, bestOfSample
+import .HallOfFameModule: HallOfFame, calculateParetoFrontier, string_dominating_pareto_curve
+import .SingleIterationModule: SRCycle, OptimizeAndSimplifyPopulation
+import .InterfaceSymbolicUtilsModule: node_to_symbolic, symbolic_to_node
+import .CustomSymbolicUtilsSimplificationModule: custom_simplify
+import .SimplifyEquationModule: simplifyWithSymbolicUtils, combineOperators, simplifyTree
+import .ProgressBarsModule: ProgressBar, set_multiline_postfix
+import .RecorderModule: @recorder, find_iteration_from_record
 
 include("Configure.jl")
 include("Deprecates.jl")

@@ -1,11 +1,12 @@
-using FromFile
+module ConstantOptimizationModule
+
 import LineSearches
 import Optim
-@from "Core.jl" import CONST_TYPE, Node, Options, Dataset
-@from "Utils.jl" import getTime
-@from "EquationUtils.jl" import getConstants, setConstants, countConstants
-@from "LossFunctions.jl" import scoreFunc, EvalLoss
-@from "PopMember.jl" import PopMember
+import ..CoreModule: CONST_TYPE, Node, Options, Dataset
+import ..UtilsModule: getTime
+import ..EquationUtilsModule: getConstants, setConstants, countConstants
+import ..LossFunctionsModule: scoreFunc, EvalLoss
+import ..PopMemberModule: PopMember
 
 # Proxy function for optimization
 function optFunc(x::Vector{CONST_TYPE}, dataset::Dataset{T}, baseline::T,
@@ -57,4 +58,6 @@ function optimizeConstants(dataset::Dataset{T},
         setConstants(member.tree, x0)
     end
     return member
+end
+
 end

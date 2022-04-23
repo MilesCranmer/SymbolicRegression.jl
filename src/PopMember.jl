@@ -1,7 +1,8 @@
-using FromFile
-@from "Core.jl" import Options, Dataset, Node, copyNode
-@from "Utils.jl" import getTime
-@from "LossFunctions.jl" import scoreFunc
+module PopMemberModule
+
+import ..CoreModule: Options, Dataset, Node, copyNode
+import ..UtilsModule: getTime
+import ..LossFunctionsModule: scoreFunc
 
 # Define a member of population by equation, score, and age
 mutable struct PopMember{T<:Real}
@@ -62,4 +63,6 @@ function copyPopMember(p::PopMember{T}) where {T<:Real}
     ref = copy(p.ref)
     parent = copy(p.parent)
     return PopMember{T}(tree, score, loss, birth, ref, parent)
+end
+
 end
