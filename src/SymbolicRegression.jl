@@ -126,6 +126,9 @@ which is useful for debugging and profiling.
 - `procs::Union{Array{Int, 1}, Nothing}=nothing`: If you have set up
     a distributed run manually with `procs = addprocs()` and `@everywhere`,
     pass the `procs` to this keyword argument.
+- `multithreading::Bool=false`: Whether to use multithreading. Otherwise,
+    will use multiprocessing. Multithreading uses less memory, but multiprocessing
+    can handle multi-node compute.
 - `runtests::Bool=true`: Whether to run (quick) tests before starting the
     search, to see if there will be any problems during the equation search
     related to the host environment.
@@ -135,6 +138,12 @@ which is useful for debugging and profiling.
     which will cause `EquationSearch` to return the state. Note that
     you cannot change the operators or dataset, but most other options
     should be changeable.
+- `addprocs_function`::Union{Function, Nothing}=nothing`: If using distributed
+    mode (`multithreading=false`), you may pass a custom function to use
+    instead of `addprocs`. This function should take a single positional argument,
+    which is the number of processes to use, as well as the `lazy` keyword argument.
+    For example, if set up on a slurm cluster, you could pass
+    `addprocs_function = addprocs_slurm`, which will set up slurm processes.
 
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
@@ -153,6 +162,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
         multithreading::Bool=false,
         runtests::Bool=true,
         saved_state::Union{StateType{T}, Nothing}=nothing,
+        addprocs_function::Union{Function, Nothing}=nothing,
        ) where {T<:Real}
 
     nout = size(y, FEATURE_DIM)
@@ -167,7 +177,8 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
     return EquationSearch(datasets;
         niterations=niterations, options=options,
         numprocs=numprocs, procs=procs, multithreading=multithreading,
-        runtests=runtests, saved_state=saved_state)
+        runtests=runtests, saved_state=saved_state,
+        addprocs_function=addprocs_function)
 end
 
 function EquationSearch(X::AbstractMatrix{T1}, y::AbstractMatrix{T2}; kw...) where {T1<:Real,T2<:Real}
@@ -187,6 +198,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         multithreading::Bool=false,
         runtests::Bool=true,
         saved_state::Union{StateType{T}, Nothing}=nothing,
+        addprocs_function::Union{Function, Nothing}=nothing,
        ) where {T<:Real}
 
                 # Population(datasets[j], baselineMSEs[j], npop=options.npop,
@@ -208,7 +220,8 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     return _EquationSearch(concurrency, datasets;
         niterations=niterations, options=options,
         numprocs=numprocs, procs=procs,
-        runtests=runtests, saved_state=saved_state)
+        runtests=runtests, saved_state=saved_state,
+        addprocs_function=addprocs_function)
 end
 
 function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
@@ -218,6 +231,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         procs::Union{Array{Int, 1}, Nothing}=nothing,
         runtests::Bool=true,
         saved_state::Union{StateType{T}, Nothing}=nothing,
+        addprocs_function::Union{Function, Nothing}=nothing,
        ) where {T<:Real,ConcurrencyType<:SRConcurrency}
 
     can_read_input = true
@@ -328,14 +342,17 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
     ### Distributed code:
     ##########################################################################
     if ConcurrencyType == SRDistributed
+        if addprocs_function === nothing
+            addprocs_function = addprocs
+        end
         if numprocs === nothing && procs === nothing
             numprocs = 4
-            procs = addprocs(4, lazy=false)
+            procs = addprocs_function(4, lazy=false)
             we_created_procs = true
         elseif numprocs === nothing
             numprocs = length(procs)
         elseif procs === nothing
-            procs = addprocs(numprocs, lazy=false)
+            procs = addprocs_function(numprocs, lazy=false)
             we_created_procs = true
         end
 
