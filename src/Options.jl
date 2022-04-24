@@ -279,7 +279,7 @@ function Options(;
     recorder=nothing,
     recorder_file="pysr_recorder.json",
     probPickFirst=0.86f0,
-    earlyStopCondition::Union{Function, Float32, Nothing}=nothing,
+    earlyStopCondition::Union{Function, AbstractFloat, Nothing}=nothing,
     stateReturn::Bool=false,
     use_symbolic_utils::Bool=false,
     timeout_in_seconds=nothing,
@@ -471,7 +471,7 @@ function Options(;
         recorder = haskey(ENV, "PYSR_RECORDER") && (ENV["PYSR_RECORDER"] == "1")
     end
 
-    if typeof(earlyStopCondition) == Float32
+    if typeof(earlyStopCondition) <: AbstractFloat
         earlyStopCondition = (loss, complexity) -> loss < earlyStopCondition
     end
 
