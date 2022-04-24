@@ -356,4 +356,7 @@ options = create_options([cos => [exp => 0]])
 options = create_options([exp => [cos => 0]])
 @test SymbolicRegression.CheckConstraintsModule.flag_illegal_nests(tree, options)
 
+options = create_options([(+) => [(+) => 0]])
+@test SymbolicRegression.CheckConstraintsModule.flag_illegal_nests(tree, options)
+
 println("Passed.")
