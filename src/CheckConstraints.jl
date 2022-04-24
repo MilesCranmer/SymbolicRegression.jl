@@ -61,6 +61,17 @@ function count_operators(tree::Node, ::Val{degree}, ::Val{op}, options::Options)
     return count
 end
 
+"""Count the max number of times an operator of a given degree is nested"""
+function count_max_nestedness(tree::Node, degree::Int, op::Int, options::Options)::Int
+    if tree.degree == 0
+        return 0
+    elseif tree.degree == 1
+        return Int(degree == 1 && tree.op == op) + count_max_nestedness(tree.l, degree, op, options)
+    else  # tree.degree == 2
+        return Int(degree == 2 && tree.op == op) + max(count_max_nestedness(tree.l, degree, op, options), count_max_nestedness(tree.r, degree, op, options))
+    end
+end
+
 
 """Check if there are any illegal combinations of operators"""
 function flag_illegal_nests(tree::Node, ::Val{degree}, ::Val{op}, options::Options)::Bool where {degree,op}
