@@ -56,7 +56,7 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
     timeout_in_seconds::Union{Float64, Nothing}
     skip_mutation_failures::Bool
     enable_autodiff::Bool
-    nested_constraints::Union{Dict{Function, Dict{Function, Int64}},Nothing}
+    nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
 
 end
 

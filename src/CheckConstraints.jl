@@ -62,47 +62,59 @@ function count_operators(tree::Node, ::Val{degree}, ::Val{op}, options::Options)
 end
 
 """Count the max number of times an operator of a given degree is nested"""
-function count_max_nestedness(tree::Node, degree::Int, op::Int, options::Options)::Int
+function count_max_nestedness(tree::Node, ::Val{degree}, ::Val{op}, options::Options)::Int where {op,degree}
     if tree.degree == 0
         return 0
     elseif tree.degree == 1
-        return Int(degree == 1 && tree.op == op) + count_max_nestedness(tree.l, degree, op, options)
+        count = (degree == 1 && tree.op == op) ? 1 : 0
+        return count + count_max_nestedness(tree.l, Val(degree), Val(op), options)
     else  # tree.degree == 2
-        return Int(degree == 2 && tree.op == op) + max(count_max_nestedness(tree.l, degree, op, options), count_max_nestedness(tree.r, degree, op, options))
+        count = (degree == 2 && tree.op == op) ? 1 : 0
+        return count + max(
+            count_max_nestedness(tree.l, Val(degree), Val(op), options),
+            count_max_nestedness(tree.r, Val(degree), Val(op), options)
+        )
     end
 end
 
+# function fast_max_nestedness(tree::Node, degree::Int, op_idx::Int, nested_degree::Int, nested_op_idx::Int, options::Options)::Int
+function fast_max_nestedness(tree::Node, ::Val{degree}, ::Val{op_idx}, ::Val{nested_degree}, ::Val{nested_op_idx}, options::Options)::Int where {degree,op_idx,nested_degree,nested_op_idx}
+    # Don't need to branch - once you find operator, run
+    # count_max once, then return. Don't need to go deeper!
+    if tree.degree == 0
+        return 0
+    elseif tree.degree == 1
+        if degree != tree.degree || tree.op != op_idx
+            return fast_max_nestedness(tree.l, Val(degree), Val(op_idx), Val(nested_degree), Val(nested_op_idx), options)
+        end
+        return count_max_nestedness(tree.l, Val(nested_degree), Val(nested_op_idx), options)
+    else
+        if degree != tree.degree || tree.op != op_idx
+            return max(
+                fast_max_nestedness(tree.l, Val(degree), Val(op_idx), Val(nested_degree), Val(nested_op_idx), options),
+                fast_max_nestedness(tree.r, Val(degree), Val(op_idx), Val(nested_degree), Val(nested_op_idx), options)
+            )
+        end
+        return max(
+            count_max_nestedness(tree.l, Val(nested_degree), Val(nested_op_idx), options),
+            count_max_nestedness(tree.r, Val(nested_degree), Val(nested_op_idx), options)
+        )
+    end
+end
 
 """Check if there are any illegal combinations of operators"""
-function flag_illegal_nests(tree::Node, options::Options)::Bool
-    if tree.degree == 0
-        return false
-    end
-
+function flag_illegal_nests(tree::Node, options::Options{A,B,dA,dB,S})::Bool where {A,B,dA,dB,S}
     # We search from the top first, then from child nodes at end.
-    op = tree.degree == 1 ? options.unaops[tree.op] : options.binops[tree.op]
     nested_constraints = options.nested_constraints
-
-    if haskey(nested_constraints, op)
-        # Now, we count max nesting of any operator specified.
-        for (nest_op, max_nesting) ∈ nested_constraints[op]
-            nest_op_degree = nest_op ∈ options.unaops ? 1 : 2
-            nest_op_idx = nest_op_degree == 1 ? findfirst(isequal(nest_op), options.unaops) : findfirst(isequal(nest_op), options.binops)
-            nestedness = count_max_nestedness(tree.l, nest_op_degree, nest_op_idx, options)
-            if tree.degree == 2
-                nestedness = max(nestedness, count_max_nestedness(tree.r, nest_op_degree, nest_op_idx, options))
-            end
-            if nestedness > max_nesting
+    for (degree, op_idx, nested_constraint) ∈ nested_constraints
+        for (nested_degree, nested_op_idx, max_nestedness) ∈ nested_constraint
+            nestedness = fast_max_nestedness(tree, Val(degree), Val(op_idx), Val(nested_degree), Val(nested_op_idx), options)
+            if nestedness > max_nestedness
                 return true
             end
         end
     end
-
-    if tree.degree == 1
-        return flag_illegal_nests(tree.l, options)
-    else  # tree.degree == 2
-        return (flag_illegal_nests(tree.l, options) || flag_illegal_nests(tree.r, options))
-    end
+    return false
 end
 
 """Check if user-passed constraints are violated or not"""
@@ -124,7 +136,7 @@ function check_constraints(tree::Node, options::Options, maxsize::Int)::Bool
             return false
         end
     end
-    if flag_illegal_nests(tree, options)
+    if options.nested_constraints !== nothing && flag_illegal_nests(tree, options)
         return false
     end
 

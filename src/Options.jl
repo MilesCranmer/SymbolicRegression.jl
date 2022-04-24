@@ -324,6 +324,30 @@ function Options(;
             end
         end
 
+        # Lastly, we clean it up into a dict of (degree,op_idx) => max_nesting.
+        new_nested_constraints = []
+        # Dict()
+        for (op, nested_constraint) ∈ nested_constraints
+            (degree, idx) = if op ∈ binary_operators
+                2, findfirst(isequal(op), binary_operators)
+            else
+                1, findfirst(isequal(op), unary_operators)
+            end
+            new_max_nesting_dict = []
+            # Dict()
+            for (nested_op, max_nesting) ∈ nested_constraint
+                (nested_degree, nested_idx) = if nested_op ∈ binary_operators
+                    2, findfirst(isequal(nested_op), binary_operators)
+                else
+                    1, findfirst(isequal(nested_op), unary_operators)
+                end
+                # new_max_nesting_dict[(nested_degree, nested_idx)] = max_nesting
+                push!(new_max_nesting_dict, (nested_degree, nested_idx, max_nesting))
+            end
+            # new_nested_constraints[(degree, idx)] = new_max_nesting_dict
+            push!(new_nested_constraints, (degree, idx, new_max_nesting_dict))
+        end
+        nested_constraints = new_nested_constraints
     end
 
 
