@@ -225,6 +225,14 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     expression with the original expression and proceed normally.
 - `enable_autodiff`: Whether to enable automatic differentiation functionality. This is turned off by default.
     If turned on, this will be turned off if one of the operators does not have well-defined gradients.
+- `nested_constraints`: Specifies how many times a combination of operators can be nested. For example,
+    `[sin => [cos => 0, sin => -1], cos => [cos => 2]]` specifies that `cos` may never appear within a `sin`,
+    but `sin` can be nested with itself an unlimited number of times. The second term specifies that `cos`
+    can be nested up to 2 times within a `cos`, so that `cos(cos(cos(x)))` is allowed (as well as any combination
+    of `+` or `-` within it), but `cos(cos(cos(cos(x))))` is not allowed. When an operator is not specified,
+    it is assumed that it can be nested an unlimited number of times. This requires that there is no operator
+    which is used both in the unary operators and the binary operators (e.g., `-` could be both subtract, and negation).
+    For binary operators, both arguments are treated the same way, and the max of each argument is constrained.
 """
 function Options(;
     binary_operators::NTuple{nbin, Any}=(+, -, /, *),
@@ -277,6 +285,7 @@ function Options(;
     timeout_in_seconds=nothing,
     skip_mutation_failures::Bool=true,
     enable_autodiff::Bool=false,
+    nested_constraints=nothing,
    ) where {nuna,nbin}
 
     if warmupMaxsize !== nothing
@@ -289,6 +298,57 @@ function Options(;
 
     @assert maxsize > 3
     @assert warmupMaxsizeBy >= 0f0
+
+    # Make sure nested_constraints contains functions within our operator set:
+    if nested_constraints !== nothing
+        # Check that intersection of binary operators and unary operators is empty:
+        for op ∈ binary_operators
+            if op ∈ unary_operators
+                error("Operator " + op + " is both a binary and unary operator. You can't use nested constraints.")
+            end
+        end
+
+        # Convert to dict:
+        if !(typeof(nested_constraints) <: Dict)
+            # Convert to dict:
+            nested_constraints = Dict([
+                cons[1] => Dict(cons[2]...)
+                for cons in nested_constraints
+            ]...)
+        end
+        for (op, nested_constraint) ∈ nested_constraints
+            @assert op ∈ binary_operators || op ∈ unary_operators
+            for (nested_op, max_nesting) ∈ nested_constraint
+                @assert nested_op ∈ binary_operators || nested_op ∈ unary_operators
+                @assert max_nesting >= -1 && typeof(max_nesting) <: Int
+            end
+        end
+
+        # Lastly, we clean it up into a dict of (degree,op_idx) => max_nesting.
+        new_nested_constraints = []
+        # Dict()
+        for (op, nested_constraint) ∈ nested_constraints
+            (degree, idx) = if op ∈ binary_operators
+                2, findfirst(isequal(op), binary_operators)
+            else
+                1, findfirst(isequal(op), unary_operators)
+            end
+            new_max_nesting_dict = []
+            # Dict()
+            for (nested_op, max_nesting) ∈ nested_constraint
+                (nested_degree, nested_idx) = if nested_op ∈ binary_operators
+                    2, findfirst(isequal(nested_op), binary_operators)
+                else
+                    1, findfirst(isequal(nested_op), unary_operators)
+                end
+                # new_max_nesting_dict[(nested_degree, nested_idx)] = max_nesting
+                push!(new_max_nesting_dict, (nested_degree, nested_idx, max_nesting))
+            end
+            # new_nested_constraints[(degree, idx)] = new_max_nesting_dict
+            push!(new_nested_constraints, (degree, idx, new_max_nesting_dict))
+        end
+        nested_constraints = new_nested_constraints
+    end
 
 
     if typeof(constraints) <: Tuple
@@ -415,7 +475,7 @@ function Options(;
         earlyStopCondition = (loss, complexity) -> loss < earlyStopCondition
     end
 
-    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(diff_binary_operators), typeof(diff_unary_operators), typeof(loss)}(binary_operators, unary_operators, diff_binary_operators, diff_unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, crossoverProbability, warmupMaxsizeBy, useFrequency, useFrequencyInTournament, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition, stateReturn, use_symbolic_utils, timeout_in_seconds, skip_mutation_failures, enable_autodiff)
+    options = Options{typeof(binary_operators),typeof(unary_operators), typeof(diff_binary_operators), typeof(diff_unary_operators), typeof(loss)}(binary_operators, unary_operators, diff_binary_operators, diff_unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, crossoverProbability, warmupMaxsizeBy, useFrequency, useFrequencyInTournament, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition, stateReturn, use_symbolic_utils, timeout_in_seconds, skip_mutation_failures, enable_autodiff, nested_constraints)
 
     @eval begin
         Base.print(io::IO, tree::Node) = print(io, stringTree(tree, $options))
