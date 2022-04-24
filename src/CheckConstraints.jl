@@ -107,6 +107,9 @@ end
 function flag_illegal_nests(tree::Node, options::Options)::Bool
     # We search from the top first, then from child nodes at end.
     nested_constraints = options.nested_constraints
+    if nested_constraints === nothing
+        return false
+    end
     for (degree, op_idx, op_constraint) ∈ nested_constraints
         for (nested_degree, nested_op_idx, max_nestedness) ∈ op_constraint
             nestedness = fast_max_nestedness(tree, degree, op_idx, nested_degree, nested_op_idx, options)
@@ -137,7 +140,7 @@ function check_constraints(tree::Node, options::Options, maxsize::Int)::Bool
             return false
         end
     end
-    if options.nested_constraints !== nothing && flag_illegal_nests(tree, options)
+    if flag_illegal_nests(tree, options)
         return false
     end
 
