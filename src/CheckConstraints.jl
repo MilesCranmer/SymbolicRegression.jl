@@ -74,34 +74,36 @@ end
 
 
 """Check if there are any illegal combinations of operators"""
-function flag_illegal_nests(tree::Node, ::Val{degree}, ::Val{op}, options::Options)::Bool where {degree,op}
-    if degree == 0 || tree.degree == 0
+function flag_illegal_nests(tree::Node, options::Options)::Bool
+    if tree.degree == 0
         return false
     end
 
-    # No checking binary operators, so skip it:
-    if degree == 2
-        return false
+    # We search from the top first, then from child nodes at end.
+    op = tree.degree == 1 ? options.unaops[tree.op] : options.binops[tree.op]
+    nested_constraints = options.nested_constraints
+
+    if haskey(nested_constraints, op)
+        # Now, we count max nesting of any operator specified.
+        for (nest_op, max_nesting) ∈ nested_constraints[op]
+            nest_op_degree = nest_op ∈ options.unaops ? 1 : 2
+            nest_op_idx = nest_op_degree == 1 ? findfirst(isequal(nest_op), options.unaops) : findfirst(isequal(nest_op), options.binops)
+            nestedness = count_max_nestedness(tree.l, nest_op_degree, nest_op_idx, options)
+            if tree.degree == 2
+                nestedness = max(nestedness, count_max_nestedness(tree.r, nest_op_degree, nest_op_idx, options))
+            end
+            if nestedness > max_nesting
+                return true
+            end
+        end
     end
 
-    if options.unaops[op] in [sin, cos]
-        count_of_nested_sin_cos = 0
-        if sin in options.unaops
-            idx_of_sin = findfirst(isequal(sin), options.unaops)
-            count_of_nested_sin_cos += count_operators(tree.l, Val(1), Val(idx_of_sin), options)
-        end
-        if cos in options.unaops
-            idx_of_cos = findfirst(isequal(cos), options.unaops)
-            count_of_nested_sin_cos += count_operators(tree.l, Val(1), Val(idx_of_cos), options)
-        end
-
-        if count_of_nested_sin_cos > 0
-            return true # flag!
-        end
+    if tree.degree == 1
+        return flag_illegal_nests(tree.l, options)
+    else  # tree.degree == 2
+        return (flag_illegal_nests(tree.l, options) || flag_illegal_nests(tree.r, options))
     end
-    return false
 end
-
 
 """Check if user-passed constraints are violated or not"""
 function check_constraints(tree::Node, options::Options, maxsize::Int)::Bool
@@ -122,10 +124,8 @@ function check_constraints(tree::Node, options::Options, maxsize::Int)::Bool
             return false
         end
     end
-    for i=1:options.nuna
-        if flag_illegal_nests(tree, Val(1), Val(i), options)
-            return false
-        end
+    if flag_illegal_nests(tree, options)
+        return false
     end
 
     return true

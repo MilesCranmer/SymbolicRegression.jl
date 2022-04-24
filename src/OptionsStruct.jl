@@ -8,8 +8,8 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
     unaops::B
     diff_binops::dA
     diff_unaops::dB
-    bin_constraints::Array{Tuple{Int,Int}, 1}
-    una_constraints::Array{Int, 1}
+    bin_constraints::Vector{Tuple{Int,Int}}
+    una_constraints::Vector{Int}
     ns::Int
     parsimony::Float32
     alpha::Float32
@@ -56,6 +56,7 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
     timeout_in_seconds::Union{Float64, Nothing}
     skip_mutation_failures::Bool
     enable_autodiff::Bool
+    nested_constraints::Union{Dict{Function, Dict{Function, Int64}},Nothing}
 
 end
 
