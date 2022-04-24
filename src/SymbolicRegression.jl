@@ -762,7 +762,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 # Check if zero size:
                 if length(dominating) == 0
                     all_below = false
-                elseif !any([options.earlyStopCondition(member.loss, member.complexity) for member in dominating])
+                elseif !any([options.earlyStopCondition(member.loss, countNodes(member.tree)) for member in dominating])
                     # None of the equations meet the stop condition.
                     all_below = false
                 end
