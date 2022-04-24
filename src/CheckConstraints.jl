@@ -47,21 +47,6 @@ function flagUnaOperatorComplexity(tree::Node, ::Val{op}, options::Options)::Boo
 end
 
 
-"""Count number of a specific operator in a tree"""
-function count_operators(tree::Node, ::Val{degree}, ::Val{op}, options::Options)::Int where {op,degree}
-    if tree.degree == 0
-        return 0
-    end
-
-    count = Int(tree.degree == degree && op == tree.op)
-    count += count_operators(tree.l, Val(degree), Val(op), options)
-    if tree.degree == 2
-        count += count_operators(tree.r, Val(degree), Val(op), options)
-    end
-    return count
-end
-
-
 """Count the max number of times an operator of a given degree is nested"""
 function count_max_nestedness(tree::Node, degree::Int, op::Int, options::Options)::Int
     if tree.degree == 0
