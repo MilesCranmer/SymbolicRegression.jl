@@ -472,7 +472,9 @@ function Options(;
     end
 
     if typeof(earlyStopCondition) <: AbstractFloat
-        earlyStopCondition = (loss, complexity) -> loss < earlyStopCondition
+        # Need to make explicit copy here for this to work:
+        stopping_point = Float64(earlyStopCondition)
+        earlyStopCondition = (loss, complexity) -> loss < stopping_point
     end
 
     options = Options{typeof(binary_operators),typeof(unary_operators), typeof(diff_binary_operators), typeof(diff_unary_operators), typeof(loss)}(binary_operators, unary_operators, diff_binary_operators, diff_unary_operators, bin_constraints, una_constraints, ns, parsimony, alpha, maxsize, maxdepth, fast_cycle, migration, hofMigration, fractionReplacedHof, shouldOptimizeConstants, hofFile, npopulations, perturbationFactor, annealing, batching, batchSize, mutationWeights, crossoverProbability, warmupMaxsizeBy, useFrequency, useFrequencyInTournament, npop, ncyclesperiteration, fractionReplaced, topn, verbosity, probNegate, nuna, nbin, seed, loss, progress, terminal_width, optimizer_algorithm, optimize_probability, optimizer_nrestarts, optimizer_iterations, recorder, recorder_file, probPickFirst, earlyStopCondition, stateReturn, use_symbolic_utils, timeout_in_seconds, skip_mutation_failures, enable_autodiff, nested_constraints)
