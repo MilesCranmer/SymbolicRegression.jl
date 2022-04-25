@@ -1,8 +1,8 @@
 module OptionsModule
 
-using Distributed
-using LossFunctions
-using Zygote: gradient
+import Distributed: nworkers
+import LossFunctions: L2DistLoss
+import Zygote: gradient
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.

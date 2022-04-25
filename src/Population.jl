@@ -1,6 +1,6 @@
 module PopulationModule
 
-using Random
+import Random: randperm
 import ..CoreModule: Options, Dataset, RecordType, stringTree
 import ..EquationUtilsModule: countNodes
 import ..LossFunctionsModule: scoreFunc

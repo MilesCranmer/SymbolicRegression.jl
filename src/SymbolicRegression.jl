@@ -55,11 +55,12 @@ export Population,
 
 using Distributed
 import JSON3
-using Printf: @printf, @sprintf
-using Pkg
-using Random: seed!, shuffle!
+import Printf: @printf, @sprintf
+import Pkg
+import Random: seed!, shuffle!
 using Reexport
-@reexport using LossFunctions
+@reexport import LossFunctions: MarginLoss, DistanceLoss, SupervisedLoss, ZeroOneLoss, LogitMarginLoss, PerceptronLoss, HingeLoss, L1HingeLoss, L2HingeLoss, SmoothedL1HingeLoss, ModifiedHuberLoss, L2MarginLoss, ExpLoss, SigmoidLoss, DWDMarginLoss, LPDistLoss, L1DistLoss, L2DistLoss, PeriodicLoss, HuberLoss, EpsilonInsLoss, L1EpsilonInsLoss, L2EpsilonInsLoss, LogitDistLoss, QuantileLoss, LogCoshLoss
+
 
 include("Core.jl")
 include("Recorder.jl")

@@ -1,6 +1,6 @@
 module RegularizedEvolutionModule
 
-using Random: shuffle!
+import Random: shuffle!
 import ..CoreModule: Options, Dataset, RecordType, stringTree
 import ..PopMemberModule: PopMember
 import ..PopulationModule: Population, bestOfSample

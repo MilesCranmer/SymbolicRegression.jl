@@ -1,7 +1,7 @@
 module LossFunctionsModule
 
-using Random: randperm
-using LossFunctions
+import Random: randperm
+import LossFunctions: value, AggMode, SupervisedLoss
 import ..CoreModule: Options, Dataset, Node
 import ..EquationUtilsModule: countNodes
 import ..EvaluateEquationModule: evalTreeArray, differentiableEvalTreeArray

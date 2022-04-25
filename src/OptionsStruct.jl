@@ -1,6 +1,6 @@
 module OptionsStructModule
 
-using LossFunctions
+import LossFunctions: SupervisedLoss
 
 struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
 

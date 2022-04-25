@@ -1,6 +1,5 @@
 module EvaluateEquationModule
 
-using LinearAlgebra
 import ..CoreModule: Node, Options
 import ..UtilsModule: @return_on_false, is_bad_array
 

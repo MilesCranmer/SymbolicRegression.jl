@@ -9,9 +9,8 @@ Usage:
 > ....
 > end
 """
-# module ProgressBars
 
-using Printf
+import Printf: @sprintf
 
 EIGHTS = Dict(0 => ' ',
               1 => '▏',
