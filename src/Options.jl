@@ -226,7 +226,7 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `enable_autodiff`: Whether to enable automatic differentiation functionality. This is turned off by default.
     If turned on, this will be turned off if one of the operators does not have well-defined gradients.
 - `nested_constraints`: Specifies how many times a combination of operators can be nested. For example,
-    `[sin => [cos => 0, sin => -1], cos => [cos => 2]]` specifies that `cos` may never appear within a `sin`,
+    `[sin => [cos => 0], cos => [cos => 2]]` specifies that `cos` may never appear within a `sin`,
     but `sin` can be nested with itself an unlimited number of times. The second term specifies that `cos`
     can be nested up to 2 times within a `cos`, so that `cos(cos(cos(x)))` is allowed (as well as any combination
     of `+` or `-` within it), but `cos(cos(cos(cos(x))))` is not allowed. When an operator is not specified,
