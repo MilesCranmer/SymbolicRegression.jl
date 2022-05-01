@@ -48,7 +48,6 @@ default_params = (
     probPickFirst=1.0,
     earlyStopCondition=nothing,
     stateReturn=false,
-    use_symbolic_utils=false,
     timeout_in_seconds=nothing,
     skip_mutation_failures=false,
 )
