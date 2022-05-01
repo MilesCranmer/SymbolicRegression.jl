@@ -232,6 +232,7 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `earlyStopCondition`: Float - whether to stop early if the mean loss gets below this value.
     Function - a function taking (loss, complexity) as arguments and returning true or false.
 - `timeout_in_seconds`: Float64 - the time in seconds after which to exit (as an alternative to the number of iterations).
+- `max_evals`: Int (or Nothing) - the maximum number of evaluations of expressions to perform.
 - `skip_mutation_failures`: Whether to simply skip over mutations that fail or are rejected, rather than to replace the mutated
     expression with the original expression and proceed normally.
 - `enable_autodiff`: Whether to enable automatic differentiation functionality. This is turned off by default.
@@ -293,6 +294,7 @@ function Options(;
     earlyStopCondition::Union{Function,AbstractFloat,Nothing}=nothing,
     stateReturn::Bool=false,
     timeout_in_seconds=nothing,
+    max_evals=nothing,
     skip_mutation_failures::Bool=true,
     enable_autodiff::Bool=false,
     nested_constraints=nothing,
@@ -553,6 +555,7 @@ function Options(;
         earlyStopCondition,
         stateReturn,
         timeout_in_seconds,
+        max_evals,
         skip_mutation_failures,
         enable_autodiff,
         nested_constraints,
