@@ -12,7 +12,6 @@ tree = Node("x1") + Node("x1")
 # Should simplify to 2*x1:
 import SymbolicUtils: simplify
 
-eqn = node_to_symbolic(tree, options; index_functions=true)
-eqn2 = simplify(eqn, options)
-
+eqn = node_to_symbolic(tree, options; index_functions=false)
+eqn2 = simplify(eqn)
 @test occursin("2", "$(eqn2[1])")
