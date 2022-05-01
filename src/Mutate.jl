@@ -94,14 +94,7 @@ function nextGeneration(dataset::Dataset{T},
         elseif mutationChoice < cweights[6]
             tree = simplifyTree(tree, options) # Sometimes we simplify tree
             tree = combineOperators(tree, options) # See if repeated constants at outer levels
-            # SymbolicUtils is quite slow, so only rarely
-            #  do we use it for simplification.
-            if rand() < 0.01 && options.use_symbolic_utils
-                tree = simplifyWithSymbolicUtils(tree, options, curmaxsize)
-                @recorder tmp_recorder["type"] = "full_simplify"
-            else
-                @recorder tmp_recorder["type"] = "partial_simplify"
-            end
+            @recorder tmp_recorder["type"] = "partial_simplify"
             mutation_accepted = true
             return PopMember(tree, beforeScore, beforeLoss, parent=parent_ref), mutation_accepted
 

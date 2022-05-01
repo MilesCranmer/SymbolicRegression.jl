@@ -48,7 +48,6 @@ struct Options{A,B,C<:Union{SupervisedLoss,Function}}
     probPickFirst::Float32
     earlyStopCondition::Union{Function, Nothing}
     stateReturn::Bool
-    use_symbolic_utils::Bool
     timeout_in_seconds::Union{Float64, Nothing}
     skip_mutation_failures::Bool
 
