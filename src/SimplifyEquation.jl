@@ -2,7 +2,6 @@ module SimplifyEquationModule
 
 import ..CoreModule: CONST_TYPE, Node, copyNode, Options
 import ..EquationUtilsModule: countNodes
-import ..InterfaceSymbolicUtilsModule: node_to_symbolic_safe, symbolic_to_node
 import ..CheckConstraintsModule: check_constraints
 import ..UtilsModule: isbad, isgood
 
