@@ -1,6 +1,7 @@
-using FromFile
-@from "Core.jl" import CONST_TYPE, Node, copyNode, Options
-@from "EquationUtils.jl" import countNodes, countConstants, countOperators, countDepth
+module MutationFunctionsModule
+
+import ..CoreModule: CONST_TYPE, Node, copyNode, Options
+import ..EquationUtilsModule: countNodes, countConstants, countOperators, countDepth
 
 # Return a random node from the tree
 function randomNode(tree::Node)::Node
@@ -320,4 +321,6 @@ function crossoverTrees(tree1::Node, tree2::Node)::Tuple{Node, Node}
         tree2 = node1
     end
     return tree1, tree2
+end
+
 end

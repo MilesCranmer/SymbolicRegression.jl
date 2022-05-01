@@ -1,10 +1,11 @@
-using FromFile
-using Random: shuffle!
-@from "Core.jl" import Options, Dataset, RecordType, stringTree
-@from "PopMember.jl" import PopMember
-@from "Population.jl" import Population, bestOfSample
-@from "Mutate.jl" import nextGeneration, crossoverGeneration
-@from "Recorder.jl" import @recorder
+module RegularizedEvolutionModule
+
+import Random: shuffle!
+import ..CoreModule: Options, Dataset, RecordType, stringTree
+import ..PopMemberModule: PopMember
+import ..PopulationModule: Population, bestOfSample
+import ..MutateModule: nextGeneration, crossoverGeneration
+import ..RecorderModule: @recorder
 
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample
@@ -117,4 +118,6 @@ function regEvolCycle(dataset::Dataset{T},
     end
 
     return pop
+end
+
 end

@@ -1,10 +1,11 @@
-using FromFile
-@from "Core.jl" import CONST_TYPE, Node, copyNode, Options
-@from "EquationUtils.jl" import countNodes
-@from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
-@from "InterfaceSymbolicUtils.jl" import node_to_symbolic_safe, symbolic_to_node
-@from "CheckConstraints.jl" import check_constraints
-@from "Utils.jl" import isbad, isgood
+module SimplifyEquationModule
+
+import ..CoreModule: CONST_TYPE, Node, copyNode, Options
+import ..EquationUtilsModule: countNodes
+import ..CustomSymbolicUtilsSimplificationModule: custom_simplify
+import ..InterfaceSymbolicUtilsModule: node_to_symbolic_safe, symbolic_to_node
+import ..CheckConstraintsModule: check_constraints
+import ..UtilsModule: isbad, isgood
 
 # Simplify tree
 function combineOperators(tree::Node, options::Options)::Node
@@ -156,4 +157,6 @@ end
 
 function simplifyWithSymbolicUtils(tree::Node, options::Options)::Node
     simplifyWithSymbolicUtils(tree, options, options.maxsize)
+end
+
 end

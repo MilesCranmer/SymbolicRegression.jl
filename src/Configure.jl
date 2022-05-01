@@ -1,4 +1,4 @@
-@from "Core.jl" import RecordType
+import ..CoreModule: RecordType
 
 # Check for errors before they happen
 function testOptionConfiguration(T, options::Options)
@@ -50,7 +50,7 @@ function testDatasetConfiguration(dataset::Dataset{T}, options::Options) where {
 
     if !(typeof(options.loss) <: SupervisedLoss)
         if dataset.weighted
-            if !(3 in [m.nargs for m in methods(options.loss)])
+            if !(3 in [m.nargs - 1 for m in methods(options.loss)])
                 throw(AssertionError("When you create a custom loss function, and are using weights, you need to define your loss function with three scalar arguments: f(prediction, target, weight)."))
             end
         end
@@ -59,7 +59,7 @@ end
 
 """ Move custom operators and loss functions to workers, if undefined """
 function move_functions_to_workers(procs, options::Options, dataset::Dataset{T}) where {T}
-    for function_set=1:3
+    for function_set=1:5
         if function_set == 1
             ops = options.unaops
             nargs = 1
@@ -67,6 +67,18 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
             ops = options.binops
             nargs = 2
         elseif function_set == 3
+            if !options.enable_autodiff
+                continue
+            end
+            ops = options.diff_unaops
+            nargs = 1
+        elseif function_set == 4
+            if !options.enable_autodiff
+                continue
+            end
+            ops = options.diff_binops
+            nargs = 2
+        elseif function_set == 5
             if typeof(options.loss) <: SupervisedLoss
                 continue
             end

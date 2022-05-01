@@ -16,6 +16,8 @@ export Population,
     printTree,
     stringTree,
     evalTreeArray,
+    evalDiffTreeArray,
+    evalGradTreeArray,
     differentiableEvalTreeArray,
     node_to_symbolic,
     symbolic_to_node,
@@ -53,29 +55,51 @@ export Population,
 
 using Distributed
 import JSON3
-using Printf: @printf, @sprintf
-using Pkg
-using Random: seed!, shuffle!
-using FromFile
+import Printf: @printf, @sprintf
+import Pkg
+import Random: seed!, shuffle!
 using Reexport
-@reexport using LossFunctions
+@reexport import LossFunctions: MarginLoss, DistanceLoss, SupervisedLoss, ZeroOneLoss, LogitMarginLoss, PerceptronLoss, HingeLoss, L1HingeLoss, L2HingeLoss, SmoothedL1HingeLoss, ModifiedHuberLoss, L2MarginLoss, ExpLoss, SigmoidLoss, DWDMarginLoss, LPDistLoss, L1DistLoss, L2DistLoss, PeriodicLoss, HuberLoss, EpsilonInsLoss, L1EpsilonInsLoss, L2EpsilonInsLoss, LogitDistLoss, QuantileLoss, LogCoshLoss
 
-@from "Core.jl" import CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, SRConcurrency, SRSerial, SRThreaded, SRDistributed, stringTree, printTree
-@from "Utils.jl" import debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
-@from "EquationUtils.jl" import countNodes
-@from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
-@from "CheckConstraints.jl" import check_constraints
-@from "MutationFunctions.jl" import genRandomTree, genRandomTreeFixedSize, randomNode, randomNodeAndParent, crossoverTrees
-@from "LossFunctions.jl" import EvalLoss, Loss, scoreFunc
-@from "PopMember.jl" import PopMember, copyPopMember
-@from "Population.jl" import Population, bestSubPop, record_population, bestOfSample
-@from "HallOfFame.jl" import HallOfFame, calculateParetoFrontier, string_dominating_pareto_curve
-@from "SingleIteration.jl" import SRCycle, OptimizeAndSimplifyPopulation
-@from "InterfaceSymbolicUtils.jl" import node_to_symbolic, symbolic_to_node
-@from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
-@from "SimplifyEquation.jl" import simplifyWithSymbolicUtils, combineOperators, simplifyTree
-@from "ProgressBars.jl" import ProgressBar, set_multiline_postfix
-@from "Recorder.jl" import @recorder, find_iteration_from_record
+
+include("Core.jl")
+include("Recorder.jl")
+include("Utils.jl")
+include("EquationUtils.jl")
+include("EvaluateEquation.jl")
+include("EvaluateEquationDerivative.jl")
+include("CheckConstraints.jl")
+include("MutationFunctions.jl")
+include("LossFunctions.jl")
+include("PopMember.jl")
+include("ConstantOptimization.jl")
+include("Population.jl")
+include("HallOfFame.jl")
+include("InterfaceSymbolicUtils.jl")
+include("CustomSymbolicUtilsSimplification.jl")
+include("SimplifyEquation.jl")
+include("Mutate.jl")
+include("RegularizedEvolution.jl")
+include("SingleIteration.jl")
+include("ProgressBars.jl")
+
+import .CoreModule: CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, SRConcurrency, SRSerial, SRThreaded, SRDistributed, stringTree, printTree
+import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
+import .EquationUtilsModule: countNodes, getConstants, setConstants, indexConstants, NodeIndex
+import .EvaluateEquationModule: evalTreeArray, differentiableEvalTreeArray
+import .EvaluateEquationDerivativeModule: evalDiffTreeArray, evalGradTreeArray
+import .CheckConstraintsModule: check_constraints
+import .MutationFunctionsModule: genRandomTree, genRandomTreeFixedSize, randomNode, randomNodeAndParent, crossoverTrees
+import .LossFunctionsModule: EvalLoss, Loss, scoreFunc
+import .PopMemberModule: PopMember, copyPopMember
+import .PopulationModule: Population, bestSubPop, record_population, bestOfSample
+import .HallOfFameModule: HallOfFame, calculateParetoFrontier, string_dominating_pareto_curve
+import .SingleIterationModule: SRCycle, OptimizeAndSimplifyPopulation
+import .InterfaceSymbolicUtilsModule: node_to_symbolic, symbolic_to_node
+import .CustomSymbolicUtilsSimplificationModule: custom_simplify
+import .SimplifyEquationModule: simplifyWithSymbolicUtils, combineOperators, simplifyTree
+import .ProgressBarsModule: ProgressBar, set_multiline_postfix
+import .RecorderModule: @recorder, find_iteration_from_record
 
 include("Configure.jl")
 include("Deprecates.jl")
@@ -123,6 +147,9 @@ which is useful for debugging and profiling.
 - `procs::Union{Array{Int, 1}, Nothing}=nothing`: If you have set up
     a distributed run manually with `procs = addprocs()` and `@everywhere`,
     pass the `procs` to this keyword argument.
+- `multithreading::Bool=false`: Whether to use multithreading. Otherwise,
+    will use multiprocessing. Multithreading uses less memory, but multiprocessing
+    can handle multi-node compute.
 - `runtests::Bool=true`: Whether to run (quick) tests before starting the
     search, to see if there will be any problems during the equation search
     related to the host environment.
@@ -132,6 +159,12 @@ which is useful for debugging and profiling.
     which will cause `EquationSearch` to return the state. Note that
     you cannot change the operators or dataset, but most other options
     should be changeable.
+- `addprocs_function`::Union{Function, Nothing}=nothing`: If using distributed
+    mode (`multithreading=false`), you may pass a custom function to use
+    instead of `addprocs`. This function should take a single positional argument,
+    which is the number of processes to use, as well as the `lazy` keyword argument.
+    For example, if set up on a slurm cluster, you could pass
+    `addprocs_function = addprocs_slurm`, which will set up slurm processes.
 
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
@@ -150,6 +183,7 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
         multithreading::Bool=false,
         runtests::Bool=true,
         saved_state::Union{StateType{T}, Nothing}=nothing,
+        addprocs_function::Union{Function, Nothing}=nothing,
        ) where {T<:Real}
 
     nout = size(y, FEATURE_DIM)
@@ -164,7 +198,8 @@ function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
     return EquationSearch(datasets;
         niterations=niterations, options=options,
         numprocs=numprocs, procs=procs, multithreading=multithreading,
-        runtests=runtests, saved_state=saved_state)
+        runtests=runtests, saved_state=saved_state,
+        addprocs_function=addprocs_function)
 end
 
 function EquationSearch(X::AbstractMatrix{T1}, y::AbstractMatrix{T2}; kw...) where {T1<:Real,T2<:Real}
@@ -184,6 +219,7 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         multithreading::Bool=false,
         runtests::Bool=true,
         saved_state::Union{StateType{T}, Nothing}=nothing,
+        addprocs_function::Union{Function, Nothing}=nothing,
        ) where {T<:Real}
 
                 # Population(datasets[j], baselineMSEs[j], npop=options.npop,
@@ -205,7 +241,8 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
     return _EquationSearch(concurrency, datasets;
         niterations=niterations, options=options,
         numprocs=numprocs, procs=procs,
-        runtests=runtests, saved_state=saved_state)
+        runtests=runtests, saved_state=saved_state,
+        addprocs_function=addprocs_function)
 end
 
 function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
@@ -215,6 +252,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         procs::Union{Array{Int, 1}, Nothing}=nothing,
         runtests::Bool=true,
         saved_state::Union{StateType{T}, Nothing}=nothing,
+        addprocs_function::Union{Function, Nothing}=nothing,
        ) where {T<:Real,ConcurrencyType<:SRConcurrency}
 
     can_read_input = true
@@ -325,14 +363,17 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
     ### Distributed code:
     ##########################################################################
     if ConcurrencyType == SRDistributed
+        if addprocs_function === nothing
+            addprocs_function = addprocs
+        end
         if numprocs === nothing && procs === nothing
             numprocs = 4
-            procs = addprocs(4)
+            procs = addprocs_function(4, lazy=false)
             we_created_procs = true
         elseif numprocs === nothing
             numprocs = length(procs)
         elseif procs === nothing
-            procs = addprocs(numprocs)
+            procs = addprocs_function(numprocs, lazy=false)
             we_created_procs = true
         end
 
@@ -722,7 +763,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 # Check if zero size:
                 if length(dominating) == 0
                     all_below = false
-                elseif !any([options.earlyStopCondition(member.loss, member.complexity) for member in dominating])
+                elseif !any([options.earlyStopCondition(member.loss, countNodes(member.tree)) for member in dominating])
                     # None of the equations meet the stop condition.
                     all_below = false
                 end

@@ -1,4 +1,4 @@
-using LossFunctions
+import SymbolicRegression: L2DistLoss
 
 maximum_residual = 1e-2
 

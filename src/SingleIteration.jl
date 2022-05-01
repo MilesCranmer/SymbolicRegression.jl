@@ -1,13 +1,14 @@
-using FromFile
-@from "Core.jl" import Options, Dataset, RecordType, stringTree
-@from "EquationUtils.jl" import countNodes
-@from "Utils.jl" import debug
-@from "SimplifyEquation.jl" import simplifyTree, combineOperators, simplifyWithSymbolicUtils
-@from "PopMember.jl" import copyPopMember
-@from "Population.jl" import Population, finalizeScores, bestSubPop
-@from "HallOfFame.jl" import HallOfFame
-@from "RegularizedEvolution.jl" import regEvolCycle
-@from "ConstantOptimization.jl" import optimizeConstants
+module SingleIterationModule
+
+import ..CoreModule: Options, Dataset, RecordType, stringTree
+import ..EquationUtilsModule: countNodes
+import ..UtilsModule: debug
+import ..SimplifyEquationModule: simplifyTree, combineOperators, simplifyWithSymbolicUtils
+import ..PopMemberModule: copyPopMember
+import ..PopulationModule: Population, finalizeScores, bestSubPop
+import ..HallOfFameModule: HallOfFame
+import ..RegularizedEvolutionModule: regEvolCycle
+import ..ConstantOptimizationModule: optimizeConstants
 
 
 # Cycle through regularized evolution many times,
@@ -60,4 +61,6 @@ function OptimizeAndSimplifyPopulation(
     end
     pop = finalizeScores(dataset, baseline, pop, options)
     return pop
+end
+
 end

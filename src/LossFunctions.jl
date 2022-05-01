@@ -1,34 +1,29 @@
-using FromFile
-using Random: randperm
-using LossFunctions
-@from "Core.jl" import Options, Dataset, Node
-@from "EquationUtils.jl" import countNodes
-@from "EvaluateEquation.jl" import evalTreeArray, differentiableEvalTreeArray
+module LossFunctionsModule
+
+import Random: randperm
+import LossFunctions: value, AggMode, SupervisedLoss
+import ..CoreModule: Options, Dataset, Node
+import ..EquationUtilsModule: countNodes
+import ..EvaluateEquationModule: evalTreeArray, differentiableEvalTreeArray
 
 
-function Loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,C})::T where {T<:Real,A,B,C<:SupervisedLoss}
+function Loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C})::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss}
     value(options.loss, y, x, AggMode.Mean())
 end
-function Loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,C})::T where {T<:Real,A,B,C<:Function}
+function Loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C})::T where {T<:Real,A,B,dA,dB,C<:Function}
     sum(options.loss.(x, y))/length(y)
 end
 
-function Loss(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options{A,B,C})::T where {T<:Real,A,B,C<:SupervisedLoss}
+function Loss(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options{A,B,dA,dB,C})::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss}
     value(options.loss, y, x, AggMode.WeightedMean(w))
 end
-function Loss(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options{A,B,C})::T where {T<:Real,A,B,C<:Function}
+function Loss(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options{A,B,dA,dB,C})::T where {T<:Real,A,B,dA,dB,C<:Function}
     sum(options.loss.(x, y, w))/sum(w)
 end
 
-# Loss function. Only MSE implemented right now. TODO
-# Also need to put actual loss function in scoreFuncBatch!
-function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options;
-                  allow_diff=false)::T where {T<:Real}
-    if !allow_diff
-        (prediction, completion) = evalTreeArray(tree, dataset.X, options)
-    else
-        (prediction, completion) = differentiableEvalTreeArray(tree, dataset.X, options)
-    end
+# Evaluate the loss of a particular expression on the input dataset.
+function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options)::T where {T<:Real}
+    (prediction, completion) = evalTreeArray(tree, dataset.X, options)
     if !completion
         return T(1000000000)
     end
@@ -52,8 +47,8 @@ end
 # Score an equation
 function scoreFunc(dataset::Dataset{T},
                    baseline::T, tree::Node,
-                   options::Options; allow_diff=false)::Tuple{T,T} where {T<:Real}
-    loss = EvalLoss(tree, dataset, options; allow_diff=allow_diff)
+                   options::Options)::Tuple{T,T} where {T<:Real}
+    loss = EvalLoss(tree, dataset, options)
     score = lossToScore(loss, baseline, tree, options)
     return score, loss
 end
@@ -78,4 +73,6 @@ function scoreFuncBatch(dataset::Dataset{T}, baseline::T,
     end
     score = lossToScore(loss, baseline, tree, options)
     return score, loss
+end
+
 end

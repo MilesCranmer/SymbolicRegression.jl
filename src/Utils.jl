@@ -1,7 +1,8 @@
+module UtilsModule
+
 import Printf: @printf
 using Distributed
-using FromFile
-@from "Core.jl" import SRThreaded, SRSerial, SRDistributed
+import ..CoreModule: SRThreaded, SRSerial, SRDistributed
 
 function debug(verbosity, string...)
     if verbosity > 0
@@ -25,8 +26,8 @@ function check_numeric(n)
 end
 
 function is_anonymous_function(op)
-	op_string = string(nameof(op))
-	return length(op_string) > 1 && op_string[1] == '#' && check_numeric(op_string[2:2])
+    op_string = string(nameof(op))
+    return length(op_string) > 1 && op_string[1] == '#' && check_numeric(op_string[2:2])
 end
 
 function recursive_merge(x::AbstractVector...)
@@ -48,6 +49,13 @@ isbad(x) = !isgood(x)
 macro return_on_false(flag, retval)
     :(if !$(esc(flag))
           return ($(esc(retval)), false)
+    end)
+end
+
+# Returns two arrays
+macro return_on_false2(flag, retval, retval2)
+    :(if !$(esc(flag))
+          return ($(esc(retval)), $(esc(retval2)), false)
     end)
 end
 
@@ -80,4 +88,10 @@ macro sr_spawner(parallel, p, expr)
             Threads.@spawn($(esc(expr)))
         end
     end
+end
+
+# Fastest way to check for NaN in an array.
+# (due to optimizations in sum())
+is_bad_array(array) = !isfinite(sum(array))
+
 end

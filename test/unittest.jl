@@ -1,5 +1,4 @@
-using FromFile
-@from "test_params.jl" import default_params
+include("test_params.jl")
 using SymbolicRegression, SymbolicUtils, Test, Random, ForwardDiff
 using SymbolicRegression: Options, stringTree, evalTreeArray, Dataset, differentiableEvalTreeArray
 using SymbolicRegression: printTree, pow, EvalLoss, scoreFunc, Node
@@ -17,6 +16,7 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
                 default_params...,
                 binary_operators=(+, *, ^, /, binop),
                 unary_operators=(unaop,), npopulations=4,
+                verbosity = (unaop == gamma) ? 0 : Int(1e9),
                 kw...
             )
         end
@@ -160,6 +160,9 @@ for (loss, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
     @test abs(Loss(x, y, options) - sum(evaluator.(x, y))/length(x)) < 1e-6
     @test abs(Loss(x, y, w, options) - sum(evaluator.(x, y, w))/sum(w)) < 1e-6
 end
+
+# Test derivatives
+include("test_derivatives.jl")
 
 # Test simplification:
 include("test_simplification.jl")
@@ -311,5 +314,49 @@ output, flag = evalTreeArray(tree, X, options)
 tree = cos(Node("x1") + NaN)
 output, flag = evalTreeArray(tree, X, options)
 @test !flag
+
+println("Passed.")
+
+
+println("Test operator nesting and flagging.")
+import SymbolicRegression
+
+# Count max nests:
+tree = cos(exp(exp(exp(exp(Node("x1"))))))
+degree_of_exp = 1
+index_of_exp = findfirst(isequal(exp), options.unaops)
+@test 4 == SymbolicRegression.CheckConstraintsModule.count_max_nestedness(tree, degree_of_exp, index_of_exp, options)
+
+tree = cos(exp(Node("x1")) + exp(exp(exp(exp(Node("x1"))))))
+@test 4 == SymbolicRegression.CheckConstraintsModule.count_max_nestedness(tree, degree_of_exp, index_of_exp, options)
+
+degree_of_plus = 2
+index_of_plus = findfirst(isequal(+), options.binops)
+tree = cos(exp(Node("x1")) + exp(exp(Node("x1") + exp(exp(exp(Node("x1")))))))
+@test 2 == SymbolicRegression.CheckConstraintsModule.count_max_nestedness(tree, degree_of_plus, index_of_plus, options)
+
+
+# Test checking for illegal nests:
+create_options(nested_constraints) = Options(binary_operators = (+, *, /, -), unary_operators = (cos, exp), nested_constraints = nested_constraints)
+
+x1 = Node("x1")
+options = create_options(nothing)
+tree = cos(cos(x1)) + cos(x1) + exp(cos(x1))
+@test !SymbolicRegression.CheckConstraintsModule.flag_illegal_nests(tree, options)
+
+options = create_options([cos => [cos => 0]])
+@test SymbolicRegression.CheckConstraintsModule.flag_illegal_nests(tree, options)
+
+options = create_options([cos => [cos => 1]])
+@test !SymbolicRegression.CheckConstraintsModule.flag_illegal_nests(tree, options)
+
+options = create_options([cos => [exp => 0]])
+@test !SymbolicRegression.CheckConstraintsModule.flag_illegal_nests(tree, options)
+
+options = create_options([exp => [cos => 0]])
+@test SymbolicRegression.CheckConstraintsModule.flag_illegal_nests(tree, options)
+
+options = create_options([(+) => [(+) => 0]])
+@test SymbolicRegression.CheckConstraintsModule.flag_illegal_nests(tree, options)
 
 println("Passed.")

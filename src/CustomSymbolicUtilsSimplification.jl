@@ -1,9 +1,10 @@
-using FromFile
+module CustomSymbolicUtilsSimplificationModule
+
 using SymbolicUtils
 using SymbolicUtils: Chain, If, RestartedChain, IfElse, Postwalk, Fixpoint, @ordered_acrule, isnotflat, flatten_term, needs_sorting, sort_args, is_literal_number, hasrepeats, merge_repeats, _isone, _iszero, _isinteger, istree, symtype, is_operation, expand, operation, arguments
-@from "Core.jl" import Options
-@from "InterfaceSymbolicUtils.jl" import SYMBOLIC_UTILS_TYPES
-@from "Utils.jl" import isgood, @return_on_false
+import ..CoreModule: Options
+import ..InterfaceSymbolicUtilsModule: SYMBOLIC_UTILS_TYPES
+import ..UtilsModule: isgood, @return_on_false
 
 function has_trig(term)
     !istree(term) && return false
@@ -180,4 +181,6 @@ function custom_simplify(init_eqn::T, options::Options)::Tuple{SYMBOLIC_UTILS_TY
 
 	# Remove power laws
     return multiply_powers(eqn::SYMBOLIC_UTILS_TYPES)
+end
+
 end

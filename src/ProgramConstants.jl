@@ -1,3 +1,5 @@
+module ProgramConstantsModule
+
 const MAX_DEGREE = 2
 const CONST_TYPE = Float32
 const BATCH_DIM = 2
@@ -9,3 +11,5 @@ abstract type SRConcurrency end
 struct SRSerial <: SRConcurrency end
 struct SRThreaded <: SRConcurrency end
 struct SRDistributed <: SRConcurrency end
+
+end

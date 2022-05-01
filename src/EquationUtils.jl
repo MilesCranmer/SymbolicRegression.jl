@@ -1,5 +1,6 @@
-using FromFile
-@from "Core.jl" import CONST_TYPE, Node, copyNode, Options
+module EquationUtilsModule
+
+import ..CoreModule: CONST_TYPE, Node, copyNode, Options
 
 # Count the operators, constants, variables in an equation
 function countNodes(tree::Node)::Int
@@ -97,4 +98,48 @@ function setConstants(tree::Node, constants::AbstractVector{T}) where {T<:Real}
         setConstants(tree.l, constants)
         setConstants(tree.r, constants[numberLeft+1:end])
     end
+end
+
+
+## Assign index to nodes of a tree
+# This will mirror a Node struct, rather
+# than adding a new attribute to Node.
+mutable struct NodeIndex
+    constant_index::Int  # Index of this constant (if a constant exists here)
+    l::NodeIndex
+    r::NodeIndex
+
+    NodeIndex() = new()
+end
+
+function indexConstants(tree::Node)::NodeIndex
+    indexConstants(tree, 0)
+end
+
+function indexConstants(tree::Node, left_index::Int)::NodeIndex
+    index_tree = NodeIndex()
+    indexConstants(tree, index_tree, left_index)
+    return index_tree
+end
+
+# Count how many constants to the left of this node, and put them in a tree
+function indexConstants(tree::Node, index_tree::NodeIndex, left_index::Int)
+    if tree.degree == 0
+        if tree.constant
+            index_tree.constant_index = left_index + 1
+        end
+    elseif tree.degree == 1
+        index_tree.constant_index = countConstants(tree.l)
+        index_tree.l = NodeIndex()
+        indexConstants(tree.l, index_tree.l, left_index)
+    else
+        index_tree.l = NodeIndex()
+        index_tree.r = NodeIndex()
+        indexConstants(tree.l, index_tree.l, left_index)
+        index_tree.constant_index = countConstants(tree.l)
+        left_index_here = left_index + index_tree.constant_index
+        indexConstants(tree.r, index_tree.r, left_index_here)
+    end
+end
+
 end

@@ -1,7 +1,7 @@
-using FromFile
-@from "Core.jl" import Node, Options
-@from "Utils.jl" import @return_on_false
+module EvaluateEquationModule
 
+import ..CoreModule: Node, Options
+import ..UtilsModule: @return_on_false, is_bad_array
 
 macro return_on_check(val, T, n)
     # This will generate the following code:
@@ -15,7 +15,7 @@ macro return_on_check(val, T, n)
 end
 
 macro return_on_nonfinite_array(array, T, n)
-    :(if !isfinite(sum($(esc(array)))) # Other solution. *0 because of potential for overflow.
+    :(if is_bad_array($(esc(array)))
         return (Array{$(esc(T)), 1}(undef, $(esc(n))), false)
     end)
 end
@@ -337,4 +337,6 @@ function deg2_diff_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
     out = op.(left, right)
     no_nans = !any(x -> (!isfinite(x)), out)
     return (out, no_nans)
+end
+
 end
