@@ -3,7 +3,7 @@ module SingleIterationModule
 import ..CoreModule: Options, Dataset, RecordType, stringTree
 import ..EquationUtilsModule: countNodes
 import ..UtilsModule: debug
-import ..SimplifyEquationModule: simplifyTree, combineOperators, simplifyWithSymbolicUtils
+import ..SimplifyEquationModule: simplifyTree, combineOperators
 import ..PopMemberModule: copyPopMember
 import ..PopulationModule: Population, finalizeScores, bestSubPop
 import ..HallOfFameModule: HallOfFame

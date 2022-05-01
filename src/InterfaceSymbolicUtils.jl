@@ -4,7 +4,6 @@ using SymbolicUtils
 import ..CoreModule: CONST_TYPE, Node, Options
 import ..UtilsModule: isgood, isbad, @return_on_false
 
-const SYMBOLIC_UTILS_TYPES = Union{<:Number,SymbolicUtils.Sym{<:Number},SymbolicUtils.Term{<:Number}}
 
 """
     node_to_symbolic(tree::Node, options::Options;
@@ -28,15 +27,14 @@ will generate a symbolic equation in SymbolicUtils.jl format.
     using `symbolic_to_node`.
 """
 function node_to_symbolic(tree::Node, options::Options; 
-                     varMap::Union{Array{String, 1}, Nothing}=nothing,
-                     evaluate_functions::Bool=false,
-                     index_functions::Bool=false
-                     )::SYMBOLIC_UTILS_TYPES
+                          varMap::Union{Array{String, 1}, Nothing}=nothing,
+                          evaluate_functions::Bool=false,
+                          index_functions::Bool=false)
     if tree.degree == 0
         if tree.constant
             return tree.val
         else
-            if varMap == nothing
+            if varMap === nothing
                 return SymbolicUtils.Sym{Real}(Symbol("x$(tree.feature)"))
             else
                 return SymbolicUtils.Sym{Real}(Symbol(varMap[tree.feature]))
@@ -73,15 +71,14 @@ function node_to_symbolic(tree::Node, options::Options;
 end
 
 function node_to_symbolic_safe(tree::Node, options::Options; 
-                     varMap::Union{Array{String, 1}, Nothing}=nothing,
-                     evaluate_functions::Bool=false,
-                     index_functions::Bool=false
-                     )::Tuple{SYMBOLIC_UTILS_TYPES,Bool}
+                               varMap::Union{Array{String, 1}, Nothing}=nothing,
+                               evaluate_functions::Bool=false,
+                               index_functions::Bool=false)
     if tree.degree == 0
         if tree.constant
             return tree.val, true
         else
-            if varMap == nothing
+            if varMap === nothing
                 return SymbolicUtils.Sym{Real}(Symbol("x$(tree.feature)")), true
             else
                 return SymbolicUtils.Sym{Real}(Symbol(varMap[tree.feature])), true
@@ -135,19 +132,18 @@ end
 
 # Just constant
 function symbolic_to_node(eqn::T, options::Options;
-                     varMap::Union{Array{String, 1}, Nothing}=nothing)::Node where {T<:Number}
+                          varMap::Union{Array{String, 1}, Nothing}=nothing)::Node where {T<:Number}
     return Node(convert(CONST_TYPE, eqn))
 end
 
 # Just variable
 function symbolic_to_node(eqn::T, options::Options;
-                     varMap::Union{Array{String, 1}, Nothing}=nothing)::Node where {T<:SymbolicUtils.Sym{<:Number}}
+                          varMap::Union{Array{String, 1}, Nothing}=nothing)::Node where {T<:SymbolicUtils.Sym{<:Number}}
     return Node(varMap_to_index(eqn.name, varMap))
 end
 
 function _multiarg_split(op_idx::Int, eqn::Array{Any, 1},
-                        options::Options, varMap::Union{Array{String, 1}, Nothing}
-                       )::Node
+                         options::Options, varMap::Union{Array{String, 1}, Nothing})::Node
     if length(eqn) == 2
         return Node(op_idx,
                     symbolic_to_node(eqn[1], options, varMap=varMap),
@@ -167,8 +163,7 @@ end
 
 # Equation:
 function symbolic_to_node(eqn::T, options::Options;
-                       varMap::Union{Array{String, 1}, Nothing}=nothing
-                  )::Node where {T<:SymbolicUtils.Term{<:Number}}
+                          varMap::Union{Array{String, 1}, Nothing}=nothing)::Node where {T<:SymbolicUtils.Term{<:Number}}
     args = SymbolicUtils.arguments(eqn)
     l = symbolic_to_node(args[1], options, varMap=varMap)
     nargs = length(args)

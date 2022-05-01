@@ -6,7 +6,7 @@ import ..LossFunctionsModule: scoreFunc, scoreFuncBatch
 import ..CheckConstraintsModule: check_constraints
 import ..PopMemberModule: PopMember
 import ..MutationFunctionsModule: genRandomTreeFixedSize, mutateConstant, mutateOperator, appendRandomOp, prependRandomOp, insertRandomOp, deleteRandomOp, crossoverTrees
-import ..SimplifyEquationModule: simplifyTree, combineOperators, simplifyWithSymbolicUtils
+import ..SimplifyEquationModule: simplifyTree, combineOperators
 import ..RecorderModule: @recorder
 
 # Go through one simulated options.annealing mutation cycle
