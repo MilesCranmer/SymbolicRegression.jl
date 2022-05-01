@@ -11,7 +11,7 @@ const SUPPORTED_OPS = (cos, sin, exp, cot, tan, csc, sec, +, -, *, /)
 isgood(x::SymbolicUtils.Symbolic) = SymbolicUtils.istree(x) ? all(isgood.([SymbolicUtils.operation(x);SymbolicUtils.arguments(x)])) : true
 subs_bad(x) = isgood(x) ? x : Inf
 
-function parse_tree_to_eqs(tree::Node, options::Options, index_functions::Bool=false, evaluate_functions::Bool=false)
+function parse_tree_to_eqs(tree::Node, options::Options, index_functions::Bool=false)
     if tree.degree == 0
         # Return constant if needed
         tree.constant && return subs_bad(tree.val)
@@ -28,7 +28,7 @@ function parse_tree_to_eqs(tree::Node, options::Options, index_functions::Bool=f
         op = SymbolicUtils.Sym{(SymbolicUtils.FnType){Tuple{dtypes...}, Number}}(Symbol(op))
     end
 
-    return subs_bad(op(map(x->parse_tree_to_eqs(x, options, index_functions, evaluate_functions), children)...))
+    return subs_bad(op(map(x->parse_tree_to_eqs(x, options, index_functions), children)...))
 end
 
 ## Convert symbolic function back
@@ -100,7 +100,6 @@ end
 """
     node_to_symbolic(tree::Node, options::Options;
                 varMap::Union{Array{String, 1}, Nothing}=nothing,
-                evaluate_functions::Bool=false,
                 index_functions::Bool=false)
 
 The interface to SymbolicUtils.jl. Passing a tree to this function
@@ -112,19 +111,15 @@ will generate a symbolic equation in SymbolicUtils.jl format.
 - `options::Options`: Options, which contains the operators used in the equation.
 - `varMap::Union{Array{String, 1}, Nothing}=nothing`: What variable names to use for
     each feature. Default is [x1, x2, x3, ...].
-- `evaluate_functions::Bool=false`: Whether to evaluate the operators, or
-    leave them as symbolic.
 - `index_functions::Bool=false`: Whether to generate special names for the
     operators, which then allows one to convert back to a `Node` format
     using `symbolic_to_node`.
     (CURRENTLY UNAVAILABLE - See https://github.com/MilesCranmer/SymbolicRegression.jl/pull/84).
 """
 function node_to_symbolic(tree::Node, options::Options;
-                     varMap::Union{Array{String, 1}, Nothing}=nothing,
-                     evaluate_functions::Bool=false,
-                     index_functions::Bool=true
-                     )
-    expr = subs_bad(parse_tree_to_eqs(tree, options, index_functions, evaluate_functions))
+                          varMap::Union{Array{String, 1}, Nothing}=nothing,
+                          index_functions::Bool=true)
+    expr = subs_bad(parse_tree_to_eqs(tree, options, index_functions))
     # Check for NaN and Inf
     @assert isgood(expr) "The recovered equation contains NaN or Inf."
     # Return if no varMap is given
