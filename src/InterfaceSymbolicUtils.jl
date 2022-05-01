@@ -118,7 +118,7 @@ will generate a symbolic equation in SymbolicUtils.jl format.
 """
 function node_to_symbolic(tree::Node, options::Options;
                           varMap::Union{Array{String, 1}, Nothing}=nothing,
-                          index_functions::Bool=true)
+                          index_functions::Bool=false)
     expr = subs_bad(parse_tree_to_eqs(tree, options, index_functions))
     # Check for NaN and Inf
     @assert isgood(expr) "The recovered equation contains NaN or Inf."
