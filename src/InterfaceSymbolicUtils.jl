@@ -138,11 +138,23 @@ function symbolic_to_node(eqn::T, options::Options;
     convert(Node, eqn, options; varMap=varMap)
 end
 
-function multiply_powers(eqn::T)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {T<:Union{<:Number,SymbolicUtils.Sym{<:Number}}}
-	return eqn, true
+# function Base.convert(::typeof(Node), x::Number, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
+# function Base.convert(::typeof(Node), expr::SymbolicUtils.Symbolic, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
+
+function multiply_powers(eqn::Number)::Tuple{SYMBOLIC_UTILS_TYPES,Bool}
+    return eqn, true
 end
 
-function multiply_powers(eqn::T, op::F)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {F,T<:Union{SymbolicUtils.Term{<:Number},SymbolicUtils.Symbolic{<:Number}}}
+function multiply_powers(eqn::SymbolicUtils.Symbolic)::Tuple{SYMBOLIC_UTILS_TYPES,Bool}
+    if !SymbolicUtils.istree(eqn)
+        return eqn, true
+    end
+	op = SymbolicUtils.operation(eqn)
+	return multiply_powers(eqn, op)
+end
+
+
+function multiply_powers(eqn::SymbolicUtils.Symbolic, op::F)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {F}
 	args = SymbolicUtils.arguments(eqn)
 	nargs = length(args)
 	if nargs == 1
@@ -195,11 +207,6 @@ function multiply_powers(eqn::T, op::F)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where 
         end
         return cumulator, true
 	end
-end
-
-function multiply_powers(eqn::T)::Tuple{SYMBOLIC_UTILS_TYPES,Bool} where {T<:Union{SymbolicUtils.Term{<:Number},SymbolicUtils.Symbolic{<:Number}}}
-	op = SymbolicUtils.operation(eqn)
-	return multiply_powers(eqn, op)
 end
 
 end

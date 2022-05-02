@@ -7,7 +7,7 @@ binary_operators = (+, -, /, *)
 
 index_of_mult = [i for (i, op) in enumerate(binary_operators) if op == *][1]
 
-options = Options(; default_params..., binary_operators=binary_operators)
+options = Options(binary_operators=binary_operators)
 
 tree = Node("x1") + Node("x1")
 
@@ -15,16 +15,18 @@ tree = Node("x1") + Node("x1")
 eqn = convert(Symbolic, tree, options)
 eqn2 = simplify(eqn)
 # Should correctly simplify to 2 x1:
+# (although it might use 2(x1^1))
 @test occursin("2", "$(repr(eqn2)[1])")
 
-# Let's convert back:
+# Let's convert back the simplified version.
+# This should remove the ^ operator:
 tree = convert(Node, eqn2, options)
 # Make sure one of the nodes is now 2.0:
 @test (tree.l.constant ? tree.l : tree.r).val == 2
 # Make sure the other node is x1:
 @test (!tree.l.constant ? tree.l : tree.r).feature == 1
 
-# Finally, let's try simplifying a product, and ensure
+# Finally, let's try converting a product, and ensure
 # that SymbolicUtils does not convert it to a power:
 tree = Node("x1") * Node("x1")
 eqn = convert(Symbolic, tree, options)
@@ -54,10 +56,15 @@ tree = (((x2 + x2) * ((-0.5982493 / pow_abs(x1, x2)) / -0.54734415)) + (sin(cust
 eqn = convert(Symbolic, tree, options, index_functions=true)
 
 tree_copy = convert(Node, eqn, options)
+tree_copy2 = convert(Node, simplify(eqn), options)
 # Too difficult to check the representation, so we check by evaluation:
 N = 100
-X = rand(MersenneTwister(0), 3, N)
+X = rand(MersenneTwister(0), 3, N) .+ 0.1
 output1, flag1 = evalTreeArray(tree, X, options)
 output2, flag2 = evalTreeArray(tree_copy, X, options)
+output3, flag3 = evalTreeArray(tree_copy2, X, options)
 
-isapprox(output1, output2, atol=1e-5 * N)
+@test isapprox(output1, output2, atol=1e-4 * sqrt(N))
+# Simplified equation may give a different answer due to rounding errors,
+# so we weaken the requirement:
+@test isapprox(output1, output3, atol=1e-2 * sqrt(N))
