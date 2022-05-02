@@ -37,10 +37,10 @@ y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
 options = SymbolicRegression.Options(
     binary_operators=(+, *, /, -),
     unary_operators=(cos, exp),
-    npopulations=40
+    npopulations=20
 )
 
-hall_of_fame = EquationSearch(X, y, niterations=50, options=options, numprocs=4)
+hall_of_fame = EquationSearch(X, y, niterations=40, options=options, numprocs=4)
 ```
 We can view the equations in the dominating
 Pareto frontier with:
