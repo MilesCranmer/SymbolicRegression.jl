@@ -10,9 +10,9 @@ options = Options(; default_params..., binary_operators=binary_operators)
 tree = Node("x1") + Node("x1")
 
 # Should simplify to 2*x1:
-import SymbolicUtils: simplify
+import SymbolicUtils: simplify, Symbolic
 
-eqn = node_to_symbolic(tree, options; index_functions=false)
+eqn = convert(Symbolic, tree, options)
 eqn2 = simplify(eqn)
 # Should correctly simplify to 2 x1:
 @test occursin("2", "$(repr(eqn2)[1])")
