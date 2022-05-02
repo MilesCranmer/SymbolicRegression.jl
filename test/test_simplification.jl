@@ -14,4 +14,5 @@ import SymbolicUtils: simplify
 
 eqn = node_to_symbolic(tree, options; index_functions=false)
 eqn2 = simplify(eqn)
-@test occursin("2", "$(eqn2[1])")
+# Should correctly simplify to 2 x1:
+@test occursin("2", "$(repr(eqn2)[1])")
