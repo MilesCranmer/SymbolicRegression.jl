@@ -63,9 +63,9 @@ end
 function score_func(
     dataset::Dataset{T}, baseline::T, tree::Node, options::Options
 )::Tuple{T,T} where {T<:Real}
-    loss = eval_loss(tree, dataset, options)
-    score = loss_to_score(loss, baseline, tree, options)
-    return score, loss
+    result_loss = eval_loss(tree, dataset, options)
+    score = loss_to_score(result_loss, baseline, tree, options)
+    return score, result_loss
 end
 
 # Score an equation with a small batch
@@ -82,13 +82,13 @@ function score_func_batch(
     end
 
     if !dataset.weighted
-        loss = loss(prediction, batch_y, options)
+        result_loss = loss(prediction, batch_y, options)
     else
         batch_w = dataset.weights[batch_idx]
-        loss = loss(prediction, batch_y, batch_w, options)
+        result_loss = loss(prediction, batch_y, batch_w, options)
     end
-    score = loss_to_score(loss, baseline, tree, options)
-    return score, loss
+    score = loss_to_score(result_loss, baseline, tree, options)
+    return score, result_loss
 end
 
 end

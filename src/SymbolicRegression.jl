@@ -597,14 +597,14 @@ function _EquationSearch(
                 )
                 if options.batching
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
-                        score, loss = score_func(
+                        score, result_loss = score_func(
                             dataset,
                             baselineMSE,
                             tmp_best_seen.members[i_member].tree,
                             options,
                         )
                         tmp_best_seen.members[i_member].score = score
-                        tmp_best_seen.members[i_member].loss = loss
+                        tmp_best_seen.members[i_member].loss = result_loss
                     end
                 end
                 (tmp_pop, tmp_best_seen, cur_record)
@@ -726,10 +726,9 @@ function _EquationSearch(
             open(hofFile, "w") do io
                 println(io, "Complexity|MSE|Equation")
                 for member in dominating
-                    loss = member.loss
                     println(
                         io,
-                        "$(count_nodes(member.tree))|$(loss)|$(string_tree(member.tree, options, varMap=dataset.varMap))",
+                        "$(count_nodes(member.tree))|$(member.loss)|$(string_tree(member.tree, options, varMap=dataset.varMap))",
                     )
                 end
             end
@@ -807,14 +806,14 @@ function _EquationSearch(
                 if options.batching
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
                         if tmp_best_seen.exists[i_member]
-                            score, loss = score_func(
+                            score, result_loss = score_func(
                                 dataset,
                                 baselineMSE,
                                 tmp_best_seen.members[i_member].tree,
                                 options,
                             )
                             tmp_best_seen.members[i_member].score = score
-                            tmp_best_seen.members[i_member].loss = loss
+                            tmp_best_seen.members[i_member].loss = result_loss
                         end
                     end
                 end
