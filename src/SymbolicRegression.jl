@@ -159,7 +159,7 @@ which is useful for debugging and profiling.
     which will cause `EquationSearch` to return the state. Note that
     you cannot change the operators or dataset, but most other options
     should be changeable.
-- `addprocs_function`::Union{Function, Nothing}=nothing`: If using distributed
+- `addprocs_function::Union{Function, Nothing}=nothing`: If using distributed
     mode (`multithreading=false`), you may pass a custom function to use
     instead of `addprocs`. This function should take a single positional argument,
     which is the number of processes to use, as well as the `lazy` keyword argument.
