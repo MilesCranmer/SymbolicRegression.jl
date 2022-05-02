@@ -166,13 +166,13 @@ customloss(x, y, w) = w * (abs(x - y)^2.5)
 testl1(x, y) = abs(x - y)
 testl1(x, y, w) = abs(x - y) * w
 
-for (loss, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
+for (loss_fnc, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
     local options = Options(;
         default_params...,
         binary_operators=(+, *, -, /),
         unary_operators=(cos, exp),
         npopulations=4,
-        loss=loss,
+        loss=loss_fnc,
     )
     x = randn(MersenneTwister(0), Float32, 100)
     y = randn(MersenneTwister(1), Float32, 100)
