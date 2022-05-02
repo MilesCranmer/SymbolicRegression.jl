@@ -459,11 +459,12 @@ function Options(;
             continue
         end
         @eval begin
-            Base.$_f(l::Node, r::Node)::Node = if (l.constant && r.constant)
-                Node($f(l.val, r.val)::AbstractFloat)
-            else
-                Node($op, l, r)
-            end
+            Base.$_f(l::Node, r::Node)::Node =
+                if (l.constant && r.constant)
+                    Node($f(l.val, r.val)::AbstractFloat)
+                else
+                    Node($op, l, r)
+                end
             Base.$_f(l::Node, r::AbstractFloat)::Node =
                 l.constant ? Node($f(l.val, r)::AbstractFloat) : Node($op, l, r)
             Base.$_f(l::AbstractFloat, r::Node)::Node =

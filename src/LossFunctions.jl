@@ -49,7 +49,9 @@ function eval_loss(tree::Node, dataset::Dataset{T}, options::Options)::T where {
 end
 
 # Compute a score which includes a complexity penalty in the loss
-function loss_to_score(loss::T, baseline::T, tree::Node, options::Options)::T where {T<:Real}
+function loss_to_score(
+    loss::T, baseline::T, tree::Node, options::Options
+)::T where {T<:Real}
     normalized_loss_term = loss / baseline
     size = count_nodes(tree)
     parsimony_term = size * options.parsimony

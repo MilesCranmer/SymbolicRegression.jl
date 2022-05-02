@@ -152,7 +152,11 @@ import .EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
 import .EvaluateEquationDerivativeModule: eval_diff_tree_array, eval_grad_tree_array
 import .CheckConstraintsModule: check_constraints
 import .MutationFunctionsModule:
-    gen_random_tree, gen_random_tree_fixed_size, random_node, random_node_and_parent, crossover_trees
+    gen_random_tree,
+    gen_random_tree_fixed_size,
+    random_node,
+    random_node_and_parent,
+    crossover_trees
 import .LossFunctionsModule: eval_loss, loss, score_func
 import .PopMemberModule: PopMember, copy_pop_member
 import .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
@@ -405,7 +409,9 @@ function _EquationSearch(
     # Set up a channel to send finished populations back to head node
     if ConcurrencyType in [SRDistributed, SRThreaded]
         if ConcurrencyType == SRDistributed
-            channels = [[RemoteChannel(1) for i in 1:(options.npopulations)] for j in 1:nout]
+            channels = [
+                [RemoteChannel(1) for i in 1:(options.npopulations)] for j in 1:nout
+            ]
         else
             channels = [[Channel(1) for i in 1:(options.npopulations)] for j in 1:nout]
         end

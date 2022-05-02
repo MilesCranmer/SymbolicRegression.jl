@@ -1,6 +1,5 @@
 using Base: @deprecate
 
-
 @deprecate EvalLoss eval_loss
 @deprecate Loss loss
 @deprecate OptimizeAndSimplifyPopulation optimize_and_simplify_population

@@ -75,7 +75,9 @@ for type in [Float32, Float64]
         true_grad = reduce(hcat, true_grad)'
         predicted_grad = eval_grad_tree_array(tree, X, options; variable=true)[2]
         predicted_grad2 =
-            reduce(hcat, [eval_diff_tree_array(tree, X, options, i)[2] for i in 1:nfeatures])'
+            reduce(
+                hcat, [eval_diff_tree_array(tree, X, options, i)[2] for i in 1:nfeatures]
+            )'
 
         # Print largest difference between predicted_grad, true_grad:
         @test array_test(predicted_grad, true_grad)

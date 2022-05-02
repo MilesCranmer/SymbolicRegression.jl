@@ -4,7 +4,9 @@ import ..CoreModule: Node, Options
 import ..EquationUtilsModule: count_nodes
 
 # Check if any binary operator are overly complex
-function flag_bin_operator_complexity(tree::Node, ::Val{op}, options::Options)::Bool where {op}
+function flag_bin_operator_complexity(
+    tree::Node, ::Val{op}, options::Options
+)::Bool where {op}
     if tree.degree == 0
         return false
     elseif tree.degree == 1
@@ -32,7 +34,9 @@ function flag_bin_operator_complexity(tree::Node, ::Val{op}, options::Options)::
 end
 
 # Check if any unary operators are overly complex
-function flag_una_operator_complexity(tree::Node, ::Val{op}, options::Options)::Bool where {op}
+function flag_una_operator_complexity(
+    tree::Node, ::Val{op}, options::Options
+)::Bool where {op}
     if tree.degree == 0
         return false
     elseif tree.degree == 1
