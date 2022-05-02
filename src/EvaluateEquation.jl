@@ -9,20 +9,23 @@ macro return_on_check(val, T, n)
     #     return (Array{T, 1}(undef, n), false)
     # end
 
-    :(if !isfinite($(esc(val)))
-        return (Array{$(esc(T)), 1}(undef, $(esc(n))), false)
-    end)
+    :(
+        if !isfinite($(esc(val)))
+            return (Array{$(esc(T)),1}(undef, $(esc(n))), false)
+        end
+    )
 end
 
 macro return_on_nonfinite_array(array, T, n)
-    :(if is_bad_array($(esc(array)))
-        return (Array{$(esc(T)), 1}(undef, $(esc(n))), false)
-    end)
+    :(
+        if is_bad_array($(esc(array)))
+            return (Array{$(esc(T)),1}(undef, $(esc(n))), false)
+        end
+    )
 end
 
-
 """
-    evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)
+    eval_tree_array(tree::Node, cX::AbstractMatrix{T}, options::Options)
 
 Evaluate a binary tree (equation) over a given input data matrix. The
 options contain all of the operators used. This function fuses doublets
@@ -50,15 +53,19 @@ which speed up evaluation significantly.
     or nan was encountered, and a large loss should be assigned
     to the equation.
 """
-function evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
+function eval_tree_array(
+    tree::Node, cX::AbstractMatrix{T}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real}
     n = size(cX, 2)
-    result, finished = _evalTreeArray(tree, cX, options)
+    result, finished = _eval_tree_array(tree, cX, options)
     @return_on_false finished result
     @return_on_nonfinite_array result T n
     return result, finished
 end
 
-function _evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
+function _eval_tree_array(
+    tree::Node, cX::AbstractMatrix{T}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real}
     if tree.degree == 0
         deg0_eval(tree, cX, options)
     elseif tree.degree == 1
@@ -95,19 +102,20 @@ function _evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tu
     end
 end
 
-
-function deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
+function deg2_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
-    (cumulator, complete) = _evalTreeArray(tree.l, cX, options)
+    (cumulator, complete) = _eval_tree_array(tree.l, cX, options)
     @return_on_false complete cumulator
     @return_on_nonfinite_array cumulator T n
-    (array2, complete2) = _evalTreeArray(tree.r, cX, options)
+    (array2, complete2) = _eval_tree_array(tree.r, cX, options)
     @return_on_false complete2 cumulator
     @return_on_nonfinite_array array2 T n
     op = options.binops[op_idx]
 
     # We check inputs (and intermediates), not outputs.
-    @inbounds @simd for j=1:n
+    @inbounds @simd for j in 1:n
         x = op(cumulator[j], array2[j])::T
         cumulator[j] = x
     end
@@ -115,20 +123,24 @@ function deg2_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Op
     return (cumulator, true)
 end
 
-function deg1_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
+function deg1_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
-    (cumulator, complete) = _evalTreeArray(tree.l, cX, options)
+    (cumulator, complete) = _eval_tree_array(tree.l, cX, options)
     @return_on_false complete cumulator
     @return_on_nonfinite_array cumulator T n
     op = options.unaops[op_idx]
-    @inbounds @simd for j=1:n
+    @inbounds @simd for j in 1:n
         x = op(cumulator[j])::T
         cumulator[j] = x
     end
     return (cumulator, true) #
 end
 
-function deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
+function deg0_eval(
+    tree::Node, cX::AbstractMatrix{T}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real}
     n = size(cX, 2)
     if tree.constant
         return (fill(convert(T, tree.val), n), true)
@@ -137,7 +149,9 @@ function deg0_eval(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{A
     end
 end
 
-function deg1_l2_ll0_lr0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx,op_l_idx}
+function deg1_l2_ll0_lr0_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx,op_l_idx}
     n = size(cX, 2)
     op = options.unaops[op_idx]
     op_l = options.binops[op_l_idx]
@@ -155,10 +169,10 @@ function deg1_l2_ll0_lr0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, 
         val_ll = convert(T, tree.l.l.val)
         @return_on_check val_ll T n
         feature_lr = tree.l.r.feature
-        cumulator = Array{T, 1}(undef, n)
-        @inbounds @simd for j=1:n
+        cumulator = Array{T,1}(undef, n)
+        @inbounds @simd for j in 1:n
             x_l = op_l(val_ll, cX[feature_lr, j])::T
-            x = isfinite(x_l) ? op(x_l)::T : T(Inf) # These will get discovered by _evalTreeArray at end.
+            x = isfinite(x_l) ? op(x_l)::T : T(Inf) # These will get discovered by _eval_tree_array at end.
             cumulator[j] = x
         end
         return (cumulator, true)
@@ -166,8 +180,8 @@ function deg1_l2_ll0_lr0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, 
         feature_ll = tree.l.l.feature
         val_lr = convert(T, tree.l.r.val)
         @return_on_check val_lr T n
-        cumulator = Array{T, 1}(undef, n)
-        @inbounds @simd for j=1:n
+        cumulator = Array{T,1}(undef, n)
+        @inbounds @simd for j in 1:n
             x_l = op_l(cX[feature_ll, j], val_lr)::T
             x = isfinite(x_l) ? op(x_l)::T : T(Inf)
             cumulator[j] = x
@@ -176,8 +190,8 @@ function deg1_l2_ll0_lr0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, 
     else
         feature_ll = tree.l.l.feature
         feature_lr = tree.l.r.feature
-        cumulator = Array{T, 1}(undef, n)
-        @inbounds @simd for j=1:n
+        cumulator = Array{T,1}(undef, n)
+        @inbounds @simd for j in 1:n
             x_l = op_l(cX[feature_ll, j], cX[feature_lr, j])::T
             x = isfinite(x_l) ? op(x_l)::T : T(Inf)
             cumulator[j] = x
@@ -186,9 +200,10 @@ function deg1_l2_ll0_lr0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, 
     end
 end
 
-
 # op(op2(x)) for x variable or constant
-function deg1_l1_ll0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx,op_l_idx}
+function deg1_l1_ll0_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx,op_l_idx}
     n = size(cX, 2)
     op = options.unaops[op_idx]
     op_l = options.unaops[op_l_idx]
@@ -202,8 +217,8 @@ function deg1_l1_ll0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Va
         return (fill(x, n), true)
     else
         feature_ll = tree.l.l.feature
-        cumulator = Array{T, 1}(undef, n)
-        @inbounds @simd for j=1:n
+        cumulator = Array{T,1}(undef, n)
+        @inbounds @simd for j in 1:n
             x_l = op_l(cX[feature_ll, j])::T
             x = isfinite(x_l) ? op(x_l)::T : T(Inf)
             cumulator[j] = x
@@ -212,7 +227,9 @@ function deg1_l1_ll0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Va
     end
 end
 
-function deg2_l0_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
+function deg2_l0_r0_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     op = options.binops[op_idx]
     if tree.l.constant && tree.r.constant
@@ -224,28 +241,28 @@ function deg2_l0_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, optio
         @return_on_check x T n
         return (fill(x, n), true)
     elseif tree.l.constant
-        cumulator = Array{T, 1}(undef, n)
+        cumulator = Array{T,1}(undef, n)
         val_l = convert(T, tree.l.val)
         @return_on_check val_l T n
         feature_r = tree.r.feature
-        @inbounds @simd for j=1:n
+        @inbounds @simd for j in 1:n
             x = op(val_l, cX[feature_r, j])::T
             cumulator[j] = x
         end
     elseif tree.r.constant
-        cumulator = Array{T, 1}(undef, n)
+        cumulator = Array{T,1}(undef, n)
         feature_l = tree.l.feature
         val_r = convert(T, tree.r.val)
         @return_on_check val_r T n
-        @inbounds @simd for j=1:n
+        @inbounds @simd for j in 1:n
             x = op(cX[feature_l, j], val_r)::T
             cumulator[j] = x
         end
     else
-        cumulator = Array{T, 1}(undef, n)
+        cumulator = Array{T,1}(undef, n)
         feature_l = tree.l.feature
         feature_r = tree.r.feature
-        @inbounds @simd for j=1:n
+        @inbounds @simd for j in 1:n
             x = op(cX[feature_l, j], cX[feature_r, j])::T
             cumulator[j] = x
         end
@@ -253,22 +270,24 @@ function deg2_l0_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, optio
     return (cumulator, true)
 end
 
-function deg2_l0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
+function deg2_l0_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
-    (cumulator, complete) = _evalTreeArray(tree.r, cX, options)
+    (cumulator, complete) = _eval_tree_array(tree.r, cX, options)
     @return_on_false complete cumulator
     @return_on_nonfinite_array cumulator T n
     op = options.binops[op_idx]
     if tree.l.constant
         val = convert(T, tree.l.val)
         @return_on_check val T n
-        @inbounds @simd for j=1:n
+        @inbounds @simd for j in 1:n
             x = op(val, cumulator[j])::T
             cumulator[j] = x
         end
     else
         feature = tree.l.feature
-        @inbounds @simd for j=1:n
+        @inbounds @simd for j in 1:n
             x = op(cX[feature, j], cumulator[j])::T
             cumulator[j] = x
         end
@@ -276,22 +295,24 @@ function deg2_l0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
     return (cumulator, true)
 end
 
-function deg2_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
+function deg2_r0_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
-    (cumulator, complete) = _evalTreeArray(tree.l, cX, options)
+    (cumulator, complete) = _eval_tree_array(tree.l, cX, options)
     @return_on_false complete cumulator
     @return_on_nonfinite_array cumulator T n
     op = options.binops[op_idx]
     if tree.r.constant
         val = convert(T, tree.r.val)
         @return_on_check val T n
-        @inbounds @simd for j=1:n
+        @inbounds @simd for j in 1:n
             x = op(cumulator[j], val)::T
             cumulator[j] = x
         end
     else
         feature = tree.r.feature
-        @inbounds @simd for j=1:n
+        @inbounds @simd for j in 1:n
             x = op(cumulator[j], cX[feature, j])::T
             cumulator[j] = x
         end
@@ -299,10 +320,11 @@ function deg2_r0_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options:
     return (cumulator, true)
 end
 
-
 # Evaluate an equation over an array of datapoints
 # This one is just for reference. The fused one should be faster.
-function differentiableEvalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real}
+function differentiable_eval_tree_array(
+    tree::Node, cX::AbstractMatrix{T}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real}
     n = size(cX, 2)
     if tree.degree == 0
         if tree.constant
@@ -317,9 +339,10 @@ function differentiableEvalTreeArray(tree::Node, cX::AbstractMatrix{T}, options:
     end
 end
 
-function deg1_diff_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
-    n = size(cX, 2)
-    (left, complete) = differentiableEvalTreeArray(tree.l, cX, options)
+function deg1_diff_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
+    (left, complete) = differentiable_eval_tree_array(tree.l, cX, options)
     @return_on_false complete left
     op = options.unaops[op_idx]
     out = op.(left)
@@ -327,11 +350,12 @@ function deg1_diff_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
     return (out, no_nans)
 end
 
-function deg2_diff_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options)::Tuple{AbstractVector{T}, Bool} where {T<:Real,op_idx}
-    n = size(cX, 2)
-    (left, complete) = differentiableEvalTreeArray(tree.l, cX, options)
+function deg2_diff_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
+    (left, complete) = differentiable_eval_tree_array(tree.l, cX, options)
     @return_on_false complete left
-    (right, complete2) = differentiableEvalTreeArray(tree.r, cX, options)
+    (right, complete2) = differentiable_eval_tree_array(tree.r, cX, options)
     @return_on_false complete2 left
     op = options.binops[op_idx]
     out = op.(left, right)

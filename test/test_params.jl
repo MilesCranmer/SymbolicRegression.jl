@@ -24,9 +24,11 @@ default_params = (
     annealing=true,
     batching=false,
     batchSize=50,
-    mutationWeights=[10.000000, 1.000000, 1.000000, 3.000000, 3.000000, 0.010000, 1.000000, 1.000000],
+    mutationWeights=[
+        10.000000, 1.000000, 1.000000, 3.000000, 3.000000, 0.010000, 1.000000, 1.000000
+    ],
     crossoverProbability=0.0f0,
-    warmupMaxsizeBy=0f0,
+    warmupMaxsizeBy=0.0f0,
     useFrequency=false,
     npop=1000,
     ncyclesperiteration=300,

@@ -1,8 +1,8 @@
 module PopMemberModule
 
-import ..CoreModule: Options, Dataset, Node, copyNode
-import ..UtilsModule: getTime
-import ..LossFunctionsModule: scoreFunc
+import ..CoreModule: Options, Dataset, Node, copy_node
+import ..UtilsModule: get_time
+import ..LossFunctionsModule: score_func
 
 # Define a member of population by equation, score, and age
 mutable struct PopMember{T<:Real}
@@ -31,7 +31,7 @@ function PopMember(t::Node, score::T, loss::T; ref::Int=-1, parent::Int=-1) wher
     if ref == -1
         ref = abs(rand(Int))
     end
-    PopMember{T}(t, score, loss, getTime(), ref, parent)
+    return PopMember{T}(t, score, loss, get_time(), ref, parent)
 end
 
 """
@@ -48,15 +48,15 @@ Automatically compute the score for this tree.
 - `t::Node`: The tree for the population member.
 - `options::Options`: What options to use.
 """
-function PopMember(dataset::Dataset{T},
-                   baseline::T, t::Node,
-                   options::Options; ref::Int=-1, parent::Int=-1) where {T<:Real}
-    score, loss = scoreFunc(dataset, baseline, t, options)
-    PopMember(t, score, loss, ref=ref, parent=parent)
+function PopMember(
+    dataset::Dataset{T}, baseline::T, t::Node, options::Options; ref::Int=-1, parent::Int=-1
+) where {T<:Real}
+    score, loss = score_func(dataset, baseline, t, options)
+    return PopMember(t, score, loss; ref=ref, parent=parent)
 end
 
-function copyPopMember(p::PopMember{T}) where {T<:Real}
-    tree = copyNode(p.tree)
+function copy_pop_member(p::PopMember{T}) where {T<:Real}
+    tree = copy_node(p.tree)
     score = copy(p.score)
     loss = copy(p.loss)
     birth = copy(p.birth)

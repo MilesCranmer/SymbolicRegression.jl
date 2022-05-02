@@ -3,7 +3,6 @@ module OptionsStructModule
 import LossFunctions: SupervisedLoss
 
 struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
-
     binops::A
     unaops::B
     diff_binops::dA
@@ -26,7 +25,7 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
     annealing::Bool
     batching::Bool
     batchSize::Int
-    mutationWeights::Array{Float64, 1}
+    mutationWeights::Array{Float64,1}
     crossoverProbability::Float32
     warmupMaxsizeBy::Float32
     useFrequency::Bool
@@ -39,10 +38,10 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
     probNegate::Float32
     nuna::Int
     nbin::Int
-    seed::Union{Int, Nothing}
+    seed::Union{Int,Nothing}
     loss::C
     progress::Bool
-    terminal_width::Union{Int, Nothing}
+    terminal_width::Union{Int,Nothing}
     optimizer_algorithm::String
     optimize_probability::Float32
     optimizer_nrestarts::Int
@@ -50,16 +49,18 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
     recorder::Bool
     recorder_file::String
     probPickFirst::Float32
-    earlyStopCondition::Union{Function, Nothing}
+    earlyStopCondition::Union{Function,Nothing}
     stateReturn::Bool
-    timeout_in_seconds::Union{Float64, Nothing}
+    timeout_in_seconds::Union{Float64,Nothing}
     skip_mutation_failures::Bool
     enable_autodiff::Bool
     nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
-
 end
 
-Base.print(io::IO, options::Options) = print(io, """Options(
+function Base.print(io::IO, options::Options)
+    return print(
+        io,
+        """Options(
 # Operators:
     binops=$(options.binops), unaops=$(options.unaops),
 # Loss:
@@ -84,7 +85,9 @@ Base.print(io::IO, options::Options) = print(io, """Options(
     hofFile=$(options.hofFile), verbosity=$(options.verbosity), seed=$(options.seed), progress=$(options.progress),
 # Early Exit:
     earlyStopCondition=$(options.earlyStopCondition), timeout_in_seconds=$(options.timeout_in_seconds),
-)""")
+)""",
+    )
+end
 Base.show(io::IO, options::Options) = Base.print(io, options)
 
 end

@@ -12,15 +12,9 @@ Usage:
 
 import Printf: @sprintf
 
-EIGHTS = Dict(0 => ' ',
-              1 => '▏',
-              2 => '▎',
-              3 => '▍',
-              4 => '▌',
-              5 => '▋',
-              6 => '▊',
-              7 => '▉',
-              8 => '█')
+EIGHTS = Dict(
+    0 => ' ', 1 => '▏', 2 => '▎', 3 => '▍', 4 => '▌', 5 => '▋', 6 => '▊', 7 => '▉', 8 => '█'
+)
 
 # Split this because UTF-8 indexing is horrible otherwise
 # IDLE = collect("◢◤ ")
@@ -50,7 +44,7 @@ mutable struct ProgressBar
     multilinepostfix::AbstractString
     mutex::Threads.SpinLock
 
-    function ProgressBar(wrapped::Any; total::Int = -2, width = nothing, leave=true)
+    function ProgressBar(wrapped::Any; total::Int=-2, width=nothing, leave=true)
         this = new()
         this.wrapped = wrapped
         if width === nothing
@@ -71,11 +65,10 @@ mutable struct ProgressBar
         this.mutex = Threads.SpinLock()
         this.current = 0
 
-
         if total == -2  # No total given
             try
                 this.total = length(wrapped)
-            catch 
+            catch
                 this.total = -1
             end
         else
@@ -91,17 +84,17 @@ tqdm = ProgressBar
 
 function format_time(seconds)
     if isfinite(seconds)
-        mins,s  = divrem(round(Int, seconds), 60)
-        h, m    = divrem(mins, 60)
+        mins, s = divrem(round(Int, seconds), 60)
+        h, m = divrem(mins, 60)
     else
         h = 0
         m = Inf
         s = Inf
     end
-    if h!=0
-        return @sprintf("%02d:%02d:%02d",h,m,s)
+    if h != 0
+        return @sprintf("%02d:%02d:%02d", h, m, s)
     else
-        return @sprintf("%02d:%02d",m,s)
+        return @sprintf("%02d:%02d", m, s)
     end
 end
 
@@ -122,17 +115,15 @@ function display_progress(t::ProgressBar)
     postfix_string = postfix_repr(t.postfix)
 
     # Reset Cursor to beginning of the line
-    for line in 1:t.extra_lines
+    for line in 1:(t.extra_lines)
         move_up_1_line()
     end
     go_to_start_of_line()
-
 
     if t.description != ""
         barwidth -= length(t.description) + 1
         print(t.description * " ")
     end
-
 
     if (t.total <= 0)
         status_string = "$(t.current)it $elapsed [$iterations_per_second$postfix_string]"
@@ -146,11 +137,11 @@ function display_progress(t::ProgressBar)
         print("┫ ")
         print(status_string)
     else
-        ETA = (t.total-t.current) / speed
+        ETA = (t.total - t.current) / speed
 
-        percentage_string = string(@sprintf("%.1f%%",t.current/t.total*100))
+        percentage_string = string(@sprintf("%.1f%%", t.current / t.total * 100))
 
-        eta     = format_time(ETA)
+        eta = format_time(ETA)
         status_string = "$(t.current)/$(t.total) [$elapsed<$eta, $iterations_per_second$postfix_string]"
 
         barwidth -= length(status_string) + length(percentage_string) + 1
@@ -177,9 +168,8 @@ function display_progress(t::ProgressBar)
     t.last_extra_lines = t.extra_lines
     t.extra_lines = ceil(Int, length(multiline_postfix_string) / t.width) + 1
     print(multiline_postfix_string)
-    println() #Newline is required for Python to read in.
+    return println() #Newline is required for Python to read in.
 end
-
 
 erase_to_end_of_line() = print("\033[K")
 move_up_1_line() = print("\033[1A")
@@ -202,7 +192,7 @@ function clear_progress(t::ProgressBar)
         erase_line()
         move_up_1_line()
     end
-    erase_line()
+    return erase_line()
 end
 
 function set_multiline_postfix(t::ProgressBar, postfix::AbstractString)
@@ -210,7 +200,7 @@ function set_multiline_postfix(t::ProgressBar, postfix::AbstractString)
     if mistakenly_used_newline_at_start
         postfix = postfix[2:end]
     end
-    t.multilinepostfix = postfix
+    return t.multilinepostfix = postfix
 end
 
 function postfix_repr(postfix::NamedTuple)::AbstractString
@@ -228,17 +218,17 @@ function Base.iterate(iter::ProgressBar)
     return iterate(iter.wrapped)
 end
 
-function Base.iterate(iter::ProgressBar,s)
+function Base.iterate(iter::ProgressBar, s)
     if displaysize(stdout)[2] != iter.width && !iter.fixwidth
         iter.width = displaysize(stdout)[2]
         print("\n"^(iter.extra_lines + 2))
     end
     iter.current += 1
-    if(time_ns() - iter.last_print > PRINTING_DELAY)
+    if (time_ns() - iter.last_print > PRINTING_DELAY)
         display_progress(iter)
         iter.last_print = time_ns()
     end
-    state = iterate(iter.wrapped,s)
+    state = iterate(iter.wrapped, s)
     if state === nothing
         if iter.total > 0
             iter.current = iter.total

@@ -1,13 +1,13 @@
 module SimplifyEquationModule
 
-import ..CoreModule: CONST_TYPE, Node, copyNode, Options
-import ..EquationUtilsModule: countNodes
+import ..CoreModule: CONST_TYPE, Node, copy_node, Options
+import ..EquationUtilsModule: count_nodes
 import ..CheckConstraintsModule: check_constraints
 import ..UtilsModule: isbad, isgood
 
 # Simplify tree
-function combineOperators(tree::Node, options::Options)::Node
-    # NOTE: (const (+*-) const) already accounted for. Call simplifyTree before.
+function combine_operators(tree::Node, options::Options)::Node
+    # NOTE: (const (+*-) const) already accounted for. Call simplify_tree before.
     # ((const + var) + const) => (const + var)
     # ((const * var) * const) => (const * var)
     # ((const - var) - const) => (const - var)
@@ -16,14 +16,16 @@ function combineOperators(tree::Node, options::Options)::Node
     if tree.degree == 0
         return tree
     elseif tree.degree == 1
-        tree.l = combineOperators(tree.l, options)
+        tree.l = combine_operators(tree.l, options)
     elseif tree.degree == 2
-        tree.l = combineOperators(tree.l, options)
-        tree.r = combineOperators(tree.r, options)
+        tree.l = combine_operators(tree.l, options)
+        tree.r = combine_operators(tree.r, options)
     end
 
     top_level_constant = tree.degree == 2 && (tree.l.constant || tree.r.constant)
-    if tree.degree == 2 && (options.binops[tree.op] == (*) || options.binops[tree.op] == (+)) && top_level_constant
+    if tree.degree == 2 &&
+        (options.binops[tree.op] == (*) || options.binops[tree.op] == (+)) &&
+        top_level_constant
         op = tree.op
         # Put the constant in r. Need to assume var in left for simplification assumption.
         if tree.l.constant
@@ -92,9 +94,9 @@ function combineOperators(tree::Node, options::Options)::Node
 end
 
 # Simplify tree
-function simplifyTree(tree::Node, options::Options)::Node
+function simplify_tree(tree::Node, options::Options)::Node
     if tree.degree == 1
-        tree.l = simplifyTree(tree.l, options)
+        tree.l = simplify_tree(tree.l, options)
         l = tree.l.val
         if tree.l.degree == 0 && tree.l.constant && isgood(l)
             out = options.unaops[tree.op](l)
@@ -104,11 +106,10 @@ function simplifyTree(tree::Node, options::Options)::Node
             return Node(convert(CONST_TYPE, out))
         end
     elseif tree.degree == 2
-        tree.l = simplifyTree(tree.l, options)
-        tree.r = simplifyTree(tree.r, options)
+        tree.l = simplify_tree(tree.l, options)
+        tree.r = simplify_tree(tree.r, options)
         constantsBelow = (
-             tree.l.degree == 0 && tree.l.constant &&
-             tree.r.degree == 0 && tree.r.constant
+            tree.l.degree == 0 && tree.l.constant && tree.r.degree == 0 && tree.r.constant
         )
         if constantsBelow
             # NaN checks:

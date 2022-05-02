@@ -9,21 +9,21 @@ export Population,
 
     #Functions:
     EquationSearch,
-    SRCycle,
-    calculateParetoFrontier,
-    countNodes,
-    copyNode,
-    printTree,
-    stringTree,
-    evalTreeArray,
-    evalDiffTreeArray,
-    evalGradTreeArray,
-    differentiableEvalTreeArray,
+    s_r_cycle,
+    calculate_pareto_frontier,
+    count_nodes,
+    copy_node,
+    print_tree,
+    string_tree,
+    eval_tree_array,
+    eval_diff_tree_array,
+    eval_grad_tree_array,
+    differentiable_eval_tree_array,
     node_to_symbolic,
     symbolic_to_node,
-    combineOperators,
-    genRandomTree,
-    genRandomTreeFixedSize,
+    combine_operators,
+    gen_random_tree,
+    gen_random_tree_fixed_size,
 
     #Operators
     plus,
@@ -52,13 +52,38 @@ export Population,
     atanh_clip
 
 using Distributed
-import JSON3
+using JSON3: JSON3
 import Printf: @printf, @sprintf
-import Pkg
+using Pkg: Pkg
 import Random: seed!, shuffle!
 using Reexport
-@reexport import LossFunctions: MarginLoss, DistanceLoss, SupervisedLoss, ZeroOneLoss, LogitMarginLoss, PerceptronLoss, HingeLoss, L1HingeLoss, L2HingeLoss, SmoothedL1HingeLoss, ModifiedHuberLoss, L2MarginLoss, ExpLoss, SigmoidLoss, DWDMarginLoss, LPDistLoss, L1DistLoss, L2DistLoss, PeriodicLoss, HuberLoss, EpsilonInsLoss, L1EpsilonInsLoss, L2EpsilonInsLoss, LogitDistLoss, QuantileLoss, LogCoshLoss
-
+@reexport import LossFunctions:
+    MarginLoss,
+    DistanceLoss,
+    SupervisedLoss,
+    ZeroOneLoss,
+    LogitMarginLoss,
+    PerceptronLoss,
+    HingeLoss,
+    L1HingeLoss,
+    L2HingeLoss,
+    SmoothedL1HingeLoss,
+    ModifiedHuberLoss,
+    L2MarginLoss,
+    ExpLoss,
+    SigmoidLoss,
+    DWDMarginLoss,
+    LPDistLoss,
+    L1DistLoss,
+    L2DistLoss,
+    PeriodicLoss,
+    HuberLoss,
+    EpsilonInsLoss,
+    L1EpsilonInsLoss,
+    L2EpsilonInsLoss,
+    LogitDistLoss,
+    QuantileLoss,
+    LogCoshLoss
 
 include("Core.jl")
 include("Recorder.jl")
@@ -80,20 +105,66 @@ include("RegularizedEvolution.jl")
 include("SingleIteration.jl")
 include("ProgressBars.jl")
 
-import .CoreModule: CONST_TYPE, MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, Dataset, Node, copyNode, Options, plus, sub, mult, square, cube, pow, div, log_abs, log2_abs, log10_abs, log1p_abs, sqrt_abs, acosh_abs, neg, greater, greater, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip, SRConcurrency, SRSerial, SRThreaded, SRDistributed, stringTree, printTree
-import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
-import .EquationUtilsModule: countNodes, getConstants, setConstants, indexConstants, NodeIndex
-import .EvaluateEquationModule: evalTreeArray, differentiableEvalTreeArray
-import .EvaluateEquationDerivativeModule: evalDiffTreeArray, evalGradTreeArray
+import .CoreModule:
+    CONST_TYPE,
+    MAX_DEGREE,
+    BATCH_DIM,
+    FEATURE_DIM,
+    RecordType,
+    Dataset,
+    Node,
+    copy_node,
+    Options,
+    plus,
+    sub,
+    mult,
+    square,
+    cube,
+    pow,
+    div,
+    log_abs,
+    log2_abs,
+    log10_abs,
+    log1p_abs,
+    sqrt_abs,
+    acosh_abs,
+    neg,
+    greater,
+    greater,
+    relu,
+    logical_or,
+    logical_and,
+    gamma,
+    erf,
+    erfc,
+    atanh_clip,
+    SRConcurrency,
+    SRSerial,
+    SRThreaded,
+    SRDistributed,
+    string_tree,
+    print_tree
+import .UtilsModule:
+    debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
+import .EquationUtilsModule:
+    count_nodes, get_constants, set_constants, index_constants, NodeIndex
+import .EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
+import .EvaluateEquationDerivativeModule: eval_diff_tree_array, eval_grad_tree_array
 import .CheckConstraintsModule: check_constraints
-import .MutationFunctionsModule: genRandomTree, genRandomTreeFixedSize, randomNode, randomNodeAndParent, crossoverTrees
-import .LossFunctionsModule: EvalLoss, Loss, scoreFunc
-import .PopMemberModule: PopMember, copyPopMember
-import .PopulationModule: Population, bestSubPop, record_population, bestOfSample
-import .HallOfFameModule: HallOfFame, calculateParetoFrontier, string_dominating_pareto_curve
-import .SingleIterationModule: SRCycle, OptimizeAndSimplifyPopulation
+import .MutationFunctionsModule:
+    gen_random_tree,
+    gen_random_tree_fixed_size,
+    random_node,
+    random_node_and_parent,
+    crossover_trees
+import .LossFunctionsModule: eval_loss, loss, score_func
+import .PopMemberModule: PopMember, copy_pop_member
+import .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
+import .HallOfFameModule:
+    HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
+import .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
 import .InterfaceSymbolicUtilsModule: node_to_symbolic, symbolic_to_node
-import .SimplifyEquationModule: combineOperators, simplifyTree
+import .SimplifyEquationModule: combine_operators, simplify_tree
 import .ProgressBarsModule: ProgressBar, set_multiline_postfix
 import .RecorderModule: @recorder, find_iteration_from_record
 
@@ -101,16 +172,9 @@ include("Configure.jl")
 include("Deprecates.jl")
 
 StateType{T} = Tuple{
-    Union{
-        Vector{Vector{Population{T}}},
-        Matrix{Population{T}}
-    },
-    Union{
-        HallOfFame,
-        Vector{HallOfFame}
-    }
+    Union{Vector{Vector{Population{T}}},Matrix{Population{T}}},
+    Union{HallOfFame,Vector{HallOfFame}},
 }
-
 
 """
     EquationSearch(X, y[; kws...])
@@ -169,58 +233,76 @@ which is useful for debugging and profiling.
     is given in `.score`. The array of `PopMember` objects
     is enumerated by size from `1` to `options.maxsize`.
 """
-function EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
-        niterations::Int=10,
-        weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing,
-        varMap::Union{Array{String, 1}, Nothing}=nothing,
-        options::Options=Options(),
-        numprocs::Union{Int, Nothing}=nothing,
-        procs::Union{Array{Int, 1}, Nothing}=nothing,
-        multithreading::Bool=false,
-        runtests::Bool=true,
-        saved_state::Union{StateType{T}, Nothing}=nothing,
-        addprocs_function::Union{Function, Nothing}=nothing,
-       ) where {T<:Real}
-
+function EquationSearch(
+    X::AbstractMatrix{T},
+    y::AbstractMatrix{T};
+    niterations::Int=10,
+    weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
+    varMap::Union{Array{String,1},Nothing}=nothing,
+    options::Options=Options(),
+    numprocs::Union{Int,Nothing}=nothing,
+    procs::Union{Array{Int,1},Nothing}=nothing,
+    multithreading::Bool=false,
+    runtests::Bool=true,
+    saved_state::Union{StateType{T},Nothing}=nothing,
+    addprocs_function::Union{Function,Nothing}=nothing,
+) where {T<:Real}
     nout = size(y, FEATURE_DIM)
     if weights !== nothing
         weights = reshape(weights, size(y))
     end
-    datasets = [Dataset(X, y[j, :],
-                    weights=(weights === nothing ? weights : weights[j, :]),
-                    varMap=varMap)
-                for j=1:nout]
+    datasets = [
+        Dataset(
+            X,
+            y[j, :];
+            weights=(weights === nothing ? weights : weights[j, :]),
+            varMap=varMap,
+        ) for j in 1:nout
+    ]
 
-    return EquationSearch(datasets;
-        niterations=niterations, options=options,
-        numprocs=numprocs, procs=procs, multithreading=multithreading,
-        runtests=runtests, saved_state=saved_state,
-        addprocs_function=addprocs_function)
+    return EquationSearch(
+        datasets;
+        niterations=niterations,
+        options=options,
+        numprocs=numprocs,
+        procs=procs,
+        multithreading=multithreading,
+        runtests=runtests,
+        saved_state=saved_state,
+        addprocs_function=addprocs_function,
+    )
 end
 
-function EquationSearch(X::AbstractMatrix{T1}, y::AbstractMatrix{T2}; kw...) where {T1<:Real,T2<:Real}
+function EquationSearch(
+    X::AbstractMatrix{T1}, y::AbstractMatrix{T2}; kw...
+) where {T1<:Real,T2<:Real}
     U = promote_type(T1, T2)
-    EquationSearch(convert(AbstractMatrix{U}, X), convert(AbstractMatrix{U}, y); kw...)
+    return EquationSearch(
+        convert(AbstractMatrix{U}, X), convert(AbstractMatrix{U}, y); kw...
+    )
 end
 
-function EquationSearch(X::AbstractMatrix{T1}, y::AbstractVector{T2}; kw...) where {T1<:Real,T2<:Real}
-    EquationSearch(X, reshape(y, (1, size(y, 1))); kw...)
+function EquationSearch(
+    X::AbstractMatrix{T1}, y::AbstractVector{T2}; kw...
+) where {T1<:Real,T2<:Real}
+    return EquationSearch(X, reshape(y, (1, size(y, 1))); kw...)
 end
 
-function EquationSearch(datasets::Array{Dataset{T}, 1};
-        niterations::Int=10,
-        options::Options=Options(),
-        numprocs::Union{Int, Nothing}=nothing,
-        procs::Union{Array{Int, 1}, Nothing}=nothing,
-        multithreading::Bool=false,
-        runtests::Bool=true,
-        saved_state::Union{StateType{T}, Nothing}=nothing,
-        addprocs_function::Union{Function, Nothing}=nothing,
-       ) where {T<:Real}
+function EquationSearch(
+    datasets::Array{Dataset{T},1};
+    niterations::Int=10,
+    options::Options=Options(),
+    numprocs::Union{Int,Nothing}=nothing,
+    procs::Union{Array{Int,1},Nothing}=nothing,
+    multithreading::Bool=false,
+    runtests::Bool=true,
+    saved_state::Union{StateType{T},Nothing}=nothing,
+    addprocs_function::Union{Function,Nothing}=nothing,
+) where {T<:Real}
 
-                # Population(datasets[j], baselineMSEs[j], npop=options.npop,
-                #            nlength=3, options=options, nfeatures=datasets[j].nfeatures),
-                # HallOfFame(options),
+    # Population(datasets[j], baselineMSEs[j], npop=options.npop,
+    #            nlength=3, options=options, nfeatures=datasets[j].nfeatures),
+    # HallOfFame(options),
 
     noprocs = (procs === nothing && numprocs == 0)
     someprocs = !noprocs
@@ -234,23 +316,30 @@ function EquationSearch(datasets::Array{Dataset{T}, 1};
         SRSerial()
     end
 
-    return _EquationSearch(concurrency, datasets;
-        niterations=niterations, options=options,
-        numprocs=numprocs, procs=procs,
-        runtests=runtests, saved_state=saved_state,
-        addprocs_function=addprocs_function)
+    return _EquationSearch(
+        concurrency,
+        datasets;
+        niterations=niterations,
+        options=options,
+        numprocs=numprocs,
+        procs=procs,
+        runtests=runtests,
+        saved_state=saved_state,
+        addprocs_function=addprocs_function,
+    )
 end
 
-function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
-        niterations::Int=10,
-        options::Options=Options(),
-        numprocs::Union{Int, Nothing}=nothing,
-        procs::Union{Array{Int, 1}, Nothing}=nothing,
-        runtests::Bool=true,
-        saved_state::Union{StateType{T}, Nothing}=nothing,
-        addprocs_function::Union{Function, Nothing}=nothing,
-       ) where {T<:Real,ConcurrencyType<:SRConcurrency}
-
+function _EquationSearch(
+    ::ConcurrencyType,
+    datasets::Array{Dataset{T},1};
+    niterations::Int=10,
+    options::Options=Options(),
+    numprocs::Union{Int,Nothing}=nothing,
+    procs::Union{Array{Int,1},Nothing}=nothing,
+    runtests::Bool=true,
+    saved_state::Union{StateType{T},Nothing}=nothing,
+    addprocs_function::Union{Function,Nothing}=nothing,
+) where {T<:Real,ConcurrencyType<:SRConcurrency}
     can_read_input = true
     try
         Base.start_reading(stdin)
@@ -267,31 +356,39 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         end
     end
 
-
     # Redefine print, show:
     @eval begin
-        Base.print(io::IO, tree::Node) = print(io, stringTree(tree, $options; varMap=$(datasets[1].varMap)))
-        Base.show(io::IO, tree::Node) = print(io, stringTree(tree, $options; varMap=$(datasets[1].varMap)))
+        function Base.print(io::IO, tree::Node)
+            return print(io, string_tree(tree, $options; varMap=$(datasets[1].varMap)))
+        end
+        function Base.show(io::IO, tree::Node)
+            return print(io, string_tree(tree, $options; varMap=$(datasets[1].varMap)))
+        end
     end
 
     example_dataset = datasets[1]
     nout = size(datasets, 1)
 
     if runtests
-        testOptionConfiguration(T, options)
+        test_option_configuration(T, options)
         # Testing the first output variable is the same:
-        testDatasetConfiguration(example_dataset, options)
+        test_dataset_configuration(example_dataset, options)
     end
 
     if example_dataset.weighted
-        avgys = [sum(dataset.y .* dataset.weights) / sum(dataset.weights)
-                for dataset in datasets]
-        baselineMSEs = [Loss(dataset.y, ones(T, dataset.n) .* avgy, dataset.weights, options)
-                       for dataset in datasets, avgy in avgys]
+        avgys = [
+            sum(dataset.y .* dataset.weights) / sum(dataset.weights) for dataset in datasets
+        ]
+        baselineMSEs = [
+            loss(dataset.y, ones(T, dataset.n) .* avgy, dataset.weights, options) for
+            dataset in datasets, avgy in avgys
+        ]
     else
-        avgys = [sum(dataset.y)/dataset.n for dataset in datasets]
-        baselineMSEs = [Loss(dataset.y, ones(T, dataset.n) .* avgy, options)
-                       for (dataset, avgy) in zip(datasets, avgys)]
+        avgys = [sum(dataset.y) / dataset.n for dataset in datasets]
+        baselineMSEs = [
+            loss(dataset.y, ones(T, dataset.n) .* avgy, options) for
+            (dataset, avgy) in zip(datasets, avgys)
+        ]
     end
 
     if options.seed !== nothing
@@ -307,32 +404,49 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         Task
     end
 
-    allPops = [allPopsType[] for j=1:nout]
-    init_pops = [allPopsType[] for j=1:nout]
+    allPops = [allPopsType[] for j in 1:nout]
+    init_pops = [allPopsType[] for j in 1:nout]
     # Set up a channel to send finished populations back to head node
     if ConcurrencyType in [SRDistributed, SRThreaded]
         if ConcurrencyType == SRDistributed
-            channels = [[RemoteChannel(1) for i=1:options.npopulations] for j=1:nout]
+            channels = [
+                [RemoteChannel(1) for i in 1:(options.npopulations)] for j in 1:nout
+            ]
         else
-            channels = [[Channel(1) for i=1:options.npopulations] for j=1:nout]
+            channels = [[Channel(1) for i in 1:(options.npopulations)] for j in 1:nout]
         end
-        tasks = [Task[] for j=1:nout]
+        tasks = [Task[] for j in 1:nout]
     end
 
     # This is a recorder for populations, but is not actually used for processing, just
     # for the final return.
-    returnPops = [[Population(datasets[j], baselineMSEs[j], npop=1,
-                              options=options, nfeatures=datasets[j].nfeatures)
-                    for i=1:options.npopulations]
-                    for j=1:nout]
+    returnPops = [
+        [
+            Population(
+                datasets[j],
+                baselineMSEs[j];
+                npop=1,
+                options=options,
+                nfeatures=datasets[j].nfeatures,
+            ) for i in 1:(options.npopulations)
+        ] for j in 1:nout
+    ]
     # These initial populations are discarded:
-    bestSubPops = [[Population(datasets[j], baselineMSEs[j], npop=1, options=options, nfeatures=datasets[j].nfeatures)
-                    for i=1:options.npopulations]
-                    for j=1:nout]
+    bestSubPops = [
+        [
+            Population(
+                datasets[j],
+                baselineMSEs[j];
+                npop=1,
+                options=options,
+                nfeatures=datasets[j].nfeatures,
+            ) for i in 1:(options.npopulations)
+        ] for j in 1:nout
+    ]
     if saved_state === nothing
-        hallOfFame = [HallOfFame(options) for j=1:nout]
+        hallOfFame = [HallOfFame(options) for j in 1:nout]
     else
-        hallOfFame = saved_state[2]::Union{HallOfFame, Vector{HallOfFame}}
+        hallOfFame = saved_state[2]::Union{HallOfFame,Vector{HallOfFame}}
         if !isa(hallOfFame, Vector{HallOfFame})
             hallOfFame = [hallOfFame]
         end
@@ -345,13 +459,15 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
     smallest_frequency_allowed = 1
     # 3 here means this will last 3 cycles before being "refreshed"
     # We start out with even numbers at all frequencies.
-    frequencyComplexities = [ones(T, actualMaxsize) * window_size / actualMaxsize for i=1:nout]
+    frequencyComplexities = [
+        ones(T, actualMaxsize) * window_size / actualMaxsize for i in 1:nout
+    ]
 
-    curmaxsizes = [3 for j=1:nout]
-    record = RecordType("options"=>"$(options)")
+    curmaxsizes = [3 for j in 1:nout]
+    record = RecordType("options" => "$(options)")
 
-    if options.warmupMaxsizeBy == 0f0
-        curmaxsizes = [options.maxsize for j=1:nout]
+    if options.warmupMaxsizeBy == 0.0f0
+        curmaxsizes = [options.maxsize for j in 1:nout]
     end
 
     we_created_procs = false
@@ -364,12 +480,12 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         end
         if numprocs === nothing && procs === nothing
             numprocs = 4
-            procs = addprocs_function(4, lazy=false)
+            procs = addprocs_function(4; lazy=false)
             we_created_procs = true
         elseif numprocs === nothing
             numprocs = length(procs)
         elseif procs === nothing
-            procs = addprocs_function(numprocs, lazy=false)
+            procs = addprocs_function(numprocs; lazy=false)
             we_created_procs = true
         end
 
@@ -388,20 +504,26 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         end
     end
     # Get the next worker process to give a job:
-    worker_assignment = Dict{Tuple{Int,Int}, Int}()
+    worker_assignment = Dict{Tuple{Int,Int},Int}()
 
-    for j=1:nout
-        for i=1:options.npopulations
+    for j in 1:nout
+        for i in 1:(options.npopulations)
             worker_idx = next_worker(worker_assignment, procs)
             if ConcurrencyType == SRDistributed
                 worker_assignment[(j, i)] = worker_idx
             end
             if saved_state === nothing
                 new_pop = @sr_spawner ConcurrencyType worker_idx (
-                    Population(datasets[j], baselineMSEs[j], npop=options.npop,
-                            nlength=3, options=options, nfeatures=datasets[j].nfeatures),
+                    Population(
+                        datasets[j],
+                        baselineMSEs[j];
+                        npop=options.npop,
+                        nlength=3,
+                        options=options,
+                        nfeatures=datasets[j].nfeatures,
+                    ),
                     HallOfFame(options),
-                    RecordType()
+                    RecordType(),
                 )
             else
                 is_vector = typeof(saved_state[1]) <: Vector{Vector{Population{T}}}
@@ -409,18 +531,24 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
 
                 if length(cur_saved_state.members) >= options.npop
                     new_pop = @sr_spawner ConcurrencyType worker_idx (
-                        cur_saved_state,
-                        HallOfFame(options),
-                        RecordType()
+                        cur_saved_state, HallOfFame(options), RecordType()
                     )
                 else
                     # If population has not yet been created (e.g., exited too early)
-                    println("Warning: recreating population (output=$(j), population=$(i)), as the saved one only has $(length(cur_saved_state.members)) members.")
+                    println(
+                        "Warning: recreating population (output=$(j), population=$(i)), as the saved one only has $(length(cur_saved_state.members)) members.",
+                    )
                     new_pop = @sr_spawner ConcurrencyType worker_idx (
-                        Population(datasets[j], baselineMSEs[j], npop=options.npop,
-                                nlength=3, options=options, nfeatures=datasets[j].nfeatures),
+                        Population(
+                            datasets[j],
+                            baselineMSEs[j];
+                            npop=options.npop,
+                            nlength=3,
+                            options=options,
+                            nfeatures=datasets[j].nfeatures,
+                        ),
                         HallOfFame(options),
-                        RecordType()
+                        RecordType(),
                     )
                 end
             end
@@ -428,12 +556,12 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         end
     end
     # 2. Start the cycle on every process:
-    for j=1:nout
+    for j in 1:nout
         dataset = datasets[j]
         baselineMSE = baselineMSEs[j]
         frequencyComplexity = frequencyComplexities[j]
         curmaxsize = curmaxsizes[j]
-        for i=1:options.npopulations
+        for i in 1:(options.npopulations)
             @recorder record["out$(j)_pop$(i)"] = RecordType()
             worker_idx = next_worker(worker_assignment, procs)
             if ConcurrencyType == SRDistributed
@@ -450,18 +578,33 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 end
 
                 cur_record = RecordType()
-                @recorder cur_record["out$(j)_pop$(i)"] = RecordType("iteration0"=>record_population(in_pop, options))
-                tmp_pop, tmp_best_seen = SRCycle(dataset, baselineMSE, in_pop,
-                                                 options.ncyclesperiteration, curmaxsize,
-                                                 copy(frequencyComplexity)/sum(frequencyComplexity),
-                                                 verbosity=options.verbosity, options=options,
-                                                 record=cur_record)
-                tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
+                @recorder cur_record["out$(j)_pop$(i)"] = RecordType(
+                    "iteration0" => record_population(in_pop, options)
+                )
+                tmp_pop, tmp_best_seen = s_r_cycle(
+                    dataset,
+                    baselineMSE,
+                    in_pop,
+                    options.ncyclesperiteration,
+                    curmaxsize,
+                    copy(frequencyComplexity) / sum(frequencyComplexity);
+                    verbosity=options.verbosity,
+                    options=options,
+                    record=cur_record,
+                )
+                tmp_pop = optimize_and_simplify_population(
+                    dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record
+                )
                 if options.batching
-                    for i_member=1:(options.maxsize + MAX_DEGREE)
-                        score, loss = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
+                    for i_member in 1:(options.maxsize + MAX_DEGREE)
+                        score, result_loss = score_func(
+                            dataset,
+                            baselineMSE,
+                            tmp_best_seen.members[i_member].tree,
+                            options,
+                        )
                         tmp_best_seen.members[i_member].score = score
-                        tmp_best_seen.members[i_member].loss = loss
+                        tmp_best_seen.members[i_member].loss = result_loss
                     end
                 end
                 (tmp_pop, tmp_best_seen, cur_record)
@@ -473,12 +616,11 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
     debug(options.verbosity > 0 || options.progress, "Started!")
     start_time = time()
     total_cycles = options.npopulations * niterations
-    cycles_remaining = [total_cycles for j=1:nout]
+    cycles_remaining = [total_cycles for j in 1:nout]
     sum_cycle_remaining = sum(cycles_remaining)
     if options.progress && nout == 1
         #TODO: need to iterate this on the max cycles remaining!
-        progress_bar = ProgressBar(1:sum_cycle_remaining;
-                                   width=options.terminal_width)
+        progress_bar = ProgressBar(1:sum_cycle_remaining; width=options.terminal_width)
         cur_cycle = nothing
         cur_state = nothing
     end
@@ -489,8 +631,8 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
     equation_speed = Float32[]
 
     if ConcurrencyType in [SRDistributed, SRThreaded]
-        for j=1:nout
-            for i=1:options.npopulations
+        for j in 1:nout
+            for i in 1:(options.npopulations)
                 # Start listening for each population to finish:
                 t = @async put!(channels[j][i], fetch(allPops[j][i]))
                 push!(tasks[j], t)
@@ -500,10 +642,10 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
 
     # Randomly order which order to check populations:
     # This is done so that we do work on all nout equally.
-    all_idx = [(j, i) for j=1:nout for i=1:options.npopulations]
+    all_idx = [(j, i) for j in 1:nout for i in 1:(options.npopulations)]
     shuffle!(all_idx)
     kappa = 0
-    head_node_time = Dict("occupied"=>0, "start"=>time())
+    head_node_time = Dict("occupied" => 0, "start" => time())
     while sum(cycles_remaining) > 0
         kappa += 1
         if kappa > options.npopulations * nout
@@ -520,19 +662,25 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             end
         end
         # Non-blocking check if a population is ready:
-        population_ready = ConcurrencyType in [SRDistributed, SRThreaded] ? isready(channels[j][i]) : true
+        population_ready =
+            ConcurrencyType in [SRDistributed, SRThreaded] ? isready(channels[j][i]) : true
         # Don't start more if this output has finished its cycles:
         # TODO - this might skip extra cycles?
         population_ready &= (cycles_remaining[j] > 0)
         if population_ready
             head_node_start_work = time()
             # Take the fetch operation from the channel since its ready
-            (cur_pop, best_seen, cur_record) = ConcurrencyType in [SRDistributed, SRThreaded] ? take!(channels[j][i]) : allPops[j][i]
+            (cur_pop, best_seen, cur_record) =
+                if ConcurrencyType in [SRDistributed, SRThreaded]
+                    take!(channels[j][i])
+                else
+                    allPops[j][i]
+                end
             returnPops[j][i] = cur_pop
             cur_pop::Population
             best_seen::HallOfFame
             cur_record::RecordType
-            bestSubPops[j][i] = bestSubPop(cur_pop, topn=options.topn)
+            bestSubPops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
             @recorder record = recursive_merge(record, cur_record)
 
             dataset = datasets[j]
@@ -540,26 +688,29 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             curmaxsize = curmaxsizes[j]
 
             #Try normal copy...
-            bestPops = Population([member for pop in bestSubPops[j] for member in pop.members])
+            bestPops = Population([
+                member for pop in bestSubPops[j] for member in pop.members
+            ])
 
             ###################################################################
             # Hall Of Fame updating ###########################################
-            for (i_member, member) in enumerate(Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists])))
+            for (i_member, member) in enumerate(
+                Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists]))
+            )
                 part_of_cur_pop = i_member <= length(cur_pop.members)
-                size = countNodes(member.tree)
+                size = count_nodes(member.tree)
 
                 if part_of_cur_pop
                     frequencyComplexities[j][size] += 1
                 end
                 actualMaxsize = options.maxsize + MAX_DEGREE
 
-
                 valid_size = size < actualMaxsize
                 if valid_size
                     already_filled = hallOfFame[j].exists[size]
                     better_than_current = member.score < hallOfFame[j].members[size].score
                     if !already_filled || better_than_current
-                        hallOfFame[j].members[size] = copyPopMember(member)
+                        hallOfFame[j].members[size] = copy_pop_member(member)
                         hallOfFame[j].exists[size] = true
                     end
                 end
@@ -567,7 +718,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             ###################################################################
 
             # Dominating pareto curve - must be better than all simpler equations
-            dominating = calculateParetoFrontier(dataset, hallOfFame[j], options)
+            dominating = calculate_pareto_frontier(dataset, hallOfFame[j], options)
             hofFile = options.hofFile
             if nout > 1
                 hofFile = hofFile * ".out$j"
@@ -575,39 +726,45 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             open(hofFile, "w") do io
                 println(io, "Complexity|MSE|Equation")
                 for member in dominating
-                    loss = member.loss
-                    println(io, "$(countNodes(member.tree))|$(loss)|$(stringTree(member.tree, options, varMap=dataset.varMap))")
+                    println(
+                        io,
+                        "$(count_nodes(member.tree))|$(member.loss)|$(string_tree(member.tree, options, varMap=dataset.varMap))",
+                    )
                 end
             end
-            cp(hofFile, hofFile*".bkup", force=true)
+            cp(hofFile, hofFile * ".bkup"; force=true)
 
             ###################################################################
             # Migration #######################################################
             # Try normal copy otherwise.
             if options.migration
-                for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplaced))
+                for k in rand(
+                    1:(options.npop), round(Int, options.npop * options.fractionReplaced)
+                )
                     to_copy = rand(1:size(bestPops.members, 1))
 
                     # Explicit copy here resets the birth. 
                     cur_pop.members[k] = PopMember(
-                        copyNode(bestPops.members[to_copy].tree),
+                        copy_node(bestPops.members[to_copy].tree),
                         copy(bestPops.members[to_copy].score),
-                        copy(bestPops.members[to_copy].loss)
+                        copy(bestPops.members[to_copy].loss),
                     )
-                    # TODO: Clean this up using copyPopMember.
+                    # TODO: Clean this up using copy_pop_member.
                 end
             end
 
             if options.hofMigration && size(dominating, 1) > 0
-                for k in rand(1:options.npop, round(Int, options.npop*options.fractionReplacedHof))
+                for k in rand(
+                    1:(options.npop), round(Int, options.npop * options.fractionReplacedHof)
+                )
                     # Copy in case one gets used twice
                     to_copy = rand(1:size(dominating, 1))
                     cur_pop.members[k] = PopMember(
-                       copyNode(dominating[to_copy].tree),
-                       copy(dominating[to_copy].score),
-                       copy(dominating[to_copy].loss)
+                        copy_node(dominating[to_copy].tree),
+                        copy(dominating[to_copy].score),
+                        copy(dominating[to_copy].loss),
                     )
-                    # TODO: Clean this up with copyPopMember.
+                    # TODO: Clean this up with copy_pop_member.
                 end
             end
             ###################################################################
@@ -627,20 +784,36 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
 
             allPops[j][i] = @sr_spawner ConcurrencyType worker_idx let
                 cur_record = RecordType()
-                @recorder cur_record[key] = RecordType("iteration$(iteration)"=>record_population(cur_pop, options))
-                tmp_pop, tmp_best_seen = SRCycle(
-                    dataset, baselineMSE, cur_pop, options.ncyclesperiteration,
-                    curmaxsize, copy(frequencyComplexities[j])/sum(frequencyComplexities[j]),
-                    verbosity=options.verbosity, options=options, record=cur_record)
-                tmp_pop = OptimizeAndSimplifyPopulation(dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record)
+                @recorder cur_record[key] = RecordType(
+                    "iteration$(iteration)" => record_population(cur_pop, options)
+                )
+                tmp_pop, tmp_best_seen = s_r_cycle(
+                    dataset,
+                    baselineMSE,
+                    cur_pop,
+                    options.ncyclesperiteration,
+                    curmaxsize,
+                    copy(frequencyComplexities[j]) / sum(frequencyComplexities[j]);
+                    verbosity=options.verbosity,
+                    options=options,
+                    record=cur_record,
+                )
+                tmp_pop = optimize_and_simplify_population(
+                    dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record
+                )
 
                 # Update scores if using batching:
                 if options.batching
-                    for i_member=1:(options.maxsize + MAX_DEGREE)
+                    for i_member in 1:(options.maxsize + MAX_DEGREE)
                         if tmp_best_seen.exists[i_member]
-                            score, loss = scoreFunc(dataset, baselineMSE, tmp_best_seen.members[i_member].tree, options)
+                            score, result_loss = score_func(
+                                dataset,
+                                baselineMSE,
+                                tmp_best_seen.members[i_member].tree,
+                                options,
+                            )
                             tmp_best_seen.members[i_member].score = score
-                            tmp_best_seen.members[i_member].loss = loss
+                            tmp_best_seen.members[i_member].loss = result_loss
                         end
                     end
                 end
@@ -653,23 +826,35 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
 
             cycles_elapsed = total_cycles - cycles_remaining[j]
             if options.warmupMaxsizeBy > 0
-                fraction_elapsed = 1f0 * cycles_elapsed / total_cycles
+                fraction_elapsed = 1.0f0 * cycles_elapsed / total_cycles
                 if fraction_elapsed > options.warmupMaxsizeBy
                     curmaxsizes[j] = options.maxsize
                 else
-                    curmaxsizes[j] = 3 + floor(Int, (options.maxsize - 3) * fraction_elapsed / options.warmupMaxsizeBy)
+                    curmaxsizes[j] =
+                        3 + floor(
+                            Int,
+                            (options.maxsize - 3) * fraction_elapsed /
+                            options.warmupMaxsizeBy,
+                        )
                 end
             end
             num_equations += options.ncyclesperiteration * options.npop / 10.0
 
             if options.progress && nout == 1
                 # set_postfix(iter, Equations=)
-                equation_strings = string_dominating_pareto_curve(hallOfFame[j], baselineMSE,
-                                                                  datasets[j], options,
-                                                                  avgys[j])
-                load_string = @sprintf("Head worker occupation: %.1f", 100*head_node_time["occupied"]/(time() - head_node_time["start"])) * "%\n"
+                equation_strings = string_dominating_pareto_curve(
+                    hallOfFame[j], baselineMSE, datasets[j], options, avgys[j]
+                )
+                load_string =
+                    @sprintf(
+                        "Head worker occupation: %.1f",
+                        100 * head_node_time["occupied"] /
+                            (time() - head_node_time["start"])
+                    ) * "%\n"
                 # TODO - include command about "q" here.
-                load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
+                load_string *= @sprintf(
+                    "Press 'q' and then <enter> to stop execution early.\n"
+                )
                 equation_strings = load_string * equation_strings
                 set_multiline_postfix(progress_bar, equation_strings)
                 if cur_cycle === nothing
@@ -681,7 +866,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             end
             head_node_end_work = time()
             head_node_time["occupied"] += (head_node_end_work - head_node_start_work)
-        
+
             # Move moving window along frequencyComplexities:
             cur_size_frequency_complexities = sum(frequencyComplexities[j])
             if cur_size_frequency_complexities > window_size
@@ -689,20 +874,21 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
                 # We need frequencyComplexities to be positive, but also sum to a number.
                 # min(frequencyComplexities[j])
                 while difference_in_size > 0
-                    indices_to_subtract = findall(frequencyComplexities[j] .> smallest_frequency_allowed)
+                    indices_to_subtract = findall(
+                        frequencyComplexities[j] .> smallest_frequency_allowed
+                    )
                     num_remaining = size(indices_to_subtract, 1)
                     amount_to_subtract = min(
                         difference_in_size / num_remaining,
-                        min(frequencyComplexities[j][indices_to_subtract]...) - smallest_frequency_allowed
+                        min(frequencyComplexities[j][indices_to_subtract]...) -
+                        smallest_frequency_allowed,
                     )
                     frequencyComplexities[j][indices_to_subtract] .-= amount_to_subtract
                     difference_in_size -= amount_to_subtract * num_remaining
                 end
             end
-
         end
         sleep(1e-6)
-
 
         ################################################################
         ## Printing code
@@ -710,7 +896,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         #Update if time has passed, and some new equations generated.
         if elapsed > print_every_n_seconds && num_equations > 0.0
             # Dominating pareto curve - must be better than all simpler equations
-            current_speed = num_equations/elapsed
+            current_speed = num_equations / elapsed
             average_over_m_measurements = 10 #for print_every...=5, this gives 50 second running average
             push!(equation_speed, current_speed)
             if length(equation_speed) > average_over_m_measurements
@@ -718,25 +904,31 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
             end
             if (options.verbosity > 0) || (options.progress && nout > 1)
                 @printf("\n")
-                average_speed = sum(equation_speed)/length(equation_speed)
+                average_speed = sum(equation_speed) / length(equation_speed)
                 @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
-                @printf("Head worker occupation: %.1f%%\n", 100 * head_node_time["occupied"]/(time() - head_node_time["start"]))
+                @printf(
+                    "Head worker occupation: %.1f%%\n",
+                    100 * head_node_time["occupied"] / (time() - head_node_time["start"])
+                )
                 cycles_elapsed = total_cycles * nout - sum(cycles_remaining)
-                @printf("Progress: %d / %d total iterations (%.3f%%)\n",
-                        cycles_elapsed, total_cycles * nout,
-                        100.0*cycles_elapsed/total_cycles/nout)
+                @printf(
+                    "Progress: %d / %d total iterations (%.3f%%)\n",
+                    cycles_elapsed,
+                    total_cycles * nout,
+                    100.0 * cycles_elapsed / total_cycles / nout
+                )
 
                 @printf("==============================\n")
-                for j=1:nout
+                for j in 1:nout
                     if nout > 1
                         @printf("Best equations for output %d\n", j)
                     end
-                    equation_strings = string_dominating_pareto_curve(hallOfFame[j], baselineMSEs[j],
-                                                                      datasets[j], options,
-                                                                      avgys[j])
+                    equation_strings = string_dominating_pareto_curve(
+                        hallOfFame[j], baselineMSEs[j], datasets[j], options, avgys[j]
+                    )
                     print(equation_strings)
                     @printf("==============================\n")
-                    
+
                     # Debugging code for frequencyComplexities:
                     # for size_i=1:actualMaxsize
                     #     @printf("frequencyComplexities size %d = %.2f\n", size_i, frequencyComplexities[j][size_i])
@@ -754,12 +946,15 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         if options.earlyStopCondition !== nothing
             # Check if all nout are below stopping condition.
             all_below = true
-            for j=1:nout
-                dominating = calculateParetoFrontier(datasets[j], hallOfFame[j], options)
+            for j in 1:nout
+                dominating = calculate_pareto_frontier(datasets[j], hallOfFame[j], options)
                 # Check if zero size:
                 if length(dominating) == 0
                     all_below = false
-                elseif !any([options.earlyStopCondition(member.loss, countNodes(member.tree)) for member in dominating])
+                elseif !any([
+                    options.earlyStopCondition(member.loss, count_nodes(member.tree)) for
+                    member in dominating
+                ])
                     # None of the equations meet the stop condition.
                     all_below = false
                 end
@@ -813,7 +1008,7 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
 
     @recorder begin
         open(options.recorder_file, "w") do io
-            JSON3.write(io, record, allow_inf = true)
+            JSON3.write(io, record; allow_inf=true)
         end
     end
 
@@ -829,6 +1024,5 @@ function _EquationSearch(::ConcurrencyType, datasets::Array{Dataset{T}, 1};
         end
     end
 end
-
 
 end #module SR
