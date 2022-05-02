@@ -1,11 +1,12 @@
-using FromFile
-using Random: randperm
-using LossFunctions
+module LossFunctionsModule
+
+import Random: randperm
+import LossFunctions: value, AggMode, SupervisedLoss
 using Zygote: gradient
-@from "Core.jl" import Options, Dataset, Node
-@from "EquationUtils.jl" import countNodes
-@from "EvaluateEquation.jl" import evalTreeArray
-@from "EvaluateEquationDerivative.jl" import evalGradTreeArray
+import ..CoreModule: Options, Dataset, Node
+import ..EquationUtilsModule: countNodes
+import ..EvaluateEquationModule: evalTreeArray, differentiableEvalTreeArray
+import ..EvaluateEquationDerivativeModule: evalGradTreeArray
 
 
 ###############################################################################
@@ -25,8 +26,7 @@ function Loss(x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, opt
     sum(options.loss.(x, y, w))/sum(w)
 end
 
-# Loss function. Only MSE implemented right now. TODO
-# Also need to put actual loss function in scoreFuncBatch!
+# Evaluate the loss of a particular expression on the input dataset.
 function EvalLoss(tree::Node, dataset::Dataset{T}, options::Options)::T where {T<:Real}
     (prediction, completion) = evalTreeArray(tree, dataset.X, options)
     if !completion
@@ -100,4 +100,6 @@ function scoreFuncBatch(dataset::Dataset{T}, baseline::T,
     end
     score = lossToScore(loss, baseline, tree, options)
     return score, loss
+end
+
 end

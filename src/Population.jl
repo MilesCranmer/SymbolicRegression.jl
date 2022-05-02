@@ -1,10 +1,11 @@
-using Random
-using FromFile
-@from "Core.jl" import Options, Dataset, RecordType, stringTree
-@from "EquationUtils.jl" import countNodes
-@from "LossFunctions.jl" import scoreFunc
-@from "MutationFunctions.jl" import genRandomTree
-@from "PopMember.jl" import PopMember
+module PopulationModule
+
+import Random: randperm
+import ..CoreModule: Options, Dataset, RecordType, stringTree
+import ..EquationUtilsModule: countNodes
+import ..LossFunctionsModule: scoreFunc
+import ..MutationFunctionsModule: genRandomTree
+import ..PopMemberModule: PopMember
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
 mutable struct Population{T<:Real}
@@ -123,4 +124,6 @@ function record_population(pop::Population{T}, options::Options)::RecordType whe
                              for member in pop.members],
                "time"=>time()
     )
+end
+
 end

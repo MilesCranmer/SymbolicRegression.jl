@@ -1,3 +1,5 @@
+module ProgressBarsModule
+
 """
 Customisable progressbar decorator for iterators.
 Copied from https://github.com/cloud-oak/ProgressBars.jl to allow for custom modifications.
@@ -7,9 +9,8 @@ Usage:
 > ....
 > end
 """
-# module ProgressBars
 
-using Printf
+import Printf: @sprintf
 
 EIGHTS = Dict(0 => ' ',
               1 => '▏',
@@ -334,3 +335,5 @@ function newline_to_spaces(string, terminal_width)
 end
 
 # end
+
+end

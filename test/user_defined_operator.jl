@@ -1,6 +1,5 @@
-using FromFile
 using SymbolicRegression, Test
-@from "test_params.jl" import maximum_residual, default_params
+include("test_params.jl")
 
 _inv(x::Float32)::Float32 = 1f0/x
 X = rand(Float32, 5, 100) .+ 1

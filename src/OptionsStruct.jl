@@ -1,4 +1,6 @@
-using LossFunctions
+module OptionsStructModule
+
+import LossFunctions: SupervisedLoss
 
 struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
 
@@ -6,8 +8,8 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
     unaops::B
     diff_binops::dA
     diff_unaops::dB
-    bin_constraints::Array{Tuple{Int,Int}, 1}
-    una_constraints::Array{Int, 1}
+    bin_constraints::Vector{Tuple{Int,Int}}
+    una_constraints::Vector{Int}
     ns::Int
     parsimony::Float32
     alpha::Float32
@@ -50,10 +52,10 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
     probPickFirst::Float32
     earlyStopCondition::Union{Function, Nothing}
     stateReturn::Bool
-    use_symbolic_utils::Bool
     timeout_in_seconds::Union{Float64, Nothing}
     skip_mutation_failures::Bool
     enable_autodiff::Bool
+    nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
 
 end
 
@@ -79,8 +81,10 @@ Base.print(io::IO, options::Options) = print(io, """Options(
 # Speed Tweaks:
     batching=$(options.batching), batchSize=$(options.batchSize), fast_cycle=$(options.fast_cycle), 
 # Logistics:
-    hofFile=$(options.hofFile), verbosity=$(options.verbosity), seed=$(options.seed), progress=$(options.progress), use_symbolic_utils=$(options.use_symbolic_utils),
+    hofFile=$(options.hofFile), verbosity=$(options.verbosity), seed=$(options.seed), progress=$(options.progress),
 # Early Exit:
     earlyStopCondition=$(options.earlyStopCondition), timeout_in_seconds=$(options.timeout_in_seconds),
 )""")
 Base.show(io::IO, options::Options) = Base.print(io, options)
+
+end

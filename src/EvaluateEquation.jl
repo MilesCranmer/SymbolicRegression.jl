@@ -1,7 +1,7 @@
-using FromFile
-using LinearAlgebra
-@from "Core.jl" import Node, Options
-@from "Utils.jl" import @return_on_false, is_bad_array
+module EvaluateEquationModule
+
+import ..CoreModule: Node, Options
+import ..UtilsModule: @return_on_false, is_bad_array
 
 macro return_on_check(val, T, n)
     # This will generate the following code:
@@ -337,4 +337,6 @@ function deg2_diff_eval(tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, option
     out = op.(left, right)
     no_nans = !any(x -> (!isfinite(x)), out)
     return (out, no_nans)
+end
+
 end

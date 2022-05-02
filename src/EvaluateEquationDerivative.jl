@@ -1,16 +1,18 @@
-using FromFile
+module EvaluateEquationDerivativeModule
+
 using LinearAlgebra
-@from "Core.jl" import Node, Options
-@from "Utils.jl" import @return_on_false2, is_bad_array
-@from "EquationUtils.jl" import countConstants, indexConstants, NodeIndex
-@from "EvaluateEquation.jl" import deg0_eval
+import ..CoreModule: Node, Options
+import ..UtilsModule: @return_on_false2, is_bad_array
+import ..EquationUtilsModule: countConstants, indexConstants, NodeIndex
+import ..EvaluateEquationModule: deg0_eval
 
 """
     evalDiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)
 
 Compute the forward derivative of an expression, using a similar
 structure and optimization to evalTreeArray. `direction` is the index of a particular
-constant in the expression. (See `indexConstants` for how order is calculated.)
+variable in the expression. e.g., `direction=1` would indicate derivative with
+respect to `x1`.
 
 # Returns
 
@@ -18,6 +20,8 @@ constant in the expression. (See `indexConstants` for how order is calculated.)
     the derivative, and whether the evaluation completed as normal (or encountered a nan or inf).
 """
 function evalDiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool} where {T<:Real}
+    # TODO: Implement quick check for whether the variable is actually used
+    # in this tree. Otherwise, return zero.
     evaluation, derivative, complete = _evalDiffTreeArray(tree, cX, options, direction)
     @return_on_false2 complete evaluation derivative
     return evaluation, derivative, !(is_bad_array(evaluation) || is_bad_array(derivative))
@@ -182,3 +186,5 @@ function grad_deg2_eval(tree::Node, n::Int, n_gradients::Int, index_tree::NodeIn
 end
 
 
+
+end

@@ -1,4 +1,4 @@
-using LossFunctions
+import SymbolicRegression: L2DistLoss
 
 maximum_residual = 1e-2
 
@@ -48,7 +48,6 @@ default_params = (
     probPickFirst=1.0,
     earlyStopCondition=nothing,
     stateReturn=false,
-    use_symbolic_utils=false,
     timeout_in_seconds=nothing,
     skip_mutation_failures=false,
 )

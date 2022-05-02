@@ -1,10 +1,9 @@
-using FromFile
-@from "Core.jl" import CONST_TYPE, Node, copyNode, Options
-@from "EquationUtils.jl" import countNodes
-@from "CustomSymbolicUtilsSimplification.jl" import custom_simplify
-@from "InterfaceSymbolicUtils.jl" import node_to_symbolic_safe, symbolic_to_node
-@from "CheckConstraints.jl" import check_constraints
-@from "Utils.jl" import isbad, isgood
+module SimplifyEquationModule
+
+import ..CoreModule: CONST_TYPE, Node, copyNode, Options
+import ..EquationUtilsModule: countNodes
+import ..CheckConstraintsModule: check_constraints
+import ..UtilsModule: isbad, isgood
 
 # Simplify tree
 function combineOperators(tree::Node, options::Options)::Node
@@ -130,30 +129,4 @@ function simplifyTree(tree::Node, options::Options)::Node
     return tree
 end
 
-
-# Expensive but powerful simplify using SymbolicUtils
-function simplifyWithSymbolicUtils(tree::Node, options::Options, curmaxsize::Int)::Node
-    if !(((+) in options.binops) && ((*) in options.binops))
-        return tree
-    end
-    init_node = copyNode(tree)
-    init_size = countNodes(tree)
-    symbolic_util_form, complete = node_to_symbolic_safe(tree, options, index_functions=true)
-    if !complete
-        return init_node
-    end
-    eqn_form, complete2 = custom_simplify(symbolic_util_form, options)
-    if !complete2
-        return init_node
-    end
-    final_node = symbolic_to_node(eqn_form, options)
-    final_size = countNodes(tree)
-    did_simplification_improve = (final_size <= init_size) && (check_constraints(final_node, options, curmaxsize))
-    output = did_simplification_improve ? final_node : init_node
-
-    return output
-end
-
-function simplifyWithSymbolicUtils(tree::Node, options::Options)::Node
-    simplifyWithSymbolicUtils(tree, options, options.maxsize)
 end

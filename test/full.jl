@@ -1,5 +1,4 @@
-using FromFile
-@from "test_params.jl" import maximum_residual, default_params
+include("test_params.jl")
 using SymbolicRegression, SymbolicUtils
 using Test
 using SymbolicRegression: stringTree
@@ -111,7 +110,7 @@ for i=0:5
     # Always assume multi
     for dom in dominating
         best = dom[end]
-        eqn = node_to_symbolic(best.tree, options, evaluate_functions=true)
+        eqn = node_to_symbolic(best.tree, options)
 
         local x4 = SymbolicUtils.Sym{Real}(Symbol("x4"))
         true_eqn = 2*cos(x4)
@@ -149,7 +148,7 @@ dominating = calculateParetoFrontier(X, y, hallOfFame, options)
 best = dominating[end]
 
 eqn = node_to_symbolic(best.tree, options;
-                       evaluate_functions=true, varMap=varMap)
+                       varMap=varMap)
 
 t4 = SymbolicUtils.Sym{Real}(Symbol("t4"))
 true_eqn = 2*cos(t4)
@@ -174,7 +173,7 @@ dominating = calculateParetoFrontier(X, y, hallOfFame, options)
 best = dominating[end]
 printTree(best.tree, options)
 eqn = node_to_symbolic(best.tree, options;
-                       evaluate_functions=true, varMap=varMap)
+                       varMap=varMap)
 residual = simplify(eqn - true_eqn) + t4 * 1e-10
 @test best.loss < maximum_residual / 10
 
