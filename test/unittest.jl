@@ -1,8 +1,8 @@
 include("test_params.jl")
 using SymbolicRegression, SymbolicUtils, Test, Random, ForwardDiff
 using SymbolicRegression:
-    Options, stringTree, evalTreeArray, Dataset, differentiableEvalTreeArray
-using SymbolicRegression: printTree, pow, EvalLoss, scoreFunc, Node
+    Options, string_tree, eval_tree_array, Dataset, differentiable_eval_tree_array
+using SymbolicRegression: print_tree, pow, eval_loss, score_func, Node
 using SymbolicRegression:
     plus,
     sub,
@@ -23,7 +23,7 @@ using SymbolicRegression:
     logical_and,
     gamma
 using SymbolicRegression: node_to_symbolic, symbolic_to_node
-using SymbolicRegression: check_constraints, Loss
+using SymbolicRegression: check_constraints, loss
 
 x1 = 2.0
 # Initialize functions in Base....
@@ -47,11 +47,11 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
         # binop at outside:
         tree = Node(5, (Node(3.0) * Node(1, Node("x1")))^2.0, -1.2)
         tree_bad = Node(5, (Node(3.0) * Node(1, Node("x1")))^2.1, -1.3)
-        n = countNodes(tree)
+        n = count_nodes(tree)
 
         true_result = f_true(x1)
 
-        result = eval(Meta.parse(stringTree(tree, make_options())))
+        result = eval(Meta.parse(string_tree(tree, make_options())))
 
         # Test Basics
         @test n == 8
@@ -76,8 +76,8 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
             X = X + sign.(X) * T(0.1)
             y = T.(f_true.(X[1, :]))
             dataset = Dataset(X, y)
-            test_y, complete = evalTreeArray(tree, X, make_options())
-            test_y2, complete2 = differentiableEvalTreeArray(tree, X, make_options())
+            test_y, complete = eval_tree_array(tree, X, make_options())
+            test_y2, complete2 = differentiable_eval_tree_array(tree, X, make_options())
 
             # Test Evaluation
             @test complete == true
@@ -86,25 +86,25 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
             @test all(abs.(test_y2 .- y) / N .< zero_tolerance)
 
             # Test loss:
-            @test abs(EvalLoss(tree, dataset, make_options())) < zero_tolerance
-            @test EvalLoss(tree, dataset, make_options()) ==
-                scoreFunc(dataset, one(T), tree, make_options())[2]
+            @test abs(eval_loss(tree, dataset, make_options())) < zero_tolerance
+            @test eval_loss(tree, dataset, make_options()) ==
+                score_func(dataset, one(T), tree, make_options())[2]
 
             #Test Scoring
-            @test abs(scoreFunc(dataset, one(T), tree, make_options(; parsimony=0.0))[1]) <
+            @test abs(score_func(dataset, one(T), tree, make_options(; parsimony=0.0))[1]) <
                 zero_tolerance
-            @test scoreFunc(dataset, one(T), tree, make_options(; parsimony=1.0))[1] > 1.0
-            @test scoreFunc(dataset, one(T), tree, make_options())[1] <
-                scoreFunc(dataset, one(T), tree_bad, make_options())[1]
-            @test scoreFunc(dataset, one(T) * 10, tree_bad, make_options())[1] <
-                scoreFunc(dataset, one(T), tree_bad, make_options())[1]
+            @test score_func(dataset, one(T), tree, make_options(; parsimony=1.0))[1] > 1.0
+            @test score_func(dataset, one(T), tree, make_options())[1] <
+                score_func(dataset, one(T), tree_bad, make_options())[1]
+            @test score_func(dataset, one(T) * 10, tree_bad, make_options())[1] <
+                score_func(dataset, one(T), tree_bad, make_options())[1]
 
             # Test gradients:
             df_true = x -> ForwardDiff.derivative(f_true, x)
             dy = T.(df_true.(X[1, :]))
             test_dy = (
                 x -> ForwardDiff.gradient(
-                    _x -> sum(differentiableEvalTreeArray(tree, _x, make_options())[1]),
+                    _x -> sum(differentiable_eval_tree_array(tree, _x, make_options())[1]),
                     x,
                 )
             )(
@@ -157,7 +157,7 @@ tree = Node(5, (Node(3.0) * Node(1, Node("x1")))^2.0, -1.2)
 eqn = node_to_symbolic(tree, options; varMap=["energy"], index_functions=true)
 tree2 = symbolic_to_node(eqn, options; varMap=["energy"])
 
-@test stringTree(tree, options) == stringTree(tree2, options)
+@test string_tree(tree, options) == string_tree(tree2, options)
 
 # Test constraint-checking interface
 tree = Node(5, (Node(3.0) * Node(1, Node("x1")))^2.0, -1.2)
@@ -183,8 +183,8 @@ for (loss, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
     x = randn(MersenneTwister(0), Float32, 100)
     y = randn(MersenneTwister(1), Float32, 100)
     w = abs.(randn(MersenneTwister(2), Float32, 100))
-    @test abs(Loss(x, y, options) - sum(evaluator.(x, y)) / length(x)) < 1e-6
-    @test abs(Loss(x, y, w, options) - sum(evaluator.(x, y, w)) / sum(w)) < 1e-6
+    @test abs(loss(x, y, options) - sum(evaluator.(x, y)) / length(x)) < 1e-6
+    @test abs(loss(x, y, w, options) - sum(evaluator.(x, y, w)) / sum(w)) < 1e-6
 end
 
 # Test derivatives
@@ -257,7 +257,7 @@ for fnc in [
     nfeatures = 3
     X = randn(MersenneTwister(0), Float32, nfeatures, N)
 
-    test_y = evalTreeArray(tree, X, options)[1]
+    test_y = eval_tree_array(tree, X, options)[1]
     true_y = realfnc.(X[1, :], X[2, :], X[3, :])
 
     zero_tolerance = 1e-6
@@ -271,7 +271,7 @@ println("Passed.")
 println("Testing crossover function.")
 using SymbolicRegression
 using Test
-using SymbolicRegression: crossoverTrees
+using SymbolicRegression: crossover_trees
 options = SymbolicRegression.Options(;
     default_params...,
     binary_operators=(+, *, /, -),
@@ -286,7 +286,7 @@ cos_flip_to_tree2 = false
 exp_flip_to_tree1 = false
 swapped_cos_with_exp = false
 for i in 1:1000
-    child_tree1, child_tree2 = crossoverTrees(tree1, tree2)
+    child_tree1, child_tree2 = crossover_trees(tree1, tree2)
     if occursin("cos", repr(child_tree2))
         # Moved cosine to tree2
         global cos_flip_to_tree2 = true
@@ -320,20 +320,20 @@ println("Testing NaN detection.")
 # Creating a NaN via computation.
 tree = cos(exp(exp(exp(exp(Node("x1"))))))
 X = randn(MersenneTwister(0), Float32, 1, 100) * 100.0f0
-output, flag = evalTreeArray(tree, X, options)
+output, flag = eval_tree_array(tree, X, options)
 @test !flag
 
 # Creating a NaN/Inf via division by constant zero.
 tree = cos(Node("x1") / 0.0f0)
-output, flag = evalTreeArray(tree, X, options)
+output, flag = eval_tree_array(tree, X, options)
 @test !flag
 
 # Having a NaN/Inf constants:
 tree = cos(Node("x1") + Inf)
-output, flag = evalTreeArray(tree, X, options)
+output, flag = eval_tree_array(tree, X, options)
 @test !flag
 tree = cos(Node("x1") + NaN)
-output, flag = evalTreeArray(tree, X, options)
+output, flag = eval_tree_array(tree, X, options)
 @test !flag
 
 println("Passed.")

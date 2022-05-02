@@ -19,7 +19,7 @@ import ..OperatorsModule:
     sqrt_abs,
     acosh_abs,
     atanh_clip
-import ..EquationModule: Node, stringTree
+import ..EquationModule: Node, string_tree
 import ..OptionsStructModule: Options
 
 """
@@ -558,8 +558,8 @@ function Options(;
     )
 
     @eval begin
-        Base.print(io::IO, tree::Node) = print(io, stringTree(tree, $options))
-        Base.show(io::IO, tree::Node) = print(io, stringTree(tree, $options))
+        Base.print(io::IO, tree::Node) = print(io, string_tree(tree, $options))
+        Base.show(io::IO, tree::Node) = print(io, string_tree(tree, $options))
     end
 
     return options

@@ -98,7 +98,7 @@ function Node(var_string::String, varMap::Array{String,1})
 end
 
 # Copy an equation (faster than deepcopy)
-function copyNode(tree::Node)::Node
+function copy_node(tree::Node)::Node
     if tree.degree == 0
         if tree.constant
             return Node(copy(tree.val))
@@ -106,13 +106,13 @@ function copyNode(tree::Node)::Node
             return Node(copy(tree.feature))
         end
     elseif tree.degree == 1
-        return Node(copy(tree.op), copyNode(tree.l))
+        return Node(copy(tree.op), copy_node(tree.l))
     else
-        return Node(copy(tree.op), copyNode(tree.l), copyNode(tree.r))
+        return Node(copy(tree.op), copy_node(tree.l), copy_node(tree.r))
     end
 end
 
-function stringOp(
+function string_op(
     op::F,
     tree::Node,
     options::Options;
@@ -120,22 +120,22 @@ function stringOp(
     varMap::Union{Array{String,1},Nothing}=nothing,
 )::String where {F}
     if op in [+, -, *, /, ^]
-        l = stringTree(tree.l, options; bracketed=false, varMap=varMap)
-        r = stringTree(tree.r, options; bracketed=false, varMap=varMap)
+        l = string_tree(tree.l, options; bracketed=false, varMap=varMap)
+        r = string_tree(tree.r, options; bracketed=false, varMap=varMap)
         if bracketed
             return "$l $(string(op)) $r"
         else
             return "($l $(string(op)) $r)"
         end
     else
-        l = stringTree(tree.l, options; bracketed=true, varMap=varMap)
-        r = stringTree(tree.r, options; bracketed=true, varMap=varMap)
+        l = string_tree(tree.l, options; bracketed=true, varMap=varMap)
+        r = string_tree(tree.r, options; bracketed=true, varMap=varMap)
         return "$(string(op))($l, $r)"
     end
 end
 
 """
-    stringTree(tree::Node, options::Options; kws...)
+    string_tree(tree::Node, options::Options; kws...)
 
 Convert an equation to a string.
 
@@ -144,7 +144,7 @@ Convert an equation to a string.
 - `varMap::Union{Array{String, 1}, Nothing}=nothing`: what variables
     to print for each feature.
 """
-function stringTree(
+function string_tree(
     tree::Node,
     options::Options;
     bracketed::Bool=false,
@@ -161,25 +161,25 @@ function stringTree(
             end
         end
     elseif tree.degree == 1
-        return "$(options.unaops[tree.op])($(stringTree(tree.l, options, bracketed=true, varMap=varMap)))"
+        return "$(options.unaops[tree.op])($(string_tree(tree.l, options, bracketed=true, varMap=varMap)))"
     else
-        return stringOp(
+        return string_op(
             options.binops[tree.op], tree, options; bracketed=bracketed, varMap=varMap
         )
     end
 end
 
 # Print an equation
-function printTree(
+function print_tree(
     io::IO, tree::Node, options::Options; varMap::Union{Array{String,1},Nothing}=nothing
 )
-    return println(io, stringTree(tree, options; varMap=varMap))
+    return println(io, string_tree(tree, options; varMap=varMap))
 end
 
-function printTree(
+function print_tree(
     tree::Node, options::Options; varMap::Union{Array{String,1},Nothing}=nothing
 )
-    return println(stringTree(tree, options; varMap=varMap))
+    return println(string_tree(tree, options; varMap=varMap))
 end
 
 end

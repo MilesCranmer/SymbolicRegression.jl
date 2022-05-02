@@ -71,9 +71,9 @@ tree_copy2 = convert(Node, simplify(eqn), options)
 # Too difficult to check the representation, so we check by evaluation:
 N = 100
 X = rand(MersenneTwister(0), 3, N) .+ 0.1
-output1, flag1 = evalTreeArray(tree, X, options)
-output2, flag2 = evalTreeArray(tree_copy, X, options)
-output3, flag3 = evalTreeArray(tree_copy2, X, options)
+output1, flag1 = eval_tree_array(tree, X, options)
+output2, flag2 = eval_tree_array(tree_copy, X, options)
+output3, flag3 = eval_tree_array(tree_copy2, X, options)
 
 @test isapprox(output1, output2, atol=1e-4 * sqrt(N))
 # Simplified equation may give a different answer due to rounding errors,

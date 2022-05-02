@@ -1,15 +1,15 @@
 module RegularizedEvolutionModule
 
 import Random: shuffle!
-import ..CoreModule: Options, Dataset, RecordType, stringTree
+import ..CoreModule: Options, Dataset, RecordType, string_tree
 import ..PopMemberModule: PopMember
-import ..PopulationModule: Population, bestOfSample
-import ..MutateModule: nextGeneration, crossoverGeneration
+import ..PopulationModule: Population, best_of_sample
+import ..MutateModule: next_generation, crossover_generation
 import ..RecorderModule: @recorder
 
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample
-function regEvolCycle(
+function reg_evol_cycle(
     dataset::Dataset{T},
     baseline::T,
     pop::Population,
@@ -53,7 +53,7 @@ function regEvolCycle(
             end
             allstar = pop.members[best_idx]
             mutation_recorder = RecordType()
-            babies[i], accepted[i] = nextGeneration(
+            babies[i], accepted[i] = next_generation(
                 dataset,
                 baseline,
                 allstar,
@@ -75,9 +75,9 @@ function regEvolCycle(
     else
         for i in 1:round(Int, pop.n / options.ns)
             if rand() > options.crossoverProbability
-                allstar = bestOfSample(pop, frequencyComplexity, options)
+                allstar = best_of_sample(pop, frequencyComplexity, options)
                 mutation_recorder = RecordType()
-                baby, mutation_accepted = nextGeneration(
+                baby, mutation_accepted = next_generation(
                     dataset,
                     baseline,
                     allstar,
@@ -103,7 +103,7 @@ function regEvolCycle(
                         if !haskey(record["mutations"], "$(member.ref)")
                             record["mutations"]["$(member.ref)"] = RecordType(
                                 "events" => Vector{RecordType}(),
-                                "tree" => stringTree(member.tree, options),
+                                "tree" => string_tree(member.tree, options),
                                 "score" => member.score,
                                 "loss" => member.loss,
                                 "parent" => member.parent,
@@ -129,10 +129,10 @@ function regEvolCycle(
                 pop.members[oldest] = baby
 
             else # Crossover
-                allstar1 = bestOfSample(pop, frequencyComplexity, options)
-                allstar2 = bestOfSample(pop, frequencyComplexity, options)
+                allstar1 = best_of_sample(pop, frequencyComplexity, options)
+                allstar2 = best_of_sample(pop, frequencyComplexity, options)
 
-                baby1, baby2, crossover_accepted = crossoverGeneration(
+                baby1, baby2, crossover_accepted = crossover_generation(
                     allstar1, allstar2, dataset, baseline, curmaxsize, options
                 )
 

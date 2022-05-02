@@ -3,14 +3,14 @@ module EvaluateEquationDerivativeModule
 using LinearAlgebra
 import ..CoreModule: Node, Options
 import ..UtilsModule: @return_on_false2, is_bad_array
-import ..EquationUtilsModule: countConstants, indexConstants, NodeIndex
+import ..EquationUtilsModule: count_constants, index_constants, NodeIndex
 import ..EvaluateEquationModule: deg0_eval
 
 """
-    evalDiffTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)
+    eval_diff_tree_array(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)
 
 Compute the forward derivative of an expression, using a similar
-structure and optimization to evalTreeArray. `direction` is the index of a particular
+structure and optimization to eval_tree_array. `direction` is the index of a particular
 variable in the expression. e.g., `direction=1` would indicate derivative with
 respect to `x1`.
 
@@ -19,17 +19,17 @@ respect to `x1`.
 - `(evaluation, derivative, complete)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool}`: the normal evaluation,
     the derivative, and whether the evaluation completed as normal (or encountered a nan or inf).
 """
-function evalDiffTreeArray(
+function eval_diff_tree_array(
     tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int
 )::Tuple{AbstractVector{T},AbstractVector{T},Bool} where {T<:Real}
     # TODO: Implement quick check for whether the variable is actually used
     # in this tree. Otherwise, return zero.
-    evaluation, derivative, complete = _evalDiffTreeArray(tree, cX, options, direction)
+    evaluation, derivative, complete = _eval_diff_tree_array(tree, cX, options, direction)
     @return_on_false2 complete evaluation derivative
     return evaluation, derivative, !(is_bad_array(evaluation) || is_bad_array(derivative))
 end
 
-function _evalDiffTreeArray(
+function _eval_diff_tree_array(
     tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int
 )::Tuple{AbstractVector{T},AbstractVector{T},Bool} where {T<:Real}
     if tree.degree == 0
@@ -54,7 +54,7 @@ function diff_deg1_eval(
     tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int
 )::Tuple{AbstractVector{T},AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
-    (cumulator, dcumulator, complete) = evalDiffTreeArray(tree.l, cX, options, direction)
+    (cumulator, dcumulator, complete) = eval_diff_tree_array(tree.l, cX, options, direction)
     @return_on_false2 complete cumulator dcumulator
 
     op = options.unaops[op_idx]
@@ -74,9 +74,9 @@ function diff_deg2_eval(
     tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int
 )::Tuple{AbstractVector{T},AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
-    (cumulator, dcumulator, complete) = evalDiffTreeArray(tree.l, cX, options, direction)
+    (cumulator, dcumulator, complete) = eval_diff_tree_array(tree.l, cX, options, direction)
     @return_on_false2 complete cumulator dcumulator
-    (array2, dcumulator2, complete2) = evalDiffTreeArray(tree.r, cX, options, direction)
+    (array2, dcumulator2, complete2) = eval_diff_tree_array(tree.r, cX, options, direction)
     @return_on_false2 complete2 array2 dcumulator2
 
     op = options.binops[op_idx]
@@ -94,10 +94,10 @@ function diff_deg2_eval(
 end
 
 """
-    evalGradTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options; variable::Bool=false)
+    eval_grad_tree_array(tree::Node, cX::AbstractMatrix{T}, options::Options; variable::Bool=false)
 
 Compute the forward-mode derivative of an expression, using a similar
-structure and optimization to evalTreeArray. `variable` specifies whether
+structure and optimization to eval_tree_array. `variable` specifies whether
 we should take derivatives with respect to features (i.e., cX), or with respect
 to every constant in the expression.
 
@@ -106,20 +106,20 @@ to every constant in the expression.
 - `(evaluation, gradient, complete)::Tuple{AbstractVector{T}, AbstractMatrix{T}, Bool}`: the normal evaluation,
     the gradient, and whether the evaluation completed as normal (or encountered a nan or inf).
 """
-function evalGradTreeArray(
+function eval_grad_tree_array(
     tree::Node, cX::AbstractMatrix{T}, options::Options; variable::Bool=false
 )::Tuple{AbstractVector{T},AbstractMatrix{T},Bool} where {T<:Real}
     n = size(cX, 2)
     if variable
         n_gradients = size(cX, 1)
     else
-        n_gradients = countConstants(tree)
+        n_gradients = count_constants(tree)
     end
-    index_tree = indexConstants(tree, 0)
-    return evalGradTreeArray(tree, n, n_gradients, index_tree, cX, options, Val(variable))
+    index_tree = index_constants(tree, 0)
+    return eval_grad_tree_array(tree, n, n_gradients, index_tree, cX, options, Val(variable))
 end
 
-function evalGradTreeArray(
+function eval_grad_tree_array(
     tree::Node,
     n::Int,
     n_gradients::Int,
@@ -128,14 +128,14 @@ function evalGradTreeArray(
     options::Options,
     ::Val{variable},
 )::Tuple{AbstractVector{T},AbstractMatrix{T},Bool} where {T<:Real,variable}
-    evaluation, gradient, complete = _evalGradTreeArray(
+    evaluation, gradient, complete = _eval_grad_tree_array(
         tree, n, n_gradients, index_tree, cX, options, Val(variable)
     )
     @return_on_false2 complete evaluation gradient
     return evaluation, gradient, !(is_bad_array(evaluation) || is_bad_array(gradient))
 end
 
-function _evalGradTreeArray(
+function _eval_grad_tree_array(
     tree::Node,
     n::Int,
     n_gradients::Int,
@@ -188,7 +188,7 @@ function grad_deg1_eval(
     options::Options,
     ::Val{variable},
 )::Tuple{AbstractVector{T},AbstractMatrix{T},Bool} where {T<:Real,op_idx,variable}
-    (cumulator, dcumulator, complete) = evalGradTreeArray(
+    (cumulator, dcumulator, complete) = eval_grad_tree_array(
         tree.l, n, n_gradients, index_tree.l, cX, options, Val(variable)
     )
     @return_on_false2 complete cumulator dcumulator
@@ -219,11 +219,11 @@ function grad_deg2_eval(
     ::Val{variable},
 )::Tuple{AbstractVector{T},AbstractMatrix{T},Bool} where {T<:Real,op_idx,variable}
     derivative_part = Array{T,2}(undef, n_gradients, n)
-    (cumulator1, dcumulator1, complete) = evalGradTreeArray(
+    (cumulator1, dcumulator1, complete) = eval_grad_tree_array(
         tree.l, n, n_gradients, index_tree.l, cX, options, Val(variable)
     )
     @return_on_false2 complete cumulator1 dcumulator1
-    (cumulator2, dcumulator2, complete2) = evalGradTreeArray(
+    (cumulator2, dcumulator2, complete2) = eval_grad_tree_array(
         tree.r, n, n_gradients, index_tree.r, cX, options, Val(variable)
     )
     @return_on_false2 complete2 cumulator1 dcumulator1

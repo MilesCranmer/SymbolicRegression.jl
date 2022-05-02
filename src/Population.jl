@@ -1,10 +1,10 @@
 module PopulationModule
 
 import Random: randperm
-import ..CoreModule: Options, Dataset, RecordType, stringTree
-import ..EquationUtilsModule: countNodes
-import ..LossFunctionsModule: scoreFunc
-import ..MutationFunctionsModule: genRandomTree
+import ..CoreModule: Options, Dataset, RecordType, string_tree
+import ..EquationUtilsModule: count_nodes
+import ..LossFunctionsModule: score_func
+import ..MutationFunctionsModule: gen_random_tree
 import ..PopMemberModule: PopMember
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
@@ -36,7 +36,7 @@ function Population(
     return Population(
         [
             PopMember(
-                dataset, baseline, genRandomTree(nlength, options, nfeatures), options
+                dataset, baseline, gen_random_tree(nlength, options, nfeatures), options
             ) for i in 1:npop
         ],
         npop,
@@ -64,16 +64,16 @@ function Population(
 end
 
 # Sample 10 random members of the population, and make a new one
-function samplePop(pop::Population, options::Options)::Population
+function sample_pop(pop::Population, options::Options)::Population
     idx = randperm(pop.n)[1:(options.ns)]
     return Population(pop.members[idx])
 end
 
 # Sample the population, and get the best member from that sample
-function bestOfSample(
+function best_of_sample(
     pop::Population, frequencyComplexity::AbstractVector{T}, options::Options
 )::PopMember where {T<:Real}
-    sample = samplePop(pop, options)
+    sample = sample_pop(pop, options)
 
     if options.useFrequencyInTournament
         # Score based on frequency of that size occuring.
@@ -84,7 +84,7 @@ function bestOfSample(
         scores = [
             sample.members[member].score * exp(
                 frequency_scaling *
-                frequencyComplexity[countNodes(sample.members[member].tree)],
+                frequencyComplexity[count_nodes(sample.members[member].tree)],
             ) for member in 1:(options.ns)
         ]
     else
@@ -116,13 +116,13 @@ function bestOfSample(
     return sample.members[chosen_idx]
 end
 
-function finalizeScores(
+function finalize_scores(
     dataset::Dataset{T}, baseline::T, pop::Population, options::Options
 )::Population where {T<:Real}
     need_recalculate = options.batching
     if need_recalculate
         @inbounds @simd for member in 1:(pop.n)
-            score, loss = scoreFunc(dataset, baseline, pop.members[member].tree, options)
+            score, loss = score_func(dataset, baseline, pop.members[member].tree, options)
             pop.members[member].score = score
             pop.members[member].loss = loss
         end
@@ -131,7 +131,7 @@ function finalizeScores(
 end
 
 # Return best 10 examples
-function bestSubPop(pop::Population; topn::Int=10)::Population
+function best_sub_pop(pop::Population; topn::Int=10)::Population
     best_idx = sortperm([pop.members[member].score for member in 1:(pop.n)])
     return Population(pop.members[best_idx[1:topn]])
 end
@@ -140,10 +140,10 @@ function record_population(pop::Population{T}, options::Options)::RecordType whe
     return RecordType(
         "population" => [
             RecordType(
-                "tree" => stringTree(member.tree, options),
+                "tree" => string_tree(member.tree, options),
                 "loss" => member.loss,
                 "score" => member.score,
-                "complexity" => countNodes(member.tree),
+                "complexity" => count_nodes(member.tree),
                 "birth" => member.birth,
                 "ref" => member.ref,
                 "parent" => member.parent,

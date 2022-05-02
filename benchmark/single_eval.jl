@@ -22,7 +22,7 @@ tree = (
 )
 
 function testfunc()
-    out = evalTreeArray(tree, X, options)
+    out = eval_tree_array(tree, X, options)
     return nothing
 end
 @btime testfunc()

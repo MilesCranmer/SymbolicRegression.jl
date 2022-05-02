@@ -1,7 +1,7 @@
 include("test_params.jl")
 using SymbolicRegression, SymbolicUtils
 using Test
-using SymbolicRegression: stringTree
+using SymbolicRegression: string_tree
 using Random
 
 x1 = 0.1f0;
@@ -93,7 +93,7 @@ for i in 0:5
             numprocs=numprocs,
             multithreading=multithreading,
         )
-        dominating = [calculateParetoFrontier(X, y, hallOfFame, options; weights=weights)]
+        dominating = [calculate_pareto_frontier(X, y, hallOfFame, options; weights=weights)]
     else
         y = 2 * cos.(X[4, :])
         if multi
@@ -106,10 +106,10 @@ for i in 0:5
         )
         if multi
             dominating = [
-                calculateParetoFrontier(X, y[j, :], hallOfFame[j], options) for j in 1:2
+                calculate_pareto_frontier(X, y[j, :], hallOfFame[j], options) for j in 1:2
             ]
         else
-            dominating = [calculateParetoFrontier(X, y, hallOfFame, options)]
+            dominating = [calculate_pareto_frontier(X, y, hallOfFame, options)]
         end
     end
 
@@ -148,7 +148,7 @@ X = randn(MersenneTwister(0), Float32, 5, 100)
 y = 2 * cos.(X[4, :])
 varMap = ["t1", "t2", "t3", "t4", "t5"]
 state, hallOfFame = EquationSearch(X, y; varMap=varMap, niterations=2, options=options)
-dominating = calculateParetoFrontier(X, y, hallOfFame, options)
+dominating = calculate_pareto_frontier(X, y, hallOfFame, options)
 
 best = dominating[end]
 
@@ -177,9 +177,9 @@ state, hallOfFame = EquationSearch(
     X, y; varMap=varMap, niterations=0, options=options, saved_state=(state, hallOfFame)
 )
 
-dominating = calculateParetoFrontier(X, y, hallOfFame, options)
+dominating = calculate_pareto_frontier(X, y, hallOfFame, options)
 best = dominating[end]
-printTree(best.tree, options)
+print_tree(best.tree, options)
 eqn = node_to_symbolic(best.tree, options; varMap=varMap)
 residual = simplify(eqn - true_eqn) + t4 * 1e-10
 @test best.loss < maximum_residual / 10

@@ -1,7 +1,7 @@
 import ..CoreModule: RecordType
 
 # Check for errors before they happen
-function testOptionConfiguration(T, options::Options)
+function test_option_configuration(T, options::Options)
     for op in (options.binops..., options.unaops...)
         if is_anonymous_function(op)
             throw(
@@ -47,7 +47,7 @@ function testOptionConfiguration(T, options::Options)
 end
 
 # Check for errors before they happen
-function testDatasetConfiguration(dataset::Dataset{T}, options::Options) where {T<:Real}
+function test_dataset_configuration(dataset::Dataset{T}, options::Options) where {T<:Real}
     n = dataset.n
     if n != size(dataset.X, 2) || n != size(dataset.y, 1)
         throw(
@@ -201,7 +201,7 @@ function test_module_on_workers(procs, options::Options)
     )
     futures = []
     for proc in procs
-        push!(futures, @spawnat proc SymbolicRegression.genRandomTree(3, options, 5))
+        push!(futures, @spawnat proc SymbolicRegression.gen_random_tree(3, options, 5))
     end
     for future in futures
         fetch(future)
@@ -226,7 +226,7 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
                     options=options,
                     nfeatures=dataset.nfeatures,
                 )
-                tmp_pop = SRCycle(
+                tmp_pop = s_r_cycle(
                     dataset,
                     convert(T, 1),
                     tmp_pop,
@@ -237,7 +237,7 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
                     options=options,
                     record=RecordType(),
                 )[1]
-                tmp_pop = OptimizeAndSimplifyPopulation(
+                tmp_pop = optimize_and_simplify_population(
                     dataset, T(1.0), tmp_pop, options, options.maxsize, RecordType()
                 )
             end

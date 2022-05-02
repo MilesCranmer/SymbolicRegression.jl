@@ -1,6 +1,6 @@
 using Test
 using SymbolicRegression
-using SymbolicRegression: evalDiffTreeArray, evalGradTreeArray
+using SymbolicRegression: eval_diff_tree_array, eval_grad_tree_array
 using Random
 using Zygote
 using LinearAlgebra
@@ -62,7 +62,7 @@ for type in [Float32, Float64]
         equation = [equation1, equation2, equation3][j]
 
         tree = equation(nx1, nx2, nx3)
-        predicted_output = evalTreeArray(tree, X, options)[1]
+        predicted_output = eval_tree_array(tree, X, options)[1]
         true_output = equation.([X[i, :] for i in 1:nfeatures]...)
 
         # First, check if the predictions are approximately equal:
@@ -73,9 +73,9 @@ for type in [Float32, Float64]
         )
         # Convert tuple of vectors to matrix:
         true_grad = reduce(hcat, true_grad)'
-        predicted_grad = evalGradTreeArray(tree, X, options; variable=true)[2]
+        predicted_grad = eval_grad_tree_array(tree, X, options; variable=true)[2]
         predicted_grad2 =
-            reduce(hcat, [evalDiffTreeArray(tree, X, options, i)[2] for i in 1:nfeatures])'
+            reduce(hcat, [eval_diff_tree_array(tree, X, options, i)[2] for i in 1:nfeatures])'
 
         # Print largest difference between predicted_grad, true_grad:
         @test array_test(predicted_grad, true_grad)
@@ -92,7 +92,7 @@ for type in [Float32, Float64]
     equation4(x1, x2, x3) = 3.2f0 * x1
     # The gradient should be: (C * x1) => x1 is gradient with respect to C.
     tree = equation4(nx1, nx2, nx3)
-    predicted_grad = evalGradTreeArray(tree, X, options; variable=false)[2]
+    predicted_grad = eval_grad_tree_array(tree, X, options; variable=false)[2]
     @test array_test(predicted_grad[1, :], X[1, :])
 
     # More complex expression:
@@ -116,7 +116,7 @@ for type in [Float32, Float64]
         [X[i, :] for i in 1:nfeatures]...,
     )[1:2]
     true_grad = reduce(hcat, true_grad)'
-    predicted_grad = evalGradTreeArray(tree, X, options; variable=false)[2]
+    predicted_grad = eval_grad_tree_array(tree, X, options; variable=false)[2]
 
     @test array_test(predicted_grad, true_grad)
     println("Done.")
@@ -124,7 +124,7 @@ end
 
 println("Testing NodeIndex.")
 
-import SymbolicRegression: getConstants, NodeIndex, indexConstants
+import SymbolicRegression: get_constants, NodeIndex, index_constants
 
 options = Options(;
     binary_operators=(+, *, -, /, pow_abs),
@@ -145,6 +145,6 @@ function check_tree(tree::Node, node_index::NodeIndex, constant_list::AbstractVe
     end
 end
 
-@test check_tree(tree, indexConstants(tree), getConstants(tree))
+@test check_tree(tree, index_constants(tree), get_constants(tree))
 
 println("Done.")

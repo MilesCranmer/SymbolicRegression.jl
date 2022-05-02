@@ -1,6 +1,6 @@
 using Documenter, SymbolicRegression
 using SymbolicRegression:
-    Node, PopMember, Population, evalTreeArray, Dataset, HallOfFame, CONST_TYPE, stringTree
+    Node, PopMember, Population, eval_tree_array, Dataset, HallOfFame, CONST_TYPE, string_tree
 
 makedocs(;
     sitename="SymbolicRegression.jl",

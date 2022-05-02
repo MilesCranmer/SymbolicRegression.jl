@@ -1,18 +1,18 @@
 module SingleIterationModule
 
-import ..CoreModule: Options, Dataset, RecordType, stringTree
-import ..EquationUtilsModule: countNodes
+import ..CoreModule: Options, Dataset, RecordType, string_tree
+import ..EquationUtilsModule: count_nodes
 import ..UtilsModule: debug
-import ..SimplifyEquationModule: simplifyTree, combineOperators
-import ..PopMemberModule: copyPopMember
-import ..PopulationModule: Population, finalizeScores, bestSubPop
+import ..SimplifyEquationModule: simplify_tree, combine_operators
+import ..PopMemberModule: copy_pop_member
+import ..PopulationModule: Population, finalize_scores, best_sub_pop
 import ..HallOfFameModule: HallOfFame
-import ..RegularizedEvolutionModule: regEvolCycle
-import ..ConstantOptimizationModule: optimizeConstants
+import ..RegularizedEvolutionModule: reg_evol_cycle
+import ..ConstantOptimizationModule: optimize_constants
 
 # Cycle through regularized evolution many times,
 # printing the fittest equation every 10% through
-function SRCycle(
+function s_r_cycle(
     dataset::Dataset{T},
     baseline::T,
     pop::Population,
@@ -29,7 +29,7 @@ function SRCycle(
 
     for temperature in 1:size(allT, 1)
         if options.annealing
-            pop = regEvolCycle(
+            pop = reg_evol_cycle(
                 dataset,
                 baseline,
                 pop,
@@ -40,7 +40,7 @@ function SRCycle(
                 record,
             )
         else
-            pop = regEvolCycle(
+            pop = reg_evol_cycle(
                 dataset,
                 baseline,
                 pop,
@@ -52,12 +52,12 @@ function SRCycle(
             )
         end
         for member in pop.members
-            size = countNodes(member.tree)
+            size = count_nodes(member.tree)
             score = member.score
             if !best_examples_seen.exists[size] ||
                 score < best_examples_seen.members[size].score
                 best_examples_seen.exists[size] = true
-                best_examples_seen.members[size] = copyPopMember(member)
+                best_examples_seen.members[size] = copy_pop_member(member)
             end
         end
     end
@@ -65,7 +65,7 @@ function SRCycle(
     return (pop, best_examples_seen)
 end
 
-function OptimizeAndSimplifyPopulation(
+function optimize_and_simplify_population(
     dataset::Dataset{T},
     baseline::T,
     pop::Population,
@@ -74,13 +74,13 @@ function OptimizeAndSimplifyPopulation(
     record::RecordType,
 )::Population where {T<:Real}
     @inbounds @simd for j in 1:(pop.n)
-        pop.members[j].tree = simplifyTree(pop.members[j].tree, options)
-        pop.members[j].tree = combineOperators(pop.members[j].tree, options)
+        pop.members[j].tree = simplify_tree(pop.members[j].tree, options)
+        pop.members[j].tree = combine_operators(pop.members[j].tree, options)
         if rand() < options.optimize_probability && options.shouldOptimizeConstants
-            pop.members[j] = optimizeConstants(dataset, baseline, pop.members[j], options)
+            pop.members[j] = optimize_constants(dataset, baseline, pop.members[j], options)
         end
     end
-    pop = finalizeScores(dataset, baseline, pop, options)
+    pop = finalize_scores(dataset, baseline, pop, options)
     return pop
 end
 

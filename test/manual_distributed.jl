@@ -23,7 +23,7 @@ options = SymbolicRegression.Options(;
 hallOfFame = EquationSearch(X, y; niterations=8, options=options, procs=procs)
 rmprocs(procs)
 
-dominating = calculateParetoFrontier(X, y, hallOfFame, options)
+dominating = calculate_pareto_frontier(X, y, hallOfFame, options)
 best = dominating[end]
 # Test the score
 @test best.loss < maximum_residual / 10

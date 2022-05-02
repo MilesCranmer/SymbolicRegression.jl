@@ -1,9 +1,9 @@
 module HallOfFameModule
 
-import ..CoreModule: CONST_TYPE, MAX_DEGREE, Node, Options, Dataset, stringTree
-import ..EquationUtilsModule: countNodes
-import ..PopMemberModule: PopMember, copyPopMember
-import ..LossFunctionsModule: EvalLoss
+import ..CoreModule: CONST_TYPE, MAX_DEGREE, Node, Options, Dataset, string_tree
+import ..EquationUtilsModule: count_nodes
+import ..PopMemberModule: PopMember, copy_pop_member
+import ..LossFunctionsModule: eval_loss
 using Printf: @sprintf
 
 """ List of the best members seen all time in `.members` """
@@ -32,10 +32,10 @@ function HallOfFame(options::Options)
 end
 
 """
-    calculateParetoFrontier(dataset::Dataset{T}, hallOfFame::HallOfFame,
+    calculate_pareto_frontier(dataset::Dataset{T}, hallOfFame::HallOfFame,
                             options::Options) where {T<:Real}
 """
-function calculateParetoFrontier(
+function calculate_pareto_frontier(
     dataset::Dataset{T}, hallOfFame::HallOfFame, options::Options
 )::Array{PopMember,1} where {T<:Real}
     # Dominating pareto curve - must be better than all simpler equations
@@ -60,14 +60,14 @@ function calculateParetoFrontier(
             end
         end
         if betterThanAllSmaller
-            push!(dominating, copyPopMember(member))
+            push!(dominating, copy_pop_member(member))
         end
     end
     return dominating
 end
 
 """
-    calculateParetoFrontier(X::AbstractMatrix{T}, y::AbstractVector{T},
+    calculate_pareto_frontier(X::AbstractMatrix{T}, y::AbstractVector{T},
                             hallOfFame::HallOfFame, options::Options;
                             weights=nothing, varMap=nothing) where {T<:Real}
 
@@ -75,7 +75,7 @@ Compute the dominating Pareto frontier for a given hallOfFame. This
 is the list of equations where each equation has a better loss than all
 simpler equations.
 """
-function calculateParetoFrontier(
+function calculate_pareto_frontier(
     X::AbstractMatrix{T},
     y::AbstractVector{T},
     hallOfFame::HallOfFame,
@@ -83,7 +83,7 @@ function calculateParetoFrontier(
     weights=nothing,
     varMap=nothing,
 ) where {T<:Real}
-    return calculateParetoFrontier(
+    return calculate_pareto_frontier(
         Dataset(X, y; weights=weights, varMap=varMap), hallOfFame, options
     )
 end
@@ -96,12 +96,12 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE, dataset, option
     output *= "Hall of Fame:\n"
     output *= "-----------------------------------------\n"
     output *= @sprintf(
-        "%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation"
+        "%-10s  %-8s   %-8s  %-8s\n", "Complexity", "loss", "Score", "Equation"
     )
 
-    dominating = calculateParetoFrontier(dataset, hallOfFame, options)
+    dominating = calculate_pareto_frontier(dataset, hallOfFame, options)
     for member in dominating
-        complexity = countNodes(member.tree)
+        complexity = count_nodes(member.tree)
         if member.loss < 0.0
             throw(
                 DomainError(
@@ -123,7 +123,7 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE, dataset, option
             complexity,
             curMSE,
             score,
-            stringTree(member.tree, options, varMap=dataset.varMap)
+            string_tree(member.tree, options, varMap=dataset.varMap)
         )
         lastMSE = curMSE
         lastComplexity = complexity

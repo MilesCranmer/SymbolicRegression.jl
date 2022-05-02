@@ -1,23 +1,23 @@
 module CheckConstraintsModule
 
 import ..CoreModule: Node, Options
-import ..EquationUtilsModule: countNodes
+import ..EquationUtilsModule: count_nodes
 
 # Check if any binary operator are overly complex
-function flagBinOperatorComplexity(tree::Node, ::Val{op}, options::Options)::Bool where {op}
+function flag_bin_operator_complexity(tree::Node, ::Val{op}, options::Options)::Bool where {op}
     if tree.degree == 0
         return false
     elseif tree.degree == 1
-        return flagBinOperatorComplexity(tree.l, Val(op), options)
+        return flag_bin_operator_complexity(tree.l, Val(op), options)
     else
         if tree.op == op
             overly_complex::Bool = (
                 (
                     (options.bin_constraints[op][1]::Int > -1) &&
-                    (countNodes(tree.l) > options.bin_constraints[op][1]::Int)
+                    (count_nodes(tree.l) > options.bin_constraints[op][1]::Int)
                 ) || (
                     (options.bin_constraints[op][2]::Int > -1) &&
-                    (countNodes(tree.r) > options.bin_constraints[op][2]::Int)
+                    (count_nodes(tree.r) > options.bin_constraints[op][2]::Int)
                 )
             )
             if overly_complex
@@ -25,31 +25,31 @@ function flagBinOperatorComplexity(tree::Node, ::Val{op}, options::Options)::Boo
             end
         end
         return (
-            flagBinOperatorComplexity(tree.l, Val(op), options) ||
-            flagBinOperatorComplexity(tree.r, Val(op), options)
+            flag_bin_operator_complexity(tree.l, Val(op), options) ||
+            flag_bin_operator_complexity(tree.r, Val(op), options)
         )
     end
 end
 
 # Check if any unary operators are overly complex
-function flagUnaOperatorComplexity(tree::Node, ::Val{op}, options::Options)::Bool where {op}
+function flag_una_operator_complexity(tree::Node, ::Val{op}, options::Options)::Bool where {op}
     if tree.degree == 0
         return false
     elseif tree.degree == 1
         if tree.op == op
             overly_complex::Bool = (
                 (options.una_constraints[op]::Int > -1) &&
-                (countNodes(tree.l) > options.una_constraints[op]::Int)
+                (count_nodes(tree.l) > options.una_constraints[op]::Int)
             )
             if overly_complex
                 return true
             end
         end
-        return flagUnaOperatorComplexity(tree.l, Val(op), options)
+        return flag_una_operator_complexity(tree.l, Val(op), options)
     else
         return (
-            flagUnaOperatorComplexity(tree.l, Val(op), options) ||
-            flagUnaOperatorComplexity(tree.r, Val(op), options)
+            flag_una_operator_complexity(tree.l, Val(op), options) ||
+            flag_una_operator_complexity(tree.r, Val(op), options)
         )
     end
 end
@@ -130,20 +130,20 @@ end
 
 """Check if user-passed constraints are violated or not"""
 function check_constraints(tree::Node, options::Options, maxsize::Int)::Bool
-    if countNodes(tree) > maxsize
+    if count_nodes(tree) > maxsize
         return false
     end
     for i in 1:(options.nbin)
         if options.bin_constraints[i] == (-1, -1)
             continue
-        elseif flagBinOperatorComplexity(tree, Val(i), options)
+        elseif flag_bin_operator_complexity(tree, Val(i), options)
             return false
         end
     end
     for i in 1:(options.nuna)
         if options.una_constraints[i] == -1
             continue
-        elseif flagUnaOperatorComplexity(tree, Val(i), options)
+        elseif flag_una_operator_complexity(tree, Val(i), options)
             return false
         end
     end

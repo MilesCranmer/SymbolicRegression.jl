@@ -9,21 +9,21 @@ export Population,
 
     #Functions:
     EquationSearch,
-    SRCycle,
-    calculateParetoFrontier,
-    countNodes,
-    copyNode,
-    printTree,
-    stringTree,
-    evalTreeArray,
-    evalDiffTreeArray,
-    evalGradTreeArray,
-    differentiableEvalTreeArray,
+    s_r_cycle,
+    calculate_pareto_frontier,
+    count_nodes,
+    copy_node,
+    print_tree,
+    string_tree,
+    eval_tree_array,
+    eval_diff_tree_array,
+    eval_grad_tree_array,
+    differentiable_eval_tree_array,
     node_to_symbolic,
     symbolic_to_node,
-    combineOperators,
-    genRandomTree,
-    genRandomTreeFixedSize,
+    combine_operators,
+    gen_random_tree,
+    gen_random_tree_fixed_size,
 
     #Operators
     plus,
@@ -113,7 +113,7 @@ import .CoreModule:
     RecordType,
     Dataset,
     Node,
-    copyNode,
+    copy_node,
     Options,
     plus,
     sub,
@@ -142,25 +142,25 @@ import .CoreModule:
     SRSerial,
     SRThreaded,
     SRDistributed,
-    stringTree,
-    printTree
+    string_tree,
+    print_tree
 import .UtilsModule:
     debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
 import .EquationUtilsModule:
-    countNodes, getConstants, setConstants, indexConstants, NodeIndex
-import .EvaluateEquationModule: evalTreeArray, differentiableEvalTreeArray
-import .EvaluateEquationDerivativeModule: evalDiffTreeArray, evalGradTreeArray
+    count_nodes, get_constants, set_constants, index_constants, NodeIndex
+import .EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
+import .EvaluateEquationDerivativeModule: eval_diff_tree_array, eval_grad_tree_array
 import .CheckConstraintsModule: check_constraints
 import .MutationFunctionsModule:
-    genRandomTree, genRandomTreeFixedSize, randomNode, randomNodeAndParent, crossoverTrees
-import .LossFunctionsModule: EvalLoss, Loss, scoreFunc
-import .PopMemberModule: PopMember, copyPopMember
-import .PopulationModule: Population, bestSubPop, record_population, bestOfSample
+    gen_random_tree, gen_random_tree_fixed_size, random_node, random_node_and_parent, crossover_trees
+import .LossFunctionsModule: eval_loss, loss, score_func
+import .PopMemberModule: PopMember, copy_pop_member
+import .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 import .HallOfFameModule:
-    HallOfFame, calculateParetoFrontier, string_dominating_pareto_curve
-import .SingleIterationModule: SRCycle, OptimizeAndSimplifyPopulation
+    HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
+import .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
 import .InterfaceSymbolicUtilsModule: node_to_symbolic, symbolic_to_node
-import .SimplifyEquationModule: combineOperators, simplifyTree
+import .SimplifyEquationModule: combine_operators, simplify_tree
 import .ProgressBarsModule: ProgressBar, set_multiline_postfix
 import .RecorderModule: @recorder, find_iteration_from_record
 
@@ -355,10 +355,10 @@ function _EquationSearch(
     # Redefine print, show:
     @eval begin
         function Base.print(io::IO, tree::Node)
-            return print(io, stringTree(tree, $options; varMap=$(datasets[1].varMap)))
+            return print(io, string_tree(tree, $options; varMap=$(datasets[1].varMap)))
         end
         function Base.show(io::IO, tree::Node)
-            return print(io, stringTree(tree, $options; varMap=$(datasets[1].varMap)))
+            return print(io, string_tree(tree, $options; varMap=$(datasets[1].varMap)))
         end
     end
 
@@ -366,9 +366,9 @@ function _EquationSearch(
     nout = size(datasets, 1)
 
     if runtests
-        testOptionConfiguration(T, options)
+        test_option_configuration(T, options)
         # Testing the first output variable is the same:
-        testDatasetConfiguration(example_dataset, options)
+        test_dataset_configuration(example_dataset, options)
     end
 
     if example_dataset.weighted
@@ -376,13 +376,13 @@ function _EquationSearch(
             sum(dataset.y .* dataset.weights) / sum(dataset.weights) for dataset in datasets
         ]
         baselineMSEs = [
-            Loss(dataset.y, ones(T, dataset.n) .* avgy, dataset.weights, options) for
+            loss(dataset.y, ones(T, dataset.n) .* avgy, dataset.weights, options) for
             dataset in datasets, avgy in avgys
         ]
     else
         avgys = [sum(dataset.y) / dataset.n for dataset in datasets]
         baselineMSEs = [
-            Loss(dataset.y, ones(T, dataset.n) .* avgy, options) for
+            loss(dataset.y, ones(T, dataset.n) .* avgy, options) for
             (dataset, avgy) in zip(datasets, avgys)
         ]
     end
@@ -575,7 +575,7 @@ function _EquationSearch(
                 @recorder cur_record["out$(j)_pop$(i)"] = RecordType(
                     "iteration0" => record_population(in_pop, options)
                 )
-                tmp_pop, tmp_best_seen = SRCycle(
+                tmp_pop, tmp_best_seen = s_r_cycle(
                     dataset,
                     baselineMSE,
                     in_pop,
@@ -586,12 +586,12 @@ function _EquationSearch(
                     options=options,
                     record=cur_record,
                 )
-                tmp_pop = OptimizeAndSimplifyPopulation(
+                tmp_pop = optimize_and_simplify_population(
                     dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record
                 )
                 if options.batching
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
-                        score, loss = scoreFunc(
+                        score, loss = score_func(
                             dataset,
                             baselineMSE,
                             tmp_best_seen.members[i_member].tree,
@@ -674,7 +674,7 @@ function _EquationSearch(
             cur_pop::Population
             best_seen::HallOfFame
             cur_record::RecordType
-            bestSubPops[j][i] = bestSubPop(cur_pop; topn=options.topn)
+            bestSubPops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
             @recorder record = recursive_merge(record, cur_record)
 
             dataset = datasets[j]
@@ -692,7 +692,7 @@ function _EquationSearch(
                 Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists]))
             )
                 part_of_cur_pop = i_member <= length(cur_pop.members)
-                size = countNodes(member.tree)
+                size = count_nodes(member.tree)
 
                 if part_of_cur_pop
                     frequencyComplexities[j][size] += 1
@@ -704,7 +704,7 @@ function _EquationSearch(
                     already_filled = hallOfFame[j].exists[size]
                     better_than_current = member.score < hallOfFame[j].members[size].score
                     if !already_filled || better_than_current
-                        hallOfFame[j].members[size] = copyPopMember(member)
+                        hallOfFame[j].members[size] = copy_pop_member(member)
                         hallOfFame[j].exists[size] = true
                     end
                 end
@@ -712,7 +712,7 @@ function _EquationSearch(
             ###################################################################
 
             # Dominating pareto curve - must be better than all simpler equations
-            dominating = calculateParetoFrontier(dataset, hallOfFame[j], options)
+            dominating = calculate_pareto_frontier(dataset, hallOfFame[j], options)
             hofFile = options.hofFile
             if nout > 1
                 hofFile = hofFile * ".out$j"
@@ -723,7 +723,7 @@ function _EquationSearch(
                     loss = member.loss
                     println(
                         io,
-                        "$(countNodes(member.tree))|$(loss)|$(stringTree(member.tree, options, varMap=dataset.varMap))",
+                        "$(count_nodes(member.tree))|$(loss)|$(string_tree(member.tree, options, varMap=dataset.varMap))",
                     )
                 end
             end
@@ -740,11 +740,11 @@ function _EquationSearch(
 
                     # Explicit copy here resets the birth. 
                     cur_pop.members[k] = PopMember(
-                        copyNode(bestPops.members[to_copy].tree),
+                        copy_node(bestPops.members[to_copy].tree),
                         copy(bestPops.members[to_copy].score),
                         copy(bestPops.members[to_copy].loss),
                     )
-                    # TODO: Clean this up using copyPopMember.
+                    # TODO: Clean this up using copy_pop_member.
                 end
             end
 
@@ -755,11 +755,11 @@ function _EquationSearch(
                     # Copy in case one gets used twice
                     to_copy = rand(1:size(dominating, 1))
                     cur_pop.members[k] = PopMember(
-                        copyNode(dominating[to_copy].tree),
+                        copy_node(dominating[to_copy].tree),
                         copy(dominating[to_copy].score),
                         copy(dominating[to_copy].loss),
                     )
-                    # TODO: Clean this up with copyPopMember.
+                    # TODO: Clean this up with copy_pop_member.
                 end
             end
             ###################################################################
@@ -782,7 +782,7 @@ function _EquationSearch(
                 @recorder cur_record[key] = RecordType(
                     "iteration$(iteration)" => record_population(cur_pop, options)
                 )
-                tmp_pop, tmp_best_seen = SRCycle(
+                tmp_pop, tmp_best_seen = s_r_cycle(
                     dataset,
                     baselineMSE,
                     cur_pop,
@@ -793,7 +793,7 @@ function _EquationSearch(
                     options=options,
                     record=cur_record,
                 )
-                tmp_pop = OptimizeAndSimplifyPopulation(
+                tmp_pop = optimize_and_simplify_population(
                     dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record
                 )
 
@@ -801,7 +801,7 @@ function _EquationSearch(
                 if options.batching
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
                         if tmp_best_seen.exists[i_member]
-                            score, loss = scoreFunc(
+                            score, loss = score_func(
                                 dataset,
                                 baselineMSE,
                                 tmp_best_seen.members[i_member].tree,
@@ -942,12 +942,12 @@ function _EquationSearch(
             # Check if all nout are below stopping condition.
             all_below = true
             for j in 1:nout
-                dominating = calculateParetoFrontier(datasets[j], hallOfFame[j], options)
+                dominating = calculate_pareto_frontier(datasets[j], hallOfFame[j], options)
                 # Check if zero size:
                 if length(dominating) == 0
                     all_below = false
                 elseif !any([
-                    options.earlyStopCondition(member.loss, countNodes(member.tree)) for
+                    options.earlyStopCondition(member.loss, count_nodes(member.tree)) for
                     member in dominating
                 ])
                     # None of the equations meet the stop condition.
