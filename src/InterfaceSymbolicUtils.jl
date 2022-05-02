@@ -67,6 +67,12 @@ function findoperation(op, ops)
     throw(error("Operation $(op) in expression not found in operations $(ops)!"))
 end
 
+function Base.convert(::typeof(SymbolicUtils.Symbolic), tree::Node, options::Options;
+                      varMap::Union{Array{String, 1}, Nothing}=nothing,
+                      index_functions::Bool=false)
+    node_to_symbolic(tree, options; varMap=varMap, index_functions=index_functions)
+end
+
 function Base.convert(::typeof(Node), x::Number, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
     return Node(CONST_TYPE(x))
 end
@@ -76,20 +82,20 @@ function Base.convert(::typeof(Node), x::Symbol, options::Options; varMap::Union
     return Node(String(x), varMap)
 end
 
-function Base.convert(::typeof(Node), x::SymbolicUtils.Symbolic, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
-    if !SymbolicUtils.istree(x)
-        varMap === nothing && return Node(String(x.name))
-        return Node(String(x.name), varMap)
+function Base.convert(::typeof(Node), expr::SymbolicUtils.Symbolic, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
+    if !SymbolicUtils.istree(expr)
+        varMap === nothing && return Node(String(expr.name))
+        return Node(String(expr.name), varMap)
     end
 
     # First, we remove integer powers:
-    y, good_return = multiply_powers(x)
+    y, good_return = multiply_powers(expr)
     if good_return
-        x = y
+        expr = y
     end
 
-    op = convert_to_function(SymbolicUtils.operation(x))
-    args = SymbolicUtils.arguments(x)
+    op = convert_to_function(SymbolicUtils.operation(expr))
+    args = SymbolicUtils.arguments(expr)
 
     length(args) > 2 && return split_eq(op, args, options; varMap=varMap)
     ind = length(args) == 2 ? findoperation(op, options.binops) : findoperation(op, options.unaops)
