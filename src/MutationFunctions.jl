@@ -8,7 +8,6 @@ function random_node(tree::Node)::Node
     if tree.degree == 0
         return tree
     end
-    a = count_nodes(tree)
     b = 0
     c = 0
     if tree.degree >= 1
@@ -176,7 +175,6 @@ function random_node_and_parent(
     if tree.degree == 0
         return tree, parent, side
     end
-    a = count_nodes(tree)
     b = 0
     c = 0
     if tree.degree >= 1

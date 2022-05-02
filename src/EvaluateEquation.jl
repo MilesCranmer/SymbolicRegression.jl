@@ -342,7 +342,6 @@ end
 function deg1_diff_eval(
     tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
-    n = size(cX, 2)
     (left, complete) = differentiable_eval_tree_array(tree.l, cX, options)
     @return_on_false complete left
     op = options.unaops[op_idx]
@@ -354,7 +353,6 @@ end
 function deg2_diff_eval(
     tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
-    n = size(cX, 2)
     (left, complete) = differentiable_eval_tree_array(tree.l, cX, options)
     @return_on_false complete left
     (right, complete2) = differentiable_eval_tree_array(tree.r, cX, options)

@@ -72,7 +72,6 @@ end
 function score_func_batch(
     dataset::Dataset{T}, baseline::T, tree::Node, options::Options
 )::Tuple{T,T} where {T<:Real}
-    batchSize = options.batchSize
     batch_idx = randperm(dataset.n)[1:(options.batchSize)]
     batch_X = dataset.X[:, batch_idx]
     batch_y = dataset.y[batch_idx]
