@@ -37,15 +37,15 @@ y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
 options = SymbolicRegression.Options(
     binary_operators=(+, *, /, -),
     unary_operators=(cos, exp),
-    npopulations=20
+    npopulations=40
 )
 
-hallOfFame = EquationSearch(X, y, niterations=5, options=options, numprocs=4)
+hall_of_fame = EquationSearch(X, y, niterations=50, options=options, numprocs=4)
 ```
 We can view the equations in the dominating
 Pareto frontier with:
 ```julia
-dominating = calculateParetoFrontier(X, y, hallOfFame, options)
+dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
 ```
 We can convert the best equation
 to [SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl)
@@ -60,9 +60,9 @@ We can also print out the full pareto frontier like so:
 println("Complexity\tMSE\tEquation")
 
 for member in dominating
-    size = countNodes(member.tree)
+    size = count_nodes(member.tree)
     loss = member.loss
-    string = stringTree(member.tree, options)
+    string = string_tree(member.tree, options)
 
     println("$(size)\t$(loss)\t$(string)")
 end
