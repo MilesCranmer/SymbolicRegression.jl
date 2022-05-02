@@ -77,11 +77,6 @@ function Base.convert(::typeof(Node), x::Number, options::Options; varMap::Union
     return Node(CONST_TYPE(x))
 end
 
-function Base.convert(::typeof(Node), x::Symbol, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
-    varMap === nothing && return Node(String(x))
-    return Node(String(x), varMap)
-end
-
 function Base.convert(::typeof(Node), expr::SymbolicUtils.Symbolic, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
     if !SymbolicUtils.istree(expr)
         varMap === nothing && return Node(String(expr.name))
