@@ -37,7 +37,7 @@ jobs:
           if out == ""
               exit(0)
           else
-              @error "Some files have not been formatted !!!"
+              @error "Some files have not been formatted. Please run JuliaFormatter.format(\".\") from the repository root."
               write(stdout, out)
               exit(1)
           end'
