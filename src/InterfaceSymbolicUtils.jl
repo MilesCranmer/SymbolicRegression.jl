@@ -15,7 +15,7 @@ function parse_tree_to_eqs(tree::Node, options::Options, index_functions::Bool=f
     if tree.degree == 0
         # Return constant if needed
         tree.constant && return subs_bad(tree.val)
-        return SymbolicUtils.Sym{Number}(Symbol("x$(tree.feature)"))
+        return SymbolicUtils.Sym{LiteralReal}(Symbol("x$(tree.feature)"))
     end
     # Collect the next children
     children = tree.degree >= 2 ? (tree.l, tree.r) : (tree.l,)
@@ -132,7 +132,7 @@ function node_to_symbolic(tree::Node, options::Options;
     varMap === nothing && return expr
     # Create a substitution tuple
     subs = Dict(
-        [SymbolicUtils.Sym{Number}(Symbol("x$(i)")) => SymbolicUtils.Sym{Number}(Symbol(varMap[i])) for i in 1:length(varMap)]...
+        [SymbolicUtils.Sym{LiteralReal}(Symbol("x$(i)")) => SymbolicUtils.Sym{LiteralReal}(Symbol(varMap[i])) for i in 1:length(varMap)]...
     )
     return substitute(expr, subs)
 end
