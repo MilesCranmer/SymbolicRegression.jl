@@ -102,16 +102,10 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
             # Test gradients:
             df_true = x -> ForwardDiff.derivative(f_true, x)
             dy = T.(df_true.(X[1, :]))
-            test_dy = (
-                x -> ForwardDiff.gradient(
-                    _x -> sum(differentiable_eval_tree_array(tree, _x, make_options())[1]),
-                    x,
-                )
-            )(
-                X
-            )[
-                1, :
-            ]
+            test_dy = ForwardDiff.gradient(
+                _x -> sum(differentiable_eval_tree_array(tree, _x, make_options())[1]), X
+            )
+            test_dy = test_dy[1, 1:end]
             @test all(abs.(test_dy .- dy) / N .< zero_tolerance)
         end
     end

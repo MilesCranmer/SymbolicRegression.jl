@@ -30,7 +30,7 @@ for reverse in [false, true]
     dummy_frequencies = [0.0f-10 for i in 1:100]
     best_pop_member = [
         SymbolicRegression.best_of_sample(pop, dummy_frequencies, options).score for
-        j = 1:100
+        j in 1:100
     ]
 
     mean_value = sum(best_pop_member) / length(best_pop_member)
