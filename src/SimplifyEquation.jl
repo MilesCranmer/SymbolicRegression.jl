@@ -23,7 +23,9 @@ function combineOperators(tree::Node, options::Options)::Node
     end
 
     top_level_constant = tree.degree == 2 && (tree.l.constant || tree.r.constant)
-    if tree.degree == 2 && (options.binops[tree.op] == (*) || options.binops[tree.op] == (+)) && top_level_constant
+    if tree.degree == 2 &&
+        (options.binops[tree.op] == (*) || options.binops[tree.op] == (+)) &&
+        top_level_constant
         op = tree.op
         # Put the constant in r. Need to assume var in left for simplification assumption.
         if tree.l.constant
@@ -107,8 +109,7 @@ function simplifyTree(tree::Node, options::Options)::Node
         tree.l = simplifyTree(tree.l, options)
         tree.r = simplifyTree(tree.r, options)
         constantsBelow = (
-             tree.l.degree == 0 && tree.l.constant &&
-             tree.r.degree == 0 && tree.r.constant
+            tree.l.degree == 0 && tree.l.constant && tree.r.degree == 0 && tree.r.constant
         )
         if constantsBelow
             # NaN checks:

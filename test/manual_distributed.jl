@@ -5,23 +5,22 @@ procs = addprocs(4)
 using Test, Pkg
 project_path = splitdir(Pkg.project().path)[1]
 @everywhere procs begin
-    Base.MainInclude.eval(quote
-        using Pkg
-        Pkg.activate($$project_path)
-    end)
+    Base.MainInclude.eval(
+        quote
+            using Pkg
+            Pkg.activate($$project_path)
+        end,
+    )
 end
 @everywhere using SymbolicRegression
-@everywhere _inv(x::Float32)::Float32 = 1f0/x
+@everywhere _inv(x::Float32)::Float32 = 1.0f0 / x
 X = rand(Float32, 5, 100) .+ 1
 y = 1.2f0 .+ 2 ./ X[3, :]
 
 options = SymbolicRegression.Options(;
-    default_params...,
-    binary_operators=(+, *),
-    unary_operators=(_inv,),
-    npopulations=8
+    default_params..., binary_operators=(+, *), unary_operators=(_inv,), npopulations=8
 )
-hallOfFame = EquationSearch(X, y, niterations=8, options=options, procs=procs)
+hallOfFame = EquationSearch(X, y; niterations=8, options=options, procs=procs)
 rmprocs(procs)
 
 dominating = calculateParetoFrontier(X, y, hallOfFame, options)

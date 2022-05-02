@@ -24,7 +24,6 @@ function countDepth(tree::Node)::Int
     end
 end
 
-
 # Count the number of unary operators in the equation
 function countUnaryOperators(tree::Node)::Int
     if tree.degree == 0
@@ -52,7 +51,6 @@ function countOperators(tree::Node)::Int
     return countUnaryOperators(tree) + countBinaryOperators(tree)
 end
 
-
 # Count the number of constants in an equation
 function countConstants(tree::Node)::Int
     if tree.degree == 0
@@ -67,7 +65,6 @@ function countConstants(tree::Node)::Int
         return 0 + countConstants(tree.l) + countConstants(tree.r)
     end
 end
-
 
 # Get all the constants from a tree
 function getConstants(tree::Node)::AbstractVector{CONST_TYPE}
@@ -96,10 +93,9 @@ function setConstants(tree::Node, constants::AbstractVector{T}) where {T<:Real}
     else
         numberLeft = countConstants(tree.l)
         setConstants(tree.l, constants)
-        setConstants(tree.r, constants[numberLeft+1:end])
+        setConstants(tree.r, constants[(numberLeft + 1):end])
     end
 end
-
 
 ## Assign index to nodes of a tree
 # This will mirror a Node struct, rather
@@ -113,7 +109,7 @@ mutable struct NodeIndex
 end
 
 function indexConstants(tree::Node)::NodeIndex
-    indexConstants(tree, 0)
+    return indexConstants(tree, 0)
 end
 
 function indexConstants(tree::Node, left_index::Int)::NodeIndex

@@ -31,7 +31,7 @@ function PopMember(t::Node, score::T, loss::T; ref::Int=-1, parent::Int=-1) wher
     if ref == -1
         ref = abs(rand(Int))
     end
-    PopMember{T}(t, score, loss, getTime(), ref, parent)
+    return PopMember{T}(t, score, loss, getTime(), ref, parent)
 end
 
 """
@@ -48,11 +48,11 @@ Automatically compute the score for this tree.
 - `t::Node`: The tree for the population member.
 - `options::Options`: What options to use.
 """
-function PopMember(dataset::Dataset{T},
-                   baseline::T, t::Node,
-                   options::Options; ref::Int=-1, parent::Int=-1) where {T<:Real}
+function PopMember(
+    dataset::Dataset{T}, baseline::T, t::Node, options::Options; ref::Int=-1, parent::Int=-1
+) where {T<:Real}
     score, loss = scoreFunc(dataset, baseline, t, options)
-    PopMember(t, score, loss, ref=ref, parent=parent)
+    return PopMember(t, score, loss; ref=ref, parent=parent)
 end
 
 function copyPopMember(p::PopMember{T}) where {T<:Real}
