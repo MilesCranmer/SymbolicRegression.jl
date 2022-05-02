@@ -66,7 +66,6 @@ evalTreeArray(tree::Node, cX::AbstractMatrix{T}, options::Options) where {T<:Rea
 ```@docs
 node_to_symbolic(tree::Node, options::Options; 
                      varMap::Union{Array{String, 1}, Nothing}=nothing,
-                     evaluate_functions::Bool=false,
                      index_functions::Bool=false)
 ```
 

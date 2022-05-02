@@ -52,7 +52,6 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function}}
     probPickFirst::Float32
     earlyStopCondition::Union{Function, Nothing}
     stateReturn::Bool
-    use_symbolic_utils::Bool
     timeout_in_seconds::Union{Float64, Nothing}
     skip_mutation_failures::Bool
     enable_autodiff::Bool
@@ -82,7 +81,7 @@ Base.print(io::IO, options::Options) = print(io, """Options(
 # Speed Tweaks:
     batching=$(options.batching), batchSize=$(options.batchSize), fast_cycle=$(options.fast_cycle), 
 # Logistics:
-    hofFile=$(options.hofFile), verbosity=$(options.verbosity), seed=$(options.seed), progress=$(options.progress), use_symbolic_utils=$(options.use_symbolic_utils),
+    hofFile=$(options.hofFile), verbosity=$(options.verbosity), seed=$(options.seed), progress=$(options.progress),
 # Early Exit:
     earlyStopCondition=$(options.earlyStopCondition), timeout_in_seconds=$(options.timeout_in_seconds),
 )""")
