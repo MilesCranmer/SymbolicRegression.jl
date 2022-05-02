@@ -31,9 +31,8 @@ function parse_tree_to_eqs(tree::Node, options::Options, index_functions::Bool=f
     return subs_bad(op(map(x->parse_tree_to_eqs(x, options, index_functions), children)...))
 end
 
-## Convert symbolic function back
-convert_to_function(x, args...) = x
-
+# For operators which are indexed, we need to convert them back
+# using the string:
 function convert_to_function(x::SymbolicUtils.Sym{SymbolicUtils.FnType{T, Number}}, options::Options) where {T <: Tuple}
     degree = length(T.types)
     if degree == 1
@@ -46,6 +45,10 @@ function convert_to_function(x::SymbolicUtils.Sym{SymbolicUtils.FnType{T, Number
         throw(AssertionError("Function $(String(x.name)) has degree > 2 !"))
     end
 end
+
+# For normal operators, simply return the function itself:
+convert_to_function(x, options::Options) = x
+
 
 # Split equation
 function split_eq(op, args, options::Options; varMap::Union{Array{String, 1}, Nothing}=nothing)
@@ -89,7 +92,7 @@ function Base.convert(::typeof(Node), expr::SymbolicUtils.Symbolic, options::Opt
         expr = y
     end
 
-    op = convert_to_function(SymbolicUtils.operation(expr))
+    op = convert_to_function(SymbolicUtils.operation(expr), options)
     args = SymbolicUtils.arguments(expr)
 
     length(args) > 2 && return split_eq(op, args, options; varMap=varMap)
