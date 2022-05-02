@@ -21,8 +21,6 @@ export Population,
     differentiableEvalTreeArray,
     node_to_symbolic,
     symbolic_to_node,
-    custom_simplify,
-    simplifyWithSymbolicUtils,
     combineOperators,
     genRandomTree,
     genRandomTreeFixedSize,
@@ -76,7 +74,6 @@ include("ConstantOptimization.jl")
 include("Population.jl")
 include("HallOfFame.jl")
 include("InterfaceSymbolicUtils.jl")
-include("CustomSymbolicUtilsSimplification.jl")
 include("SimplifyEquation.jl")
 include("Mutate.jl")
 include("RegularizedEvolution.jl")
@@ -96,8 +93,7 @@ import .PopulationModule: Population, bestSubPop, record_population, bestOfSampl
 import .HallOfFameModule: HallOfFame, calculateParetoFrontier, string_dominating_pareto_curve
 import .SingleIterationModule: SRCycle, OptimizeAndSimplifyPopulation
 import .InterfaceSymbolicUtilsModule: node_to_symbolic, symbolic_to_node
-import .CustomSymbolicUtilsSimplificationModule: custom_simplify
-import .SimplifyEquationModule: simplifyWithSymbolicUtils, combineOperators, simplifyTree
+import .SimplifyEquationModule: combineOperators, simplifyTree
 import .ProgressBarsModule: ProgressBar, set_multiline_postfix
 import .RecorderModule: @recorder, find_iteration_from_record
 
