@@ -25,6 +25,9 @@ function s_r_cycle(
 )::Tuple{Population,HallOfFame} where {T<:Real}
     max_temp = T(1.0)
     min_temp = T(0.0)
+    if !options.annealing
+        min_temp = max_temp
+    end
     all_temperatures = LinRange(max_temp, min_temp, ncycles)
     best_examples_seen = HallOfFame(options)
 
@@ -33,7 +36,7 @@ function s_r_cycle(
             dataset,
             baseline,
             pop,
-            options.annealing ? temperature : max_temp,
+            temperature,
             curmaxsize,
             frequencyComplexity,
             options,
