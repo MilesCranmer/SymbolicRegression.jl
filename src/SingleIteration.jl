@@ -23,34 +23,22 @@ function s_r_cycle(
     options::Options,
     record::RecordType,
 )::Tuple{Population,HallOfFame} where {T<:Real}
-    top = convert(T, 1)
-    allT = LinRange(top, convert(T, 0), ncycles)
+    max_temp = T(1.0)
+    min_temp = T(0.0)
+    all_temperatures = LinRange(max_temp, min_temp, ncycles)
     best_examples_seen = HallOfFame(options)
 
-    for temperature in 1:size(allT, 1)
-        if options.annealing
-            pop = reg_evol_cycle(
-                dataset,
-                baseline,
-                pop,
-                allT[temperature],
-                curmaxsize,
-                frequencyComplexity,
-                options,
-                record,
-            )
-        else
-            pop = reg_evol_cycle(
-                dataset,
-                baseline,
-                pop,
-                top,
-                curmaxsize,
-                frequencyComplexity,
-                options,
-                record,
-            )
-        end
+    for temperature in all_temperatures
+        pop = reg_evol_cycle(
+            dataset,
+            baseline,
+            pop,
+            options.annealing ? temperature : max_temp,
+            curmaxsize,
+            frequencyComplexity,
+            options,
+            record,
+        )
         for member in pop.members
             size = count_nodes(member.tree)
             score = member.score
