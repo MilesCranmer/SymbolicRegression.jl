@@ -22,7 +22,7 @@ function s_r_cycle(
     verbosity::Int=0,
     options::Options,
     record::RecordType,
-)::Tuple{Population,HallOfFame} where {T<:Real}
+)::Tuple{Population,HallOfFame,Float64} where {T<:Real}
     max_temp = T(1.0)
     min_temp = T(0.0)
     if !options.annealing
@@ -30,9 +30,10 @@ function s_r_cycle(
     end
     all_temperatures = LinRange(max_temp, min_temp, ncycles)
     best_examples_seen = HallOfFame(options)
+    num_evals = 0.0
 
     for temperature in all_temperatures
-        pop = reg_evol_cycle(
+        pop, tmp_num_evals = reg_evol_cycle(
             dataset,
             baseline,
             pop,
@@ -42,6 +43,7 @@ function s_r_cycle(
             options,
             record,
         )
+        num_evals += tmp_num_evals
         for member in pop.members
             size = count_nodes(member.tree)
             score = member.score
@@ -53,7 +55,7 @@ function s_r_cycle(
         end
     end
 
-    return (pop, best_examples_seen)
+    return (pop, best_examples_seen, num_evals)
 end
 
 function optimize_and_simplify_population(
@@ -63,16 +65,21 @@ function optimize_and_simplify_population(
     options::Options,
     curmaxsize::Int,
     record::RecordType,
-)::Population where {T<:Real}
+)::Tuple{Population,Float64} where {T<:Real}
+    array_num_evals = zeros(Float64, pop.n)
     @inbounds @simd for j in 1:(pop.n)
         pop.members[j].tree = simplify_tree(pop.members[j].tree, options)
         pop.members[j].tree = combine_operators(pop.members[j].tree, options)
         if rand() < options.optimize_probability && options.shouldOptimizeConstants
-            pop.members[j] = optimize_constants(dataset, baseline, pop.members[j], options)
+            pop.members[j], array_num_evals[j] = optimize_constants(
+                dataset, baseline, pop.members[j], options
+            )
         end
     end
-    pop = finalize_scores(dataset, baseline, pop, options)
-    return pop
+    num_evals = sum(array_num_evals)
+    pop, tmp_num_evals = finalize_scores(dataset, baseline, pop, options)
+    num_evals += tmp_num_evals
+    return (pop, num_evals)
 end
 
 end

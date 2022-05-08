@@ -18,13 +18,15 @@ function reg_evol_cycle(
     frequencyComplexity::AbstractVector{T},
     options::Options,
     record::RecordType,
-)::Population where {T<:Real}
+)::Tuple{Population,Float64} where {T<:Real}
     # Batch over each subsample. Can give 15% improvement in speed; probably moreso for large pops.
     # but is ultimately a different algorithm than regularized evolution, and might not be
     # as good.
     if options.crossoverProbability > 0.0
         @recorder error("You cannot have the recorder on when using crossover")
     end
+
+    num_evals = 0.0
 
     if options.fast_cycle
 
@@ -39,6 +41,7 @@ function reg_evol_cycle(
         n_evol_cycles = round(Int, pop.n / options.ns)
         babies = Array{PopMember}(undef, n_evol_cycles)
         accepted = Array{Bool}(undef, n_evol_cycles)
+        array_num_evals = Array{Float64}(undef, n_evol_cycles)
 
         # Iterate each ns-member sub-sample
         @inbounds Threads.@threads for i in 1:n_evol_cycles
@@ -53,7 +56,7 @@ function reg_evol_cycle(
             end
             allstar = pop.members[best_idx]
             mutation_recorder = RecordType()
-            babies[i], accepted[i] = next_generation(
+            babies[i], accepted[i], array_num_evals[i] = next_generation(
                 dataset,
                 baseline,
                 allstar,
@@ -64,6 +67,7 @@ function reg_evol_cycle(
                 tmp_recorder=mutation_recorder,
             )
         end
+        num_evals = sum(array_num_evals)
 
         # Replace the n_evol_cycles-oldest members of each population
         @inbounds for i in 1:n_evol_cycles
@@ -77,7 +81,7 @@ function reg_evol_cycle(
             if rand() > options.crossoverProbability
                 allstar = best_of_sample(pop, frequencyComplexity, options)
                 mutation_recorder = RecordType()
-                baby, mutation_accepted = next_generation(
+                baby, mutation_accepted, tmp_num_evals = next_generation(
                     dataset,
                     baseline,
                     allstar,
@@ -87,6 +91,7 @@ function reg_evol_cycle(
                     options;
                     tmp_recorder=mutation_recorder,
                 )
+                num_evals += tmp_num_evals
 
                 if !mutation_accepted && options.skip_mutation_failures
                     # Skip this mutation rather than replacing oldest member with unchanged member
@@ -132,9 +137,10 @@ function reg_evol_cycle(
                 allstar1 = best_of_sample(pop, frequencyComplexity, options)
                 allstar2 = best_of_sample(pop, frequencyComplexity, options)
 
-                baby1, baby2, crossover_accepted = crossover_generation(
+                baby1, baby2, crossover_accepted, tmp_num_evals = crossover_generation(
                     allstar1, allstar2, dataset, baseline, curmaxsize, options
                 )
+                num_evals += tmp_num_evals
 
                 if !crossover_accepted && options.skip_mutation_failures
                     continue
@@ -149,7 +155,7 @@ function reg_evol_cycle(
         end
     end
 
-    return pop
+    return (pop, num_evals)
 end
 
 end
