@@ -528,16 +528,16 @@ function _EquationSearch(
                     ),
                     HallOfFame(options),
                     RecordType(),
+                    Float64(options.npop),
                 )
                 # This involves npop evaluations, on the full dataset:
-                num_evals[j][i] += options.npop
             else
                 is_vector = typeof(saved_state[1]) <: Vector{Vector{Population{T}}}
                 cur_saved_state = is_vector ? saved_state[1][j][i] : saved_state[1][j, i]
 
                 if length(cur_saved_state.members) >= options.npop
                     new_pop = @sr_spawner ConcurrencyType worker_idx (
-                        cur_saved_state, HallOfFame(options), RecordType()
+                        cur_saved_state, HallOfFame(options), RecordType(), 0.0
                     )
                 else
                     # If population has not yet been created (e.g., exited too early)
@@ -555,8 +555,8 @@ function _EquationSearch(
                         ),
                         HallOfFame(options),
                         RecordType(),
+                        Float64(options.npop),
                     )
-                    num_evals[j][i] += options.npop
                 end
             end
             push!(init_pops[j], new_pop)

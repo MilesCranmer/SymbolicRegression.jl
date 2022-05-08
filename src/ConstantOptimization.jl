@@ -25,7 +25,7 @@ function optimize_constants(
     nconst = count_constants(member.tree)
     num_evals = 0.0
     if nconst == 0
-        return member
+        return (member, 0.0)
     end
     x0 = get_constants(member.tree)
     f(x::Vector{CONST_TYPE})::T = opt_func(x, dataset, baseline, member.tree, options)
