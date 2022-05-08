@@ -118,16 +118,18 @@ end
 
 function finalize_scores(
     dataset::Dataset{T}, baseline::T, pop::Population, options::Options
-)::Population where {T<:Real}
+)::Tuple{Population,Float64} where {T<:Real}
     need_recalculate = options.batching
+    num_evals = 0.0
     if need_recalculate
         @inbounds @simd for member in 1:(pop.n)
             score, loss = score_func(dataset, baseline, pop.members[member].tree, options)
             pop.members[member].score = score
             pop.members[member].loss = loss
         end
+        num_evals += pop.n * (options.batchSize / dataset.n)
     end
-    return pop
+    return (pop, num_evals)
 end
 
 # Return best 10 examples

@@ -28,15 +28,17 @@ function next_generation(
     frequencyComplexity::AbstractVector{T},
     options::Options;
     tmp_recorder::RecordType,
-)::Tuple{PopMember,Bool} where {T<:Real}
+)::Tuple{PopMember,Bool,Float64} where {T<:Real}
     prev = member.tree
     parent_ref = member.ref
     tree = prev
     mutation_accepted = false
+    num_evals = 0.0
 
     #TODO - reconsider this
     if options.batching
         beforeScore, beforeLoss = score_func_batch(dataset, baseline, prev, options)
+        num_evals += (options.batchSize / dataset.n)
     else
         beforeScore = member.score
         beforeLoss = member.loss
@@ -110,8 +112,11 @@ function next_generation(
             tree = combine_operators(tree, options) # See if repeated constants at outer levels
             @recorder tmp_recorder["type"] = "partial_simplify"
             mutation_accepted = true
-            return PopMember(tree, beforeScore, beforeLoss; parent=parent_ref),
-            mutation_accepted
+            return (
+                PopMember(tree, beforeScore, beforeLoss; parent=parent_ref),
+                mutation_accepted,
+                num_evals,
+            )
 
             is_success_always_possible = true
             # Simplification shouldn't hurt complexity; unless some non-symmetric constraint
@@ -133,8 +138,11 @@ function next_generation(
                 tmp_recorder["reason"] = "identity"
             end
             mutation_accepted = true
-            return PopMember(tree, beforeScore, beforeLoss; parent=parent_ref),
-            mutation_accepted
+            return (
+                PopMember(tree, beforeScore, beforeLoss; parent=parent_ref),
+                mutation_accepted,
+                num_evals,
+            )
         end
 
         successful_mutation =
@@ -150,14 +158,19 @@ function next_generation(
             tmp_recorder["reason"] = "failed_constraint_check"
         end
         mutation_accepted = false
-        return PopMember(copy_node(prev), beforeScore, beforeLoss; parent=parent_ref),
-        mutation_accepted
+        return (
+            PopMember(copy_node(prev), beforeScore, beforeLoss; parent=parent_ref),
+            mutation_accepted,
+            num_evals,
+        )
     end
 
     if options.batching
         afterScore, afterLoss = score_func_batch(dataset, baseline, tree, options)
+        num_evals += (options.batchSize / dataset.n)
     else
         afterScore, afterLoss = score_func(dataset, baseline, tree, options)
+        num_evals += 1
     end
 
     if isnan(afterScore)
@@ -166,8 +179,11 @@ function next_generation(
             tmp_recorder["reason"] = "nan_loss"
         end
         mutation_accepted = false
-        return PopMember(copy_node(prev), beforeScore, beforeLoss; parent=parent_ref),
-        mutation_accepted
+        return (
+            PopMember(copy_node(prev), beforeScore, beforeLoss; parent=parent_ref),
+            mutation_accepted,
+            num_evals,
+        )
     end
 
     probChange = 1.0
@@ -187,15 +203,22 @@ function next_generation(
             tmp_recorder["reason"] = "annealing_or_frequency"
         end
         mutation_accepted = false
-        return PopMember(copy_node(prev), beforeScore, beforeLoss; parent=parent_ref),
-        mutation_accepted
+        return (
+            PopMember(copy_node(prev), beforeScore, beforeLoss; parent=parent_ref),
+            mutation_accepted,
+            num_evals,
+        )
     else
         @recorder begin
             tmp_recorder["result"] = "accept"
             tmp_recorder["reason"] = "pass"
         end
         mutation_accepted = true
-        return PopMember(tree, afterScore, afterLoss; parent=parent_ref), mutation_accepted
+        return (
+            PopMember(tree, afterScore, afterLoss; parent=parent_ref),
+            mutation_accepted,
+            num_evals,
+        )
     end
 end
 
@@ -207,7 +230,7 @@ function crossover_generation(
     baseline::T,
     curmaxsize::Int,
     options::Options,
-)::Tuple{PopMember,PopMember,Bool} where {T<:Real}
+)::Tuple{PopMember,PopMember,Bool,Float64} where {T<:Real}
     tree1 = member1.tree
     tree2 = member2.tree
     crossover_accepted = false
@@ -216,6 +239,7 @@ function crossover_generation(
     child_tree1, child_tree2 = crossover_trees(tree1, tree2)
     num_tries = 1
     max_tries = 10
+    num_evals = 0.0
     while true
         # Both trees satisfy constraints
         if check_constraints(child_tree1, options, curmaxsize) &&
@@ -224,7 +248,7 @@ function crossover_generation(
         end
         if num_tries > max_tries
             crossover_accepted = false
-            return member1, member2, crossover_accepted  # Fail.
+            return member1, member2, crossover_accepted, num_evals  # Fail.
         end
         child_tree1, child_tree2 = crossover_trees(tree1, tree2)
         num_tries += 1
@@ -232,16 +256,18 @@ function crossover_generation(
     if options.batching
         afterScore1, afterLoss1 = score_func_batch(dataset, baseline, child_tree1, options)
         afterScore2, afterLoss2 = score_func_batch(dataset, baseline, child_tree2, options)
+        num_evals += 2 * (options.batchSize / dataset.n)
     else
         afterScore1, afterLoss1 = score_func(dataset, baseline, child_tree1, options)
         afterScore2, afterLoss2 = score_func(dataset, baseline, child_tree2, options)
+        num_evals += options.batchSize / dataset.n
     end
 
     baby1 = PopMember(child_tree1, afterScore1, afterLoss1; parent=member1.ref)
     baby2 = PopMember(child_tree2, afterScore2, afterLoss2; parent=member2.ref)
 
     crossover_accepted = true
-    return baby1, baby2, crossover_accepted
+    return baby1, baby2, crossover_accepted, num_evals
 end
 
 end
