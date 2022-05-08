@@ -1014,7 +1014,7 @@ function _EquationSearch(
         ################################################################
         ## num_evals stopping code
         if options.max_evals !== nothing
-            if options.max_evals <= sum(num_evals)
+            if options.max_evals <= sum(sum, num_evals)
                 break
             end
         end
