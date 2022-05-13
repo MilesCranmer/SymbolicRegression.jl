@@ -318,9 +318,8 @@ function Options(;
         for op in binary_operators
             if op ∈ unary_operators
                 error(
-                    "Operator " +
-                    op +
-                    " is both a binary and unary operator. You can't use nested constraints.",
+                    "Operator $(op) is both a binary and unary operator. " *
+                    "You can't use nested constraints.",
                 )
             end
         end
