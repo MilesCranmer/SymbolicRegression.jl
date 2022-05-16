@@ -199,3 +199,5 @@ include("test_crossover.jl")
 include("test_nan_detection.jl")
 
 include("test_constraints.jl")
+
+include("test_complexity.jl")
