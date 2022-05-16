@@ -1,7 +1,7 @@
 module SingleIterationModule
 
 import ..CoreModule: Options, Dataset, RecordType, string_tree
-import ..EquationUtilsModule: count_nodes
+import ..EquationUtilsModule: compute_complexity
 import ..UtilsModule: debug
 import ..SimplifyEquationModule: simplify_tree, combine_operators
 import ..PopMemberModule: copy_pop_member
@@ -45,10 +45,12 @@ function s_r_cycle(
         )
         num_evals += tmp_num_evals
         for member in pop.members
-            size = count_nodes(member.tree)
+            size = compute_complexity(member.tree, options)
             score = member.score
-            if !best_examples_seen.exists[size] ||
+            if size <= options.maxsize && (
+                !best_examples_seen.exists[size] ||
                 score < best_examples_seen.members[size].score
+            )
                 best_examples_seen.exists[size] = true
                 best_examples_seen.members[size] = copy_pop_member(member)
             end

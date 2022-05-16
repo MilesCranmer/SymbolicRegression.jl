@@ -20,7 +20,7 @@ import ..OperatorsModule:
     acosh_abs,
     atanh_clip
 import ..EquationModule: Node, string_tree
-import ..OptionsStructModule: Options
+import ..OptionsStructModule: Options, ComplexityMapping
 
 """
          build_constraints(una_constraints, bin_constraints,
@@ -180,6 +180,15 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `ns`: Number of equations in each subsample during regularized evolution.
 - `topn`: Number of equations to return to the host process, and to
     consider for the hall of fame.
+- `complexity_of_operators`: What complexity should be assigned to each operator,
+    and the occurrence of a constant or variable. By default, this is 1
+    for all operators. Can be a real number as well, in which case
+    the complexity of an expression will be rounded to the nearest integer.
+    Input this in the form of, e.g., [(^)]
+- `complexity_of_constants`: What complexity should be assigned to use of a constant.
+    By default, this is 1.
+- `complexity_of_variables`: What complexity should be assigned to each variable.
+    By default, this is 1.
 - `alpha`: The probability of accepting an equation mutation
     during regularized evolution is given by exp(-delta_loss/(alpha * T)),
     where T goes from 1 to 0. Thus, alpha=infinite is the same as no annealing.
@@ -253,6 +262,9 @@ function Options(;
     loss=L2DistLoss(),
     ns=12, #1 sampled from every ns per mutation
     topn=12, #samples to return per population
+    complexity_of_operators=nothing,
+    complexity_of_constants::Union{Nothing,Real}=nothing,
+    complexity_of_variables::Union{Nothing,Real}=nothing,
     parsimony=0.0032f0,
     alpha=0.100000f0,
     maxsize=20,
@@ -387,6 +399,55 @@ function Options(;
         una_constraints, bin_constraints, unary_operators, binary_operators, nuna, nbin
     )
 
+    # Define the complexities of everything.
+    use_complexity_mapping = (
+        complexity_of_constants !== nothing ||
+        complexity_of_variables !== nothing ||
+        complexity_of_operators !== nothing
+    )
+    if use_complexity_mapping
+        if complexity_of_operators === nothing
+            complexity_of_operators = Dict()
+        else
+            # Convert to dict:
+            complexity_of_operators = Dict(complexity_of_operators)
+        end
+
+        # Get consistent type:
+        promoted_type = promote_type(
+            (complexity_of_variables !== nothing) ? typeof(complexity_of_variables) : Int,
+            (complexity_of_constants !== nothing) ? typeof(complexity_of_constants) : Int,
+            (x -> typeof(x)).(values(complexity_of_operators))...,
+        )
+
+        # If not in dict, then just set it to 1.
+        binop_complexities = promoted_type[
+            (haskey(complexity_of_operators, op) ? complexity_of_operators[op] : 1) #
+            for op in binary_operators
+        ]
+        unaop_complexities = promoted_type[
+            (haskey(complexity_of_operators, op) ? complexity_of_operators[op] : 1) #
+            for op in unary_operators
+        ]
+
+        variable_complexity = (
+            (complexity_of_variables !== nothing) ? complexity_of_variables : 1
+        )
+        constant_complexity = (
+            (complexity_of_constants !== nothing) ? complexity_of_constants : 1
+        )
+
+        complexity_mapping = ComplexityMapping(;
+            binop_complexities=binop_complexities,
+            unaop_complexities=unaop_complexities,
+            variable_complexity=variable_complexity,
+            constant_complexity=constant_complexity,
+        )
+    else
+        complexity_mapping = ComplexityMapping(false)
+    end
+    # Finish defining complexities
+
     if maxdepth === nothing
         maxdepth = maxsize
     end
@@ -505,6 +566,7 @@ function Options(;
         typeof(diff_binary_operators),
         typeof(diff_unary_operators),
         typeof(loss),
+        eltype(complexity_mapping),
     }(
         binary_operators,
         unary_operators,
@@ -512,6 +574,7 @@ function Options(;
         diff_unary_operators,
         bin_constraints,
         una_constraints,
+        complexity_mapping,
         ns,
         parsimony,
         alpha,

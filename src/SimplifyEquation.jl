@@ -1,7 +1,6 @@
 module SimplifyEquationModule
 
 import ..CoreModule: CONST_TYPE, Node, copy_node, Options
-import ..EquationUtilsModule: count_nodes
 import ..CheckConstraintsModule: check_constraints
 import ..UtilsModule: isbad, isgood
 

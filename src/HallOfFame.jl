@@ -1,7 +1,7 @@
 module HallOfFameModule
 
 import ..CoreModule: CONST_TYPE, MAX_DEGREE, Node, Options, Dataset, string_tree
-import ..EquationUtilsModule: count_nodes
+import ..EquationUtilsModule: compute_complexity
 import ..PopMemberModule: PopMember, copy_pop_member
 import ..LossFunctionsModule: eval_loss
 using Printf: @sprintf
@@ -101,7 +101,7 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE, dataset, option
 
     dominating = calculate_pareto_frontier(dataset, hallOfFame, options)
     for member in dominating
-        complexity = count_nodes(member.tree)
+        complexity = compute_complexity(member.tree, options)
         if member.loss < 0.0
             throw(
                 DomainError(

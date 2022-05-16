@@ -2,7 +2,7 @@ module PopulationModule
 
 import Random: randperm
 import ..CoreModule: Options, Dataset, RecordType, string_tree
-import ..EquationUtilsModule: count_nodes
+import ..EquationUtilsModule: compute_complexity
 import ..LossFunctionsModule: score_func
 import ..MutationFunctionsModule: gen_random_tree
 import ..PopMemberModule: PopMember
@@ -81,12 +81,13 @@ function best_of_sample(
         frequency_scaling = 20
         # e.g., for 100% occupied at one size, exp(-20*1) = 2.061153622438558e-9; which seems like a good punishment for dominating the population.
 
-        scores = [
-            sample.members[member].score * exp(
-                frequency_scaling *
-                frequencyComplexity[count_nodes(sample.members[member].tree)],
-            ) for member in 1:(options.ns)
-        ]
+        scores = []
+        for member in 1:(options.ns)
+            size = compute_complexity(sample.members[member].tree, options)
+            frequency = (size <= options.maxsize) ? frequencyComplexity[size] : T(0)
+            score = sample.members[member].score * exp(frequency_scaling * frequency)
+            push!(scores, score)
+        end
     else
         scores = [sample.members[member].score for member in 1:(options.ns)]
     end
@@ -145,7 +146,7 @@ function record_population(pop::Population{T}, options::Options)::RecordType whe
                 "tree" => string_tree(member.tree, options),
                 "loss" => member.loss,
                 "score" => member.score,
-                "complexity" => count_nodes(member.tree),
+                "complexity" => compute_complexity(member.tree, options),
                 "birth" => member.birth,
                 "ref" => member.ref,
                 "parent" => member.parent,

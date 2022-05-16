@@ -3,17 +3,17 @@ module LossFunctionsModule
 import Random: randperm
 import LossFunctions: value, AggMode, SupervisedLoss
 import ..CoreModule: Options, Dataset, Node
-import ..EquationUtilsModule: count_nodes
+import ..EquationUtilsModule: compute_complexity
 import ..EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
 
 function loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C}
-)::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss}
+    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C,D}
+)::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss,D}
     return value(options.loss, y, x, AggMode.Mean())
 end
 function loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C}
-)::T where {T<:Real,A,B,dA,dB,C<:Function}
+    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C,D}
+)::T where {T<:Real,A,B,dA,dB,C<:Function,D}
     return sum(options.loss.(x, y)) / length(y)
 end
 
@@ -21,16 +21,16 @@ function loss(
     x::AbstractArray{T},
     y::AbstractArray{T},
     w::AbstractArray{T},
-    options::Options{A,B,dA,dB,C},
-)::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss}
+    options::Options{A,B,dA,dB,C,D},
+)::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss,D}
     return value(options.loss, y, x, AggMode.WeightedMean(w))
 end
 function loss(
     x::AbstractArray{T},
     y::AbstractArray{T},
     w::AbstractArray{T},
-    options::Options{A,B,dA,dB,C},
-)::T where {T<:Real,A,B,dA,dB,C<:Function}
+    options::Options{A,B,dA,dB,C,D},
+)::T where {T<:Real,A,B,dA,dB,C<:Function,D}
     return sum(options.loss.(x, y, w)) / sum(w)
 end
 
@@ -53,7 +53,7 @@ function loss_to_score(
     loss::T, baseline::T, tree::Node, options::Options
 )::T where {T<:Real}
     normalized_loss_term = loss / baseline
-    size = count_nodes(tree)
+    size = compute_complexity(tree, options)
     parsimony_term = size * options.parsimony
 
     return normalized_loss_term + parsimony_term

@@ -1,7 +1,7 @@
 module MutateModule
 
 import ..CoreModule: Node, copy_node, Options, Dataset, RecordType
-import ..EquationUtilsModule: count_nodes, count_constants, count_depth
+import ..EquationUtilsModule: compute_complexity, count_constants, count_depth
 import ..LossFunctionsModule: score_func, score_func_batch
 import ..CheckConstraintsModule: check_constraints
 import ..PopMemberModule: PopMember
@@ -51,7 +51,7 @@ function next_generation(
     weightAdjustmentMutateConstant = min(8, count_constants(prev)) / 8.0
     cur_weights = copy(options.mutationWeights) .* 1.0
     cur_weights[1] *= weightAdjustmentMutateConstant
-    n = count_nodes(prev)
+    n = compute_complexity(prev, options)
     depth = count_depth(prev)
 
     # If equation too big, don't add new operators
@@ -192,9 +192,11 @@ function next_generation(
         probChange *= exp(-delta / (temperature * options.alpha))
     end
     if options.useFrequency
-        oldSize = count_nodes(prev)
-        newSize = count_nodes(tree)
-        probChange *= frequencyComplexity[oldSize] / frequencyComplexity[newSize]
+        oldSize = compute_complexity(prev, options)
+        newSize = compute_complexity(tree, options)
+        old_frequency = (oldSize <= options.maxsize) ? frequencyComplexity[oldSize] : 1e-6
+        new_frequency = (newSize <= options.maxsize) ? frequencyComplexity[newSize] : 1e-6
+        probChange *= old_frequency / new_frequency
     end
 
     if probChange < rand()
