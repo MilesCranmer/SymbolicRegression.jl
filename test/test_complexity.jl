@@ -11,16 +11,6 @@ options = make_options()
 tree = sin((x1 + x2 + x3)^2.3)
 @test compute_complexity(tree, options) == 8
 
-# - `complexity_of_operators`: What complexity should be assigned to each operator,
-#     and the occurrence of a constant or variable. By default, this is 1
-#     for all operators. Can be a real number as well, in which case
-#     the complexity of an expression will be rounded to the nearest integer.
-#     Input this in the form of, e.g., [(^)]
-# - `complexity_of_constant`: What complexity should be assigned to use of a constant.
-#     By default, this is 1.
-# - `complexity_of_variable`: What complexity should be assigned to each variable.
-#     By default, this is 1.
-
 options = make_options(complexity_of_operators=[sin => 3])
 @test compute_complexity(tree, options) == 10
 options = make_options(complexity_of_operators=[sin => 3, (+) => 2])
