@@ -330,9 +330,8 @@ function Options(;
         for op in binary_operators
             if op ∈ unary_operators
                 error(
-                    "Operator " +
-                    op +
-                    " is both a binary and unary operator. You can't use nested constraints.",
+                    "Operator $(op) is both a binary and unary operator. " *
+                    "You can't use nested constraints.",
                 )
             end
         end
@@ -345,8 +344,13 @@ function Options(;
             )
         end
         for (op, nested_constraint) in nested_constraints
-            @assert op ∈ binary_operators || op ∈ unary_operators
+            if !(op ∈ binary_operators || op ∈ unary_operators)
+                error("Operator $(op) is not in the operator set.")
+            end
             for (nested_op, max_nesting) in nested_constraint
+                if !(nested_op ∈ binary_operators || nested_op ∈ unary_operators)
+                    error("Operator $(nested_op) is not in the operator set.")
+                end
                 @assert nested_op ∈ binary_operators || nested_op ∈ unary_operators
                 @assert max_nesting >= -1 && typeof(max_nesting) <: Int
             end
