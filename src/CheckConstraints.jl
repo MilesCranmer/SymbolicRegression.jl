@@ -15,11 +15,15 @@ function flag_bin_operator_complexity(
         if tree.op == op
             overly_complex::Bool = (
                 (
-                    (options.bin_constraints[op][1]::Int > -1) &&
-                    (compute_complexity(tree.l, options) > options.bin_constraints[op][1]::Int)
+                    (options.bin_constraints[op][1]::Int > -1) && (
+                        compute_complexity(tree.l, options) >
+                        options.bin_constraints[op][1]::Int
+                    )
                 ) || (
-                    (options.bin_constraints[op][2]::Int > -1) &&
-                    (compute_complexity(tree.r, options) > options.bin_constraints[op][2]::Int)
+                    (options.bin_constraints[op][2]::Int > -1) && (
+                        compute_complexity(tree.r, options) >
+                        options.bin_constraints[op][2]::Int
+                    )
                 )
             )
             if overly_complex

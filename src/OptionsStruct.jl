@@ -14,9 +14,7 @@ end
 Base.eltype(::ComplexityMapping{T}) where {T} = T
 
 function ComplexityMapping(use::Bool)
-    return ComplexityMapping{Int}(
-        use, zeros(Int, 0), zeros(Int, 0), 1, 1
-    )
+    return ComplexityMapping{Int}(use, zeros(Int, 0), zeros(Int, 0), 1, 1)
 end
 
 """Promote type when defining complexity mapping."""

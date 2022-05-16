@@ -148,7 +148,12 @@ import .CoreModule:
 import .UtilsModule:
     debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
 import .EquationUtilsModule:
-    count_nodes, compute_complexity, get_constants, set_constants, index_constants, NodeIndex
+    count_nodes,
+    compute_complexity,
+    get_constants,
+    set_constants,
+    index_constants,
+    NodeIndex
 import .EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
 import .EvaluateEquationDerivativeModule: eval_diff_tree_array, eval_grad_tree_array
 import .CheckConstraintsModule: check_constraints
@@ -970,8 +975,9 @@ function _EquationSearch(
                 if length(dominating) == 0
                     all_below = false
                 elseif !any([
-                    options.earlyStopCondition(member.loss, compute_complexity(member.tree, options)) for
-                    member in dominating
+                    options.earlyStopCondition(
+                        member.loss, compute_complexity(member.tree, options)
+                    ) for member in dominating
                 ])
                     # None of the equations meet the stop condition.
                     all_below = false

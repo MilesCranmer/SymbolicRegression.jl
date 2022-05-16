@@ -83,8 +83,9 @@ function best_of_sample(
 
         scores = [
             sample.members[member].score * exp(
-                frequency_scaling *
-                frequencyComplexity[compute_complexity(sample.members[member].tree, options)],
+                frequency_scaling * frequencyComplexity[compute_complexity(
+                    sample.members[member].tree, options
+                )],
             ) for member in 1:(options.ns)
         ]
     else
