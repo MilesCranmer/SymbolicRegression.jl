@@ -1,4 +1,5 @@
 include("test_params.jl")
+println("Testing whether probPickFirst works.")
 using SymbolicRegression, Test
 
 n = 10
@@ -38,3 +39,5 @@ for reverse in [false, true]
     # Make sure average score is small
     @test mean_value < 0.1
 end
+
+println("Passed.")
