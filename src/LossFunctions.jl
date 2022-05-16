@@ -7,13 +7,13 @@ import ..EquationUtilsModule: count_nodes
 import ..EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
 
 function loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C}
-)::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss}
+    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C,D}
+)::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss,D}
     return value(options.loss, y, x, AggMode.Mean())
 end
 function loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C}
-)::T where {T<:Real,A,B,dA,dB,C<:Function}
+    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C,D}
+)::T where {T<:Real,A,B,dA,dB,C<:Function,D}
     return sum(options.loss.(x, y)) / length(y)
 end
 
@@ -21,16 +21,16 @@ function loss(
     x::AbstractArray{T},
     y::AbstractArray{T},
     w::AbstractArray{T},
-    options::Options{A,B,dA,dB,C},
-)::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss}
+    options::Options{A,B,dA,dB,C,D},
+)::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss,D}
     return value(options.loss, y, x, AggMode.WeightedMean(w))
 end
 function loss(
     x::AbstractArray{T},
     y::AbstractArray{T},
     w::AbstractArray{T},
-    options::Options{A,B,dA,dB,C},
-)::T where {T<:Real,A,B,dA,dB,C<:Function}
+    options::Options{A,B,dA,dB,C,D},
+)::T where {T<:Real,A,B,dA,dB,C<:Function,D}
     return sum(options.loss.(x, y, w)) / sum(w)
 end
 
