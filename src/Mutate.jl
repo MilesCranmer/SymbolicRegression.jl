@@ -194,7 +194,9 @@ function next_generation(
     if options.useFrequency
         oldSize = compute_complexity(prev, options)
         newSize = compute_complexity(tree, options)
-        probChange *= frequencyComplexity[oldSize] / frequencyComplexity[newSize]
+        old_frequency = (oldSize <= options.maxsize) ? frequencyComplexity[oldSize] : 1e-6
+        new_frequency = (newSize <= options.maxsize) ? frequencyComplexity[newSize] : 1e-6
+        probChange *= old_frequency / new_frequency
     end
 
     if probChange < rand()
