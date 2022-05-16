@@ -81,13 +81,16 @@ function best_of_sample(
         frequency_scaling = 20
         # e.g., for 100% occupied at one size, exp(-20*1) = 2.061153622438558e-9; which seems like a good punishment for dominating the population.
 
-        scores = [
-            sample.members[member].score * exp(
-                frequency_scaling * frequencyComplexity[compute_complexity(
-                    sample.members[member].tree, options
-                )],
-            ) for member in 1:(options.ns)
-        ]
+        scores = []
+        for member in 1:(options.ns)
+            size = compute_complexity(sample.members[member].tree, options)
+            frequency = if size <= length(frequencyComplexity)
+                frequencyComplexity[size]
+            else
+                T(0)
+            end
+            push!(scores, sample.members[member].score * exp(frequency_scaling * frequency))
+        end
     else
         scores = [sample.members[member].score for member in 1:(options.ns)]
     end
