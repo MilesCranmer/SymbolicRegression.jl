@@ -1,7 +1,7 @@
 module CheckConstraintsModule
 
 import ..CoreModule: Node, Options
-import ..EquationUtilsModule: complexity
+import ..EquationUtilsModule: compute_complexity
 
 # Check if any binary operator are overly complex
 function flag_bin_operator_complexity(

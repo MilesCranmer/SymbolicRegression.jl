@@ -185,9 +185,9 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     for all operators. Can be a real number as well, in which case
     the complexity of an expression will be rounded to the nearest integer.
     Input this in the form of, e.g., [(^)]
-- `complexity_of_constant`: What complexity should be assigned to use of a constant.
+- `complexity_of_constants`: What complexity should be assigned to use of a constant.
     By default, this is 1.
-- `complexity_of_variable`: What complexity should be assigned to each variable.
+- `complexity_of_variables`: What complexity should be assigned to each variable.
     By default, this is 1.
 - `alpha`: The probability of accepting an equation mutation
     during regularized evolution is given by exp(-delta_loss/(alpha * T)),
@@ -263,8 +263,8 @@ function Options(;
     ns=12, #1 sampled from every ns per mutation
     topn=12, #samples to return per population
     complexity_of_operators=nothing,
-    complexity_of_constant::Union{Nothing,Real}=nothing,
-    complexity_of_variable::Union{Nothing,Real}=nothing,
+    complexity_of_constants::Union{Nothing,Real}=nothing,
+    complexity_of_variables::Union{Nothing,Real}=nothing,
     parsimony=0.0032f0,
     alpha=0.100000f0,
     maxsize=20,
@@ -399,6 +399,55 @@ function Options(;
         una_constraints, bin_constraints, unary_operators, binary_operators, nuna, nbin
     )
 
+    # Define the complexities of everything.
+    use_complexity_mapping = (
+        complexity_of_constants !== nothing ||
+        complexity_of_variables !== nothing ||
+        complexity_of_operators !== nothing
+    )
+    if use_complexity_mapping
+        if complexity_of_operators === nothing
+            complexity_of_operators = Dict()
+        else
+            # Convert to dict:
+            complexity_of_operators = Dict(complexity_of_operators)
+        end
+
+        # Get consistent type:
+        promoted_type = promote_type(
+            (complexity_of_variables !== nothing) ? typeof(complexity_of_variables) : Int,
+            (complexity_of_constants !== nothing) ? typeof(complexity_of_constants) : Int,
+            (x -> typeof(x)).(values(complexity_of_operators))...,
+        )
+
+        # If not in dict, then just set it to 1.
+        binop_complexities = promoted_type[
+            (haskey(complexity_of_operators, op) ? complexity_of_operators[op] : 1) #
+            for op in binary_operators
+        ]
+        unaop_complexities = promoted_type[
+            (haskey(complexity_of_operators, op) ? complexity_of_operators[op] : 1) #
+            for op in unary_operators
+        ]
+
+        variable_complexity = (
+            (complexity_of_variables !== nothing) ? complexity_of_variables : 1
+        )
+        constant_complexity = (
+            (complexity_of_constants !== nothing) ? complexity_of_constants : 1
+        )
+
+        complexity_mapping = ComplexityMapping(;
+            binop_complexities=binop_complexities,
+            unaop_complexities=unaop_complexities,
+            variable_complexity=variable_complexity,
+            constant_complexity=constant_complexity,
+        )
+    else
+        complexity_mapping = ComplexityMapping(false)
+    end
+    # Finish defining complexities
+
     if maxdepth === nothing
         maxdepth = maxsize
     end
@@ -509,46 +558,6 @@ function Options(;
         # Need to make explicit copy here for this to work:
         stopping_point = Float64(earlyStopCondition)
         earlyStopCondition = (loss, complexity) -> loss < stopping_point
-    end
-
-    # Define the complexities of everything.
-    use_complexity_mapping = (
-        complexity_of_constant !== nothing ||
-        complexity_of_variable !== nothing ||
-        complexity_of_operators !== nothing
-    )
-    if use_complexity_mapping
-        if complexity_of_operators === nothing
-            complexity_of_operators = Dict()
-        else
-            # Convert to dict:
-            complexity_of_operators = Dict(complexity_of_operators)
-        end
-
-        # If not in dict, then just set it to 1.
-        binop_complexities = [
-            (haskey(complexity_of_operators, op) ? complexity_of_operators[op] : 1) #
-            for op in binary_operators
-        ]
-        unaop_complexities = [
-            (haskey(complexity_of_operators, op) ? complexity_of_operators[op] : 1) #
-            for op in unary_operators
-        ]
-        variable_complexity = (
-            (complexity_of_variable !== nothing) ? complexity_of_variable : 1
-        )
-        constant_complexity = (
-            (complexity_of_constant !== nothing) ? complexity_of_constant : 1
-        )
-
-        complexity_mapping = ComplexityMapping(;
-            binop_complexities=binop_complexities,
-            unaop_complexities=unaop_complexities,
-            variable_complexity=variable_complexity,
-            constant_complexity=constant_complexity,
-        )
-    else
-        complexity_mapping = ComplexityMapping(false)
     end
 
     options = Options{

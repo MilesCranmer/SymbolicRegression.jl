@@ -75,7 +75,7 @@ if these are defined.
 """
 function compute_complexity(tree::Node, options::Options)::Int
     if options.complexity_mapping.use
-        return Int(_compute_complexity(tree, options))
+        return round(Int, _compute_complexity(tree, options))
     else
         return count_nodes(tree)
     end
