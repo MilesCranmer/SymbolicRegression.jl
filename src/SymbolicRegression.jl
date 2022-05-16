@@ -720,7 +720,9 @@ function _EquationSearch(
                 size = compute_complexity(member.tree, options)
 
                 if part_of_cur_pop
-                    frequencyComplexities[j][size] += 1
+                    if size <= options.maxsize
+                        frequencyComplexities[j][size] += 1
+                    end
                 end
                 actualMaxsize = options.maxsize + MAX_DEGREE
 
