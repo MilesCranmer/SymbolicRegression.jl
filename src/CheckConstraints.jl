@@ -1,7 +1,7 @@
 module CheckConstraintsModule
 
 import ..CoreModule: Node, Options
-import ..EquationUtilsModule: count_nodes
+import ..EquationUtilsModule: complexity
 
 # Check if any binary operator are overly complex
 function flag_bin_operator_complexity(
@@ -16,10 +16,10 @@ function flag_bin_operator_complexity(
             overly_complex::Bool = (
                 (
                     (options.bin_constraints[op][1]::Int > -1) &&
-                    (count_nodes(tree.l) > options.bin_constraints[op][1]::Int)
+                    (compute_complexity(tree.l, options) > options.bin_constraints[op][1]::Int)
                 ) || (
                     (options.bin_constraints[op][2]::Int > -1) &&
-                    (count_nodes(tree.r) > options.bin_constraints[op][2]::Int)
+                    (compute_complexity(tree.r, options) > options.bin_constraints[op][2]::Int)
                 )
             )
             if overly_complex
@@ -43,7 +43,7 @@ function flag_una_operator_complexity(
         if tree.op == op
             overly_complex::Bool = (
                 (options.una_constraints[op]::Int > -1) &&
-                (count_nodes(tree.l) > options.una_constraints[op]::Int)
+                (compute_complexity(tree.l, options) > options.una_constraints[op]::Int)
             )
             if overly_complex
                 return true
@@ -134,7 +134,7 @@ end
 
 """Check if user-passed constraints are violated or not"""
 function check_constraints(tree::Node, options::Options, maxsize::Int)::Bool
-    if count_nodes(tree) > maxsize
+    if compute_complexity(tree, options) > maxsize
         return false
     end
     for i in 1:(options.nbin)

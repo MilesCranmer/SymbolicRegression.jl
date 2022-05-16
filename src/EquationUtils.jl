@@ -66,6 +66,44 @@ function count_constants(tree::Node)::Int
     end
 end
 
+"""
+Compute the complexity of a tree.
+
+By default, this is the number of nodes in a tree.
+However, it could use the custom settings in options.complexity_mapping
+if these are defined.
+"""
+function compute_complexity(tree::Node, options::Options)::Int
+    if options.complexity_mapping.use
+        return Int(_compute_complexity(tree, options))
+    else
+        return count_nodes(tree)
+    end
+end
+
+function _compute_complexity(
+    tree::Node, options::Options{A,B,dA,dB,C,complexity_type}
+)::complexity_type where {A,B,dA,dB,C,complexity_type<:Real}
+    if tree.degree == 0
+        if tree.constant
+            return options.complexity_mapping.constant_complexity
+        else
+            return options.complexity_mapping.variable_complexity
+        end
+    elseif tree.degree == 1
+        return (
+            options.complexity_mapping.unaop_complexities[tree.op] +
+            _compute_complexity(tree.l, options)
+        )
+    else # tree.degree == 2
+        return (
+            options.complexity_mapping.binop_complexities[tree.op] +
+            _compute_complexity(tree.l, options) +
+            _compute_complexity(tree.r, options)
+        )
+    end
+end
+
 # Get all the constants from a tree
 function get_constants(tree::Node)::AbstractVector{CONST_TYPE}
     if tree.degree == 0

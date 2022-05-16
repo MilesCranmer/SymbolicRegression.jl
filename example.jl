@@ -17,9 +17,9 @@ println(simplify(eqn * 5 + 3))
 println("Complexity\tMSE\tEquation")
 
 for member in dominating
-    size = count_nodes(member.tree)
+    complexity = compute_complexity(member.tree, options)
     loss = member.loss
     string = string_tree(member.tree, options)
 
-    println("$(size)\t$(loss)\t$(string)")
+    println("$(complexity)\t$(loss)\t$(string)")
 end

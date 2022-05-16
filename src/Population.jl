@@ -2,7 +2,7 @@ module PopulationModule
 
 import Random: randperm
 import ..CoreModule: Options, Dataset, RecordType, string_tree
-import ..EquationUtilsModule: count_nodes
+import ..EquationUtilsModule: compute_complexity
 import ..LossFunctionsModule: score_func
 import ..MutationFunctionsModule: gen_random_tree
 import ..PopMemberModule: PopMember
@@ -84,7 +84,7 @@ function best_of_sample(
         scores = [
             sample.members[member].score * exp(
                 frequency_scaling *
-                frequencyComplexity[count_nodes(sample.members[member].tree)],
+                frequencyComplexity[compute_complexity(sample.members[member].tree, options)],
             ) for member in 1:(options.ns)
         ]
     else
@@ -145,7 +145,7 @@ function record_population(pop::Population{T}, options::Options)::RecordType whe
                 "tree" => string_tree(member.tree, options),
                 "loss" => member.loss,
                 "score" => member.score,
-                "complexity" => count_nodes(member.tree),
+                "complexity" => compute_complexity(member.tree, options),
                 "birth" => member.birth,
                 "ref" => member.ref,
                 "parent" => member.parent,

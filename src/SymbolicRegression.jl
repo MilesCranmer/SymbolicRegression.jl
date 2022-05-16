@@ -12,6 +12,7 @@ export Population,
     s_r_cycle,
     calculate_pareto_frontier,
     count_nodes,
+    compute_complexity,
     copy_node,
     print_tree,
     string_tree,
@@ -147,7 +148,7 @@ import .CoreModule:
 import .UtilsModule:
     debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
 import .EquationUtilsModule:
-    count_nodes, get_constants, set_constants, index_constants, NodeIndex
+    count_nodes, compute_complexity, get_constants, set_constants, index_constants, NodeIndex
 import .EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
 import .EvaluateEquationDerivativeModule: eval_diff_tree_array, eval_grad_tree_array
 import .CheckConstraintsModule: check_constraints
@@ -711,7 +712,7 @@ function _EquationSearch(
                 Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists]))
             )
                 part_of_cur_pop = i_member <= length(cur_pop.members)
-                size = count_nodes(member.tree)
+                size = compute_complexity(member.tree, options)
 
                 if part_of_cur_pop
                     frequencyComplexities[j][size] += 1
@@ -741,7 +742,7 @@ function _EquationSearch(
                 for member in dominating
                     println(
                         io,
-                        "$(count_nodes(member.tree))|$(member.loss)|$(string_tree(member.tree, options, varMap=dataset.varMap))",
+                        "$(compute_complexity(member.tree, options))|$(member.loss)|$(string_tree(member.tree, options, varMap=dataset.varMap))",
                     )
                 end
             end
@@ -969,7 +970,7 @@ function _EquationSearch(
                 if length(dominating) == 0
                     all_below = false
                 elseif !any([
-                    options.earlyStopCondition(member.loss, count_nodes(member.tree)) for
+                    options.earlyStopCondition(member.loss, compute_complexity(member.tree, options)) for
                     member in dominating
                 ])
                     # None of the equations meet the stop condition.

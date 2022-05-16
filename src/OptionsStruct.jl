@@ -14,8 +14,8 @@ end
 Base.eltype(::ComplexityMapping{T}) where {T} = T
 
 function ComplexityMapping(use::Bool)
-    return ComplexityMapping{Float32}(
-        use, zeros(Float32, 0), zeros(Float32, 0), Float32(NaN), Float32(NaN)
+    return ComplexityMapping{Int}(
+        use, zeros(Int, 0), zeros(Int, 0), 1, 1
     )
 end
 

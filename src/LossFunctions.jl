@@ -3,7 +3,7 @@ module LossFunctionsModule
 import Random: randperm
 import LossFunctions: value, AggMode, SupervisedLoss
 import ..CoreModule: Options, Dataset, Node
-import ..EquationUtilsModule: count_nodes
+import ..EquationUtilsModule: compute_complexity
 import ..EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
 
 function loss(
@@ -53,7 +53,7 @@ function loss_to_score(
     loss::T, baseline::T, tree::Node, options::Options
 )::T where {T<:Real}
     normalized_loss_term = loss / baseline
-    size = count_nodes(tree)
+    size = compute_complexity(tree, options)
     parsimony_term = size * options.parsimony
 
     return normalized_loss_term + parsimony_term
