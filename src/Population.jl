@@ -84,12 +84,9 @@ function best_of_sample(
         scores = []
         for member in 1:(options.ns)
             size = compute_complexity(sample.members[member].tree, options)
-            frequency = if size <= options.maxsize
-                frequencyComplexity[size]
-            else
-                T(0)
-            end
-            push!(scores, sample.members[member].score * exp(frequency_scaling * frequency))
+            frequency = (size <= options.maxsize) ? frequencyComplexity[size] : T(0)
+            score = sample.members[member].score * exp(frequency_scaling * frequency)
+            push!(scores, score)
         end
     else
         scores = [sample.members[member].score for member in 1:(options.ns)]
