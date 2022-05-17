@@ -184,7 +184,7 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     and the occurrence of a constant or variable. By default, this is 1
     for all operators. Can be a real number as well, in which case
     the complexity of an expression will be rounded to the nearest integer.
-    Input this in the form of, e.g., [(^)]
+    Input this in the form of, e.g., [(^) => 3, sin => 2].
 - `complexity_of_constants`: What complexity should be assigned to use of a constant.
     By default, this is 1.
 - `complexity_of_variables`: What complexity should be assigned to each variable.
