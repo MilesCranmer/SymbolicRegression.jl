@@ -1,5 +1,3 @@
-import ..CoreModule: RecordType
-
 # Check for errors before they happen
 function test_option_configuration(T, options::Options)
     for op in (options.binops..., options.unaops...)
