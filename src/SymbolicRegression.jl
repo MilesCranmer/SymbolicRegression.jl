@@ -375,6 +375,11 @@ function _EquationSearch(
     example_dataset = datasets[1]
     nout = size(datasets, 1)
 
+    if options.abstract_symbolic_regression
+        println("Tests are being skipped, as abstract symbolic regression is enabled.")
+        runtests = false
+    end
+
     if runtests
         test_option_configuration(T, options)
         # Testing the first output variable is the same:
