@@ -376,6 +376,7 @@ function _EquationSearch(
     nout = size(datasets, 1)
 
     if options.abstract_symbolic_regression
+        @assert ConcurrencyType in [SRSerial, SRThreaded]
         println("Tests are being skipped, as abstract symbolic regression is enabled.")
         runtests = false
     end
