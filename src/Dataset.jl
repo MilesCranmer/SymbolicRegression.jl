@@ -2,13 +2,14 @@ module DatasetModule
 
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM
 
-struct Dataset{T<:Real}
-    X::AbstractMatrix{T}
-    y::AbstractVector{T}
+struct Dataset{X_type,y_type}
+    X::X_type
+    y::y_type
+    abstract::Bool
     n::Int
     nfeatures::Int
     weighted::Bool
-    weights::Union{AbstractVector{T},Nothing}
+    weights::Union{y_type,Nothing}
     varMap::Array{String,1}
 end
 
@@ -20,20 +21,26 @@ end
 Construct a dataset to pass between internal functions.
 """
 function Dataset(
-    X::AbstractMatrix{T},
-    y::AbstractVector{T};
-    weights::Union{AbstractVector{T},Nothing}=nothing,
+    X::X_type,
+    y::y_type;
+    weights::Union{y_type,Nothing}=nothing,
     varMap::Union{Array{String,1},Nothing}=nothing,
-) where {T<:Real}
-    Base.require_one_based_indexing(X, y)
-    n = size(X, BATCH_DIM)
-    nfeatures = size(X, FEATURE_DIM)
-    weighted = weights !== nothing
-    if varMap === nothing
-        varMap = ["x$(i)" for i in 1:nfeatures]
+) where {X_type,y_type}
+    if X_type <: AbstractMatrix && y_type <: AbstractVector
+        Base.require_one_based_indexing(X, y)
+        n = size(X, BATCH_DIM)
+        nfeatures = size(X, FEATURE_DIM)
+        weighted = weights !== nothing
+        if varMap === nothing
+            varMap = ["x$(i)" for i in 1:nfeatures]
+        end
+        return Dataset{X_type,y_type}(X, y, false, n, nfeatures, weighted, weights, varMap)
+    else
+        println("Assuming abstract dataset.")
+        @assert weights === nothing
+        @assert varMap === nothing
+        return Dataset{X_type,y_type}(X, y, true)
     end
-
-    return Dataset{T}(X, y, n, nfeatures, weighted, weights, varMap)
 end
 
 end
