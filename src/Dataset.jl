@@ -25,6 +25,7 @@ function Dataset(
     weights::Union{AbstractVector{T},Nothing}=nothing,
     varMap::Union{Array{String,1},Nothing}=nothing,
 ) where {T<:Real}
+    Base.require_one_based_indexing(X, y)
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
     weighted = weights !== nothing
