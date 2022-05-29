@@ -39,7 +39,7 @@ function Dataset(
         println("Assuming abstract dataset.")
         @assert weights === nothing
         @assert varMap === nothing
-        return Dataset{X_type,y_type}(X, y, true)
+        return Dataset{X_type,y_type}(X, y, true, 0, 0, false, nothing, String[])
     end
 end
 
