@@ -254,6 +254,10 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     it is assumed that it can be nested an unlimited number of times. This requires that there is no operator
     which is used both in the unary operators and the binary operators (e.g., `-` could be both subtract, and negation).
     For binary operators, both arguments are treated the same way, and the max of each argument is constrained.
+- `abstract_symbolic_regression`: Allow abstract datasets and abstract operators: vectors, tensors, etc.
+   `enable_autodiff` must be set to false. All normal checks will be turned off, and regular scalar optimization
+   will be turned off. It is assumed that passed operators are already vectorized. Multiple dispatched operators
+   are allowed. Distributed computing is not allowed.
 """
 function Options(;
     binary_operators::NTuple{nbin,Any}=(+, -, /, *),
@@ -310,6 +314,7 @@ function Options(;
     skip_mutation_failures::Bool=true,
     enable_autodiff::Bool=false,
     nested_constraints=nothing,
+    abstract_symbolic_regression=false,
 ) where {nuna,nbin}
     if warmupMaxsize !== nothing
         error(
@@ -323,6 +328,10 @@ function Options(;
 
     @assert maxsize > 3
     @assert warmupMaxsizeBy >= 0.0f0
+
+    if abstract_symbolic_regression
+        @assert enable_autodiff == false
+    end
 
     # Make sure nested_constraints contains functions within our operator set:
     if nested_constraints !== nothing
@@ -626,6 +635,7 @@ function Options(;
         skip_mutation_failures,
         enable_autodiff,
         nested_constraints,
+        abstract_symbolic_regression,
     )
 
     @eval begin
