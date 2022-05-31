@@ -783,7 +783,9 @@ function _EquationSearch(
                     cur_pop.members[k] = PopMember(
                         copy_node(dominating[to_copy].tree),
                         copy(dominating[to_copy].score),
-                        copy(dominating[to_copy].loss),
+                        copy(dominating[to_copy].loss);
+                        ref=copy(dominating[to_copy].ref),
+                        parent=copy(dominating[to_copy].parent),
                     )
                     # TODO: Clean this up with copy_pop_member.
                 end

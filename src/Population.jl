@@ -36,7 +36,11 @@ function Population(
     return Population(
         [
             PopMember(
-                dataset, baseline, gen_random_tree(nlength, options, nfeatures), options
+                dataset,
+                baseline,
+                gen_random_tree(nlength, options, nfeatures),
+                options;
+                parent=-1,
             ) for i in 1:npop
         ],
         npop,
