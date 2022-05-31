@@ -33,14 +33,12 @@ end
 @test length(data.mutations) > 1000
 
 # Check whether 10 random elements have the right properties:
-i = 0
-for key in keys(data.mutations)
+for (i, key) in enumerate(keys(data.mutations))
     @test haskey(data.mutations[key], :events)
     @test haskey(data.mutations[key], :score)
     @test haskey(data.mutations[key], :tree)
     @test haskey(data.mutations[key], :loss)
     @test haskey(data.mutations[key], :parent)
-    i += 1
     if i > 10
         break
     end
