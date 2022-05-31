@@ -16,6 +16,8 @@ mutable struct PopMember{T<:Real}
     parent::Int
 end
 
+generate_reference() = abs(rand(Int))
+
 """
     PopMember(t::Node, score::T, loss::T)
 
@@ -29,7 +31,7 @@ Create a population member with a birth date at the current time.
 """
 function PopMember(t::Node, score::T, loss::T; ref::Int=-1, parent::Int=-1) where {T<:Real}
     if ref == -1
-        ref = abs(rand(Int))
+        ref = generate_reference()
     end
     return PopMember{T}(t, score, loss, get_time(), ref, parent)
 end
