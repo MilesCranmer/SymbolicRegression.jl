@@ -66,9 +66,10 @@ function optimize_constants(
 
     if Optim.converged(result)
         set_constants(member.tree, result.minimizer)
-        member.score, member.loss = score_func(dataset, baseline, member.tree, options)
+        score, loss = score_func(dataset, baseline, member.tree, options)
+        member = PopMember(member.tree, score, loss; parent=member.ref)
+        # TODO: record mutation.
         num_evals += 1
-        member.birth = get_time()
     else
         set_constants(member.tree, x0)
     end
