@@ -198,7 +198,6 @@ println("Running README example.")
 include("../example.jl")
 println("Passed.")
 
-
 println("Testing whether the recorder works.")
 include("test_recorder.jl")
 println("Passed.")
