@@ -113,7 +113,13 @@ function next_generation(
             @recorder tmp_recorder["type"] = "partial_simplify"
             mutation_accepted = true
             return (
-                PopMember(tree, beforeScore, beforeLoss; parent=parent_ref),
+                PopMember(
+                    tree,
+                    beforeScore,
+                    beforeLoss;
+                    parent=parent_ref,
+                    deterministic=options.deterministic,
+                ),
                 mutation_accepted,
                 num_evals,
             )
@@ -139,7 +145,13 @@ function next_generation(
             end
             mutation_accepted = true
             return (
-                PopMember(tree, beforeScore, beforeLoss; parent=parent_ref),
+                PopMember(
+                    tree,
+                    beforeScore,
+                    beforeLoss;
+                    parent=parent_ref,
+                    deterministic=options.deterministic,
+                ),
                 mutation_accepted,
                 num_evals,
             )
@@ -159,7 +171,13 @@ function next_generation(
         end
         mutation_accepted = false
         return (
-            PopMember(copy_node(prev), beforeScore, beforeLoss; parent=parent_ref),
+            PopMember(
+                copy_node(prev),
+                beforeScore,
+                beforeLoss;
+                parent=parent_ref,
+                deterministic=options.deterministic,
+            ),
             mutation_accepted,
             num_evals,
         )
@@ -180,7 +198,13 @@ function next_generation(
         end
         mutation_accepted = false
         return (
-            PopMember(copy_node(prev), beforeScore, beforeLoss; parent=parent_ref),
+            PopMember(
+                copy_node(prev),
+                beforeScore,
+                beforeLoss;
+                parent=parent_ref,
+                deterministic=options.deterministic,
+            ),
             mutation_accepted,
             num_evals,
         )
@@ -206,7 +230,13 @@ function next_generation(
         end
         mutation_accepted = false
         return (
-            PopMember(copy_node(prev), beforeScore, beforeLoss; parent=parent_ref),
+            PopMember(
+                copy_node(prev),
+                beforeScore,
+                beforeLoss;
+                parent=parent_ref,
+                deterministic=options.deterministic,
+            ),
             mutation_accepted,
             num_evals,
         )
@@ -217,7 +247,13 @@ function next_generation(
         end
         mutation_accepted = true
         return (
-            PopMember(tree, afterScore, afterLoss; parent=parent_ref),
+            PopMember(
+                tree,
+                afterScore,
+                afterLoss;
+                parent=parent_ref,
+                deterministic=options.deterministic,
+            ),
             mutation_accepted,
             num_evals,
         )
@@ -265,8 +301,20 @@ function crossover_generation(
         num_evals += options.batchSize / dataset.n
     end
 
-    baby1 = PopMember(child_tree1, afterScore1, afterLoss1; parent=member1.ref)
-    baby2 = PopMember(child_tree2, afterScore2, afterLoss2; parent=member2.ref)
+    baby1 = PopMember(
+        child_tree1,
+        afterScore1,
+        afterLoss1;
+        parent=member1.ref,
+        deterministic=options.deterministic,
+    )
+    baby2 = PopMember(
+        child_tree2,
+        afterScore2,
+        afterLoss2;
+        parent=member2.ref,
+        deterministic=options.deterministic,
+    )
 
     crossover_accepted = true
     return baby1, baby2, crossover_accepted, num_evals

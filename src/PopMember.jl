@@ -1,7 +1,7 @@
 module PopMemberModule
 
 import ..CoreModule: Options, Dataset, Node, copy_node
-import ..UtilsModule: get_time
+import ..UtilsModule: get_birth_order
 import ..LossFunctionsModule: score_func
 
 # Define a member of population by equation, score, and age
@@ -29,11 +29,15 @@ Create a population member with a birth date at the current time.
 - `score::T`: The score (normalized to a baseline, and offset by a complexity penalty)
 - `loss::T`: The raw loss to assign.
 """
-function PopMember(t::Node, score::T, loss::T; ref::Int=-1, parent::Int=-1) where {T<:Real}
+function PopMember(
+    t::Node, score::T, loss::T; ref::Int=-1, parent::Int=-1, deterministic=false
+) where {T<:Real}
     if ref == -1
         ref = generate_reference()
     end
-    return PopMember{T}(t, score, loss, get_time(), ref, parent)
+    return PopMember{T}(
+        t, score, loss, get_birth_order(; deterministic=deterministic), ref, parent
+    )
 end
 
 """
@@ -51,10 +55,16 @@ Automatically compute the score for this tree.
 - `options::Options`: What options to use.
 """
 function PopMember(
-    dataset::Dataset{T}, baseline::T, t::Node, options::Options; ref::Int=-1, parent::Int=-1
+    dataset::Dataset{T},
+    baseline::T,
+    t::Node,
+    options::Options;
+    ref::Int=-1,
+    parent::Int=-1,
+    deterministic=nothing,
 ) where {T<:Real}
     score, loss = score_func(dataset, baseline, t, options)
-    return PopMember(t, score, loss; ref=ref, parent=parent)
+    return PopMember(t, score, loss; ref=ref, parent=parent, deterministic=deterministic)
 end
 
 function copy_pop_member(p::PopMember{T}) where {T<:Real}

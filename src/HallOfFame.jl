@@ -27,8 +27,13 @@ function HallOfFame(options::Options)
     actualMaxsize = options.maxsize + MAX_DEGREE
     return HallOfFame(
         [
-            PopMember(Node(convert(CONST_TYPE, 1)), 1.0f9, 1.0f9; parent=-1) for
-            i in 1:actualMaxsize
+            PopMember(
+                Node(convert(CONST_TYPE, 1)),
+                1.0f9,
+                1.0f9;
+                parent=-1,
+                deterministic=options.deterministic,
+            ) for i in 1:actualMaxsize
         ],
         [false for i in 1:actualMaxsize],
     )

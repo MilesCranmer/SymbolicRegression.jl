@@ -41,6 +41,7 @@ function Population(
                 gen_random_tree(nlength, options, nfeatures),
                 options;
                 parent=-1,
+                deterministic=options.deterministic,
             ) for i in 1:npop
         ],
         npop,

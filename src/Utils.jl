@@ -16,8 +16,18 @@ function debug_inline(verbosity, string...)
     end
 end
 
-function get_time()::Int
-    return round(Int, 1e3 * (time() - 1.6e9))
+pseudo_time = 0
+
+function get_birth_order(; deterministic=false)::Int
+    """deterministic gives a birth time with perfect resolution, but is not thread safe."""
+    if deterministic
+        global pseudo_time
+        pseudo_time += 1
+        return pseudo_time
+    else
+        resolution = 1e7
+        return round(Int, resolution * time())
+    end
 end
 
 function check_numeric(n)

@@ -33,7 +33,8 @@ using Base: @deprecate
 @deprecate genRandomTree gen_random_tree
 @deprecate genRandomTreeFixedSize gen_random_tree_fixed_size
 @deprecate getConstants get_constants
-@deprecate getTime get_time
+@deprecate getTime get_birth_order
+@deprecate get_time get_birth_order
 @deprecate indexConstants index_constants
 @deprecate insertRandomOp insert_random_op
 @deprecate lossToScore loss_to_score

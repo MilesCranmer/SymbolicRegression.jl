@@ -346,6 +346,12 @@ function _EquationSearch(
     saved_state::Union{StateType{T},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
 ) where {T<:Real,ConcurrencyType<:SRConcurrency}
+    if ConcurrencyType != SRThreaded
+        if !options.deterministic
+            error("Determinism is only guaranteed for serial mode.")
+        end
+    end
+
     can_read_input = true
     try
         Base.start_reading(stdin)
@@ -768,7 +774,10 @@ function _EquationSearch(
                     cur_pop.members[k] = PopMember(
                         copy_node(bestPops.members[to_copy].tree),
                         copy(bestPops.members[to_copy].score),
-                        copy(bestPops.members[to_copy].loss),
+                        copy(bestPops.members[to_copy].loss);
+                        ref=copy(dominating[to_copy].ref),
+                        parent=copy(dominating[to_copy].parent),
+                        deterministic=options.deterministic,
                     )
                     # TODO: Clean this up using copy_pop_member.
                 end
@@ -786,6 +795,7 @@ function _EquationSearch(
                         copy(dominating[to_copy].loss);
                         ref=copy(dominating[to_copy].ref),
                         parent=copy(dominating[to_copy].parent),
+                        deterministic=options.deterministic,
                     )
                     # TODO: Clean this up with copy_pop_member.
                 end
