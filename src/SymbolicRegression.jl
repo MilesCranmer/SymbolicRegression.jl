@@ -775,8 +775,8 @@ function _EquationSearch(
                         copy_node(bestPops.members[to_copy].tree),
                         copy(bestPops.members[to_copy].score),
                         copy(bestPops.members[to_copy].loss);
-                        ref=copy(dominating[to_copy].ref),
-                        parent=copy(dominating[to_copy].parent),
+                        ref=copy(bestPops.members[to_copy].ref),
+                        parent=copy(bestPops.members[to_copy].parent),
                         deterministic=options.deterministic,
                     )
                     # TODO: Clean this up using copy_pop_member.
