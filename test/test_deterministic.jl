@@ -19,10 +19,10 @@ begin
 
     all_outputs = []
     for i in 1:2
-        hall_of_fame = EquationSearch(
+        local hall_of_fame = EquationSearch(
             X, y; niterations=5, options=options, multithreading=false, numprocs=0
         )
-        dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
+        local dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
         push!(all_outputs, dominating[end].tree)
     end
 
