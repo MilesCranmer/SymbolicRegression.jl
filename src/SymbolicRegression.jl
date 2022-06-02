@@ -346,8 +346,8 @@ function _EquationSearch(
     saved_state::Union{StateType{T},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
 ) where {T<:Real,ConcurrencyType<:SRConcurrency}
-    if ConcurrencyType != SRThreaded
-        if options.deterministic
+    if options.deterministic
+        if ConcurrencyType != SRThreaded
             error("Determinism is only guaranteed for serial mode.")
         end
     end
