@@ -57,23 +57,44 @@ end
 function acosh_abs(x::T)::T where {T<:Real}
     return acosh(abs(x) + convert(T, 1))
 end
-function sqrt_abs(x::T)::T where {T<:Real}
+
+# Generics:
+square(x) = x * x
+cube(x) = x * x * x
+plus(x, y) = x + y
+sub(x, y) = x - y
+mult(x, y) = x * y
+pow(x, y) = abs(x)^y
+div(x, y) = x / y
+log_abs(x) = log(abs(x) + 1//100000000)
+log2_abs(x) = log2(abs(x) + 1//100000000)
+log10_abs(x) = log10(abs(x) + 1//100000000)
+log1p_abs(x) = log(abs(x) + 1)
+acosh_abs(x) = acosh(abs(x) + 1)
+
+function sqrt_abs(x::T)::T where {T}
     return sqrt(abs(x))
 end
-function neg(x::T)::T where {T<:Real}
+function neg(x::T)::T where {T}
     return -x
 end
-function greater(x::T, y::T)::T where {T<:Real}
+
+function greater(x::T, y::T)::T where {T}
     return convert(T, (x > y))
 end
-function relu(x::T)::T where {T<:Real}
+function greater(x, y)
+    return (x > y)
+end
+function relu(x::T)::T where {T}
     return convert(T, (x > 0)) * x
 end
-function logical_or(x::T, y::T)::T where {T<:Real}
+
+function logical_or(x::T, y::T)::T where {T}
     return convert(T, (x > convert(T, 0) || y > convert(T, 0)))
 end
+
 # (Just use multiplication normally)
-function logical_and(x::T, y::T)::T where {T<:Real}
+function logical_and(x::T, y::T)::T where {T}
     return convert(T, (x > convert(T, 0) && y > convert(T, 0)))
 end
 
