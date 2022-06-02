@@ -254,6 +254,9 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     it is assumed that it can be nested an unlimited number of times. This requires that there is no operator
     which is used both in the unary operators and the binary operators (e.g., `-` could be both subtract, and negation).
     For binary operators, both arguments are treated the same way, and the max of each argument is constrained.
+- `deterministic`: Use a global counter for the birth time, rather than calls to `time()`. This gives
+    perfect resolution, and is therefore deterministic. However, it is not thread safe, and must be used
+    in serial mode.
 """
 function Options(;
     binary_operators::NTuple{nbin,Any}=(+, -, /, *),
@@ -310,6 +313,7 @@ function Options(;
     skip_mutation_failures::Bool=true,
     enable_autodiff::Bool=false,
     nested_constraints=nothing,
+    deterministic=false,
 ) where {nuna,nbin}
     if warmupMaxsize !== nothing
         error(
@@ -626,6 +630,7 @@ function Options(;
         skip_mutation_failures,
         enable_autodiff,
         nested_constraints,
+        deterministic,
     )
 
     @eval begin

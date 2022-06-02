@@ -3,7 +3,7 @@ module ConstantOptimizationModule
 using LineSearches: LineSearches
 using Optim: Optim
 import ..CoreModule: CONST_TYPE, Node, Options, Dataset
-import ..UtilsModule: get_time
+import ..UtilsModule: get_birth_order
 import ..EquationUtilsModule: get_constants, set_constants, count_constants
 import ..LossFunctionsModule: score_func, eval_loss
 import ..PopMemberModule: PopMember
@@ -68,7 +68,7 @@ function optimize_constants(
         set_constants(member.tree, result.minimizer)
         member.score, member.loss = score_func(dataset, baseline, member.tree, options)
         num_evals += 1
-        member.birth = get_time()
+        member.birth = get_birth_order(; deterministic=options.deterministic)
     else
         set_constants(member.tree, x0)
     end

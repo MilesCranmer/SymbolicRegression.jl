@@ -201,3 +201,7 @@ println("Passed.")
 println("Testing whether the recorder works.")
 include("test_recorder.jl")
 println("Passed.")
+
+println("Testing whether deterministic mode works.")
+include("test_deterministic.jl")
+println("Passed.")
