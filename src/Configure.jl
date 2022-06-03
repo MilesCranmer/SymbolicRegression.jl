@@ -79,7 +79,7 @@ end
 
 """ Move custom operators and loss functions to workers, if undefined """
 function move_functions_to_workers(procs, options::Options, dataset::Dataset{T}) where {T}
-    for function_set in 1:5
+    for function_set in 1:6
         if function_set == 1
             ops = options.unaops
             nargs = 1
@@ -104,6 +104,12 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
             end
             ops = (options.loss,)
             nargs = dataset.weighted ? 3 : 2
+        elseif function_set == 6
+            if !(typeof(options.earlyStopCondition) <: Function)
+                continue
+            end
+            ops = (options.earlyStopCondition,)
+            nargs = 2
         end
         for op in ops
             try
