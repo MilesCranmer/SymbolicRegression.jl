@@ -3,18 +3,25 @@ module EquationModule
 import ..ProgramConstantsModule: CONST_TYPE
 import ..OptionsStructModule: Options
 
-# Define a serialization format for the symbolic equations:
+################################################################################
+# Node defines a symbolic expression stored in a binary tree.
+# A single `Node` instance is one "node" of this tree, and
+# has references to its children. By tracing through the children
+# nodes, you can evaluate or print a given expression.
 mutable struct Node
-    #Holds operators, variables, constants in a tree
-    degree::Int #0 for constant/variable, 1 for cos/sin, 2 for +/* etc.
-    constant::Bool #false if variable
-    val::CONST_TYPE
+    degree::Int  # 0 for constant/variable, 1 for cos/sin, 2 for +/* etc.
+    constant::Bool  # false if variable
+    val::CONST_TYPE  # If is a constant, this stores the actual value
     # ------------------- (possibly undefined below)
-    feature::Int #Either const value, or enumerates variable.
-    op::Int #enumerates operator (separately for degree=1,2)
-    l::Node
-    r::Node
+    feature::Int  # If is a variable (e.g., x in cos(x)), this stores the feature index.
+    op::Int  # If operator, this is the index of the operator in options.binary_operators, or options.unary_operators
+    l::Node  # Left child node. Only defined for degree=1 or degree=2.
+    r::Node  # Right child node. Only defined for degree=2. 
 
+
+    #################
+    ## Constructors:
+    #################
     Node(d::Int, c::Bool, v::CONST_TYPE) = new(d, c, v)
     Node(d::Int, c::Bool, v::CONST_TYPE, f::Int) = new(d, c, v, f)
     Node(d::Int, c::Bool, v::CONST_TYPE, f::Int, o::Int, l::Node) = new(d, c, v, f, o, l)
@@ -22,6 +29,7 @@ mutable struct Node
         return new(d, c, v, f, o, l, r)
     end
 end
+################################################################################
 
 Node(val::CONST_TYPE) = Node(0, true, val) #Leave other values undefined
 """
