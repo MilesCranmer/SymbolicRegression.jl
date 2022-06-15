@@ -18,7 +18,6 @@ mutable struct Node
     l::Node  # Left child node. Only defined for degree=1 or degree=2.
     r::Node  # Right child node. Only defined for degree=2. 
 
-
     #################
     ## Constructors:
     #################
