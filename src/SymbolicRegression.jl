@@ -890,6 +890,7 @@ function _EquationSearch(
                 difference_in_size = cur_size_frequency_complexities - window_size
                 # We need frequencyComplexities to be positive, but also sum to a number.
                 # min(frequencyComplexities[j])
+                num_loops = 0
                 while difference_in_size > 0
                     indices_to_subtract = findall(
                         frequencyComplexities[j] .> smallest_frequency_allowed
@@ -902,6 +903,10 @@ function _EquationSearch(
                     )
                     frequencyComplexities[j][indices_to_subtract] .-= amount_to_subtract
                     difference_in_size -= amount_to_subtract * num_remaining
+                    num_loops += 1
+                    if num_loops > 1000 || (amount_to_subtract * num_remaining) < 1e-6
+                        break
+                    end
                 end
             end
         end
