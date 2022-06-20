@@ -1,6 +1,13 @@
 If you are looking for the main loop, start with `function _EquationSearch` in `SymbolicRegression.jl`. You can proceed from there.
 All functions are imported at the top using `import {filename}Module` syntax, which should help you navigate the codebase.
 
+If you are looking to add a new parameter, add a new attribute to the `Options` struct in `OptionsStruct.jl`.
+Then, add a new argument to the `Options` function in `Options.jl`, and pass that argument to the constructor at the bottom of the function.
+That parameter will then be available any where `Options` is used.
+
+If you are trying to pass a function as a parameter, things get a bit complicated.
+Check out the function `move_functions_to_workers` in `Configure.jl` to see how functions are passed to workers.
+
 The file system is structured as follows. Indentation
 shows dependencies.
 
