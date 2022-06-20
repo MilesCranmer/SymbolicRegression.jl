@@ -163,7 +163,7 @@ import .MutationFunctionsModule:
     random_node,
     random_node_and_parent,
     crossover_trees
-import .LossFunctionsModule: eval_loss, loss, score_func
+import .LossFunctionsModule: eval_loss, score_func
 import .PopMemberModule: PopMember, copy_pop_member
 import .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 import .HallOfFameModule:
@@ -391,17 +391,14 @@ function _EquationSearch(
         avgys = [
             sum(dataset.y .* dataset.weights) / sum(dataset.weights) for dataset in datasets
         ]
-        baselineMSEs = [
-            loss(dataset.y, ones(T, dataset.n) .* avgy, dataset.weights, options) for
-            dataset in datasets, avgy in avgys
-        ]
     else
         avgys = [sum(dataset.y) / dataset.n for dataset in datasets]
-        baselineMSEs = [
-            loss(dataset.y, ones(T, dataset.n) .* avgy, options) for
-            (dataset, avgy) in zip(datasets, avgys)
-        ]
     end
+    baseline_expressions = [Node(CONST_TYPE(avgy)) for avgy in avgys]
+    baselineMSEs = [
+        eval_loss(const_expr, dataset, options) for
+        (dataset, const_expr) in zip(datasets, baseline_expressions)
+    ]
 
     if options.seed !== nothing
         seed!(options.seed)
