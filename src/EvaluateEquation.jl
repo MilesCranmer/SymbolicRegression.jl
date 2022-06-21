@@ -1,7 +1,9 @@
 module EvaluateEquationModule
 
+import LRUCache: LRU
 import ..CoreModule: Node, Options
 import ..UtilsModule: @return_on_false, is_bad_array
+import ..EquationUtilsModule: count_constants, count_nodes
 
 macro return_on_check(val, T, n)
     # This will generate the following code:
@@ -63,7 +65,32 @@ function eval_tree_array(
     return result, finished
 end
 
+const lru = Dict([
+    T => LRU{UInt,Tuple{Vector{T},Bool}}(; maxsize=1000) for
+    T in [Float16, Float32, Float64]
+])
+
 function _eval_tree_array(
+    tree::Node, cX::AbstractMatrix{T}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real}
+    zero = UInt(0)
+    stree = zero
+    cnodes = count_nodes(tree)
+    if (cnodes == 5 && count_constants(tree) == 0)
+        stree = hash(tree)
+    end
+    if stree != zero && haskey(lru[T], stree)
+        result, finished = getindex(lru[T], stree)
+    else
+        result, finished = __eval_tree_array(tree, cX, options)
+        if stree != zero
+            lru[T][stree] = (result, finished)
+        end
+    end
+    return result, finished
+end
+
+function __eval_tree_array(
     tree::Node, cX::AbstractMatrix{T}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
     if tree.degree == 0
