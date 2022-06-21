@@ -59,7 +59,7 @@ function mmd_loss(x::AbstractMatrix{T}, y::AbstractMatrix{T}, options::Options):
     n = size(x, 2)
     @assert n == size(y, 2)
     mmd_raw = zeros(T, n, n)
-    mmd_kernel_width = options.noisy_kernel_width  # TODO: make this a parameter
+    mmd_kernel_width = T(options.noisy_kernel_width)  # TODO: make this a parameter
     @inbounds for i in 1:n
         @inbounds @simd for j in 1:n
             # We exploit assumption that x and y are same shape, although
