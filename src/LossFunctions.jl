@@ -53,24 +53,26 @@ function eval_loss(tree::Node, dataset::Dataset{T}, options::Options)::T where {
     end
 end
 
-function mmd_loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options)::T where {T<:Real}
+function mmd_loss(x::AbstractMatrix{T}, y::AbstractMatrix{T}, options::Options)::T where {T<:Real}
     # x: (feature, row)
     # y: (feature, row)
     n = size(x, 2)
     @assert n == size(y, 2)
-    k_xx = zeros(T, n, n)
-    k_yy = zeros(T, n, n)
-    k_xy = zeros(T, n, n)
+    mmd_raw = zeros(T, n, n)
     mmd_kernel_width = options.noisy_kernel_width  # TODO: make this a parameter
     @inbounds for i in 1:n
         @inbounds @simd for j in 1:n
-            k_xx[i, j] = exp(-sum((x[:, i] .- x[:, j]) .^ 2) / mmd_kernel_width)
-            k_yy[i, j] = exp(-sum((y[:, i] .- y[:, j]) .^ 2) / mmd_kernel_width)
-            k_xy[i, j] = exp(-sum((x[:, i] .- y[:, j]) .^ 2) / mmd_kernel_width)
+            # We exploit assumption that x and y are same shape, although
+            # this doesn't have to be the case for MMD.
+            # This let's us vectorize
+            mmd_raw[i, j] = (
+                exp(-sum((x[:, i] .- x[:, j]) .^ 2) / mmd_kernel_width)
+                + exp(-sum((y[:, i] .- y[:, j]) .^ 2) / mmd_kernel_width)
+                - 2 * exp(-sum((x[:, i] .- y[:, j]) .^ 2) / mmd_kernel_width)
+            )
         end
     end
-    mmd_raw = sum(k_xx) + sum(k_yy) - 2 * sum(k_xy)
-    mmd = mmd_raw / n^2
+    mmd = sum(mmd_raw) / n^2
     return mmd
 end
 
