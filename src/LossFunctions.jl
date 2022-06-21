@@ -68,7 +68,7 @@ function mmd_loss(
     k = (args...) -> kernelmatrix(k_raw, args...; obsdim=2)
 
     mmd_raw = sum(k(x) .+ k(y) .- 2 .* k(x, y))
-    mmd = mmd_raw / size(x, 2) ^ 2
+    mmd = mmd_raw / size(x, 2)^2
     return abs(mmd)
 end
 
@@ -77,43 +77,45 @@ function eval_loss_noisy_nodes(
 )::T where {T<:Real}
     @assert !dataset.weighted
 
-    baseX = dataset.X
     # Settings for noise generation:
     num_noise_features = options.noisy_features
     num_seeds = options.noisy_num_seeds
     num_rows = options.noisy_num_points_to_eval
 
     losses = Array{T}(undef, num_seeds)
-    z_true = Array{T}(undef, dataset.nfeatures + num_noise_features + 1, num_rows)
-    z_pred = Array{T}(undef, dataset.nfeatures + num_noise_features + 1, num_rows)
+    z_true = Array{T}(
+        undef, dataset.nfeatures + num_noise_features + 1, num_rows * num_seeds
+    )
+    z_pred = Array{T}(
+        undef, dataset.nfeatures + num_noise_features + 1, num_rows * num_seeds
+    )
     # ^[X, noise, y]
 
     noise_start = dataset.nfeatures + 1
     noise_end = noise_start + num_noise_features
 
+    z_true[1:(dataset.nfeatures), :] .= dataset.X_true_resampled
     z_true[noise_start:noise_end, :] .= T(0)
+    z_true[end, :] .= dataset.y_true_resampled
 
+    z_pred[1:(dataset.nfeatures), :] .= dataset.X_pred_resampled
+    z_pred[noise_start:noise_end, :] .= dataset.noise
+
+    (prediction, completion) = eval_tree_array(tree, view(z_pred, 1:noise_end, :), options)
+    if !completion
+        return T(1000000000)
+    end
+    z_pred[noise_start:noise_end, :] .= T(0)
+    z_pred[end, :] .= prediction
+
+    # Compute MMD in each segment:
     for noise_seed in 1:num_seeds
-
-        # Current data batch:
-        z_true[1:(dataset.nfeatures), :] .= view(baseX, :, dataset.rand_true_idx[noise_seed])
-        z_true[end, :] .= view(dataset.y, dataset.rand_true_idx[noise_seed])
-
-        z_pred[1:(dataset.nfeatures), :] .= view(baseX, :, dataset.rand_pred_idx[noise_seed])
-        z_pred[noise_start:noise_end, :] .= view(dataset.noise, noise_seed, :, :)
-
-        # Noise enters as a feature:
-        (prediction, completion) = eval_tree_array(
-            tree, view(z_true, 1:noise_end, :), options
+        # TODO: Leave out noise columns, as they are unused.
+        losses[noise_seed] = mmd_loss(
+            view(z_pred, :, ((noise_seed - 1) * num_rows + 1):(noise_seed * num_rows)),
+            view(z_true, :, ((noise_seed - 1) * num_rows + 1):(noise_seed * num_rows)),
+            options,
         )
-        if !completion
-            return T(1000000000)
-        end
-
-        # We compare joint distribution of (x, y) to (x, y_predicted)
-        z_pred[noise_start:noise_end, :] .= T(0)
-        z_pred[end, :] .= prediction
-        losses[noise_seed] = mmd_loss(z_pred, z_true, options)
     end
     return sum(losses) / num_seeds
 end

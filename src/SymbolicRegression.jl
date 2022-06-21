@@ -257,7 +257,7 @@ function EquationSearch(
     if weights !== nothing
         weights = reshape(weights, size(y))
     end
-    if options.noisy_nodes === nothing
+    if options.noisy_nodes === false
         noise = nothing
         rand_pred_idx = nothing
         rand_true_idx = nothing
@@ -266,21 +266,24 @@ function EquationSearch(
         noise = randn(
             MersenneTwister(0),
             T,
-            options.noisy_num_seeds,
             options.noisy_features,
-            options.noisy_num_points_to_eval,
+            options.noisy_num_seeds * options.noisy_num_points_to_eval,
         )
         # Sample *without* replacement
-        rand_true_idx = [
-            randperm(MersenneTwister(s), size(X, 2))[1:options.noisy_num_points_to_eval]
-            for s in 1:options.noisy_num_seeds
-        ]
+        rand_true_idx = reduce(
+            vcat,
+            [
+                randperm(MersenneTwister(s), size(X, 2))[1:(options.noisy_num_points_to_eval)]
+                for s in 1:(options.noisy_num_seeds)
+            ],
+        )
         # Sample predicted points *with* replacement, so that
         # noise is forced to push apart.
-        rand_pred_idx = [
-            rand(MersenneTwister(s+options.noisy_num_seeds), 1:size(X, 2), options.noisy_num_points_to_eval)
-            for s in 1:options.noisy_num_seeds
-        ]
+        rand_pred_idx = rand(
+            MersenneTwister(1 + options.noisy_num_seeds),
+            1:size(X, 2),
+            options.noisy_num_points_to_eval * options.noisy_num_seeds,
+        )
     end
     datasets = [
         Dataset(
