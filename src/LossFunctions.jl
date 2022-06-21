@@ -90,7 +90,11 @@ function eval_loss_noisy_nodes(
         if !completion
             return T(1000000000)
         end
-        losses[noise_seed] = mmd_loss(prediction, dataset.y, options)
+
+        z_true = vcat(noisy_X, reshape(dataset.y, (1, dataset.n)))
+        z_predicted = vcat(noisy_X, reshape(prediction, (1, dataset.n)))
+
+        losses[noise_seed] = mmd_loss(z_predicted, z_true, options)
     end
     return sum(losses) / num_seeds
 end
