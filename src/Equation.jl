@@ -164,7 +164,13 @@ function string_tree(
             if varMap === nothing
                 return "x$(tree.feature)"
             else
-                return varMap[tree.feature]
+                if tree.feature <= length(varMap)
+                    return varMap[tree.feature]
+                else
+                    @assert options.noisy_nodes
+                    @assert tree.feature <= length(varMap) + options.noisy_features
+                    return "epsilon$(tree.feature - length(varMap))"
+                end
             end
         end
     elseif tree.degree == 1
