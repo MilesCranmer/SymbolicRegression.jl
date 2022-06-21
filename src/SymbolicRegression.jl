@@ -56,7 +56,7 @@ using Distributed
 using JSON3: JSON3
 import Printf: @printf, @sprintf
 using Pkg: Pkg
-import Random: seed!, shuffle!, MersenneTwister
+import Random: seed!, shuffle!, MersenneTwister, randperm
 using Reexport
 @reexport import LossFunctions:
     MarginLoss,
@@ -259,10 +259,28 @@ function EquationSearch(
     end
     if options.noisy_nodes === nothing
         noise = nothing
+        rand_pred_idx = nothing
+        rand_true_idx = nothing
     else
+        @assert options.noisy_num_points_to_eval < size(X, 2)
         noise = randn(
-            MersenneTwister(0), T, options.noisy_num_seeds, options.noisy_features, size(X, 2)
+            MersenneTwister(0),
+            T,
+            options.noisy_num_seeds,
+            options.noisy_features,
+            options.noisy_num_points_to_eval,
         )
+        # Sample *without* replacement
+        rand_true_idx = [
+            randperm(MersenneTwister(s), size(X, 2))[1:options.noisy_num_points_to_eval]
+            for s in 1:options.noisy_num_seeds
+        ]
+        # Sample predicted points *with* replacement, so that
+        # noise is forced to push apart.
+        rand_pred_idx = [
+            rand(MersenneTwister(s+options.noisy_num_seeds), 1:size(X, 2), options.noisy_num_points_to_eval)
+            for s in 1:options.noisy_num_seeds
+        ]
     end
     datasets = [
         Dataset(
@@ -271,6 +289,8 @@ function EquationSearch(
             weights=(weights === nothing ? weights : weights[j, :]),
             varMap=varMap,
             noise=noise,
+            rand_true_idx=rand_true_idx,
+            rand_pred_idx=rand_pred_idx,
         ) for j in 1:nout
     ]
 

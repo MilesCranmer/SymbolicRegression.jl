@@ -1,5 +1,6 @@
 module LossFunctionsModule
 
+import StatsBase: sample
 import KernelFunctions: SqExponentialKernel, ScaleTransform, kernelmatrix
 import Random: randperm, MersenneTwister
 import LossFunctions: value, AggMode, SupervisedLoss
@@ -55,8 +56,8 @@ function eval_loss(tree::Node, dataset::Dataset{T}, options::Options)::T where {
 end
 
 function mmd_loss(
-    x::AbstractMatrix{T}, y::AbstractMatrix{T}, ::Val{n}, ::Val{nfeatures}, options::Options
-)::T where {T<:Real,n,nfeatures}
+    x::AbstractMatrix{T}, y::AbstractMatrix{T}, options::Options
+)::T where {T<:Real}
     # x: (feature, row)
     # y: (feature, row)
     mmd_raw = T(0)
@@ -67,7 +68,7 @@ function mmd_loss(
     k = (args...) -> kernelmatrix(k_raw, args...; obsdim=2)
 
     mmd_raw = sum(k(x) .+ k(y) .- 2 .* k(x, y))
-    mmd = mmd_raw / n^2
+    mmd = mmd_raw / size(x, 2) ^ 2
     return abs(mmd)
 end
 
@@ -80,25 +81,25 @@ function eval_loss_noisy_nodes(
     # Settings for noise generation:
     num_noise_features = options.noisy_features
     num_seeds = options.noisy_num_seeds
+    num_rows = options.noisy_num_points_to_eval
 
     losses = Array{T}(undef, num_seeds)
-    z_true = Array{T}(undef, dataset.nfeatures + num_noise_features + 1, dataset.n)
-    z_pred = Array{T}(undef, dataset.nfeatures + num_noise_features + 1, dataset.n)
+    z_true = Array{T}(undef, dataset.nfeatures + num_noise_features + 1, num_rows)
+    z_pred = Array{T}(undef, dataset.nfeatures + num_noise_features + 1, num_rows)
+    # ^[X, noise, y]
 
     noise_start = dataset.nfeatures + 1
     noise_end = noise_start + num_noise_features
-    val_n = Val(dataset.n)
-    val_nfeatures = Val(dataset.nfeatures + num_noise_features + 1)
-
-    z_true[1:(dataset.nfeatures), :] .= baseX
-    z_pred[1:(dataset.nfeatures), :] .= baseX
 
     z_true[noise_start:noise_end, :] .= T(0)
-    z_true[end, :] .= dataset.y
 
     for noise_seed in 1:num_seeds
 
-        # Current batch of noise:
+        # Current data batch:
+        z_true[1:(dataset.nfeatures), :] .= view(baseX, :, dataset.rand_true_idx[noise_seed])
+        z_true[end, :] .= view(dataset.y, dataset.rand_true_idx[noise_seed])
+
+        z_pred[1:(dataset.nfeatures), :] .= view(baseX, :, dataset.rand_pred_idx[noise_seed])
         z_pred[noise_start:noise_end, :] .= view(dataset.noise, noise_seed, :, :)
 
         # Noise enters as a feature:
@@ -112,7 +113,7 @@ function eval_loss_noisy_nodes(
         # We compare joint distribution of (x, y) to (x, y_predicted)
         z_pred[noise_start:noise_end, :] .= T(0)
         z_pred[end, :] .= prediction
-        losses[noise_seed] = mmd_loss(z_pred, z_true, val_n, val_nfeatures, options)
+        losses[noise_seed] = mmd_loss(z_pred, z_true, options)
     end
     return sum(losses) / num_seeds
 end

@@ -10,7 +10,9 @@ struct Dataset{T<:Real}
     weighted::Bool
     weights::Union{AbstractVector{T},Nothing}
     varMap::Array{String,1}
-    noise::Union{AbstractArray{T, 3},Nothing}  # If using noisy nodes
+    noise::Union{AbstractArray{T,3},Nothing}  # If using noisy nodes
+    rand_true_idx::Union{Vector{Vector{Int}},Nothing}
+    rand_pred_idx::Union{Vector{Vector{Int}},Nothing}
 end
 
 """
@@ -26,6 +28,8 @@ function Dataset(
     weights::Union{AbstractVector{T},Nothing}=nothing,
     varMap::Union{Array{String,1},Nothing}=nothing,
     noise::Union{AbstractArray{T,3},Nothing}=nothing,
+    rand_true_idx::Union{Vector{Vector{Int}},Nothing}=nothing,
+    rand_pred_idx::Union{Vector{Vector{Int}},Nothing}=nothing,
 ) where {T<:Real}
     Base.require_one_based_indexing(X, y)
     n = size(X, BATCH_DIM)
@@ -35,7 +39,9 @@ function Dataset(
         varMap = ["x$(i)" for i in 1:nfeatures]
     end
 
-    return Dataset{T}(X, y, n, nfeatures, weighted, weights, varMap, noise)
+    return Dataset{T}(
+        X, y, n, nfeatures, weighted, weights, varMap, noise, rand_true_idx, rand_pred_idx
+    )
 end
 
 end

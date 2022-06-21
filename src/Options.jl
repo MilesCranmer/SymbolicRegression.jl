@@ -316,8 +316,9 @@ function Options(;
     deterministic=false,
     noisy_nodes=false,
     noisy_features=0,
-    noisy_kernel_width=0.1f0,
+    noisy_kernel_width=100f0,
     noisy_num_seeds=5,
+    noisy_num_points_to_eval=50,
 ) where {nuna,nbin}
     if warmupMaxsize !== nothing
         error(
@@ -639,6 +640,7 @@ function Options(;
         noisy_features,
         noisy_kernel_width,
         noisy_num_seeds,
+        noisy_num_points_to_eval,
     )
 
     @eval begin
