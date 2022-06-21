@@ -79,7 +79,7 @@ function eval_loss_noisy_nodes(
     baseX = dataset.X
     # Settings for noise generation:
     num_noise_features = options.noisy_features
-    num_seeds = 5
+    num_seeds = options.num_seeds
 
     losses = Array{T}(undef, num_seeds)
     z_true = Array{T}(undef, dataset.nfeatures + num_noise_features + 1, dataset.n)

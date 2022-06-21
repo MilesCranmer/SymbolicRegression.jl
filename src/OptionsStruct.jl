@@ -93,6 +93,7 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function},D}
     noisy_nodes::Bool
     noisy_features::Int
     noisy_kernel_width::Float32
+    noisy_num_seeds::Int
 end
 
 function Base.print(io::IO, options::Options)

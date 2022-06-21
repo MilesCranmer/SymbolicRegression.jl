@@ -260,8 +260,9 @@ function EquationSearch(
     if options.noisy_nodes === nothing
         noise = nothing
     else
-        num_seeds = 5  # HACK
-        noise = randn(MersenneTwister(0), T, num_seeds, options.noisy_features, size(X, 1))
+        noise = randn(
+            MersenneTwister(0), T, options.num_seeds, options.noisy_features, size(X, 2)
+        )
     end
     datasets = [
         Dataset(

@@ -317,6 +317,7 @@ function Options(;
     noisy_nodes=false,
     noisy_features=0,
     noisy_kernel_width=0.1f0,
+    noisy_num_seeds=5,
 ) where {nuna,nbin}
     if warmupMaxsize !== nothing
         error(
@@ -637,6 +638,7 @@ function Options(;
         noisy_nodes,
         noisy_features,
         noisy_kernel_width,
+        noisy_num_seeds,
     )
 
     @eval begin
