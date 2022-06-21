@@ -6,6 +6,7 @@ version = "0.9.6"
 [deps]
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+KernelFunctions = "ec8451be-7e33-11e9-00cf-bbf324bd1392"
 LineSearches = "d3d80556-e9d4-5f37-9878-2ab0fcc64255"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LossFunctions = "30fc2ffe-d236-52d8-8643-a9d8f7c094a7"
@@ -20,6 +21,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 JSON3 = "1"
+KernelFunctions = "0.10"
 LineSearches = "7"
 LossFunctions = "0.6, 0.7, 0.8"
 Optim = "0.19, 1.1"

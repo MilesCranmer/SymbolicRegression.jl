@@ -1,5 +1,6 @@
 module LossFunctionsModule
 
+import KernelFunctions: SqExponentialKernel, ScaleTransform, kernelmatrix
 import Random: randperm, MersenneTwister
 import LossFunctions: value, AggMode, SupervisedLoss
 import ..CoreModule: Options, Dataset, Node
@@ -59,26 +60,13 @@ function mmd_loss(
     # x: (feature, row)
     # y: (feature, row)
     mmd_raw = T(0)
+
     mmd_kernel_width = T(options.noisy_kernel_width)  # TODO: make this a parameter
-    @inbounds for i in 1:n
-        @inbounds for j in 1:n
-            # We exploit assumption that x and y are same shape, although
-            # this doesn't have to be the case for MMD.
-            # This let's us vectorize:
-            sq_xx = T(0)
-            sq_yy = T(0)
-            sq_xy = T(0)
-            @inbounds for k in 1:nfeatures
-                sq_xx += (x[k, i] - x[k, j])^2
-                sq_yy += (y[k, i] - y[k, j])^2
-                sq_xy += (x[k, i] - y[k, j])^2
-            end
-            mmd_raw += (
-                exp(-sq_xx / mmd_kernel_width) + exp(-sq_yy / mmd_kernel_width) -
-                2 * exp(-sq_xy / mmd_kernel_width)
-            )
-        end
-    end
+    k_raw = SqExponentialKernel() ∘ ScaleTransform(1 / mmd_kernel_width)
+
+    k = (args...) -> kernelmatrix(k_raw, args...; obsdim=2)
+
+    mmd_raw = sum(k(x) .+ k(y) .- 2 .* k(x, y))
     mmd = mmd_raw / n^2
     return mmd
 end
