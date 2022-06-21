@@ -189,4 +189,20 @@ function print_tree(
     return println(string_tree(tree, options; varMap=varMap))
 end
 
+function Base.hash(tree::Node)::UInt
+    if tree.degree == 0
+        if tree.constant
+            # tree.val used.
+            return hash((0, tree.val))
+        else
+            # tree.feature used.
+            return hash((1, tree.feature))
+        end
+    elseif tree.degree == 1
+        return hash((1, tree.op, hash(tree.l)))
+    else
+        return hash((2, tree.op, hash(tree.l), hash(tree.r)))
+    end
+end
+
 end
