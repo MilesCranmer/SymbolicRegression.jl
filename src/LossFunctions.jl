@@ -80,17 +80,23 @@ function eval_loss_noisy_nodes(
     @assert !dataset.weighted
 
     baseX = dataset.X
+    # Settings for noise generation:
     num_noise_features = options.noisy_features
     num_seeds = 5
+
     losses = zeros(T, num_seeds)
     for noise_seed in 1:num_seeds
+
+        # Current batch of noise:
         current_noise = randn(MersenneTwister(noise_seed), T, num_noise_features, dataset.n)
+        # Noise enters as a feature:
         noisy_X = vcat(baseX, current_noise)
         (prediction, completion) = eval_tree_array(tree, noisy_X, options)
         if !completion
             return T(1000000000)
         end
 
+        # We compare joint distribution of (x, y) to (x, y_predicted)
         z_true = vcat(noisy_X, reshape(dataset.y, (1, dataset.n)))
         z_predicted = vcat(noisy_X, reshape(prediction, (1, dataset.n)))
 
