@@ -23,7 +23,7 @@ using SymbolicRegression:
     logical_and,
     gamma
 using SymbolicRegression: node_to_symbolic, symbolic_to_node
-using SymbolicRegression: check_constraints, loss
+using SymbolicRegression: check_constraints
 
 x1 = 2.0
 # Initialize functions in Base....
@@ -177,8 +177,14 @@ for (loss_fnc, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
     x = randn(MersenneTwister(0), Float32, 100)
     y = randn(MersenneTwister(1), Float32, 100)
     w = abs.(randn(MersenneTwister(2), Float32, 100))
-    @test abs(loss(x, y, options) - sum(evaluator.(x, y)) / length(x)) < 1e-6
-    @test abs(loss(x, y, w, options) - sum(evaluator.(x, y, w)) / sum(w)) < 1e-6
+    @test abs(
+        SymbolicRegression.LossFunctionsModule.loss(x, y, options) -
+        sum(evaluator.(x, y)) / length(x),
+    ) < 1e-6
+    @test abs(
+        SymbolicRegression.LossFunctionsModule.loss(x, y, w, options) -
+        sum(evaluator.(x, y, w)) / sum(w),
+    ) < 1e-6
 end
 
 # Test derivatives
