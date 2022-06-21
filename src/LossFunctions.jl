@@ -79,7 +79,7 @@ function eval_loss_noisy_nodes(
     baseX = dataset.X
     # Settings for noise generation:
     num_noise_features = options.noisy_features
-    num_seeds = options.num_seeds
+    num_seeds = options.noisy_num_seeds
 
     losses = Array{T}(undef, num_seeds)
     z_true = Array{T}(undef, dataset.nfeatures + num_noise_features + 1, dataset.n)
@@ -93,12 +93,12 @@ function eval_loss_noisy_nodes(
     z_true[1:(dataset.nfeatures), :] .= baseX
     z_pred[1:(dataset.nfeatures), :] .= baseX
 
+    z_true[noise_start:noise_end, :] .= T(0)
     z_true[end, :] .= dataset.y
 
     for noise_seed in 1:num_seeds
 
         # Current batch of noise:
-        z_true[noise_start:noise_end, :] .= view(dataset.noise, noise_seed, :, :)
         z_pred[noise_start:noise_end, :] .= view(dataset.noise, noise_seed, :, :)
 
         # Noise enters as a feature:
@@ -110,6 +110,7 @@ function eval_loss_noisy_nodes(
         end
 
         # We compare joint distribution of (x, y) to (x, y_predicted)
+        z_pred[noise_start:noise_end, :] .= T(0)
         z_pred[end, :] .= prediction
         losses[noise_seed] = mmd_loss(z_pred, z_true, val_n, val_nfeatures, options)
     end
