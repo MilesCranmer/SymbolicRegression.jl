@@ -314,6 +314,9 @@ function Options(;
     enable_autodiff::Bool=false,
     nested_constraints=nothing,
     deterministic=false,
+    noisy_nodes=false,
+    noisy_features=0,
+    noisy_kernel_width=1f0,
 ) where {nuna,nbin}
     if warmupMaxsize !== nothing
         error(
@@ -631,6 +634,9 @@ function Options(;
         enable_autodiff,
         nested_constraints,
         deterministic,
+        noisy_nodes,
+        noisy_features,
+        noisy_kernel_width,
     )
 
     @eval begin

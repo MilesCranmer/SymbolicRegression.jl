@@ -1,6 +1,6 @@
 module LossFunctionsModule
 
-import Random: randperm
+import Random: randperm, MersenneTwister
 import LossFunctions: value, AggMode, SupervisedLoss
 import ..CoreModule: Options, Dataset, Node
 import ..EquationUtilsModule: compute_complexity
@@ -36,7 +36,12 @@ end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function eval_loss(tree::Node, dataset::Dataset{T}, options::Options)::T where {T<:Real}
+    if options.noisy_nodes
+        return eval_loss_noisy_nodes(tree, dataset, options)
+    end
+
     (prediction, completion) = eval_tree_array(tree, dataset.X, options)
+
     if !completion
         return T(1000000000)
     end
@@ -67,6 +72,27 @@ function mmd_loss(x::AbstractArray{T}, y::AbstractArray{T}, options::Options)::T
     mmd_raw = sum(k_xx) + sum(k_yy) - 2 * sum(k_xy)
     mmd = mmd_raw / n^2
     return mmd
+end
+
+function eval_loss_noisy_nodes(
+    tree::Node, dataset::Dataset{T}, options::Options
+)::T where {T<:Real}
+    @assert !dataset.weighted
+
+    baseX = dataset.X
+    num_noise_features = options.noisy_features
+    num_seeds = 5
+    losses = zeros(T, num_seeds)
+    for noise_seed in 1:num_seeds
+        current_noise = randn(MersenneTwister(noise_seed), T, num_noise_features, dataset.n)
+        noisy_X = vcat(baseX, current_noise)
+        (prediction, completion) = eval_tree_array(tree, noisy_X, options)
+        if !completion
+            return T(1000000000)
+        end
+        losses[noise_seed] = mmd_loss(prediction, dataset.y, options)
+    end
+    return sum(losses) / num_seeds
 end
 
 # Compute a score which includes a complexity penalty in the loss

@@ -45,6 +45,9 @@ function next_generation(
     end
 
     nfeatures = dataset.nfeatures
+    if options.noisy_nodes
+        nfeatures += options.noisy_features
+    end
 
     mutationChoice = rand()
     #More constants => more likely to do constant mutation
