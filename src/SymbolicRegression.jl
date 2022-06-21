@@ -261,7 +261,7 @@ function EquationSearch(
         noise = nothing
     else
         noise = randn(
-            MersenneTwister(0), T, options.num_seeds, options.noisy_features, size(X, 2)
+            MersenneTwister(0), T, options.noisy_num_seeds, options.noisy_features, size(X, 2)
         )
     end
     datasets = [
