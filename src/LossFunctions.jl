@@ -53,26 +53,33 @@ function eval_loss(tree::Node, dataset::Dataset{T}, options::Options)::T where {
     end
 end
 
-function mmd_loss(x::AbstractMatrix{T}, y::AbstractMatrix{T}, options::Options)::T where {T<:Real}
+function mmd_loss(
+    x::AbstractMatrix{T}, y::AbstractMatrix{T}, ::Val{n}, ::Val{nfeatures}, options::Options
+)::T where {T<:Real,n,nfeatures}
     # x: (feature, row)
     # y: (feature, row)
-    n = size(x, 2)
-    @assert n == size(y, 2)
-    mmd_raw = zeros(T, n, n)
+    mmd_raw = T(0)
     mmd_kernel_width = T(options.noisy_kernel_width)  # TODO: make this a parameter
     @inbounds for i in 1:n
-        @inbounds @simd for j in 1:n
+        @inbounds for j in 1:n
             # We exploit assumption that x and y are same shape, although
             # this doesn't have to be the case for MMD.
-            # This let's us vectorize
-            mmd_raw[i, j] = (
-                exp(-sum((x[:, i] .- x[:, j]) .^ 2) / mmd_kernel_width)
-                + exp(-sum((y[:, i] .- y[:, j]) .^ 2) / mmd_kernel_width)
-                - 2 * exp(-sum((x[:, i] .- y[:, j]) .^ 2) / mmd_kernel_width)
+            # This let's us vectorize:
+            sq_xx = T(0)
+            sq_yy = T(0)
+            sq_xy = T(0)
+            @inbounds for k in 1:nfeatures
+                sq_xx += (x[k, i] - x[k, j])^2
+                sq_yy += (y[k, i] - y[k, j])^2
+                sq_xy += (x[k, i] - y[k, j])^2
+            end
+            mmd_raw += (
+                exp(-sq_xx / mmd_kernel_width) + exp(-sq_yy / mmd_kernel_width) -
+                2 * exp(-sq_xy / mmd_kernel_width)
             )
         end
     end
-    mmd = sum(mmd_raw) / n^2
+    mmd = mmd_raw / n^2
     return mmd
 end
 
@@ -86,23 +93,37 @@ function eval_loss_noisy_nodes(
     num_noise_features = options.noisy_features
     num_seeds = 5
 
-    losses = zeros(T, num_seeds)
+    losses = Array{T}(undef, num_seeds)
+    z_true = Array{T}(undef, dataset.nfeatures + num_noise_features + 1, dataset.n)
+    z_pred = Array{T}(undef, dataset.nfeatures + num_noise_features + 1, dataset.n)
+
+    noise_start = dataset.nfeatures + 1
+    noise_end = noise_start + num_noise_features
+    val_n = Val(dataset.n)
+    val_nfeatures = Val(dataset.nfeatures + num_noise_features + 1)
+
+    z_true[1:(dataset.nfeatures), :] .= baseX
+    z_pred[1:(dataset.nfeatures), :] .= baseX
+
+    z_true[end, :] .= dataset.y
+
     for noise_seed in 1:num_seeds
 
         # Current batch of noise:
-        current_noise = randn(MersenneTwister(noise_seed), T, num_noise_features, dataset.n)
+        z_true[noise_start:noise_end, :] .= view(dataset.noise, noise_seed, :, :)
+        z_pred[noise_start:noise_end, :] .= view(dataset.noise, noise_seed, :, :)
+
         # Noise enters as a feature:
-        noisy_X = vcat(baseX, current_noise)
-        (prediction, completion) = eval_tree_array(tree, noisy_X, options)
+        (prediction, completion) = eval_tree_array(
+            tree, view(z_true, 1:noise_end, :), options
+        )
         if !completion
             return T(1000000000)
         end
 
         # We compare joint distribution of (x, y) to (x, y_predicted)
-        z_true = vcat(noisy_X, reshape(dataset.y, (1, dataset.n)))
-        z_predicted = vcat(noisy_X, reshape(prediction, (1, dataset.n)))
-
-        losses[noise_seed] = mmd_loss(z_predicted, z_true, options)
+        z_pred[end, :] .= prediction
+        losses[noise_seed] = mmd_loss(z_pred, z_true, val_n, val_nfeatures, options)
     end
     return sum(losses) / num_seeds
 end

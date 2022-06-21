@@ -257,12 +257,19 @@ function EquationSearch(
     if weights !== nothing
         weights = reshape(weights, size(y))
     end
+    if options.noisy_nodes === nothing
+        noise = nothing
+    else
+        num_seeds = 5  # HACK
+        noise = randn(MersenneTwister(0), T, num_seeds, options.noisy_features, size(X, 1))
+    end
     datasets = [
         Dataset(
             X,
             y[j, :];
             weights=(weights === nothing ? weights : weights[j, :]),
             varMap=varMap,
+            noise=noise,
         ) for j in 1:nout
     ]
 

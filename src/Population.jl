@@ -63,6 +63,7 @@ function Population(
     options::Options,
     nfeatures::Int,
 ) where {T<:Real}
+    # TODO: This shouldn't be used, because it might be weighted!
     return Population(
         Dataset(X, y), baseline; npop=npop, options=options, nfeatures=nfeatures
     )
