@@ -316,7 +316,7 @@ function Options(;
     deterministic=false,
     noisy_nodes=false,
     noisy_features=0,
-    noisy_kernel_width=1f0,
+    noisy_kernel_width=0.1f0,
 ) where {nuna,nbin}
     if warmupMaxsize !== nothing
         error(
