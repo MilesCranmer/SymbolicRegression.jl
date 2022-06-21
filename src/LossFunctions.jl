@@ -68,7 +68,7 @@ function mmd_loss(
 
     mmd_raw = sum(k(x) .+ k(y) .- 2 .* k(x, y))
     mmd = mmd_raw / n^2
-    return mmd
+    return abs(mmd)
 end
 
 function eval_loss_noisy_nodes(
