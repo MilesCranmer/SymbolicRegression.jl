@@ -2,6 +2,7 @@ module OperatorsModule
 
 using SpecialFunctions: SpecialFunctions
 import SpecialFunctions: erf, erfc
+import Base: @deprecate
 #TODO - actually add these operators to the module!
 
 function gamma(x::T)::T where {T<:Real}
@@ -36,7 +37,7 @@ end
 function cube(x::T)::T where {T<:Real}
     return x^3
 end
-function pow(x::T, y::T)::T where {T<:Real}
+function pow_abs(x::T, y::T)::T where {T<:Real}
     return abs(x)^y
 end
 function div(x::T, y::T)::T where {T<:Real}
@@ -64,7 +65,7 @@ cube(x) = x * x * x
 plus(x, y) = x + y
 sub(x, y) = x - y
 mult(x, y) = x * y
-pow(x, y) = abs(x)^y
+pow_abs(x, y) = abs(x)^y
 div(x, y) = x / y
 log_abs(x) = log(abs(x) + 1//100000000)
 log2_abs(x) = log2(abs(x) + 1//100000000)
@@ -97,5 +98,8 @@ end
 function logical_and(x::T, y::T)::T where {T}
     return convert(T, (x > convert(T, 0) && y > convert(T, 0)))
 end
+
+# Deprecated operations:
+@deprecate pow pow_abs
 
 end

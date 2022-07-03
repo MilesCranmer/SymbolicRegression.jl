@@ -2,7 +2,7 @@ include("test_params.jl")
 using SymbolicRegression, SymbolicUtils, Test, Random, ForwardDiff
 using SymbolicRegression:
     Options, string_tree, eval_tree_array, Dataset, differentiable_eval_tree_array
-using SymbolicRegression: print_tree, pow, eval_loss, score_func, Node
+using SymbolicRegression: print_tree, pow_abs, eval_loss, score_func, Node
 using SymbolicRegression:
     plus,
     sub,
