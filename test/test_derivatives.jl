@@ -6,23 +6,23 @@ using Zygote
 using LinearAlgebra
 
 seed = 0
-pow_abs(x::T, y::T) where {T<:Real} = abs(x)^y
+pow_abs2(x::T, y::T) where {T<:Real} = abs(x)^y
 custom_cos(x::T) where {T<:Real} = cos(x)^2
 
 # Define these custom functions for Node data types:
-pow_abs(l::Node, r::Node)::Node =
-    (l.constant && r.constant) ? Node(pow_abs(l.val, r.val)::AbstractFloat) : Node(5, l, r)
-pow_abs(l::Node, r::AbstractFloat)::Node =
-    l.constant ? Node(pow_abs(l.val, r)::AbstractFloat) : Node(5, l, r)
-pow_abs(l::AbstractFloat, r::Node)::Node =
-    r.constant ? Node(pow_abs(l, r.val)::AbstractFloat) : Node(5, l, r)
+pow_abs2(l::Node, r::Node)::Node =
+    (l.constant && r.constant) ? Node(pow_abs2(l.val, r.val)::AbstractFloat) : Node(5, l, r)
+pow_abs2(l::Node, r::AbstractFloat)::Node =
+    l.constant ? Node(pow_abs2(l.val, r)::AbstractFloat) : Node(5, l, r)
+pow_abs2(l::AbstractFloat, r::Node)::Node =
+    r.constant ? Node(pow_abs2(l, r.val)::AbstractFloat) : Node(5, l, r)
 custom_cos(x::Node)::Node = x.constant ? Node(custom_cos(x.val)::AbstractFloat) : Node(1, x)
 
 equation1(x1, x2, x3) = x1 + x2 + x3 + 3.2f0
-equation2(x1, x2, x3) = pow_abs(x1, x2) + x3 + custom_cos(1.0f0 + x3) + 3.0f0 / x1
+equation2(x1, x2, x3) = pow_abs2(x1, x2) + x3 + custom_cos(1.0f0 + x3) + 3.0f0 / x1
 function equation3(x1, x2, x3)
     return (
-        ((x2 + x2) * ((-0.5982493 / pow_abs(x1, x2)) / -0.54734415)) + (
+        ((x2 + x2) * ((-0.5982493 / pow_abs2(x1, x2)) / -0.54734415)) + (
             sin(
                 custom_cos(
                     sin(1.2926733 - 1.6606787) / sin(
@@ -53,7 +53,7 @@ for type in [Float32, Float64]
     X = rand(rng, type, nfeatures, N) * 10
 
     options = Options(;
-        binary_operators=(+, *, -, /, pow_abs),
+        binary_operators=(+, *, -, /, pow_abs2),
         unary_operators=(custom_cos, exp, sin),
         enable_autodiff=true,
     )
@@ -102,10 +102,10 @@ for type in [Float32, Float64]
     const_value2 = -3.2f0
 
     function equation5(x1, x2, x3)
-        return pow_abs(x1, x2) + x3 + custom_cos(const_value + x3) + const_value2 / x1
+        return pow_abs2(x1, x2) + x3 + custom_cos(const_value + x3) + const_value2 / x1
     end
     function equation5_with_const(c1, c2, x1, x2, x3)
-        return pow_abs(x1, x2) + x3 + custom_cos(c1 + x3) + c2 / x1
+        return pow_abs2(x1, x2) + x3 + custom_cos(c1 + x3) + c2 / x1
     end
 
     tree = equation5(nx1, nx2, nx3)
@@ -129,7 +129,7 @@ println("Testing NodeIndex.")
 import SymbolicRegression: get_constants, NodeIndex, index_constants
 
 options = Options(;
-    binary_operators=(+, *, -, /, pow_abs),
+    binary_operators=(+, *, -, /, pow_abs2),
     unary_operators=(custom_cos, exp, sin),
     enable_autodiff=true,
 )

@@ -38,23 +38,23 @@ tree_copy = convert(Node, eqn, options)
 # Let's test a much more complex function,
 # with custom operators, and unary operators:
 x1, x2, x3 = Node("x1"), Node("x2"), Node("x3")
-pow_abs(x, y) = abs(x)^y
+pow_abs2(x, y) = abs(x)^y
 custom_cos(x) = cos(x)^2
 
 # Define for Node (usually these are done internally to Options)
-pow_abs(l::Node, r::Node)::Node =
-    (l.constant && r.constant) ? Node(pow_abs(l.val, r.val)::AbstractFloat) : Node(5, l, r)
-pow_abs(l::Node, r::AbstractFloat)::Node =
-    l.constant ? Node(pow_abs(l.val, r)::AbstractFloat) : Node(5, l, r)
-pow_abs(l::AbstractFloat, r::Node)::Node =
-    r.constant ? Node(pow_abs(l, r.val)::AbstractFloat) : Node(5, l, r)
+pow_abs2(l::Node, r::Node)::Node =
+    (l.constant && r.constant) ? Node(pow_abs2(l.val, r.val)::AbstractFloat) : Node(5, l, r)
+pow_abs2(l::Node, r::AbstractFloat)::Node =
+    l.constant ? Node(pow_abs2(l.val, r)::AbstractFloat) : Node(5, l, r)
+pow_abs2(l::AbstractFloat, r::Node)::Node =
+    r.constant ? Node(pow_abs2(l, r.val)::AbstractFloat) : Node(5, l, r)
 custom_cos(x::Node)::Node = x.constant ? Node(custom_cos(x.val)::AbstractFloat) : Node(1, x)
 
 options = Options(;
-    binary_operators=(+, *, -, /, pow_abs), unary_operators=(custom_cos, exp, sin)
+    binary_operators=(+, *, -, /, pow_abs2), unary_operators=(custom_cos, exp, sin)
 )
 tree = (
-    ((x2 + x2) * ((-0.5982493 / pow_abs(x1, x2)) / -0.54734415)) + (
+    ((x2 + x2) * ((-0.5982493 / pow_abs2(x1, x2)) / -0.54734415)) + (
         sin(
             custom_cos(
                 sin(1.2926733 - 1.6606787) /
