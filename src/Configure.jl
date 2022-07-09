@@ -23,7 +23,6 @@ function assert_operators_defined_over_reals(T, options::Options)
     end
 end
 
-
 # Check for errors before they happen
 function test_option_configuration(T, options::Options)
     for op in (options.binops..., options.unaops...)
