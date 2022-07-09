@@ -1,15 +1,4 @@
-# Check for errors before they happen
-function test_option_configuration(T, options::Options)
-    for op in (options.binops..., options.unaops...)
-        if is_anonymous_function(op)
-            throw(
-                AssertionError(
-                    "Anonymous functions can't be used as operators for SymbolicRegression.jl",
-                ),
-            )
-        end
-    end
-
+function assert_operators_defined_over_reals(T, options::Options)
     test_input = map(x -> convert(T, x), LinRange(-100, 100, 99))
     cur_op = nothing
     try
@@ -32,6 +21,22 @@ function test_option_configuration(T, options::Options)
             ),
         )
     end
+end
+
+
+# Check for errors before they happen
+function test_option_configuration(T, options::Options)
+    for op in (options.binops..., options.unaops...)
+        if is_anonymous_function(op)
+            throw(
+                AssertionError(
+                    "Anonymous functions can't be used as operators for SymbolicRegression.jl",
+                ),
+            )
+        end
+    end
+
+    assert_operators_defined_over_reals(T, options)
 
     for binop in options.binops
         if binop in options.unaops
