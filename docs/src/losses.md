@@ -120,7 +120,7 @@ L(r) = \begin{cases} \frac{r^2}{2} & \quad \text{if } | r | \le \alpha \\ \alpha
 
 The ``ϵ``-insensitive loss. Typically used in linear support vector
 regression. It ignores deviances smaller than ``ϵ``, but penalizes
-larger deviances linarily.
+larger deviances linearly.
 It is Lipschitz continuous and convex, but not strictly convex.
 
 ```math
@@ -311,7 +311,7 @@ L(a) = \ln (1 + e^{-a})
 ```
 ### `L1HingeLoss <: MarginLoss`
 
-The hinge loss linearly penalizes every predicition where the
+The hinge loss linearly penalizes every prediction where the
 resulting `agreement < 1` .
 It is Lipschitz continuous and convex, but not strictly convex.
 
@@ -338,7 +338,7 @@ L(a) = \max \{ 0, 1 - a \}
 ### `L2HingeLoss <: MarginLoss`
 
 The truncated least squares loss quadratically penalizes every
-predicition where the resulting `agreement < 1`.
+prediction where the resulting `agreement < 1`.
 It is locally Lipschitz continuous and convex,
 but not strictly convex.
 
