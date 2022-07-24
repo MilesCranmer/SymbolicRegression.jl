@@ -571,6 +571,8 @@ function Options(;
         earlyStopCondition = (loss, complexity) -> loss < stopping_point
     end
 
+    key = hash((binary_operators, unary_operators))
+
     options = Options{
         typeof(binary_operators),
         typeof(unary_operators),
@@ -634,6 +636,7 @@ function Options(;
         enable_autodiff,
         nested_constraints,
         deterministic,
+        key,
     )
 
     @eval begin

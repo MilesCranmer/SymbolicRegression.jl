@@ -10,6 +10,7 @@ struct Dataset{T<:Real}
     weighted::Bool
     weights::Union{AbstractVector{T},Nothing}
     varMap::Array{String,1}
+    key::UInt64
 end
 
 """
@@ -32,8 +33,9 @@ function Dataset(
     if varMap === nothing
         varMap = ["x$(i)" for i in 1:nfeatures]
     end
+    key = hash((X, y, n, nfeatures, weighted, weights, varMap))
 
-    return Dataset{T}(X, y, n, nfeatures, weighted, weights, varMap)
+    return Dataset{T}(X, y, n, nfeatures, weighted, weights, varMap, key)
 end
 
 end
