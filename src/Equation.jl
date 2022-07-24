@@ -189,6 +189,10 @@ function print_tree(
     return println(string_tree(tree, options; varMap=varMap))
 end
 
+#####################################################################
+# Base functions for Node: ##########################################
+#####################################################################
+
 function Base.hash(tree::Node)::UInt
     if tree.degree == 0
         if tree.constant
@@ -204,5 +208,32 @@ function Base.hash(tree::Node)::UInt
         return hash((2, tree.op, hash(tree.l), hash(tree.r)))
     end
 end
+
+function tree_equal(tree::Node, other::Node)::Bool
+    tree.degree != other.degree && return false
+
+    if tree.degree == 0
+        tree.constant != other.constant && return false
+
+        if tree.constant
+            return tree.val == other.val
+        else
+            return tree.feature == other.feature
+        end
+    elseif tree.degree == 1
+        return tree.op == other.op && tree_equal(tree.l, other.l)
+    else  # tree.degree == 2
+        return (
+            tree.op == other.op
+            && tree_equal(tree.l, other.l)
+            && tree_equal(tree.r, other.r)
+        )
+    end
+end
+
+function Base.:(==)(tree::Node, other::Node)::Bool
+    return tree_equal(tree, other)
+end
+
 
 end
