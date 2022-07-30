@@ -364,4 +364,5 @@ function deg2_diff_eval(
     return (out, no_nans)
 end
 
-end
+
+end # end of module 
