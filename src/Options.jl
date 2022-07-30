@@ -266,6 +266,7 @@ function Options(;
     unary_operators::NTuple{nuna,Any}=(),
     constraints=nothing,
     loss=L2DistLoss(),
+    custom_loss_functions=nothing,
     ns=12, #1 sampled from every ns per mutation
     topn=12, #samples to return per population
     complexity_of_operators=nothing,
@@ -578,6 +579,7 @@ function Options(;
         typeof(diff_unary_operators),
         typeof(loss),
         eltype(complexity_mapping),
+        typeof(custom_loss_function)
     }(
         binary_operators,
         unary_operators,
@@ -617,6 +619,7 @@ function Options(;
         nbin,
         seed,
         loss,
+        custom_loss_function,
         progress,
         terminal_width,
         optimizer_algorithm,
