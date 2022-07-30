@@ -34,7 +34,7 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function},D}
+struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function},D,E}
     binops::A
     unaops::B
     diff_binops::dA
@@ -73,6 +73,7 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function},D}
     nbin::Int
     seed::Union{Int,Nothing}
     loss::C
+    custom_loss_function::E
     progress::Bool
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::String
