@@ -266,7 +266,7 @@ function Options(;
     unary_operators::NTuple{nuna,Any}=(),
     constraints=nothing,
     loss=L2DistLoss(),
-    custom_loss_functions=nothing,
+    custom_loss_function=nothing,
     ns=12, #1 sampled from every ns per mutation
     topn=12, #samples to return per population
     complexity_of_operators=nothing,
