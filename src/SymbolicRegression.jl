@@ -752,16 +752,18 @@ function _EquationSearch(
             if nout > 1
                 hofFile = hofFile * ".out$j"
             end
-            open(hofFile, "w") do io
-                println(io, "Complexity,Loss,Equation")
-                for member in dominating
-                    println(
-                        io,
-                        "$(compute_complexity(member.tree, options)),$(member.loss),\"$(string_tree(member.tree, options, varMap=dataset.varMap))\"",
-                    )
+            # Write file twice in case exit in middle of filewrite
+            for out_file in [hofFile, hofFile * ".bkup"]
+                open(out_file, "w") do io
+                    println(io, "Complexity,Loss,Equation")
+                    for member in dominating
+                        println(
+                            io,
+                            "$(compute_complexity(member.tree, options)),$(member.loss),\"$(string_tree(member.tree, options, varMap=dataset.varMap))\"",
+                        )
+                    end
                 end
             end
-            cp(hofFile, hofFile * ".bkup"; force=true)
 
             ###################################################################
             # Migration #######################################################
