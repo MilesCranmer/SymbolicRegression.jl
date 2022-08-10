@@ -753,11 +753,11 @@ function _EquationSearch(
                 hofFile = hofFile * ".out$j"
             end
             open(hofFile, "w") do io
-                println(io, "Complexity|MSE|Equation")
+                println(io, "Complexity,Loss,Equation")
                 for member in dominating
                     println(
                         io,
-                        "$(compute_complexity(member.tree, options))|$(member.loss)|$(string_tree(member.tree, options, varMap=dataset.varMap))",
+                        "$(compute_complexity(member.tree, options)),$(member.loss),\"$(string_tree(member.tree, options, varMap=dataset.varMap))\"",
                     )
                 end
             end
