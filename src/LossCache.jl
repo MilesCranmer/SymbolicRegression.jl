@@ -1,5 +1,7 @@
 module LossCacheModule
 
+import ..CoreModule: Node
+
 """
 A simple thread-safe cache for recording losses of expressions.
 
@@ -60,13 +62,13 @@ function Base.get!(f::Function, cache::LossCache{T}, key::UInt) where {T<:Real}
 end
 
 function maybe_get!(
-    callable::Function, cache::LossCache{T}, tree::Node, use_caching::Bool
+    callable::Function, cache::Union{Nothing,LossCache{T}}, tree::Node
 ) where {T<:Real}
-    if use_caching
+    if cache === nothing
+        return callable()
+    else
         tree_hash = hash(tree)::UInt
         return get!(callable, cache, tree_hash)
-    else
-        return callable()
     end
 end
 
