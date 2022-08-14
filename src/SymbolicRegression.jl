@@ -715,7 +715,7 @@ function _EquationSearch(
             best_seen::HallOfFame
             cur_record::RecordType
             cur_num_evals::Float64
-            cache::LossCache{T}
+            cache::Union{LossCache{T},Nothing}
             bestSubPops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
             @recorder record = recursive_merge(record, cur_record)
             num_evals[j][i] += cur_num_evals
