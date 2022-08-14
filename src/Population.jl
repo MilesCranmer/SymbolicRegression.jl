@@ -33,6 +33,7 @@ function Population(
     nlength::Int=3,
     options::Options,
     nfeatures::Int,
+    cache::Union{Nothing,LossCache{T}}=nothing,
 ) where {T<:Real}
     return Population(
         [
@@ -43,6 +44,7 @@ function Population(
                 options;
                 parent=-1,
                 deterministic=options.deterministic,
+                cache=cache,
             ) for i in 1:npop
         ],
         npop,
@@ -63,9 +65,15 @@ function Population(
     nlength::Int=3,
     options::Options,
     nfeatures::Int,
+    cache::Union{Nothing,LossCache{T}}=nothing,
 ) where {T<:Real}
     return Population(
-        Dataset(X, y), baseline; npop=npop, options=options, nfeatures=nfeatures
+        Dataset(X, y),
+        baseline;
+        npop=npop,
+        options=options,
+        nfeatures=nfeatures,
+        cache=cache,
     )
 end
 
