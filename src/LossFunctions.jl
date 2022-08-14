@@ -5,6 +5,7 @@ import LossFunctions: value, AggMode, SupervisedLoss
 import ..CoreModule: Options, Dataset, Node
 import ..EquationUtilsModule: compute_complexity
 import ..EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
+import ..LossCacheModule: LossCache, maybe_get!
 
 function loss(
     x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C,D}
@@ -35,16 +36,23 @@ function loss(
 end
 
 # Evaluate the loss of a particular expression on the input dataset.
-function eval_loss(tree::Node, dataset::Dataset{T}, options::Options)::T where {T<:Real}
-    (prediction, completion) = eval_tree_array(tree, dataset.X, options)
-    if !completion
-        return T(1000000000)
-    end
+function eval_loss(
+    tree::Node,
+    dataset::Dataset{T},
+    options::Options;
+    cache::Union{Nothing,LossCache{T}}=nothing,
+)::T where {T<:Real}
+    maybe_get!(cache, tree) do
+        (prediction, completion) = eval_tree_array(tree, dataset.X, options)
+        if !completion
+            return T(1000000000)
+        end
 
-    if dataset.weighted
-        return loss(prediction, dataset.y, dataset.weights, options)
-    else
-        return loss(prediction, dataset.y, options)
+        if dataset.weighted
+            return loss(prediction, dataset.y, dataset.weights, options)
+        else
+            return loss(prediction, dataset.y, options)
+        end
     end
 end
 
@@ -61,9 +69,13 @@ end
 
 # Score an equation
 function score_func(
-    dataset::Dataset{T}, baseline::T, tree::Node, options::Options
+    dataset::Dataset{T},
+    baseline::T,
+    tree::Node,
+    options::Options;
+    cache::Union{Nothing,LossCache{T}}=nothing,
 )::Tuple{T,T} where {T<:Real}
-    result_loss = eval_loss(tree, dataset, options)
+    result_loss = eval_loss(tree, dataset, options; cache=cache)
     score = loss_to_score(result_loss, baseline, tree, options)
     return score, result_loss
 end
