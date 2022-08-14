@@ -95,6 +95,7 @@ include("EvaluateEquation.jl")
 include("EvaluateEquationDerivative.jl")
 include("CheckConstraints.jl")
 include("MutationFunctions.jl")
+include("LossCache.jl")
 include("LossFunctions.jl")
 include("PopMember.jl")
 include("ConstantOptimization.jl")
@@ -165,6 +166,7 @@ import .MutationFunctionsModule:
     random_node,
     random_node_and_parent,
     crossover_trees
+import .LossCacheModule: LossCache
 import .LossFunctionsModule: eval_loss, loss, score_func
 import .PopMemberModule: PopMember, copy_pop_member
 import .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
@@ -411,7 +413,7 @@ function _EquationSearch(
     # Start a population on every process
     #    Store the population, hall of fame
     allPopsType = if ConcurrencyType == SRSerial
-        Tuple{Population,HallOfFame,RecordType,Float64}
+        Tuple{Population,HallOfFame,RecordType,Float64,Union{LossCache{T},Nothing}}
     elseif ConcurrencyType == SRDistributed
         Future
     else
@@ -543,6 +545,7 @@ function _EquationSearch(
                     HallOfFame(options),
                     RecordType(),
                     Float64(options.npop),
+                    (options.use_caching ? LossCache(Dict{UInt,T}(); max_size=100_000) : nothing),
                 )
                 # This involves npop evaluations, on the full dataset:
             else
@@ -570,6 +573,7 @@ function _EquationSearch(
                         HallOfFame(options),
                         RecordType(),
                         Float64(options.npop),
+                        (options.use_caching ? LossCache(Dict{UInt,T}(); max_size=100_000) : nothing),
                     )
                 end
             end
@@ -592,11 +596,13 @@ function _EquationSearch(
             # TODO - why is this needed??
             # Multi-threaded doesn't like to fetch within a new task:
             updated_pop = @sr_spawner ConcurrencyType worker_idx let
-                in_pop = if ConcurrencyType in [SRDistributed, SRThreaded]
-                    fetch(init_pops[j][i])[1]
+                init_pop = if ConcurrencyType in [SRDistributed, SRThreaded]
+                    fetch(init_pops[j][i])
                 else
-                    init_pops[j][i][1]
+                    init_pops[j][i]
                 end
+                in_pop = init_pop[1]
+                cache = init_pop[5]
 
                 cur_record = RecordType()
                 @recorder cur_record["out$(j)_pop$(i)"] = RecordType(
@@ -613,10 +619,12 @@ function _EquationSearch(
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
+                    cache=cache,
                 )
                 tmp_num_evals += evals_from_cycle
                 tmp_pop, evals_from_optimize = optimize_and_simplify_population(
-                    dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record
+                    dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record;
+                    cache=cache
                 )
                 tmp_num_evals += evals_from_optimize
                 if options.batching
@@ -625,14 +633,15 @@ function _EquationSearch(
                             dataset,
                             baselineMSE,
                             tmp_best_seen.members[i_member].tree,
-                            options,
+                            options;
+                            cache=cache,
                         )
                         tmp_best_seen.members[i_member].score = score
                         tmp_best_seen.members[i_member].loss = result_loss
                         tmp_num_evals += 1
                     end
                 end
-                (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
+                (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals, cache)
             end
             push!(allPops[j], updated_pop)
         end
@@ -695,7 +704,7 @@ function _EquationSearch(
         if population_ready
             head_node_start_work = time()
             # Take the fetch operation from the channel since its ready
-            (cur_pop, best_seen, cur_record, cur_num_evals) =
+            (cur_pop, best_seen, cur_record, cur_num_evals, cache) =
                 if ConcurrencyType in [SRDistributed, SRThreaded]
                     take!(channels[j][i])
                 else
@@ -706,6 +715,7 @@ function _EquationSearch(
             best_seen::HallOfFame
             cur_record::RecordType
             cur_num_evals::Float64
+            cache::LossCache{T}
             bestSubPops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
             @recorder record = recursive_merge(record, cur_record)
             num_evals[j][i] += cur_num_evals
@@ -825,6 +835,7 @@ function _EquationSearch(
                     "iteration$(iteration)" => record_population(cur_pop, options)
                 )
                 tmp_num_evals = 0.0
+                # TODO(mcranmer): This is re-used code.
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
                     baselineMSE,
@@ -835,10 +846,12 @@ function _EquationSearch(
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
+                    cache=cache
                 )
                 tmp_num_evals += evals_from_cycle
                 tmp_pop, evals_from_optimize = optimize_and_simplify_population(
-                    dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record
+                    dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record;
+                    cache=cache
                 )
                 tmp_num_evals += evals_from_optimize
 
@@ -850,7 +863,8 @@ function _EquationSearch(
                                 dataset,
                                 baselineMSE,
                                 tmp_best_seen.members[i_member].tree,
-                                options,
+                                options;
+                                cache=cache,
                             )
                             tmp_best_seen.members[i_member].score = score
                             tmp_best_seen.members[i_member].loss = result_loss
@@ -859,7 +873,7 @@ function _EquationSearch(
                     end
                 end
 
-                (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
+                (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals, cache)
             end
             if ConcurrencyType in [SRDistributed, SRThreaded]
                 tasks[j][i] = @async put!(channels[j][i], fetch(allPops[j][i]))

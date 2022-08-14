@@ -3,6 +3,7 @@ module PopulationModule
 import Random: randperm
 import ..CoreModule: Options, Dataset, RecordType, string_tree
 import ..EquationUtilsModule: compute_complexity
+import ..LossCacheModule: LossCache
 import ..LossFunctionsModule: score_func
 import ..MutationFunctionsModule: gen_random_tree
 import ..PopMemberModule: PopMember
@@ -123,13 +124,19 @@ function best_of_sample(
 end
 
 function finalize_scores(
-    dataset::Dataset{T}, baseline::T, pop::Population, options::Options
+    dataset::Dataset{T},
+    baseline::T,
+    pop::Population,
+    options::Options;
+    cache::Union{Nothing,LossCache{T}}=nothing,
 )::Tuple{Population,Float64} where {T<:Real}
     need_recalculate = options.batching
     num_evals = 0.0
     if need_recalculate
         @inbounds @simd for member in 1:(pop.n)
-            score, loss = score_func(dataset, baseline, pop.members[member].tree, options)
+            score, loss = score_func(
+                dataset, baseline, pop.members[member].tree, options; cache=cache
+            )
             pop.members[member].score = score
             pop.members[member].loss = loss
         end

@@ -10,6 +10,7 @@ import ..HallOfFameModule: HallOfFame
 import ..RegularizedEvolutionModule: reg_evol_cycle
 import ..ConstantOptimizationModule: optimize_constants
 import ..RecorderModule: @recorder
+import ..LossCacheModule: LossCache
 
 # Cycle through regularized evolution many times,
 # printing the fittest equation every 10% through
@@ -23,6 +24,7 @@ function s_r_cycle(
     verbosity::Int=0,
     options::Options,
     record::RecordType,
+    cache::Union{Nothing,LossCache{T}}=nothing,
 )::Tuple{Population,HallOfFame,Float64} where {T<:Real}
     max_temp = T(1.0)
     min_temp = T(0.0)
@@ -42,7 +44,8 @@ function s_r_cycle(
             curmaxsize,
             frequencyComplexity,
             options,
-            record,
+            record;
+            cache=cache,
         )
         num_evals += tmp_num_evals
         for member in pop.members
@@ -67,7 +70,8 @@ function optimize_and_simplify_population(
     pop::Population,
     options::Options,
     curmaxsize::Int,
-    record::RecordType,
+    record::RecordType;
+    cache::Union{Nothing,LossCache{T}}=nothing,
 )::Tuple{Population,Float64} where {T<:Real}
     array_num_evals = zeros(Float64, pop.n)
     do_optimization = rand(pop.n) .< options.optimize_probability
@@ -76,12 +80,12 @@ function optimize_and_simplify_population(
         pop.members[j].tree = combine_operators(pop.members[j].tree, options)
         if options.shouldOptimizeConstants && do_optimization[j]
             pop.members[j], array_num_evals[j] = optimize_constants(
-                dataset, baseline, pop.members[j], options
+                dataset, baseline, pop.members[j], options; cache=cache
             )
         end
     end
     num_evals = sum(array_num_evals)
-    pop, tmp_num_evals = finalize_scores(dataset, baseline, pop, options)
+    pop, tmp_num_evals = finalize_scores(dataset, baseline, pop, options; cache=cache)
     num_evals += tmp_num_evals
 
     # Now, we create new references for every member,

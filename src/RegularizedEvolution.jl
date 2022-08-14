@@ -6,6 +6,7 @@ import ..PopMemberModule: PopMember
 import ..PopulationModule: Population, best_of_sample
 import ..MutateModule: next_generation, crossover_generation
 import ..RecorderModule: @recorder
+import ..LossCacheModule: LossCache
 
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample
@@ -17,7 +18,8 @@ function reg_evol_cycle(
     curmaxsize::Int,
     frequencyComplexity::AbstractVector{T},
     options::Options,
-    record::RecordType,
+    record::RecordType;
+    cache::Union{Nothing,LossCache{T}}=nothing,
 )::Tuple{Population,Float64} where {T<:Real}
     # Batch over each subsample. Can give 15% improvement in speed; probably moreso for large pops.
     # but is ultimately a different algorithm than regularized evolution, and might not be
@@ -65,6 +67,8 @@ function reg_evol_cycle(
                 frequencyComplexity,
                 options;
                 tmp_recorder=mutation_recorder,
+                cache=nothing,
+                # TODO(mcranmer): Need to check that caching works here.
             )
         end
         num_evals = sum(array_num_evals)
@@ -90,6 +94,7 @@ function reg_evol_cycle(
                     frequencyComplexity,
                     options;
                     tmp_recorder=mutation_recorder,
+                    cache=cache,
                 )
                 num_evals += tmp_num_evals
 
@@ -138,7 +143,7 @@ function reg_evol_cycle(
                 allstar2 = best_of_sample(pop, frequencyComplexity, options)
 
                 baby1, baby2, crossover_accepted, tmp_num_evals = crossover_generation(
-                    allstar1, allstar2, dataset, baseline, curmaxsize, options
+                    allstar1, allstar2, dataset, baseline, curmaxsize, options; cache=cache
                 )
                 num_evals += tmp_num_evals
 

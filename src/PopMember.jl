@@ -2,6 +2,7 @@ module PopMemberModule
 
 import ..CoreModule: Options, Dataset, Node, copy_node
 import ..UtilsModule: get_birth_order
+import ..LossCacheModule: LossCache
 import ..LossFunctionsModule: score_func
 
 # Define a member of population by equation, score, and age
@@ -62,8 +63,9 @@ function PopMember(
     ref::Int=-1,
     parent::Int=-1,
     deterministic=nothing,
+    cache::Union{Nothing,LossCache{T}}=nothing,
 ) where {T<:Real}
-    score, loss = score_func(dataset, baseline, t, options)
+    score, loss = score_func(dataset, baseline, t, options; cache=cache)
     return PopMember(t, score, loss; ref=ref, parent=parent, deterministic=deterministic)
 end
 

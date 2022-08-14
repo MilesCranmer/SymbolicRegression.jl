@@ -2,6 +2,7 @@ module MutateModule
 
 import ..CoreModule: Node, copy_node, Options, Dataset, RecordType
 import ..EquationUtilsModule: compute_complexity, count_constants, count_depth
+import ..LossCacheModule: LossCache
 import ..LossFunctionsModule: score_func, score_func_batch
 import ..CheckConstraintsModule: check_constraints
 import ..PopMemberModule: PopMember
@@ -28,6 +29,7 @@ function next_generation(
     frequencyComplexity::AbstractVector{T},
     options::Options;
     tmp_recorder::RecordType,
+    cache::Union{Nothing,LossCache{T}}=nothing,
 )::Tuple{PopMember,Bool,Float64} where {T<:Real}
     prev = member.tree
     parent_ref = member.ref
@@ -187,7 +189,7 @@ function next_generation(
         afterScore, afterLoss = score_func_batch(dataset, baseline, tree, options)
         num_evals += (options.batchSize / dataset.n)
     else
-        afterScore, afterLoss = score_func(dataset, baseline, tree, options)
+        afterScore, afterLoss = score_func(dataset, baseline, tree, options; cache=cache)
         num_evals += 1
     end
 
@@ -267,7 +269,8 @@ function crossover_generation(
     dataset::Dataset{T},
     baseline::T,
     curmaxsize::Int,
-    options::Options,
+    options::Options;
+    cache::Union{Nothing,LossCache{T}}=nothing,
 )::Tuple{PopMember,PopMember,Bool,Float64} where {T<:Real}
     tree1 = member1.tree
     tree2 = member2.tree
@@ -296,8 +299,12 @@ function crossover_generation(
         afterScore2, afterLoss2 = score_func_batch(dataset, baseline, child_tree2, options)
         num_evals += 2 * (options.batchSize / dataset.n)
     else
-        afterScore1, afterLoss1 = score_func(dataset, baseline, child_tree1, options)
-        afterScore2, afterLoss2 = score_func(dataset, baseline, child_tree2, options)
+        afterScore1, afterLoss1 = score_func(
+            dataset, baseline, child_tree1, options; cache=cache
+        )
+        afterScore2, afterLoss2 = score_func(
+            dataset, baseline, child_tree2, options; cache=cache
+        )
         num_evals += options.batchSize / dataset.n
     end
 
