@@ -59,4 +59,15 @@ function Base.get!(f::Function, cache::LossCache{T}, key::UInt) where {T<:Real}
     end
 end
 
+function maybe_get!(
+    callable::Function, cache::LossCache{T}, tree::Node, use_caching::Bool
+) where {T<:Real}
+    if use_caching
+        tree_hash = hash(tree)::UInt
+        return get!(callable, cache, tree_hash)
+    else
+        return callable()
+    end
+end
+
 end
