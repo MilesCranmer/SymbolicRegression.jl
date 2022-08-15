@@ -6,15 +6,18 @@ import ..CoreModule: Options, Dataset, Node
 import ..EquationUtilsModule: compute_complexity
 import ..EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
 
-function loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C,D}
-)::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss,D}
-    return value(options.loss, y, x, AggMode.Mean())
-end
-function loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{A,B,dA,dB,C,D}
-)::T where {T<:Real,A,B,dA,dB,C<:Function,D}
-    return sum(options.loss.(x, y)) / length(y)
+function loss( # fmt: off
+    x::AbstractArray{T},
+    y::AbstractArray{T},
+    options::Options{A,B,dA,dB,C,D}, # fmt: on
+)::T where {T<:Real,A,B,dA,dB,C,D}
+    if C <: SupervisedLoss
+        return value(options.loss, y, x, AggMode.Mean())
+    elseif C <: Function
+        return sum(options.loss.(x, y)) / length(y)
+    else
+        error("Unrecognized type for loss function: $(C)")
+    end
 end
 
 function loss(
@@ -22,16 +25,14 @@ function loss(
     y::AbstractArray{T},
     w::AbstractArray{T},
     options::Options{A,B,dA,dB,C,D},
-)::T where {T<:Real,A,B,dA,dB,C<:SupervisedLoss,D}
-    return value(options.loss, y, x, AggMode.WeightedMean(w))
-end
-function loss(
-    x::AbstractArray{T},
-    y::AbstractArray{T},
-    w::AbstractArray{T},
-    options::Options{A,B,dA,dB,C,D},
-)::T where {T<:Real,A,B,dA,dB,C<:Function,D}
-    return sum(options.loss.(x, y, w)) / sum(w)
+)::T where {T<:Real,A,B,dA,dB,C,D}
+    if C <: SupervisedLoss
+        return value(options.loss, y, x, AggMode.WeightedMean(w))
+    elseif C <: Function
+        return sum(options.loss.(x, y, w)) / sum(w)
+    else
+        error("Unrecognized type for loss function: $(C)")
+    end
 end
 
 # Evaluate the loss of a particular expression on the input dataset.
