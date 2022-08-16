@@ -96,22 +96,14 @@ function _eval_tree_array_stack(
             end
             push!(stack_results, result)
         elseif top.degree == 1
-            # child_result = pop!(stack_results)
-            # result = options.unaops[top.op].(child_result)
-            # push!(stack_results, result)
-            ## Or, equivalently:
             stack_results[end] .= options.unaops[top.op].(stack_results[end])
         else # top.degree == 2
             child_r_result = pop!(stack_results)
-            # child_l_result = pop!(stack_results)
-            # result = options.binops[top.op].(child_l_result, child_r_result)
-            # push!(stack_results, result)
-            ## Or, equivalently:
             stack_results[end] .=
                 options.binops[top.op].(stack_results[end], child_r_result)
         end
     end
-    return output = stack_results[1]
+    return stack_results[1]
 end
 
 function _eval_tree_array(
