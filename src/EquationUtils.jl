@@ -51,6 +51,17 @@ function count_operators(tree::Node)::Int
     return count_unary_operators(tree) + count_binary_operators(tree)
 end
 
+# Count the number of leafs in a tree
+function count_leafs(tree::Node)::Int
+    if tree.degree == 0
+        return 1
+    elseif tree.degree == 1
+        return count_leafs(tree.l)
+    else
+        return count_leafs(tree.l) + count_leafs(tree.r)
+    end
+end
+
 # Count the number of constants in an equation
 function count_constants(tree::Node)::Int
     if tree.degree == 0
