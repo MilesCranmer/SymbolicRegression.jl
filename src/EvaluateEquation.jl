@@ -63,48 +63,7 @@ function eval_tree_array(
     return result, finished
 end
 
-function _eval_tree_array_stack(
-    tree::Node, cX::AbstractMatrix{T}, options::Options
-)::Tuple{AbstractVector{T},Bool} where {T<:Real}
-    n = size(cX, 2)
-    # tree_size = count_nodes(tree)
-    stack = Node[]
-    processed_stack = Node[]
-    stack_results = Vector{Float32}[]
-    current = tree # 2
-    push!(stack, current)
-    while length(stack) > 0
-        top = pop!(stack)
-        if top.degree == 2
-            push!(stack, top.l)
-            push!(stack, top.r)
-        elseif top.degree == 1
-            push!(stack, top.l)
-        end
-        push!(processed_stack, top)
-    end
-    # Process stack:
-    # for top in reverse(processed_stack)
-    while length(processed_stack) > 0
-        top = pop!(processed_stack)
-        if top.degree == 0
-            # Evaluate and store in stack_results.
-            if top.constant
-                result = fill(convert(T, top.val), n)
-            else
-                result = cX[top.feature, :]
-            end
-            push!(stack_results, result)
-        elseif top.degree == 1
-            stack_results[end] .= options.unaops[top.op].(stack_results[end])
-        else # top.degree == 2
-            child_r_result = pop!(stack_results)
-            stack_results[end] .=
-                options.binops[top.op].(stack_results[end], child_r_result)
-        end
-    end
-    return stack_results[1]
-end
+
 
 function _eval_tree_array(
     tree::Node, cX::AbstractMatrix{T}, options::Options
@@ -404,6 +363,53 @@ function deg2_diff_eval(
     out = op.(left, right)
     no_nans = !any(x -> (!isfinite(x)), out)
     return (out, no_nans)
+end
+
+
+
+## Stack-based evaluation:
+function _eval_tree_array_stack(
+    tree::Node, cX::AbstractMatrix{T}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real}
+    n = size(cX, 2)
+    # tree_size = count_nodes(tree)
+    stack = Node[]
+    processed_stack = Node[]
+    # TODO: Pre-allocate this array:
+    stack_results = Vector{Float32}[]
+    current = tree # 2
+    push!(stack, current)
+    while length(stack) > 0
+        top = pop!(stack)
+        if top.degree == 2
+            push!(stack, top.l)
+            push!(stack, top.r)
+        elseif top.degree == 1
+            push!(stack, top.l)
+        end
+        push!(processed_stack, top)
+    end
+    # Process stack:
+    # for top in reverse(processed_stack)
+    while length(processed_stack) > 0
+        top = pop!(processed_stack)
+        if top.degree == 0
+            # Evaluate and store in stack_results.
+            if top.constant
+                result = fill(convert(T, top.val), n)
+            else
+                result = cX[top.feature, :]
+            end
+            push!(stack_results, result)
+        elseif top.degree == 1
+            stack_results[end] .= options.unaops[top.op].(stack_results[end])
+        else # top.degree == 2
+            child_r_result = pop!(stack_results)
+            stack_results[end] .=
+                options.binops[top.op].(stack_results[end], child_r_result)
+        end
+    end
+    return stack_results[1], true
 end
 
 end
