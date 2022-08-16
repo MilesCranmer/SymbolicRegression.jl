@@ -402,14 +402,31 @@ function _eval_tree_array_stack(
             end
             push!(stack_results, result)
         elseif top.degree == 1
-            stack_results[end] .= options.unaops[top.op].(stack_results[end])
+            _unary_kernel!(stack_results[end], Val(top.op), options)
         else # top.degree == 2
             child_r_result = pop!(stack_results)
-            stack_results[end] .=
-                options.binops[top.op].(stack_results[end], child_r_result)
+            _binary_kernel!(stack_results[end], child_r_result, Val(top.op), options)
         end
     end
     return stack_results[1], true
+end
+
+function _unary_kernel!(
+    result::AbstractVector{T}, ::Val{op_idx}, options::Options
+) where {T<:Real,op_idx}
+    op = options.unaops[op_idx]
+    @inbounds @simd for j in eachindex(result)
+        result[j] = op(result[j])
+    end
+end
+
+function _binary_kernel!(
+    result::AbstractVector{T}, child_r_result::AbstractVector{T}, ::Val{op_idx}, options::Options
+) where {T<:Real,op_idx}
+    op = options.binops[op_idx]
+    @inbounds @simd for j in eachindex(result)
+        result[j] = op(result[j], child_r_result[j])
+    end
 end
 
 end
