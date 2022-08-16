@@ -2,6 +2,7 @@ module EvaluateEquationModule
 
 import ..CoreModule: Node, Options
 import ..UtilsModule: @return_on_false, is_bad_array
+import ..EquationUtilsModule: count_leafs
 
 macro return_on_check(val, T, n)
     # This will generate the following code:
@@ -62,8 +63,6 @@ function eval_tree_array(
     @return_on_nonfinite_array result T n
     return result, finished
 end
-
-
 
 function _eval_tree_array(
     tree::Node, cX::AbstractMatrix{T}, options::Options
@@ -365,20 +364,19 @@ function deg2_diff_eval(
     return (out, no_nans)
 end
 
-
-
 ## Stack-based evaluation:
 function _eval_tree_array_stack(
     tree::Node, cX::AbstractMatrix{T}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
     n = size(cX, 2)
-    # tree_size = count_nodes(tree)
+    num_leafs = count_leafs(tree)
     stack = Node[]
     processed_stack = Node[]
     # TODO: Pre-allocate this array:
-    stack_results = Vector{Float32}[]
-    current = tree # 2
-    push!(stack, current)
+    stack_results = [Array{T,1}(undef, n) for i in 1:num_leafs]
+
+    top = tree # 2
+    push!(stack, top)
     while length(stack) > 0
         top = pop!(stack)
         if top.degree == 2
@@ -390,24 +388,29 @@ function _eval_tree_array_stack(
         push!(processed_stack, top)
     end
     # Process stack:
-    # for top in reverse(processed_stack)
+    i = 0
     while length(processed_stack) > 0
         top = pop!(processed_stack)
         if top.degree == 0
-            # Evaluate and store in stack_results.
+            i += 1
             if top.constant
-                result = fill(convert(T, top.val), n)
+                val = convert(T, top.val)
+                @inbounds @simd for j in 1:n
+                    stack_results[i][j] = val
+                end
             else
-                result = cX[top.feature, :]
+                @inbounds @simd for j in 1:n
+                    stack_results[i][j] = cX[top.feature, j]
+                end
             end
-            push!(stack_results, result)
         elseif top.degree == 1
-            _unary_kernel!(stack_results[end], Val(top.op), options)
-            @return_on_nonfinite_array stack_results[end] T n
+            _unary_kernel!(stack_results[i], Val(top.op), options)
+            @return_on_nonfinite_array stack_results[i] T n
         else # top.degree == 2
-            child_r_result = pop!(stack_results)
-            _binary_kernel!(stack_results[end], child_r_result, Val(top.op), options)
-            @return_on_nonfinite_array stack_results[end] T n
+            child_r_result = stack_results[i]
+            i -= 1
+            _binary_kernel!(stack_results[i], child_r_result, Val(top.op), options)
+            @return_on_nonfinite_array stack_results[i] T n
         end
     end
     return stack_results[1], true
@@ -423,7 +426,10 @@ function _unary_kernel!(
 end
 
 function _binary_kernel!(
-    result::AbstractVector{T}, child_r_result::AbstractVector{T}, ::Val{op_idx}, options::Options
+    result::AbstractVector{T},
+    child_r_result::AbstractVector{T},
+    ::Val{op_idx},
+    options::Options,
 ) where {T<:Real,op_idx}
     op = options.binops[op_idx]
     @inbounds @simd for j in eachindex(result)
