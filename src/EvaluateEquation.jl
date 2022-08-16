@@ -403,9 +403,11 @@ function _eval_tree_array_stack(
             push!(stack_results, result)
         elseif top.degree == 1
             _unary_kernel!(stack_results[end], Val(top.op), options)
+            @return_on_nonfinite_array stack_results[end] T n
         else # top.degree == 2
             child_r_result = pop!(stack_results)
             _binary_kernel!(stack_results[end], child_r_result, Val(top.op), options)
+            @return_on_nonfinite_array stack_results[end] T n
         end
     end
     return stack_results[1], true
