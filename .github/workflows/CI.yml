@@ -31,7 +31,8 @@ jobs:
           - '1.7.1'
         os:
           - ubuntu-latest
-          - windows-latest
+          - windows-2019
+          - windows-2022
           - macOS-latest
 
     steps:
