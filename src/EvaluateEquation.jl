@@ -66,39 +66,81 @@ end
 function _eval_tree_array(
     tree::Node, cX::AbstractMatrix{T}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
-    if tree.degree == 0
-        deg0_eval(tree, cX, options)
-    elseif tree.degree == 1
+    
+    # Fast kernels:
+    if tree.degree == 1
         # TODO: We could all do Val(tree.l.degree) here, instead of having
         # different kernels for const vs data.
 
         # We fuse (and compile) the following:
-        #  - op(op2(x, y)), where x, y, z are constants or variables.
-        #  - op(op2(x)), where x is a constant or variable.
-        #  - op(x), for any x.
-        if tree.l.degree == 2 && tree.l.l.degree == 0 && tree.l.r.degree == 0
-            deg1_l2_ll0_lr0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
-        elseif tree.l.degree == 1 && tree.l.l.degree == 0
-            deg1_l1_ll0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
-        else
-            deg1_eval(tree, cX, Val(tree.op), options)
+        if tree.l.degree == 2
+            if tree.l.l.degree == 0 && tree.l.r.degree == 0
+                # op(op2(x, y)), where x, y, z are constants or variables.
+                return deg1_l2_ll0_lr0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+            else
+                # Check we can't use a faster method:
+                if tree.l.l.degree != 0 && tree.l.r.degree != 0
+                    # op(op2(x, y)), for any x and y
+                    return deg1_l2_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+                end
+            end
+        elseif tree.l.degree == 1
+            if tree.l.l.degree == 0
+                # op(op2(x)), where x is a constant or variable.
+                return deg1_l1_ll0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+            else
+                # op(op2(x)), for any x
+                return deg1_l1_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+            end
         end
-    else
-        # We fuse (and compile) the following:
-        #  - op(x, y), where x, y are constants or variables.
-        #  - op(x, y), where x is a constant or variable but y is not.
-        #  - op(x, y), where y is a constant or variable but x is not.
-        #  - op(x, y), for any x or y
-        # TODO - add op(op2(x, y), z) and op(x, op2(y, z))
-        if tree.l.degree == 0 && tree.r.degree == 0
-            deg2_l0_r0_eval(tree, cX, Val(tree.op), options)
-        elseif tree.l.degree == 0
-            deg2_l0_eval(tree, cX, Val(tree.op), options)
+    elseif tree.degree == 2
+
+        # Constants or variables inside:
+        if tree.l.degree == 0
+            if tree.r.degree == 0
+                # op(x, y), where x, y are constants or variables.
+                return deg2_l0_r0_eval(tree, cX, Val(tree.op), options)
+            else
+                # op(x, y), where x is a constant or variable but y is not.
+                return deg2_l0_eval(tree, cX, Val(tree.op), options)
+            end
         elseif tree.r.degree == 0
-            deg2_r0_eval(tree, cX, Val(tree.op), options)
-        else
-            deg2_eval(tree, cX, Val(tree.op), options)
+            # op(x, y), where y is a constant or variable but x is not.
+            return deg2_r0_eval(tree, cX, Val(tree.op), options)
         end
+
+        # Binary inside:
+        if tree.l.degree == 2
+            # Make sure we can't use the faster method:
+            if tree.l.l.degree != 0 && tree.l.r.degree != 0
+                # op(op2(x, y), z), for any x, y, and z
+                return deg2_l2_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+            end
+        elseif tree.r.degree == 2
+            if tree.r.l.degree != 0 && tree.r.r.degree != 0
+                # op(x, op2(y, z)), for any x, y, and z
+                return deg2_r2_eval(tree, cX, Val(tree.op), Val(tree.r.op), options)
+            end
+        end
+
+        # Unary inside:
+        if tree.l.degree == 1
+            # op(op2(x), y), for any x and y
+            return deg2_l1_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+        elseif tree.r.degree == 1
+            # op(x, op2(y)), for any x and y
+            return deg2_r1_eval(tree, cX, Val(tree.op), Val(tree.r.op), options)
+        end
+    end
+
+
+    # Slow kernels:
+    if tree.degree == 0
+        return deg0_eval(tree, cX, options)
+    elseif tree.degree == 1
+        return deg1_eval(tree, cX, Val(tree.op), options)
+    else
+        return deg2_eval(tree, cX, Val(tree.op), options)
     end
 end
 
@@ -149,6 +191,151 @@ function deg0_eval(
     end
 end
 
+# op(op2(x, y), z) for arbitrary x, y, z
+function deg2_l2_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options
+) where {T<:Real,op_idx,op_l_idx}
+    n = size(cX, 2)
+    op = options.binops[op_idx]
+    op_l = options.binops[op_l_idx]
+
+    # TODO: can check multiple arrays at once
+    (cumulator_l_l, complete) = _eval_tree_array(tree.l.l, cX, options)
+    @return_on_false complete cumulator_l_l
+    @return_on_nonfinite_array cumulator_l_l T n
+
+    (cumulator_l_r, complete2) = _eval_tree_array(tree.l.r, cX, options)
+    @return_on_false complete2 cumulator_l_r
+    @return_on_nonfinite_array cumulator_l_r T n
+
+    (cumulator_r, complete3) = _eval_tree_array(tree.r, cX, options)
+    @return_on_false complete3 cumulator_r
+    @return_on_nonfinite_array cumulator_r T n
+
+    @inbounds @simd for j in 1:n
+        x_l = op_l(cumulator_l_l[j], cumulator_l_r[j])::T
+        x = isfinite(x_l) ? op(x_l, cumulator_r[j])::T : T(Inf)
+        cumulator_r[j] = x
+    end
+    return (cumulator_r, true)
+end
+
+# op(x, op2(y, z)) for arbitrary x, y, z
+function deg2_r2_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_r_idx}, options::Options
+) where {T<:Real,op_idx,op_r_idx}
+    n = size(cX, 2)
+    op = options.binops[op_idx]
+    op_r = options.binops[op_r_idx]
+
+    (cumulator_l, complete) = _eval_tree_array(tree.l, cX, options)
+    @return_on_false complete cumulator_l
+    @return_on_nonfinite_array cumulator_l T n
+
+    (cumulator_r_l, complete3) = _eval_tree_array(tree.r.l, cX, options)
+    @return_on_false complete3 cumulator_r_l
+    @return_on_nonfinite_array cumulator_r_l T n
+
+    (cumulator_r_r, complete2) = _eval_tree_array(tree.r.r, cX, options)
+    @return_on_false complete2 cumulator_r_r
+    @return_on_nonfinite_array cumulator_r_r T n
+
+    @inbounds @simd for j in 1:n
+        x_r = op_r(cumulator_r_l[j], cumulator_r_r[j])::T
+        x = isfinite(x_r) ? op(cumulator_l[j], x_r)::T : T(Inf)
+        cumulator_l[j]
+    end
+    return (cumulator_l, true)
+end
+
+
+# op(op2(x), y) for arbitrary x, y
+function deg2_l1_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options
+) where {T<:Real,op_idx,op_l_idx}
+    n = size(cX, 2)
+    op = options.binops[op_idx]
+    op_l = options.unaops[op_l_idx]
+    (cumulator, complete) = _eval_tree_array(tree.l.l, cX, options)
+    @return_on_false complete cumulator
+    @return_on_nonfinite_array cumulator T n
+    (array2, complete2) = _eval_tree_array(tree.r, cX, options)
+    @return_on_false complete2 cumulator
+    @return_on_nonfinite_array array2 T n
+    @inbounds @simd for j in 1:n
+        x_l = op_l(cumulator[j])::T
+        y = array2[j]
+        x = isfinite(x_l) ? op(x_l, y)::T : T(Inf)
+        cumulator[j] = x
+    end
+    return (cumulator, true)
+end
+
+# op(x, op2(y)) for arbitrary x, y
+function deg2_r1_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_r_idx}, options::Options
+) where {T<:Real,op_idx,op_r_idx}
+    n = size(cX, 2)
+    op = options.binops[op_idx]
+    op_r = options.unaops[op_r_idx]
+    (cumulator, complete) = _eval_tree_array(tree.l, cX, options)
+    @return_on_false complete cumulator
+    @return_on_nonfinite_array cumulator T n
+    (array2, complete2) = _eval_tree_array(tree.r.l, cX, options)
+    @return_on_false complete2 cumulator
+    @return_on_nonfinite_array array2 T n
+    @inbounds @simd for j in 1:n
+        x = cumulator[j]
+        y_l = op_r(array2[j])::T
+        out = isfinite(y_l) ? op(x, y_l)::T : T(Inf)
+        cumulator[j] = out
+    end
+    return (cumulator, true)
+end
+
+
+# op(op2(x)) for arbitrary x, y
+function deg1_l1_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options
+) where {T<:Real,op_idx,op_l_idx}
+    n = size(cX, 2)
+    op = options.unaops[op_idx]
+    op_l = options.binops[op_l_idx]
+    (cumulator, complete) = _eval_tree_array(tree.l.l, cX, options)
+    @return_on_false complete cumulator
+    @return_on_nonfinite_array cumulator T n
+    @inbounds @simd for j in 1:n
+        x_l = op_l(cumulator[j])::T
+        x = isfinite(x_l) ? op(x_l)::T : T(Inf)
+        cumulator[j] = x
+    end
+    return (cumulator, true)
+end
+
+
+# op(op2(x, y)) for arbitrary x, y
+function deg1_l2_eval(
+    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options
+) where {T<:Real,op_idx,op_l_idx}
+    n = size(cX, 2)
+    op = options.unaops[op_idx]
+    op_l = options.binops[op_l_idx]
+    (cumulator, complete) = _eval_tree_array(tree.l.l, cX, options)
+    @return_on_false complete cumulator
+    @return_on_nonfinite_array cumulator T n
+    (array2, complete2) = _eval_tree_array(tree.l.r, cX, options)
+    @return_on_false complete2 cumulator
+    @return_on_nonfinite_array array2 T n
+    @inbounds @simd for j in 1:n
+        x_l = op_l(cumulator[j], array2[j])::T
+        x = isfinite(x_l) ? op(x_l)::T : T(Inf)
+        cumulator[j] = x
+    end
+    return (cumulator, true)
+end
+
+
+# op(op2(x, y)), where x, y, z are constants or variables.
 function deg1_l2_ll0_lr0_eval(
     tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx,op_l_idx}
