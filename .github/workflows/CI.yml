@@ -27,8 +27,8 @@ jobs:
       matrix:
         julia-version:
           - '1.5.0'
-          - '1.6.1'
           - '1.7.1'
+          - '1.8.0'
         os:
           - ubuntu-latest
           - windows-2019
