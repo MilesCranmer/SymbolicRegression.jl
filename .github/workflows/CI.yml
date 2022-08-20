@@ -31,10 +31,7 @@ jobs:
           - '1.7.1'
           - '1.8.0'
         os:
-          - ubuntu-latest
           - windows-2019
-          - windows-2022
-          - macOS-latest
 
     steps:
       - uses: actions/checkout@v1.0.0
