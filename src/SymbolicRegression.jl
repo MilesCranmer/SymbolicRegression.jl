@@ -58,7 +58,6 @@ using JSON3: JSON3
 import Printf: @printf, @sprintf
 using Pkg: Pkg
 import Random: seed!, shuffle!
-import ReverseDiff
 using Reexport
 @reexport import LossFunctions:
     MarginLoss,
