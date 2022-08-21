@@ -32,7 +32,6 @@ jobs:
           - '1.8.0'
         os:
           - ubuntu-latest
-          - windows-2019
           - windows-latest
           - macOS-latest
 
