@@ -24,17 +24,6 @@ function test(package_name)
 end
 
 packages_to_test = [
-    "Distributed",
-    "JSON3",
-    "LineSearches",
-    "LinearAlgebra",
-    "LossFunctions",
-    "Optim",
-    "Printf",
-    "Random",
-    "Reexport",
-    "SpecialFunctions",
-    "Zygote",
     "FunctionWrappers",
     "ReverseDiff",
 ]
