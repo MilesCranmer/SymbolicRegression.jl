@@ -32,7 +32,6 @@ SpecialFunctions = "0.10.1, 1, 2"
 SymbolicUtils = "0.19"
 Zygote = "0.6"
 julia = "1.5"
-ReverseDiff = "=1.8.0"
 
 [extras]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
