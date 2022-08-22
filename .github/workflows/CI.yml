@@ -61,7 +61,7 @@ jobs:
       - name: "Build package"
         uses: julia-actions/julia-buildpkg@v1
       - name: Setup tmate session
-        uses: mxschmitt/tmate-action@v3
+        uses: mxschmitt/action-tmate@v3
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
         timeout-minutes: 15
       - name: "Run tests"
