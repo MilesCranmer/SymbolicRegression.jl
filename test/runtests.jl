@@ -3,14 +3,20 @@ using Pkg, Distributed
 
 """Try to dynamically create workers, and import the package."""
 function test(package_name)
-    procs = addprocs(2)
+    procs = addprocs(4)
     project_path = splitdir(Pkg.project().path)[1]
+    # Import package on head worker:
+    Base.MainInclude.eval(
+        quote
+            import $(Symbol(package_name))
+        end
+    )
+    # Import package on worker:
     @everywhere procs begin
         Base.MainInclude.eval(
             quote
                 using Pkg
                 Pkg.activate($$project_path)
-                # Import package on workers:
                 import $(Symbol($package_name))
             end,
         )
@@ -31,9 +37,6 @@ packages_to_test = [
     "SpecialFunctions",
     "Zygote",
     "ReverseDiff",
-    "SymbolicUtils",
-    "PreallocationTools",
-    "SymbolicRegression",
 ]
 for package_name in packages_to_test
     println("Testing $(package_name)...")
