@@ -24,7 +24,7 @@ end
 
 # Import SymbolicRegression on workers:
 @everywhere procs begin
-    Base.MainInclude.eval(import ReverseDiff)
+    Base.MainInclude.eval(using SymbolicRegression)
 end
 # END HACK
 
