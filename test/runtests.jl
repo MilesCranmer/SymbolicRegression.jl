@@ -1,6 +1,5 @@
 # HACK
 using Pkg, Distributed
-import ReverseDiff
 
 """Try to dynamically create workers, and import the package."""
 function test(package_name)
@@ -36,6 +35,7 @@ packages_to_test = [
     "Reexport",
     "SpecialFunctions",
     "Zygote",
+    "FunctionWrappers",
     "ReverseDiff",
 ]
 for package_name in packages_to_test
