@@ -1,16 +1,11 @@
 # HACK
 using Pkg, Distributed
+import ReverseDiff
 
 """Try to dynamically create workers, and import the package."""
 function test(package_name)
     procs = addprocs(4)
     project_path = splitdir(Pkg.project().path)[1]
-    # Import package on head worker:
-    Base.MainInclude.eval(
-        quote
-            import $(Symbol(package_name))
-        end
-    )
     # Import package on worker:
     @everywhere procs begin
         Base.MainInclude.eval(
