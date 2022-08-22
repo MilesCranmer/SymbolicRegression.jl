@@ -7,6 +7,11 @@ function test(package_name)
     procs = addprocs(4)
     project_path = splitdir(Pkg.project().path)[1]
     # Import package on worker:
+    Base.MainInclude.eval(
+        quote
+            import $(Symbol($package_name))
+        end,
+    )
     @everywhere procs begin
         Base.MainInclude.eval(
             quote
