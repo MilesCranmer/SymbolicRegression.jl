@@ -9,7 +9,7 @@ function test(package_name)
     # Import package on worker:
     Base.MainInclude.eval(
         quote
-            import $(Symbol($package_name))
+            import $(Symbol(package_name))
         end,
     )
     @everywhere procs begin
