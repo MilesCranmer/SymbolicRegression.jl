@@ -11,7 +11,7 @@ function test(package_name)
                 using Pkg
                 Pkg.activate($$project_path)
                 # Import package on workers:
-                using $(Symbol($package_name)): $(Symbol($package_name))
+                import $(Symbol($package_name))
             end,
         )
     end
