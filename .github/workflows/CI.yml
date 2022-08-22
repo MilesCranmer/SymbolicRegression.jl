@@ -60,16 +60,16 @@ jobs:
             ${{ runner.os }}-
       - name: "Build package"
         uses: julia-actions/julia-buildpkg@v1
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        timeout-minutes: 15
       - name: "Run tests"
         run: |
             julia --color=yes --project=. -e 'import Pkg; Pkg.add("Coverage")'
             julia --color=yes --inline=yes --depwarn=yes --code-coverage=user --project=. -e 'import Pkg; Pkg.test(coverage=true)'
             julia --color=yes --project=. coverage.jl
         shell: bash
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-        timeout-minutes: 15
       - name: Coveralls
         uses: coverallsapp/github-action@master
         with:
