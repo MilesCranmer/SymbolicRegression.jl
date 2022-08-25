@@ -1,6 +1,7 @@
 module EvaluateEquationModule
 
-import ..CoreModule: Node, Options
+import ..CoreModule: Node, Options, CONST_TYPE
+import ..EquationUtilsModule: count_nodes
 import ..UtilsModule: @return_on_false, is_bad_array
 
 macro return_on_check(val, T, n)
@@ -63,44 +64,72 @@ function eval_tree_array(
     return result, finished
 end
 
+# Childless node whose type describes the operation.
+struct TypedNode{v_degree,v_constant,v_feature,v_op}
+    degree::v_degree
+    constant::v_constant  # false if variable
+    val::CONST_TYPE  # If is a constant, this stores the actual value
+    feature::v_feature  # If is a variable (e.g., x in cos(x)), this stores the feature index.
+    op::v_op  # If operator, this is the index of the operator in options.binary_operators, or options.unary_operators
+end
+
+function TypedNode(degree::v_degree, constant::v_constant, val::CONST_TYPE, feature::v_feature, op::v_op)
+    return TypedNode{v_degree, v_constant, v_feature, v_op}(degree, constant, val, feature, op)
+end
+
+function TypedNode(tree::Node)
+    degree = Val(tree.degree)
+    constant = Val(tree.constant)
+    val = tree.val
+    feature = (tree.degree > 0) ? Val(tree.feature) : Val(-1)
+    op = (tree.degree > 0) ? Val(tree.op) : Val(-1)
+    return TypedNode(degree, constant, val, feature, op)
+end
+
+function stack_typed_nodes(tree::Node)
+    cur_node = TypedNode(tree)
+    if tree.degree == 0
+        return (cur_node,)
+    elseif tree.degree == 1
+        return (cur_node, stack_typed_nodes(tree.left_child)...)
+    else
+        return (cur_node, stack_typed_nodes(tree.left_child)..., stack_typed_nodes(tree.right_child)...)
+    end
+end
+
+
 function _eval_tree_array(
     tree::Node, cX::AbstractMatrix{T}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
     if tree.degree == 0
         deg0_eval(tree, cX, options)
-    elseif tree.degree == 1
-        # TODO: We could all do Val(tree.l.degree) here, instead of having
-        # different kernels for const vs data.
+    end
+    tree_size = count_nodes(tree) 
+    if tree_size == 5
+        # Use fused version.
+        typed_nodes = stack_typed_nodes(tree)
+    end
 
-        # We fuse (and compile) the following:
-        #  - op(op2(x, y)), where x, y, z are constants or variables.
-        #  - op(op2(x)), where x is a constant or variable.
-        #  - op(x), for any x.
-        if tree.l.degree == 2 && tree.l.l.degree == 0 && tree.l.r.degree == 0
-            deg1_l2_ll0_lr0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
-        elseif tree.l.degree == 1 && tree.l.l.degree == 0
-            deg1_l1_ll0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
-        else
-            deg1_eval(tree, cX, Val(tree.op), options)
-        end
+    if tree.degree == 1
+        deg1_eval(tree, cX, Val(tree.op), options)
     else
-        # We fuse (and compile) the following:
-        #  - op(x, y), where x, y are constants or variables.
-        #  - op(x, y), where x is a constant or variable but y is not.
-        #  - op(x, y), where y is a constant or variable but x is not.
-        #  - op(x, y), for any x or y
-        # TODO - add op(op2(x, y), z) and op(x, op2(y, z))
-        if tree.l.degree == 0 && tree.r.degree == 0
-            deg2_l0_r0_eval(tree, cX, Val(tree.op), options)
-        elseif tree.l.degree == 0
-            deg2_l0_eval(tree, cX, Val(tree.op), options)
-        elseif tree.r.degree == 0
-            deg2_r0_eval(tree, cX, Val(tree.op), options)
-        else
-            deg2_eval(tree, cX, Val(tree.op), options)
-        end
+        deg2_eval(tree, cX, Val(tree.op), options)
     end
 end
+
+function typed_eval_tree_array(
+    typed_nodes::v_typed_nodes, cX::AbstractMatrix{T}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {v_typed_nodes,T<:Real}
+    # The tree structure is now a compile-time constant.
+    vec_nodes = v_typed_nodes.types
+end
+    
+
+
+
+
+
+
 
 function deg2_eval(
     tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
@@ -149,176 +178,6 @@ function deg0_eval(
     end
 end
 
-function deg1_l2_ll0_lr0_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options
-)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx,op_l_idx}
-    n = size(cX, 2)
-    op = options.unaops[op_idx]
-    op_l = options.binops[op_l_idx]
-    if tree.l.l.constant && tree.l.r.constant
-        val_ll = convert(T, tree.l.l.val)
-        val_lr = convert(T, tree.l.r.val)
-        @return_on_check val_ll T n
-        @return_on_check val_lr T n
-        x_l = op_l(val_ll, val_lr)::T
-        @return_on_check x_l T n
-        x = op(x_l)::T
-        @return_on_check x T n
-        return (fill(x, n), true)
-    elseif tree.l.l.constant
-        val_ll = convert(T, tree.l.l.val)
-        @return_on_check val_ll T n
-        feature_lr = tree.l.r.feature
-        cumulator = Array{T,1}(undef, n)
-        @inbounds @simd for j in 1:n
-            x_l = op_l(val_ll, cX[feature_lr, j])::T
-            x = isfinite(x_l) ? op(x_l)::T : T(Inf) # These will get discovered by _eval_tree_array at end.
-            cumulator[j] = x
-        end
-        return (cumulator, true)
-    elseif tree.l.r.constant
-        feature_ll = tree.l.l.feature
-        val_lr = convert(T, tree.l.r.val)
-        @return_on_check val_lr T n
-        cumulator = Array{T,1}(undef, n)
-        @inbounds @simd for j in 1:n
-            x_l = op_l(cX[feature_ll, j], val_lr)::T
-            x = isfinite(x_l) ? op(x_l)::T : T(Inf)
-            cumulator[j] = x
-        end
-        return (cumulator, true)
-    else
-        feature_ll = tree.l.l.feature
-        feature_lr = tree.l.r.feature
-        cumulator = Array{T,1}(undef, n)
-        @inbounds @simd for j in 1:n
-            x_l = op_l(cX[feature_ll, j], cX[feature_lr, j])::T
-            x = isfinite(x_l) ? op(x_l)::T : T(Inf)
-            cumulator[j] = x
-        end
-        return (cumulator, true)
-    end
-end
-
-# op(op2(x)) for x variable or constant
-function deg1_l1_ll0_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options
-)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx,op_l_idx}
-    n = size(cX, 2)
-    op = options.unaops[op_idx]
-    op_l = options.unaops[op_l_idx]
-    if tree.l.l.constant
-        val_ll = convert(T, tree.l.l.val)
-        @return_on_check val_ll T n
-        x_l = op_l(val_ll)::T
-        @return_on_check x_l T n
-        x = op(x_l)::T
-        @return_on_check x T n
-        return (fill(x, n), true)
-    else
-        feature_ll = tree.l.l.feature
-        cumulator = Array{T,1}(undef, n)
-        @inbounds @simd for j in 1:n
-            x_l = op_l(cX[feature_ll, j])::T
-            x = isfinite(x_l) ? op(x_l)::T : T(Inf)
-            cumulator[j] = x
-        end
-        return (cumulator, true)
-    end
-end
-
-function deg2_l0_r0_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
-)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
-    n = size(cX, 2)
-    op = options.binops[op_idx]
-    if tree.l.constant && tree.r.constant
-        val_l = convert(T, tree.l.val)
-        @return_on_check val_l T n
-        val_r = convert(T, tree.r.val)
-        @return_on_check val_r T n
-        x = op(val_l, val_r)::T
-        @return_on_check x T n
-        return (fill(x, n), true)
-    elseif tree.l.constant
-        cumulator = Array{T,1}(undef, n)
-        val_l = convert(T, tree.l.val)
-        @return_on_check val_l T n
-        feature_r = tree.r.feature
-        @inbounds @simd for j in 1:n
-            x = op(val_l, cX[feature_r, j])::T
-            cumulator[j] = x
-        end
-    elseif tree.r.constant
-        cumulator = Array{T,1}(undef, n)
-        feature_l = tree.l.feature
-        val_r = convert(T, tree.r.val)
-        @return_on_check val_r T n
-        @inbounds @simd for j in 1:n
-            x = op(cX[feature_l, j], val_r)::T
-            cumulator[j] = x
-        end
-    else
-        cumulator = Array{T,1}(undef, n)
-        feature_l = tree.l.feature
-        feature_r = tree.r.feature
-        @inbounds @simd for j in 1:n
-            x = op(cX[feature_l, j], cX[feature_r, j])::T
-            cumulator[j] = x
-        end
-    end
-    return (cumulator, true)
-end
-
-function deg2_l0_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
-)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
-    n = size(cX, 2)
-    (cumulator, complete) = _eval_tree_array(tree.r, cX, options)
-    @return_on_false complete cumulator
-    @return_on_nonfinite_array cumulator T n
-    op = options.binops[op_idx]
-    if tree.l.constant
-        val = convert(T, tree.l.val)
-        @return_on_check val T n
-        @inbounds @simd for j in 1:n
-            x = op(val, cumulator[j])::T
-            cumulator[j] = x
-        end
-    else
-        feature = tree.l.feature
-        @inbounds @simd for j in 1:n
-            x = op(cX[feature, j], cumulator[j])::T
-            cumulator[j] = x
-        end
-    end
-    return (cumulator, true)
-end
-
-function deg2_r0_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
-)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
-    n = size(cX, 2)
-    (cumulator, complete) = _eval_tree_array(tree.l, cX, options)
-    @return_on_false complete cumulator
-    @return_on_nonfinite_array cumulator T n
-    op = options.binops[op_idx]
-    if tree.r.constant
-        val = convert(T, tree.r.val)
-        @return_on_check val T n
-        @inbounds @simd for j in 1:n
-            x = op(cumulator[j], val)::T
-            cumulator[j] = x
-        end
-    else
-        feature = tree.r.feature
-        @inbounds @simd for j in 1:n
-            x = op(cumulator[j], cX[feature, j])::T
-            cumulator[j] = x
-        end
-    end
-    return (cumulator, true)
-end
 
 # Evaluate an equation over an array of datapoints
 # This one is just for reference. The fused one should be faster.
