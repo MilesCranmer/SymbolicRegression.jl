@@ -65,35 +65,25 @@ function eval_tree_array(
 end
 
 # Childless node whose type describes the operation.
-struct TypedNode{v_degree,v_constant,v_feature,v_op}
-    degree::v_degree
+struct TypedNode{v_constant,v_op}
     constant::v_constant  # false if variable
-    val::CONST_TYPE  # If is a constant, this stores the actual value
-    feature::v_feature  # If is a variable (e.g., x in cos(x)), this stores the feature index.
     op::v_op  # If operator, this is the index of the operator in options.binary_operators, or options.unary_operators
 end
 
-function TypedNode(degree::v_degree, constant::v_constant, val::CONST_TYPE, feature::v_feature, op::v_op)
-    return TypedNode{v_degree, v_constant, v_feature, v_op}(degree, constant, val, feature, op)
-end
-
 function TypedNode(tree::Node)
-    degree = Val(tree.degree)
     constant = Val(tree.constant)
-    val = tree.val
-    feature = (tree.degree > 0) ? Val(tree.feature) : Val(-1)
     op = (tree.degree > 0) ? Val(tree.op) : Val(-1)
-    return TypedNode(degree, constant, val, feature, op)
+    return TypedNode(constant, op)
 end
 
-function stack_typed_nodes(tree::Node)
+function node2typednode(tree::Node)
     cur_node = TypedNode(tree)
     if tree.degree == 0
         return (cur_node,)
     elseif tree.degree == 1
-        return (cur_node, stack_typed_nodes(tree.left_child)...)
+        return (cur_node, node2typednode(tree.l))
     else
-        return (cur_node, stack_typed_nodes(tree.left_child)..., stack_typed_nodes(tree.right_child)...)
+        return (cur_node, node2typednode(tree.l), node2typednode(tree.r))
     end
 end
 
