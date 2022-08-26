@@ -136,6 +136,7 @@ end
     # The tree structure is now a compile-time constant.
     # typed_nodes is like Tuple{TypedNode{...},...}
     kernel = typed_node_to_kernel(typed_nodes, :(tree))
+    println("New kernel: $(eltype(cX)) ", kernel)
     T = eltype(cX)
     return quote
         n = size(cX, 2)
