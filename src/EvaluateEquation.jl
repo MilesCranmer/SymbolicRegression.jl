@@ -92,30 +92,56 @@ function _eval_tree_array(
     tree::Node, cX::AbstractMatrix{T}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
     if tree.degree == 0
-        deg0_eval(tree, cX, options)
+        return deg0_eval(tree, cX, options)
     end
+
+    # Fused part:
     tree_size = count_nodes(tree) 
     if tree_size == 5
         # Use fused version.
-        typed_nodes = stack_typed_nodes(tree)
+        typed_nodes = node2typednode(tree)
+        return typed_eval_tree_array(tree, typed_nodes, cX, options)
     end
 
     if tree.degree == 1
-        deg1_eval(tree, cX, Val(tree.op), options)
+        return deg1_eval(tree, cX, Val(tree.op), options)
     else
-        deg2_eval(tree, cX, Val(tree.op), options)
+        return deg2_eval(tree, cX, Val(tree.op), options)
     end
 end
 
-function typed_eval_tree_array(
-    typed_nodes::v_typed_nodes, cX::AbstractMatrix{T}, options::Options
-)::Tuple{AbstractVector{T},Bool} where {v_typed_nodes,T<:Real}
-    # The tree structure is now a compile-time constant.
-    vec_nodes = v_typed_nodes.types
+function typed_node_to_kernel(typed_nodes, tree::T)::Expr where {T<:Union{Symbol,Expr}}
+    degree = length(typed_nodes.types) - 1
+    println(types_nodes.types)
+    head = typed_nodes.types[1]
+    v_constant, v_op = head.types
+    constant = v_constant.parameters[1]
+    op = v_op.parameters[1]
+    if degree == 0
+        if constant
+            return :($tree.val)
+        else
+            return :(cX[$tree.feature, j])
+        end
+    elseif degree == 1
+        child = typed_node_to_kernel(typed_nodes.types[2], :($tree.l))
+        return :(options.unaops[$op]($child))
+    else
+        l_child = typed_node_to_kernel(typed_nodes.types[2], :($tree.l))
+        r_child = typed_node_to_kernel(typed_nodes.types[3], :($tree.r))
+        return :(options.binops[$op]($l_child, $r_child))
+    end
 end
-    
 
-
+@generated function typed_eval_tree_array(tree, typed_nodes, cX, options)
+    # The tree structure is now a compile-time constant.
+    # typed_nodes is like Tuple{TypedNode{...},...}
+    kernel = typed_node_to_kernel(typed_nodes, :(tree))
+    println(kernel)
+    return quote
+        return (cX[1, :], true)
+    end
+end
 
 
 
