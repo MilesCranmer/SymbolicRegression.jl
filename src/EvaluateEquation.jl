@@ -139,17 +139,13 @@ end
     T = eltype(cX)
     return quote
         n = size(cX, 2)
-        out_array = Array{$T, 1}(undef, n)
-        @inbounds @simd for j = 1:n
+        out_array = Array{$T,1}(undef, n)
+        @inbounds @simd for j in 1:n
             out_array[j] = $(kernel)
         end
         return (out_array, true)
     end
 end
-
-
-
-
 
 function deg2_eval(
     tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
