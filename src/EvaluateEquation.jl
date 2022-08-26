@@ -87,7 +87,6 @@ function node2typednode(tree::Node)
     end
 end
 
-
 function _eval_tree_array(
     tree::Node, cX::AbstractMatrix{T}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
@@ -96,8 +95,8 @@ function _eval_tree_array(
     end
 
     # Fused part:
-    tree_size = count_nodes(tree) 
-    if tree_size == 5
+    tree_size = count_nodes(tree)
+    if tree_size >= 3 && tree_size <= 7
         # Use fused version.
         typed_nodes = node2typednode(tree)
         return typed_eval_tree_array(tree, typed_nodes, cX, options)
@@ -194,7 +193,6 @@ function deg0_eval(
         return (cX[tree.feature, :], true)
     end
 end
-
 
 # Evaluate an equation over an array of datapoints
 # This one is just for reference. The fused one should be faster.
