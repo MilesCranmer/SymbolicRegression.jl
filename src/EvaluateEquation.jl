@@ -112,7 +112,6 @@ end
 
 function typed_node_to_kernel(typed_nodes, tree::T)::Expr where {T<:Union{Symbol,Expr}}
     degree = length(typed_nodes.types) - 1
-    println(types_nodes.types)
     head = typed_nodes.types[1]
     v_constant, v_op = head.types
     constant = v_constant.parameters[1]
@@ -137,9 +136,14 @@ end
     # The tree structure is now a compile-time constant.
     # typed_nodes is like Tuple{TypedNode{...},...}
     kernel = typed_node_to_kernel(typed_nodes, :(tree))
-    println(kernel)
+    T = eltype(cX)
     return quote
-        return (cX[1, :], true)
+        n = size(cX, 2)
+        out_array = Array{$T, 1}(undef, n)
+        @inbounds @simd for j = 1:n
+            out_array[j] = $(kernel)
+        end
+        return (out_array, true)
     end
 end
 
