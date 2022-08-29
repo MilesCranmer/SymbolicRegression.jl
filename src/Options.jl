@@ -533,16 +533,16 @@ function Options(;
             continue
         end
         @eval begin
-            Base.$_f(l::Node{CT}, r::Node{CT})::Node{CT} where {CT} =
+            Base.$_f(l::Node, r::Node)::Node =
                 if (l.constant && r.constant)
-                    Node($f(l.val, r.val), CT)
+                    Node($f(l.val, r.val)::AbstractFloat)
                 else
-                    Node($op, l, r, CT)
+                    Node($op, l, r)
                 end
             Base.$_f(l::Node, r::AbstractFloat)::Node =
-                l.constant ? Node($f(l.val, r), CT) : Node($op, l, r, CT)
+                l.constant ? Node($f(l.val, r)::AbstractFloat) : Node($op, l, r)
             Base.$_f(l::AbstractFloat, r::Node)::Node =
-                r.constant ? Node($f(l, r.val), CT) : Node($op, l, r, CT)
+                r.constant ? Node($f(l, r.val)::AbstractFloat) : Node($op, l, r)
         end
     end
 
