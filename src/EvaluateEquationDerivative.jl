@@ -2,7 +2,7 @@ module EvaluateEquationDerivativeModule
 
 using LinearAlgebra
 import ..CoreModule: Node, Options
-import ..UtilsModule: @return_on_false2, is_bad_array
+import ..UtilsModule: @return_on_false2, is_bad_array, debug
 import ..EquationUtilsModule: count_constants, index_constants, NodeIndex
 import ..EvaluateEquationModule: deg0_eval
 
@@ -20,7 +20,7 @@ respect to `x1`.
     the derivative, and whether the evaluation completed as normal (or encountered a nan or inf).
 """
 function eval_diff_tree_array(
-    tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int
+    tree::Node{T}, cX::AbstractMatrix{T}, options::Options, direction::Int
 )::Tuple{AbstractVector{T},AbstractVector{T},Bool} where {T<:Real}
     # TODO: Implement quick check for whether the variable is actually used
     # in this tree. Otherwise, return zero.
@@ -28,9 +28,21 @@ function eval_diff_tree_array(
     @return_on_false2 complete evaluation derivative
     return evaluation, derivative, !(is_bad_array(evaluation) || is_bad_array(derivative))
 end
+function eval_diff_tree_array(
+    tree::Node{T1}, cX::AbstractMatrix{T2}, options::Options, direction::Int
+) where {T1<:Real, T2<:Real}
+    T = promote_type(T1, T2)
+    debug(
+        options.verbosity > 0,
+        "Warning: eval_diff_tree_array received mixed types: tree=$(T1) and data=$(T2).",
+    )
+    tree = convert(Node{T}, tree)
+    cX = convert(AbstractMatrix{T}, cX)
+    return eval_diff_tree_array(tree, cX, options, direction)
+end
 
 function _eval_diff_tree_array(
-    tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int
+    tree::Node{T}, cX::AbstractMatrix{T}, options::Options, direction::Int
 )::Tuple{AbstractVector{T},AbstractVector{T},Bool} where {T<:Real}
     if tree.degree == 0
         diff_deg0_eval(tree, cX, options, direction)
@@ -42,7 +54,7 @@ function _eval_diff_tree_array(
 end
 
 function diff_deg0_eval(
-    tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int
+    tree::Node{T}, cX::AbstractMatrix{T}, options::Options, direction::Int
 )::Tuple{AbstractVector{T},AbstractVector{T},Bool} where {T<:Real}
     n = size(cX, 2)
     const_part = deg0_eval(tree, cX, options)[1]
@@ -51,7 +63,7 @@ function diff_deg0_eval(
 end
 
 function diff_deg1_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int
+    tree::Node{T}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int
 )::Tuple{AbstractVector{T},AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     (cumulator, dcumulator, complete) = eval_diff_tree_array(tree.l, cX, options, direction)
@@ -71,7 +83,7 @@ function diff_deg1_eval(
 end
 
 function diff_deg2_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int
+    tree::Node{T}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options, direction::Int
 )::Tuple{AbstractVector{T},AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     (cumulator, dcumulator, complete) = eval_diff_tree_array(tree.l, cX, options, direction)
@@ -94,7 +106,7 @@ function diff_deg2_eval(
 end
 
 """
-    eval_grad_tree_array(tree::Node, cX::AbstractMatrix{T}, options::Options; variable::Bool=false)
+    eval_grad_tree_array(tree::Node{T}, cX::AbstractMatrix{T}, options::Options; variable::Bool=false)
 
 Compute the forward-mode derivative of an expression, using a similar
 structure and optimization to eval_tree_array. `variable` specifies whether
@@ -107,7 +119,7 @@ to every constant in the expression.
     the gradient, and whether the evaluation completed as normal (or encountered a nan or inf).
 """
 function eval_grad_tree_array(
-    tree::Node, cX::AbstractMatrix{T}, options::Options; variable::Bool=false
+    tree::Node{T}, cX::AbstractMatrix{T}, options::Options; variable::Bool=false
 )::Tuple{AbstractVector{T},AbstractMatrix{T},Bool} where {T<:Real}
     n = size(cX, 2)
     if variable
@@ -122,7 +134,7 @@ function eval_grad_tree_array(
 end
 
 function eval_grad_tree_array(
-    tree::Node,
+    tree::Node{T},
     n::Int,
     n_gradients::Int,
     index_tree::NodeIndex,
@@ -138,7 +150,7 @@ function eval_grad_tree_array(
 end
 
 function _eval_grad_tree_array(
-    tree::Node,
+    tree::Node{T},
     n::Int,
     n_gradients::Int,
     index_tree::NodeIndex,
@@ -160,7 +172,7 @@ function _eval_grad_tree_array(
 end
 
 function grad_deg0_eval(
-    tree::Node,
+    tree::Node{T},
     n::Int,
     n_gradients::Int,
     index_tree::NodeIndex,
@@ -181,7 +193,7 @@ function grad_deg0_eval(
 end
 
 function grad_deg1_eval(
-    tree::Node,
+    tree::Node{T},
     n::Int,
     n_gradients::Int,
     index_tree::NodeIndex,
@@ -211,7 +223,7 @@ function grad_deg1_eval(
 end
 
 function grad_deg2_eval(
-    tree::Node,
+    tree::Node{T},
     n::Int,
     n_gradients::Int,
     index_tree::NodeIndex,
