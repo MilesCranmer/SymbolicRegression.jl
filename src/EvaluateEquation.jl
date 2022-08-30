@@ -421,7 +421,7 @@ function _unary_kernel!(
 ) where {T<:Real,op_idx}
     op = options.unaops[op_idx]
     @inbounds @simd for j in eachindex(result)
-        result[j] = op(result[j])
+        result[j] = op(result[j])::T
     end
 end
 
@@ -433,7 +433,7 @@ function _binary_kernel!(
 ) where {T<:Real,op_idx}
     op = options.binops[op_idx]
     @inbounds @simd for j in eachindex(result)
-        result[j] = op(result[j], child_r_result[j])
+        result[j] = op(result[j], child_r_result[j])::T
     end
 end
 
