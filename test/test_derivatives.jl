@@ -61,7 +61,7 @@ for type in [Float32, Float64]
     for j in 1:3
         equation = [equation1, equation2, equation3][j]
 
-        tree = equation(nx1, nx2, nx3)
+        tree = convert(Node{type}, equation(nx1, nx2, nx3))
         predicted_output = eval_tree_array(tree, X, options)[1]
         true_output = equation.([X[i, :] for i in 1:nfeatures]...)
 
@@ -94,6 +94,7 @@ for type in [Float32, Float64]
     equation4(x1, x2, x3) = 3.2f0 * x1
     # The gradient should be: (C * x1) => x1 is gradient with respect to C.
     tree = equation4(nx1, nx2, nx3)
+    tree = convert(Node{type}, tree)
     predicted_grad = eval_grad_tree_array(tree, X, options; variable=false)[2]
     @test array_test(predicted_grad[1, :], X[1, :])
 
@@ -109,6 +110,7 @@ for type in [Float32, Float64]
     end
 
     tree = equation5(nx1, nx2, nx3)
+    tree = convert(Node{type}, tree)
 
     # Use zygote to explicitly find the gradient:
     true_grad = gradient(
