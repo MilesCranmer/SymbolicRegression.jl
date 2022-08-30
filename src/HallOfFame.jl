@@ -25,12 +25,12 @@ has been instantiated or not.
 """
 function HallOfFame(options::Options, ::Type{T}) where {T<:AbstractFloat}
     actualMaxsize = options.maxsize + MAX_DEGREE
-    return HallOfFame{T}(
+    return HallOfFame(
         [
             PopMember(
                 Node(convert(T, 1)),
-                1.0f9,
-                1.0f9;
+                T(1.0),
+                T(1.0);
                 parent=-1,
                 deterministic=options.deterministic,
             ) for i in 1:actualMaxsize
