@@ -75,7 +75,7 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
 
             Random.seed!(0)
             N = 100
-            X = T.(randn(MersenneTwister(0), T, 5, N) / 3)
+            X = T.(randn(MersenneTwister(0), 5, N) / 3)
             X = X + sign.(X) * T(0.1)
             y = T.(f_true.(X[1, :]))
             dataset = Dataset(X, y)
