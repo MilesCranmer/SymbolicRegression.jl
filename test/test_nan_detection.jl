@@ -1,4 +1,6 @@
 println("Testing NaN detection.")
+using SymbolicRegression
+using Random
 
 for T in [Float16, Float32, Float64]
     options = Options(binary_operators=(+, *, /, -), unary_operators=(cos, sin, exp))

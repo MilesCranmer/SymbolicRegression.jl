@@ -1,3 +1,7 @@
+using SymbolicRegression
+using Random
+include("test_params.jl")
+
 # Test simple evaluations:
 options = Options(;
     default_params..., binary_operators=(+, *, /, -), unary_operators=(cos, sin)

@@ -1,5 +1,4 @@
 using SymbolicRegression
-using SymbolicRegression: check_constraints
 include("test_params.jl")
 
 _inv(x) = 1 / x
@@ -11,7 +10,8 @@ options = Options(;
     npopulations=4,
 )
 tree = Node(5, (Node(3.0) * Node(1, Node("x1")))^2.0, -1.2)
-violating_tree = Node(1, tree)
 
-@test check_constraints(tree, options) == true
-@test check_constraints(violating_tree, options) == false
+eqn = node_to_symbolic(tree, options; varMap=["energy"], index_functions=true)
+tree2 = symbolic_to_node(eqn, options; varMap=["energy"])
+
+@test string_tree(tree, options) == string_tree(tree2, options)
