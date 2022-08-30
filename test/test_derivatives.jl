@@ -50,9 +50,10 @@ for type in [Float32, Float64]
     nfeatures = 3
     N = 100
 
-    X = rand(rng, type, nfeatures, N) * 10
+    X = rand(rng, nfeatures, N) * 10
+    X = convert(AbstractMatrix{type}, X)
 
-    options = Options(;
+    local options = Options(;
         binary_operators=(+, *, -, /, pow_abs2),
         unary_operators=(custom_cos, exp, sin),
         enable_autodiff=true,
@@ -61,9 +62,10 @@ for type in [Float32, Float64]
     for j in 1:3
         equation = [equation1, equation2, equation3][j]
 
-        tree = convert(Node{type}, equation(nx1, nx2, nx3))
+        local tree = convert(Node{type}, equation(nx1, nx2, nx3))
         predicted_output = eval_tree_array(tree, X, options)[1]
         true_output = equation.([X[i, :] for i in 1:nfeatures]...)
+        true_output = convert(AbstractArray{type}, true_output)
 
         # First, check if the predictions are approximately equal:
         @test array_test(predicted_output, true_output)
@@ -80,6 +82,8 @@ for type in [Float32, Float64]
             )'
 
         # Print largest difference between predicted_grad, true_grad:
+        println("Largest difference between predicted_grad and true_grad:")
+        println(max(abs.(predicted_grad .- true_grad)...))
         @test array_test(predicted_grad, true_grad)
         @test array_test(predicted_grad2, true_grad)
 
@@ -93,8 +97,8 @@ for type in [Float32, Float64]
     # Test gradient with respect to constants:
     equation4(x1, x2, x3) = 3.2f0 * x1
     # The gradient should be: (C * x1) => x1 is gradient with respect to C.
-    tree = equation4(nx1, nx2, nx3)
-    tree = convert(Node{type}, tree)
+    local tree = equation4(nx1, nx2, nx3)
+    local tree = convert(Node{type}, tree)
     predicted_grad = eval_grad_tree_array(tree, X, options; variable=false)[2]
     @test array_test(predicted_grad[1, :], X[1, :])
 
@@ -109,8 +113,8 @@ for type in [Float32, Float64]
         return pow_abs2(x1, x2) + x3 + custom_cos(c1 + x3) + c2 / x1
     end
 
-    tree = equation5(nx1, nx2, nx3)
-    tree = convert(Node{type}, tree)
+    local tree = equation5(nx1, nx2, nx3)
+    local tree = convert(Node{type}, tree)
 
     # Use zygote to explicitly find the gradient:
     true_grad = gradient(
