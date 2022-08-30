@@ -59,7 +59,8 @@ function diff_deg0_eval(
 )::Tuple{AbstractVector{T},AbstractVector{T},Bool} where {T<:Real}
     n = size(cX, 2)
     const_part = deg0_eval(tree, cX, options)[1]
-    derivative_part = (tree.feature == direction) ? ones(T, n) : zeros(T, n)
+    derivative_part =
+        ((!tree.constant) && tree.feature == direction) ? ones(T, n) : zeros(T, n)
     return (const_part, derivative_part, true)
 end
 
