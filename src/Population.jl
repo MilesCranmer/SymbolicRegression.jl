@@ -33,7 +33,7 @@ function Population(
     options::Options,
     nfeatures::Int,
 ) where {T<:Real}
-    return Population(
+    return Population{T}(
         [
             PopMember(
                 dataset,
