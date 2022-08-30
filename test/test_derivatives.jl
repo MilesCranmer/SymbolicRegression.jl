@@ -6,8 +6,8 @@ using Zygote
 using LinearAlgebra
 
 seed = 0
-pow_abs2(x::T1, y::T2) where {T1<:Number,T2<:Number} = abs(x)^y
-custom_cos(x::T) where {T<:Number} = cos(x)^2
+pow_abs2(x::T, y::T) where {T<:Real} = abs(x)^y
+custom_cos(x::T) where {T<:Real} = cos(x)^2
 
 # Define these custom functions for Node data types:
 pow_abs2(l::Node, r::Node)::Node =
@@ -27,7 +27,7 @@ nx3 = Node("x3")
 
 # Equations to test gradients on:
 
-function array_test(ar1, ar2; rtol=0.3)
+function array_test(ar1, ar2; rtol=0.1)
     return isapprox(ar1, ar2; rtol=rtol)
 end
 
@@ -44,11 +44,11 @@ for type in [Float16, Float32, Float64]
     nfeatures = 3
     N = 10
 
-    X = rand(rng, nfeatures, N) .* 5
-    X = convert(AbstractMatrix{type}, X)
+    X = rand(rng, type, nfeatures, N) .* 5
+
+
 
     for j in 1:2
-        println("Equation: $(j)")
         equation = [equation1, equation2][j]
 
         tree = convert(Node{type}, equation(nx1, nx2, nx3))
@@ -64,10 +64,10 @@ for type in [Float16, Float32, Float64]
         )
         # Convert tuple of vectors to matrix:
         true_grad = reduce(hcat, true_grad)'
-        predicted_grad = eval_grad_tree_array(tree, copy(X), options; variable=true)[2]
+        predicted_grad = eval_grad_tree_array(tree, X, options; variable=true)[2]
         predicted_grad2 =
             reduce(
-                hcat, [eval_diff_tree_array(tree, copy(X), options, i)[2] for i in 1:nfeatures]
+                hcat, [eval_diff_tree_array(tree, X, options, i)[2] for i in 1:nfeatures]
             )'
 
         # Print largest difference between predicted_grad, true_grad:
