@@ -1,7 +1,7 @@
 module EvaluateEquationModule
 
 import ..CoreModule: Node, Options
-import ..UtilsModule: @return_on_false, is_bad_array
+import ..UtilsModule: @return_on_false, is_bad_array, debug
 
 macro return_on_check(val, T, n)
     # This will generate the following code:
@@ -54,7 +54,7 @@ which speed up evaluation significantly.
     to the equation.
 """
 function eval_tree_array(
-    tree::Node, cX::AbstractMatrix{T}, options::Options
+    tree::Node{T}, cX::AbstractMatrix{T}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
     n = size(cX, 2)
     result, finished = _eval_tree_array(tree, cX, options)
@@ -62,9 +62,21 @@ function eval_tree_array(
     @return_on_nonfinite_array result T n
     return result, finished
 end
+function eval_tree_array(
+    tree::Node{T1}, cX::AbstractMatrix{T2}, options::Options
+) where {T1<:Real,T2<:Real}
+    T = promote_type(T1, T2)
+    debug(
+        options.verbosity > 0,
+        "Warning: eval_tree_array received mixed types: tree=$(T1) and data=$(T2).",
+    )
+    tree = convert(Node{T}, tree)
+    cX = convert(AbstractMatrix{T}, cX)
+    return eval_tree_array(tree, cX, options)
+end
 
 function _eval_tree_array(
-    tree::Node, cX::AbstractMatrix{T}, options::Options
+    tree::Node{T}, cX::AbstractMatrix{T}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
     if tree.degree == 0
         deg0_eval(tree, cX, options)
@@ -103,7 +115,7 @@ function _eval_tree_array(
 end
 
 function deg2_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+    tree::Node{T}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     (cumulator, complete) = _eval_tree_array(tree.l, cX, options)
@@ -124,7 +136,7 @@ function deg2_eval(
 end
 
 function deg1_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+    tree::Node{T}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     (cumulator, complete) = _eval_tree_array(tree.l, cX, options)
@@ -139,7 +151,7 @@ function deg1_eval(
 end
 
 function deg0_eval(
-    tree::Node, cX::AbstractMatrix{T}, options::Options
+    tree::Node{T}, cX::AbstractMatrix{T}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
     n = size(cX, 2)
     if tree.constant
@@ -150,7 +162,7 @@ function deg0_eval(
 end
 
 function deg1_l2_ll0_lr0_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options
+    tree::Node{T}, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx,op_l_idx}
     n = size(cX, 2)
     op = options.unaops[op_idx]
@@ -202,7 +214,7 @@ end
 
 # op(op2(x)) for x variable or constant
 function deg1_l1_ll0_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options
+    tree::Node{T}, cX::AbstractMatrix{T}, ::Val{op_idx}, ::Val{op_l_idx}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx,op_l_idx}
     n = size(cX, 2)
     op = options.unaops[op_idx]
@@ -228,7 +240,7 @@ function deg1_l1_ll0_eval(
 end
 
 function deg2_l0_r0_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+    tree::Node{T}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     op = options.binops[op_idx]
@@ -271,7 +283,7 @@ function deg2_l0_r0_eval(
 end
 
 function deg2_l0_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+    tree::Node{T}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     (cumulator, complete) = _eval_tree_array(tree.r, cX, options)
@@ -296,7 +308,7 @@ function deg2_l0_eval(
 end
 
 function deg2_r0_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+    tree::Node{T}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
     n = size(cX, 2)
     (cumulator, complete) = _eval_tree_array(tree.l, cX, options)
@@ -323,7 +335,7 @@ end
 # Evaluate an equation over an array of datapoints
 # This one is just for reference. The fused one should be faster.
 function differentiable_eval_tree_array(
-    tree::Node, cX::AbstractMatrix{T}, options::Options
+    tree::Node{T}, cX::AbstractMatrix{T}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
     n = size(cX, 2)
     if tree.degree == 0
@@ -338,9 +350,21 @@ function differentiable_eval_tree_array(
         return deg2_diff_eval(tree, cX, Val(tree.op), options)
     end
 end
+function differentiable_eval_tree_array(
+    tree::Node{T1}, cX::AbstractMatrix{T2}, options::Options
+) where {T1<:Real,T2<:Real}
+    T = promote_type(T1, T2)
+    debug(
+        options.verbosity > 0,
+        "Warning: differentiable_eval_tree_array received mixed types: tree=$(T1) and data=$(T2).",
+    )
+    tree = convert(Node{T}, tree)
+    cX = convert(AbstractMatrix{T}, cX)
+    return differentiable_eval_tree_array(tree, cX, options)
+end
 
 function deg1_diff_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+    tree::Node{T}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
     (left, complete) = differentiable_eval_tree_array(tree.l, cX, options)
     @return_on_false complete left
@@ -351,7 +375,7 @@ function deg1_diff_eval(
 end
 
 function deg2_diff_eval(
-    tree::Node, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+    tree::Node{T}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
     (left, complete) = differentiable_eval_tree_array(tree.l, cX, options)
     @return_on_false complete left

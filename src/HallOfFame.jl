@@ -1,14 +1,14 @@
 module HallOfFameModule
 
-import ..CoreModule: CONST_TYPE, MAX_DEGREE, Node, Options, Dataset, string_tree
+import ..CoreModule: MAX_DEGREE, Node, Options, Dataset, string_tree
 import ..EquationUtilsModule: compute_complexity
 import ..PopMemberModule: PopMember, copy_pop_member
 import ..LossFunctionsModule: eval_loss
 using Printf: @sprintf
 
 """ List of the best members seen all time in `.members` """
-mutable struct HallOfFame
-    members::Array{PopMember,1}
+mutable struct HallOfFame{T<:AbstractFloat}
+    members::Array{PopMember{T},1}
     exists::Array{Bool,1} #Whether it has been set
 
     # Arranged by complexity - store one at each.
@@ -23,12 +23,12 @@ by size (i.e., `.members[1]` is the constant solution).
 `.exists` is used to determine whether the particular member
 has been instantiated or not.
 """
-function HallOfFame(options::Options)
+function HallOfFame(options::Options, ::Type{T}) where {T<:AbstractFloat}
     actualMaxsize = options.maxsize + MAX_DEGREE
-    return HallOfFame(
+    return HallOfFame{T}(
         [
             PopMember(
-                Node(convert(CONST_TYPE, 1)),
+                Node(convert(T, 1)),
                 1.0f9,
                 1.0f9;
                 parent=-1,
@@ -44,7 +44,7 @@ end
                             options::Options) where {T<:Real}
 """
 function calculate_pareto_frontier(
-    dataset::Dataset{T}, hallOfFame::HallOfFame, options::Options
+    dataset::Dataset{T}, hallOfFame::HallOfFame{T}, options::Options
 )::Array{PopMember,1} where {T<:Real}
     # Dominating pareto curve - must be better than all simpler equations
     dominating = PopMember[]

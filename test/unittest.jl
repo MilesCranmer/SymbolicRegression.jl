@@ -45,13 +45,13 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
         f_true = (x,) -> binop((3.0 * unaop(x))^2.0, -1.2)
 
         # binop at outside:
-        tree = Node(5, (Node(3.0) * Node(1, Node("x1")))^2.0, -1.2)
-        tree_bad = Node(5, (Node(3.0) * Node(1, Node("x1")))^2.1, -1.3)
-        n = count_nodes(tree)
+        const_tree = Node(5, (Node(3.0) * Node(1, Node("x1")))^2.0, -1.2)
+        const_tree_bad = Node(5, (Node(3.0) * Node(1, Node("x1")))^2.1, -1.3)
+        n = count_nodes(const_tree)
 
         true_result = f_true(x1)
 
-        result = eval(Meta.parse(string_tree(tree, make_options())))
+        result = eval(Meta.parse(string_tree(const_tree, make_options())))
 
         # Test Basics
         @test n == 8
@@ -70,9 +70,12 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
                 zero_tolerance = 1e-6
             end
 
+            tree = convert(Node{T}, const_tree)
+            tree_bad = convert(Node{T}, const_tree_bad)
+
             Random.seed!(0)
             N = 100
-            X = T.(randn(MersenneTwister(0), Float64, 5, N) / 3)
+            X = T.(randn(MersenneTwister(0), T, 5, N) / 3)
             X = X + sign.(X) * T(0.1)
             y = T.(f_true.(X[1, :]))
             dataset = Dataset(X, y)

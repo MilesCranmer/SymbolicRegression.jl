@@ -23,14 +23,14 @@ function s_r_cycle(
     verbosity::Int=0,
     options::Options,
     record::RecordType,
-)::Tuple{Population,HallOfFame,Float64} where {T<:Real}
+)::Tuple{Population{T},HallOfFame{T},Float64} where {T<:Real}
     max_temp = T(1.0)
     min_temp = T(0.0)
     if !options.annealing
         min_temp = max_temp
     end
     all_temperatures = LinRange(max_temp, min_temp, ncycles)
-    best_examples_seen = HallOfFame(options)
+    best_examples_seen = HallOfFame(options, T)
     num_evals = 0.0
 
     for temperature in all_temperatures

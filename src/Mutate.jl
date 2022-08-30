@@ -22,13 +22,13 @@ import ..RecorderModule: @recorder
 function next_generation(
     dataset::Dataset{T},
     baseline::T,
-    member::PopMember,
+    member::PopMember{T},
     temperature::T,
     curmaxsize::Int,
     frequencyComplexity::AbstractVector{T},
     options::Options;
     tmp_recorder::RecordType,
-)::Tuple{PopMember,Bool,Float64} where {T<:Real}
+)::Tuple{PopMember{T},Bool,Float64} where {T<:Real}
     prev = member.tree
     parent_ref = member.ref
     tree = prev
@@ -133,7 +133,7 @@ function next_generation(
             # We select a random size, though the generated tree
             # may have fewer nodes than we request.
             tree_size_to_generate = rand(1:curmaxsize)
-            tree = gen_random_tree_fixed_size(tree_size_to_generate, options, nfeatures)
+            tree = gen_random_tree_fixed_size(tree_size_to_generate, options, nfeatures, T)
             @recorder tmp_recorder["type"] = "regenerate"
 
             is_success_always_possible = true
