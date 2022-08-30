@@ -18,8 +18,8 @@ pow_abs2(l::AbstractFloat, r::Node)::Node =
     r.constant ? Node(pow_abs2(l, r.val)) : Node(5, l, r)
 custom_cos(x::Node)::Node = x.constant ? Node(custom_cos(x.val)) : Node(1, x)
 
-equation1(x1, x2, x3) = x1 + x2 + x3 + 3.2f0
-equation2(x1, x2, x3) = pow_abs2(x1, x2) + x3 + custom_cos(1.0f0 + x3) + 3.0f0 / x1
+equation1(x1, x2, x3) = x1 + x2 + x3 + 3.2
+equation2(x1, x2, x3) = pow_abs2(x1, x2) + x3 + custom_cos(1.0 + x3) + 3.0 / x1
 
 nx1 = Node("x1")
 nx2 = Node("x2")
@@ -27,7 +27,7 @@ nx3 = Node("x3")
 
 # Equations to test gradients on:
 
-function array_test(ar1, ar2; rtol=0.1)
+function array_test(ar1, ar2; rtol=0.3)
     return isapprox(ar1, ar2; rtol=rtol)
 end
 
@@ -38,7 +38,7 @@ options = Options(;
 )
 
 
-for type in [Float32, Float16, Float64]
+for type in [Float16, Float32, Float64]
     println("Testing derivatives with respect to variables, with type=$(type).")
     rng = MersenneTwister(seed)
     nfeatures = 3
