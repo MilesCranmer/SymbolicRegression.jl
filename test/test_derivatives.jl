@@ -44,7 +44,6 @@ function array_test(ar1, ar2; rtol=0.1)
     return isapprox(ar1, ar2; rtol=rtol)
 end
 
-
 for type in [Float16, Float32, Float64]
     println("Testing derivatives with respect to variables, with type=$(type).")
     rng = MersenneTwister(seed)

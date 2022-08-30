@@ -46,7 +46,9 @@ function mutate_operator(tree::Node, options::Options)::Node
 end
 
 # Randomly perturb a constant
-function mutate_constant(tree::Node{T}, temperature::T, options::Options)::Node where {T<:AbstractFloat}
+function mutate_constant(
+    tree::Node{T}, temperature::T, options::Options
+)::Node where {T<:AbstractFloat}
     # T is between 0 and 1.
 
     if count_constants(tree) == 0
@@ -77,7 +79,10 @@ end
 
 # Add a random unary/binary operation to the end of a tree
 function append_random_op(
-    tree::Node{T}, options::Options, nfeatures::Int; makeNewBinOp::Union{Bool,Nothing}=nothing
+    tree::Node{T},
+    options::Options,
+    nfeatures::Int;
+    makeNewBinOp::Union{Bool,Nothing}=nothing,
 )::Node{T} where {T<:AbstractFloat}
     node = random_node(tree)
     while node.degree != 0
@@ -91,7 +96,9 @@ function append_random_op(
 
     if makeNewBinOp
         newnode = Node(
-            rand(1:(options.nbin)), make_random_leaf(nfeatures, T), make_random_leaf(nfeatures, T)
+            rand(1:(options.nbin)),
+            make_random_leaf(nfeatures, T),
+            make_random_leaf(nfeatures, T),
         )
     else
         newnode = Node(rand(1:(options.nuna)), make_random_leaf(nfeatures, T))
@@ -111,7 +118,9 @@ function append_random_op(
 end
 
 # Insert random node
-function insert_random_op(tree::Node{T}, options::Options, nfeatures::Int)::Node{T} where {T<:AbstractFloat}
+function insert_random_op(
+    tree::Node{T}, options::Options, nfeatures::Int
+)::Node{T} where {T<:AbstractFloat}
     node = random_node(tree)
     choice = rand()
     makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
@@ -136,7 +145,9 @@ function insert_random_op(tree::Node{T}, options::Options, nfeatures::Int)::Node
 end
 
 # Add random node to the top of a tree
-function prepend_random_op(tree::Node{T}, options::Options, nfeatures::Int)::Node{T} where {T<:AbstractFloat}
+function prepend_random_op(
+    tree::Node{T}, options::Options, nfeatures::Int
+)::Node{T} where {T<:AbstractFloat}
     node = tree
     choice = rand()
     makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
@@ -200,7 +211,9 @@ end
 
 # Select a random node, and replace it an the subtree
 # with a variable or constant
-function delete_random_op(tree::Node{T}, options::Options, nfeatures::Int)::Node{T} where {T<:AbstractFloat}
+function delete_random_op(
+    tree::Node{T}, options::Options, nfeatures::Int
+)::Node{T} where {T<:AbstractFloat}
     node, parent, side = random_node_and_parent(tree)
     isroot = (parent === nothing)
 
@@ -246,7 +259,9 @@ function delete_random_op(tree::Node{T}, options::Options, nfeatures::Int)::Node
 end
 
 # Create a random equation by appending random operators
-function gen_random_tree(length::Int, options::Options, nfeatures::Int, ::Type{T})::Node{T} where {T<:AbstractFloat}
+function gen_random_tree(
+    length::Int, options::Options, nfeatures::Int, ::Type{T}
+)::Node{T} where {T<:AbstractFloat}
     # Note that this base tree is just a placeholder; it will be replaced.
     tree = Node(convert(T, 1))
     for i in 1:length
@@ -256,7 +271,9 @@ function gen_random_tree(length::Int, options::Options, nfeatures::Int, ::Type{T
     return tree
 end
 
-function gen_random_tree_fixed_size(node_count::Int, options::Options, nfeatures::Int, ::Type{T})::Node{T} where {T<:AbstractFloat}
+function gen_random_tree_fixed_size(
+    node_count::Int, options::Options, nfeatures::Int, ::Type{T}
+)::Node{T} where {T<:AbstractFloat}
     tree = make_random_leaf(nfeatures, T)
     cur_size = count_nodes(tree)
     while cur_size < node_count

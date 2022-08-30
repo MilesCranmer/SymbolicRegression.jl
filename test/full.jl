@@ -44,7 +44,9 @@ for i in 0:5
         crossoverProbability = 0.02f0
         useFrequencyInTournament = true
     elseif i == 4
-        println("with crossover and skip mutation failures and both frequencies options, and Float16 type")
+        println(
+            "with crossover and skip mutation failures and both frequencies options, and Float16 type",
+        )
         crossoverProbability = 0.02f0
         skip_mutation_failures = true
         useFrequency = true

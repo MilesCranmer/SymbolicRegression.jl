@@ -2,7 +2,7 @@ println("Testing NaN detection.")
 using SymbolicRegression
 
 for T in [Float32]
-    options = Options(binary_operators=(+, *, /, -), unary_operators=(cos, sin, exp))
+    options = Options(; binary_operators=(+, *, /, -), unary_operators=(cos, sin, exp))
     # Creating a NaN via computation.
     tree = exp(exp(exp(exp(Node("x1") + T(1)))))
     X = ones(T, 1, 10) .* 100

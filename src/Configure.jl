@@ -209,7 +209,10 @@ function test_module_on_workers(procs, options::Options)
     )
     futures = []
     for proc in procs
-        push!(futures, @spawnat proc SymbolicRegression.gen_random_tree(3, options, 5, CONST_TYPE))
+        push!(
+            futures,
+            @spawnat proc SymbolicRegression.gen_random_tree(3, options, 5, CONST_TYPE)
+        )
     end
     for future in futures
         fetch(future)

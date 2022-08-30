@@ -31,7 +31,7 @@ function eval_diff_tree_array(
 end
 function eval_diff_tree_array(
     tree::Node{T1}, cX::AbstractMatrix{T2}, options::Options, direction::Int
-) where {T1<:Real, T2<:Real}
+) where {T1<:Real,T2<:Real}
     T = promote_type(T1, T2)
     debug(
         options.verbosity > 0,

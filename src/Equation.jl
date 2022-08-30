@@ -23,8 +23,14 @@ mutable struct Node{T<:AbstractFloat}
     #################
     Node(d::Int, c::Bool, v::_T) where {_T<:AbstractFloat} = new{_T}(d, c, v)
     Node(d::Int, c::Bool, v::_T, f::Int) where {_T<:AbstractFloat} = new{_T}(d, c, v, f)
-    Node(d::Int, c::Bool, v::_T, f::Int, o::Int, l::Node{_T}) where {_T<:AbstractFloat} = new{_T}(d, c, v, f, o, l)
-    function Node(d::Int, c::Bool, v::_T, f::Int, o::Int, l::Node{_T}, r::Node{_T}) where {_T<:AbstractFloat}
+    function Node(
+        d::Int, c::Bool, v::_T, f::Int, o::Int, l::Node{_T}
+    ) where {_T<:AbstractFloat}
+        return new{_T}(d, c, v, f, o, l)
+    end
+    function Node(
+        d::Int, c::Bool, v::_T, f::Int, o::Int, l::Node{_T}, r::Node{_T}
+    ) where {_T<:AbstractFloat}
         return new{_T}(d, c, v, f, o, l, r)
     end
 end
@@ -67,7 +73,9 @@ Node(feature::Int) = Node(0, false, convert(CONST_TYPE, 0), feature)
 
 Create a variable node using feature `feature::Int`, while specifying the node type.
 """
-Node(feature::Int, ::Type{T}) where {T<:AbstractFloat} = Node(0, false, convert(T, 0), feature)
+function Node(feature::Int, ::Type{T}) where {T<:AbstractFloat}
+    return Node(0, false, convert(T, 0), feature)
+end
 
 """
     Node(op::Int, l::Node)
@@ -145,7 +153,9 @@ end
 
 Short-form for creating two scalar/variable node, and applying a binary operator
 """
-function Node(op::Int, l::T1, r::T2) where {T1<:Union{AbstractFloat,Int},T2<:Union{AbstractFloat,Int}}
+function Node(
+    op::Int, l::T1, r::T2
+) where {T1<:Union{AbstractFloat,Int},T2<:Union{AbstractFloat,Int}}
     if T1 <: AbstractFloat && T2 <: AbstractFloat
         T = promote_type(T1, T2)
         l = convert(T, l)
