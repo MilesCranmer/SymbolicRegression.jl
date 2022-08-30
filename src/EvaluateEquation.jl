@@ -155,7 +155,7 @@ function deg0_eval(
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
     n = size(cX, 2)
     if tree.constant
-        return (fill(convert(T, tree.val), n), true)
+        return (fill(tree.val, n), true)
     else
         return (cX[tree.feature, :], true)
     end
@@ -168,8 +168,8 @@ function deg1_l2_ll0_lr0_eval(
     op = options.unaops[op_idx]
     op_l = options.binops[op_l_idx]
     if tree.l.l.constant && tree.l.r.constant
-        val_ll = convert(T, tree.l.l.val)
-        val_lr = convert(T, tree.l.r.val)
+        val_ll = tree.l.l.val
+        val_lr = tree.l.r.val
         @return_on_check val_ll T n
         @return_on_check val_lr T n
         x_l = op_l(val_ll, val_lr)::T
@@ -178,7 +178,7 @@ function deg1_l2_ll0_lr0_eval(
         @return_on_check x T n
         return (fill(x, n), true)
     elseif tree.l.l.constant
-        val_ll = convert(T, tree.l.l.val)
+        val_ll = tree.l.l.val
         @return_on_check val_ll T n
         feature_lr = tree.l.r.feature
         cumulator = Array{T,1}(undef, n)
@@ -190,7 +190,7 @@ function deg1_l2_ll0_lr0_eval(
         return (cumulator, true)
     elseif tree.l.r.constant
         feature_ll = tree.l.l.feature
-        val_lr = convert(T, tree.l.r.val)
+        val_lr = tree.l.r.val
         @return_on_check val_lr T n
         cumulator = Array{T,1}(undef, n)
         @inbounds @simd for j in 1:n
@@ -220,7 +220,7 @@ function deg1_l1_ll0_eval(
     op = options.unaops[op_idx]
     op_l = options.unaops[op_l_idx]
     if tree.l.l.constant
-        val_ll = convert(T, tree.l.l.val)
+        val_ll = tree.l.l.val
         @return_on_check val_ll T n
         x_l = op_l(val_ll)::T
         @return_on_check x_l T n
@@ -245,16 +245,16 @@ function deg2_l0_r0_eval(
     n = size(cX, 2)
     op = options.binops[op_idx]
     if tree.l.constant && tree.r.constant
-        val_l = convert(T, tree.l.val)
+        val_l = tree.l.val
         @return_on_check val_l T n
-        val_r = convert(T, tree.r.val)
+        val_r = tree.r.val
         @return_on_check val_r T n
         x = op(val_l, val_r)::T
         @return_on_check x T n
         return (fill(x, n), true)
     elseif tree.l.constant
         cumulator = Array{T,1}(undef, n)
-        val_l = convert(T, tree.l.val)
+        val_l = tree.l.val
         @return_on_check val_l T n
         feature_r = tree.r.feature
         @inbounds @simd for j in 1:n
@@ -264,7 +264,7 @@ function deg2_l0_r0_eval(
     elseif tree.r.constant
         cumulator = Array{T,1}(undef, n)
         feature_l = tree.l.feature
-        val_r = convert(T, tree.r.val)
+        val_r = tree.r.val
         @return_on_check val_r T n
         @inbounds @simd for j in 1:n
             x = op(cX[feature_l, j], val_r)::T
@@ -291,7 +291,7 @@ function deg2_l0_eval(
     @return_on_nonfinite_array cumulator T n
     op = options.binops[op_idx]
     if tree.l.constant
-        val = convert(T, tree.l.val)
+        val = tree.l.val
         @return_on_check val T n
         @inbounds @simd for j in 1:n
             x = op(val, cumulator[j])::T
@@ -316,7 +316,7 @@ function deg2_r0_eval(
     @return_on_nonfinite_array cumulator T n
     op = options.binops[op_idx]
     if tree.r.constant
-        val = convert(T, tree.r.val)
+        val = tree.r.val
         @return_on_check val T n
         @inbounds @simd for j in 1:n
             x = op(cumulator[j], val)::T
