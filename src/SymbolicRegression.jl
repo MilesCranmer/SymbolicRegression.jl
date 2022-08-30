@@ -460,11 +460,11 @@ function _EquationSearch(
     if saved_state === nothing
         hallOfFame = [HallOfFame(options, T) for j in 1:nout]
     else
-        hallOfFame = saved_state[2]::Union{HallOfFame,Vector{HallOfFame}}
-        if !isa(hallOfFame, Vector{HallOfFame})
+        hallOfFame = saved_state[2]::Union{HallOfFame{T},Vector{HallOfFame{T}}}
+        if !isa(hallOfFame, Vector{HallOfFame{T}})
             hallOfFame = [hallOfFame]
         end
-        hallOfFame::Vector{HallOfFame}
+        hallOfFame::Vector{HallOfFame{T}}
     end
     actualMaxsize = options.maxsize + MAX_DEGREE
 
