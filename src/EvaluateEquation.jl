@@ -335,12 +335,12 @@ end
 # Evaluate an equation over an array of datapoints
 # This one is just for reference. The fused one should be faster.
 function differentiable_eval_tree_array(
-    tree::Node{T}, cX::AbstractMatrix{T}, options::Options
-)::Tuple{AbstractVector{T},Bool} where {T<:Real}
+    tree::Node{T1}, cX::AbstractMatrix{T}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real,T1}
     n = size(cX, 2)
     if tree.degree == 0
         if tree.constant
-            return (ones(T, n) .* tree.val, true)
+            return (ones(T, n) .* convert(T, tree.val), true)
         else
             return (cX[tree.feature, :], true)
         end
@@ -350,22 +350,10 @@ function differentiable_eval_tree_array(
         return deg2_diff_eval(tree, cX, Val(tree.op), options)
     end
 end
-function differentiable_eval_tree_array(
-    tree::Node{T1}, cX::AbstractMatrix{T2}, options::Options
-) where {T1<:Real,T2<:Real}
-    T = promote_type(T1, T2)
-    debug(
-        options.verbosity > 0,
-        "Warning: differentiable_eval_tree_array received mixed types: tree=$(T1) and data=$(T2).",
-    )
-    tree = convert(Node{T}, tree)
-    cX = convert(AbstractMatrix{T}, cX)
-    return differentiable_eval_tree_array(tree, cX, options)
-end
 
 function deg1_diff_eval(
-    tree::Node{T}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
-)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
+    tree::Node{T1}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx,T1}
     (left, complete) = differentiable_eval_tree_array(tree.l, cX, options)
     @return_on_false complete left
     op = options.unaops[op_idx]
@@ -375,8 +363,8 @@ function deg1_diff_eval(
 end
 
 function deg2_diff_eval(
-    tree::Node{T}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
-)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx}
+    tree::Node{T1}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
+)::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx,T1}
     (left, complete) = differentiable_eval_tree_array(tree.l, cX, options)
     @return_on_false complete left
     (right, complete2) = differentiable_eval_tree_array(tree.r, cX, options)
