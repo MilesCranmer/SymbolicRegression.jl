@@ -22,6 +22,7 @@ respect to `x1`.
 function eval_diff_tree_array(
     tree::Node{T}, cX::AbstractMatrix{T}, options::Options, direction::Int
 )::Tuple{AbstractVector{T},AbstractVector{T},Bool} where {T<:Real}
+    @assert options.enable_autodiff
     # TODO: Implement quick check for whether the variable is actually used
     # in this tree. Otherwise, return zero.
     evaluation, derivative, complete = _eval_diff_tree_array(tree, cX, options, direction)
@@ -121,6 +122,7 @@ to every constant in the expression.
 function eval_grad_tree_array(
     tree::Node{T}, cX::AbstractMatrix{T}, options::Options; variable::Bool=false
 )::Tuple{AbstractVector{T},AbstractMatrix{T},Bool} where {T<:Real}
+    @assert options.enable_autodiff
     n = size(cX, 2)
     if variable
         n_gradients = size(cX, 1)
