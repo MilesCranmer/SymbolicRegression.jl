@@ -221,6 +221,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     to periodically optimize constants in equations.
 - `optimizer_nrestarts`: How many different random starting positions to consider
     for optimization of constants.
+- `optimizer_algorithm`: Select algorithm to use for optimizing constants. Default
+    is "BFGS", but "NelderMead" is also supported.
 - `hofFile`: What file to store equations to, as a backup.
 - `perturbationFactor`: When mutating a constant, either
     multiply or divide by (1+perturbationFactor)^(rand()+1).
