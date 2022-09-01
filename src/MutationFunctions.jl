@@ -1,6 +1,6 @@
 module MutationFunctionsModule
 
-import ..CoreModule: CONST_TYPE, Node, copy_node, Options
+import ..CoreModule: Node, copy_node, Options
 import ..EquationUtilsModule: count_nodes, count_constants, count_operators, count_depth
 
 # Return a random node from the tree
@@ -46,7 +46,9 @@ function mutate_operator(tree::Node, options::Options)::Node
 end
 
 # Randomly perturb a constant
-function mutate_constant(tree::Node, temperature::T, options::Options)::Node where {T<:Real}
+function mutate_constant(
+    tree::Node{T}, temperature::T, options::Options
+)::Node where {T<:AbstractFloat}
     # T is between 0 and 1.
 
     if count_constants(tree) == 0
@@ -57,15 +59,15 @@ function mutate_constant(tree::Node, temperature::T, options::Options)::Node whe
         node = random_node(tree)
     end
 
-    bottom = convert(T, 1//10)
-    maxChange = options.perturbationFactor * temperature + convert(T, 1) + bottom
-    factor = maxChange^Float32(rand())
+    bottom = 1//10
+    maxChange = T(options.perturbationFactor) * temperature + T(1 + bottom)
+    factor = maxChange^rand(T)
     makeConstBigger = rand() > 0.5
 
     if makeConstBigger
-        node.val *= convert(CONST_TYPE, factor)
+        node.val *= factor
     else
-        node.val /= convert(CONST_TYPE, factor)
+        node.val /= factor
     end
 
     if rand() > options.probNegate
@@ -77,8 +79,11 @@ end
 
 # Add a random unary/binary operation to the end of a tree
 function append_random_op(
-    tree::Node, options::Options, nfeatures::Int; makeNewBinOp::Union{Bool,Nothing}=nothing
-)::Node
+    tree::Node{T},
+    options::Options,
+    nfeatures::Int;
+    makeNewBinOp::Union{Bool,Nothing}=nothing,
+)::Node{T} where {T<:AbstractFloat}
     node = random_node(tree)
     while node.degree != 0
         node = random_node(tree)
@@ -91,10 +96,12 @@ function append_random_op(
 
     if makeNewBinOp
         newnode = Node(
-            rand(1:(options.nbin)), make_random_leaf(nfeatures), make_random_leaf(nfeatures)
+            rand(1:(options.nbin)),
+            make_random_leaf(nfeatures, T),
+            make_random_leaf(nfeatures, T),
         )
     else
-        newnode = Node(rand(1:(options.nuna)), make_random_leaf(nfeatures))
+        newnode = Node(rand(1:(options.nuna)), make_random_leaf(nfeatures, T))
     end
 
     if newnode.degree == 2
@@ -111,14 +118,16 @@ function append_random_op(
 end
 
 # Insert random node
-function insert_random_op(tree::Node, options::Options, nfeatures::Int)::Node
+function insert_random_op(
+    tree::Node{T}, options::Options, nfeatures::Int
+)::Node{T} where {T<:AbstractFloat}
     node = random_node(tree)
     choice = rand()
     makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
     left = copy_node(node)
 
     if makeNewBinOp
-        right = make_random_leaf(nfeatures)
+        right = make_random_leaf(nfeatures, T)
         newnode = Node(rand(1:(options.nbin)), left, right)
     else
         newnode = Node(rand(1:(options.nuna)), left)
@@ -136,14 +145,16 @@ function insert_random_op(tree::Node, options::Options, nfeatures::Int)::Node
 end
 
 # Add random node to the top of a tree
-function prepend_random_op(tree::Node, options::Options, nfeatures::Int)::Node
+function prepend_random_op(
+    tree::Node{T}, options::Options, nfeatures::Int
+)::Node{T} where {T<:AbstractFloat}
     node = tree
     choice = rand()
     makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
     left = copy_node(tree)
 
     if makeNewBinOp
-        right = make_random_leaf(nfeatures)
+        right = make_random_leaf(nfeatures, T)
         newnode = Node(rand(1:(options.nbin)), left, right)
     else
         newnode = Node(rand(1:(options.nuna)), left)
@@ -160,11 +171,11 @@ function prepend_random_op(tree::Node, options::Options, nfeatures::Int)::Node
     return node
 end
 
-function make_random_leaf(nfeatures::Int)::Node
+function make_random_leaf(nfeatures::Int, ::Type{T})::Node{T} where {T<:AbstractFloat}
     if rand() > 0.5
-        return Node(randn(CONST_TYPE))
+        return Node(randn(T))
     else
-        return Node(rand(1:nfeatures))
+        return Node(rand(1:nfeatures), T)
     end
 end
 
@@ -200,13 +211,15 @@ end
 
 # Select a random node, and replace it an the subtree
 # with a variable or constant
-function delete_random_op(tree::Node, options::Options, nfeatures::Int)::Node
+function delete_random_op(
+    tree::Node{T}, options::Options, nfeatures::Int
+)::Node{T} where {T<:AbstractFloat}
     node, parent, side = random_node_and_parent(tree)
     isroot = (parent === nothing)
 
     if node.degree == 0
         # Replace with new constant
-        newnode = make_random_leaf(nfeatures)
+        newnode = make_random_leaf(nfeatures, T)
         node.degree = newnode.degree
         node.val = newnode.val
         node.constant = newnode.constant
@@ -246,9 +259,11 @@ function delete_random_op(tree::Node, options::Options, nfeatures::Int)::Node
 end
 
 # Create a random equation by appending random operators
-function gen_random_tree(length::Int, options::Options, nfeatures::Int)::Node
+function gen_random_tree(
+    length::Int, options::Options, nfeatures::Int, ::Type{T}
+)::Node{T} where {T<:AbstractFloat}
     # Note that this base tree is just a placeholder; it will be replaced.
-    tree = Node(convert(CONST_TYPE, 1))
+    tree = Node(convert(T, 1))
     for i in 1:length
         # TODO: This can be larger number of nodes than length.
         tree = append_random_op(tree, options, nfeatures)
@@ -256,8 +271,10 @@ function gen_random_tree(length::Int, options::Options, nfeatures::Int)::Node
     return tree
 end
 
-function gen_random_tree_fixed_size(node_count::Int, options::Options, nfeatures::Int)::Node
-    tree = make_random_leaf(nfeatures)
+function gen_random_tree_fixed_size(
+    node_count::Int, options::Options, nfeatures::Int, ::Type{T}
+)::Node{T} where {T<:AbstractFloat}
+    tree = make_random_leaf(nfeatures, T)
     cur_size = count_nodes(tree)
     while cur_size < node_count
         if cur_size == node_count - 1  # only unary operator allowed.

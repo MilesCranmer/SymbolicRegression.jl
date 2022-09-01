@@ -13,13 +13,13 @@ custom_cos(x::T) where {T<:Real} = cos(x)^2
 pow_abs2(l::Node, r::Node)::Node =
     (l.constant && r.constant) ? Node(pow_abs2(l.val, r.val)::AbstractFloat) : Node(5, l, r)
 pow_abs2(l::Node, r::AbstractFloat)::Node =
-    l.constant ? Node(pow_abs2(l.val, r)::AbstractFloat) : Node(5, l, r)
+    l.constant ? Node(pow_abs2(l.val, r)) : Node(5, l, r)
 pow_abs2(l::AbstractFloat, r::Node)::Node =
-    r.constant ? Node(pow_abs2(l, r.val)::AbstractFloat) : Node(5, l, r)
-custom_cos(x::Node)::Node = x.constant ? Node(custom_cos(x.val)::AbstractFloat) : Node(1, x)
+    r.constant ? Node(pow_abs2(l, r.val)) : Node(5, l, r)
+custom_cos(x::Node)::Node = x.constant ? Node(custom_cos(x.val)) : Node(1, x)
 
-equation1(x1, x2, x3) = x1 + x2 + x3 + 3.2f0
-equation2(x1, x2, x3) = pow_abs2(x1, x2) + x3 + custom_cos(1.0f0 + x3) + 3.0f0 / x1
+equation1(x1, x2, x3) = x1 + x2 + x3 + 3.2
+equation2(x1, x2, x3) = pow_abs2(x1, x2) + x3 + custom_cos(1.0 + x3) + 3.0 / x1
 function equation3(x1, x2, x3)
     return (
         ((x2 + x2) * ((-0.5982493 / pow_abs2(x1, x2)) / -0.54734415)) + (
@@ -44,13 +44,13 @@ function array_test(ar1, ar2; rtol=0.1)
     return isapprox(ar1, ar2; rtol=rtol)
 end
 
-for type in [Float32, Float64]
+for type in [Float16, Float32, Float64]
     println("Testing derivatives with respect to variables, with type=$(type).")
     rng = MersenneTwister(seed)
     nfeatures = 3
     N = 100
 
-    X = rand(rng, type, nfeatures, N) * 10
+    X = rand(rng, type, nfeatures, N) * 5
 
     options = Options(;
         binary_operators=(+, *, -, /, pow_abs2),
@@ -60,10 +60,15 @@ for type in [Float32, Float64]
 
     for j in 1:3
         equation = [equation1, equation2, equation3][j]
+        if type == Float16 && j == 3
+            # Numerical precision hurts this comparison too much
+            continue
+        end
 
-        tree = equation(nx1, nx2, nx3)
+        tree = convert(Node{type}, equation(nx1, nx2, nx3))
         predicted_output = eval_tree_array(tree, X, options)[1]
         true_output = equation.([X[i, :] for i in 1:nfeatures]...)
+        true_output = convert(AbstractArray{type}, true_output)
 
         # First, check if the predictions are approximately equal:
         @test array_test(predicted_output, true_output)
@@ -94,6 +99,7 @@ for type in [Float32, Float64]
     equation4(x1, x2, x3) = 3.2f0 * x1
     # The gradient should be: (C * x1) => x1 is gradient with respect to C.
     tree = equation4(nx1, nx2, nx3)
+    tree = convert(Node{type}, tree)
     predicted_grad = eval_grad_tree_array(tree, X, options; variable=false)[2]
     @test array_test(predicted_grad[1, :], X[1, :])
 
@@ -109,6 +115,7 @@ for type in [Float32, Float64]
     end
 
     tree = equation5(nx1, nx2, nx3)
+    tree = convert(Node{type}, tree)
 
     # Use zygote to explicitly find the gradient:
     true_grad = gradient(

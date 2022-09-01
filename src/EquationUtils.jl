@@ -1,6 +1,6 @@
 module EquationUtilsModule
 
-import ..CoreModule: CONST_TYPE, Node, copy_node, Options
+import ..CoreModule: Node, copy_node, Options
 
 # Count the operators, constants, variables in an equation
 function count_nodes(tree::Node)::Int
@@ -105,12 +105,12 @@ function _compute_complexity(
 end
 
 # Get all the constants from a tree
-function get_constants(tree::Node)::AbstractVector{CONST_TYPE}
+function get_constants(tree::Node{T})::AbstractVector{T} where {T<:AbstractFloat}
     if tree.degree == 0
         if tree.constant
             return [tree.val]
         else
-            return CONST_TYPE[]
+            return T[]
         end
     elseif tree.degree == 1
         return get_constants(tree.l)
@@ -121,10 +121,10 @@ function get_constants(tree::Node)::AbstractVector{CONST_TYPE}
 end
 
 # Set all the constants inside a tree
-function set_constants(tree::Node, constants::AbstractVector{T}) where {T<:Real}
+function set_constants(tree::Node{T}, constants::AbstractVector{T}) where {T<:Real}
     if tree.degree == 0
         if tree.constant
-            tree.val = convert(CONST_TYPE, constants[1])
+            tree.val = constants[1]
         end
     elseif tree.degree == 1
         set_constants(tree.l, constants)

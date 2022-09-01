@@ -5,8 +5,8 @@ import ..UtilsModule: get_birth_order
 import ..LossFunctionsModule: score_func
 
 # Define a member of population by equation, score, and age
-mutable struct PopMember{T<:Real}
-    tree::Node
+mutable struct PopMember{T<:AbstractFloat}
+    tree::Node{T}
     score::T  # Inludes complexity penalty, normalization
     loss::T  # Raw loss
     birth::Int
@@ -30,7 +30,7 @@ Create a population member with a birth date at the current time.
 - `loss::T`: The raw loss to assign.
 """
 function PopMember(
-    t::Node, score::T, loss::T; ref::Int=-1, parent::Int=-1, deterministic=false
+    t::Node{T}, score::T, loss::T; ref::Int=-1, parent::Int=-1, deterministic=false
 ) where {T<:Real}
     if ref == -1
         ref = generate_reference()
@@ -57,7 +57,7 @@ Automatically compute the score for this tree.
 function PopMember(
     dataset::Dataset{T},
     baseline::T,
-    t::Node,
+    t::Node{T},
     options::Options;
     ref::Int=-1,
     parent::Int=-1,

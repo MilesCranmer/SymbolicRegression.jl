@@ -24,6 +24,7 @@ for i in 0:5
     skip_mutation_failures = false
     useFrequency = false
     useFrequencyInTournament = false
+    T = Float32
     print("Testing with batching=$(batching) and weighted=$(weighted), ")
     if i == 0
         println("with serial & progress bar & warmup & BFGS")
@@ -43,13 +44,17 @@ for i in 0:5
         crossoverProbability = 0.02f0
         useFrequencyInTournament = true
     elseif i == 4
-        println("with crossover and skip mutation failures and both frequencies options")
+        println(
+            "with crossover and skip mutation failures and both frequencies options, and Float16 type",
+        )
         crossoverProbability = 0.02f0
         skip_mutation_failures = true
         useFrequency = true
         useFrequencyInTournament = true
+        T = Float16
     elseif i == 5
-        println("with default hyperparameters")
+        println("with default hyperparameters, and Float64 type")
+        T = Float64
     end
     if i == 5
         options = SymbolicRegression.Options(;
@@ -77,10 +82,10 @@ for i in 0:5
         )
     end
 
-    X = randn(MersenneTwister(0), Float32, 5, 100)
+    X = randn(MersenneTwister(0), T, 5, 100)
     if weighted
         mask = rand(100) .> 0.5
-        weights = map(x -> convert(Float32, x), mask)
+        weights = map(x -> convert(T, x), mask)
         # Completely different function superimposed - need
         # to use correct weights to figure it out!
         y = (2 .* cos.(X[4, :])) .* weights .+ (1 .- weights) .* (5 .* X[2, :])
@@ -116,6 +121,10 @@ for i in 0:5
     # Always assume multi
     for dom in dominating
         best = dom[end]
+        # Assert we created the correct type of trees:
+        @test typeof(best.tree) == Node{T}
+
+        # Look at the symbolic version:
         eqn = node_to_symbolic(best.tree, options)
 
         local x4 = SymbolicUtils.Sym{Real}(Symbol("x4"))
