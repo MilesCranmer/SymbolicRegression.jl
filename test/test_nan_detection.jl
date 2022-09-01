@@ -2,8 +2,9 @@ println("Testing NaN detection.")
 using SymbolicRegression
 using Test
 
+options = Options(; binary_operators=(+, *, /, -), unary_operators=(cos, sin, exp))
+
 function run_nan_detection_test(T)
-    options = Options(; binary_operators=(+, *, /, -), unary_operators=(cos, sin, exp))
     # Creating a NaN via computation.
     tree = exp(exp(exp(exp(Node("x1") + 1))))
     tree = convert(Node{T}, tree)
