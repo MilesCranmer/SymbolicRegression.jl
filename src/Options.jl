@@ -217,10 +217,10 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     migrated equations at the end of each cycle.
 - `fractionReplacedHof`: What fraction to replace with hall of fame
     equations at the end of each cycle.
-- `shouldOptimizeConstants`: Whether to use NelderMead optimization
+- `shouldOptimizeConstants`: Whether to use an optimization algorithm
     to periodically optimize constants in equations.
 - `optimizer_nrestarts`: How many different random starting positions to consider
-    when using NelderMead optimization.
+    for optimization of constants.
 - `hofFile`: What file to store equations to, as a backup.
 - `perturbationFactor`: When mutating a constant, either
     multiply or divide by (1+perturbationFactor)^(rand()+1).
