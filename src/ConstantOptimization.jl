@@ -46,7 +46,7 @@ function optimize_constants(
     num_evals += result.f_calls
     # Try other initial conditions:
     for i in 1:(options.optimizer_nrestarts)
-        new_start = x0 .* (convert(T, 1) .+ convert(T, 1//2) * randn(T, size(x0, 1)))
+        new_start = x0 .* (T(1) .+ T(1//2) * randn(T, size(x0, 1)))
         tmpresult = Optim.optimize(
             f,
             new_start,
