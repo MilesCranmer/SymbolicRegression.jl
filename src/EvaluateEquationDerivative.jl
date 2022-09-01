@@ -74,6 +74,7 @@ function diff_deg1_eval(
     op = options.unaops[op_idx]
     diff_op = options.diff_unaops[op_idx]
 
+    # TODO - add type assertions to get better speed:
     @inbounds @simd for j in 1:n
         x = op(cumulator[j])::T
         dx = diff_op(cumulator[j])::T * dcumulator[j]
