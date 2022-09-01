@@ -1,3 +1,4 @@
+using SafeTestsets
 
 @safetestset "Test tree construction and scoring" begin
     include("test_tree_construction.jl")

@@ -1,5 +1,6 @@
 println("Testing whether probPickFirst works.")
-using SymbolicRegression, Test
+using SymbolicRegression
+using Test
 include("test_params.jl")
 
 n = 10

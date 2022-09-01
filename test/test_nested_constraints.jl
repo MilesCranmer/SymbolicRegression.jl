@@ -1,5 +1,6 @@
 println("Test operator nesting and flagging.")
 using SymbolicRegression
+using Test
 
 function create_options(nested_constraints)
     return Options(;

@@ -1,5 +1,6 @@
 using SymbolicRegression
 using SymbolicRegression: check_constraints
+using Test
 include("test_params.jl")
 
 _inv(x) = 1 / x

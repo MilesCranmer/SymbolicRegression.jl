@@ -1,5 +1,6 @@
 println("Testing NaN detection.")
 using SymbolicRegression
+using Test
 
 for T in [Float32]
     options = Options(; binary_operators=(+, *, /, -), unary_operators=(cos, sin, exp))

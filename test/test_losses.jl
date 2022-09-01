@@ -1,6 +1,7 @@
 using SymbolicRegression
 using SymbolicRegression: loss
 using Random
+using Test
 include("test_params.jl")
 
 customloss(x, y) = abs(x - y)^2.5

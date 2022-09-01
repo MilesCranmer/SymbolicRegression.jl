@@ -18,6 +18,7 @@ using SymbolicRegression:
     logical_or,
     logical_and,
     gamma
+using Test
 include("test_params.jl")
 
 # Generic operator tests

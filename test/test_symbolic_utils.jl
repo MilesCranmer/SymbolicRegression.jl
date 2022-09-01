@@ -1,4 +1,5 @@
 using SymbolicRegression
+using Test
 include("test_params.jl")
 
 _inv(x) = 1 / x
