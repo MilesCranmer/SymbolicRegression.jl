@@ -533,16 +533,28 @@ function Options(;
             continue
         end
         @eval begin
-            Base.$_f(l::Node, r::Node)::Node =
+            function Base.$_f(l::Node{T1}, r::Node{T2}) where {T1<:AbstractFloat,T2<:AbstractFloat}
+                T = promote_type(T1, T2)
+                l = convert(Node{T}, l)
+                r = convert(Node{T}, r)
                 if (l.constant && r.constant)
-                    Node($f(l.val, r.val)::AbstractFloat)
+                    return Node($f(l.val, r.val))
                 else
-                    Node($op, l, r)
+                    return Node($op, l, r)
                 end
-            Base.$_f(l::Node, r::AbstractFloat)::Node =
-                l.constant ? Node($f(l.val, r)::AbstractFloat) : Node($op, l, r)
-            Base.$_f(l::AbstractFloat, r::Node)::Node =
-                r.constant ? Node($f(l, r.val)::AbstractFloat) : Node($op, l, r)
+            end
+            function Base.$_f(l::Node{T1}, r::T2) where {T1<:AbstractFloat,T2<:Real}
+                T = promote_type(T1, T2)
+                l = convert(Node{T}, l)
+                r = convert(T, r)
+                return l.constant ? Node($f(l.val, r)) : Node($op, l, r)
+            end
+            function Base.$_f(l::T1, r::Node{T2}) where {T1<:Real,T2<:AbstractFloat}
+                T = promote_type(T1, T2)
+                l = convert(T, l)
+                r = convert(Node{T}, r)
+                return r.constant ? Node($f(l, r.val)) : Node($op, l, r)
+            end
         end
     end
 
@@ -552,8 +564,9 @@ function Options(;
             continue
         end
         @eval begin
-            Base.$f(l::Node)::Node =
-                l.constant ? Node($f(l.val)::AbstractFloat) : Node($op, l)
+            function Base.$f(l::Node{T})::Node{T} where {T<:AbstractFloat}
+                return l.constant ? Node($f(l.val)) : Node($op, l)
+            end
         end
     end
 
