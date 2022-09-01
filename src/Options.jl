@@ -1,5 +1,6 @@
 module OptionsModule
 
+using Optim: Optim
 import Distributed: nworkers
 import LossFunctions: L2DistLoss
 import Zygote: gradient
@@ -305,7 +306,8 @@ function Options(;
     optimizer_algorithm="BFGS",
     optimizer_nrestarts=2,
     optimize_probability=0.14f0,
-    optimizer_iterations=8,
+    optimizer_iterations=nothing,
+    optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
     recorder=nothing,
     recorder_file="pysr_recorder.json",
     probPickFirst=0.86f0,
@@ -571,6 +573,22 @@ function Options(;
         earlyStopCondition = (loss, complexity) -> loss < stopping_point
     end
 
+    # Parse optimizer options
+    default_optimizer_iterations = 8
+    if !isa(optimizer_options, Optim.Options)
+        if isnothing(optimizer_iterations)
+            optimizer_iterations = default_optimizer_iterations
+        end
+        if isnothing(optimizer_options)
+            optimizer_options = Optim.Options(; iterations=optimizer_iterations)
+        else
+            if haskey(optimizer_options, :iterations)
+                optimizer_iterations = optimizer_options[:iterations]
+            end
+            optimizer_options = Optim.Options(; optimizer_options..., iterations=optimizer_iterations)
+        end
+    end
+
     options = Options{
         typeof(binary_operators),
         typeof(unary_operators),
@@ -622,7 +640,7 @@ function Options(;
         optimizer_algorithm,
         optimize_probability,
         optimizer_nrestarts,
-        optimizer_iterations,
+        optimizer_options,
         recorder,
         recorder_file,
         probPickFirst,

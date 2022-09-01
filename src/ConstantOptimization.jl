@@ -41,7 +41,7 @@ function optimize_constants(
         end
     end
     result = Optim.optimize(
-        f, x0, algorithm, Optim.Options(; iterations=options.optimizer_iterations)
+        f, x0, algorithm, options.optimizer_options
     )
     num_evals += result.f_calls
     # Try other initial conditions:
@@ -55,7 +55,7 @@ function optimize_constants(
             f,
             new_start,
             algorithm,
-            Optim.Options(; iterations=options.optimizer_iterations),
+            options.optimizer_options,
         )
         num_evals += tmpresult.f_calls
 
