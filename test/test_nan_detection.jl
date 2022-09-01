@@ -6,6 +6,7 @@ for T in [Float32]
     options = Options(; binary_operators=(+, *, /, -), unary_operators=(cos, sin, exp))
     # Creating a NaN via computation.
     tree = exp(exp(exp(exp(Node("x1") + T(1)))))
+    tree = convert(Node{T}, tree)
     X = ones(T, 1, 10) .* 100
     output, flag = eval_tree_array(tree, X, options)
     @test !flag
@@ -18,9 +19,11 @@ for T in [Float32]
 
     # Having a NaN/Inf constants:
     tree = cos(Node("x1") + T(Inf))
+    tree = convert(Node{T}, tree)
     output, flag = eval_tree_array(tree, X, options)
     @test !flag
     tree = cos(Node("x1") + T(NaN))
+    tree = convert(Node{T}, tree)
     output, flag = eval_tree_array(tree, X, options)
     @test !flag
 end
