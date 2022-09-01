@@ -533,7 +533,9 @@ function Options(;
             continue
         end
         @eval begin
-            function Base.$_f(l::Node{T1}, r::Node{T2}) where {T1<:AbstractFloat,T2<:AbstractFloat}
+            function Base.$_f(
+                l::Node{T1}, r::Node{T2}
+            ) where {T1<:AbstractFloat,T2<:AbstractFloat}
                 T = promote_type(T1, T2)
                 l = convert(Node{T}, l)
                 r = convert(Node{T}, r)
