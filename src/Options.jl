@@ -223,6 +223,10 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     for optimization of constants.
 - `optimizer_algorithm`: Select algorithm to use for optimizing constants. Default
     is "BFGS", but "NelderMead" is also supported.
+- `optimizer_options`: General options for the constant optimization. For details
+    we refer to the documentation on `Optim.Options` from the `Optim.jl` package.
+    Options can be provided here as `NamedTuple`, e.g. `(iterations=16,)`, as a
+    `Dict`, e.g. Dict(:x_tol => 1.0e-32,), or as an `Optim.Options` instance.
 - `hofFile`: What file to store equations to, as a backup.
 - `perturbationFactor`: When mutating a constant, either
     multiply or divide by (1+perturbationFactor)^(rand()+1).
