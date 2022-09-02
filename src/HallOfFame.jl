@@ -105,7 +105,7 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE, dataset, option
     output *= "Hall of Fame:\n"
     output *= "-----------------------------------------\n"
     output *= @sprintf(
-        "%-10s  %-8s   %-8s  %-8s\n", "Complexity", "loss", "Score", "Equation"
+        "%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation"
     )
 
     dominating = calculate_pareto_frontier(dataset, hallOfFame, options)
