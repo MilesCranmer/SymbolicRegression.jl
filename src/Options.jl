@@ -591,7 +591,9 @@ function Options(;
             if haskey(optimizer_options, :iterations)
                 optimizer_iterations = optimizer_options[:iterations]
             end
-            optimizer_options = Optim.Options(; optimizer_options..., iterations=optimizer_iterations)
+            optimizer_options = Optim.Options(;
+                optimizer_options..., iterations=optimizer_iterations
+            )
         end
     end
 

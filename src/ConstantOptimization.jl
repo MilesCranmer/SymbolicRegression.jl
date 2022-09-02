@@ -40,9 +40,7 @@ function optimize_constants(
             error("Optimization function not implemented.")
         end
     end
-    result = Optim.optimize(
-        f, x0, algorithm, options.optimizer_options
-    )
+    result = Optim.optimize(f, x0, algorithm, options.optimizer_options)
     num_evals += result.f_calls
     # Try other initial conditions:
     for i in 1:(options.optimizer_nrestarts)
@@ -51,12 +49,7 @@ function optimize_constants(
                 convert(CONST_TYPE, 1) .+
                 convert(CONST_TYPE, 1//2) * randn(CONST_TYPE, size(x0, 1))
             )
-        tmpresult = Optim.optimize(
-            f,
-            new_start,
-            algorithm,
-            options.optimizer_options,
-        )
+        tmpresult = Optim.optimize(f, new_start, algorithm, options.optimizer_options)
         num_evals += tmpresult.f_calls
 
         if tmpresult.minimum < result.minimum
