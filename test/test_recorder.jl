@@ -20,7 +20,7 @@ options = SymbolicRegression.Options(;
 hall_of_fame = EquationSearch(X, y; niterations=5, options=options, multithreading=true)
 
 data = open(options.recorder_file, "r") do io
-    JSON3.read(io)
+    JSON3.read(io; allow_inf=true)
 end
 
 @test haskey(data, :options)
