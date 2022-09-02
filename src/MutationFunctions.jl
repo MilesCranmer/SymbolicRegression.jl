@@ -4,7 +4,7 @@ import ..CoreModule: Node, copy_node, Options
 import ..EquationUtilsModule: count_nodes, count_constants, count_operators, count_depth
 
 # Return a random node from the tree
-function random_node(tree::Node)::Node
+function random_node(tree::Node{T})::Node{T} where {T}
     if tree.degree == 0
         return tree
     end
@@ -29,7 +29,7 @@ end
 
 # Randomly convert an operator into another one (binary->binary;
 # unary->unary)
-function mutate_operator(tree::Node, options::Options)::Node
+function mutate_operator(tree::Node{T}, options::Options)::Node{T} where {T}
     if count_operators(tree) == 0
         return tree
     end
@@ -48,7 +48,7 @@ end
 # Randomly perturb a constant
 function mutate_constant(
     tree::Node{T}, temperature::T, options::Options
-)::Node where {T<:AbstractFloat}
+)::Node{T} where {T<:AbstractFloat}
     # T is between 0 and 1.
 
     if count_constants(tree) == 0
@@ -181,8 +181,8 @@ end
 
 # Return a random node from the tree with parent, and side ('n' for no parent)
 function random_node_and_parent(
-    tree::Node, parent::Union{Node,Nothing}; side::Char
-)::Tuple{Node,Union{Node,Nothing},Char}
+    tree::Node{T}, parent::Union{Node{T},Nothing}; side::Char
+)::Tuple{Node{T},Union{Node{T},Nothing},Char} where {T}
     if tree.degree == 0
         return tree, parent, side
     end
@@ -205,7 +205,9 @@ function random_node_and_parent(
     return random_node_and_parent(tree.r, tree; side='r')
 end
 
-function random_node_and_parent(tree::Node)::Tuple{Node,Union{Node,Nothing},Char}
+function random_node_and_parent(
+    tree::Node{T}
+)::Tuple{Node{T},Union{Node{T},Nothing},Char} where {T}
     return random_node_and_parent(tree, nothing; side='n')
 end
 
@@ -289,7 +291,7 @@ function gen_random_tree_fixed_size(
 end
 
 """Crossover between two expressions"""
-function crossover_trees(tree1::Node, tree2::Node)::Tuple{Node,Node}
+function crossover_trees(tree1::Node{T}, tree2::Node{T})::Tuple{Node{T},Node{T}} where {T}
     tree1 = copy_node(tree1)
     tree2 = copy_node(tree2)
 

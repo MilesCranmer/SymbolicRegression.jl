@@ -5,7 +5,7 @@ import ..CheckConstraintsModule: check_constraints
 import ..UtilsModule: isbad, isgood
 
 # Simplify tree
-function combine_operators(tree::Node, options::Options)::Node
+function combine_operators(tree::Node{T}, options::Options)::Node{T} where {T}
     # NOTE: (const (+*-) const) already accounted for. Call simplify_tree before.
     # ((const + var) + const) => (const + var)
     # ((const * var) * const) => (const * var)
