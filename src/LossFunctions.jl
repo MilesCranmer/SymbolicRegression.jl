@@ -39,7 +39,7 @@ end
 function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
     (prediction, completion) = eval_tree_array(tree, dataset.X, options)
     if !completion
-        return T(1000000000)
+        return T(Inf)
     end
 
     if dataset.weighted
@@ -78,7 +78,7 @@ function score_func_batch(
     batch_y = dataset.y[batch_idx]
     (prediction, completion) = eval_tree_array(tree, batch_X, options)
     if !completion
-        return T(1000000000), T(1000000000)
+        return T(0), T(Inf)
     end
 
     if !dataset.weighted
