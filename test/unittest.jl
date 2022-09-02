@@ -56,6 +56,10 @@ end
     include("test_complexity.jl")
 end
 
+@safetestset "Test options" begin
+    include("test_options.jl")
+end
+
 @safetestset "Test hash of tree" begin
     include("test_hash.jl")
 end

@@ -1,5 +1,6 @@
 module OptionsStructModule
 
+using Optim: Optim
 import LossFunctions: SupervisedLoss
 
 """This struct defines how complexity is calculated."""
@@ -78,7 +79,7 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function},D}
     optimizer_algorithm::String
     optimize_probability::Float32
     optimizer_nrestarts::Int
-    optimizer_iterations::Int
+    optimizer_options::Optim.Options
     recorder::Bool
     recorder_file::String
     probPickFirst::Float32
@@ -109,7 +110,7 @@ function Base.print(io::IO, options::Options)
 # Tournaments:
     probPickFirst=$(options.probPickFirst), ns=$(options.ns), topn=$(options.topn), 
 # Constant tuning:
-    perturbationFactor=$(options.perturbationFactor), probNegate=$(options.probNegate), shouldOptimizeConstants=$(options.shouldOptimizeConstants), optimizer_algorithm=$(options.optimizer_algorithm), optimize_probability=$(options.optimize_probability), optimizer_nrestarts=$(options.optimizer_nrestarts), optimizer_iterations=$(options.optimizer_iterations),
+    perturbationFactor=$(options.perturbationFactor), probNegate=$(options.probNegate), shouldOptimizeConstants=$(options.shouldOptimizeConstants), optimizer_algorithm=$(options.optimizer_algorithm), optimize_probability=$(options.optimize_probability), optimizer_nrestarts=$(options.optimizer_nrestarts), optimizer_iterations=$(options.optimizer_options.iterations),
 # Mutations:
     mutationWeights=$(options.mutationWeights), crossoverProbability=$(options.crossoverProbability), skip_mutation_failures=$(options.skip_mutation_failures)
 # Annealing:
