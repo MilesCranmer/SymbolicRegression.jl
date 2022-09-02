@@ -29,8 +29,8 @@ function HallOfFame(options::Options, ::Type{T}) where {T<:AbstractFloat}
         [
             PopMember(
                 Node(convert(T, 1)),
-                T(1.0),
-                T(1.0);
+                T(1e9),
+                T(1e9);
                 parent=-1,
                 deterministic=options.deterministic,
             ) for i in 1:actualMaxsize
