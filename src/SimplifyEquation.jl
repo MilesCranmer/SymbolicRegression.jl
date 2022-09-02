@@ -1,11 +1,11 @@
 module SimplifyEquationModule
 
-import ..CoreModule: CONST_TYPE, Node, copy_node, Options
+import ..CoreModule: Node, copy_node, Options
 import ..CheckConstraintsModule: check_constraints
 import ..UtilsModule: isbad, isgood
 
 # Simplify tree
-function combine_operators(tree::Node, options::Options)::Node
+function combine_operators(tree::Node{T}, options::Options)::Node{T} where {T}
     # NOTE: (const (+*-) const) already accounted for. Call simplify_tree before.
     # ((const + var) + const) => (const + var)
     # ((const * var) * const) => (const * var)
@@ -93,7 +93,7 @@ function combine_operators(tree::Node, options::Options)::Node
 end
 
 # Simplify tree
-function simplify_tree(tree::Node, options::Options)::Node
+function simplify_tree(tree::Node{T}, options::Options)::Node{T} where {T<:AbstractFloat}
     if tree.degree == 1
         tree.l = simplify_tree(tree.l, options)
         l = tree.l.val
@@ -102,7 +102,7 @@ function simplify_tree(tree::Node, options::Options)::Node
             if isbad(out)
                 return tree
             end
-            return Node(convert(CONST_TYPE, out))
+            return Node(convert(T, out))
         end
     elseif tree.degree == 2
         tree.l = simplify_tree(tree.l, options)
@@ -123,7 +123,7 @@ function simplify_tree(tree::Node, options::Options)::Node
             if isbad(out)
                 return tree
             end
-            return Node(convert(CONST_TYPE, out))
+            return Node(convert(T, out))
         end
     end
     return tree

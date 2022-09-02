@@ -36,7 +36,7 @@ function loss(
 end
 
 # Evaluate the loss of a particular expression on the input dataset.
-function eval_loss(tree::Node, dataset::Dataset{T}, options::Options)::T where {T<:Real}
+function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
     (prediction, completion) = eval_tree_array(tree, dataset.X, options)
     if !completion
         return T(1000000000)
@@ -51,7 +51,7 @@ end
 
 # Compute a score which includes a complexity penalty in the loss
 function loss_to_score(
-    loss::T, baseline::T, tree::Node, options::Options
+    loss::T, baseline::T, tree::Node{T}, options::Options
 )::T where {T<:Real}
     normalized_loss_term = loss / baseline
     size = compute_complexity(tree, options)
@@ -62,7 +62,7 @@ end
 
 # Score an equation
 function score_func(
-    dataset::Dataset{T}, baseline::T, tree::Node, options::Options
+    dataset::Dataset{T}, baseline::T, tree::Node{T}, options::Options
 )::Tuple{T,T} where {T<:Real}
     result_loss = eval_loss(tree, dataset, options)
     score = loss_to_score(result_loss, baseline, tree, options)
@@ -71,7 +71,7 @@ end
 
 # Score an equation with a small batch
 function score_func_batch(
-    dataset::Dataset{T}, baseline::T, tree::Node, options::Options
+    dataset::Dataset{T}, baseline::T, tree::Node{T}, options::Options
 )::Tuple{T,T} where {T<:Real}
     batch_idx = randperm(dataset.n)[1:(options.batchSize)]
     batch_X = dataset.X[:, batch_idx]

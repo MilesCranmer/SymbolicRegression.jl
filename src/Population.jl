@@ -33,12 +33,12 @@ function Population(
     options::Options,
     nfeatures::Int,
 ) where {T<:Real}
-    return Population(
+    return Population{T}(
         [
             PopMember(
                 dataset,
                 baseline,
-                gen_random_tree(nlength, options, nfeatures),
+                gen_random_tree(nlength, options, nfeatures, T),
                 options;
                 parent=-1,
                 deterministic=options.deterministic,

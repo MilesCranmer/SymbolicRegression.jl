@@ -181,7 +181,7 @@ include("Deprecates.jl")
 
 StateType{T} = Tuple{
     Union{Vector{Vector{Population{T}}},Matrix{Population{T}}},
-    Union{HallOfFame,Vector{HallOfFame}},
+    Union{HallOfFame{T},Vector{HallOfFame{T}}},
 }
 
 """
@@ -458,13 +458,13 @@ function _EquationSearch(
         ] for j in 1:nout
     ]
     if saved_state === nothing
-        hallOfFame = [HallOfFame(options) for j in 1:nout]
+        hallOfFame = [HallOfFame(options, T) for j in 1:nout]
     else
-        hallOfFame = saved_state[2]::Union{HallOfFame,Vector{HallOfFame}}
-        if !isa(hallOfFame, Vector{HallOfFame})
+        hallOfFame = saved_state[2]::Union{HallOfFame{T},Vector{HallOfFame{T}}}
+        if !isa(hallOfFame, Vector{HallOfFame{T}})
             hallOfFame = [hallOfFame]
         end
-        hallOfFame::Vector{HallOfFame}
+        hallOfFame::Vector{HallOfFame{T}}
     end
     actualMaxsize = options.maxsize + MAX_DEGREE
 
@@ -540,7 +540,7 @@ function _EquationSearch(
                         options=options,
                         nfeatures=datasets[j].nfeatures,
                     ),
-                    HallOfFame(options),
+                    HallOfFame(options, T),
                     RecordType(),
                     Float64(options.npop),
                 )
@@ -551,7 +551,7 @@ function _EquationSearch(
 
                 if length(cur_saved_state.members) >= options.npop
                     new_pop = @sr_spawner ConcurrencyType worker_idx (
-                        cur_saved_state, HallOfFame(options), RecordType(), 0.0
+                        cur_saved_state, HallOfFame(options, T), RecordType(), 0.0
                     )
                 else
                     # If population has not yet been created (e.g., exited too early)
@@ -567,7 +567,7 @@ function _EquationSearch(
                             options=options,
                             nfeatures=datasets[j].nfeatures,
                         ),
-                        HallOfFame(options),
+                        HallOfFame(options, T),
                         RecordType(),
                         Float64(options.npop),
                     )
