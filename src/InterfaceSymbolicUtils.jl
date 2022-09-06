@@ -101,7 +101,7 @@ function Base.convert(
     options::Options;
     varMap::Union{Array{String,1},Nothing}=nothing,
 )
-    return Node(CONST_TYPE(x))
+    return Node(; val=CONST_TYPE(x))
 end
 
 function Base.convert(

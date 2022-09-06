@@ -7,7 +7,7 @@ import ..LossFunctionsModule: eval_loss
 using Printf: @sprintf
 
 """ List of the best members seen all time in `.members` """
-mutable struct HallOfFame{T<:AbstractFloat}
+mutable struct HallOfFame{T<:Real}
     members::Array{PopMember{T},1}
     exists::Array{Bool,1} #Whether it has been set
 
@@ -23,12 +23,12 @@ by size (i.e., `.members[1]` is the constant solution).
 `.exists` is used to determine whether the particular member
 has been instantiated or not.
 """
-function HallOfFame(options::Options, ::Type{T}) where {T<:AbstractFloat}
+function HallOfFame(options::Options, ::Type{T}) where {T<:Real}
     actualMaxsize = options.maxsize + MAX_DEGREE
     return HallOfFame(
         [
             PopMember(
-                Node(convert(T, 1)),
+                Node(; val=convert(T, 1)),
                 T(0),
                 T(Inf);
                 parent=-1,

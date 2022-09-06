@@ -105,7 +105,7 @@ function _compute_complexity(
 end
 
 # Get all the constants from a tree
-function get_constants(tree::Node{T})::AbstractVector{T} where {T<:AbstractFloat}
+function get_constants(tree::Node{T})::AbstractVector{T} where {T<:Real}
     if tree.degree == 0
         if tree.constant
             return [tree.val]

@@ -5,7 +5,7 @@ import ..UtilsModule: get_birth_order
 import ..LossFunctionsModule: score_func
 
 # Define a member of population by equation, score, and age
-mutable struct PopMember{T<:AbstractFloat}
+mutable struct PopMember{T<:Real}
     tree::Node{T}
     score::T  # Inludes complexity penalty, normalization
     loss::T  # Raw loss

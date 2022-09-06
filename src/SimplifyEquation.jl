@@ -93,7 +93,7 @@ function combine_operators(tree::Node{T}, options::Options)::Node{T} where {T}
 end
 
 # Simplify tree
-function simplify_tree(tree::Node{T}, options::Options)::Node{T} where {T<:AbstractFloat}
+function simplify_tree(tree::Node{T}, options::Options)::Node{T} where {T<:Real}
     if tree.degree == 1
         tree.l = simplify_tree(tree.l, options)
         l = tree.l.val
@@ -102,7 +102,7 @@ function simplify_tree(tree::Node{T}, options::Options)::Node{T} where {T<:Abstr
             if isbad(out)
                 return tree
             end
-            return Node(convert(T, out))
+            return Node(; val=convert(T, out))
         end
     elseif tree.degree == 2
         tree.l = simplify_tree(tree.l, options)
@@ -123,7 +123,7 @@ function simplify_tree(tree::Node{T}, options::Options)::Node{T} where {T<:Abstr
             if isbad(out)
                 return tree
             end
-            return Node(convert(T, out))
+            return Node(; val=convert(T, out))
         end
     end
     return tree

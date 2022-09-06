@@ -26,7 +26,7 @@ for fnc in [
     (x1, x2, x3) -> x1 * x2,
     (x1, x2, x3) -> x1 * 3.0f0,
     (x1, x2, x3) -> 3.0f0 * x2,
-    (((x1, x2, x3) -> 3.0f0 * 6.0f0), ((x1, x2, x3) -> Node(3.0f0) * 6.0f0)),
+    (((x1, x2, x3) -> 3.0f0 * 6.0f0), ((x1, x2, x3) -> Node(;val=3.0f0) * 6.0f0)),
     # deg2_l0_eval
     (x1, x2, x3) -> x1 * sin(x2),
     (x1, x2, x3) -> 3.0f0 * sin(x2),
@@ -39,11 +39,11 @@ for fnc in [
     (x1, x2, x3) -> cos(x1 * x2),
     (x1, x2, x3) -> cos(x1 * 3.0f0),
     (x1, x2, x3) -> cos(3.0f0 * x2),
-    (((x1, x2, x3) -> cos(3.0f0 * -0.5f0)), ((x1, x2, x3) -> cos(Node(3.0f0) * -0.5f0))),
+    (((x1, x2, x3) -> cos(3.0f0 * -0.5f0)), ((x1, x2, x3) -> cos(Node(; val=3.0f0) * -0.5f0))),
 
     # deg1_l1_ll0_eval
     (x1, x2, x3) -> cos(sin(x1)),
-    (((x1, x2, x3) -> cos(sin(3.0f0))), ((x1, x2, x3) -> cos(sin(Node(3.0f0))))),
+    (((x1, x2, x3) -> cos(sin(3.0f0))), ((x1, x2, x3) -> cos(sin(Node(; val=3.0f0))))),
 
     # everything else:
     (x1, x2, x3) -> (sin(cos(sin(cos(x1) * x3) * 3.0f0) * -0.5f0) + 2.0f0) * 5.0f0,

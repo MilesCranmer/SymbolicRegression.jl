@@ -10,7 +10,7 @@ options = Options(;
     constraints=(_inv => 4,),
     npopulations=4,
 )
-tree = Node(5, (Node(3.0) * Node(1, Node("x1")))^2.0, -1.2)
+tree = Node(5, (Node(; val=3.0) * Node(1, Node("x1")))^2.0, Node(;val=-1.2))
 
 eqn = node_to_symbolic(tree, options; varMap=["energy"], index_functions=true)
 tree2 = symbolic_to_node(eqn, options; varMap=["energy"])
