@@ -19,7 +19,7 @@ import ..OperatorsModule:
     log2_nan,
     log1p_nan,
     sqrt_abs,
-    acosh_abs,
+    acosh_nan,
     atanh_clip
 import ..EquationModule: Node, string_tree
 import ..OptionsStructModule: Options, ComplexityMapping
@@ -112,7 +112,7 @@ function unaopmap(op)
     elseif op == sqrt
         return sqrt_abs
     elseif op == acosh
-        return acosh_abs
+        return acosh_nan
     elseif op == atanh
         return atanh_clip
     end

@@ -10,7 +10,7 @@ using SymbolicRegression:
     log2_nan,
     log10_nan,
     sqrt_abs,
-    acosh_abs,
+    acosh_nan,
     neg,
     greater,
     greater,
@@ -33,6 +33,8 @@ for T in types_to_test
     @test isnan(log2_nan(-val))
     @test abs(log10_nan(val) - log10(val)) < 1e-6
     @test isnan(log10_nan(-val))
+    @test abs(acosh_nan(val2) - acosh(val2)) < 1e-6
+    @test isnan(acosh_nan(-val2))
     @test neg(-val) == val
     @test sqrt_abs(val) == sqrt(val)
     @test mult(val, val2) == val * val2

@@ -59,8 +59,9 @@ function log1p_nan(x::T)::T where {T<:Real}
     x <= T(-1) && return T(NaN)
     return log1p(x)
 end
-function acosh_abs(x::T)::T where {T<:Real}
-    return acosh(abs(x) + convert(T, 1))
+function acosh_nan(x::T)::T where {T<:Real}
+    x < T(1) && return T(NaN)
+    return acosh(x)
 end
 
 # Generics:
@@ -75,7 +76,7 @@ log_nan(x) = log(x)
 log2_nan(x) = log2(x)
 log10_nan(x) = log10(x)
 log1p_nan(x) = log1p(x)
-acosh_abs(x) = acosh(abs(x) + 1)
+acosh_nan(x) = acosh(x)
 
 function sqrt_abs(x::T)::T where {T}
     return sqrt(abs(x))

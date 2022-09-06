@@ -8,7 +8,7 @@ include("test_params.jl")
 x1 = 2.0
 
 # Initialize functions in Base....
-for unaop in [cos, exp, log_nan, log2_nan, log10_nan, relu, gamma, acosh_abs]
+for unaop in [cos, exp, log_nan, log2_nan, log10_nan, relu, gamma, acosh_nan]
     for binop in [sub]
         function make_options(; kw...)
             return Options(;
@@ -56,12 +56,16 @@ for unaop in [cos, exp, log_nan, log2_nan, log10_nan, relu, gamma, acosh_abs]
 
             Random.seed!(0)
             N = 100
-            if unaop in [log_nan, log2_nan, log10_nan]
+            if unaop in [log_nan, log2_nan, log10_nan, acosh_nan]
                 X = T.(rand(MersenneTwister(0), 5, N) / 3)
             else
                 X = T.(randn(MersenneTwister(0), 5, N) / 3)
             end
             X = X + sign.(X) * T(0.1)
+            if unaop == acosh_nan
+                X = X .+ T(1.0)
+            end
+
             y = T.(f_true.(X[1, :]))
             dataset = Dataset(X, y)
             test_y, complete = eval_tree_array(tree, X, make_options())
