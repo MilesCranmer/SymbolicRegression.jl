@@ -6,9 +6,9 @@ using SymbolicRegression:
     square,
     cube,
     div,
-    log_abs,
-    log2_abs,
-    log10_abs,
+    log_nan,
+    log2_nan,
+    log10_nan,
     sqrt_abs,
     acosh_abs,
     neg,
@@ -27,9 +27,12 @@ for T in types_to_test
     val = T(0.5)
     val2 = T(3.2)
     @test sqrt_abs(val) == sqrt_abs(-val)
-    @test abs(log_abs(-val) - log(val)) < 1e-6
-    @test abs(log2_abs(-val) - log2(val)) < 1e-6
-    @test abs(log10_abs(-val) - log10(val)) < 1e-6
+    @test abs(log_nan(val) - log(val)) < 1e-6
+    @test isnan(log_nan(-val))
+    @test abs(log2_nan(val) - log2(val)) < 1e-6
+    @test isnan(log2_nan(-val))
+    @test abs(log10_nan(val) - log10(val)) < 1e-6
+    @test isnan(log10_nan(-val))
     @test neg(-val) == val
     @test sqrt_abs(val) == sqrt(val)
     @test mult(val, val2) == val * val2
