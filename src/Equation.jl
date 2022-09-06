@@ -106,8 +106,8 @@ Node(var_string::String) = Node(; feature=parse(Int, var_string[2:end]))
 Create a variable node, using a user-passed format
 """
 function Node(var_string::String, varMap::Array{String,1})
-    return Node(
-        [i for (i, _variable) in enumerate(varMap) if _variable == var_string][1]::Int
+    return Node(;
+        feature=[i for (i, _variable) in enumerate(varMap) if _variable == var_string][1]::Int
     )
 end
 
