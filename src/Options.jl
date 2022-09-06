@@ -541,9 +541,7 @@ function Options(;
             continue
         end
         @eval begin
-            function Base.$_f(
-                l::Node{T1}, r::Node{T2}
-            ) where {T1<:Real,T2<:Real}
+            function Base.$_f(l::Node{T1}, r::Node{T2}) where {T1<:Real,T2<:Real}
                 T = promote_type(T1, T2)
                 l = convert(Node{T}, l)
                 r = convert(Node{T}, r)

@@ -8,13 +8,13 @@ tree = Node(
     2,
     Node(
         1,
-        Node(3, Node(1, Node(;val=1.0f0), Node(;feature=2)), Node(2, Node(;val=-1.0f0))),
-        Node(1, Node(;feature=3), Node(;feature=4)),
+        Node(3, Node(1, Node(; val=1.0f0), Node(; feature=2)), Node(2, Node(; val=-1.0f0))),
+        Node(1, Node(; feature=3), Node(; feature=4)),
     ),
     Node(
         4,
-        Node(3, Node(1, Node(;val=1.0f0), Node(;feature=2)), Node(2, Node(;val=-1.0f0))),
-        Node(1, Node(;feature=3), Node(;feature=4)),
+        Node(3, Node(1, Node(; val=1.0f0), Node(; feature=2)), Node(2, Node(; val=-1.0f0))),
+        Node(1, Node(; feature=3), Node(; feature=4)),
     ),
 )
 

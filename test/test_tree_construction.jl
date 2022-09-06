@@ -26,8 +26,10 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
         f_true = (x,) -> binop((3.0 * unaop(x))^2.0, -1.2)
 
         # binop at outside:
-        const_tree = Node(5, (Node(;val=3.0) * Node(1, Node("x1")))^2.0, Node(;val=-1.2))
-        const_tree_bad = Node(5, (Node(;val=3.0) * Node(1, Node("x1")))^2.1, Node(;val=-1.3))
+        const_tree = Node(5, (Node(; val=3.0) * Node(1, Node("x1")))^2.0, Node(; val=-1.2))
+        const_tree_bad = Node(
+            5, (Node(; val=3.0) * Node(1, Node("x1")))^2.1, Node(; val=-1.3)
+        )
         n = count_nodes(const_tree)
 
         true_result = f_true(x1)

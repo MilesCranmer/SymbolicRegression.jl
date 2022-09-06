@@ -12,10 +12,8 @@ custom_cos(x::T) where {T<:Real} = cos(x)^2
 # Define these custom functions for Node data types:
 pow_abs2(l::Node, r::Node)::Node =
     (l.constant && r.constant) ? Node(pow_abs2(l.val, r.val)::Real) : Node(5, l, r)
-pow_abs2(l::Node, r::Real)::Node =
-    l.constant ? Node(pow_abs2(l.val, r)) : Node(5, l, r)
-pow_abs2(l::Real, r::Node)::Node =
-    r.constant ? Node(pow_abs2(l, r.val)) : Node(5, l, r)
+pow_abs2(l::Node, r::Real)::Node = l.constant ? Node(pow_abs2(l.val, r)) : Node(5, l, r)
+pow_abs2(l::Real, r::Node)::Node = r.constant ? Node(pow_abs2(l, r.val)) : Node(5, l, r)
 custom_cos(x::Node)::Node = x.constant ? Node(; val=custom_cos(x.val)) : Node(1, x)
 
 equation1(x1, x2, x3) = x1 + x2 + x3 + 3.2

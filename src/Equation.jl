@@ -58,18 +58,24 @@ end
 
 Create a leaf node of a constant.
 """
-function Node(; val::T1=nothing, feature::T2=nothing)::Node where {T1<:Union{Real,Nothing},T2<:Union{Integer,Nothing}}
+function Node(;
+    val::T1=nothing, feature::T2=nothing
+)::Node where {T1<:Union{Real,Nothing},T2<:Union{Integer,Nothing}}
     if T1 <: Nothing && T2 <: Nothing
         error("You must specify either `val` or `feature` when creating a leaf node.")
     elseif !(T1 <: Nothing || T2 <: Nothing)
-        error("You must specify either `val` or `feature` when creating a leaf node, not both.")
+        error(
+            "You must specify either `val` or `feature` when creating a leaf node, not both.",
+        )
     elseif T2 <: Nothing
         return Node(0, true, val)
     else
         return Node(0, false, convert(CONST_TYPE, 0), feature)
     end
 end
-function Node(::Type{T}; val::T1=nothing, feature::T2=nothing)::Node{T} where {T<:Real,T1<:Union{Real,Nothing},T2<:Union{Integer,Nothing}}
+function Node(
+    ::Type{T}; val::T1=nothing, feature::T2=nothing
+)::Node{T} where {T<:Real,T1<:Union{Real,Nothing},T2<:Union{Integer,Nothing}}
     return convert(Node{T}, Node(; val=val, feature=feature))
 end
 
@@ -107,7 +113,9 @@ Create a variable node, using a user-passed format
 """
 function Node(var_string::String, varMap::Array{String,1})
     return Node(;
-        feature=[i for (i, _variable) in enumerate(varMap) if _variable == var_string][1]::Int
+        feature=[
+            i for (i, _variable) in enumerate(varMap) if _variable == var_string
+        ][1]::Int,
     )
 end
 
