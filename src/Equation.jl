@@ -8,7 +8,7 @@ import ..OptionsStructModule: Options
 # A single `Node` instance is one "node" of this tree, and
 # has references to its children. By tracing through the children
 # nodes, you can evaluate or print a given expression.
-mutable struct Node{T<:AbstractFloat}
+mutable struct Node{T<:Real}
     degree::Int  # 0 for constant/variable, 1 for cos/sin, 2 for +/* etc.
     constant::Bool  # false if variable
     val::T  # If is a constant, this stores the actual value
@@ -21,16 +21,14 @@ mutable struct Node{T<:AbstractFloat}
     #################
     ## Constructors:
     #################
-    Node(d::Int, c::Bool, v::_T) where {_T<:AbstractFloat} = new{_T}(d, c, v)
-    Node(d::Int, c::Bool, v::_T, f::Int) where {_T<:AbstractFloat} = new{_T}(d, c, v, f)
-    function Node(
-        d::Int, c::Bool, v::_T, f::Int, o::Int, l::Node{_T}
-    ) where {_T<:AbstractFloat}
+    Node(d::Int, c::Bool, v::_T) where {_T<:Real} = new{_T}(d, c, v)
+    Node(d::Int, c::Bool, v::_T, f::Int) where {_T<:Real} = new{_T}(d, c, v, f)
+    function Node(d::Int, c::Bool, v::_T, f::Int, o::Int, l::Node{_T}) where {_T<:Real}
         return new{_T}(d, c, v, f, o, l)
     end
     function Node(
         d::Int, c::Bool, v::_T, f::Int, o::Int, l::Node{_T}, r::Node{_T}
-    ) where {_T<:AbstractFloat}
+    ) where {_T<:Real}
         return new{_T}(d, c, v, f, o, l, r)
     end
 end
