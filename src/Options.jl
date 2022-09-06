@@ -14,10 +14,10 @@ import ..OperatorsModule:
     mult,
     sub,
     div,
-    log_abs,
-    log10_abs,
-    log2_abs,
-    log1p_abs,
+    log_nan,
+    log10_nan,
+    log2_nan,
+    log1p_nan,
     sqrt_abs,
     acosh_abs,
     atanh_clip
@@ -102,13 +102,13 @@ end
 
 function unaopmap(op)
     if op == log
-        return log_abs
+        return log_nan
     elseif op == log10
-        return log10_abs
+        return log10_nan
     elseif op == log2
-        return log2_abs
+        return log2_nan
     elseif op == log1p
-        return log1p_abs
+        return log1p_nan
     elseif op == sqrt
         return sqrt_abs
     elseif op == acosh

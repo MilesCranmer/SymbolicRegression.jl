@@ -43,17 +43,21 @@ end
 function div(x::T, y::T)::T where {T<:Real}
     return x / y
 end
-function log_abs(x::T)::T where {T<:Real}
-    return log(abs(x) + convert(T, 1//100000000))
+function log_nan(x::T)::T where {T<:Real}
+    x <= T(0) && return T(NaN)
+    return log(x)
 end
-function log2_abs(x::T)::T where {T<:Real}
-    return log2(abs(x) + convert(T, 1//100000000))
+function log2_nan(x::T)::T where {T<:Real}
+    x <= T(0) && return T(NaN)
+    return log2(x)
 end
-function log10_abs(x::T)::T where {T<:Real}
-    return log10(abs(x) + convert(T, 1//100000000))
+function log10_nan(x::T)::T where {T<:Real}
+    x <= T(0) && return T(NaN)
+    return log10(x)
 end
-function log1p_abs(x::T)::T where {T<:Real}
-    return log(abs(x) + convert(T, 1))
+function log1p_nan(x::T)::T where {T<:Real}
+    x <= T(-1) && return T(NaN)
+    return log1p(x)
 end
 function acosh_abs(x::T)::T where {T<:Real}
     return acosh(abs(x) + convert(T, 1))
@@ -67,10 +71,10 @@ sub(x, y) = x - y
 mult(x, y) = x * y
 pow_abs(x, y) = abs(x)^y
 div(x, y) = x / y
-log_abs(x) = log(abs(x) + 1//100000000)
-log2_abs(x) = log2(abs(x) + 1//100000000)
-log10_abs(x) = log10(abs(x) + 1//100000000)
-log1p_abs(x) = log(abs(x) + 1)
+log_nan(x) = log(x)
+log2_nan(x) = log2(x)
+log10_nan(x) = log10(x)
+log1p_nan(x) = log1p(x)
 acosh_abs(x) = acosh(abs(x) + 1)
 
 function sqrt_abs(x::T)::T where {T}
