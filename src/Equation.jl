@@ -250,7 +250,12 @@ function string_tree(
             end
         end
     elseif tree.degree == 1
-        return "$(options.unaops[tree.op])($(string_tree(tree.l, options, bracketed=true, varMap=varMap)))"
+        if occursin("_nan", string(options.unaops[tree.op]))
+            op_name = replace(string(options.unaops[tree.op]), "_nan" => "")
+            return "$(op_name)($(string_tree(tree.l, options, bracketed=true, varMap=varMap)))"
+        else
+            return "$(options.unaops[tree.op])($(string_tree(tree.l, options, bracketed=true, varMap=varMap)))"
+        end
     else
         return string_op(
             options.binops[tree.op], tree, options; bracketed=bracketed, varMap=varMap
