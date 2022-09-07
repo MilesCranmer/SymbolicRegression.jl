@@ -34,7 +34,7 @@ import .OperatorsModule:
     log2_nan,
     log10_nan,
     log1p_nan,
-    sqrt_abs,
+    sqrt_nan,
     acosh_nan,
     neg,
     greater,

@@ -8,7 +8,7 @@ include("test_params.jl")
 x1 = 2.0
 
 # Initialize functions in Base....
-for unaop in [cos, exp, log_nan, log2_nan, log10_nan, relu, gamma, acosh_nan]
+for unaop in [cos, exp, log_nan, log2_nan, log10_nan, sqrt_nan, relu, gamma, acosh_nan]
     for binop in [sub]
         function make_options(; kw...)
             return Options(;
@@ -56,7 +56,7 @@ for unaop in [cos, exp, log_nan, log2_nan, log10_nan, relu, gamma, acosh_nan]
 
             Random.seed!(0)
             N = 100
-            if unaop in [log_nan, log2_nan, log10_nan, acosh_nan]
+            if unaop in [log_nan, log2_nan, log10_nan, acosh_nan, sqrt_nan]
                 X = T.(rand(MersenneTwister(0), 5, N) / 3)
             else
                 X = T.(randn(MersenneTwister(0), 5, N) / 3)

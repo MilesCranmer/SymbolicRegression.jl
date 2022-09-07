@@ -9,7 +9,7 @@ using SymbolicRegression:
     log_nan,
     log2_nan,
     log10_nan,
-    sqrt_abs,
+    sqrt_nan,
     acosh_nan,
     neg,
     greater,
@@ -26,7 +26,6 @@ types_to_test = [Float16, Float32, Float64, BigFloat]
 for T in types_to_test
     val = T(0.5)
     val2 = T(3.2)
-    @test sqrt_abs(val) == sqrt_abs(-val)
     @test abs(log_nan(val) - log(val)) < 1e-6
     @test isnan(log_nan(-val))
     @test abs(log2_nan(val) - log2(val)) < 1e-6
@@ -36,7 +35,8 @@ for T in types_to_test
     @test abs(acosh_nan(val2) - acosh(val2)) < 1e-6
     @test isnan(acosh_nan(-val2))
     @test neg(-val) == val
-    @test sqrt_abs(val) == sqrt(val)
+    @test sqrt_nan(val) == sqrt(val)
+    @test isnan(sqrt_nan(-val))
     @test mult(val, val2) == val * val2
     @test plus(val, val2) == val + val2
     @test sub(val, val2) == val - val2

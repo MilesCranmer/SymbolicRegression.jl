@@ -63,6 +63,10 @@ function acosh_nan(x::T)::T where {T<:Real}
     x < T(1) && return T(NaN)
     return acosh(x)
 end
+function sqrt_nan(x::T)::T where {T<:Real}
+    x < T(0) && return T(NaN)
+    return sqrt(x)
+end
 
 # Generics:
 square(x) = x * x
@@ -77,10 +81,8 @@ log2_nan(x) = log2(x)
 log10_nan(x) = log10(x)
 log1p_nan(x) = log1p(x)
 acosh_nan(x) = acosh(x)
+sqrt_nan(x) = sqrt(x)
 
-function sqrt_abs(x::T)::T where {T}
-    return sqrt(abs(x))
-end
 function neg(x::T)::T where {T}
     return -x
 end

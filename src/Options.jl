@@ -18,7 +18,7 @@ import ..OperatorsModule:
     log10_nan,
     log2_nan,
     log1p_nan,
-    sqrt_abs,
+    sqrt_nan,
     acosh_nan,
     atanh_clip
 import ..EquationModule: Node, string_tree
@@ -110,7 +110,7 @@ function unaopmap(op)
     elseif op == log1p
         return log1p_nan
     elseif op == sqrt
-        return sqrt_abs
+        return sqrt_nan
     elseif op == acosh
         return acosh_nan
     elseif op == atanh
