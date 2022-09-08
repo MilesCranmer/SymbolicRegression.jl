@@ -14,7 +14,7 @@ for unaop in [cos, exp, log_nan, log2_nan, log10_nan, sqrt_nan, relu, gamma, aco
             return Options(;
                 default_params...,
                 binary_operators=(+, *, ^, /, binop),
-                unary_operators=(unaop,),
+                unary_operators=(unaop, abs),
                 npopulations=4,
                 verbosity=(unaop == gamma) ? 0 : Int(1e9),
                 kw...,
@@ -23,11 +23,11 @@ for unaop in [cos, exp, log_nan, log2_nan, log10_nan, sqrt_nan, relu, gamma, aco
         make_options()
 
         # for unaop in 
-        f_true = (x,) -> binop((3.0 * unaop(x))^2.0, -1.2)
+        f_true = (x,) -> binop(abs(3.0 * unaop(x))^2.0, -1.2)
 
         # binop at outside:
-        const_tree = Node(5, (Node(3.0) * Node(1, Node("x1")))^2.0, -1.2)
-        const_tree_bad = Node(5, (Node(3.0) * Node(1, Node("x1")))^2.1, -1.3)
+        const_tree = Node(5, Node(2, Node(3.0) * Node(1, Node("x1")))^2.0, -1.2)
+        const_tree_bad = Node(5, Node(2, Node(3.0) * Node(1, Node("x1")))^2.1, -1.3)
         n = count_nodes(const_tree)
 
         true_result = f_true(x1)
@@ -35,7 +35,7 @@ for unaop in [cos, exp, log_nan, log2_nan, log10_nan, sqrt_nan, relu, gamma, aco
         result = eval(Meta.parse(string_tree(const_tree, make_options())))
 
         # Test Basics
-        @test n == 8
+        @test n == 9
         @test result == true_result
 
         types_to_test = [Float32, Float64, BigFloat]
