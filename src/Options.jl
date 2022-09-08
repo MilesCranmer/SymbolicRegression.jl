@@ -10,16 +10,16 @@ import Zygote: gradient
 import ..OperatorsModule:
     plus,
     pow,
-    pow_nan,
+    safe_pow,
     mult,
     sub,
     div,
-    log_nan,
-    log10_nan,
-    log2_nan,
-    log1p_nan,
-    sqrt_nan,
-    acosh_nan,
+    safe_log,
+    safe_log10,
+    safe_log2,
+    safe_log1p,
+    safe_sqrt,
+    safe_acosh,
     atanh_clip
 import ..EquationModule: Node, string_tree
 import ..OptionsStructModule: Options, ComplexityMapping
@@ -93,26 +93,26 @@ function binopmap(op)
     elseif op == div
         return /
     elseif op == ^
-        return pow_nan
+        return safe_pow
     elseif op == pow
-        return pow_nan
+        return safe_pow
     end
     return op
 end
 
 function unaopmap(op)
     if op == log
-        return log_nan
+        return safe_log
     elseif op == log10
-        return log10_nan
+        return safe_log10
     elseif op == log2
-        return log2_nan
+        return safe_log2
     elseif op == log1p
-        return log1p_nan
+        return safe_log1p
     elseif op == sqrt
-        return sqrt_nan
+        return safe_sqrt
     elseif op == acosh
-        return acosh_nan
+        return safe_acosh
     elseif op == atanh
         return atanh_clip
     end
@@ -131,7 +131,7 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     be defined for two input scalars, and one output scalar. All operators
     need to be defined over the entire real line (excluding infinity - these
     are stopped before they are input), or return `NaN` where not defined.
-    Thus, `log` should be replaced with `log_nan`, etc.
+    Thus, `log` should be replaced with `safe_log`, etc.
     For speed, define it so it takes two reals
     of the same type as input, and outputs the same type. For the SymbolicUtils
     simplification backend, you will need to define a generic method of the
@@ -532,7 +532,7 @@ function Options(;
     end
 
     for (op, f) in enumerate(map(Symbol, binary_operators))
-        _f = if f in [Symbol(pow), Symbol(pow_nan)]
+        _f = if f in [Symbol(pow), Symbol(safe_pow)]
             Symbol(^)
         else
             f

@@ -5,13 +5,13 @@ using SymbolicRegression:
     mult,
     square,
     cube,
-    pow_nan,
+    safe_pow,
     div,
-    log_nan,
-    log2_nan,
-    log10_nan,
-    sqrt_nan,
-    acosh_nan,
+    safe_log,
+    safe_log2,
+    safe_log10,
+    safe_sqrt,
+    safe_acosh,
     neg,
     greater,
     greater,
@@ -27,27 +27,27 @@ types_to_test = [Float16, Float32, Float64, BigFloat]
 for T in types_to_test
     val = T(0.5)
     val2 = T(3.2)
-    @test abs(log_nan(val) - log(val)) < 1e-6
-    @test isnan(log_nan(-val))
-    @test abs(log2_nan(val) - log2(val)) < 1e-6
-    @test isnan(log2_nan(-val))
-    @test abs(log10_nan(val) - log10(val)) < 1e-6
-    @test isnan(log10_nan(-val))
-    @test abs(acosh_nan(val2) - acosh(val2)) < 1e-6
-    @test isnan(acosh_nan(-val2))
+    @test abs(safe_log(val) - log(val)) < 1e-6
+    @test isnan(safe_log(-val))
+    @test abs(safe_log2(val) - log2(val)) < 1e-6
+    @test isnan(safe_log2(-val))
+    @test abs(safe_log10(val) - log10(val)) < 1e-6
+    @test isnan(safe_log10(-val))
+    @test abs(safe_acosh(val2) - acosh(val2)) < 1e-6
+    @test isnan(safe_acosh(-val2))
     @test neg(-val) == val
-    @test sqrt_nan(val) == sqrt(val)
-    @test isnan(sqrt_nan(-val))
+    @test safe_sqrt(val) == sqrt(val)
+    @test isnan(safe_sqrt(-val))
     @test mult(val, val2) == val * val2
     @test plus(val, val2) == val + val2
     @test sub(val, val2) == val - val2
     @test square(val) == val * val
     @test cube(val) == val * val * val
-    @test isnan(pow_nan(T(0.0), -T(1.0)))
-    @test isnan(pow_nan(-val, val2))
-    @test all(isnan.([pow_nan(-val, -val2), pow_nan(T(0.0), -val2)]))
-    @test abs(pow_nan(val, val2) - val^val2) < 1e-6
-    @test abs(pow_nan(val, -val2) - val^(-val2)) < 1e-6
+    @test isnan(safe_pow(T(0.0), -T(1.0)))
+    @test isnan(safe_pow(-val, val2))
+    @test all(isnan.([safe_pow(-val, -val2), safe_pow(T(0.0), -val2)]))
+    @test abs(safe_pow(val, val2) - val^val2) < 1e-6
+    @test abs(safe_pow(val, -val2) - val^(-val2)) < 1e-6
     @test div(val, val2) == val / val2
     @test greater(val, val2) == T(0.0)
     @test greater(val2, val) == T(1.0)

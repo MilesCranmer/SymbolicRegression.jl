@@ -37,7 +37,7 @@ end
 function cube(x::T)::T where {T<:Real}
     return x^3
 end
-function pow_nan(x::T, y::T)::T where {T<:Real}
+function safe_pow(x::T, y::T)::T where {T<:Real}
     if isinteger(y)
         y < T(0) && x == T(0) && return T(NaN)
     else
@@ -49,27 +49,27 @@ end
 function div(x::T, y::T)::T where {T<:Real}
     return x / y
 end
-function log_nan(x::T)::T where {T<:Real}
+function safe_log(x::T)::T where {T<:Real}
     x <= T(0) && return T(NaN)
     return log(x)
 end
-function log2_nan(x::T)::T where {T<:Real}
+function safe_log2(x::T)::T where {T<:Real}
     x <= T(0) && return T(NaN)
     return log2(x)
 end
-function log10_nan(x::T)::T where {T<:Real}
+function safe_log10(x::T)::T where {T<:Real}
     x <= T(0) && return T(NaN)
     return log10(x)
 end
-function log1p_nan(x::T)::T where {T<:Real}
+function safe_log1p(x::T)::T where {T<:Real}
     x <= T(-1) && return T(NaN)
     return log1p(x)
 end
-function acosh_nan(x::T)::T where {T<:Real}
+function safe_acosh(x::T)::T where {T<:Real}
     x < T(1) && return T(NaN)
     return acosh(x)
 end
-function sqrt_nan(x::T)::T where {T<:Real}
+function safe_sqrt(x::T)::T where {T<:Real}
     x < T(0) && return T(NaN)
     return sqrt(x)
 end
@@ -80,14 +80,14 @@ cube(x) = x * x * x
 plus(x, y) = x + y
 sub(x, y) = x - y
 mult(x, y) = x * y
-pow_nan(x, y) = x^y
+safe_pow(x, y) = x^y
 div(x, y) = x / y
-log_nan(x) = log(x)
-log2_nan(x) = log2(x)
-log10_nan(x) = log10(x)
-log1p_nan(x) = log1p(x)
-acosh_nan(x) = acosh(x)
-sqrt_nan(x) = sqrt(x)
+safe_log(x) = log(x)
+safe_log2(x) = log2(x)
+safe_log10(x) = log10(x)
+safe_log1p(x) = log1p(x)
+safe_acosh(x) = acosh(x)
+safe_sqrt(x) = sqrt(x)
 
 function neg(x::T)::T where {T}
     return -x
@@ -113,6 +113,6 @@ function logical_and(x::T, y::T)::T where {T}
 end
 
 # Deprecated operations:
-@deprecate pow pow_nan
+@deprecate pow safe_pow
 
 end
