@@ -5,6 +5,7 @@ using SymbolicRegression:
     mult,
     square,
     cube,
+    pow_nan,
     div,
     log_nan,
     log2_nan,
@@ -42,6 +43,11 @@ for T in types_to_test
     @test sub(val, val2) == val - val2
     @test square(val) == val * val
     @test cube(val) == val * val * val
+    @test isnan(pow_nan(T(0.0), -T(1.0)))
+    @test isnan(pow_nan(-val, val2))
+    @test all(isnan.([pow_nan(-val, -val2), pow_nan(T(0.0), -val2)]))
+    @test abs(pow_nan(val, val2) - val^val2) < 1e-6
+    @test abs(pow_nan(val, -val2) - val^(-val2)) < 1e-6
     @test div(val, val2) == val / val2
     @test greater(val, val2) == T(0.0)
     @test greater(val2, val) == T(1.0)
