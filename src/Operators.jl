@@ -37,8 +37,14 @@ end
 function cube(x::T)::T where {T<:Real}
     return x^3
 end
-function pow_abs(x::T, y::T)::T where {T<:Real}
-    return abs(x)^y
+function pow_nan(x::T, y::T)::T where {T<:Real}
+    if isinteger(y)
+        y < T(0) && x == T(0) && return T(NaN)
+    else
+        y > T(0) && x < T(0) && return T(NaN)
+        y < T(0) && x <= T(0) && return T(NaN)
+    end
+    return x^y
 end
 function div(x::T, y::T)::T where {T<:Real}
     return x / y
@@ -74,7 +80,7 @@ cube(x) = x * x * x
 plus(x, y) = x + y
 sub(x, y) = x - y
 mult(x, y) = x * y
-pow_abs(x, y) = abs(x)^y
+pow_nan(x, y) = x^y
 div(x, y) = x / y
 log_nan(x) = log(x)
 log2_nan(x) = log2(x)
@@ -107,6 +113,6 @@ function logical_and(x::T, y::T)::T where {T}
 end
 
 # Deprecated operations:
-@deprecate pow pow_abs
+@deprecate pow pow_nan
 
 end

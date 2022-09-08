@@ -10,7 +10,7 @@ import Zygote: gradient
 import ..OperatorsModule:
     plus,
     pow,
-    pow_abs,
+    pow_nan,
     mult,
     sub,
     div,
@@ -93,9 +93,9 @@ function binopmap(op)
     elseif op == div
         return /
     elseif op == ^
-        return pow_abs
+        return pow_nan
     elseif op == pow
-        return pow_abs
+        return pow_nan
     end
     return op
 end
@@ -532,7 +532,7 @@ function Options(;
     end
 
     for (op, f) in enumerate(map(Symbol, binary_operators))
-        _f = if f in [Symbol(pow), Symbol(pow_abs)]
+        _f = if f in [Symbol(pow), Symbol(pow_nan)]
             Symbol(^)
         else
             f

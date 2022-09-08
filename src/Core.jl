@@ -28,7 +28,7 @@ import .OperatorsModule:
     square,
     cube,
     pow,
-    pow_abs,
+    pow_nan,
     div,
     log_nan,
     log2_nan,
