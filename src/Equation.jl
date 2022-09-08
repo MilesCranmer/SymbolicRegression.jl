@@ -201,6 +201,19 @@ function copy_node(tree::Node{T})::Node{T} where {T}
     end
 end
 
+function get_op_name(op::String)
+    rename = Dict(
+        "safe_log" => "log",
+        "safe_log2" => "log2",
+        "safe_log10" => "log10",
+        "safe_log1p" => "log1p",
+        "safe_acosh" => "acosh",
+        "safe_sqrt" => "sqrt",
+        "safe_pow" => "^",
+    )
+    return get(rename, op, op)
+end
+
 function string_op(
     op::F,
     tree::Node,
@@ -208,18 +221,19 @@ function string_op(
     bracketed::Bool=false,
     varMap::Union{Array{String,1},Nothing}=nothing,
 )::String where {F}
-    if op in [+, -, *, /, ^]
+    op_name = get_op_name(string(op))
+    if op_name in ["+", "-", "*", "/", "^"]
         l = string_tree(tree.l, options; bracketed=false, varMap=varMap)
         r = string_tree(tree.r, options; bracketed=false, varMap=varMap)
         if bracketed
-            return "$l $(string(op)) $r"
+            return "$l $op_name $r"
         else
-            return "($l $(string(op)) $r)"
+            return "($l $op_name $r)"
         end
     else
         l = string_tree(tree.l, options; bracketed=true, varMap=varMap)
         r = string_tree(tree.r, options; bracketed=true, varMap=varMap)
-        return "$(string(op))($l, $r)"
+        return "$op_name($l, $r)"
     end
 end
 
@@ -250,12 +264,8 @@ function string_tree(
             end
         end
     elseif tree.degree == 1
-        if occursin("_nan", string(options.unaops[tree.op]))
-            op_name = replace(string(options.unaops[tree.op]), "_nan" => "")
-            return "$(op_name)($(string_tree(tree.l, options, bracketed=true, varMap=varMap)))"
-        else
-            return "$(options.unaops[tree.op])($(string_tree(tree.l, options, bracketed=true, varMap=varMap)))"
-        end
+        op_name = get_op_name(string(options.unaops[tree.op]))
+        return "$(op_name)($(string_tree(tree.l, options, bracketed=true, varMap=varMap)))"
     else
         return string_op(
             options.binops[tree.op], tree, options; bracketed=bracketed, varMap=varMap
