@@ -114,5 +114,6 @@ end
 
 # Deprecated operations:
 @deprecate pow safe_pow
+@deprecate pow_abs safe_pow
 
 end
