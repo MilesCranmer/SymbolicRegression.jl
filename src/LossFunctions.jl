@@ -53,7 +53,12 @@ end
 function loss_to_score(
     loss::T, baseline::T, tree::Node{T}, options::Options
 )::T where {T<:Real}
-    normalized_loss_term = loss / baseline
+    normalization = if baseline < T(0.01)
+        T(0.01)
+    else
+        baseline
+    end
+    normalized_loss_term = loss / normalization
     size = compute_complexity(tree, options)
     parsimony_term = size * options.parsimony
 
