@@ -201,17 +201,18 @@ function copy_node(tree::Node{T})::Node{T} where {T}
     end
 end
 
+const OP_NAMES = Dict(
+    "safe_log" => "log",
+    "safe_log2" => "log2",
+    "safe_log10" => "log10",
+    "safe_log1p" => "log1p",
+    "safe_acosh" => "acosh",
+    "safe_sqrt" => "sqrt",
+    "safe_pow" => "^",
+)
+
 function get_op_name(op::String)
-    rename = Dict(
-        "safe_log" => "log",
-        "safe_log2" => "log2",
-        "safe_log10" => "log10",
-        "safe_log1p" => "log1p",
-        "safe_acosh" => "acosh",
-        "safe_sqrt" => "sqrt",
-        "safe_pow" => "^",
-    )
-    return get(rename, op, op)
+    return get(OP_NAMES, op, op)
 end
 
 function string_op(
