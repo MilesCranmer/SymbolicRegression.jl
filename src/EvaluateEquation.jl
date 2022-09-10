@@ -361,7 +361,7 @@ function deg1_eval_constant(
 )::Tuple{T,Bool} where {T<:Real,op_idx}
     op = options.unaops[op_idx]
     (cumulator, complete) = _eval_constant_tree(tree.l, options)
-    !complete && return cumulator, false
+    !complete && return zero(T), false
     output = op(cumulator)::T
     return output, isfinite(output)
 end
@@ -371,9 +371,9 @@ function deg2_eval_constant(
 )::Tuple{T,Bool} where {T<:Real,op_idx}
     op = options.binops[op_idx]
     (cumulator, complete) = _eval_constant_tree(tree.l, options)
-    !complete && return cumulator, false
+    !complete && return zero(T), false
     (cumulator2, complete2) = _eval_constant_tree(tree.r, options)
-    !complete2 && return cumulator2, false
+    !complete2 && return zero(T), false
     output = op(cumulator, cumulator2)::T
     return output, isfinite(output)
 end
