@@ -26,7 +26,9 @@ for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma,
         f_true = (x,) -> binop(abs(3.0 * unaop(x))^2.0, -1.2)
 
         # binop at outside:
-        const_tree = Node(5, Node(2, Node(; val=3.0) * Node(1, Node("x1")))^2.0, Node(; val=-1.2))
+        const_tree = Node(
+            5, Node(2, Node(; val=3.0) * Node(1, Node("x1")))^2.0, Node(; val=-1.2)
+        )
         const_tree_bad = Node(
             5, Node(2, Node(; val=3.0) * Node(1, Node("x1")))^2.1, Node(; val=-1.3)
         )
