@@ -34,6 +34,13 @@ mutable struct Node{T<:Real}
 end
 ################################################################################
 
+"""
+    convert(::Type{Node{T1}}, n::Node{T2}) where {T1,T2}
+
+Convert a `Node{T2}` to a `Node{T1}`.
+This will recursively convert all children nodes to `Node{T1}`,
+using `convert(T1, tree.val)` at constant nodes.
+"""
 function Base.convert(::Type{Node{T1}}, tree::Node{T2}) where {T1,T2}
     if T1 == T2
         return tree
