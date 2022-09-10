@@ -74,8 +74,8 @@ all variables (or, all constants). Both use forward-mode automatic, but use
 `Zygote.jl` to compute derivatives of each operator, so this is very efficient.
 
 ```@docs
-eval_diff_tree_array(tree::Node{T}, cX::AbstractMatrix{T}, options::Options, direction::Int)
-eval_grad_tree_array(tree::Node{T}, cX::AbstractMatrix{T}, options::Options; variable::Bool=false)
+eval_diff_tree_array(tree::Node{T}, cX::AbstractMatrix{T}, options::Options, direction::Int) where {T<:Real}
+eval_grad_tree_array(tree::Node{T}, cX::AbstractMatrix{T}, options::Options; variable::Bool=false) where {T<:Real}
 ```
 
 ## SymbolicUtils.jl interface
