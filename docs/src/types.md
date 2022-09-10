@@ -2,17 +2,31 @@
 
 ## Equations
 
-Equations are specified as binary trees with the `Node` type. Operators
-defined in `Base` are re-defined for Node types, so that one can
-use, e.g., `t=Node("x1") * 3f0` to create a tree, so long as
-`*` was specified as a binary operator.
+Equations are specified as binary trees with the `Node` type, defined
+as follows:
 
 ```@docs
 Node{T<:Real}
+```
+
+There are a variety of constructors for `Node` objects, including:
+
+```@docs
 Node(; val::Real=nothing, feature::Integer=nothing)
 Node(op::Int, l::Node)
 Node(op::Int, l::Node, r::Node)
 Node(var_string::String)
+```
+
+When you create an `Options` object, the operators
+passed are also re-defined for `Node` types.
+This allows you use, e.g., `t=Node("x1") * 3f0` to create a tree, so long as
+`*` was specified as a binary operator.
+
+When using these node constructors, types will automatically be promoted.
+You can convert the type of a node using `convert`:
+
+```@docs
 convert(::Type{Node{T1}}, tree::Node{T2}) where {T1, T2}
 ```
 
