@@ -278,7 +278,7 @@ function Options(;
     complexity_of_operators=nothing,
     complexity_of_constants::Union{Nothing,Real}=nothing,
     complexity_of_variables::Union{Nothing,Real}=nothing,
-    parsimony=0.0f0,
+    parsimony=0.0032f0,
     alpha=0.100000f0,
     maxsize=20,
     maxdepth=nothing,
