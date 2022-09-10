@@ -6,11 +6,8 @@ import Base: @deprecate
 #TODO - actually add these operators to the module!
 
 function gamma(x::T)::T where {T<:Real}
-    if x <= T(0) && abs(x % 1) < T(1e-6)
-        T(1//100000000)
-    else
-        SpecialFunctions.gamma(x)
-    end
+    out = SpecialFunctions.gamma(x)
+    return isinf(out) ? T(NaN) : out
 end
 gamma(x) = SpecialFunctions.gamma(x)
 
@@ -37,26 +34,41 @@ end
 function cube(x::T)::T where {T<:Real}
     return x^3
 end
-function pow_abs(x::T, y::T)::T where {T<:Real}
-    return abs(x)^y
+function safe_pow(x::T, y::T)::T where {T<:Real}
+    if isinteger(y)
+        y < T(0) && x == T(0) && return T(NaN)
+    else
+        y > T(0) && x < T(0) && return T(NaN)
+        y < T(0) && x <= T(0) && return T(NaN)
+    end
+    return x^y
 end
 function div(x::T, y::T)::T where {T<:Real}
     return x / y
 end
-function log_abs(x::T)::T where {T<:Real}
-    return log(abs(x) + convert(T, 1//100000000))
+function safe_log(x::T)::T where {T<:Real}
+    x <= T(0) && return T(NaN)
+    return log(x)
 end
-function log2_abs(x::T)::T where {T<:Real}
-    return log2(abs(x) + convert(T, 1//100000000))
+function safe_log2(x::T)::T where {T<:Real}
+    x <= T(0) && return T(NaN)
+    return log2(x)
 end
-function log10_abs(x::T)::T where {T<:Real}
-    return log10(abs(x) + convert(T, 1//100000000))
+function safe_log10(x::T)::T where {T<:Real}
+    x <= T(0) && return T(NaN)
+    return log10(x)
 end
-function log1p_abs(x::T)::T where {T<:Real}
-    return log(abs(x) + convert(T, 1))
+function safe_log1p(x::T)::T where {T<:Real}
+    x <= T(-1) && return T(NaN)
+    return log1p(x)
 end
-function acosh_abs(x::T)::T where {T<:Real}
-    return acosh(abs(x) + convert(T, 1))
+function safe_acosh(x::T)::T where {T<:Real}
+    x < T(1) && return T(NaN)
+    return acosh(x)
+end
+function safe_sqrt(x::T)::T where {T<:Real}
+    x < T(0) && return T(NaN)
+    return sqrt(x)
 end
 
 # Generics:
@@ -65,17 +77,15 @@ cube(x) = x * x * x
 plus(x, y) = x + y
 sub(x, y) = x - y
 mult(x, y) = x * y
-pow_abs(x, y) = abs(x)^y
+safe_pow(x, y) = x^y
 div(x, y) = x / y
-log_abs(x) = log(abs(x) + 1//100000000)
-log2_abs(x) = log2(abs(x) + 1//100000000)
-log10_abs(x) = log10(abs(x) + 1//100000000)
-log1p_abs(x) = log(abs(x) + 1)
-acosh_abs(x) = acosh(abs(x) + 1)
+safe_log(x) = log(x)
+safe_log2(x) = log2(x)
+safe_log10(x) = log10(x)
+safe_log1p(x) = log1p(x)
+safe_acosh(x) = acosh(x)
+safe_sqrt(x) = sqrt(x)
 
-function sqrt_abs(x::T)::T where {T}
-    return sqrt(abs(x))
-end
 function neg(x::T)::T where {T}
     return -x
 end
@@ -100,6 +110,7 @@ function logical_and(x::T, y::T)::T where {T}
 end
 
 # Deprecated operations:
-@deprecate pow pow_abs
+@deprecate pow safe_pow
+@deprecate pow_abs safe_pow
 
 end

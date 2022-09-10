@@ -8,13 +8,13 @@ include("test_params.jl")
 x1 = 2.0
 
 # Initialize functions in Base....
-for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
+for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma, safe_acosh]
     for binop in [sub]
         function make_options(; kw...)
             return Options(;
                 default_params...,
                 binary_operators=(+, *, ^, /, binop),
-                unary_operators=(unaop,),
+                unary_operators=(unaop, abs),
                 npopulations=4,
                 verbosity=(unaop == gamma) ? 0 : Int(1e9),
                 kw...,
@@ -23,12 +23,12 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
         make_options()
 
         # for unaop in 
-        f_true = (x,) -> binop((3.0 * unaop(x))^2.0, -1.2)
+        f_true = (x,) -> binop(abs(3.0 * unaop(x))^2.0, -1.2)
 
         # binop at outside:
-        const_tree = Node(5, (Node(; val=3.0) * Node(1, Node("x1")))^2.0, Node(; val=-1.2))
+        const_tree = Node(5, Node(2, Node(; val=3.0) * Node(1, Node("x1")))^2.0, Node(; val=-1.2))
         const_tree_bad = Node(
-            5, (Node(; val=3.0) * Node(1, Node("x1")))^2.1, Node(; val=-1.3)
+            5, Node(2, Node(; val=3.0) * Node(1, Node("x1")))^2.1, Node(; val=-1.3)
         )
         n = count_nodes(const_tree)
 
@@ -37,7 +37,7 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
         result = eval(Meta.parse(string_tree(const_tree, make_options())))
 
         # Test Basics
-        @test n == 8
+        @test n == 9
         @test result == true_result
 
         types_to_test = [Float32, Float64, BigFloat]
@@ -58,8 +58,16 @@ for unaop in [cos, exp, log_abs, log2_abs, log10_abs, relu, gamma, acosh_abs]
 
             Random.seed!(0)
             N = 100
-            X = T.(randn(MersenneTwister(0), 5, N) / 3)
+            if unaop in [safe_log, safe_log2, safe_log10, safe_acosh, safe_sqrt]
+                X = T.(rand(MersenneTwister(0), 5, N) / 3)
+            else
+                X = T.(randn(MersenneTwister(0), 5, N) / 3)
+            end
             X = X + sign.(X) * T(0.1)
+            if unaop == safe_acosh
+                X = X .+ T(1.0)
+            end
+
             y = T.(f_true.(X[1, :]))
             dataset = Dataset(X, y)
             test_y, complete = eval_tree_array(tree, X, make_options())
