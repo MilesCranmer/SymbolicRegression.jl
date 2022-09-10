@@ -4,19 +4,15 @@
 
 Equations are specified as binary trees with the `Node` type. Operators
 defined in `Base` are re-defined for Node types, so that one can
-use, e.g., `t=Node(1) * 3f0` to create a tree.
+use, e.g., `t=Node("x1") * 3f0` to create a tree, so long as
+`*` was specified as a binary operator.
 
 ```@docs
-Node(val::AbstractFloat)
-Node(feature::Int)
-Node(var_string::String)
-Node(var_string::String, varMap::Array{String, 1})
+Node(; val::Real=nothing, feature::Integer=nothing)
 Node(op::Int, l::Node)
-Node(op::Int, l::Union{AbstractFloat, Int})
 Node(op::Int, l::Node, r::Node)
-Node(op::Int, l::Union{AbstractFloat, Int}, r::Node)
-Node(op::Int, l::Node, r::Union{AbstractFloat, Int})
-Node(op::Int, l::Union{AbstractFloat, Int}, r::Union{AbstractFloat, Int})
+Node(var_string::String)
+convert(::Type{Node{T1}}, tree::Node{T2}) where {T1, T2}
 ```
 
 ## Population
@@ -38,9 +34,10 @@ Population(X::AbstractMatrix{T}, y::AbstractVector{T}, baseline::T;
 ```
 
 ## Population members
+
 ```@docs
-PopMember(t::Node, score::T, loss::T) where {T<:Real}
-PopMember(dataset::Dataset{T}, baseline::T, t::Node, options::Options) where {T<:Real}
+PopMember(t::Node{T}, score::T, loss::T) where {T<:Real}
+PopMember(dataset::Dataset{T}, baseline::T, t::Node{T}, options::Options) where {T<:Real}
 ```
 
 ## Hall of Fame
