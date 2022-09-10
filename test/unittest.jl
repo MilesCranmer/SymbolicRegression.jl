@@ -37,7 +37,7 @@ end
 end
 
 @safetestset "Test validity of integer expression evaluation" begin
-    include("test_evaluation.jl")
+    include("test_integer_evaluation.jl")
 end
 
 @safetestset "Test tournament selection" begin
