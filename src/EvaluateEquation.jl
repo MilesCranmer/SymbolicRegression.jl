@@ -353,7 +353,7 @@ function _eval_constant_tree(tree::Node{T}, options::Options)::Tuple{T,Bool} whe
 end
 
 @inline function deg0_eval_constant(tree::Node{T})::Tuple{T,Bool} where {T<:Real}
-    return tree.value, true
+    return tree.val, true
 end
 
 function deg1_eval_constant(
