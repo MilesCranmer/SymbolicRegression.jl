@@ -2,6 +2,7 @@ module EvaluateEquationModule
 
 import ..CoreModule: Node, Options
 import ..UtilsModule: @return_on_false, is_bad_array, debug
+import ..EquationUtilsModule: is_constant
 
 macro return_on_check(val, T, n)
     # This will generate the following code:
@@ -78,42 +79,41 @@ end
 function _eval_tree_array(
     tree::Node{T}, cX::AbstractMatrix{T}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
-    # First, we try evaluating with a fused kernels:
-    if tree.degree == 1
-        # TODO: We could all do Val(tree.l.degree) here, instead of having
-        # different kernels for const vs data.
-
-        # We fuse (and compile) the following:
-        #  - op(op2(x, y)), where x, y, z are constants or variables.
-        #  - op(op2(x)), where x is a constant or variable.
-        #  - op(x), for any x.
-        if tree.l.degree == 2 && tree.l.l.degree == 0 && tree.l.r.degree == 0
-            return deg1_l2_ll0_lr0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
-        elseif tree.l.degree == 1 && tree.l.l.degree == 0
-            return deg1_l1_ll0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
-        end
-    elseif tree.degree == 2
-        # We fuse (and compile) the following:
-        #  - op(x, y), where x, y are constants or variables.
-        #  - op(x, y), where x is a constant or variable but y is not.
-        #  - op(x, y), where y is a constant or variable but x is not.
-        #  - op(x, y), for any x or y
-        # TODO - add op(op2(x, y), z) and op(x, op2(y, z))
-        if tree.l.degree == 0 && tree.r.degree == 0
-            return deg2_l0_r0_eval(tree, cX, Val(tree.op), options)
-        elseif tree.l.degree == 0
-            return deg2_l0_eval(tree, cX, Val(tree.op), options)
-        elseif tree.r.degree == 0
-            return deg2_r0_eval(tree, cX, Val(tree.op), options)
-        end
-    end
-
+    # First, we see if there are only constants in the tree - meaning
+    # we can just return the constant result.
     if tree.degree == 0
         return deg0_eval(tree, cX, options)
+    elseif is_constant(tree)
+        # Speed hack for constant trees.
+        result, flag = _eval_constant_tree(tree, options)
+        !flag && return Array{T,1}(undef, size(cX, 2)), false
+        return fill(result, size(cX, 2)), true
     elseif tree.degree == 1
-        return deg1_eval(tree, cX, Val(tree.op), options)
-    else
-        return deg2_eval(tree, cX, Val(tree.op), options)
+        if tree.l.degree == 2 && tree.l.l.degree == 0 && tree.l.r.degree == 0
+            # op(op2(x, y)), where x, y, z are constants or variables.
+            return deg1_l2_ll0_lr0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+        elseif tree.l.degree == 1 && tree.l.l.degree == 0
+            # op(op2(x)), where x is a constant or variable.
+            return deg1_l1_ll0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+        else
+            # op(x), for any x.
+            return deg1_eval(tree, cX, Val(tree.op), options)
+        end
+    elseif tree.degree == 2
+        # TODO - add op(op2(x, y), z) and op(x, op2(y, z))
+        if tree.l.degree == 0 && tree.r.degree == 0
+            # op(x, y), where x, y are constants or variables.
+            return deg2_l0_r0_eval(tree, cX, Val(tree.op), options)
+        elseif tree.l.degree == 0
+            # op(x, y), where x is a constant or variable but y is not.
+            return deg2_l0_eval(tree, cX, Val(tree.op), options)
+        elseif tree.r.degree == 0
+            # op(x, y), where y is a constant or variable but x is not.
+            return deg2_r0_eval(tree, cX, Val(tree.op), options)
+        else
+            # op(x, y), for any x or y
+            return deg2_eval(tree, cX, Val(tree.op), options)
+        end
     end
 end
 
@@ -333,6 +333,49 @@ function deg2_r0_eval(
         end
     end
     return (cumulator, true)
+end
+
+"""
+    _eval_constant_tree(tree::Node{T}, options::Options)::Tuple{T,Bool} where {T<:Real}
+
+Evaluate a tree which is assumed to not contain any variable nodes. This
+gives better performance, as we do not need to perform computation
+over an entire array when the values are all the same.
+"""
+function _eval_constant_tree(tree::Node{T}, options::Options)::Tuple{T,Bool} where {T<:Real}
+    if tree.degree == 0
+        return deg0_eval_constant(tree)
+    elseif tree.degree == 1
+        return deg1_eval_constant(tree, Val(tree.op), options)
+    else
+        return deg2_eval_constant(tree, Val(tree.op), options)
+    end
+end
+
+@inline function deg0_eval_constant(tree::Node{T})::Tuple{T,Bool} where {T<:Real}
+    return tree.value, true
+end
+
+function deg1_eval_constant(
+    tree::Node{T}, ::Val{op_idx}, options::Options
+)::Tuple{T,Bool} where {T<:Real,op_idx}
+    op = options.unaops[op_idx]
+    (cumulator, complete) = _eval_constant_tree(tree.l, options)
+    !complete && return cumulator, false
+    output = op(cumulator)::T
+    return output, isfinite(output)
+end
+
+function deg2_eval_constant(
+    tree::Node{T}, ::Val{op_idx}, options::Options
+)::Tuple{T,Bool} where {T<:Real,op_idx}
+    op = options.binops[op_idx]
+    (cumulator, complete) = _eval_constant_tree(tree.l, options)
+    !complete && return cumulator, false
+    (cumulator2, complete2) = _eval_constant_tree(tree.r, options)
+    !complete2 && return cumulator2, false
+    output = op(cumulator, cumulator2)::T
+    return output, isfinite(output)
 end
 
 # Evaluate an equation over an array of datapoints
