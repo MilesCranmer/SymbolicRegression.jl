@@ -7,12 +7,20 @@ import ..EquationUtilsModule: count_constants, index_constants, NodeIndex
 import ..EvaluateEquationModule: deg0_eval
 
 """
-    eval_diff_tree_array(tree::Node, cX::AbstractMatrix{T}, options::Options, direction::Int)
+    eval_diff_tree_array(tree::Node{T}, cX::AbstractMatrix{T}, options::Options, direction::Int)
 
 Compute the forward derivative of an expression, using a similar
 structure and optimization to eval_tree_array. `direction` is the index of a particular
 variable in the expression. e.g., `direction=1` would indicate derivative with
 respect to `x1`.
+
+# Arguments
+
+- `tree::Node`: The expression tree to evaluate.
+- `cX::AbstractMatrix{T}`: The data matrix, with each column being a data point.
+- `options::Options`: The options used to create the `tree`. Note that `options.enable_autodiff`
+    must be `true`. This is needed to create the derivative operations.
+- `direction::Int`: The index of the variable to take the derivative with respect to.
 
 # Returns
 
@@ -115,6 +123,15 @@ Compute the forward-mode derivative of an expression, using a similar
 structure and optimization to eval_tree_array. `variable` specifies whether
 we should take derivatives with respect to features (i.e., cX), or with respect
 to every constant in the expression.
+
+# Arguments
+
+- `tree::Node{T}`: The expression tree to evaluate.
+- `cX::AbstractMatrix{T}`: The data matrix, with each column being a data point.
+- `options::Options`: The options used to create the `tree`. Note that `options.enable_autodiff`
+    must be `true`. This is needed to create the derivative operations.
+- `variable::Bool`: Whether to take derivatives with respect to features (i.e., `cX` - with `variable=true`),
+    or with respect to every constant in the expression (`variable=false`).
 
 # Returns
 
