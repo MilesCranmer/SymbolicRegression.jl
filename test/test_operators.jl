@@ -48,6 +48,11 @@ for T in types_to_test
     @test all(isnan.([safe_pow(-val, -val2), safe_pow(T(0.0), -val2)]))
     @test abs(safe_pow(val, val2) - val^val2) < 1e-6
     @test abs(safe_pow(val, -val2) - val^(-val2)) < 1e-6
+    @test !isnan(safe_pow(T(-1.0), T(2.0)))
+    @test isnan(safe_pow(T(-1.0), T(2.1)))
+    @test isnan(safe_log(zero(T)))
+    @test isnan(safe_log2(zero(T)))
+    @test isnan(safe_log10(zero(T)))
     @test div(val, val2) == val / val2
     @test greater(val, val2) == T(0.0)
     @test greater(val2, val) == T(1.0)
