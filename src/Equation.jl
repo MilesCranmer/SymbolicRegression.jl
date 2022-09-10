@@ -3,11 +3,36 @@ module EquationModule
 import ..ProgramConstantsModule: CONST_TYPE
 import ..OptionsStructModule: Options
 
-################################################################################
-# Node defines a symbolic expression stored in a binary tree.
-# A single `Node` instance is one "node" of this tree, and
-# has references to its children. By tracing through the children
-# nodes, you can evaluate or print a given expression.
+"""
+    Node{T<:Real}
+
+Node defines a symbolic expression stored in a binary tree.
+A single `Node` instance is one "node" of this tree, and
+has references to its children. By tracing through the children
+nodes, you can evaluate or print a given expression.
+
+# Fields
+
+- `degree::Int`: Degree of the node. 0 for constants, 1 for
+    unary operators, 2 for binary operators.
+- `constant::Bool`: Whether the node is a constant.
+- `val::T`: Value of the node. If `degree==0`, and `constant==true`,
+    this is the value of the constant. It has a type specified by the
+    overall type of the `Node` (e.g., `Float64`).
+- `feature::Int` (optional): Index of the feature to use in the
+    case of a feature node. Only used if `degree==0` and `constant==false`. 
+    Only defined if `degree == 0 && constant == false`.
+- `op::Int`: If `degree==1`, this is the index of the operator
+    in `options.unaops`. If `degree==2`, this is the index of the
+    operator in `options.binops`. In other words, this is an enum
+    of the operators, and is dependent on the specific `Options`
+    object. Only defined if `degree >= 1`
+- `l::Node{T}`: Left child of the node. Only defined if `degree >= 1`.
+    Same type as the parent node.
+- `r::Node{T}`: Right child of the node. Only defined if `degree == 2`.
+    Same type as the parent node. This is to be passed as the right
+    argument to the binary operator.
+"""
 mutable struct Node{T<:Real}
     degree::Int  # 0 for constant/variable, 1 for cos/sin, 2 for +/* etc.
     constant::Bool  # false if variable

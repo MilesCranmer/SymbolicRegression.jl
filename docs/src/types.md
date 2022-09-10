@@ -8,6 +8,7 @@ use, e.g., `t=Node("x1") * 3f0` to create a tree, so long as
 `*` was specified as a binary operator.
 
 ```@docs
+Node{T<:Real}
 Node(; val::Real=nothing, feature::Integer=nothing)
 Node(op::Int, l::Node)
 Node(op::Int, l::Node, r::Node)
