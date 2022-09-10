@@ -15,13 +15,17 @@ mutable struct HallOfFame{T<:Real}
 end
 
 """
-    HallOfFame(options::Options)
+    HallOfFame(options::Options, ::Type{T}) where {T<:Real}
 
 Create empty HallOfFame. The HallOfFame stores a list
 of `PopMember` objects in `.members`, which is enumerated
 by size (i.e., `.members[1]` is the constant solution).
 `.exists` is used to determine whether the particular member
 has been instantiated or not.
+
+Arguments:
+- `options`: Options containing specification about deterministic.
+- `T`: Type of Nodes to use in the population. e.g., `Float64`.
 """
 function HallOfFame(options::Options, ::Type{T}) where {T<:Real}
     actualMaxsize = options.maxsize + MAX_DEGREE

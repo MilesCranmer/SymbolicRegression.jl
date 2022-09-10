@@ -43,7 +43,7 @@ PopMember(dataset::Dataset{T}, baseline::T, t::Node{T}, options::Options) where 
 ## Hall of Fame
 
 ```@docs
-HallOfFame(options::Options)
+HallOfFame(options::Options, ::Type{T}) where {T<:Real}
 ```
 
 ## Dataset
