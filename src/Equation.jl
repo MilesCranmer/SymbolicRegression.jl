@@ -8,7 +8,7 @@ import ..OptionsStructModule: Options
 # A single `Node` instance is one "node" of this tree, and
 # has references to its children. By tracing through the children
 # nodes, you can evaluate or print a given expression.
-mutable struct Node{T<:AbstractFloat}
+mutable struct Node{T<:Real}
     degree::Int  # 0 for constant/variable, 1 for cos/sin, 2 for +/* etc.
     constant::Bool  # false if variable
     val::T  # If is a constant, this stores the actual value
@@ -21,16 +21,14 @@ mutable struct Node{T<:AbstractFloat}
     #################
     ## Constructors:
     #################
-    Node(d::Int, c::Bool, v::_T) where {_T<:AbstractFloat} = new{_T}(d, c, v)
-    Node(d::Int, c::Bool, v::_T, f::Int) where {_T<:AbstractFloat} = new{_T}(d, c, v, f)
-    function Node(
-        d::Int, c::Bool, v::_T, f::Int, o::Int, l::Node{_T}
-    ) where {_T<:AbstractFloat}
+    Node(d::Int, c::Bool, v::_T) where {_T<:Real} = new{_T}(d, c, v)
+    Node(d::Int, c::Bool, v::_T, f::Int) where {_T<:Real} = new{_T}(d, c, v, f)
+    function Node(d::Int, c::Bool, v::_T, f::Int, o::Int, l::Node{_T}) where {_T<:Real}
         return new{_T}(d, c, v, f, o, l)
     end
     function Node(
         d::Int, c::Bool, v::_T, f::Int, o::Int, l::Node{_T}, r::Node{_T}
-    ) where {_T<:AbstractFloat}
+    ) where {_T<:Real}
         return new{_T}(d, c, v, f, o, l, r)
     end
 end
@@ -56,25 +54,29 @@ function Base.convert(::Type{Node{T1}}, tree::Node{T2}) where {T1,T2}
 end
 
 """
-    Node(val::AbstractFloat)
+    Node(; val::Real=nothing, feature::Integer=nothing)
 
-Create a scalar constant node
+Create a leaf node of a constant.
 """
-Node(val::T) where {T<:AbstractFloat} = Node(0, true, val) #Leave other values undefined
-
-"""
-    Node(feature::Int)
-
-Create a variable node using feature `feature::Int`
-"""
-Node(feature::Int) = Node(0, false, convert(CONST_TYPE, 0), feature)
-"""
-    Node(feature::Int)
-
-Create a variable node using feature `feature::Int`, while specifying the node type.
-"""
-function Node(feature::Int, ::Type{T}) where {T<:AbstractFloat}
-    return Node(0, false, convert(T, 0), feature)
+function Node(;
+    val::T1=nothing, feature::T2=nothing
+)::Node where {T1<:Union{Real,Nothing},T2<:Union{Integer,Nothing}}
+    if T1 <: Nothing && T2 <: Nothing
+        error("You must specify either `val` or `feature` when creating a leaf node.")
+    elseif !(T1 <: Nothing || T2 <: Nothing)
+        error(
+            "You must specify either `val` or `feature` when creating a leaf node, not both.",
+        )
+    elseif T2 <: Nothing
+        return Node(0, true, val)
+    else
+        return Node(0, false, convert(CONST_TYPE, 0), feature)
+    end
+end
+function Node(
+    ::Type{T}; val::T1=nothing, feature::T2=nothing
+)::Node{T} where {T<:Real,T1<:Union{Real,Nothing},T2<:Union{Integer,Nothing}}
+    return convert(Node{T}, Node(; val=val, feature=feature))
 end
 
 """
@@ -85,104 +87,35 @@ Apply unary operator `op` (enumerating over the order given) to `Node` `l`
 Node(op::Int, l::Node{T}) where {T} = Node(1, false, convert(T, 0), 0, op, l)
 
 """
-    Node(op::Int, l::AbstractFloat)
-
-Short-form for creating a scalar node, and applying a unary operator
-"""
-function Node(op::Int, l::T) where {T<:AbstractFloat}
-    return Node(1, false, convert(T, 0), 0, op, Node(l))
-end
-"""
-    Node(op::Int, l::Int)
-
-Short-form for creating a variable node, and applying a unary operator
-"""
-function Node(op::Int, l::Int)
-    return Node(1, false, convert(CONST_TYPE, 0), 0, op, Node(l))
-end
-
-"""
     Node(op::Int, l::Node, r::Node)
 
 Apply binary operator `op` (enumerating over the order given) to `Node`s `l` and `r`
 """
-function Node(op::Int, l::Node{T1}, r::Node{T2}) where {T1<:AbstractFloat,T2<:AbstractFloat}
+function Node(op::Int, l::Node{T1}, r::Node{T2}) where {T1<:Real,T2<:Real}
     # Get highest type:
     T = promote_type(T1, T2)
     l = convert(Node{T}, l)
     r = convert(Node{T}, r)
     return Node(2, false, convert(T, 0), 0, op, l, r)
 end
-"""
-    Node(op::Int, l::Union{AbstractFloat, Int}, r::Node)
 
-Short-form to create a scalar/variable node, and apply a binary operator
-"""
-function Node(op::Int, l::T2, r::Node{T1}) where {T1<:AbstractFloat,T2<:AbstractFloat}
-    T = promote_type(T1, T2)
-    l = convert(T, l)
-    r = convert(Node{T}, r)
-    return Node(2, false, convert(T, 0.0f0), 0, op, Node(l), r)
-end
-function Node(op::Int, l::Int, r::Node{T}) where {T<:AbstractFloat}
-    return Node(2, false, convert(T, 0), 0, op, Node(l, T), r)
-end
-
-"""
-    Node(op::Int, l::Node, r::Union{AbstractFloat, Int})
-
-Short-form to create a scalar node, and apply a binary operator
-"""
-function Node(op::Int, l::Node{T1}, r::T2) where {T1<:AbstractFloat,T2<:AbstractFloat}
-    T = promote_type(T1, T2)
-    l = convert(Node{T}, l)
-    r = convert(T, r)
-    return Node(2, false, convert(T, 0), 0, op, l, Node(r))
-end
-"""
-    Node(op::Int, l::Node, r::Union{AbstractFloat, Int})
-
-Short-form to create a variable node, and apply a binary operator
-"""
-function Node(op::Int, l::Node{T}, r::Int) where {T<:AbstractFloat}
-    return Node(2, false, convert(T, 0), 0, op, l, Node(r, T))
-end
-
-"""
-    Node(op::Int, l::Union{AbstractFloat, Int}, r::Union{AbstractFloat, Int})
-
-Short-form for creating two scalar/variable node, and applying a binary operator
-"""
-function Node(
-    op::Int, l::T1, r::T2
-) where {T1<:Union{AbstractFloat,Int},T2<:Union{AbstractFloat,Int}}
-    if T1 <: AbstractFloat && T2 <: AbstractFloat
-        T = promote_type(T1, T2)
-        l = convert(T, l)
-        r = convert(T, r)
-        return Node(2, false, convert(T, 0.0f0), 0, op, Node(l), Node(r))
-    elseif T1 <: AbstractFloat
-        return Node(2, false, convert(T1, 0.0f0), 0, op, Node(l), Node(r, T1))
-    elseif T2 <: AbstractFloat
-        return Node(2, false, convert(T2, 0.0f0), 0, op, Node(l, T2), Node(r))
-    else
-        return Node(2, false, convert(CONST_TYPE, 0.0f0), 0, op, Node(l), Node(r))
-    end
-end
 """
     Node(var_string::String)
 
 Create a variable node, using the format `"x1"` to mean feature 1
 """
-Node(var_string::String) = Node(parse(Int, var_string[2:end]))
+Node(var_string::String) = Node(; feature=parse(Int, var_string[2:end]))
+
 """
     Node(var_string::String, varMap::Array{String, 1})
 
 Create a variable node, using a user-passed format
 """
 function Node(var_string::String, varMap::Array{String,1})
-    return Node(
-        [i for (i, _variable) in enumerate(varMap) if _variable == var_string][1]::Int
+    return Node(;
+        feature=[
+            i for (i, _variable) in enumerate(varMap) if _variable == var_string
+        ][1]::Int,
     )
 end
 
@@ -190,9 +123,9 @@ end
 function copy_node(tree::Node{T})::Node{T} where {T}
     if tree.degree == 0
         if tree.constant
-            return Node(copy(tree.val))
+            return Node(; val=copy(tree.val))
         else
-            return Node(copy(tree.feature), T)
+            return Node(T; feature=copy(tree.feature))
         end
     elseif tree.degree == 1
         return Node(copy(tree.op), copy_node(tree.l))

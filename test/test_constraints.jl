@@ -11,7 +11,7 @@ options = Options(;
     constraints=(_inv => 4,),
     npopulations=4,
 )
-tree = Node(5, (Node(3.0) * Node(1, Node("x1")))^2.0, -1.2)
+tree = Node(5, (Node(; val=3.0) * Node(1, Node("x1")))^2.0, Node(; val=-1.2))
 violating_tree = Node(1, tree)
 
 @test check_constraints(tree, options) == true

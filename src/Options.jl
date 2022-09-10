@@ -317,7 +317,7 @@ function Options(;
     recorder=nothing,
     recorder_file="pysr_recorder.json",
     probPickFirst=0.86f0,
-    earlyStopCondition::Union{Function,AbstractFloat,Nothing}=nothing,
+    earlyStopCondition::Union{Function,Real,Nothing}=nothing,
     stateReturn::Bool=false,
     timeout_in_seconds=nothing,
     max_evals=nothing,
@@ -541,29 +541,27 @@ function Options(;
             continue
         end
         @eval begin
-            function Base.$_f(
-                l::Node{T1}, r::Node{T2}
-            ) where {T1<:AbstractFloat,T2<:AbstractFloat}
+            function Base.$_f(l::Node{T1}, r::Node{T2}) where {T1<:Real,T2<:Real}
                 T = promote_type(T1, T2)
                 l = convert(Node{T}, l)
                 r = convert(Node{T}, r)
                 if (l.constant && r.constant)
-                    return Node($f(l.val, r.val))
+                    return Node(; val=$f(l.val, r.val))
                 else
                     return Node($op, l, r)
                 end
             end
-            function Base.$_f(l::Node{T1}, r::T2) where {T1<:AbstractFloat,T2<:Real}
+            function Base.$_f(l::Node{T1}, r::T2) where {T1<:Real,T2<:Real}
                 T = promote_type(T1, T2)
                 l = convert(Node{T}, l)
                 r = convert(T, r)
-                return l.constant ? Node($f(l.val, r)) : Node($op, l, r)
+                return l.constant ? Node(; val=$f(l.val, r)) : Node($op, l, Node(; val=r))
             end
-            function Base.$_f(l::T1, r::Node{T2}) where {T1<:Real,T2<:AbstractFloat}
+            function Base.$_f(l::T1, r::Node{T2}) where {T1<:Real,T2<:Real}
                 T = promote_type(T1, T2)
                 l = convert(T, l)
                 r = convert(Node{T}, r)
-                return r.constant ? Node($f(l, r.val)) : Node($op, l, r)
+                return r.constant ? Node(; val=$f(l, r.val)) : Node($op, Node(; val=l), r)
             end
         end
     end
@@ -574,8 +572,8 @@ function Options(;
             continue
         end
         @eval begin
-            function Base.$f(l::Node{T})::Node{T} where {T<:AbstractFloat}
-                return l.constant ? Node($f(l.val)) : Node($op, l)
+            function Base.$f(l::Node{T})::Node{T} where {T<:Real}
+                return l.constant ? Node(; val=$f(l.val)) : Node($op, l)
             end
         end
     end
@@ -588,7 +586,7 @@ function Options(;
         recorder = haskey(ENV, "PYSR_RECORDER") && (ENV["PYSR_RECORDER"] == "1")
     end
 
-    if typeof(earlyStopCondition) <: AbstractFloat
+    if typeof(earlyStopCondition) <: Real
         # Need to make explicit copy here for this to work:
         stopping_point = Float64(earlyStopCondition)
         earlyStopCondition = (loss, complexity) -> loss < stopping_point

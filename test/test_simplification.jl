@@ -43,12 +43,12 @@ custom_cos(x) = cos(x)^2
 
 # Define for Node (usually these are done internally to Options)
 pow_abs2(l::Node, r::Node)::Node =
-    (l.constant && r.constant) ? Node(pow_abs2(l.val, r.val)::AbstractFloat) : Node(5, l, r)
-pow_abs2(l::Node, r::AbstractFloat)::Node =
-    l.constant ? Node(pow_abs2(l.val, r)::AbstractFloat) : Node(5, l, r)
-pow_abs2(l::AbstractFloat, r::Node)::Node =
-    r.constant ? Node(pow_abs2(l, r.val)::AbstractFloat) : Node(5, l, r)
-custom_cos(x::Node)::Node = x.constant ? Node(custom_cos(x.val)::AbstractFloat) : Node(1, x)
+    (l.constant && r.constant) ? Node(pow_abs2(l.val, r.val)::Real) : Node(5, l, r)
+pow_abs2(l::Node, r::Real)::Node =
+    l.constant ? Node(pow_abs2(l.val, r)::Real) : Node(5, l, r)
+pow_abs2(l::Real, r::Node)::Node =
+    r.constant ? Node(pow_abs2(l, r.val)::Real) : Node(5, l, r)
+custom_cos(x::Node)::Node = x.constant ? Node(custom_cos(x.val)::Real) : Node(1, x)
 
 options = Options(;
     binary_operators=(+, *, -, /, pow_abs2), unary_operators=(custom_cos, exp, sin)
