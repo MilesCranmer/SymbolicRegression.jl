@@ -63,7 +63,14 @@ end
 """
     Node(; val::Real=nothing, feature::Integer=nothing)
 
-Create a leaf node of a constant.
+Create a leaf node: either a constant, or a variable.
+
+# Arguments:
+
+- `val::Real`, if you are specifying a constant, pass
+    the value of the constant here.
+- `feature::Integer`, if you are specifying a variable,
+    pass the index of the variable here.
 """
 function Node(;
     val::T1=nothing, feature::T2=nothing
@@ -126,7 +133,12 @@ function Node(var_string::String, varMap::Array{String,1})
     )
 end
 
-# Copy an equation (faster than deepcopy)
+"""
+    copy_node(tree::Node)
+
+Copy a node, recursively copying all children nodes.
+This is more efficient than the built-in copy.
+"""
 function copy_node(tree::Node{T})::Node{T} where {T}
     if tree.degree == 0
         if tree.constant
