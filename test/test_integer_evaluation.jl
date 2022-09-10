@@ -21,3 +21,4 @@ true_out = nodefnc.(X[1, :], X[2, :], X[3, :])
 out, flag = eval_tree_array(tree, X, options)
 @test flag
 @test isapprox(out, true_out)
+@test eltype(out) == Int32
