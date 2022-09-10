@@ -58,7 +58,7 @@ string_tree(tree::Node, options::Options)
 ```
 
 ```@docs
-eval_tree_array(tree::Node, cX::AbstractMatrix{T}, options::Options) where {T<:Real}
+eval_tree_array(tree::Node{T}, cX::AbstractMatrix{T}, options::Options) where {T<:Real}
 ```
 
 ## SymbolicUtils.jl interface
@@ -74,8 +74,8 @@ node_to_symbolic(tree::Node, options::Options;
 
 ```@docs
 calculate_pareto_frontier(X::AbstractMatrix{T}, y::AbstractVector{T},
-                        hallOfFame::HallOfFame, options::Options;
+                        hallOfFame::HallOfFame{T}, options::Options;
                         weights=nothing, varMap=nothing) where {T<:Real}
-calculate_pareto_frontier(dataset::Dataset{T}, hallOfFame::HallOfFame,
-                        options::Options) where {T<:Real}
+calculate_pareto_frontier(dataset::Dataset{T}, hallOfFame::HallOfFame{T},
+                          options::Options) where {T<:Real}
 ```

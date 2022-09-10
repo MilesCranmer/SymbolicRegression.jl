@@ -40,7 +40,7 @@ function HallOfFame(options::Options, ::Type{T}) where {T<:Real}
 end
 
 """
-    calculate_pareto_frontier(dataset::Dataset{T}, hallOfFame::HallOfFame,
+    calculate_pareto_frontier(dataset::Dataset{T}, hallOfFame::HallOfFame{T},
                             options::Options) where {T<:Real}
 """
 function calculate_pareto_frontier(
@@ -77,7 +77,7 @@ end
 
 """
     calculate_pareto_frontier(X::AbstractMatrix{T}, y::AbstractVector{T},
-                            hallOfFame::HallOfFame, options::Options;
+                            hallOfFame::HallOfFame{T}, options::Options;
                             weights=nothing, varMap=nothing) where {T<:Real}
 
 Compute the dominating Pareto frontier for a given hallOfFame. This
@@ -87,7 +87,7 @@ simpler equations.
 function calculate_pareto_frontier(
     X::AbstractMatrix{T},
     y::AbstractVector{T},
-    hallOfFame::HallOfFame,
+    hallOfFame::HallOfFame{T},
     options::Options;
     weights=nothing,
     varMap=nothing,
