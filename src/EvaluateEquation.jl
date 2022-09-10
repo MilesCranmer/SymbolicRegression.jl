@@ -78,9 +78,8 @@ end
 function _eval_tree_array(
     tree::Node{T}, cX::AbstractMatrix{T}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
-    if tree.degree == 0
-        deg0_eval(tree, cX, options)
-    elseif tree.degree == 1
+    # First, we try evaluating with a fused kernels:
+    if tree.degree == 1
         # TODO: We could all do Val(tree.l.degree) here, instead of having
         # different kernels for const vs data.
 
@@ -89,13 +88,11 @@ function _eval_tree_array(
         #  - op(op2(x)), where x is a constant or variable.
         #  - op(x), for any x.
         if tree.l.degree == 2 && tree.l.l.degree == 0 && tree.l.r.degree == 0
-            deg1_l2_ll0_lr0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
+            return deg1_l2_ll0_lr0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
         elseif tree.l.degree == 1 && tree.l.l.degree == 0
-            deg1_l1_ll0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
-        else
-            deg1_eval(tree, cX, Val(tree.op), options)
+            return deg1_l1_ll0_eval(tree, cX, Val(tree.op), Val(tree.l.op), options)
         end
-    else
+    elseif tree.degree == 2
         # We fuse (and compile) the following:
         #  - op(x, y), where x, y are constants or variables.
         #  - op(x, y), where x is a constant or variable but y is not.
@@ -103,14 +100,20 @@ function _eval_tree_array(
         #  - op(x, y), for any x or y
         # TODO - add op(op2(x, y), z) and op(x, op2(y, z))
         if tree.l.degree == 0 && tree.r.degree == 0
-            deg2_l0_r0_eval(tree, cX, Val(tree.op), options)
+            return deg2_l0_r0_eval(tree, cX, Val(tree.op), options)
         elseif tree.l.degree == 0
-            deg2_l0_eval(tree, cX, Val(tree.op), options)
+            return deg2_l0_eval(tree, cX, Val(tree.op), options)
         elseif tree.r.degree == 0
-            deg2_r0_eval(tree, cX, Val(tree.op), options)
-        else
-            deg2_eval(tree, cX, Val(tree.op), options)
+            return deg2_r0_eval(tree, cX, Val(tree.op), options)
         end
+    end
+
+    if tree.degree == 0
+        return deg0_eval(tree, cX, options)
+    elseif tree.degree == 1
+        return deg1_eval(tree, cX, Val(tree.op), options)
+    else
+        return deg2_eval(tree, cX, Val(tree.op), options)
     end
 end
 
