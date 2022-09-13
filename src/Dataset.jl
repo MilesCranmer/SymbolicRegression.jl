@@ -2,6 +2,21 @@ module DatasetModule
 
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM
 
+"""
+    Dataset{T<:Real}
+
+# Fields
+
+- `X::AbstractMatrix{T}`: The input features, with shape `(nfeatures, n)`.
+- `y::AbstractVector{T}`: The desired output values, with shape `(n,)`.
+- `n::Int`: The number of samples.
+- `nfeatures::Int`: The number of features.
+- `weighted::Bool`: Whether the dataset is non-uniformly weighted.
+- `weights::Union{AbstractVector{T},Nothing}`: If the dataset is weighted,
+    these specify the per-sample weight (with shape `(n,)`).
+- `varMap::Array{String,1}`: The names of the features,
+    with shape `(nfeatures,)`.
+"""
 struct Dataset{T<:Real}
     X::AbstractMatrix{T}
     y::AbstractVector{T}
