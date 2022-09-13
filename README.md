@@ -68,12 +68,6 @@ for member in dominating
 end
 ```
 
-
-## Search options
-
-See https://astroautomata.com/SymbolicRegression.jl/stable/api/#Options
-
-
 ## Code structure
 
 The dependency structure is as follows:
@@ -183,4 +177,10 @@ for f in *.jl; do
     done;
 done | vims -l 'f a-->
 ```
+
+
+
+## Search options
+
+See https://astroautomata.com/SymbolicRegression.jl/stable/api/#Options
 
