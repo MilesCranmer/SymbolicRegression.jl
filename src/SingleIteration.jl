@@ -71,7 +71,7 @@ function optimize_and_simplify_population(
 )::Tuple{Population,Float64} where {T<:Real}
     array_num_evals = zeros(Float64, pop.n)
     do_optimization = rand(pop.n) .< options.optimize_probability
-    @inbounds @simd for j in 1:(pop.n)
+    @inbounds for j in 1:(pop.n)
         pop.members[j].tree = simplify_tree(pop.members[j].tree, options)
         pop.members[j].tree = combine_operators(pop.members[j].tree, options)
         if options.shouldOptimizeConstants && do_optimization[j]
