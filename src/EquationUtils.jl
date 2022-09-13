@@ -67,6 +67,22 @@ function count_constants(tree::Node)::Int
 end
 
 """
+    is_constant(tree::Node)::Bool
+
+Check if an expression is a constant numerical value, or
+whether it depends on input features.
+"""
+function is_constant(tree::Node)::Bool
+    if tree.degree == 0
+        return tree.constant
+    elseif tree.degree == 1
+        return is_constant(tree.l)
+    else
+        return is_constant(tree.l) && is_constant(tree.r)
+    end
+end
+
+"""
 Compute the complexity of a tree.
 
 By default, this is the number of nodes in a tree.

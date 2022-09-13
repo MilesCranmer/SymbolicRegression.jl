@@ -64,6 +64,7 @@ HallOfFame(options::Options, ::Type{T}) where {T<:Real}
 ## Dataset
 
 ```@docs
+Dataset{T<:Real}
 Dataset(X::AbstractMatrix{T},
         y::AbstractVector{T};
         weights::Union{AbstractVector{T}, Nothing}=nothing,
