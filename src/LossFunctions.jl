@@ -5,6 +5,7 @@ import LossFunctions: value, AggMode, SupervisedLoss
 import ..CoreModule: Options, Dataset, Node
 import ..EquationUtilsModule: compute_complexity
 import ..EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
+import ..EvaluateEquationDerivativeModule: eval_grad_tree_array
 
 function loss( # fmt: off
     x::AbstractArray{T},
