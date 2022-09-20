@@ -81,20 +81,10 @@ function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T wher
     orth2_py = py
 
     loss = (
-        sum((f_x .* dH_dx .+ f_y .* dH_dy .+ f_px .* dH_dpx .+ f_py .* dH_dpy) .^ 2) +
-        sum(
-            (
-                orth_x .* dH_dx .+ orth_y .* dH_dy .+ orth_px .* dH_dpx .+
-                orth_py .* dH_dpy
-            ) .^ 2,
-        ) +
-        sum(
-            (
-                orth2_x .* dH_dx .+ orth2_y .* dH_dy .+ orth2_px .* dH_dpx .+
-                orth2_py .* dH_dpy
-            ) .^ 2,
-        )
-    )::T
+        sum((f_x .* dH_dx .+ f_y .* dH_dy .+ f_px .* dH_dpx .+ f_py .* dH_dpy) .^ 2)
+        + sum((orth_x .* dH_dx .+ orth_y .* dH_dy .+ orth_px .* dH_dpx .+ orth_py .* dH_dpy) .^ 2)
+        + sum((orth2_x .* dH_dx .+ orth2_y .* dH_dy .+ orth2_px .* dH_dpx .+ orth2_py .* dH_dpy) .^ 2)
+    )
     return loss
 end
 
