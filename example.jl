@@ -1,13 +1,41 @@
 using SymbolicRegression, SymbolicUtils
+using Random
 
-X = randn(Float32, 5, 100)
-y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
+Random.seed!(0)
+
+## y' = x
+## x' = -y
+
+n = 100
+x = randn(Float64, n)
+y = randn(Float64, n)
+px = randn(Float64, n)
+py = randn(Float64, n)
+
+X = ones(Float64, 4, n)
+X[1, :] = x
+X[2, :] = y
+X[3, :] = px
+X[4, :] = py
+
+dummy_y_variable = randn(Float64, n)
+
+function _sqrt_abs(x::T)::T where {T}
+    return Base.sqrt(abs(x))
+end
 
 options = SymbolicRegression.Options(;
-    binary_operators=(+, *, /, -), unary_operators=(cos, exp), npopulations=20
+    binary_operators=(+, *, /, -),
+    unary_operators=(_sqrt_abs, square),
+    nested_constraints=[square => [_sqrt_abs => 0], _sqrt_abs => [square => 0, _sqrt_abs => 0]],
+    enable_autodiff=true,
+    maxsize=40,
 )
 
-hall_of_fame = EquationSearch(X, y; niterations=40, options=options, numprocs=4)
+hall_of_fame = EquationSearch(
+    X, dummy_y_variable; niterations=400, options=options, multithreading=true,
+    varMap=["x", "y", "px", "py"],
+)
 
 dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
 
