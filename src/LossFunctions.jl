@@ -37,16 +37,64 @@ end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
-    (prediction, completion) = eval_tree_array(tree, dataset.X, options)
+    # (prediction, completion) = eval_tree_array(tree, dataset.X, options)
+    (prediction, gradient, completion) = eval_grad_tree_array(
+        tree, dataset.X, options; variable=true
+    )
     if !completion
         return T(Inf)
     end
 
-    if dataset.weighted
-        return loss(prediction, dataset.y, dataset.weights, options)
-    else
-        return loss(prediction, dataset.y, options)
+    x = dataset.X[1, :]
+    y = dataset.X[2, :]
+    px = dataset.X[3, :]
+    py = dataset.X[4, :]
+    nfeatures = dataset.nfeatures
+
+    # Normalize dH_dx and dH_dy
+    l2_norm_dH = sqrt.(sum(gradient .^ 2; dims=1))
+
+    # Make sure the normalization is never zero:
+    if any(l2_norm_dH .< T(1e-8))
+        return T(Inf)
     end
+
+    # Compute the dynamical equations:
+    f_x = px
+    f_y = py
+    f_px = -x
+    f_py = -4 .* y
+    dH_dx = gradient[1, :] ./ l2_norm_dH
+    dH_dy = gradient[2, :] ./ l2_norm_dH
+    dH_dpx = gradient[3, :] ./ l2_norm_dH
+    dH_dpy = gradient[4, :] ./ l2_norm_dH
+
+    orth_x = x
+    orth_y = zero(T)
+    orth_px = px
+    orth_py = zero(T)
+
+    orth2_x = zero(T)
+    orth2_y = 4 .* y
+    orth2_px = zero(T)
+    orth2_py = py
+
+    loss = (
+        sum((f_x .* dH_dx .+ f_y .* dH_dy .+ f_px .* dH_dpx .+ f_py .* dH_dpy) .^ 2) +
+        sum(
+            (
+                orth_x .* dH_dx .+ orth_y .* dH_dy .+ orth_px .* dH_dpx .+
+                orth_py .* dH_dpy
+            ) .^ 2,
+        ) +
+        sum(
+            (
+                orth2_x .* dH_dx .+ orth2_y .* dH_dy .+ orth2_px .* dH_dpx .+
+                orth2_py .* dH_dpy
+            ) .^ 2,
+        )
+    )::T
+    return loss
 end
 
 # Compute a score which includes a complexity penalty in the loss
