@@ -325,6 +325,7 @@ function Options(;
     enable_autodiff::Bool=false,
     nested_constraints=nothing,
     deterministic=false,
+    use_compression_complexity=false,
 ) where {nuna,nbin}
     if warmupMaxsize !== nothing
         error(
@@ -673,6 +674,7 @@ function Options(;
         enable_autodiff,
         nested_constraints,
         deterministic,
+        use_compression_complexity,
     )
 
     @eval begin

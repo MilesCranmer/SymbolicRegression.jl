@@ -1,6 +1,12 @@
 module EquationUtilsModule
 
+import InformationDistances: compressed_length, CodecCompressor, LibDeflateCompressor
+using CodecBzip2: Bzip2Compressor
 import ..CoreModule: Node, copy_node, Options
+
+const bcompressor = LibDeflateCompressor(; compresslevel=12)
+# const bcompressor = CodecCompressor{Bzip2Compressor}()
+const bcompressor_offset = compressed_length(bcompressor, "u0")
 
 # Count the operators, constants, variables in an equation
 function count_nodes(tree::Node)::Int
@@ -83,6 +89,37 @@ function is_constant(tree::Node)::Bool
 end
 
 """
+String representation of an expression with a minimal grammar with Polish notation.
+
+For example, with `binary_operators=(+, *, /, -)`, the expression
+`x1 * 3.2 - x2 * x2 - 1.5` will be turned into
+`b3 b3 b1 x0 c0 b1 x1 x1 c1`. If two constants are they same,
+they will be given the same index. After numeric values up to 9 are used,
+alphabetical characters are used to represent.
+"""
+function minimal_string_tree(tree::Node{T})::String where {T}
+    constants = get_constants(tree)::Vector{T}
+    return _minimal_string_tree(tree, constants)
+end
+
+const alphabetnumeric = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+function _minimal_string_tree(tree::Node{T}, constants::Vector{T})::String where {T}
+    if tree.degree == 0
+        if tree.constant
+            constant_index = findfirst(x -> x == tree.val, constants)
+            return "c$(alphabetnumeric[constant_index])"
+        else
+            return "x$(alphabetnumeric[tree.feature])"
+        end
+    elseif tree.degree == 1
+        return "u$(alphabetnumeric[tree.op]) $(_minimal_string_tree(tree.l, constants))"
+    else
+        return "b$(alphabetnumeric[tree.op]) $(_minimal_string_tree(tree.l, constants)) $(_minimal_string_tree(tree.r, constants))"
+    end
+end
+
+"""
 Compute the complexity of a tree.
 
 By default, this is the number of nodes in a tree.
@@ -90,10 +127,20 @@ However, it could use the custom settings in options.complexity_mapping
 if these are defined.
 """
 function compute_complexity(tree::Node, options::Options)::Int
-    if options.complexity_mapping.use
-        return round(Int, _compute_complexity(tree, options))
+
+    normal_complexity = if options.complexity_mapping.use
+        round(Int, _compute_complexity(tree, options))
     else
-        return count_nodes(tree)
+        count_nodes(tree)
+    end
+
+    if options.use_compression_complexity
+        s = minimal_string_tree(tree)
+        compressed_complexity = compressed_length(bcompressor, s)
+        compressed_complexity = compressed_complexity - bcompressor_offset + 1
+        return round(Int, 0.9 * compressed_complexity + 0.1 * normal_complexity)
+    else
+        return normal_complexity
     end
 end
 
