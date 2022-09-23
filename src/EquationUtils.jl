@@ -93,29 +93,28 @@ String representation of an expression with a minimal grammar with Polish notati
 
 For example, with `binary_operators=(+, *, /, -)`, the expression
 `x1 * 3.2 - x2 * x2 - 1.5` will be turned into
-`b3 b3 b1 x0 c0 b1 x1 x1 c1`. If two constants are they same,
-they will be given the same index. After numeric values up to 9 are used,
+`b3 b3 b1 x0 c0 b1 x1 x1 c1`. After numeric values up to 9 are used,
 alphabetical characters are used to represent.
 """
 function minimal_string_tree(tree::Node{T})::String where {T}
-    constants = get_constants(tree)::Vector{T}
-    return _minimal_string_tree(tree, constants)
+    node_index = index_constants(tree)
+    return _minimal_string_tree(tree, node_index)
 end
 
 const alphabetnumeric = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-function _minimal_string_tree(tree::Node{T}, constants::Vector{T})::String where {T}
+function _minimal_string_tree(tree::Node{T}, node_index::NodeIndex)::String where {T}
     if tree.degree == 0
         if tree.constant
-            constant_index = findfirst(x -> x == tree.val, constants)
+            constant_index = node_index.constant_index
             return "c$(alphabetnumeric[constant_index])"
         else
             return "x$(alphabetnumeric[tree.feature])"
         end
     elseif tree.degree == 1
-        return "u$(alphabetnumeric[tree.op]) $(_minimal_string_tree(tree.l, constants))"
+        return "u$(alphabetnumeric[tree.op]) $(_minimal_string_tree(tree.l, node_index.l))"
     else
-        return "b$(alphabetnumeric[tree.op]) $(_minimal_string_tree(tree.l, constants)) $(_minimal_string_tree(tree.r, constants))"
+        return "b$(alphabetnumeric[tree.op]) $(_minimal_string_tree(tree.l, node_index.l)) $(_minimal_string_tree(tree.r, node_index.r))"
     end
 end
 
