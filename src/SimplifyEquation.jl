@@ -1,6 +1,6 @@
 module SimplifyEquationModule
 
-import ..CoreModule: Node, left, right, copy_node, Options
+import ..CoreModule: Node, left, right, set_left!, set_right!, copy_node, Options
 import ..CheckConstraintsModule: check_constraints
 import ..UtilsModule: isbad, isgood
 
@@ -15,10 +15,10 @@ function combine_operators(tree::Node{T}, options::Options)::Node{T} where {T}
     if tree.degree == 0
         return tree
     elseif tree.degree == 1
-        tree.l = combine_operators(left(tree), options)
+        set_left!(tree, combine_operators(left(tree), options))
     elseif tree.degree == 2
-        tree.l = combine_operators(left(tree), options)
-        tree.r = combine_operators(tree.r, options)
+        set_left!(tree, combine_operators(left(tree), options))
+        set_right!(tree, combine_operators(tree.r, options))
     end
 
     top_level_constant = tree.degree == 2 && (left(tree).constant || tree.r.constant)
@@ -29,8 +29,8 @@ function combine_operators(tree::Node{T}, options::Options)::Node{T} where {T}
         # Put the constant in r. Need to assume var in left for simplification assumption.
         if left(tree).constant
             tmp = tree.r
-            tree.r = left(tree)
-            tree.l = tmp
+            set_right!(tree, left(tree))
+            set_left!(tree, tmp)
         end
         topconstant = tree.r.val
         # Simplify down first
@@ -56,15 +56,15 @@ function combine_operators(tree::Node{T}, options::Options)::Node{T} where {T}
                     l = left(tree)
                     r = tree.r
                     simplified_const = -(l.val - left(r).val) #neg(sub(l.val, left(r).val))
-                    tree.l = tree.r.r
-                    tree.r = l
+                    set_left!(tree, tree.r.r)
+                    set_right!(tree, l)
                     tree.r.val = simplified_const
                 elseif tree.r.r.constant
                     #(const - (var - const)) => (const - var)
                     l = left(tree)
                     r = tree.r
                     simplified_const = l.val + r.r.val #plus(l.val, r.r.val)
-                    tree.r = left(tree.r)
+                    set_right!(tree, left(tree.r))
                     tree.l.val = simplified_const
                 end
             end
@@ -75,15 +75,15 @@ function combine_operators(tree::Node{T}, options::Options)::Node{T} where {T}
                     l = left(tree)
                     r = tree.r
                     simplified_const = left(l).val - r.val#sub(left(l).val, r.val)
-                    tree.r = left(tree).r
-                    tree.l = r
+                    set_right!(tree, left(tree).r)
+                    set_left!(tree, r)
                     left(tree).val = simplified_const
                 elseif left(tree).r.constant
                     #((var - const) - const) => (var - const)
                     l = left(tree)
                     r = tree.r
                     simplified_const = r.val + l.r.val #plus(r.val, l.r.val)
-                    tree.l = left(left(tree))
+                    set_left!(tree, left(left(tree)))
                     tree.r.val = simplified_const
                 end
             end
@@ -95,7 +95,7 @@ end
 # Simplify tree
 function simplify_tree(tree::Node{T}, options::Options)::Node{T} where {T<:Real}
     if tree.degree == 1
-        tree.l = simplify_tree(left(tree), options)
+        set_left!(tree, simplify_tree(left(tree), options))
         l = left(tree).val
         if left(tree).degree == 0 && left(tree).constant && isgood(l)
             out = options.unaops[tree.op](l)
@@ -105,8 +105,8 @@ function simplify_tree(tree::Node{T}, options::Options)::Node{T} where {T<:Real}
             return Node(; val=convert(T, out))
         end
     elseif tree.degree == 2
-        tree.l = simplify_tree(left(tree), options)
-        tree.r = simplify_tree(tree.r, options)
+        set_left!(tree, simplify_tree(left(tree), options))
+        set_right!(tree, simplify_tree(tree.r, options))
         constantsBelow = (
             tree.l.degree == 0 && left(tree).constant && tree.r.degree == 0 && tree.r.constant
         )

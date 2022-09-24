@@ -19,7 +19,7 @@ import .ProgramConstantsModule:
     SRDistributed
 import .DatasetModule: Dataset
 import .OptionsStructModule: Options
-import .EquationModule: Node, left, right, copy_node, string_tree, print_tree
+import .EquationModule: Node, left, right, set_left!, set_right!, copy_node, string_tree, print_tree
 import .OptionsModule: Options
 import .OperatorsModule:
     plus,
