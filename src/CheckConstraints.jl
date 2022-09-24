@@ -1,6 +1,6 @@
 module CheckConstraintsModule
 
-import ..CoreModule: Node, Options
+import ..CoreModule: Node, left, right, Options
 import ..EquationUtilsModule: compute_complexity
 
 # Check if any binary operator are overly complex
@@ -10,13 +10,13 @@ function flag_bin_operator_complexity(
     if tree.degree == 0
         return false
     elseif tree.degree == 1
-        return flag_bin_operator_complexity(tree.l, Val(op), options)
+        return flag_bin_operator_complexity(left(tree), Val(op), options)
     else
         if tree.op == op
             overly_complex::Bool = (
                 (
                     (options.bin_constraints[op][1]::Int > -1) && (
-                        compute_complexity(tree.l, options) >
+                        compute_complexity(left(tree), options) >
                         options.bin_constraints[op][1]::Int
                     )
                 ) || (
@@ -31,7 +31,7 @@ function flag_bin_operator_complexity(
             end
         end
         return (
-            flag_bin_operator_complexity(tree.l, Val(op), options) ||
+            flag_bin_operator_complexity(left(tree), Val(op), options) ||
             flag_bin_operator_complexity(tree.r, Val(op), options)
         )
     end
@@ -47,16 +47,16 @@ function flag_una_operator_complexity(
         if tree.op == op
             overly_complex::Bool = (
                 (options.una_constraints[op]::Int > -1) &&
-                (compute_complexity(tree.l, options) > options.una_constraints[op]::Int)
+                (compute_complexity(left(tree), options) > options.una_constraints[op]::Int)
             )
             if overly_complex
                 return true
             end
         end
-        return flag_una_operator_complexity(tree.l, Val(op), options)
+        return flag_una_operator_complexity(left(tree), Val(op), options)
     else
         return (
-            flag_una_operator_complexity(tree.l, Val(op), options) ||
+            flag_una_operator_complexity(left(tree), Val(op), options) ||
             flag_una_operator_complexity(tree.r, Val(op), options)
         )
     end
@@ -68,11 +68,11 @@ function count_max_nestedness(tree::Node, degree::Int, op::Int, options::Options
         return 0
     elseif tree.degree == 1
         count = (degree == 1 && tree.op == op) ? 1 : 0
-        return count + count_max_nestedness(tree.l, degree, op, options)
+        return count + count_max_nestedness(left(tree), degree, op, options)
     else  # tree.degree == 2
         count = (degree == 2 && tree.op == op) ? 1 : 0
         return count + max(
-            count_max_nestedness(tree.l, degree, op, options),
+            count_max_nestedness(left(tree), degree, op, options),
             count_max_nestedness(tree.r, degree, op, options),
         )
     end
@@ -94,15 +94,15 @@ function fast_max_nestedness(
     elseif tree.degree == 1
         if degree != tree.degree || tree.op != op_idx
             return fast_max_nestedness(
-                tree.l, degree, op_idx, nested_degree, nested_op_idx, options
+                left(tree), degree, op_idx, nested_degree, nested_op_idx, options
             )
         end
-        return count_max_nestedness(tree.l, nested_degree, nested_op_idx, options)
+        return count_max_nestedness(left(tree), nested_degree, nested_op_idx, options)
     else
         if degree != tree.degree || tree.op != op_idx
             return max(
                 fast_max_nestedness(
-                    tree.l, degree, op_idx, nested_degree, nested_op_idx, options
+                    left(tree), degree, op_idx, nested_degree, nested_op_idx, options
                 ),
                 fast_max_nestedness(
                     tree.r, degree, op_idx, nested_degree, nested_op_idx, options
@@ -110,7 +110,7 @@ function fast_max_nestedness(
             )
         end
         return max(
-            count_max_nestedness(tree.l, nested_degree, nested_op_idx, options),
+            count_max_nestedness(left(tree), nested_degree, nested_op_idx, options),
             count_max_nestedness(tree.r, nested_degree, nested_op_idx, options),
         )
     end

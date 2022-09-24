@@ -1,15 +1,15 @@
 module EquationUtilsModule
 
-import ..CoreModule: Node, copy_node, Options
+import ..CoreModule: Node, left, right, copy_node, Options
 
 # Count the operators, constants, variables in an equation
 function count_nodes(tree::Node)::Int
     if tree.degree == 0
         return 1
     elseif tree.degree == 1
-        return 1 + count_nodes(tree.l)
+        return 1 + count_nodes(left(tree))
     else
-        return 1 + count_nodes(tree.l) + count_nodes(tree.r)
+        return 1 + count_nodes(left(tree)) + count_nodes(tree.r)
     end
 end
 
@@ -18,9 +18,9 @@ function count_depth(tree::Node)::Int
     if tree.degree == 0
         return 1
     elseif tree.degree == 1
-        return 1 + count_depth(tree.l)
+        return 1 + count_depth(left(tree))
     else
-        return 1 + max(count_depth(tree.l), count_depth(tree.r))
+        return 1 + max(count_depth(left(tree)), count_depth(tree.r))
     end
 end
 
@@ -29,9 +29,9 @@ function count_unary_operators(tree::Node)::Int
     if tree.degree == 0
         return 0
     elseif tree.degree == 1
-        return 1 + count_unary_operators(tree.l)
+        return 1 + count_unary_operators(left(tree))
     else
-        return 0 + count_unary_operators(tree.l) + count_unary_operators(tree.r)
+        return 0 + count_unary_operators(left(tree)) + count_unary_operators(tree.r)
     end
 end
 
@@ -40,9 +40,9 @@ function count_binary_operators(tree::Node)::Int
     if tree.degree == 0
         return 0
     elseif tree.degree == 1
-        return 0 + count_binary_operators(tree.l)
+        return 0 + count_binary_operators(left(tree))
     else
-        return 1 + count_binary_operators(tree.l) + count_binary_operators(tree.r)
+        return 1 + count_binary_operators(left(tree)) + count_binary_operators(tree.r)
     end
 end
 
@@ -60,9 +60,9 @@ function count_constants(tree::Node)::Int
             return 0
         end
     elseif tree.degree == 1
-        return 0 + count_constants(tree.l)
+        return 0 + count_constants(left(tree))
     else
-        return 0 + count_constants(tree.l) + count_constants(tree.r)
+        return 0 + count_constants(left(tree)) + count_constants(tree.r)
     end
 end
 
@@ -76,9 +76,9 @@ function is_constant(tree::Node)::Bool
     if tree.degree == 0
         return tree.constant
     elseif tree.degree == 1
-        return is_constant(tree.l)
+        return is_constant(left(tree))
     else
-        return is_constant(tree.l) && is_constant(tree.r)
+        return is_constant(left(tree)) && is_constant(tree.r)
     end
 end
 
@@ -109,12 +109,12 @@ function _compute_complexity(
     elseif tree.degree == 1
         return (
             options.complexity_mapping.unaop_complexities[tree.op] +
-            _compute_complexity(tree.l, options)
+            _compute_complexity(left(tree), options)
         )
     else # tree.degree == 2
         return (
             options.complexity_mapping.binop_complexities[tree.op] +
-            _compute_complexity(tree.l, options) +
+            _compute_complexity(left(tree), options) +
             _compute_complexity(tree.r, options)
         )
     end
@@ -129,9 +129,9 @@ function get_constants(tree::Node{T})::AbstractVector{T} where {T<:Real}
             return T[]
         end
     elseif tree.degree == 1
-        return get_constants(tree.l)
+        return get_constants(left(tree))
     else
-        both = [get_constants(tree.l), get_constants(tree.r)]
+        both = [get_constants(left(tree)), get_constants(tree.r)]
         return [constant for subtree in both for constant in subtree]
     end
 end
@@ -143,10 +143,10 @@ function set_constants(tree::Node{T}, constants::AbstractVector{T}) where {T<:Re
             tree.val = constants[1]
         end
     elseif tree.degree == 1
-        set_constants(tree.l, constants)
+        set_constants(left(tree), constants)
     else
-        numberLeft = count_constants(tree.l)
-        set_constants(tree.l, constants)
+        numberLeft = count_constants(left(tree))
+        set_constants(left(tree), constants)
         set_constants(tree.r, constants[(numberLeft + 1):end])
     end
 end
@@ -160,6 +160,22 @@ mutable struct NodeIndex
     r::NodeIndex
 
     NodeIndex() = new()
+end
+
+@inline function left(index_tree::NodeIndex)::NodeIndex
+    return index_tree.l
+end
+
+@inline function right(index_tree::NodeIndex)::NodeIndex
+    return index_tree.r
+end
+
+@inline function set_left!(index_tree::NodeIndex, new_left::NodeIndex)::NodeIndex
+    index_tree.l = new_left
+end
+
+@inline function set_right!(index_tree::NodeIndex, new_right::NodeIndex)::NodeIndex
+    index_tree.r = new_right
 end
 
 function index_constants(tree::Node)::NodeIndex
@@ -179,14 +195,14 @@ function index_constants(tree::Node, index_tree::NodeIndex, left_index::Int)
             index_tree.constant_index = left_index + 1
         end
     elseif tree.degree == 1
-        index_tree.constant_index = count_constants(tree.l)
-        index_tree.l = NodeIndex()
-        index_constants(tree.l, index_tree.l, left_index)
+        index_tree.constant_index = count_constants(left(tree))
+        set_left!(index_tree, NodeIndex())
+        index_constants(left(tree), left(index_tree), left_index)
     else
-        index_tree.l = NodeIndex()
-        index_tree.r = NodeIndex()
-        index_constants(tree.l, index_tree.l, left_index)
-        index_tree.constant_index = count_constants(tree.l)
+        set_left!(index_tree, NodeIndex())
+        set_right!(index_tree, NodeIndex())
+        index_constants(left(tree), left(index_tree), left_index)
+        index_tree.constant_index = count_constants(left(tree))
         left_index_here = left_index + index_tree.constant_index
         index_constants(tree.r, index_tree.r, left_index_here)
     end

@@ -1,6 +1,6 @@
 module MutationFunctionsModule
 
-import ..CoreModule: Node, copy_node, Options
+import ..CoreModule: Node, left, right, copy_node, Options
 import ..EquationUtilsModule: count_nodes, count_constants, count_operators, count_depth
 
 # Return a random node from the tree
@@ -11,7 +11,7 @@ function random_node(tree::Node{T})::Node{T} where {T}
     b = 0
     c = 0
     if tree.degree >= 1
-        b = count_nodes(tree.l)
+        b = count_nodes(left(tree))
     end
     if tree.degree == 2
         c = count_nodes(tree.r)
@@ -19,7 +19,7 @@ function random_node(tree::Node{T})::Node{T} where {T}
 
     i = rand(1:(1 + b + c))
     if i <= b
-        return random_node(tree.l)
+        return random_node(left(tree))
     elseif i == b + 1
         return tree
     end
@@ -107,7 +107,7 @@ function append_random_op(
     if newnode.degree == 2
         node.r = newnode.r
     end
-    node.l = newnode.l
+    node.l = left(newnode)
     node.op = newnode.op
     node.degree = newnode.degree
     node.val = newnode.val
@@ -124,18 +124,18 @@ function insert_random_op(
     node = random_node(tree)
     choice = rand()
     makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
-    left = copy_node(node)
+    new_left = copy_node(node)
 
     if makeNewBinOp
-        right = make_random_leaf(nfeatures, T)
-        newnode = Node(rand(1:(options.nbin)), left, right)
+        new_right = make_random_leaf(nfeatures, T)
+        newnode = Node(rand(1:(options.nbin)), new_left, new_right)
     else
-        newnode = Node(rand(1:(options.nuna)), left)
+        newnode = Node(rand(1:(options.nuna)), new_left)
     end
     if newnode.degree == 2
         node.r = newnode.r
     end
-    node.l = newnode.l
+    node.l = left(newnode)
     node.op = newnode.op
     node.degree = newnode.degree
     node.val = newnode.val
@@ -151,18 +151,18 @@ function prepend_random_op(
     node = tree
     choice = rand()
     makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
-    left = copy_node(tree)
+    new_left = copy_node(tree)
 
     if makeNewBinOp
-        right = make_random_leaf(nfeatures, T)
-        newnode = Node(rand(1:(options.nbin)), left, right)
+        new_right = make_random_leaf(nfeatures, T)
+        newnode = Node(rand(1:(options.nbin)), new_left, new_right)
     else
-        newnode = Node(rand(1:(options.nuna)), left)
+        newnode = Node(rand(1:(options.nuna)), new_left)
     end
     if newnode.degree == 2
         node.r = newnode.r
     end
-    node.l = newnode.l
+    node.l = left(newnode)
     node.op = newnode.op
     node.degree = newnode.degree
     node.val = newnode.val
@@ -189,7 +189,7 @@ function random_node_and_parent(
     b = 0
     c = 0
     if tree.degree >= 1
-        b = count_nodes(tree.l)
+        b = count_nodes(left(tree))
     end
     if tree.degree == 2
         c = count_nodes(tree.r)
@@ -197,7 +197,7 @@ function random_node_and_parent(
 
     i = rand(1:(1 + b + c))
     if i <= b
-        return random_node_and_parent(tree.l, tree; side='l')
+        return random_node_and_parent(left(tree), tree; side='l')
     elseif i == b + 1
         return tree, parent, side
     end
@@ -231,26 +231,26 @@ function delete_random_op(
     elseif node.degree == 1
         # Join one of the children with the parent
         if isroot
-            return node.l
-        elseif parent.l == node
-            parent.l = node.l
+            return left(node)
+        elseif left(parent) == node
+            parent.l = left(node)
         else
-            parent.r = node.l
+            parent.r = left(node)
         end
     else
         # Join one of the children with the parent
         if rand() < 0.5
             if isroot
-                return node.l
-            elseif parent.l == node
-                parent.l = node.l
+                return left(node)
+            elseif left(parent) == node
+                parent.l = left(node)
             else
-                parent.r = node.l
+                parent.r = left(node)
             end
         else
             if isroot
                 return node.r
-            elseif parent.l == node
+            elseif left(parent) == node
                 parent.l = node.r
             else
                 parent.r = node.r

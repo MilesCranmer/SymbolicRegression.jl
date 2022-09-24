@@ -76,10 +76,10 @@ function Base.convert(::Type{Node{T1}}, tree::Node{T2}) where {T1,T2}
             return Node(0, tree.constant, convert(T1, tree.val), tree.feature)
         end
     elseif tree.degree == 1
-        l = convert(Node{T1}, tree.l)
+        l = convert(Node{T1}, left(tree))
         return Node(1, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l)
     else
-        l = convert(Node{T1}, tree.l)
+        l = convert(Node{T1}, left(tree))
         r = convert(Node{T1}, tree.r)
         return Node(2, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l, r)
     end
@@ -172,9 +172,9 @@ function copy_node(tree::Node{T})::Node{T} where {T}
             return Node(T; feature=copy(tree.feature))
         end
     elseif tree.degree == 1
-        return Node(copy(tree.op), copy_node(tree.l))
+        return Node(copy(tree.op), copy_node(left(tree)))
     else
-        return Node(copy(tree.op), copy_node(tree.l), copy_node(tree.r))
+        return Node(copy(tree.op), copy_node(left(tree)), copy_node(tree.r))
     end
 end
 
@@ -201,7 +201,7 @@ function string_op(
 )::String where {F}
     op_name = get_op_name(string(op))
     if op_name in ["+", "-", "*", "/", "^"]
-        l = string_tree(tree.l, options; bracketed=false, varMap=varMap)
+        l = string_tree(left(tree), options; bracketed=false, varMap=varMap)
         r = string_tree(tree.r, options; bracketed=false, varMap=varMap)
         if bracketed
             return "$l $op_name $r"
@@ -209,7 +209,7 @@ function string_op(
             return "($l $op_name $r)"
         end
     else
-        l = string_tree(tree.l, options; bracketed=true, varMap=varMap)
+        l = string_tree(left(tree), options; bracketed=true, varMap=varMap)
         r = string_tree(tree.r, options; bracketed=true, varMap=varMap)
         return "$op_name($l, $r)"
     end
@@ -243,7 +243,7 @@ function string_tree(
         end
     elseif tree.degree == 1
         op_name = get_op_name(string(options.unaops[tree.op]))
-        return "$(op_name)($(string_tree(tree.l, options, bracketed=true, varMap=varMap)))"
+        return "$(op_name)($(string_tree(left(tree), options, bracketed=true, varMap=varMap)))"
     else
         return string_op(
             options.binops[tree.op], tree, options; bracketed=bracketed, varMap=varMap
@@ -274,10 +274,11 @@ function Base.hash(tree::Node)::UInt
             return hash((1, tree.feature))
         end
     elseif tree.degree == 1
-        return hash((1, tree.op, hash(tree.l)))
+        return hash((1, tree.op, hash(left(tree))))
     else
-        return hash((2, tree.op, hash(tree.l), hash(tree.r)))
+        return hash((2, tree.op, hash(left(tree)), hash(tree.r)))
     end
+end
 
 @inline function left(tree::Node{T})::Node{T} where {T}
     return tree.l

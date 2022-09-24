@@ -1,7 +1,7 @@
 module InterfaceSymbolicUtilsModule
 
 using SymbolicUtils
-import ..CoreModule: CONST_TYPE, Node, Options
+import ..CoreModule: CONST_TYPE, Node, left, right, Options
 import ..UtilsModule: isgood, isbad, @return_on_false
 
 const SYMBOLIC_UTILS_TYPES = Union{<:Number,SymbolicUtils.Symbolic{<:Number}}
@@ -24,7 +24,7 @@ function parse_tree_to_eqs(tree::Node, options::Options, index_functions::Bool=f
         return SymbolicUtils.Sym{LiteralReal}(Symbol("x$(tree.feature)"))
     end
     # Collect the next children
-    children = tree.degree >= 2 ? (tree.l, tree.r) : (tree.l,)
+    children = tree.degree >= 2 ? (left(tree), tree.r) : (left(tree),)
     # Get the operation
     op = tree.degree > 1 ? options.binops[tree.op] : options.unaops[tree.op]
     # Create an N tuple of Numbers for each argument

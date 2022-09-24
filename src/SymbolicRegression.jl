@@ -6,6 +6,8 @@ export Population,
     HallOfFame,
     Options,
     Node,
+    left,
+    right,
 
     #Functions:
     EquationSearch,
@@ -115,6 +117,8 @@ import .CoreModule:
     RecordType,
     Dataset,
     Node,
+    left,
+    right,
     copy_node,
     Options,
     plus,
