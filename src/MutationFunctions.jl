@@ -1,6 +1,6 @@
 module MutationFunctionsModule
 
-import ..CoreModule: Node, left, right, copy_node, Options
+import ..CoreModule: Node, left, right, set_left!, set_right!, copy_node, Options
 import ..EquationUtilsModule: count_nodes, count_constants, count_operators, count_depth
 
 # Return a random node from the tree
@@ -105,9 +105,9 @@ function append_random_op(
     end
 
     if newnode.degree == 2
-        node.r = newnode.r
+        set_right!(node, newnode.r)
     end
-    node.l = left(newnode)
+    set_left!(node, left(newnode))
     node.op = newnode.op
     node.degree = newnode.degree
     node.val = newnode.val
@@ -133,9 +133,9 @@ function insert_random_op(
         newnode = Node(rand(1:(options.nuna)), new_left)
     end
     if newnode.degree == 2
-        node.r = newnode.r
+        set_right!(node, newnode.r)
     end
-    node.l = left(newnode)
+    set_left!(node, left(newnode))
     node.op = newnode.op
     node.degree = newnode.degree
     node.val = newnode.val
@@ -160,9 +160,9 @@ function prepend_random_op(
         newnode = Node(rand(1:(options.nuna)), new_left)
     end
     if newnode.degree == 2
-        node.r = newnode.r
+        set_right!(node, newnode.r)
     end
-    node.l = left(newnode)
+    set_left!(node, left(newnode))
     node.op = newnode.op
     node.degree = newnode.degree
     node.val = newnode.val
@@ -233,9 +233,9 @@ function delete_random_op(
         if isroot
             return left(node)
         elseif left(parent) == node
-            parent.l = left(node)
+            set_left!(parent, left(node))
         else
-            parent.r = left(node)
+            set_right!(parent, left(node))
         end
     else
         # Join one of the children with the parent
@@ -243,17 +243,17 @@ function delete_random_op(
             if isroot
                 return left(node)
             elseif left(parent) == node
-                parent.l = left(node)
+                set_left!(parent, left(node))
             else
-                parent.r = left(node)
+                set_right!(parent, left(node))
             end
         else
             if isroot
                 return node.r
             elseif left(parent) == node
-                parent.l = node.r
+                set_left!(parent, node.r)
             else
-                parent.r = node.r
+                set_right!(parent, node.r)
             end
         end
     end
@@ -301,10 +301,10 @@ function crossover_trees(tree1::Node{T}, tree2::Node{T})::Tuple{Node{T},Node{T}}
     node1 = copy_node(node1)
 
     if side1 == 'l'
-        parent1.l = copy_node(node2)
+        set_left!(parent1, copy_node(node2))
         # tree1 now contains this.
     elseif side1 == 'r'
-        parent1.r = copy_node(node2)
+        set_right!(parent1, copy_node(node2))
         # tree1 now contains this.
     else # 'n'
         # This means that there is no parent2.
@@ -312,9 +312,9 @@ function crossover_trees(tree1::Node{T}, tree2::Node{T})::Tuple{Node{T},Node{T}}
     end
 
     if side2 == 'l'
-        parent2.l = node1
+        set_left!(parent2, node1)
     elseif side2 == 'r'
-        parent2.r = node1
+        set_right!(parent2, node1)
     else # 'n'
         tree2 = node1
     end
