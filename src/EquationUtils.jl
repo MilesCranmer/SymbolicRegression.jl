@@ -9,7 +9,7 @@ function count_nodes(tree::Node)::Int
     elseif tree.degree == 1
         return 1 + count_nodes(left(tree))
     else
-        return 1 + count_nodes(left(tree)) + count_nodes(tree.r)
+        return 1 + count_nodes(left(tree)) + count_nodes(right(tree))
     end
 end
 
@@ -20,7 +20,7 @@ function count_depth(tree::Node)::Int
     elseif tree.degree == 1
         return 1 + count_depth(left(tree))
     else
-        return 1 + max(count_depth(left(tree)), count_depth(tree.r))
+        return 1 + max(count_depth(left(tree)), count_depth(right(tree)))
     end
 end
 
@@ -31,7 +31,7 @@ function count_unary_operators(tree::Node)::Int
     elseif tree.degree == 1
         return 1 + count_unary_operators(left(tree))
     else
-        return 0 + count_unary_operators(left(tree)) + count_unary_operators(tree.r)
+        return 0 + count_unary_operators(left(tree)) + count_unary_operators(right(tree))
     end
 end
 
@@ -42,7 +42,7 @@ function count_binary_operators(tree::Node)::Int
     elseif tree.degree == 1
         return 0 + count_binary_operators(left(tree))
     else
-        return 1 + count_binary_operators(left(tree)) + count_binary_operators(tree.r)
+        return 1 + count_binary_operators(left(tree)) + count_binary_operators(right(tree))
     end
 end
 
@@ -62,7 +62,7 @@ function count_constants(tree::Node)::Int
     elseif tree.degree == 1
         return 0 + count_constants(left(tree))
     else
-        return 0 + count_constants(left(tree)) + count_constants(tree.r)
+        return 0 + count_constants(left(tree)) + count_constants(right(tree))
     end
 end
 
@@ -78,7 +78,7 @@ function is_constant(tree::Node)::Bool
     elseif tree.degree == 1
         return is_constant(left(tree))
     else
-        return is_constant(left(tree)) && is_constant(tree.r)
+        return is_constant(left(tree)) && is_constant(right(tree))
     end
 end
 
@@ -115,7 +115,7 @@ function _compute_complexity(
         return (
             options.complexity_mapping.binop_complexities[tree.op] +
             _compute_complexity(left(tree), options) +
-            _compute_complexity(tree.r, options)
+            _compute_complexity(right(tree), options)
         )
     end
 end
@@ -131,7 +131,7 @@ function get_constants(tree::Node{T})::AbstractVector{T} where {T<:Real}
     elseif tree.degree == 1
         return get_constants(left(tree))
     else
-        both = [get_constants(left(tree)), get_constants(tree.r)]
+        both = [get_constants(left(tree)), get_constants(right(tree))]
         return [constant for subtree in both for constant in subtree]
     end
 end
@@ -147,7 +147,7 @@ function set_constants(tree::Node{T}, constants::AbstractVector{T}) where {T<:Re
     else
         numberLeft = count_constants(left(tree))
         set_constants(left(tree), constants)
-        set_constants(tree.r, constants[(numberLeft + 1):end])
+        set_constants(right(tree), constants[(numberLeft + 1):end])
     end
 end
 
@@ -204,7 +204,7 @@ function index_constants(tree::Node, index_tree::NodeIndex, left_index::Int)
         index_constants(left(tree), left(index_tree), left_index)
         index_tree.constant_index = count_constants(left(tree))
         left_index_here = left_index + index_tree.constant_index
-        index_constants(tree.r, index_tree.r, left_index_here)
+        index_constants(right(tree), right(index_tree), left_index_here)
     end
 end
 

@@ -18,30 +18,30 @@ function combine_operators(tree::Node{T}, options::Options)::Node{T} where {T}
         set_left!(tree, combine_operators(left(tree), options))
     elseif tree.degree == 2
         set_left!(tree, combine_operators(left(tree), options))
-        set_right!(tree, combine_operators(tree.r, options))
+        set_right!(tree, combine_operators(right(tree), options))
     end
 
-    top_level_constant = tree.degree == 2 && (left(tree).constant || tree.r.constant)
+    top_level_constant = tree.degree == 2 && (left(tree).constant || right(tree).constant)
     if tree.degree == 2 &&
         (options.binops[tree.op] == (*) || options.binops[tree.op] == (+)) &&
         top_level_constant
         op = tree.op
         # Put the constant in r. Need to assume var in left for simplification assumption.
         if left(tree).constant
-            tmp = tree.r
+            tmp = right(tree)
             set_right!(tree, left(tree))
             set_left!(tree, tmp)
         end
-        topconstant = tree.r.val
+        topconstant = right(tree).val
         # Simplify down first
         below = left(tree)
         if below.degree == 2 && below.op == op
             if left(below).constant
                 tree = below
-                tree.l.val = options.binops[op](left(tree).val, topconstant)
-            elseif below.r.constant
+                left(tree).val = options.binops[op](left(tree).val, topconstant)
+            elseif right(below).constant
                 tree = below
-                tree.r.val = options.binops[op](tree.r.val, topconstant)
+                right(tree).val = options.binops[op](right(tree).val, topconstant)
             end
         end
     end
@@ -50,41 +50,41 @@ function combine_operators(tree::Node{T}, options::Options)::Node{T} where {T}
         # Currently just simplifies subtraction. (can't assume both plus and sub are operators)
         # Not commutative, so use different op.
         if left(tree).constant
-            if tree.r.degree == 2 && options.binops[tree.r.op] == (-)
-                if left(tree.r).constant
+            if right(tree).degree == 2 && options.binops[right(tree).op] == (-)
+                if left(right(tree)).constant
                     #(const - (const - var)) => (var - const)
                     l = left(tree)
-                    r = tree.r
+                    r = right(tree)
                     simplified_const = -(l.val - left(r).val) #neg(sub(l.val, left(r).val))
-                    set_left!(tree, tree.r.r)
+                    set_left!(tree, right(right(tree)))
                     set_right!(tree, l)
-                    tree.r.val = simplified_const
-                elseif tree.r.r.constant
+                    right(tree).val = simplified_const
+                elseif right(right(tree)).constant
                     #(const - (var - const)) => (const - var)
                     l = left(tree)
-                    r = tree.r
-                    simplified_const = l.val + r.r.val #plus(l.val, r.r.val)
-                    set_right!(tree, left(tree.r))
-                    tree.l.val = simplified_const
+                    r = right(tree)
+                    simplified_const = l.val + right(r).val #plus(l.val, right(r).val)
+                    set_right!(tree, left(right(tree)))
+                    left(tree).val = simplified_const
                 end
             end
-        else #tree.r.constant is true
+        else #right(tree).constant is true
             if left(tree).degree == 2 && options.binops[left(tree).op] == (-)
                 if left(left(tree)).constant
                     #((const - var) - const) => (const - var)
                     l = left(tree)
-                    r = tree.r
+                    r = right(tree)
                     simplified_const = left(l).val - r.val#sub(left(l).val, r.val)
-                    set_right!(tree, left(tree).r)
+                    set_right!(tree, right(left(tree)))
                     set_left!(tree, r)
                     left(tree).val = simplified_const
-                elseif left(tree).r.constant
+                elseif right(left(tree)).constant
                     #((var - const) - const) => (var - const)
                     l = left(tree)
-                    r = tree.r
-                    simplified_const = r.val + l.r.val #plus(r.val, l.r.val)
+                    r = right(tree)
+                    simplified_const = r.val + right(l).val #plus(r.val, right(l).val)
                     set_left!(tree, left(left(tree)))
-                    tree.r.val = simplified_const
+                    right(tree).val = simplified_const
                 end
             end
         end
@@ -106,14 +106,14 @@ function simplify_tree(tree::Node{T}, options::Options)::Node{T} where {T<:Real}
         end
     elseif tree.degree == 2
         set_left!(tree, simplify_tree(left(tree), options))
-        set_right!(tree, simplify_tree(tree.r, options))
+        set_right!(tree, simplify_tree(right(tree), options))
         constantsBelow = (
-            tree.l.degree == 0 && left(tree).constant && tree.r.degree == 0 && tree.r.constant
+            left(tree).degree == 0 && left(tree).constant && right(tree).degree == 0 && right(tree).constant
         )
         if constantsBelow
             # NaN checks:
             l = left(tree).val
-            r = tree.r.val
+            r = right(tree).val
             if isbad(l) || isbad(r)
                 return tree
             end

@@ -80,7 +80,7 @@ function Base.convert(::Type{Node{T1}}, tree::Node{T2}) where {T1,T2}
         return Node(1, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l)
     else
         l = convert(Node{T1}, left(tree))
-        r = convert(Node{T1}, tree.r)
+        r = convert(Node{T1}, right(tree))
         return Node(2, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l, r)
     end
 end
@@ -174,7 +174,7 @@ function copy_node(tree::Node{T})::Node{T} where {T}
     elseif tree.degree == 1
         return Node(copy(tree.op), copy_node(left(tree)))
     else
-        return Node(copy(tree.op), copy_node(left(tree)), copy_node(tree.r))
+        return Node(copy(tree.op), copy_node(left(tree)), copy_node(right(tree)))
     end
 end
 
@@ -202,7 +202,7 @@ function string_op(
     op_name = get_op_name(string(op))
     if op_name in ["+", "-", "*", "/", "^"]
         l = string_tree(left(tree), options; bracketed=false, varMap=varMap)
-        r = string_tree(tree.r, options; bracketed=false, varMap=varMap)
+        r = string_tree(right(tree), options; bracketed=false, varMap=varMap)
         if bracketed
             return "$l $op_name $r"
         else
@@ -210,7 +210,7 @@ function string_op(
         end
     else
         l = string_tree(left(tree), options; bracketed=true, varMap=varMap)
-        r = string_tree(tree.r, options; bracketed=true, varMap=varMap)
+        r = string_tree(right(tree), options; bracketed=true, varMap=varMap)
         return "$op_name($l, $r)"
     end
 end
@@ -276,7 +276,7 @@ function Base.hash(tree::Node)::UInt
     elseif tree.degree == 1
         return hash((1, tree.op, hash(left(tree))))
     else
-        return hash((2, tree.op, hash(left(tree)), hash(tree.r)))
+        return hash((2, tree.op, hash(left(tree)), hash(right(tree))))
     end
 end
 

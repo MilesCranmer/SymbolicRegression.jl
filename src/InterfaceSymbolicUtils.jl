@@ -24,7 +24,7 @@ function parse_tree_to_eqs(tree::Node, options::Options, index_functions::Bool=f
         return SymbolicUtils.Sym{LiteralReal}(Symbol("x$(tree.feature)"))
     end
     # Collect the next children
-    children = tree.degree >= 2 ? (left(tree), tree.r) : (left(tree),)
+    children = tree.degree >= 2 ? (left(tree), right(tree)) : (left(tree),)
     # Get the operation
     op = tree.degree > 1 ? options.binops[tree.op] : options.unaops[tree.op]
     # Create an N tuple of Numbers for each argument

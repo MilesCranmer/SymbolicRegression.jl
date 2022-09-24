@@ -14,7 +14,7 @@ function random_node(tree::Node{T})::Node{T} where {T}
         b = count_nodes(left(tree))
     end
     if tree.degree == 2
-        c = count_nodes(tree.r)
+        c = count_nodes(right(tree))
     end
 
     i = rand(1:(1 + b + c))
@@ -24,7 +24,7 @@ function random_node(tree::Node{T})::Node{T} where {T}
         return tree
     end
 
-    return random_node(tree.r)
+    return random_node(right(tree))
 end
 
 # Randomly convert an operator into another one (binary->binary;
@@ -105,7 +105,7 @@ function append_random_op(
     end
 
     if newnode.degree == 2
-        set_right!(node, newnode.r)
+        set_right!(node, right(newnode))
     end
     set_left!(node, left(newnode))
     node.op = newnode.op
@@ -133,7 +133,7 @@ function insert_random_op(
         newnode = Node(rand(1:(options.nuna)), new_left)
     end
     if newnode.degree == 2
-        set_right!(node, newnode.r)
+        set_right!(node, right(newnode))
     end
     set_left!(node, left(newnode))
     node.op = newnode.op
@@ -160,7 +160,7 @@ function prepend_random_op(
         newnode = Node(rand(1:(options.nuna)), new_left)
     end
     if newnode.degree == 2
-        set_right!(node, newnode.r)
+        set_right!(node, right(newnode))
     end
     set_left!(node, left(newnode))
     node.op = newnode.op
@@ -192,7 +192,7 @@ function random_node_and_parent(
         b = count_nodes(left(tree))
     end
     if tree.degree == 2
-        c = count_nodes(tree.r)
+        c = count_nodes(right(tree))
     end
 
     i = rand(1:(1 + b + c))
@@ -202,7 +202,7 @@ function random_node_and_parent(
         return tree, parent, side
     end
 
-    return random_node_and_parent(tree.r, tree; side='r')
+    return random_node_and_parent(right(tree), tree; side='r')
 end
 
 function random_node_and_parent(
@@ -249,11 +249,11 @@ function delete_random_op(
             end
         else
             if isroot
-                return node.r
+                return right(node)
             elseif left(parent) == node
-                set_left!(parent, node.r)
+                set_left!(parent, right(node))
             else
-                set_right!(parent, node.r)
+                set_right!(parent, right(node))
             end
         end
     end

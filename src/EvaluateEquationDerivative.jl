@@ -99,7 +99,7 @@ function diff_deg2_eval(
     n = size(cX, 2)
     (cumulator, dcumulator, complete) = eval_diff_tree_array(left(tree), cX, options, direction)
     @return_on_false2 complete cumulator dcumulator
-    (array2, dcumulator2, complete2) = eval_diff_tree_array(tree.r, cX, options, direction)
+    (array2, dcumulator2, complete2) = eval_diff_tree_array(right(tree), cX, options, direction)
     @return_on_false2 complete2 array2 dcumulator2
 
     op = options.binops[op_idx]
@@ -259,7 +259,7 @@ function grad_deg2_eval(
     )
     @return_on_false2 complete cumulator1 dcumulator1
     (cumulator2, dcumulator2, complete2) = eval_grad_tree_array(
-        tree.r, n, n_gradients, index_tree.r, cX, options, Val(variable)
+        right(tree), n, n_gradients, right(index_tree), cX, options, Val(variable)
     )
     @return_on_false2 complete2 cumulator1 dcumulator1
 

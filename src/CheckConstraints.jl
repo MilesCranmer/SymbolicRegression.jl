@@ -21,7 +21,7 @@ function flag_bin_operator_complexity(
                     )
                 ) || (
                     (options.bin_constraints[op][2]::Int > -1) && (
-                        compute_complexity(tree.r, options) >
+                        compute_complexity(right(tree), options) >
                         options.bin_constraints[op][2]::Int
                     )
                 )
@@ -32,7 +32,7 @@ function flag_bin_operator_complexity(
         end
         return (
             flag_bin_operator_complexity(left(tree), Val(op), options) ||
-            flag_bin_operator_complexity(tree.r, Val(op), options)
+            flag_bin_operator_complexity(right(tree), Val(op), options)
         )
     end
 end
@@ -57,7 +57,7 @@ function flag_una_operator_complexity(
     else
         return (
             flag_una_operator_complexity(left(tree), Val(op), options) ||
-            flag_una_operator_complexity(tree.r, Val(op), options)
+            flag_una_operator_complexity(right(tree), Val(op), options)
         )
     end
 end
@@ -73,7 +73,7 @@ function count_max_nestedness(tree::Node, degree::Int, op::Int, options::Options
         count = (degree == 2 && tree.op == op) ? 1 : 0
         return count + max(
             count_max_nestedness(left(tree), degree, op, options),
-            count_max_nestedness(tree.r, degree, op, options),
+            count_max_nestedness(right(tree), degree, op, options),
         )
     end
 end
@@ -105,13 +105,13 @@ function fast_max_nestedness(
                     left(tree), degree, op_idx, nested_degree, nested_op_idx, options
                 ),
                 fast_max_nestedness(
-                    tree.r, degree, op_idx, nested_degree, nested_op_idx, options
+                    right(tree), degree, op_idx, nested_degree, nested_op_idx, options
                 ),
             )
         end
         return max(
             count_max_nestedness(left(tree), nested_degree, nested_op_idx, options),
-            count_max_nestedness(tree.r, nested_degree, nested_op_idx, options),
+            count_max_nestedness(right(tree), nested_degree, nested_op_idx, options),
         )
     end
 end
