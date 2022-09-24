@@ -400,10 +400,10 @@ end
 function deg1_diff_eval(
     tree::Node{T1}, cX::AbstractMatrix{T}, ::Val{op_idx}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real,op_idx,T1}
-    (left, complete) = differentiable_eval_tree_array(left(tree), cX, options)
-    @return_on_false complete left
+    (cumulator, complete) = differentiable_eval_tree_array(left(tree), cX, options)
+    @return_on_false complete cumulator
     op = options.unaops[op_idx]
-    out = op.(left)
+    out = op.(cumulator)
     no_nans = !any(x -> (!isfinite(x)), out)
     return (out, no_nans)
 end
