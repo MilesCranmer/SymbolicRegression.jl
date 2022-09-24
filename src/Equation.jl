@@ -278,6 +278,21 @@ function Base.hash(tree::Node)::UInt
     else
         return hash((2, tree.op, hash(tree.l), hash(tree.r)))
     end
+
+@inline function left(tree::Node{T})::Node{T} where {T}
+    return tree.l
+end
+
+@inline function right(tree::Node{T})::Node{T} where {T}
+    return tree.r
+end
+
+@inline function set_left!(tree::Node{T}, new_left::Node{T})::Node{T} where {T}
+    tree.l = new_left
+end
+
+@inline function set_right!(tree::Node{T}, new_right::Node{T})::Node{T} where {T}
+    tree.r = new_right
 end
 
 end
