@@ -203,37 +203,29 @@ end
 id_map is a map from `objectid(tree)` to `copy(tree)`.
 We check against the map before making a new copy; otherwise
 we can simply reference the existing copy.
-[Thanks to Ted Hopp](https://stackoverflow.com/questions/49285475/how-to-copy-a-full-non-binary-tree-including-loops)
+[Thanks to Ted Hopp.](https://stackoverflow.com/questions/49285475/how-to-copy-a-full-non-binary-tree-including-loops)
+
+Note that this will *not* preserve loops in graphs.
 """
 function copy_node_with_topology(
     tree::Node{T}, id_map::IdDict{Node{T},Node{T}}
 )::Node{T} where {T}
-
-    # This preserves nodes which have multiple parents.
-    # Otherwise, we would have the branch duplicated.
-    if haskey(id_map, tree)
-        return id_map[tree]
-    end
-
-    if tree.degree == 0
-        if tree.constant
-            copied_tree = Node(; val=copy(tree.val))
+    get!(id_map, tree) do
+        if tree.degree == 0
+            if tree.constant
+                Node(; val=copy(tree.val))
+            else
+                Node(T; feature=copy(tree.feature))
+            end
+        elseif tree.degree == 1
+            Node(copy(tree.op), copy_node_with_topology(tree.l, id_map))
         else
-            copied_tree = Node(T; feature=copy(tree.feature))
+            Node(
+                copy(tree.op),
+                copy_node_with_topology(tree.l, id_map),
+                copy_node_with_topology(tree.r, id_map),
+            )
         end
-        id_map[tree] = copied_tree
-        return copied_tree
-    elseif tree.degree == 1
-        copied_tree = Node(1, false, zero(T), 0, copy(tree.op))
-        id_map[tree] = copied_tree
-        copied_tree.l = copy_node_with_topology(tree.l, id_map)
-        return copied_tree
-    else
-        copied_tree = Node(2, false, zero(T), 0, copy(tree.op))
-        id_map[tree] = copied_tree
-        copied_tree.l = copy_node_with_topology(tree.l, id_map)
-        copied_tree.r = copy_node_with_topology(tree.r, id_map)
-        return copied_tree
     end
 end
 
