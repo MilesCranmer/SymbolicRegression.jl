@@ -48,6 +48,7 @@ mutable struct Node{T<:Real}
     #################
     Node(d::Int, c::Bool, v::_T) where {_T<:Real} = new{_T}(d, c, v)
     Node(d::Int, c::Bool, v::_T, f::Int) where {_T<:Real} = new{_T}(d, c, v, f)
+    Node(d::Int, c::Bool, v::_T, f::Int, o::Int) where {_T<:Real} = new{_T}(d, c, v, f, o)
     function Node(d::Int, c::Bool, v::_T, f::Int, o::Int, l::Node{_T}) where {_T<:Real}
         return new{_T}(d, c, v, f, o, l)
     end
@@ -159,12 +160,24 @@ function Node(var_string::String, varMap::Array{String,1})
 end
 
 """
-    copy_node(tree::Node)
+    copy_node(tree::Node; preserve_topology::Bool=false)
 
 Copy a node, recursively copying all children nodes.
 This is more efficient than the built-in copy.
+With `preserve_topology=true`, this will also
+preserve linkage between a node and
+multiple parents, whereas without, this would create
+duplicate child node copies.
 """
-function copy_node(tree::Node{T})::Node{T} where {T}
+# But, when we copy the tree, the link breaks:
+function copy_node(tree::Node{T}; preserve_topology::Bool=false)::Node{T} where {T}
+    if preserve_topology
+        return copy_node_with_topology(tree, IdDict{Node{T},Node{T}}())
+    end
+    return copy_node_break_topology(tree)
+end
+
+function copy_node_break_topology(tree::Node{T})::Node{T} where {T}
     if tree.degree == 0
         if tree.constant
             return Node(; val=copy(tree.val))
@@ -175,6 +188,48 @@ function copy_node(tree::Node{T})::Node{T} where {T}
         return Node(copy(tree.op), copy_node(tree.l))
     else
         return Node(copy(tree.op), copy_node(tree.l), copy_node(tree.r))
+    end
+end
+
+"""
+    copy_node_with_topology(
+        tree::Node{T}, id_map::IdDict{Node{T},Node{T}}
+    )::Node{T} where {T}
+
+id_map is a map from `objectid(tree)` to `copy(tree)`.
+We check against the map before making a new copy; otherwise
+we can simply reference the existing copy.
+[Thanks to Ted Hopp](https://stackoverflow.com/questions/49285475/how-to-copy-a-full-non-binary-tree-including-loops)
+"""
+function copy_node_with_topology(
+    tree::Node{T}, id_map::IdDict{Node{T},Node{T}}
+)::Node{T} where {T}
+
+    # This preserves nodes which have multiple parents.
+    # Otherwise, we would have the branch duplicated.
+    if haskey(id_map, tree)
+        return id_map[tree]
+    end
+
+    if tree.degree == 0
+        if tree.constant
+            copied_tree = Node(; val=copy(tree.val))
+        else
+            copied_tree = Node(T; feature=copy(tree.feature))
+        end
+        id_map[tree] = copied_tree
+        return copied_tree
+    elseif tree.degree == 1
+        copied_tree = Node(1, false, zero(T), 0, copy(tree.op))
+        id_map[tree] = copied_tree
+        copied_tree.l = copy_node_with_topology(tree.l, id_map)
+        return copied_tree
+    else
+        copied_tree = Node(2, false, zero(T), 0, copy(tree.op))
+        id_map[tree] = copied_tree
+        copied_tree.l = copy_node_with_topology(tree.l, id_map)
+        copied_tree.r = copy_node_with_topology(tree.r, id_map)
+        return copied_tree
     end
 end
 
