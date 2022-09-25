@@ -3,14 +3,40 @@ module EquationUtilsModule
 import ..CoreModule: Node, copy_node, Options
 
 # Count the operators, constants, variables in an equation
-function count_nodes(tree::Node)::Int
+function count_nodes(tree::Node{T}; ignore_duplicates::Bool=false)::Int where {T}
+    if ignore_duplicates
+        return count_nodes_ignore_duplicates(tree)
+    end
+    return count_nodes_with_duplicates(tree)
+end
+
+function count_nodes_with_duplicates(tree::Node{T})::Int where {T}
     if tree.degree == 0
         return 1
     elseif tree.degree == 1
-        return 1 + count_nodes(tree.l)
+        return 1 + count_nodes_with_duplicates(tree.l)
     else
-        return 1 + count_nodes(tree.l) + count_nodes(tree.r)
+        return 1 + count_nodes_with_duplicates(tree.l) + count_nodes_with_duplicates(tree.r)
     end
+end
+
+function count_nodes_ignore_duplicates(
+    tree::Node{T}, nodes_seen::Vector{UInt64}=UInt64[]
+)::Int where {T}
+    if objectid(tree) in nodes_seen
+        return 0
+    elseif tree.degree == 0
+        count = 1
+    elseif tree.degree == 1
+        count = 1 + count_nodes_ignore_duplicates(tree.l, nodes_seen)
+    else
+        count =
+            1 +
+            count_nodes_ignore_duplicates(tree.l, nodes_seen) +
+            count_nodes_ignore_duplicates(tree.r, nodes_seen)
+    end
+    push!(nodes_seen, objectid(tree))
+    return count
 end
 
 # Count the max depth of a tree
