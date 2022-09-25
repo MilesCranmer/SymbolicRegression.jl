@@ -169,7 +169,6 @@ preserve linkage between a node and
 multiple parents, whereas without, this would create
 duplicate child node copies.
 """
-# But, when we copy the tree, the link breaks:
 function copy_node(tree::Node{T}; preserve_topology::Bool=false)::Node{T} where {T}
     if preserve_topology
         copy_node_with_topology(tree, IdDict{Node{T},Node{T}}())
