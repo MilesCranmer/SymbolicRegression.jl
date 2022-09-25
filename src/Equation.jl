@@ -180,14 +180,18 @@ end
 function copy_node_break_topology(tree::Node{T})::Node{T} where {T}
     if tree.degree == 0
         if tree.constant
-            return Node(; val=copy(tree.val))
+            Node(; val=copy(tree.val))
         else
-            return Node(T; feature=copy(tree.feature))
+            Node(T; feature=copy(tree.feature))
         end
     elseif tree.degree == 1
-        return Node(copy(tree.op), copy_node(tree.l))
+        Node(copy(tree.op), copy_node_break_topology(tree.l))
     else
-        return Node(copy(tree.op), copy_node(tree.l), copy_node(tree.r))
+        Node(
+            copy(tree.op),
+            copy_node_break_topology(tree.l),
+            copy_node_break_topology(tree.r),
+        )
     end
 end
 
