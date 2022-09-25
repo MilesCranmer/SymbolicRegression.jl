@@ -51,6 +51,10 @@ function count_operators(tree::Node)::Int
     return count_unary_operators(tree) + count_binary_operators(tree)
 end
 
+function has_operators(tree::Node)::Bool
+    return tree.degree > 0
+end
+
 # Count the number of constants in an equation
 function count_constants(tree::Node)::Int
     if tree.degree == 0
