@@ -30,6 +30,18 @@ You can convert the type of a node using `convert`:
 convert(::Type{Node{T1}}, tree::Node{T2}) where {T1, T2}
 ```
 
+You can set a `tree` (in-place) with `set_node!`:
+
+```@docs
+set_node!(tree::Node{T}, new_tree::Node{T}) where {T}
+```
+
+You can create a copy of a node with `copy_node`:
+
+```@docs
+copy_node(tree::Node)
+```
+
 ## Population
 
 Groups of equations are given as a population, which is

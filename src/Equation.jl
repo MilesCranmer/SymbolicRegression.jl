@@ -160,6 +160,30 @@ function Node(var_string::String, varMap::Array{String,1})
 end
 
 """
+    set_node!(tree::Node{T}, new_tree::Node{T}) where {T}
+
+Set every field of `tree` equal to the corresponding field of `new_tree`.
+"""
+function set_node!(tree::Node{T}, new_tree::Node{T}) where {T}
+    tree.degree = new_tree.degree
+    if new_tree.degree == 0
+        tree.constant = new_tree.constant
+        if new_tree.constant
+            tree.val = new_tree.val
+        else
+            tree.feature = new_tree.feature
+        end
+    else
+        tree.op = new_tree.op
+        tree.l = new_tree.l
+        if new_tree.degree == 2
+            tree.r = new_tree.r
+        end
+    end
+    return nothing
+end
+
+"""
     copy_node(tree::Node; preserve_topology::Bool=false)
 
 Copy a node, recursively copying all children nodes.
