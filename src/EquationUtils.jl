@@ -43,6 +43,16 @@ function count_constants(tree::Node)::Int
     end
 end
 
+function has_constants(tree::Node)::Bool
+    if tree.degree == 0
+        return tree.constant
+    elseif tree.degree == 1
+        return has_constants(tree.l)
+    else
+        return has_constants(tree.l) || has_constants(tree.r)
+    end
+end
+
 """
     is_constant(tree::Node)::Bool
 

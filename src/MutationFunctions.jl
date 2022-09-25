@@ -1,7 +1,7 @@
 module MutationFunctionsModule
 
 import ..CoreModule: Node, copy_node, Options
-import ..EquationUtilsModule: count_nodes, count_constants, has_operators, count_depth
+import ..EquationUtilsModule: count_nodes, has_constants, has_operators
 
 # Return a random node from the tree
 function random_node(tree::Node{T})::Node{T} where {T}
@@ -30,7 +30,7 @@ end
 # Randomly convert an operator into another one (binary->binary;
 # unary->unary)
 function mutate_operator(tree::Node{T}, options::Options)::Node{T} where {T}
-    if !has_operators(tree)
+    if !(has_operators(tree))
         return tree
     end
     node = random_node(tree)
@@ -51,7 +51,7 @@ function mutate_constant(
 )::Node{T} where {T<:Real}
     # T is between 0 and 1.
 
-    if count_constants(tree) == 0
+    if !(has_constants(tree))
         return tree
     end
     node = random_node(tree)
