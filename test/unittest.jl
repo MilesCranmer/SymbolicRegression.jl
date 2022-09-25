@@ -67,3 +67,7 @@ end
 @safetestset "Test hash of tree" begin
     include("test_hash.jl")
 end
+
+@safetestset "Test topology-preserving copy" begin
+    include("test_preserve_multiple_parents.jl")
+end
