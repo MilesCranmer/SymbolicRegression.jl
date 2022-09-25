@@ -172,9 +172,10 @@ duplicate child node copies.
 # But, when we copy the tree, the link breaks:
 function copy_node(tree::Node{T}; preserve_topology::Bool=false)::Node{T} where {T}
     if preserve_topology
-        return copy_node_with_topology(tree, IdDict{Node{T},Node{T}}())
+        copy_node_with_topology(tree, IdDict{Node{T},Node{T}}())
+    else
+        copy_node_break_topology(tree)
     end
-    return copy_node_break_topology(tree)
 end
 
 function copy_node_break_topology(tree::Node{T})::Node{T} where {T}
