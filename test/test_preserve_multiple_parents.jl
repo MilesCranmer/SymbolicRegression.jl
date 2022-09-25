@@ -2,12 +2,11 @@ using SymbolicRegression
 using Test
 
 options = Options(;
-    binary_operators=(+, -, *, ^, /, greater),
-    unary_operators=(cos, exp, sin),
+    binary_operators=(+, -, *, ^, /, greater), unary_operators=(cos, exp, sin)
 )
 x1, x2, x3 = Node("x1"), Node("x2"), Node("x3")
 
-base_tree = cos(x1 - 3.2 * x2) - x1 ^ 3.2
+base_tree = cos(x1 - 3.2 * x2) - x1^3.2
 tree = sin(base_tree) + base_tree
 
 # The base tree is exactly the same:
