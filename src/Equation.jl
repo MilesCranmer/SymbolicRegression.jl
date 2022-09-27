@@ -66,22 +66,31 @@ Convert a `Node{T2}` to a `Node{T1}`.
 This will recursively convert all children nodes to `Node{T1}`,
 using `convert(T1, tree.val)` at constant nodes.
 """
-function Base.convert(::Type{Node{T1}}, tree::Node{T2}) where {T1,T2}
+function Base.convert(
+    ::Type{Node{T1}},
+    tree::Node{T2},
+    id_map::IdDict{Node{T2},Node{T1}}=IdDict{Node{T2},Node{T1}}(),
+) where {T1,T2}
     if T1 == T2
         return tree
-    elseif tree.degree == 0
-        if tree.constant
-            return Node(0, tree.constant, convert(T1, tree.val))
+    end
+    get!(id_map, tree) do
+        if tree.degree == 0
+            if tree.constant
+                Node(0, tree.constant, convert(T1, tree.val))
+            else
+                Node(0, tree.constant, convert(T1, tree.val), tree.feature)
+            end
+        elseif tree.degree == 1
+            l = convert(Node{T1}, tree.l, id_map)
+            Node(1, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l)
         else
-            return Node(0, tree.constant, convert(T1, tree.val), tree.feature)
+            l = convert(Node{T1}, tree.l, id_map)
+            r = convert(Node{T1}, tree.r, id_map)
+            Node(
+                2, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l, r
+            )
         end
-    elseif tree.degree == 1
-        l = convert(Node{T1}, tree.l)
-        return Node(1, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l)
-    else
-        l = convert(Node{T1}, tree.l)
-        r = convert(Node{T1}, tree.r)
-        return Node(2, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l, r)
     end
 end
 
