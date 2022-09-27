@@ -42,16 +42,20 @@ options = SymbolicRegression.Options(
 
 hall_of_fame = EquationSearch(X, y, niterations=40, options=options, numprocs=4)
 ```
-
-You can view the resultant equations in the hall of fame (best expression
+You can view the resultant equations in the dominating Pareto front (best expression
 seen at each complexity) with:
 ```julia
-trees = [member.tree for member in hall_of_fame.members[hall_of_fame.exists]]
+dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
+```julia
+This is a vector of `PopMember` type - which contains the expression along with the score.
+We can get the expressions with:
+```julia
+trees = [member.tree for member in dominating]
 ```
 Each of these equations is a `Node{T}` type for some constant type `T` (like `Float32`).
 
 You can evaluate a given tree with:
-```
+```julia
 tree = trees[end]
 output, did_succeed = eval_tree_array(tree, X, options)
 ```
@@ -81,7 +85,7 @@ We can convert all constants (recursively) to `Float32`:
 float32_tree = convert(Node{Float32}, tree)
 ```
 We can then evaluate this tree on a dataset:
-```
+```julia
 X = rand(Float32, 3, 100)
 output, did_succeed = eval_tree_array(tree, X, options)
 ```
