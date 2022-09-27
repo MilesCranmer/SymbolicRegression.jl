@@ -42,6 +42,9 @@ options = SymbolicRegression.Options(
 
 hall_of_fame = EquationSearch(X, y, niterations=40, options=options, numprocs=4)
 ```
+
+## Viewing the result
+
 We can view the equations in the dominating
 Pareto frontier with:
 ```julia
@@ -67,6 +70,31 @@ for member in dominating
     println("$(complexity)\t$(loss)\t$(string)")
 end
 ```
+
+## Evaluating and constructing trees
+
+You can also manipulate and construct trees directly. For example:
+
+```julia
+using SymbolicRegression
+
+options = Options(;
+    binary_operators=(+, -, *, ^, /), unary_operators=(cos, exp, sin)
+)
+x1, x2, x3 = Node("x1"), Node("x2"), Node("x3")
+tree = cos(x1 - 3.2 * x2) - x1^3.2
+# ^This tree has float64 constants
+
+# We can convert all constants (recursively) to float32:
+float32_tree = convert(Node{Float32}, tree)
+
+# We can evaluate this tree on a dataset:
+X = rand(Float32, 3, 100)
+output, did_succeed = eval_tree_array(tree, X, options)
+```
+The `output` array will contain the result of the tree at each of the 100 rows.
+This `did_succeed` flag detects whether an evaluation was successful, or whether
+encountered any NaNs or Infs during calculation (such as, e.g., `sqrt(-1)`).
 
 ## Code structure
 
