@@ -9,12 +9,12 @@ end
 
 function _count_nodes(tree::Node{T}, nodes_seen::ID)::Int where {T,ID}
     !(ID <: Nothing) && haskey(nodes_seen, tree) && return 0
-    if tree.degree == 0
-        count = 1
+    count = if tree.degree == 0
+        1
     elseif tree.degree == 1
-        count = 1 + _count_nodes(tree.l, nodes_seen)
+        1 + _count_nodes(tree.l, nodes_seen)
     else
-        count = 1 + _count_nodes(tree.l, nodes_seen) + _count_nodes(tree.r, nodes_seen)
+        1 + _count_nodes(tree.l, nodes_seen) + _count_nodes(tree.r, nodes_seen)
     end
     !(ID <: Nothing) && (nodes_seen[tree] = true)
     return count
