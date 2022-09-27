@@ -87,9 +87,7 @@ function Base.convert(
         else
             l = convert(Node{T1}, tree.l, id_map)
             r = convert(Node{T1}, tree.r, id_map)
-            Node(
-                2, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l, r
-            )
+            Node(2, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l, r)
         end
     end
 end
