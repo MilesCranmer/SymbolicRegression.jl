@@ -43,6 +43,21 @@ options = SymbolicRegression.Options(
 hall_of_fame = EquationSearch(X, y, niterations=40, options=options, numprocs=4)
 ```
 
+You can view the resultant equations in the hall of fame (best expression
+seen at each complexity) with:
+```julia
+trees = [member.tree for member in hof.members[hof.exists]]
+```
+Each of these equations is a `Node{T}` type for some constant type `T` (like `Float32`).
+
+You can evaluate each tree with:
+```
+output, did_succeed = eval_tree_array(tree, X, options)
+```
+The `output` array will contain the result of the tree at each of the 100 rows.
+This `did_succeed` flag detects whether an evaluation was successful, or whether
+encountered any NaNs or Infs during calculation (such as, e.g., `sqrt(-1)`).
+
 ## Viewing the result
 
 We can view the equations in the dominating
@@ -92,9 +107,6 @@ float32_tree = convert(Node{Float32}, tree)
 X = rand(Float32, 3, 100)
 output, did_succeed = eval_tree_array(tree, X, options)
 ```
-The `output` array will contain the result of the tree at each of the 100 rows.
-This `did_succeed` flag detects whether an evaluation was successful, or whether
-encountered any NaNs or Infs during calculation (such as, e.g., `sqrt(-1)`).
 
 ## Code structure
 
