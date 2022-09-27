@@ -46,7 +46,7 @@ You can view the resultant equations in the dominating Pareto front (best expres
 seen at each complexity) with:
 ```julia
 dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
-```julia
+```
 This is a vector of `PopMember` type - which contains the expression along with the score.
 We can get the expressions with:
 ```julia
