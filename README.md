@@ -46,12 +46,13 @@ hall_of_fame = EquationSearch(X, y, niterations=40, options=options, numprocs=4)
 You can view the resultant equations in the hall of fame (best expression
 seen at each complexity) with:
 ```julia
-trees = [member.tree for member in hof.members[hof.exists]]
+trees = [member.tree for member in hall_of_fame.members[hall_of_fame.exists]]
 ```
 Each of these equations is a `Node{T}` type for some constant type `T` (like `Float32`).
 
-You can evaluate each tree with:
+You can evaluate a given tree with:
 ```
+tree = trees[end]
 output, did_succeed = eval_tree_array(tree, X, options)
 ```
 The `output` array will contain the result of the tree at each of the 100 rows.
