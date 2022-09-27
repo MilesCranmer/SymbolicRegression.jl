@@ -48,7 +48,6 @@ mutable struct Node{T<:Real}
     #################
     Node(d::Int, c::Bool, v::_T) where {_T<:Real} = new{_T}(d, c, v)
     Node(d::Int, c::Bool, v::_T, f::Int) where {_T<:Real} = new{_T}(d, c, v, f)
-    Node(d::Int, c::Bool, v::_T, f::Int, o::Int) where {_T<:Real} = new{_T}(d, c, v, f, o)
     function Node(d::Int, c::Bool, v::_T, f::Int, o::Int, l::Node{_T}) where {_T<:Real}
         return new{_T}(d, c, v, f, o, l)
     end
