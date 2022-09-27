@@ -42,6 +42,56 @@ options = SymbolicRegression.Options(
 
 hall_of_fame = EquationSearch(X, y, niterations=40, options=options, numprocs=4)
 ```
+You can view the resultant equations in the dominating Pareto front (best expression
+seen at each complexity) with:
+```julia
+dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
+```
+This is a vector of `PopMember` type - which contains the expression along with the score.
+We can get the expressions with:
+```julia
+trees = [member.tree for member in dominating]
+```
+Each of these equations is a `Node{T}` type for some constant type `T` (like `Float32`).
+
+You can evaluate a given tree with:
+```julia
+tree = trees[end]
+output, did_succeed = eval_tree_array(tree, X, options)
+```
+The `output` array will contain the result of the tree at each of the 100 rows.
+This `did_succeed` flag detects whether an evaluation was successful, or whether
+encountered any NaNs or Infs during calculation (such as, e.g., `sqrt(-1)`).
+
+
+## Constructing trees
+
+You can also manipulate and construct trees directly. For example:
+
+```julia
+using SymbolicRegression
+
+options = Options(;
+    binary_operators=(+, -, *, ^, /), unary_operators=(cos, exp, sin)
+)
+x1, x2, x3 = Node("x1"), Node("x2"), Node("x3")
+tree = cos(x1 - 3.2 * x2) - x1^3.2
+```
+This tree has `Float64` constants, so the type of the entire tree
+will be promoted to `Node{Float64}`.
+
+We can convert all constants (recursively) to `Float32`:
+```julia
+float32_tree = convert(Node{Float32}, tree)
+```
+We can then evaluate this tree on a dataset:
+```julia
+X = rand(Float32, 3, 100)
+output, did_succeed = eval_tree_array(tree, X, options)
+```
+
+## Exporting to SymbolicUtils.jl
+
 We can view the equations in the dominating
 Pareto frontier with:
 ```julia
@@ -68,7 +118,7 @@ for member in dominating
 end
 ```
 
-## Code structure
+# Code structure
 
 The dependency structure is as follows:
 
