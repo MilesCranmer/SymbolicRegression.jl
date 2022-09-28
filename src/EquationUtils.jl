@@ -177,40 +177,41 @@ end
 # This will mirror a Node struct, rather
 # than adding a new attribute to Node.
 mutable struct NodeIndex
-    constant_index::Int  # Index of this constant (if a constant exists here)
+    constant_index::Int # Index of this constant (if a constant exists here)
     l::NodeIndex
     r::NodeIndex
 
-    NodeIndex() = new()
+    NodeIndex(i) = new(i)
+    NodeIndex(i, l) = new(i, l)
+    NodeIndex(i, l, r) = new(i, l, r)
 end
 
-function index_constants(tree::Node)::NodeIndex
-    return index_constants(tree, 0)
-end
-
-function index_constants(tree::Node, left_index::Int)::NodeIndex
-    index_tree = NodeIndex()
-    index_constants(tree, index_tree, left_index)
-    return index_tree
+function index_constants(tree::Node{T})::NodeIndex where {T}
+    return index_constants(tree, 0, IdDict{Node{T},NodeIndex}())
 end
 
 # Count how many constants to the left of this node, and put them in a tree
-function index_constants(tree::Node, index_tree::NodeIndex, left_index::Int)
-    if tree.degree == 0
-        if tree.constant
-            index_tree.constant_index = left_index + 1
+function index_constants(
+    tree::Node{T}, left_index::Int, id_map::IdDict{Node{T},NodeIndex}
+)::NodeIndex where {T}
+    get!(id_map, tree) do
+        if tree.degree == 0
+            if tree.constant
+                NodeIndex(left_index + 1)
+            else
+                NodeIndex(-1)
+            end
+        elseif tree.degree == 1
+            NodeIndex(-1, index_constants(tree.l, left_index, id_map))
+        else
+            NodeIndex(
+                -1,
+                index_constants(tree.l, left_index, id_map),
+                index_constants(
+                    tree.r, left_index + count_constants(tree.l; ignore_duplicates=true), id_map
+                ),
+            )
         end
-    elseif tree.degree == 1
-        index_tree.constant_index = count_constants(tree.l)
-        index_tree.l = NodeIndex()
-        index_constants(tree.l, index_tree.l, left_index)
-    else
-        index_tree.l = NodeIndex()
-        index_tree.r = NodeIndex()
-        index_constants(tree.l, index_tree.l, left_index)
-        index_tree.constant_index = count_constants(tree.l)
-        left_index_here = left_index + index_tree.constant_index
-        index_constants(tree.r, index_tree.r, left_index_here)
     end
 end
 
