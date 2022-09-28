@@ -7,27 +7,41 @@ import ..CoreModule: Options, MAX_DEGREE
 
 A struct to keep track of various running averages of the search and discovered
 equations, for use in adaptive losses and parsimony.
+
+# Fields
+
+- `window_size::Int`: After this many equations are seen, the frequencies are reduced
+    by 1, averaged over all complexities, each time a new equation is seen.
+- `frequencies::Vector{Float64}`: The number of equations seen at this complexity,
+    given by the index.
+- `normalized_frequencies::Vector{Float64}`: This is the same as `frequencies`, but
+    normalized to sum to 1.0. This is updated once in a while.
 """
 mutable struct RunningSearchStatistics
-    frequencies::Vector{Float64}
     window_size::Int
-    smallest_frequency_allowed::Int
+    frequencies::Vector{Float64}
     normalized_frequencies::Vector{Float64}  # Stores `frequencies`, but normalized (updated once in a while)
 end
 
 function RunningSearchStatistics(;
-    options::Options, window_size::Int=100000, smallest_frequency_allowed=1
+    options::Options, window_size::Int=100000
 )
     maxsize = options.maxsize
     actualMaxsize = maxsize + MAX_DEGREE
     init_frequencies = fill(Float64(window_size / actualMaxsize), actualMaxsize)
 
     return RunningSearchStatistics(
-        init_frequencies, window_size, smallest_frequency_allowed, copy(init_frequencies)
+        window_size, init_frequencies,  copy(init_frequencies)
     )
 end
 
-function update_frequencies!(
+"""
+    update_frequencies!(running_search_statistics::RunningSearchStatistics; size=nothing)
+
+Update the frequencies in `running_search_statistics` by adding 1 to the frequency
+for an equation at size `size`.
+"""
+@inline function update_frequencies!(
     running_search_statistics::RunningSearchStatistics; size=nothing
 )
     if size <= length(running_search_statistics.frequencies)
@@ -35,9 +49,17 @@ function update_frequencies!(
     end
 end
 
+"""
+    move_window!(running_search_statistics::RunningSearchStatistics)
+
+Reduce `running_search_statistics.frequencies` until it sums to
+`window_size`.
+"""
 function move_window!(running_search_statistics::RunningSearchStatistics)
+    smallest_frequency_allowed = 1
+    max_loops = 1000
+
     frequencies = running_search_statistics.frequencies
-    smallest_frequency_allowed = running_search_statistics.smallest_frequency_allowed
     window_size = running_search_statistics.window_size
 
     cur_size_frequency_complexities = sum(frequencies)
@@ -58,7 +80,7 @@ function move_window!(running_search_statistics::RunningSearchStatistics)
             total_amount_to_subtract = amount_to_subtract * num_remaining
             difference_in_size -= total_amount_to_subtract
             num_loops += 1
-            if num_loops > 1000 || total_amount_to_subtract < 1e-6
+            if num_loops > max_loops || total_amount_to_subtract < 1e-6
                 # Sometimes, total_amount_to_subtract can be a very very small number.
                 break
             end
