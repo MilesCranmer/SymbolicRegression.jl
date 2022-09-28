@@ -230,8 +230,7 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
             futures,
             @spawnat proc begin
                 tmp_pop = Population(
-                    dataset,
-                    convert(T, 1);
+                    dataset;
                     npop=20,
                     nlength=3,
                     options=options,
@@ -239,7 +238,6 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
                 )
                 tmp_pop = s_r_cycle(
                     dataset,
-                    convert(T, 1),
                     tmp_pop,
                     5,
                     5,
@@ -249,7 +247,7 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
                     record=RecordType(),
                 )[1]
                 tmp_pop = optimize_and_simplify_population(
-                    dataset, T(1.0), tmp_pop, options, options.maxsize, RecordType()
+                    dataset, tmp_pop, options, options.maxsize, RecordType()
                 )
             end
         )
