@@ -36,12 +36,12 @@ function has_operators(tree::Node)::Bool
 end
 
 # Count the number of constants in an equation
-function count_constants(tree::Node{T}; ignore_duplicates::Bool=false)::Int where {T}
-    return _count_constants(tree, ignore_duplicates ? IdDict{Node{T},Bool}() : nothing)
+function count_constants(tree::Node{T})::Int where {T}
+    return _count_constants(tree, IdDict{Node{T},Bool}())
 end
 
 function _count_constants(tree::Node{T}, nodes_seen::ID)::Int where {T,ID}
-    !(ID <: Nothing) && haskey(nodes_seen, tree) && return 0
+    haskey(nodes_seen, tree) && return 0
     count = if tree.degree == 0
         if tree.constant
             1
@@ -53,7 +53,7 @@ function _count_constants(tree::Node{T}, nodes_seen::ID)::Int where {T,ID}
     else
         _count_constants(tree.l, nodes_seen) + _count_constants(tree.r, nodes_seen)
     end
-    !(ID <: Nothing) && (nodes_seen[tree] = true)
+    nodes_seen[tree] = true
     return count
 end
 
@@ -165,7 +165,7 @@ function set_constants(
     elseif tree.degree == 1
         set_constants(tree.l, constants, nodes_seen)
     else
-        numberLeft = count_constants(tree.l; ignore_duplicates=true)
+        numberLeft = count_constants(tree.l)
         set_constants(tree.l, constants, nodes_seen)
         set_constants(tree.r, constants[(numberLeft + 1):end], nodes_seen)
     end
@@ -208,7 +208,7 @@ function index_constants(
                 -1,
                 index_constants(tree.l, left_index, id_map),
                 index_constants(
-                    tree.r, left_index + count_constants(tree.l; ignore_duplicates=true), id_map
+                    tree.r, left_index + count_constants(tree.l), id_map
                 ),
             )
         end
