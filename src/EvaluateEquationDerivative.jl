@@ -146,9 +146,9 @@ function eval_grad_tree_array(
     if variable
         n_gradients = size(cX, 1)
     else
-        n_gradients = count_constants(tree)
+        n_gradients = count_constants(tree; ignore_duplicates=true)
     end
-    index_tree = index_constants(tree, 0)
+    index_tree = index_constants(tree)
     return eval_grad_tree_array(
         tree, n, n_gradients, index_tree, cX, options, Val(variable)
     )
