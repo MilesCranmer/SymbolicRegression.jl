@@ -90,35 +90,44 @@ By default, this is the number of nodes in a tree.
 However, it could use the custom settings in options.complexity_mapping
 if these are defined.
 """
-function compute_complexity(tree::Node, options::Options)::Int
+function compute_complexity(
+    tree::Node{T}, options::Options; ignore_duplicates=nothing
+)::Int where {T}
+    if ignore_duplicates === nothing
+        ignore_duplicates = options.ignore_duplicates
+    end
     if options.complexity_mapping.use
-        return round(Int, _compute_complexity(tree, options))
+        return round(
+            Int,
+            _compute_complexity(
+                tree, options, ignore_duplicates ? IdDict{Node{T},Bool}() : nothing
+            ),
+        )
     else
         return count_nodes(tree)
     end
 end
 
 function _compute_complexity(
-    tree::Node, options::Options{A,B,dA,dB,C,complexity_type}
-)::complexity_type where {A,B,dA,dB,C,complexity_type<:Real}
-    if tree.degree == 0
+    tree::Node{T}, options::Options{A,B,dA,dB,C,complexity_type}, nodes_seen::ID
+)::complexity_type where {A,B,dA,dB,C,complexity_type<:Real,T,ID}
+    !(ID <: Nothing) && haskey(nodes_seen, tree) && return zero(complexity_type)
+    count = if tree.degree == 0
         if tree.constant
-            return options.complexity_mapping.constant_complexity
+            options.complexity_mapping.constant_complexity
         else
-            return options.complexity_mapping.variable_complexity
+            options.complexity_mapping.variable_complexity
         end
     elseif tree.degree == 1
-        return (
-            options.complexity_mapping.unaop_complexities[tree.op] +
-            _compute_complexity(tree.l, options)
-        )
+        options.complexity_mapping.unaop_complexities[tree.op] +
+        _compute_complexity(tree.l, options, nodes_seen)
     else # tree.degree == 2
-        return (
-            options.complexity_mapping.binop_complexities[tree.op] +
-            _compute_complexity(tree.l, options) +
-            _compute_complexity(tree.r, options)
-        )
+        options.complexity_mapping.binop_complexities[tree.op] +
+        _compute_complexity(tree.l, options, nodes_seen) +
+        _compute_complexity(tree.r, options, nodes_seen)
     end
+    !(ID <: Nothing) && (nodes_seen[tree] = true)
+    return count
 end
 
 # Get all the constants from a tree
