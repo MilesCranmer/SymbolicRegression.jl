@@ -2,7 +2,9 @@ module UtilsModule
 
 import Printf: @printf
 using Distributed
-import ..CoreModule: SRThreaded, SRSerial, SRDistributed
+import ..CoreModule: SRThreaded, SRSerial, SRDistributed, Dataset
+import ..EquationUtilsModule: compute_complexity
+import ..HallOfFameModule: HallOfFame, calculate_pareto_frontier
 
 function debug(verbosity, string...)
     if verbosity > 0
@@ -152,6 +154,31 @@ function close_reader!(reader::StdinReader)
     if reader.can_read_user_input
         Base.stop_reading(reader.stream)
     end
+end
+
+function check_for_early_stop(
+    options::Options,
+    datasets::AbstractVector{Dataset},
+    hallOfFame::AbstractVector{HallOfFame},
+)::Bool
+    options.earlyStopCondition === nothing && return false
+
+    # Check if all nout are below stopping condition.
+    for (dataset, hof) in zip(datasets, hallOfFame)
+        dominating = calculate_pareto_frontier(dataset, hof, options)
+        # Check if zero size:
+        length(dominating) == 0 && return false
+
+        stop_conditions = [
+            options.earlyStopCondition(
+                member.loss, compute_complexity(member.tree, options)
+            ) for member in dominating
+        ]
+        if !(any(stop_conditions))
+            return false
+        end
+    end
+    return true
 end
 
 end

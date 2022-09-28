@@ -160,7 +160,8 @@ import .UtilsModule:
     StdinReader,
     watch_stdin!,
     check_for_quit,
-    close_reader!
+    close_reader!,
+    check_for_early_stop
 import .EquationUtilsModule:
     count_nodes,
     compute_complexity,
@@ -919,30 +920,8 @@ function _EquationSearch(
 
         ################################################################
         ## Early stopping code
-        if options.earlyStopCondition !== nothing
-            # Check if all nout are below stopping condition.
-            all_below = true
-            for j in 1:nout
-                dominating = calculate_pareto_frontier(datasets[j], hallOfFame[j], options)
-                # Check if zero size:
-                if length(dominating) == 0
-                    all_below = false
-                elseif !any([
-                    options.earlyStopCondition(
-                        member.loss, compute_complexity(member.tree, options)
-                    ) for member in dominating
-                ])
-                    # None of the equations meet the stop condition.
-                    all_below = false
-                end
-
-                if !all_below
-                    break
-                end
-            end
-            if all_below # Early stop!
-                break
-            end
+        if check_for_early_stop(options, datasets, hallOfFame)
+            break
         end
         ################################################################
 
