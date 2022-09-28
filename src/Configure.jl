@@ -17,7 +17,7 @@ function assert_operators_defined_over_reals(T, options::Options)
     catch error
         throw(
             AssertionError(
-                "Your configuration is invalid - one of your operators ($cur_op) is not well-defined over the real line.",
+                "Your configuration is invalid - one of your operators ($cur_op) is not well-defined over the real line. You can get around this by returning `NaN` for invalid inputs.",
             ),
         )
     end
