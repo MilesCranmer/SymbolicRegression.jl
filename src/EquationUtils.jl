@@ -131,19 +131,24 @@ function _compute_complexity(
 end
 
 # Get all the constants from a tree
-function get_constants(tree::Node{T})::AbstractVector{T} where {T<:Real}
-    if tree.degree == 0
+function get_constants(
+    tree::Node{T}, nodes_seen::IdDict{Node{T},Bool}=IdDict{Node{T},Bool}()
+)::Vector{T} where {T}
+    haskey(nodes_seen, tree) && return T[]
+    out = if tree.degree == 0
         if tree.constant
-            return [tree.val]
+            [tree.val]
         else
-            return T[]
+            T[]
         end
     elseif tree.degree == 1
-        return get_constants(tree.l)
+        get_constants(tree.l, nodes_seen)
     else
-        both = [get_constants(tree.l), get_constants(tree.r)]
-        return [constant for subtree in both for constant in subtree]
+        both = [get_constants(tree.l, nodes_seen), get_constants(tree.r, nodes_seen)]
+        [constant for subtree in both for constant in subtree]
     end
+    nodes_seen[tree] = true
+    return out
 end
 
 # Set all the constants inside a tree
