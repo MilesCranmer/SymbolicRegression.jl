@@ -27,11 +27,7 @@ Population(pop::Array{PopMember{T},1}) where {T<:Real} = Population{T}(pop, size
 Create random population and score them on the dataset.
 """
 function Population(
-    dataset::Dataset{T};
-    npop::Int,
-    nlength::Int=3,
-    options::Options,
-    nfeatures::Int,
+    dataset::Dataset{T}; npop::Int, nlength::Int=3, options::Options, nfeatures::Int
 ) where {T<:Real}
     return Population{T}(
         [
@@ -63,9 +59,7 @@ function Population(
 ) where {T<:Real}
     dataset = Dataset(X, y)
     update_baseline_loss!(dataset, options)
-    return Population(
-        dataset; npop=npop, options=options, nfeatures=nfeatures
-    )
+    return Population(dataset; npop=npop, options=options, nfeatures=nfeatures)
 end
 
 # Sample 10 random members of the population, and make a new one

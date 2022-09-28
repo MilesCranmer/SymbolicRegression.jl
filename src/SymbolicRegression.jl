@@ -151,7 +151,16 @@ import .CoreModule:
     string_tree,
     print_tree
 import .UtilsModule:
-    debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner, StdinReader, watch_stdin!, check_for_quit, close_reader!
+    debug,
+    debug_inline,
+    is_anonymous_function,
+    recursive_merge,
+    next_worker,
+    @sr_spawner,
+    StdinReader,
+    watch_stdin!,
+    check_for_quit,
+    close_reader!
 import .EquationUtilsModule:
     count_nodes,
     compute_complexity,
@@ -312,7 +321,6 @@ function EquationSearch(
     saved_state::Union{StateType{T},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
 ) where {T<:Real}
-
     noprocs = (procs === nothing && numprocs == 0)
     someprocs = !noprocs
 
@@ -413,10 +421,7 @@ function _EquationSearch(
     returnPops = [
         [
             Population(
-                datasets[j];
-                npop=1,
-                options=options,
-                nfeatures=datasets[j].nfeatures,
+                datasets[j]; npop=1, options=options, nfeatures=datasets[j].nfeatures
             ) for i in 1:(options.npopulations)
         ] for j in 1:nout
     ]
@@ -424,10 +429,7 @@ function _EquationSearch(
     bestSubPops = [
         [
             Population(
-                datasets[j];
-                npop=1,
-                options=options,
-                nfeatures=datasets[j].nfeatures,
+                datasets[j]; npop=1, options=options, nfeatures=datasets[j].nfeatures
             ) for i in 1:(options.npopulations)
         ] for j in 1:nout
     ]
@@ -588,9 +590,7 @@ function _EquationSearch(
                 if options.batching
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
                         score, result_loss = score_func(
-                            dataset,
-                            tmp_best_seen.members[i_member].tree,
-                            options,
+                            dataset, tmp_best_seen.members[i_member].tree, options
                         )
                         tmp_best_seen.members[i_member].score = score
                         tmp_best_seen.members[i_member].loss = result_loss
@@ -809,9 +809,7 @@ function _EquationSearch(
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
                         if tmp_best_seen.exists[i_member]
                             score, result_loss = score_func(
-                                dataset,
-                                tmp_best_seen.members[i_member].tree,
-                                options,
+                                dataset, tmp_best_seen.members[i_member].tree, options
                             )
                             tmp_best_seen.members[i_member].score = score
                             tmp_best_seen.members[i_member].loss = result_loss
@@ -845,7 +843,7 @@ function _EquationSearch(
             if options.progress && nout == 1
                 # set_postfix(iter, Equations=)
                 equation_strings = string_dominating_pareto_curve(
-                    hallOfFame[j], datasets[j], options,
+                    hallOfFame[j], datasets[j], options
                 )
                 load_string =
                     @sprintf(
