@@ -3,42 +3,42 @@ module AdaptiveParsimonyModule
 import ..CoreModule: Options, MAX_DEGREE
 
 """
-    RollingSearchStatistics
+    RunningSearchStatistics
 
 A struct to keep track of various running averages of the search and discovered
 equations, for use in adaptive losses and parsimony.
 """
-mutable struct RollingSearchStatistics
+mutable struct RunningSearchStatistics
     frequencies::Vector{Float64}
     window_size::Int
     smallest_frequency_allowed::Int
     normalized_frequencies::Vector{Float64}  # Stores `frequencies`, but normalized (updated once in a while)
 end
 
-function RollingSearchStatistics(;
+function RunningSearchStatistics(;
     options::Options, window_size::Int=100000, smallest_frequency_allowed=1
 )
     maxsize = options.maxsize
     actualMaxsize = maxsize + MAX_DEGREE
     init_frequencies = fill(Float64(window_size / actualMaxsize), actualMaxsize)
 
-    return RollingSearchStatistics(
+    return RunningSearchStatistics(
         init_frequencies, window_size, smallest_frequency_allowed, copy(init_frequencies)
     )
 end
 
 function update_frequencies!(
-    rolling_search_statistics::RollingSearchStatistics; size=nothing
+    running_search_statistics::RunningSearchStatistics; size=nothing
 )
-    if size <= length(rolling_search_statistics.frequencies)
-        rolling_search_statistics.frequencies[size] += 1
+    if size <= length(running_search_statistics.frequencies)
+        running_search_statistics.frequencies[size] += 1
     end
 end
 
-function move_window!(rolling_search_statistics::RollingSearchStatistics)
-    frequencies = rolling_search_statistics.frequencies
-    smallest_frequency_allowed = rolling_search_statistics.smallest_frequency_allowed
-    window_size = rolling_search_statistics.window_size
+function move_window!(running_search_statistics::RunningSearchStatistics)
+    frequencies = running_search_statistics.frequencies
+    smallest_frequency_allowed = running_search_statistics.smallest_frequency_allowed
+    window_size = running_search_statistics.window_size
 
     cur_size_frequency_complexities = sum(frequencies)
     if cur_size_frequency_complexities > window_size
@@ -66,9 +66,9 @@ function move_window!(rolling_search_statistics::RollingSearchStatistics)
     end
 end
 
-function normalize_frequencies!(rolling_search_statistics::RollingSearchStatistics)
-    return rolling_search_statistics.normalized_frequencies .=
-        rolling_search_statistics.frequencies ./ sum(rolling_search_statistics.frequencies)
+function normalize_frequencies!(running_search_statistics::RunningSearchStatistics)
+    return running_search_statistics.normalized_frequencies .=
+        running_search_statistics.frequencies ./ sum(running_search_statistics.frequencies)
 end
 
 end

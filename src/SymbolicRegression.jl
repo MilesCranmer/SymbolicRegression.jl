@@ -163,7 +163,7 @@ import .EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
 import .EvaluateEquationDerivativeModule: eval_diff_tree_array, eval_grad_tree_array
 import .CheckConstraintsModule: check_constraints
 import .AdaptiveParsimonyModule:
-    RollingSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
+    RunningSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
 import .MutationFunctionsModule:
     gen_random_tree,
     gen_random_tree_fixed_size,
@@ -473,8 +473,8 @@ function _EquationSearch(
     end
     actualMaxsize = options.maxsize + MAX_DEGREE
 
-    all_rolling_search_statistics = [
-        RollingSearchStatistics(; options=options) for i in 1:nout
+    all_running_search_statistics = [
+        RunningSearchStatistics(; options=options) for i in 1:nout
     ]
 
     curmaxsizes = [3 for j in 1:nout]
@@ -580,7 +580,7 @@ function _EquationSearch(
     for j in 1:nout
         dataset = datasets[j]
         baselineMSE = baselineMSEs[j]
-        rolling_search_statistics = all_rolling_search_statistics[j]
+        running_search_statistics = all_running_search_statistics[j]
         curmaxsize = curmaxsizes[j]
         for i in 1:(options.npopulations)
             @recorder record["out$(j)_pop$(i)"] = RecordType()
@@ -603,14 +603,14 @@ function _EquationSearch(
                     "iteration0" => record_population(in_pop, options)
                 )
                 tmp_num_evals = 0.0
-                normalize_frequencies!(rolling_search_statistics)
+                normalize_frequencies!(running_search_statistics)
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
                     baselineMSE,
                     in_pop,
                     options.ncyclesperiteration,
                     curmaxsize,
-                    rolling_search_statistics;
+                    running_search_statistics;
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
@@ -729,7 +729,7 @@ function _EquationSearch(
                 size = compute_complexity(member.tree, options)
 
                 if part_of_cur_pop
-                    update_frequencies!(all_rolling_search_statistics[j]; size=size)
+                    update_frequencies!(all_running_search_statistics[j]; size=size)
                 end
                 actualMaxsize = options.maxsize + MAX_DEGREE
 
@@ -824,14 +824,14 @@ function _EquationSearch(
                     "iteration$(iteration)" => record_population(cur_pop, options)
                 )
                 tmp_num_evals = 0.0
-                normalize_frequencies!(all_rolling_search_statistics[j])
+                normalize_frequencies!(all_running_search_statistics[j])
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
                     baselineMSE,
                     cur_pop,
                     options.ncyclesperiteration,
                     curmaxsize,
-                    all_rolling_search_statistics[j];
+                    all_running_search_statistics[j];
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
@@ -908,7 +908,7 @@ function _EquationSearch(
             head_node_end_work = time()
             head_node_time["occupied"] += (head_node_end_work - head_node_start_work)
 
-            move_window!(all_rolling_search_statistics[j])
+            move_window!(all_running_search_statistics[j])
         end
         sleep(1e-6)
 

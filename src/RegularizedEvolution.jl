@@ -4,7 +4,7 @@ import Random: shuffle!
 import ..CoreModule: Options, Dataset, RecordType, string_tree
 import ..PopMemberModule: PopMember
 import ..PopulationModule: Population, best_of_sample
-import ..AdaptiveParsimonyModule: RollingSearchStatistics
+import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..MutateModule: next_generation, crossover_generation
 import ..RecorderModule: @recorder
 
@@ -16,7 +16,7 @@ function reg_evol_cycle(
     pop::Population,
     temperature::T,
     curmaxsize::Int,
-    rolling_search_statistics::RollingSearchStatistics,
+    running_search_statistics::RunningSearchStatistics,
     options::Options,
     record::RecordType,
 )::Tuple{Population,Float64} where {T<:Real}
@@ -63,7 +63,7 @@ function reg_evol_cycle(
                 allstar,
                 temperature,
                 curmaxsize,
-                rolling_search_statistics,
+                running_search_statistics,
                 options;
                 tmp_recorder=mutation_recorder,
             )
@@ -80,7 +80,7 @@ function reg_evol_cycle(
     else
         for i in 1:round(Int, pop.n / options.ns)
             if rand() > options.crossoverProbability
-                allstar = best_of_sample(pop, rolling_search_statistics, options)
+                allstar = best_of_sample(pop, running_search_statistics, options)
                 mutation_recorder = RecordType()
                 baby, mutation_accepted, tmp_num_evals = next_generation(
                     dataset,
@@ -88,7 +88,7 @@ function reg_evol_cycle(
                     allstar,
                     temperature,
                     curmaxsize,
-                    rolling_search_statistics,
+                    running_search_statistics,
                     options;
                     tmp_recorder=mutation_recorder,
                 )
@@ -135,8 +135,8 @@ function reg_evol_cycle(
                 pop.members[oldest] = baby
 
             else # Crossover
-                allstar1 = best_of_sample(pop, rolling_search_statistics, options)
-                allstar2 = best_of_sample(pop, rolling_search_statistics, options)
+                allstar1 = best_of_sample(pop, running_search_statistics, options)
+                allstar2 = best_of_sample(pop, running_search_statistics, options)
 
                 baby1, baby2, crossover_accepted, tmp_num_evals = crossover_generation(
                     allstar1, allstar2, dataset, baseline, curmaxsize, options

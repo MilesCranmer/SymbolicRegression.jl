@@ -4,7 +4,7 @@ import ..CoreModule: Node, copy_node, Options, Dataset, RecordType
 import ..EquationUtilsModule: compute_complexity, count_constants, count_depth
 import ..LossFunctionsModule: score_func, score_func_batch
 import ..CheckConstraintsModule: check_constraints
-import ..AdaptiveParsimonyModule: RollingSearchStatistics
+import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..PopMemberModule: PopMember
 import ..MutationFunctionsModule:
     gen_random_tree_fixed_size,
@@ -26,7 +26,7 @@ function next_generation(
     member::PopMember{T},
     temperature::T,
     curmaxsize::Int,
-    rolling_search_statistics::RollingSearchStatistics,
+    running_search_statistics::RunningSearchStatistics,
     options::Options;
     tmp_recorder::RecordType,
 )::Tuple{PopMember{T},Bool,Float64} where {T<:Real}
@@ -220,12 +220,12 @@ function next_generation(
         oldSize = compute_complexity(prev, options)
         newSize = compute_complexity(tree, options)
         old_frequency = if (oldSize <= options.maxsize)
-            rolling_search_statistics.frequencies[oldSize]
+            running_search_statistics.frequencies[oldSize]
         else
             1e-6
         end
         new_frequency = if (newSize <= options.maxsize)
-            rolling_search_statistics.frequencies[newSize]
+            running_search_statistics.frequencies[newSize]
         else
             1e-6
         end

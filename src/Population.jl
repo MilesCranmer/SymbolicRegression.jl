@@ -4,7 +4,7 @@ import Random: randperm
 import ..CoreModule: Options, Dataset, RecordType, string_tree
 import ..EquationUtilsModule: compute_complexity
 import ..LossFunctionsModule: score_func
-import ..AdaptiveParsimonyModule: RollingSearchStatistics
+import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..MutationFunctionsModule: gen_random_tree
 import ..PopMemberModule: PopMember
 # A list of members of the population, with easy constructors,
@@ -77,7 +77,7 @@ end
 
 # Sample the population, and get the best member from that sample
 function best_of_sample(
-    pop::Population, rolling_search_statistics::RollingSearchStatistics, options::Options
+    pop::Population, running_search_statistics::RunningSearchStatistics, options::Options
 )::PopMember where {T<:Real}
     sample = sample_pop(pop, options)
 
@@ -91,7 +91,7 @@ function best_of_sample(
         for member in 1:(options.ns)
             size = compute_complexity(sample.members[member].tree, options)
             frequency = if (size <= options.maxsize)
-                rolling_search_statistics.frequencies[size]
+                running_search_statistics.frequencies[size]
             else
                 T(0)
             end
