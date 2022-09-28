@@ -170,7 +170,7 @@ import .MutationFunctionsModule:
     random_node,
     random_node_and_parent,
     crossover_trees
-import .LossFunctionsModule: eval_loss, loss, score_func
+import .LossFunctionsModule: eval_loss, loss, score_func, update_baseline_loss!
 import .PopMemberModule: PopMember, copy_pop_member
 import .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 import .HallOfFameModule:
@@ -313,10 +313,6 @@ function EquationSearch(
     addprocs_function::Union{Function,Nothing}=nothing,
 ) where {T<:Real}
 
-    # Population(datasets[j], baselineMSEs[j], npop=options.npop,
-    #            nlength=3, options=options, nfeatures=datasets[j].nfeatures),
-    # HallOfFame(options),
-
     noprocs = (procs === nothing && numprocs == 0)
     someprocs = !noprocs
 
@@ -381,20 +377,8 @@ function _EquationSearch(
         test_dataset_configuration(example_dataset, options)
     end
 
-    if example_dataset.weighted
-        avgys = [
-            sum(dataset.y .* dataset.weights) / sum(dataset.weights) for dataset in datasets
-        ]
-        baselineMSEs = [
-            loss(dataset.y, ones(T, dataset.n) .* avgy, dataset.weights, options) for
-            dataset in datasets, avgy in avgys
-        ]
-    else
-        avgys = [sum(dataset.y) / dataset.n for dataset in datasets]
-        baselineMSEs = [
-            loss(dataset.y, ones(T, dataset.n) .* avgy, options) for
-            (dataset, avgy) in zip(datasets, avgys)
-        ]
+    for dataset in datasets
+        update_baseline_loss!(dataset, options)
     end
 
     if options.seed !== nothing
@@ -429,8 +413,7 @@ function _EquationSearch(
     returnPops = [
         [
             Population(
-                datasets[j],
-                baselineMSEs[j];
+                datasets[j];
                 npop=1,
                 options=options,
                 nfeatures=datasets[j].nfeatures,
@@ -441,8 +424,7 @@ function _EquationSearch(
     bestSubPops = [
         [
             Population(
-                datasets[j],
-                baselineMSEs[j];
+                datasets[j];
                 npop=1,
                 options=options,
                 nfeatures=datasets[j].nfeatures,
@@ -520,8 +502,7 @@ function _EquationSearch(
             if saved_state === nothing
                 new_pop = @sr_spawner ConcurrencyType worker_idx (
                     Population(
-                        datasets[j],
-                        baselineMSEs[j];
+                        datasets[j];
                         npop=options.npop,
                         nlength=3,
                         options=options,
@@ -547,8 +528,7 @@ function _EquationSearch(
                     )
                     new_pop = @sr_spawner ConcurrencyType worker_idx (
                         Population(
-                            datasets[j],
-                            baselineMSEs[j];
+                            datasets[j];
                             npop=options.npop,
                             nlength=3,
                             options=options,
@@ -566,7 +546,6 @@ function _EquationSearch(
     # 2. Start the cycle on every process:
     for j in 1:nout
         dataset = datasets[j]
-        baselineMSE = baselineMSEs[j]
         running_search_statistics = all_running_search_statistics[j]
         curmaxsize = curmaxsizes[j]
         for i in 1:(options.npopulations)
@@ -593,7 +572,6 @@ function _EquationSearch(
                 normalize_frequencies!(running_search_statistics)
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
-                    baselineMSE,
                     in_pop,
                     options.ncyclesperiteration,
                     curmaxsize,
@@ -604,14 +582,13 @@ function _EquationSearch(
                 )
                 tmp_num_evals += evals_from_cycle
                 tmp_pop, evals_from_optimize = optimize_and_simplify_population(
-                    dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record
+                    dataset, tmp_pop, options, curmaxsize, cur_record
                 )
                 tmp_num_evals += evals_from_optimize
                 if options.batching
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
                         score, result_loss = score_func(
                             dataset,
-                            baselineMSE,
                             tmp_best_seen.members[i_member].tree,
                             options,
                         )
@@ -699,7 +676,6 @@ function _EquationSearch(
             num_evals[j][i] += cur_num_evals
 
             dataset = datasets[j]
-            baselineMSE = baselineMSEs[j]
             curmaxsize = curmaxsizes[j]
 
             #Try normal copy...
@@ -814,7 +790,6 @@ function _EquationSearch(
                 normalize_frequencies!(all_running_search_statistics[j])
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
-                    baselineMSE,
                     cur_pop,
                     options.ncyclesperiteration,
                     curmaxsize,
@@ -825,7 +800,7 @@ function _EquationSearch(
                 )
                 tmp_num_evals += evals_from_cycle
                 tmp_pop, evals_from_optimize = optimize_and_simplify_population(
-                    dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record
+                    dataset, tmp_pop, options, curmaxsize, cur_record
                 )
                 tmp_num_evals += evals_from_optimize
 
@@ -835,7 +810,6 @@ function _EquationSearch(
                         if tmp_best_seen.exists[i_member]
                             score, result_loss = score_func(
                                 dataset,
-                                baselineMSE,
                                 tmp_best_seen.members[i_member].tree,
                                 options,
                             )
@@ -871,7 +845,7 @@ function _EquationSearch(
             if options.progress && nout == 1
                 # set_postfix(iter, Equations=)
                 equation_strings = string_dominating_pareto_curve(
-                    hallOfFame[j], baselineMSE, datasets[j], options, avgys[j]
+                    hallOfFame[j], datasets[j], options,
                 )
                 load_string =
                     @sprintf(
@@ -933,7 +907,7 @@ function _EquationSearch(
                         @printf("Best equations for output %d\n", j)
                     end
                     equation_strings = string_dominating_pareto_curve(
-                        hallOfFame[j], baselineMSEs[j], datasets[j], options, avgys[j]
+                        hallOfFame[j], datasets[j], options
                     )
                     print(equation_strings)
                     @printf("==============================\n")

@@ -10,7 +10,7 @@ import ..PopMemberModule: PopMember
 
 # Proxy function for optimization
 function opt_func(
-    x::Vector{T}, dataset::Dataset{T}, baseline::T, tree::Node{T}, options::Options
+    x::Vector{T}, dataset::Dataset{T}, tree::Node{T}, options::Options
 )::T where {T<:Real}
     set_constants(tree, x)
     # TODO(mcranmer): This should use score_func batching.
@@ -20,7 +20,7 @@ end
 
 # Use Nelder-Mead to optimize the constants in an equation
 function optimize_constants(
-    dataset::Dataset{T}, baseline::T, member::PopMember{T}, options::Options
+    dataset::Dataset{T}, member::PopMember{T}, options::Options
 )::Tuple{PopMember{T},Float64} where {T<:Real}
     nconst = count_constants(member.tree)
     num_evals = 0.0
@@ -28,7 +28,7 @@ function optimize_constants(
         return (member, 0.0)
     end
     x0 = get_constants(member.tree)
-    f(x::Vector{T})::T = opt_func(x, dataset, baseline, member.tree, options)
+    f(x::Vector{T})::T = opt_func(x, dataset, member.tree, options)
     if nconst == 1
         algorithm = Optim.Newton(; linesearch=LineSearches.BackTracking())
     else
@@ -55,7 +55,7 @@ function optimize_constants(
 
     if Optim.converged(result)
         set_constants(member.tree, result.minimizer)
-        member.score, member.loss = score_func(dataset, baseline, member.tree, options)
+        member.score, member.loss = score_func(dataset, member.tree, options)
         num_evals += 1
         member.birth = get_birth_order(; deterministic=options.deterministic)
     else

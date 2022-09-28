@@ -12,7 +12,6 @@ import ..RecorderModule: @recorder
 # with the fittest of a small subsample
 function reg_evol_cycle(
     dataset::Dataset{T},
-    baseline::T,
     pop::Population,
     temperature::T,
     curmaxsize::Int,
@@ -59,7 +58,6 @@ function reg_evol_cycle(
             mutation_recorder = RecordType()
             babies[i], accepted[i], array_num_evals[i] = next_generation(
                 dataset,
-                baseline,
                 allstar,
                 temperature,
                 curmaxsize,
@@ -84,7 +82,6 @@ function reg_evol_cycle(
                 mutation_recorder = RecordType()
                 baby, mutation_accepted, tmp_num_evals = next_generation(
                     dataset,
-                    baseline,
                     allstar,
                     temperature,
                     curmaxsize,
@@ -139,7 +136,7 @@ function reg_evol_cycle(
                 allstar2 = best_of_sample(pop, running_search_statistics, options)
 
                 baby1, baby2, crossover_accepted, tmp_num_evals = crossover_generation(
-                    allstar1, allstar2, dataset, baseline, curmaxsize, options
+                    allstar1, allstar2, dataset, curmaxsize, options
                 )
                 num_evals += tmp_num_evals
 

@@ -22,7 +22,6 @@ import ..RecorderModule: @recorder
 #  exp(-delta/T) defines probability of accepting a change
 function next_generation(
     dataset::Dataset{T},
-    baseline::T,
     member::PopMember{T},
     temperature::T,
     curmaxsize::Int,
@@ -38,7 +37,7 @@ function next_generation(
 
     #TODO - reconsider this
     if options.batching
-        beforeScore, beforeLoss = score_func_batch(dataset, baseline, prev, options)
+        beforeScore, beforeLoss = score_func_batch(dataset, prev, options)
         num_evals += (options.batchSize / dataset.n)
     else
         beforeScore = member.score
@@ -185,10 +184,10 @@ function next_generation(
     end
 
     if options.batching
-        afterScore, afterLoss = score_func_batch(dataset, baseline, tree, options)
+        afterScore, afterLoss = score_func_batch(dataset, tree, options)
         num_evals += (options.batchSize / dataset.n)
     else
-        afterScore, afterLoss = score_func(dataset, baseline, tree, options)
+        afterScore, afterLoss = score_func(dataset, tree, options)
         num_evals += 1
     end
 
@@ -274,7 +273,6 @@ function crossover_generation(
     member1::PopMember,
     member2::PopMember,
     dataset::Dataset{T},
-    baseline::T,
     curmaxsize::Int,
     options::Options,
 )::Tuple{PopMember,PopMember,Bool,Float64} where {T<:Real}
@@ -301,12 +299,12 @@ function crossover_generation(
         num_tries += 1
     end
     if options.batching
-        afterScore1, afterLoss1 = score_func_batch(dataset, baseline, child_tree1, options)
-        afterScore2, afterLoss2 = score_func_batch(dataset, baseline, child_tree2, options)
+        afterScore1, afterLoss1 = score_func_batch(dataset, child_tree1, options)
+        afterScore2, afterLoss2 = score_func_batch(dataset, child_tree2, options)
         num_evals += 2 * (options.batchSize / dataset.n)
     else
-        afterScore1, afterLoss1 = score_func(dataset, baseline, child_tree1, options)
-        afterScore2, afterLoss2 = score_func(dataset, baseline, child_tree2, options)
+        afterScore1, afterLoss1 = score_func(dataset, child_tree1, options)
+        afterScore2, afterLoss2 = score_func(dataset, child_tree2, options)
         num_evals += options.batchSize / dataset.n
     end
 
