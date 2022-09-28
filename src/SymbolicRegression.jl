@@ -95,6 +95,7 @@ include("EquationUtils.jl")
 include("EvaluateEquation.jl")
 include("EvaluateEquationDerivative.jl")
 include("CheckConstraints.jl")
+include("AdaptiveParsimony.jl")
 include("MutationFunctions.jl")
 include("LossFunctions.jl")
 include("PopMember.jl")
@@ -161,6 +162,8 @@ import .EquationUtilsModule:
 import .EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
 import .EvaluateEquationDerivativeModule: eval_diff_tree_array, eval_grad_tree_array
 import .CheckConstraintsModule: check_constraints
+import .AdaptiveParsimonyModule:
+    RollingSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
 import .MutationFunctionsModule:
     gen_random_tree,
     gen_random_tree_fixed_size,
@@ -470,13 +473,8 @@ function _EquationSearch(
     end
     actualMaxsize = options.maxsize + MAX_DEGREE
 
-    # Make frequencyComplexities a moving average, rather than over all time:
-    window_size = 100000
-    smallest_frequency_allowed = 1
-    # 3 here means this will last 3 cycles before being "refreshed"
-    # We start out with even numbers at all frequencies.
-    frequencyComplexities = [
-        ones(T, actualMaxsize) * window_size / actualMaxsize for i in 1:nout
+    all_rolling_search_statistics = [
+        RollingSearchStatistics(; options=options) for i in 1:nout
     ]
 
     curmaxsizes = [3 for j in 1:nout]
@@ -582,7 +580,7 @@ function _EquationSearch(
     for j in 1:nout
         dataset = datasets[j]
         baselineMSE = baselineMSEs[j]
-        frequencyComplexity = frequencyComplexities[j]
+        rolling_search_statistics = all_rolling_search_statistics[j]
         curmaxsize = curmaxsizes[j]
         for i in 1:(options.npopulations)
             @recorder record["out$(j)_pop$(i)"] = RecordType()
@@ -605,13 +603,14 @@ function _EquationSearch(
                     "iteration0" => record_population(in_pop, options)
                 )
                 tmp_num_evals = 0.0
+                normalize_frequencies!(rolling_search_statistics)
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
                     baselineMSE,
                     in_pop,
                     options.ncyclesperiteration,
                     curmaxsize,
-                    copy(frequencyComplexity) / sum(frequencyComplexity);
+                    rolling_search_statistics;
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
@@ -730,9 +729,7 @@ function _EquationSearch(
                 size = compute_complexity(member.tree, options)
 
                 if part_of_cur_pop
-                    if size <= options.maxsize
-                        frequencyComplexities[j][size] += 1
-                    end
+                    update_frequencies!(all_rolling_search_statistics[j]; size=size)
                 end
                 actualMaxsize = options.maxsize + MAX_DEGREE
 
@@ -827,13 +824,14 @@ function _EquationSearch(
                     "iteration$(iteration)" => record_population(cur_pop, options)
                 )
                 tmp_num_evals = 0.0
+                normalize_frequencies!(all_rolling_search_statistics[j])
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
                     baselineMSE,
                     cur_pop,
                     options.ncyclesperiteration,
                     curmaxsize,
-                    copy(frequencyComplexities[j]) / sum(frequencyComplexities[j]);
+                    all_rolling_search_statistics[j];
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
@@ -910,34 +908,7 @@ function _EquationSearch(
             head_node_end_work = time()
             head_node_time["occupied"] += (head_node_end_work - head_node_start_work)
 
-            # Move moving window along frequencyComplexities:
-            cur_size_frequency_complexities = sum(frequencyComplexities[j])
-            if cur_size_frequency_complexities > window_size
-                difference_in_size = cur_size_frequency_complexities - window_size
-                # We need frequencyComplexities to be positive, but also sum to a number.
-                num_loops = 0
-                # TODO: Clean this code up. Should not have to have
-                # loop catching.
-                while difference_in_size > 0
-                    indices_to_subtract = findall(
-                        frequencyComplexities[j] .> smallest_frequency_allowed
-                    )
-                    num_remaining = size(indices_to_subtract, 1)
-                    amount_to_subtract = min(
-                        difference_in_size / num_remaining,
-                        min(frequencyComplexities[j][indices_to_subtract]...) -
-                        smallest_frequency_allowed,
-                    )
-                    frequencyComplexities[j][indices_to_subtract] .-= amount_to_subtract
-                    total_amount_to_subtract = amount_to_subtract * num_remaining
-                    difference_in_size -= total_amount_to_subtract
-                    num_loops += 1
-                    if num_loops > 1000 || total_amount_to_subtract < 1e-6
-                        # Sometimes, total_amount_to_subtract can be a very very small number.
-                        break
-                    end
-                end
-            end
+            move_window!(all_rolling_search_statistics[j])
         end
         sleep(1e-6)
 
@@ -979,11 +950,6 @@ function _EquationSearch(
                     )
                     print(equation_strings)
                     @printf("==============================\n")
-
-                    # Debugging code for frequencyComplexities:
-                    # for size_i=1:actualMaxsize
-                    #     @printf("frequencyComplexities size %d = %.2f\n", size_i, frequencyComplexities[j][size_i])
-                    # end
                 end
                 @printf("Press 'q' and then <enter> to stop execution early.\n")
             end

@@ -7,6 +7,7 @@ import ..SimplifyEquationModule: simplify_tree, combine_operators
 import ..PopMemberModule: copy_pop_member, generate_reference
 import ..PopulationModule: Population, finalize_scores, best_sub_pop
 import ..HallOfFameModule: HallOfFame
+import ..AdaptiveParsimonyModule: RollingSearchStatistics
 import ..RegularizedEvolutionModule: reg_evol_cycle
 import ..ConstantOptimizationModule: optimize_constants
 import ..RecorderModule: @recorder
@@ -19,7 +20,7 @@ function s_r_cycle(
     pop::Population,
     ncycles::Int,
     curmaxsize::Int,
-    frequencyComplexity::AbstractVector{T};
+    rolling_search_statistics::RollingSearchStatistics;
     verbosity::Int=0,
     options::Options,
     record::RecordType,
@@ -40,7 +41,7 @@ function s_r_cycle(
             pop,
             temperature,
             curmaxsize,
-            frequencyComplexity,
+            rolling_search_statistics,
             options,
             record,
         )
