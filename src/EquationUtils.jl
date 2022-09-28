@@ -37,7 +37,7 @@ end
 
 # Count the number of constants in an equation
 function count_constants(tree::Node{T}; ignore_duplicates::Bool=false)::Int where {T}
-    _count_constants(tree, ignore_duplicates ? IdDict{Node{T},Bool}() : nothing)
+    return _count_constants(tree, ignore_duplicates ? IdDict{Node{T},Bool}() : nothing)
 end
 
 function _count_constants(tree::Node{T}, nodes_seen::ID)::Int where {T,ID}
