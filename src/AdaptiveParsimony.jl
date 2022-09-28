@@ -28,10 +28,10 @@ function RunningSearchStatistics(;
 )
     maxsize = options.maxsize
     actualMaxsize = maxsize + MAX_DEGREE
-    init_frequencies = fill(Float64(window_size / actualMaxsize), actualMaxsize)
+    init_frequencies = ones(Float64, actualMaxsize)
 
     return RunningSearchStatistics(
-        window_size, init_frequencies,  copy(init_frequencies)
+        window_size, init_frequencies,  copy(init_frequencies) / sum(init_frequencies)
     )
 end
 
