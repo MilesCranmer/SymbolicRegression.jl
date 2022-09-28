@@ -23,15 +23,13 @@ mutable struct RunningSearchStatistics
     normalized_frequencies::Vector{Float64}  # Stores `frequencies`, but normalized (updated once in a while)
 end
 
-function RunningSearchStatistics(;
-    options::Options, window_size::Int=100000
-)
+function RunningSearchStatistics(; options::Options, window_size::Int=100000)
     maxsize = options.maxsize
     actualMaxsize = maxsize + MAX_DEGREE
     init_frequencies = ones(Float64, actualMaxsize)
 
     return RunningSearchStatistics(
-        window_size, init_frequencies,  copy(init_frequencies) / sum(init_frequencies)
+        window_size, init_frequencies, copy(init_frequencies) / sum(init_frequencies)
     )
 end
 
@@ -47,6 +45,7 @@ for an equation at size `size`.
     if size <= length(running_search_statistics.frequencies)
         running_search_statistics.frequencies[size] += 1
     end
+    return nothing
 end
 
 """
@@ -86,11 +85,13 @@ function move_window!(running_search_statistics::RunningSearchStatistics)
             end
         end
     end
+    return nothing
 end
 
 function normalize_frequencies!(running_search_statistics::RunningSearchStatistics)
-    return running_search_statistics.normalized_frequencies .=
+    running_search_statistics.normalized_frequencies .=
         running_search_statistics.frequencies ./ sum(running_search_statistics.frequencies)
+    return nothing
 end
 
 end
