@@ -95,13 +95,13 @@ include("EquationUtils.jl")
 include("EvaluateEquation.jl")
 include("EvaluateEquationDerivative.jl")
 include("CheckConstraints.jl")
-include("AdaptiveParsimony.jl")
 include("MutationFunctions.jl")
 include("LossFunctions.jl")
 include("PopMember.jl")
+include("HallOfFame.jl")
+include("AdaptiveParsimony.jl")
 include("ConstantOptimization.jl")
 include("Population.jl")
-include("HallOfFame.jl")
 include("InterfaceSymbolicUtils.jl")
 include("SimplifyEquation.jl")
 include("Mutate.jl")
@@ -163,7 +163,11 @@ import .EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
 import .EvaluateEquationDerivativeModule: eval_diff_tree_array, eval_grad_tree_array
 import .CheckConstraintsModule: check_constraints
 import .AdaptiveParsimonyModule:
-    RollingSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
+    RollingSearchStatistics,
+    update_frequencies!,
+    update_dense_pareto_front!,
+    move_window!,
+    normalize_statistics!
 import .MutationFunctionsModule:
     gen_random_tree,
     gen_random_tree_fixed_size,
@@ -474,7 +478,7 @@ function _EquationSearch(
     actualMaxsize = options.maxsize + MAX_DEGREE
 
     all_rolling_search_statistics = [
-        RollingSearchStatistics(; options=options) for i in 1:nout
+        RollingSearchStatistics(T; options=options) for i in 1:nout
     ]
 
     curmaxsizes = [3 for j in 1:nout]
@@ -603,7 +607,7 @@ function _EquationSearch(
                     "iteration0" => record_population(in_pop, options)
                 )
                 tmp_num_evals = 0.0
-                normalize_frequencies!(rolling_search_statistics)
+                normalize_statistics!(rolling_search_statistics)
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
                     baselineMSE,
@@ -743,6 +747,11 @@ function _EquationSearch(
                     end
                 end
             end
+            update_dense_pareto_front!(
+                all_rolling_search_statistics[j];
+                hall_of_fame=hallOfFame[j],
+                options=options,
+            )
             ###################################################################
 
             # Dominating pareto curve - must be better than all simpler equations
@@ -824,7 +833,7 @@ function _EquationSearch(
                     "iteration$(iteration)" => record_population(cur_pop, options)
                 )
                 tmp_num_evals = 0.0
-                normalize_frequencies!(all_rolling_search_statistics[j])
+                normalize_statistics!(all_rolling_search_statistics[j])
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
                     baselineMSE,

@@ -243,7 +243,7 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
                     tmp_pop,
                     5,
                     5,
-                    RollingSearchStatistics(; options=options);
+                    RollingSearchStatistics(T; options=options);
                     verbosity=options.verbosity,
                     options=options,
                     record=RecordType(),
