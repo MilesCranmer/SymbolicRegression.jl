@@ -267,6 +267,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `deterministic`: Use a global counter for the birth time, rather than calls to `time()`. This gives
     perfect resolution, and is therefore deterministic. However, it is not thread safe, and must be used
     in serial mode.
+- `node_sharing`: Whether to allow the algorithm to share nodes between different parent expressions.
+    This will allow hierarchical expressions.
 """
 function Options(;
     binary_operators::NTuple{nbin,Any}=(+, -, /, *),
@@ -325,6 +327,7 @@ function Options(;
     enable_autodiff::Bool=false,
     nested_constraints=nothing,
     deterministic=false,
+    node_sharing=true,
 ) where {nuna,nbin}
     if warmupMaxsize !== nothing
         error(
@@ -673,6 +676,7 @@ function Options(;
         enable_autodiff,
         nested_constraints,
         deterministic,
+        node_sharing,
     )
 
     @eval begin

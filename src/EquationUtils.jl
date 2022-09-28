@@ -94,7 +94,7 @@ function compute_complexity(
     tree::Node{T}, options::Options; ignore_duplicates=nothing
 )::Int where {T}
     if ignore_duplicates === nothing
-        ignore_duplicates = options.ignore_duplicates
+        ignore_duplicates = options.node_sharing
     end
     if options.complexity_mapping.use
         return round(
