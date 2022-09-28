@@ -104,4 +104,53 @@ end
 # (due to optimizations in sum())
 is_bad_array(array) = !isfinite(sum(array))
 
+struct StdinReader
+    can_read_user_input::Bool
+    stream::Base.BufferStream
+end
+
+"""Start watching stdin for user input."""
+function watch_stdin!(reader::StdinReader; stream::Base.BufferStream=stdin)
+    reader.can_read_user_input = true
+    reader.stream = stream
+    try
+        Base.start_reading(reader.stream)
+        bytes = bytesavailable(reader.stream)
+        if bytes > 0
+            # Clear out initial data
+            read(reader.stream, bytes)
+        end
+    catch err
+        if isa(err, MethodError)
+            reader.can_read_user_input = false
+        else
+            throw(err)
+        end
+    end
+end
+
+"""Check if the user typed 'q' and <enter> or <ctl-c>."""
+function check_for_quit(reader::StdinReader)::Bool
+    if reader.can_read_user_input
+        bytes = bytesavailable(reader.stream)
+        if bytes > 0
+            # Read:
+            data = read(reader.stream, bytes)
+            control_c = 0x03
+            quit = 0x71
+            if length(data) > 1 && (data[end] == control_c || data[end - 1] == quit)
+                return true
+            end
+        end
+    end
+    return false
+end
+
+"""Close the stdin reader and stop reading."""
+function close_reader!(reader::StdinReader)
+    if reader.can_read_user_input
+        Base.stop_reading(reader.stream)
+    end
+end
+
 end

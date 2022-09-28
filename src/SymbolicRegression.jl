@@ -151,7 +151,7 @@ import .CoreModule:
     string_tree,
     print_tree
 import .UtilsModule:
-    debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
+    debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner, StdinReader, watch_stdin!, check_for_quit, close_reader!
 import .EquationUtilsModule:
     count_nodes,
     compute_complexity,
@@ -359,21 +359,8 @@ function _EquationSearch(
         end
     end
 
-    can_read_input = true
-    try
-        Base.start_reading(stdin)
-        bytes = bytesavailable(stdin)
-        if bytes > 0
-            # Clear out initial data
-            read(stdin, bytes)
-        end
-    catch err
-        if isa(err, MethodError)
-            can_read_input = false
-        else
-            throw(err)
-        end
-    end
+    stdin_reader = StdinReader()
+    watch_stdin!(stdin_reader; stream=stdin)
 
     # Redefine print, show:
     @eval begin
@@ -989,17 +976,8 @@ function _EquationSearch(
 
         ################################################################
         ## Signal stopping code
-        if can_read_input
-            bytes = bytesavailable(stdin)
-            if bytes > 0
-                # Read:
-                data = read(stdin, bytes)
-                control_c = 0x03
-                quit = 0x71
-                if length(data) > 1 && (data[end] == control_c || data[end - 1] == quit)
-                    break
-                end
-            end
+        if check_for_quit(stdin_reader)
+            break
         end
         ################################################################
 
@@ -1021,9 +999,9 @@ function _EquationSearch(
         end
         ################################################################
     end
-    if can_read_input
-        Base.stop_reading(stdin)
-    end
+
+    close_reader!(stdin_reader)
+
     if we_created_procs
         rmprocs(procs)
     end
