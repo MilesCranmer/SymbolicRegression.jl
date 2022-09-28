@@ -104,13 +104,14 @@ end
 # (due to optimizations in sum())
 is_bad_array(array) = !isfinite(sum(array))
 
-struct StdinReader
+mutable struct StdinReader
     can_read_user_input::Bool
-    stream::Base.BufferStream
+    stream::Union{Base.BufferStream,Base.TTY}
+    StdinReader() = new()
 end
 
 """Start watching stdin for user input."""
-function watch_stdin!(reader::StdinReader; stream::Base.BufferStream=stdin)
+function watch_stdin!(reader::StdinReader; stream=stdin)
     reader.can_read_user_input = true
     reader.stream = stream
     try
