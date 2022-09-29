@@ -131,7 +131,7 @@ function deg2_eval(
     op = options.binops[op_idx]
 
     # We check inputs (and intermediates), not outputs.
-    @turbo for j in indices((cumulator, array2), 1)
+    @turbo safe=true for j in indices((cumulator, array2), 1)
         x = op(cumulator[j], array2[j])
         cumulator[j] = x
     end
@@ -147,7 +147,7 @@ function deg1_eval(
     @return_on_false complete cumulator
     @return_on_nonfinite_array cumulator T n
     op = options.unaops[op_idx]
-    @turbo for j in indices(cumulator, 1)
+    @turbo safe=true for j in indices(cumulator, 1)
         x = op(cumulator[j])
         cumulator[j] = x
     end
@@ -186,7 +186,7 @@ function deg1_l2_ll0_lr0_eval(
         @return_on_check val_ll T n
         feature_lr = tree.l.r.feature
         cumulator = Array{T,1}(undef, n)
-        @turbo for j in indices((cumulator, cX), (1, 2))
+        @turbo safe=true for j in indices((cumulator, cX), (1, 2))
             x_l = op_l(val_ll, cX[feature_lr, j])
             x = isfinite(x_l) ? op(x_l) : T(Inf) # These will get discovered by _eval_tree_array at end.
             cumulator[j] = x
@@ -197,7 +197,7 @@ function deg1_l2_ll0_lr0_eval(
         val_lr = tree.l.r.val
         @return_on_check val_lr T n
         cumulator = Array{T,1}(undef, n)
-        @turbo for j in indices((cumulator, cX), (1, 2))
+        @turbo safe=true for j in indices((cumulator, cX), (1, 2))
             x_l = op_l(cX[feature_ll, j], val_lr)
             x = isfinite(x_l) ? op(x_l) : T(Inf)
             cumulator[j] = x
@@ -207,7 +207,7 @@ function deg1_l2_ll0_lr0_eval(
         feature_ll = tree.l.l.feature
         feature_lr = tree.l.r.feature
         cumulator = Array{T,1}(undef, n)
-        @turbo for j in indices((cumulator, cX), (1, 2))
+        @turbo safe=true for j in indices((cumulator, cX), (1, 2))
             x_l = op_l(cX[feature_ll, j], cX[feature_lr, j])
             x = isfinite(x_l) ? op(x_l) : T(Inf)
             cumulator[j] = x
@@ -234,7 +234,7 @@ function deg1_l1_ll0_eval(
     else
         feature_ll = tree.l.l.feature
         cumulator = Array{T,1}(undef, n)
-        @turbo for j in indices((cumulator, cX), (1, 2))
+        @turbo safe=true for j in indices((cumulator, cX), (1, 2))
             x_l = op_l(cX[feature_ll, j])
             x = isfinite(x_l) ? op(x_l) : T(Inf)
             cumulator[j] = x
@@ -261,7 +261,7 @@ function deg2_l0_r0_eval(
         val_l = tree.l.val
         @return_on_check val_l T n
         feature_r = tree.r.feature
-        @turbo for j in indices((cumulator, cX), (1, 2))
+        @turbo safe=true for j in indices((cumulator, cX), (1, 2))
             x = op(val_l, cX[feature_r, j])
             cumulator[j] = x
         end
@@ -270,7 +270,7 @@ function deg2_l0_r0_eval(
         feature_l = tree.l.feature
         val_r = tree.r.val
         @return_on_check val_r T n
-        @turbo for j in indices((cumulator, cX), (1, 2))
+        @turbo safe=true for j in indices((cumulator, cX), (1, 2))
             x = op(cX[feature_l, j], val_r)
             cumulator[j] = x
         end
@@ -278,7 +278,7 @@ function deg2_l0_r0_eval(
         cumulator = Array{T,1}(undef, n)
         feature_l = tree.l.feature
         feature_r = tree.r.feature
-        @turbo for j in indices((cumulator, cX), (1, 2))
+        @turbo safe=true for j in indices((cumulator, cX), (1, 2))
             x = op(cX[feature_l, j], cX[feature_r, j])
             cumulator[j] = x
         end
@@ -297,13 +297,13 @@ function deg2_l0_eval(
     if tree.l.constant
         val = tree.l.val
         @return_on_check val T n
-        @turbo for j in indices(cumulator, 1)
+        @turbo safe=true for j in indices(cumulator, 1)
             x = op(val, cumulator[j])
             cumulator[j] = x
         end
     else
         feature = tree.l.feature
-        @turbo for j in indices((cumulator, cX), (1, 2))
+        @turbo safe=true for j in indices((cumulator, cX), (1, 2))
             x = op(cX[feature, j], cumulator[j])
             cumulator[j] = x
         end
@@ -322,13 +322,13 @@ function deg2_r0_eval(
     if tree.r.constant
         val = tree.r.val
         @return_on_check val T n
-        @turbo for j in indices(cumulator, 1)
+        @turbo safe=true for j in indices(cumulator, 1)
             x = op(cumulator[j], val)
             cumulator[j] = x
         end
     else
         feature = tree.r.feature
-        @turbo for j in indices((cumulator, cX), (1, 2))
+        @turbo safe=true for j in indices((cumulator, cX), (1, 2))
             x = op(cumulator[j], cX[feature, j])
             cumulator[j] = x
         end
