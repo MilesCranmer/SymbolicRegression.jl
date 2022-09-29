@@ -155,8 +155,7 @@ import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge
 import .SearchUtilsModule:
     next_worker,
     @sr_spawner,
-    StdinReader,
-    watch_stdin!,
+    watch_stream,
     check_for_quit,
     close_reader!,
     check_for_early_stop
@@ -362,8 +361,7 @@ function _EquationSearch(
         end
     end
 
-    stdin_reader = StdinReader()
-    watch_stdin!(stdin_reader; stream=stdin)
+    stdin_reader = watch_stream(stdin)
 
     # Redefine print, show:
     @eval begin

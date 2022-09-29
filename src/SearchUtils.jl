@@ -36,30 +36,30 @@ macro sr_spawner(parallel, p, expr)
     end
 end
 
-mutable struct StdinReader
+struct StdinReader{ST}
     can_read_user_input::Bool
-    stream::Union{Base.BufferStream,Base.TTY}
-    StdinReader() = new()
+    stream::ST
 end
 
-"""Start watching stdin for user input."""
-function watch_stdin!(reader::StdinReader; stream=stdin)
-    reader.can_read_user_input = true
-    reader.stream = stream
+"""Start watching stream (like stdin) for user input."""
+function watch_stream(stream)
+    can_read_user_input = true
+    stream = stream
     try
-        Base.start_reading(reader.stream)
-        bytes = bytesavailable(reader.stream)
+        Base.start_reading(stream)
+        bytes = bytesavailable(stream)
         if bytes > 0
             # Clear out initial data
-            read(reader.stream, bytes)
+            read(stream, bytes)
         end
     catch err
         if isa(err, MethodError)
-            reader.can_read_user_input = false
+            can_read_user_input = false
         else
             throw(err)
         end
     end
+    return StdinReader(can_read_user_input, stream)
 end
 
 """Check if the user typed 'q' and <enter> or <ctl-c>."""
