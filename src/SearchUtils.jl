@@ -41,7 +41,9 @@ macro sr_spawner(parallel, p, expr)
     end
 end
 
-function init_dummy_pops(nout::Int, npops::Int, datasets::Vector{Dataset{T}}, options::Options)::Vector{Vector{Population{T}}} where {T}
+function init_dummy_pops(
+    nout::Int, npops::Int, datasets::Vector{Dataset{T}}, options::Options
+)::Vector{Vector{Population{T}}} where {T}
     return [
         [
             Population(
@@ -77,6 +79,13 @@ function watch_stream(stream)
     return StdinReader(can_read_user_input, stream)
 end
 
+"""Close the stdin reader and stop reading."""
+function close_reader!(reader::StdinReader)
+    if reader.can_read_user_input
+        Base.stop_reading(reader.stream)
+    end
+end
+
 """Check if the user typed 'q' and <enter> or <ctl-c>."""
 function check_for_user_quit(reader::StdinReader)::Bool
     if reader.can_read_user_input
@@ -94,17 +103,10 @@ function check_for_user_quit(reader::StdinReader)::Bool
     return false
 end
 
-"""Close the stdin reader and stop reading."""
-function close_reader!(reader::StdinReader)
-    if reader.can_read_user_input
-        Base.stop_reading(reader.stream)
-    end
-end
-
-function check_for_early_stop(
-    options::Options,
+function check_for_loss_threshold(
     datasets::AbstractVector{Dataset{T}},
     hallOfFame::AbstractVector{HallOfFame{T}},
+    options::Options,
 )::Bool where {T}
     options.earlyStopCondition === nothing && return false
 
@@ -124,6 +126,15 @@ function check_for_early_stop(
         end
     end
     return true
+end
+
+function check_for_timeout(start_time::Float64, options::Options)::Bool
+    return options.timeout_in_seconds !== nothing &&
+           time() - start_time > options.timeout_in_seconds
+end
+
+function check_max_evals(num_evals, options::Options)::Bool
+    return options.max_evals !== nothing && options.max_evals <= sum(sum, num_evals)
 end
 
 function update_progress_bar!(

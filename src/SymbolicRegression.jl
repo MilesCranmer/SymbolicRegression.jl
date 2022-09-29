@@ -184,9 +184,11 @@ import .SearchUtilsModule:
     next_worker,
     @sr_spawner,
     watch_stream,
-    check_for_user_quit,
     close_reader!,
-    check_for_early_stop,
+    check_for_user_quit,
+    check_for_loss_threshold,
+    check_for_timeout,
+    check_max_evals,
     update_progress_bar!,
     print_search_state,
     init_dummy_pops
@@ -879,33 +881,13 @@ function _EquationSearch(
 
         ################################################################
         ## Early stopping code
-        if check_for_early_stop(options, datasets, hallOfFame)
+        if any((
+            check_for_loss_threshold(datasets, hallOfFame, options),
+            check_for_user_quit(stdin_reader),
+            check_for_timeout(start_time, options),
+            check_max_evals(num_evals, options),
+        ))
             break
-        end
-        ################################################################
-
-        ################################################################
-        ## Signal stopping code
-        if check_for_user_quit(stdin_reader)
-            break
-        end
-        ################################################################
-
-        ################################################################
-        ## Timeout stopping code
-        if options.timeout_in_seconds !== nothing
-            if time() - start_time > options.timeout_in_seconds
-                break
-            end
-        end
-        ################################################################
-
-        ################################################################
-        ## num_evals stopping code
-        if options.max_evals !== nothing
-            if options.max_evals <= sum(sum, num_evals)
-                break
-            end
         end
         ################################################################
     end
