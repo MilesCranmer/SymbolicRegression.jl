@@ -8,6 +8,7 @@ using Distributed
 
 import ..CoreModule: SRThreaded, SRSerial, SRDistributed, Dataset, Options
 import ..EquationUtilsModule: compute_complexity
+import ..PopulationModule: Population
 import ..HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 import ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix
@@ -38,6 +39,16 @@ macro sr_spawner(parallel, p, expr)
             Threads.@spawn($(esc(expr)))
         end
     end
+end
+
+function init_dummy_pops(nout::Int, npops::Int, datasets::Vector{Dataset{T}}, options::Options)::Vector{Vector{Population{T}}} where {T}
+    return [
+        [
+            Population(
+                datasets[j]; npop=1, options=options, nfeatures=datasets[j].nfeatures
+            ) for i in 1:npops
+        ] for j in 1:nout
+    ]
 end
 
 struct StdinReader{ST}

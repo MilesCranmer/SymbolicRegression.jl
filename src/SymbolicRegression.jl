@@ -188,7 +188,8 @@ import .SearchUtilsModule:
     close_reader!,
     check_for_early_stop,
     update_progress_bar!,
-    print_search_state
+    print_search_state,
+    init_dummy_pops
 
 include("Configure.jl")
 include("Deprecates.jl")
@@ -417,21 +418,10 @@ function _EquationSearch(
 
     # This is a recorder for populations, but is not actually used for processing, just
     # for the final return.
-    returnPops = [
-        [
-            Population(
-                datasets[j]; npop=1, options=options, nfeatures=datasets[j].nfeatures
-            ) for i in 1:(options.npopulations)
-        ] for j in 1:nout
-    ]
+    returnPops = init_dummy_pops(nout, options.npopulations, datasets, options)
     # These initial populations are discarded:
-    bestSubPops = [
-        [
-            Population(
-                datasets[j]; npop=1, options=options, nfeatures=datasets[j].nfeatures
-            ) for i in 1:(options.npopulations)
-        ] for j in 1:nout
-    ]
+    bestSubPops = init_dummy_pops(nout, options.npopulations, datasets, options)
+
     if saved_state === nothing
         hallOfFame = [HallOfFame(options, T) for j in 1:nout]
     else
