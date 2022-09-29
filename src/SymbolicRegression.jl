@@ -178,7 +178,7 @@ import .HallOfFameModule:
 import .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
 import .InterfaceSymbolicUtilsModule: node_to_symbolic, symbolic_to_node
 import .SimplifyEquationModule: combine_operators, simplify_tree
-import .ProgressBarsModule: ProgressBar, set_multiline_postfix
+import .ProgressBarsModule: WrappedProgressBar
 import .RecorderModule: @recorder, find_iteration_from_record
 import .SearchUtilsModule:
     next_worker,
@@ -186,7 +186,9 @@ import .SearchUtilsModule:
     watch_stream,
     check_for_quit,
     close_reader!,
-    check_for_early_stop
+    check_for_early_stop,
+    update_progress_bar!,
+    print_search_state
 
 include("Configure.jl")
 include("Deprecates.jl")
@@ -604,12 +606,12 @@ function _EquationSearch(
     start_time = time()
     total_cycles = options.npopulations * niterations
     cycles_remaining = [total_cycles for j in 1:nout]
-    sum_cycle_remaining = sum(cycles_remaining)
     if options.progress && nout == 1
         #TODO: need to iterate this on the max cycles remaining!
-        progress_bar = ProgressBar(1:sum_cycle_remaining; width=options.terminal_width)
-        cur_cycle = nothing
-        cur_state = nothing
+        sum_cycle_remaining = sum(cycles_remaining)
+        progress_bar = WrappedProgressBar(
+            1:sum_cycle_remaining; width=options.terminal_width
+        )
     end
 
     last_print_time = time()
@@ -632,7 +634,8 @@ function _EquationSearch(
     all_idx = [(j, i) for j in 1:nout for i in 1:(options.npopulations)]
     shuffle!(all_idx)
     kappa = 0
-    head_node_time = Dict("occupied" => 0, "start" => time())
+    head_node_occupied_for = 0.0
+    head_node_start = time()
     while sum(cycles_remaining) > 0
         kappa += 1
         if kappa > options.npopulations * nout
@@ -838,31 +841,18 @@ function _EquationSearch(
             num_equations += options.ncyclesperiteration * options.npop / 10.0
 
             if options.progress && nout == 1
-                # set_postfix(iter, Equations=)
-                equation_strings = string_dominating_pareto_curve(
-                    hallOfFame[j], datasets[j], options
+                head_node_occupation =
+                    100 * head_node_occupied_for / (time() - head_node_start)
+                update_progress_bar!(
+                    progress_bar;
+                    hall_of_fame=hallOfFame[j],
+                    dataset=datasets[j],
+                    options=options,
+                    head_node_occupation=head_node_occupation,
                 )
-                load_string =
-                    @sprintf(
-                        "Head worker occupation: %.1f",
-                        100 * head_node_time["occupied"] /
-                            (time() - head_node_time["start"])
-                    ) * "%\n"
-                # TODO - include command about "q" here.
-                load_string *= @sprintf(
-                    "Press 'q' and then <enter> to stop execution early.\n"
-                )
-                equation_strings = load_string * equation_strings
-                set_multiline_postfix(progress_bar, equation_strings)
-                if cur_cycle === nothing
-                    (cur_cycle, cur_state) = iterate(progress_bar)
-                else
-                    (cur_cycle, cur_state) = iterate(progress_bar, cur_state)
-                end
-                sum_cycle_remaining = sum(cycles_remaining)
             end
             head_node_end_work = time()
-            head_node_time["occupied"] += (head_node_end_work - head_node_start_work)
+            head_node_occupied_for += (head_node_end_work - head_node_start_work)
 
             move_window!(all_running_search_statistics[j])
         end
@@ -874,6 +864,7 @@ function _EquationSearch(
         #Update if time has passed, and some new equations generated.
         if elapsed > print_every_n_seconds && num_equations > 0.0
             # Dominating pareto curve - must be better than all simpler equations
+            head_node_occupation = 100 * head_node_occupied_for / (time() - head_node_start)
             current_speed = num_equations / elapsed
             average_over_m_measurements = 10 #for print_every...=5, this gives 50 second running average
             push!(equation_speed, current_speed)
@@ -881,33 +872,15 @@ function _EquationSearch(
                 deleteat!(equation_speed, 1)
             end
             if (options.verbosity > 0) || (options.progress && nout > 1)
-                @printf("\n")
-                average_speed = sum(equation_speed) / length(equation_speed)
-                @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
-                @printf(
-                    "Head worker occupation: %.1f%%\n",
-                    100 * head_node_time["occupied"] / (time() - head_node_time["start"])
+                print_search_state(
+                    hallOfFame,
+                    datasets,
+                    options;
+                    equation_speed=equation_speed,
+                    total_cycles=total_cycles,
+                    cycles_remaining=cycles_remaining,
+                    head_node_occupation=head_node_occupation,
                 )
-                cycles_elapsed = total_cycles * nout - sum(cycles_remaining)
-                @printf(
-                    "Progress: %d / %d total iterations (%.3f%%)\n",
-                    cycles_elapsed,
-                    total_cycles * nout,
-                    100.0 * cycles_elapsed / total_cycles / nout
-                )
-
-                @printf("==============================\n")
-                for j in 1:nout
-                    if nout > 1
-                        @printf("Best equations for output %d\n", j)
-                    end
-                    equation_strings = string_dominating_pareto_curve(
-                        hallOfFame[j], datasets[j], options
-                    )
-                    print(equation_strings)
-                    @printf("==============================\n")
-                end
-                @printf("Press 'q' and then <enter> to stop execution early.\n")
             end
             last_print_time = time()
             num_equations = 0.0

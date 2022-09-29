@@ -3,10 +3,14 @@
 This includes: process management, stdin reading, checking for early stops."""
 module SearchUtilsModule
 
+import Printf: @printf, @sprintf
 using Distributed
+
 import ..CoreModule: SRThreaded, SRSerial, SRDistributed, Dataset, Options
 import ..EquationUtilsModule: compute_complexity
-import ..HallOfFameModule: HallOfFame, calculate_pareto_frontier
+import ..HallOfFameModule:
+    HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
+import ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix
 
 function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Vector{Int})::Int
     job_counts = Dict(proc => 0 for proc in procs)
@@ -109,6 +113,66 @@ function check_for_early_stop(
         end
     end
     return true
+end
+
+function update_progress_bar!(
+    progress_bar::WrappedProgressBar;
+    hall_of_fame::HallOfFame{T},
+    dataset::Dataset{T},
+    options::Options,
+    head_node_occupation::Float64,
+) where {T}
+    equation_strings = string_dominating_pareto_curve(hall_of_fame, dataset, options)
+    load_string = @sprintf("Head worker occupation: %.1f", head_node_occupation) * "%\n"
+    # TODO - include command about "q" here.
+    load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
+    equation_strings = load_string * equation_strings
+    set_multiline_postfix(progress_bar.bar, equation_strings)
+    cur_cycle = progress_bar.cycle
+    cur_state = progress_bar.state
+    if cur_cycle === nothing
+        cur_cycle, cur_state = iterate(progress_bar.bar)
+    else
+        cur_cycle, cur_state = iterate(progress_bar.bar, cur_state)
+    end
+    progress_bar.cycle = cur_cycle
+    progress_bar.state = cur_state
+    return nothing
+end
+
+function print_search_state(
+    hall_of_fames::Vector{HallOfFame{T}},
+    datasets::Vector{Dataset{T}},
+    options::Options;
+    equation_speed::Vector{Float32},
+    total_cycles::Int,
+    cycles_remaining::Vector{Int},
+    head_node_occupation::Float64,
+) where {T}
+    nout = length(datasets)
+    average_speed = sum(equation_speed) / length(equation_speed)
+
+    @printf("\n")
+    @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
+    @printf("Head worker occupation: %.1f%%\n", head_node_occupation)
+    cycles_elapsed = total_cycles * nout - sum(cycles_remaining)
+    @printf(
+        "Progress: %d / %d total iterations (%.3f%%)\n",
+        cycles_elapsed,
+        total_cycles * nout,
+        100.0 * cycles_elapsed / total_cycles / nout
+    )
+
+    @printf("==============================\n")
+    for (j, (hall_of_fame, dataset)) in enumerate(zip(hall_of_fames, datasets))
+        if nout > 1
+            @printf("Best equations for output %d\n", j)
+        end
+        equation_strings = string_dominating_pareto_curve(hall_of_fame, dataset, options)
+        print(equation_strings)
+        @printf("==============================\n")
+    end
+    @printf("Press 'q' and then <enter> to stop execution early.\n")
 end
 
 end

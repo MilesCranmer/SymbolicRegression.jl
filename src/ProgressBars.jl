@@ -263,6 +263,16 @@ function newline_to_spaces(string, terminal_width)
     return new_string
 end
 
+# Simple wrapper for a progress bar which stores its own state
+mutable struct WrappedProgressBar
+    bar::ProgressBar
+    state::Union{Int,Nothing}
+    cycle::Union{Int,Nothing}
+
+    function WrappedProgressBar(args...; kwargs...)
+        return new(ProgressBar(args...; kwargs...), nothing, nothing)
+    end
+end
 # end
 
 end
