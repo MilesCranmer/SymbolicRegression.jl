@@ -29,7 +29,7 @@ for reverse in [false, true]
 
     pop = Population(members, n)
 
-    dummy_running_stats = SymbolicRegression.AdaptiveParsimony.RunningSearchStatistics(;
+    dummy_running_stats = SymbolicRegression.AdaptiveParsimonyModule.RunningSearchStatistics(;
         options=options
     )
     best_pop_member = [
