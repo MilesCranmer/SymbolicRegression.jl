@@ -184,7 +184,7 @@ import .SearchUtilsModule:
     next_worker,
     @sr_spawner,
     watch_stream,
-    check_for_quit,
+    check_for_user_quit,
     close_reader!,
     check_for_early_stop,
     update_progress_bar!,
@@ -886,7 +886,7 @@ function _EquationSearch(
 
         ################################################################
         ## Signal stopping code
-        if check_for_quit(stdin_reader)
+        if check_for_user_quit(stdin_reader)
             break
         end
         ################################################################

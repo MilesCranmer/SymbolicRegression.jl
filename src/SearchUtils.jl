@@ -78,7 +78,7 @@ function watch_stream(stream)
 end
 
 """Check if the user typed 'q' and <enter> or <ctl-c>."""
-function check_for_quit(reader::StdinReader)::Bool
+function check_for_user_quit(reader::StdinReader)::Bool
     if reader.can_read_user_input
         bytes = bytesavailable(reader.stream)
         if bytes > 0
