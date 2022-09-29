@@ -152,13 +152,6 @@ import .CoreModule:
     string_tree,
     print_tree
 import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge
-import .SearchUtilsModule:
-    next_worker,
-    @sr_spawner,
-    watch_stream,
-    check_for_quit,
-    close_reader!,
-    check_for_early_stop
 import .EquationUtilsModule:
     count_nodes,
     compute_complexity,
@@ -187,6 +180,13 @@ import .InterfaceSymbolicUtilsModule: node_to_symbolic, symbolic_to_node
 import .SimplifyEquationModule: combine_operators, simplify_tree
 import .ProgressBarsModule: ProgressBar, set_multiline_postfix
 import .RecorderModule: @recorder, find_iteration_from_record
+import .SearchUtilsModule:
+    next_worker,
+    @sr_spawner,
+    watch_stream,
+    check_for_quit,
+    close_reader!,
+    check_for_early_stop
 
 include("Configure.jl")
 include("Deprecates.jl")

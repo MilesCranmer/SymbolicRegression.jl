@@ -88,9 +88,9 @@ end
 
 function check_for_early_stop(
     options::Options,
-    datasets::AbstractVector{Dataset},
-    hallOfFame::AbstractVector{HallOfFame},
-)::Bool
+    datasets::AbstractVector{Dataset{T}},
+    hallOfFame::AbstractVector{HallOfFame{T}},
+)::Bool where {T}
     options.earlyStopCondition === nothing && return false
 
     # Check if all nout are below stopping condition.
