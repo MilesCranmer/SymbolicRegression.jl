@@ -108,6 +108,7 @@ include("Mutate.jl")
 include("RegularizedEvolution.jl")
 include("SingleIteration.jl")
 include("ProgressBars.jl")
+include("SearchUtils.jl")
 
 import .CoreModule:
     CONST_TYPE,
@@ -150,11 +151,8 @@ import .CoreModule:
     SRDistributed,
     string_tree,
     print_tree
-import .UtilsModule:
-    debug,
-    debug_inline,
-    is_anonymous_function,
-    recursive_merge,
+import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge
+import .SearchUtilsModule:
     next_worker,
     @sr_spawner,
     StdinReader,
