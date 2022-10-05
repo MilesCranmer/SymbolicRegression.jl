@@ -29,10 +29,16 @@ for member in dominating
 
     println(&quot;$(complexity)\t$(loss)\t$(string)&quot;)
 end</code></pre><h1 id="Code-structure"><a class="docs-heading-anchor" href="#Code-structure">Code structure</a><a id="Code-structure-1"></a><a class="docs-heading-anchor-permalink" href="#Code-structure" title="Permalink"></a></h1><p>The dependency structure is as follows:</p><pre><code class="language-mermaid hljs">stateDiagram-v2
+AdaptiveParsimony --&gt; Mutate
+AdaptiveParsimony --&gt; Population
+AdaptiveParsimony --&gt; RegularizedEvolution
+AdaptiveParsimony --&gt; SingleIteration
+AdaptiveParsimony --&gt; SymbolicRegression
 CheckConstraints --&gt; Mutate
 CheckConstraints --&gt; SimplifyEquation
 CheckConstraints --&gt; SymbolicRegression
 ConstantOptimization --&gt; SingleIteration
+Core --&gt; AdaptiveParsimony
 Core --&gt; CheckConstraints
 Core --&gt; ConstantOptimization
 Core --&gt; EquationUtils
@@ -47,10 +53,10 @@ Core --&gt; PopMember
 Core --&gt; Population
 Core --&gt; Recorder
 Core --&gt; RegularizedEvolution
+Core --&gt; SearchUtils
 Core --&gt; SimplifyEquation
 Core --&gt; SingleIteration
 Core --&gt; SymbolicRegression
-Core --&gt; Utils
 Dataset --&gt; Core
 Equation --&gt; Core
 Equation --&gt; Options
@@ -63,12 +69,14 @@ EquationUtils --&gt; LossFunctions
 EquationUtils --&gt; Mutate
 EquationUtils --&gt; MutationFunctions
 EquationUtils --&gt; Population
+EquationUtils --&gt; SearchUtils
 EquationUtils --&gt; SingleIteration
 EquationUtils --&gt; SymbolicRegression
 EvaluateEquation --&gt; EvaluateEquationDerivative
 EvaluateEquation --&gt; LossFunctions
 EvaluateEquation --&gt; SymbolicRegression
 EvaluateEquationDerivative --&gt; SymbolicRegression
+HallOfFame --&gt; SearchUtils
 HallOfFame --&gt; SingleIteration
 HallOfFame --&gt; SymbolicRegression
 InterfaceSymbolicUtils --&gt; SymbolicRegression
@@ -96,17 +104,20 @@ PopMember --&gt; RegularizedEvolution
 PopMember --&gt; SingleIteration
 PopMember --&gt; SymbolicRegression
 Population --&gt; RegularizedEvolution
+Population --&gt; SearchUtils
 Population --&gt; SingleIteration
 Population --&gt; SymbolicRegression
 ProgramConstants --&gt; Core
 ProgramConstants --&gt; Dataset
 ProgramConstants --&gt; Equation
+ProgressBars --&gt; SearchUtils
 ProgressBars --&gt; SymbolicRegression
 Recorder --&gt; Mutate
 Recorder --&gt; RegularizedEvolution
 Recorder --&gt; SingleIteration
 Recorder --&gt; SymbolicRegression
 RegularizedEvolution --&gt; SingleIteration
+SearchUtils --&gt; SymbolicRegression
 SimplifyEquation --&gt; Mutate
 SimplifyEquation --&gt; SingleIteration
 SimplifyEquation --&gt; SymbolicRegression
@@ -124,4 +135,4 @@ for f in *.jl; do
     for line in $(cat $f | grep -e &#39;import \.\.&#39; -e &#39;import \.&#39;); do
         echo $(echo $line | vims -s &#39;dwf:d$&#39; -t &#39;%s/^\.*//g&#39; &#39;%s/Module//g&#39;) $(basename &quot;$f&quot; .jl);
     done;
-done | vims -l &#39;f a--&gt; &#39; | sort</code></pre><h1 id="Contents"><a class="docs-heading-anchor" href="#Contents">Contents</a><a id="Contents-1"></a><a class="docs-heading-anchor-permalink" href="#Contents" title="Permalink"></a></h1><ul><li><a href="api/#API">API</a></li><li class="no-marker"><ul><li><a href="api/#EquationSearch">EquationSearch</a></li><li><a href="api/#Options">Options</a></li><li><a href="api/#Printing">Printing</a></li><li><a href="api/#Evaluation">Evaluation</a></li><li><a href="api/#Derivatives">Derivatives</a></li><li><a href="api/#SymbolicUtils.jl-interface">SymbolicUtils.jl interface</a></li><li><a href="api/#Pareto-frontier">Pareto frontier</a></li></ul></li><li><a href="types/#Types">Types</a></li><li class="no-marker"><ul><li><a href="types/#Equations">Equations</a></li><li><a href="types/#Population">Population</a></li><li><a href="types/#Population-members">Population members</a></li><li><a href="types/#Hall-of-Fame">Hall of Fame</a></li><li><a href="types/#Dataset">Dataset</a></li></ul></li><li><a href="losses/#Losses">Losses</a></li><li class="no-marker"><ul><li><a href="losses/#Regression:">Regression:</a></li><li><a href="losses/#Classification:">Classification:</a></li></ul></li></ul></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Wednesday 5 October 2022 21:33">Wednesday 5 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+done | vims -l &#39;f a--&gt; &#39; | sort</code></pre><h1 id="Contents"><a class="docs-heading-anchor" href="#Contents">Contents</a><a id="Contents-1"></a><a class="docs-heading-anchor-permalink" href="#Contents" title="Permalink"></a></h1><ul><li><a href="api/#API">API</a></li><li class="no-marker"><ul><li><a href="api/#EquationSearch">EquationSearch</a></li><li><a href="api/#Options">Options</a></li><li><a href="api/#Printing">Printing</a></li><li><a href="api/#Evaluation">Evaluation</a></li><li><a href="api/#Derivatives">Derivatives</a></li><li><a href="api/#SymbolicUtils.jl-interface">SymbolicUtils.jl interface</a></li><li><a href="api/#Pareto-frontier">Pareto frontier</a></li></ul></li><li><a href="types/#Types">Types</a></li><li class="no-marker"><ul><li><a href="types/#Equations">Equations</a></li><li><a href="types/#Population">Population</a></li><li><a href="types/#Population-members">Population members</a></li><li><a href="types/#Hall-of-Fame">Hall of Fame</a></li><li><a href="types/#Dataset">Dataset</a></li></ul></li><li><a href="losses/#Losses">Losses</a></li><li class="no-marker"><ul><li><a href="losses/#Regression:">Regression:</a></li><li><a href="losses/#Classification:">Classification:</a></li></ul></li></ul></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Wednesday 5 October 2022 23:55">Wednesday 5 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
