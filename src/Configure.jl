@@ -17,7 +17,7 @@ function assert_operators_defined_over_reals(T, options::Options)
     catch error
         throw(
             AssertionError(
-                "Your configuration is invalid - one of your operators ($cur_op) is not well-defined over the real line.",
+                "Your configuration is invalid - one of your operators ($cur_op) is not well-defined over the real line. You can get around this by returning `NaN` for invalid inputs.",
             ),
         )
     end
@@ -230,8 +230,7 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
             futures,
             @spawnat proc begin
                 tmp_pop = Population(
-                    dataset,
-                    convert(T, 1);
+                    dataset;
                     npop=20,
                     nlength=3,
                     options=options,
@@ -239,17 +238,16 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
                 )
                 tmp_pop = s_r_cycle(
                     dataset,
-                    convert(T, 1),
                     tmp_pop,
                     5,
                     5,
-                    ones(T, options.maxsize);
+                    RunningSearchStatistics(; options=options);
                     verbosity=options.verbosity,
                     options=options,
                     record=RecordType(),
                 )[1]
                 tmp_pop = optimize_and_simplify_population(
-                    dataset, T(1.0), tmp_pop, options, options.maxsize, RecordType()
+                    dataset, tmp_pop, options, options.maxsize, RecordType()
                 )
             end
         )

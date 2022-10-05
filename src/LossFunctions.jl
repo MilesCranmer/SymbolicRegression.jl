@@ -67,16 +67,16 @@ end
 
 # Score an equation
 function score_func(
-    dataset::Dataset{T}, baseline::T, tree::Node{T}, options::Options
+    dataset::Dataset{T}, tree::Node{T}, options::Options
 )::Tuple{T,T} where {T<:Real}
     result_loss = eval_loss(tree, dataset, options)
-    score = loss_to_score(result_loss, baseline, tree, options)
+    score = loss_to_score(result_loss, dataset.baseline_loss, tree, options)
     return score, result_loss
 end
 
 # Score an equation with a small batch
 function score_func_batch(
-    dataset::Dataset{T}, baseline::T, tree::Node{T}, options::Options
+    dataset::Dataset{T}, tree::Node{T}, options::Options
 )::Tuple{T,T} where {T<:Real}
     batch_idx = randperm(dataset.n)[1:(options.batchSize)]
     batch_X = dataset.X[:, batch_idx]
@@ -92,8 +92,17 @@ function score_func_batch(
         batch_w = dataset.weights[batch_idx]
         result_loss = loss(prediction, batch_y, batch_w, options)
     end
-    score = loss_to_score(result_loss, baseline, tree, options)
+    score = loss_to_score(result_loss, dataset.baseline_loss, tree, options)
     return score, result_loss
+end
+
+function update_baseline_loss!(dataset::Dataset{T}, options::Options) where {T<:Real}
+    dataset.baseline_loss = if dataset.weighted
+        loss(dataset.y, ones(T, dataset.n) .* dataset.avg_y, dataset.weights, options)
+    else
+        loss(dataset.y, ones(T, dataset.n) .* dataset.avg_y, options)
+    end
+    return nothing
 end
 
 end

@@ -3,7 +3,8 @@ module PopulationModule
 import Random: randperm
 import ..CoreModule: Options, Dataset, RecordType, string_tree
 import ..EquationUtilsModule: compute_complexity
-import ..LossFunctionsModule: score_func
+import ..LossFunctionsModule: score_func, update_baseline_loss!
+import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..MutationFunctionsModule: gen_random_tree
 import ..PopMemberModule: PopMember
 # A list of members of the population, with easy constructors,
@@ -19,25 +20,19 @@ Create population from list of PopMembers.
 """
 Population(pop::Array{PopMember{T},1}) where {T<:Real} = Population{T}(pop, size(pop, 1))
 """
-    Population(dataset::Dataset{T}, baseline::T;
+    Population(dataset::Dataset{T};
                npop::Int, nlength::Int=3, options::Options,
                nfeatures::Int)
 
 Create random population and score them on the dataset.
 """
 function Population(
-    dataset::Dataset{T},
-    baseline::T;
-    npop::Int,
-    nlength::Int=3,
-    options::Options,
-    nfeatures::Int,
+    dataset::Dataset{T}; npop::Int, nlength::Int=3, options::Options, nfeatures::Int
 ) where {T<:Real}
     return Population{T}(
         [
             PopMember(
                 dataset,
-                baseline,
                 gen_random_tree(nlength, options, nfeatures, T),
                 options;
                 parent=-1,
@@ -48,24 +43,23 @@ function Population(
     )
 end
 """
-    Population(X::AbstractMatrix{T}, y::AbstractVector{T},
-               baseline::T; npop::Int, nlength::Int=3,
+    Population(X::AbstractMatrix{T}, y::AbstractVector{T};
+               npop::Int, nlength::Int=3,
                options::Options, nfeatures::Int)
 
 Create random population and score them on the dataset.
 """
 function Population(
     X::AbstractMatrix{T},
-    y::AbstractVector{T},
-    baseline::T;
+    y::AbstractVector{T};
     npop::Int,
     nlength::Int=3,
     options::Options,
     nfeatures::Int,
 ) where {T<:Real}
-    return Population(
-        Dataset(X, y), baseline; npop=npop, options=options, nfeatures=nfeatures
-    )
+    dataset = Dataset(X, y)
+    update_baseline_loss!(dataset, options)
+    return Population(dataset; npop=npop, options=options, nfeatures=nfeatures)
 end
 
 # Sample 10 random members of the population, and make a new one
@@ -76,7 +70,7 @@ end
 
 # Sample the population, and get the best member from that sample
 function best_of_sample(
-    pop::Population, frequencyComplexity::AbstractVector{T}, options::Options
+    pop::Population, running_search_statistics::RunningSearchStatistics, options::Options
 )::PopMember where {T<:Real}
     sample = sample_pop(pop, options)
 
@@ -89,7 +83,11 @@ function best_of_sample(
         scores = []
         for member in 1:(options.ns)
             size = compute_complexity(sample.members[member].tree, options)
-            frequency = (size <= options.maxsize) ? frequencyComplexity[size] : T(0)
+            frequency = if (size <= options.maxsize)
+                running_search_statistics.frequencies[size]
+            else
+                T(0)
+            end
             score = sample.members[member].score * exp(frequency_scaling * frequency)
             push!(scores, score)
         end
@@ -123,13 +121,13 @@ function best_of_sample(
 end
 
 function finalize_scores(
-    dataset::Dataset{T}, baseline::T, pop::Population, options::Options
+    dataset::Dataset{T}, pop::Population, options::Options
 )::Tuple{Population,Float64} where {T<:Real}
     need_recalculate = options.batching
     num_evals = 0.0
     if need_recalculate
         @inbounds @simd for member in 1:(pop.n)
-            score, loss = score_func(dataset, baseline, pop.members[member].tree, options)
+            score, loss = score_func(dataset, pop.members[member].tree, options)
             pop.members[member].score = score
             pop.members[member].loss = loss
         end
