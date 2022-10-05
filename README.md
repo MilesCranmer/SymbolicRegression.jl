@@ -124,10 +124,16 @@ The dependency structure is as follows:
 
 ```mermaid
 stateDiagram-v2
+AdaptiveParsimony --> Mutate
+AdaptiveParsimony --> Population
+AdaptiveParsimony --> RegularizedEvolution
+AdaptiveParsimony --> SingleIteration
+AdaptiveParsimony --> SymbolicRegression
 CheckConstraints --> Mutate
 CheckConstraints --> SimplifyEquation
 CheckConstraints --> SymbolicRegression
 ConstantOptimization --> SingleIteration
+Core --> AdaptiveParsimony
 Core --> CheckConstraints
 Core --> ConstantOptimization
 Core --> EquationUtils
@@ -142,10 +148,10 @@ Core --> PopMember
 Core --> Population
 Core --> Recorder
 Core --> RegularizedEvolution
+Core --> SearchUtils
 Core --> SimplifyEquation
 Core --> SingleIteration
 Core --> SymbolicRegression
-Core --> Utils
 Dataset --> Core
 Equation --> Core
 Equation --> Options
@@ -158,12 +164,14 @@ EquationUtils --> LossFunctions
 EquationUtils --> Mutate
 EquationUtils --> MutationFunctions
 EquationUtils --> Population
+EquationUtils --> SearchUtils
 EquationUtils --> SingleIteration
 EquationUtils --> SymbolicRegression
 EvaluateEquation --> EvaluateEquationDerivative
 EvaluateEquation --> LossFunctions
 EvaluateEquation --> SymbolicRegression
 EvaluateEquationDerivative --> SymbolicRegression
+HallOfFame --> SearchUtils
 HallOfFame --> SingleIteration
 HallOfFame --> SymbolicRegression
 InterfaceSymbolicUtils --> SymbolicRegression
@@ -191,17 +199,20 @@ PopMember --> RegularizedEvolution
 PopMember --> SingleIteration
 PopMember --> SymbolicRegression
 Population --> RegularizedEvolution
+Population --> SearchUtils
 Population --> SingleIteration
 Population --> SymbolicRegression
 ProgramConstants --> Core
 ProgramConstants --> Dataset
 ProgramConstants --> Equation
+ProgressBars --> SearchUtils
 ProgressBars --> SymbolicRegression
 Recorder --> Mutate
 Recorder --> RegularizedEvolution
 Recorder --> SingleIteration
 Recorder --> SymbolicRegression
 RegularizedEvolution --> SingleIteration
+SearchUtils --> SymbolicRegression
 SimplifyEquation --> Mutate
 SimplifyEquation --> SingleIteration
 SimplifyEquation --> SymbolicRegression
