@@ -123,8 +123,6 @@ function string_dominating_pareto_curve(hallOfFame, dataset, options)
                 ),
             )
         end
-        # User higher precision when finding the original loss:
-        relu(x) = x < 0 ? 0 : x
         curMSE = member.loss
 
         delta_c = complexity - lastComplexity
