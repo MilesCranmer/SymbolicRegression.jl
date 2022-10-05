@@ -17,6 +17,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
+TermInterface = "8ea1fca8-c5ef-4a55-8b96-4e9afe9c9a3c"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]

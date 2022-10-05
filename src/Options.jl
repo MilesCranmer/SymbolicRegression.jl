@@ -1,6 +1,7 @@
 module OptionsModule
 
 using Optim: Optim
+using TermInterface: TermInterface
 import Distributed: nworkers
 import LossFunctions: L2DistLoss
 import Zygote: gradient
@@ -678,6 +679,31 @@ function Options(;
     @eval begin
         Base.print(io::IO, tree::Node) = print(io, string_tree(tree, $options))
         Base.show(io::IO, tree::Node) = print(io, string_tree(tree, $options))
+
+        # Define TermInterface:
+        function TermInterface.istree(x::Node)
+            return x.degree == 0
+        end
+        function TermInterface.exprhead(x::Node)::Symbol
+            return :call
+        end
+        function TermInterface.operation(x::Node)
+            @assert x.degree != 0
+            if x.degree == 1
+                return ($options).unaops[x.op]
+            else
+                return ($options).binops[x.op]
+            end
+        end
+        function TermInterface.arguments(x::Node{T})::Vector{Node{T}} where {T}
+            if x.degree == 0
+                return Node{T}[]
+            elseif x.degree == 1
+                return [x.l]
+            else
+                return [x.l, x.r]
+            end
+        end
     end
 
     return options
