@@ -4,6 +4,7 @@ import ..CoreModule: Node, copy_node, Options, Dataset, RecordType
 import ..EquationUtilsModule: compute_complexity, count_constants, count_depth
 import ..LossFunctionsModule: score_func, score_func_batch
 import ..CheckConstraintsModule: check_constraints
+import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..PopMemberModule: PopMember
 import ..MutationFunctionsModule:
     gen_random_tree_fixed_size,
@@ -21,11 +22,10 @@ import ..RecorderModule: @recorder
 #  exp(-delta/T) defines probability of accepting a change
 function next_generation(
     dataset::Dataset{T},
-    baseline::T,
     member::PopMember{T},
     temperature::T,
     curmaxsize::Int,
-    frequencyComplexity::AbstractVector{T},
+    running_search_statistics::RunningSearchStatistics,
     options::Options;
     tmp_recorder::RecordType,
 )::Tuple{PopMember{T},Bool,Float64} where {T<:Real}
@@ -37,7 +37,7 @@ function next_generation(
 
     #TODO - reconsider this
     if options.batching
-        beforeScore, beforeLoss = score_func_batch(dataset, baseline, prev, options)
+        beforeScore, beforeLoss = score_func_batch(dataset, prev, options)
         num_evals += (options.batchSize / dataset.n)
     else
         beforeScore = member.score
@@ -184,10 +184,10 @@ function next_generation(
     end
 
     if options.batching
-        afterScore, afterLoss = score_func_batch(dataset, baseline, tree, options)
+        afterScore, afterLoss = score_func_batch(dataset, tree, options)
         num_evals += (options.batchSize / dataset.n)
     else
-        afterScore, afterLoss = score_func(dataset, baseline, tree, options)
+        afterScore, afterLoss = score_func(dataset, tree, options)
         num_evals += 1
     end
 
@@ -218,8 +218,16 @@ function next_generation(
     if options.useFrequency
         oldSize = compute_complexity(prev, options)
         newSize = compute_complexity(tree, options)
-        old_frequency = (oldSize <= options.maxsize) ? frequencyComplexity[oldSize] : 1e-6
-        new_frequency = (newSize <= options.maxsize) ? frequencyComplexity[newSize] : 1e-6
+        old_frequency = if (oldSize <= options.maxsize)
+            running_search_statistics.frequencies[oldSize]
+        else
+            1e-6
+        end
+        new_frequency = if (newSize <= options.maxsize)
+            running_search_statistics.frequencies[newSize]
+        else
+            1e-6
+        end
         probChange *= old_frequency / new_frequency
     end
 
@@ -265,7 +273,6 @@ function crossover_generation(
     member1::PopMember,
     member2::PopMember,
     dataset::Dataset{T},
-    baseline::T,
     curmaxsize::Int,
     options::Options,
 )::Tuple{PopMember,PopMember,Bool,Float64} where {T<:Real}
@@ -292,12 +299,12 @@ function crossover_generation(
         num_tries += 1
     end
     if options.batching
-        afterScore1, afterLoss1 = score_func_batch(dataset, baseline, child_tree1, options)
-        afterScore2, afterLoss2 = score_func_batch(dataset, baseline, child_tree2, options)
+        afterScore1, afterLoss1 = score_func_batch(dataset, child_tree1, options)
+        afterScore2, afterLoss2 = score_func_batch(dataset, child_tree2, options)
         num_evals += 2 * (options.batchSize / dataset.n)
     else
-        afterScore1, afterLoss1 = score_func(dataset, baseline, child_tree1, options)
-        afterScore2, afterLoss2 = score_func(dataset, baseline, child_tree2, options)
+        afterScore1, afterLoss1 = score_func(dataset, child_tree1, options)
+        afterScore2, afterLoss2 = score_func(dataset, child_tree2, options)
         num_evals += options.batchSize / dataset.n
     end
 

@@ -95,6 +95,7 @@ include("EquationUtils.jl")
 include("EvaluateEquation.jl")
 include("EvaluateEquationDerivative.jl")
 include("CheckConstraints.jl")
+include("AdaptiveParsimony.jl")
 include("MutationFunctions.jl")
 include("LossFunctions.jl")
 include("PopMember.jl")
@@ -107,6 +108,7 @@ include("Mutate.jl")
 include("RegularizedEvolution.jl")
 include("SingleIteration.jl")
 include("ProgressBars.jl")
+include("SearchUtils.jl")
 
 import .CoreModule:
     CONST_TYPE,
@@ -149,8 +151,7 @@ import .CoreModule:
     SRDistributed,
     string_tree,
     print_tree
-import .UtilsModule:
-    debug, debug_inline, is_anonymous_function, recursive_merge, next_worker, @sr_spawner
+import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge
 import .EquationUtilsModule:
     count_nodes,
     compute_complexity,
@@ -161,13 +162,15 @@ import .EquationUtilsModule:
 import .EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
 import .EvaluateEquationDerivativeModule: eval_diff_tree_array, eval_grad_tree_array
 import .CheckConstraintsModule: check_constraints
+import .AdaptiveParsimonyModule:
+    RunningSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
 import .MutationFunctionsModule:
     gen_random_tree,
     gen_random_tree_fixed_size,
     random_node,
     random_node_and_parent,
     crossover_trees
-import .LossFunctionsModule: eval_loss, loss, score_func
+import .LossFunctionsModule: eval_loss, loss, score_func, update_baseline_loss!
 import .PopMemberModule: PopMember, copy_pop_member
 import .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 import .HallOfFameModule:
@@ -175,8 +178,20 @@ import .HallOfFameModule:
 import .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
 import .InterfaceSymbolicUtilsModule: node_to_symbolic, symbolic_to_node
 import .SimplifyEquationModule: combine_operators, simplify_tree
-import .ProgressBarsModule: ProgressBar, set_multiline_postfix
+import .ProgressBarsModule: WrappedProgressBar
 import .RecorderModule: @recorder, find_iteration_from_record
+import .SearchUtilsModule:
+    next_worker,
+    @sr_spawner,
+    watch_stream,
+    close_reader!,
+    check_for_user_quit,
+    check_for_loss_threshold,
+    check_for_timeout,
+    check_max_evals,
+    update_progress_bar!,
+    print_search_state,
+    init_dummy_pops
 
 include("Configure.jl")
 include("Deprecates.jl")
@@ -309,11 +324,6 @@ function EquationSearch(
     saved_state::Union{StateType{T},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
 ) where {T<:Real}
-
-    # Population(datasets[j], baselineMSEs[j], npop=options.npop,
-    #            nlength=3, options=options, nfeatures=datasets[j].nfeatures),
-    # HallOfFame(options),
-
     noprocs = (procs === nothing && numprocs == 0)
     someprocs = !noprocs
 
@@ -356,21 +366,7 @@ function _EquationSearch(
         end
     end
 
-    can_read_input = true
-    try
-        Base.start_reading(stdin)
-        bytes = bytesavailable(stdin)
-        if bytes > 0
-            # Clear out initial data
-            read(stdin, bytes)
-        end
-    catch err
-        if isa(err, MethodError)
-            can_read_input = false
-        else
-            throw(err)
-        end
-    end
+    stdin_reader = watch_stream(stdin)
 
     # Redefine print, show:
     @eval begin
@@ -391,20 +387,8 @@ function _EquationSearch(
         test_dataset_configuration(example_dataset, options)
     end
 
-    if example_dataset.weighted
-        avgys = [
-            sum(dataset.y .* dataset.weights) / sum(dataset.weights) for dataset in datasets
-        ]
-        baselineMSEs = [
-            loss(dataset.y, ones(T, dataset.n) .* avgy, dataset.weights, options) for
-            dataset in datasets, avgy in avgys
-        ]
-    else
-        avgys = [sum(dataset.y) / dataset.n for dataset in datasets]
-        baselineMSEs = [
-            loss(dataset.y, ones(T, dataset.n) .* avgy, options) for
-            (dataset, avgy) in zip(datasets, avgys)
-        ]
+    for dataset in datasets
+        update_baseline_loss!(dataset, options)
     end
 
     if options.seed !== nothing
@@ -436,29 +420,10 @@ function _EquationSearch(
 
     # This is a recorder for populations, but is not actually used for processing, just
     # for the final return.
-    returnPops = [
-        [
-            Population(
-                datasets[j],
-                baselineMSEs[j];
-                npop=1,
-                options=options,
-                nfeatures=datasets[j].nfeatures,
-            ) for i in 1:(options.npopulations)
-        ] for j in 1:nout
-    ]
+    returnPops = init_dummy_pops(nout, options.npopulations, datasets, options)
     # These initial populations are discarded:
-    bestSubPops = [
-        [
-            Population(
-                datasets[j],
-                baselineMSEs[j];
-                npop=1,
-                options=options,
-                nfeatures=datasets[j].nfeatures,
-            ) for i in 1:(options.npopulations)
-        ] for j in 1:nout
-    ]
+    bestSubPops = init_dummy_pops(nout, options.npopulations, datasets, options)
+
     if saved_state === nothing
         hallOfFame = [HallOfFame(options, T) for j in 1:nout]
     else
@@ -470,13 +435,8 @@ function _EquationSearch(
     end
     actualMaxsize = options.maxsize + MAX_DEGREE
 
-    # Make frequencyComplexities a moving average, rather than over all time:
-    window_size = 100000
-    smallest_frequency_allowed = 1
-    # 3 here means this will last 3 cycles before being "refreshed"
-    # We start out with even numbers at all frequencies.
-    frequencyComplexities = [
-        ones(T, actualMaxsize) * window_size / actualMaxsize for i in 1:nout
+    all_running_search_statistics = [
+        RunningSearchStatistics(; options=options) for i in 1:nout
     ]
 
     curmaxsizes = [3 for j in 1:nout]
@@ -535,8 +495,7 @@ function _EquationSearch(
             if saved_state === nothing
                 new_pop = @sr_spawner ConcurrencyType worker_idx (
                     Population(
-                        datasets[j],
-                        baselineMSEs[j];
+                        datasets[j];
                         npop=options.npop,
                         nlength=3,
                         options=options,
@@ -562,8 +521,7 @@ function _EquationSearch(
                     )
                     new_pop = @sr_spawner ConcurrencyType worker_idx (
                         Population(
-                            datasets[j],
-                            baselineMSEs[j];
+                            datasets[j];
                             npop=options.npop,
                             nlength=3,
                             options=options,
@@ -581,8 +539,7 @@ function _EquationSearch(
     # 2. Start the cycle on every process:
     for j in 1:nout
         dataset = datasets[j]
-        baselineMSE = baselineMSEs[j]
-        frequencyComplexity = frequencyComplexities[j]
+        running_search_statistics = all_running_search_statistics[j]
         curmaxsize = curmaxsizes[j]
         for i in 1:(options.npopulations)
             @recorder record["out$(j)_pop$(i)"] = RecordType()
@@ -605,29 +562,26 @@ function _EquationSearch(
                     "iteration0" => record_population(in_pop, options)
                 )
                 tmp_num_evals = 0.0
+                normalize_frequencies!(running_search_statistics)
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
-                    baselineMSE,
                     in_pop,
                     options.ncyclesperiteration,
                     curmaxsize,
-                    copy(frequencyComplexity) / sum(frequencyComplexity);
+                    running_search_statistics;
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
                 )
                 tmp_num_evals += evals_from_cycle
                 tmp_pop, evals_from_optimize = optimize_and_simplify_population(
-                    dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record
+                    dataset, tmp_pop, options, curmaxsize, cur_record
                 )
                 tmp_num_evals += evals_from_optimize
                 if options.batching
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
                         score, result_loss = score_func(
-                            dataset,
-                            baselineMSE,
-                            tmp_best_seen.members[i_member].tree,
-                            options,
+                            dataset, tmp_best_seen.members[i_member].tree, options
                         )
                         tmp_best_seen.members[i_member].score = score
                         tmp_best_seen.members[i_member].loss = result_loss
@@ -644,12 +598,12 @@ function _EquationSearch(
     start_time = time()
     total_cycles = options.npopulations * niterations
     cycles_remaining = [total_cycles for j in 1:nout]
-    sum_cycle_remaining = sum(cycles_remaining)
     if options.progress && nout == 1
         #TODO: need to iterate this on the max cycles remaining!
-        progress_bar = ProgressBar(1:sum_cycle_remaining; width=options.terminal_width)
-        cur_cycle = nothing
-        cur_state = nothing
+        sum_cycle_remaining = sum(cycles_remaining)
+        progress_bar = WrappedProgressBar(
+            1:sum_cycle_remaining; width=options.terminal_width
+        )
     end
 
     last_print_time = time()
@@ -672,7 +626,8 @@ function _EquationSearch(
     all_idx = [(j, i) for j in 1:nout for i in 1:(options.npopulations)]
     shuffle!(all_idx)
     kappa = 0
-    head_node_time = Dict("occupied" => 0, "start" => time())
+    head_node_occupied_for = 0.0
+    head_node_start = time()
     while sum(cycles_remaining) > 0
         kappa += 1
         if kappa > options.npopulations * nout
@@ -713,7 +668,6 @@ function _EquationSearch(
             num_evals[j][i] += cur_num_evals
 
             dataset = datasets[j]
-            baselineMSE = baselineMSEs[j]
             curmaxsize = curmaxsizes[j]
 
             #Try normal copy...
@@ -730,9 +684,7 @@ function _EquationSearch(
                 size = compute_complexity(member.tree, options)
 
                 if part_of_cur_pop
-                    if size <= options.maxsize
-                        frequencyComplexities[j][size] += 1
-                    end
+                    update_frequencies!(all_running_search_statistics[j]; size=size)
                 end
                 actualMaxsize = options.maxsize + MAX_DEGREE
 
@@ -827,20 +779,20 @@ function _EquationSearch(
                     "iteration$(iteration)" => record_population(cur_pop, options)
                 )
                 tmp_num_evals = 0.0
+                normalize_frequencies!(all_running_search_statistics[j])
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
-                    baselineMSE,
                     cur_pop,
                     options.ncyclesperiteration,
                     curmaxsize,
-                    copy(frequencyComplexities[j]) / sum(frequencyComplexities[j]);
+                    all_running_search_statistics[j];
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
                 )
                 tmp_num_evals += evals_from_cycle
                 tmp_pop, evals_from_optimize = optimize_and_simplify_population(
-                    dataset, baselineMSE, tmp_pop, options, curmaxsize, cur_record
+                    dataset, tmp_pop, options, curmaxsize, cur_record
                 )
                 tmp_num_evals += evals_from_optimize
 
@@ -849,10 +801,7 @@ function _EquationSearch(
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
                         if tmp_best_seen.exists[i_member]
                             score, result_loss = score_func(
-                                dataset,
-                                baselineMSE,
-                                tmp_best_seen.members[i_member].tree,
-                                options,
+                                dataset, tmp_best_seen.members[i_member].tree, options
                             )
                             tmp_best_seen.members[i_member].score = score
                             tmp_best_seen.members[i_member].loss = result_loss
@@ -884,60 +833,20 @@ function _EquationSearch(
             num_equations += options.ncyclesperiteration * options.npop / 10.0
 
             if options.progress && nout == 1
-                # set_postfix(iter, Equations=)
-                equation_strings = string_dominating_pareto_curve(
-                    hallOfFame[j], baselineMSE, datasets[j], options, avgys[j]
+                head_node_occupation =
+                    100 * head_node_occupied_for / (time() - head_node_start)
+                update_progress_bar!(
+                    progress_bar;
+                    hall_of_fame=hallOfFame[j],
+                    dataset=datasets[j],
+                    options=options,
+                    head_node_occupation=head_node_occupation,
                 )
-                load_string =
-                    @sprintf(
-                        "Head worker occupation: %.1f",
-                        100 * head_node_time["occupied"] /
-                            (time() - head_node_time["start"])
-                    ) * "%\n"
-                # TODO - include command about "q" here.
-                load_string *= @sprintf(
-                    "Press 'q' and then <enter> to stop execution early.\n"
-                )
-                equation_strings = load_string * equation_strings
-                set_multiline_postfix(progress_bar, equation_strings)
-                if cur_cycle === nothing
-                    (cur_cycle, cur_state) = iterate(progress_bar)
-                else
-                    (cur_cycle, cur_state) = iterate(progress_bar, cur_state)
-                end
-                sum_cycle_remaining = sum(cycles_remaining)
             end
             head_node_end_work = time()
-            head_node_time["occupied"] += (head_node_end_work - head_node_start_work)
+            head_node_occupied_for += (head_node_end_work - head_node_start_work)
 
-            # Move moving window along frequencyComplexities:
-            cur_size_frequency_complexities = sum(frequencyComplexities[j])
-            if cur_size_frequency_complexities > window_size
-                difference_in_size = cur_size_frequency_complexities - window_size
-                # We need frequencyComplexities to be positive, but also sum to a number.
-                num_loops = 0
-                # TODO: Clean this code up. Should not have to have
-                # loop catching.
-                while difference_in_size > 0
-                    indices_to_subtract = findall(
-                        frequencyComplexities[j] .> smallest_frequency_allowed
-                    )
-                    num_remaining = size(indices_to_subtract, 1)
-                    amount_to_subtract = min(
-                        difference_in_size / num_remaining,
-                        min(frequencyComplexities[j][indices_to_subtract]...) -
-                        smallest_frequency_allowed,
-                    )
-                    frequencyComplexities[j][indices_to_subtract] .-= amount_to_subtract
-                    total_amount_to_subtract = amount_to_subtract * num_remaining
-                    difference_in_size -= total_amount_to_subtract
-                    num_loops += 1
-                    if num_loops > 1000 || total_amount_to_subtract < 1e-6
-                        # Sometimes, total_amount_to_subtract can be a very very small number.
-                        break
-                    end
-                end
-            end
+            move_window!(all_running_search_statistics[j])
         end
         sleep(1e-6)
 
@@ -947,6 +856,7 @@ function _EquationSearch(
         #Update if time has passed, and some new equations generated.
         if elapsed > print_every_n_seconds && num_equations > 0.0
             # Dominating pareto curve - must be better than all simpler equations
+            head_node_occupation = 100 * head_node_occupied_for / (time() - head_node_start)
             current_speed = num_equations / elapsed
             average_over_m_measurements = 10 #for print_every...=5, this gives 50 second running average
             push!(equation_speed, current_speed)
@@ -954,38 +864,15 @@ function _EquationSearch(
                 deleteat!(equation_speed, 1)
             end
             if (options.verbosity > 0) || (options.progress && nout > 1)
-                @printf("\n")
-                average_speed = sum(equation_speed) / length(equation_speed)
-                @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
-                @printf(
-                    "Head worker occupation: %.1f%%\n",
-                    100 * head_node_time["occupied"] / (time() - head_node_time["start"])
+                print_search_state(
+                    hallOfFame,
+                    datasets,
+                    options;
+                    equation_speed=equation_speed,
+                    total_cycles=total_cycles,
+                    cycles_remaining=cycles_remaining,
+                    head_node_occupation=head_node_occupation,
                 )
-                cycles_elapsed = total_cycles * nout - sum(cycles_remaining)
-                @printf(
-                    "Progress: %d / %d total iterations (%.3f%%)\n",
-                    cycles_elapsed,
-                    total_cycles * nout,
-                    100.0 * cycles_elapsed / total_cycles / nout
-                )
-
-                @printf("==============================\n")
-                for j in 1:nout
-                    if nout > 1
-                        @printf("Best equations for output %d\n", j)
-                    end
-                    equation_strings = string_dominating_pareto_curve(
-                        hallOfFame[j], baselineMSEs[j], datasets[j], options, avgys[j]
-                    )
-                    print(equation_strings)
-                    @printf("==============================\n")
-
-                    # Debugging code for frequencyComplexities:
-                    # for size_i=1:actualMaxsize
-                    #     @printf("frequencyComplexities size %d = %.2f\n", size_i, frequencyComplexities[j][size_i])
-                    # end
-                end
-                @printf("Press 'q' and then <enter> to stop execution early.\n")
             end
             last_print_time = time()
             num_equations = 0.0
@@ -994,70 +881,19 @@ function _EquationSearch(
 
         ################################################################
         ## Early stopping code
-        if options.earlyStopCondition !== nothing
-            # Check if all nout are below stopping condition.
-            all_below = true
-            for j in 1:nout
-                dominating = calculate_pareto_frontier(datasets[j], hallOfFame[j], options)
-                # Check if zero size:
-                if length(dominating) == 0
-                    all_below = false
-                elseif !any([
-                    options.earlyStopCondition(
-                        member.loss, compute_complexity(member.tree, options)
-                    ) for member in dominating
-                ])
-                    # None of the equations meet the stop condition.
-                    all_below = false
-                end
-
-                if !all_below
-                    break
-                end
-            end
-            if all_below # Early stop!
-                break
-            end
-        end
-        ################################################################
-
-        ################################################################
-        ## Signal stopping code
-        if can_read_input
-            bytes = bytesavailable(stdin)
-            if bytes > 0
-                # Read:
-                data = read(stdin, bytes)
-                control_c = 0x03
-                quit = 0x71
-                if length(data) > 1 && (data[end] == control_c || data[end - 1] == quit)
-                    break
-                end
-            end
-        end
-        ################################################################
-
-        ################################################################
-        ## Timeout stopping code
-        if options.timeout_in_seconds !== nothing
-            if time() - start_time > options.timeout_in_seconds
-                break
-            end
-        end
-        ################################################################
-
-        ################################################################
-        ## num_evals stopping code
-        if options.max_evals !== nothing
-            if options.max_evals <= sum(sum, num_evals)
-                break
-            end
+        if any((
+            check_for_loss_threshold(datasets, hallOfFame, options),
+            check_for_user_quit(stdin_reader),
+            check_for_timeout(start_time, options),
+            check_max_evals(num_evals, options),
+        ))
+            break
         end
         ################################################################
     end
-    if can_read_input
-        Base.stop_reading(stdin)
-    end
+
+    close_reader!(stdin_reader)
+
     if we_created_procs
         rmprocs(procs)
     end

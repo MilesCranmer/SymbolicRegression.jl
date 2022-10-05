@@ -4,6 +4,7 @@ import Random: shuffle!
 import ..CoreModule: Options, Dataset, RecordType, string_tree
 import ..PopMemberModule: PopMember
 import ..PopulationModule: Population, best_of_sample
+import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..MutateModule: next_generation, crossover_generation
 import ..RecorderModule: @recorder
 
@@ -11,11 +12,10 @@ import ..RecorderModule: @recorder
 # with the fittest of a small subsample
 function reg_evol_cycle(
     dataset::Dataset{T},
-    baseline::T,
     pop::Population,
     temperature::T,
     curmaxsize::Int,
-    frequencyComplexity::AbstractVector{T},
+    running_search_statistics::RunningSearchStatistics,
     options::Options,
     record::RecordType,
 )::Tuple{Population,Float64} where {T<:Real}
@@ -58,11 +58,10 @@ function reg_evol_cycle(
             mutation_recorder = RecordType()
             babies[i], accepted[i], array_num_evals[i] = next_generation(
                 dataset,
-                baseline,
                 allstar,
                 temperature,
                 curmaxsize,
-                frequencyComplexity,
+                running_search_statistics,
                 options;
                 tmp_recorder=mutation_recorder,
             )
@@ -79,15 +78,14 @@ function reg_evol_cycle(
     else
         for i in 1:round(Int, pop.n / options.ns)
             if rand() > options.crossoverProbability
-                allstar = best_of_sample(pop, frequencyComplexity, options)
+                allstar = best_of_sample(pop, running_search_statistics, options)
                 mutation_recorder = RecordType()
                 baby, mutation_accepted, tmp_num_evals = next_generation(
                     dataset,
-                    baseline,
                     allstar,
                     temperature,
                     curmaxsize,
-                    frequencyComplexity,
+                    running_search_statistics,
                     options;
                     tmp_recorder=mutation_recorder,
                 )
@@ -134,11 +132,11 @@ function reg_evol_cycle(
                 pop.members[oldest] = baby
 
             else # Crossover
-                allstar1 = best_of_sample(pop, frequencyComplexity, options)
-                allstar2 = best_of_sample(pop, frequencyComplexity, options)
+                allstar1 = best_of_sample(pop, running_search_statistics, options)
+                allstar2 = best_of_sample(pop, running_search_statistics, options)
 
                 baby1, baby2, crossover_accepted, tmp_num_evals = crossover_generation(
-                    allstar1, allstar2, dataset, baseline, curmaxsize, options
+                    allstar1, allstar2, dataset, curmaxsize, options
                 )
                 num_evals += tmp_num_evals
 

@@ -41,7 +41,7 @@ function PopMember(
 end
 
 """
-    PopMember(dataset::Dataset{T}, baseline::T,
+    PopMember(dataset::Dataset{T},
               t::Node, options::Options)
 
 Create a population member with a birth date at the current time.
@@ -50,20 +50,18 @@ Automatically compute the score for this tree.
 # Arguments
 
 - `dataset::Dataset{T}`: The dataset to evaluate the tree on.
-- `baseline::T`: The baseline loss.
 - `t::Node`: The tree for the population member.
 - `options::Options`: What options to use.
 """
 function PopMember(
     dataset::Dataset{T},
-    baseline::T,
     t::Node{T},
     options::Options;
     ref::Int=-1,
     parent::Int=-1,
     deterministic=nothing,
 ) where {T<:Real}
-    score, loss = score_func(dataset, baseline, t, options)
+    score, loss = score_func(dataset, t, options)
     return PopMember(t, score, loss; ref=ref, parent=parent, deterministic=deterministic)
 end
 
