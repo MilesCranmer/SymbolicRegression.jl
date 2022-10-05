@@ -93,40 +93,49 @@ function combine_operators(tree::Node{T}, options::Options)::Node{T} where {T}
 end
 
 # Simplify tree
-function simplify_tree(tree::Node{T}, options::Options)::Node{T} where {T<:Real}
-    if tree.degree == 1
-        tree.l = simplify_tree(tree.l, options)
-        l = tree.l.val
-        if tree.l.degree == 0 && tree.l.constant && isgood(l)
-            out = options.unaops[tree.op](l)
-            if isbad(out)
-                return tree
-            end
-            return Node(; val=convert(T, out))
-        end
-    elseif tree.degree == 2
-        tree.l = simplify_tree(tree.l, options)
-        tree.r = simplify_tree(tree.r, options)
-        constantsBelow = (
-            tree.l.degree == 0 && tree.l.constant && tree.r.degree == 0 && tree.r.constant
-        )
-        if constantsBelow
-            # NaN checks:
+function simplify_tree(
+    tree::Node{T},
+    options::Options,
+    id_map::IdDict{Node{T},Node{T}}=IdDict{Node{T},Node{T}}(),
+)::Node{T} where {T<:Real}
+    get!(id_map, tree) do
+        if tree.degree == 1
+            tree.l = simplify_tree(tree.l, options, id_map)
             l = tree.l.val
-            r = tree.r.val
-            if isbad(l) || isbad(r)
-                return tree
+            if tree.l.degree == 0 && tree.l.constant && isgood(l)
+                out = options.unaops[tree.op](l)
+                if isbad(out)
+                    return tree
+                end
+                return Node(; val=convert(T, out))
             end
+        elseif tree.degree == 2
+            tree.l = simplify_tree(tree.l, options, id_map)
+            tree.r = simplify_tree(tree.r, options, id_map)
+            constantsBelow = (
+                tree.l.degree == 0 &&
+                tree.l.constant &&
+                tree.r.degree == 0 &&
+                tree.r.constant
+            )
+            if constantsBelow
+                # NaN checks:
+                l = tree.l.val
+                r = tree.r.val
+                if isbad(l) || isbad(r)
+                    return tree
+                end
 
-            # Actually compute:
-            out = options.binops[tree.op](l, r)
-            if isbad(out)
-                return tree
+                # Actually compute:
+                out = options.binops[tree.op](l, r)
+                if isbad(out)
+                    return tree
+                end
+                return Node(; val=convert(T, out))
             end
-            return Node(; val=convert(T, out))
         end
+        return tree
     end
-    return tree
 end
 
 end
