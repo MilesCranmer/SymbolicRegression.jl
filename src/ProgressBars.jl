@@ -76,7 +76,6 @@ mutable struct ProgressBar
     end
 end
 
-
 function format_time(seconds)
     if isfinite(seconds)
         mins, s = divrem(round(Int, seconds), 60)
@@ -286,7 +285,7 @@ function manually_iterate!(progress_bar::WrappedProgressBar)
 end
 
 function set_multiline_postfix!(t::WrappedProgressBar, postfix::AbstractString)
-    set_multiline_postfix!(t.bar, postfix)
+    return set_multiline_postfix!(t.bar, postfix)
 end
 
 end
