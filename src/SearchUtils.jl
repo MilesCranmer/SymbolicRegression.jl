@@ -11,7 +11,7 @@ import ..EquationUtilsModule: compute_complexity
 import ..PopulationModule: Population
 import ..HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
-import ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix
+import ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
 
 function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Vector{Int})::Int
     job_counts = Dict(proc => 0 for proc in procs)
@@ -149,16 +149,8 @@ function update_progress_bar!(
     # TODO - include command about "q" here.
     load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
     equation_strings = load_string * equation_strings
-    set_multiline_postfix(progress_bar.bar, equation_strings)
-    cur_cycle = progress_bar.cycle
-    cur_state = progress_bar.state
-    if cur_cycle === nothing
-        cur_cycle, cur_state = iterate(progress_bar.bar)
-    else
-        cur_cycle, cur_state = iterate(progress_bar.bar, cur_state)
-    end
-    progress_bar.cycle = cur_cycle
-    progress_bar.state = cur_state
+    set_multiline_postfix!(progress_bar, equation_strings)
+    manually_iterate!(progress_bar)
     return nothing
 end
 
