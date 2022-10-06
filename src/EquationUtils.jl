@@ -165,22 +165,23 @@ end
 function set_constants(
     tree::Node{T},
     constants::AbstractVector{T},
+    iter::Int=1,
     nodes_seen::IdDict{Node{T},Bool}=IdDict{Node{T},Bool}(),
-) where {T}
-    haskey(nodes_seen, tree) && return nothing
+)::Int where {T}
+    haskey(nodes_seen, tree) && return iter
     if tree.degree == 0
         if tree.constant
-            tree.val = constants[1]
+            tree.val = constants[iter]
+            iter = iter + 1
         end
     elseif tree.degree == 1
-        set_constants(tree.l, constants, nodes_seen)
+        iter = set_constants(tree.l, constants, iter, nodes_seen)
     else
-        numberLeft = count_constants(tree.l)
-        set_constants(tree.l, constants, nodes_seen)
-        set_constants(tree.r, constants[(numberLeft + 1):end], nodes_seen)
+        iter = set_constants(tree.l, constants, iter, nodes_seen)
+        iter = set_constants(tree.r, constants, iter, nodes_seen)
     end
     nodes_seen[tree] = true
-    return nothing
+    return iter
 end
 
 ## Assign index to nodes of a tree
