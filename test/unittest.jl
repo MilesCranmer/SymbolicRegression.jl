@@ -36,6 +36,10 @@ end
     include("test_evaluation.jl")
 end
 
+@safetestset "Test constant setting" begin
+    include("test_set_constants.jl")
+end
+
 @safetestset "Test validity of integer expression evaluation" begin
     include("test_integer_evaluation.jl")
 end
