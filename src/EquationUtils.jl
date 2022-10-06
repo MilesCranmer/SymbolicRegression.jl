@@ -36,11 +36,21 @@ function has_operators(tree::Node)::Bool
 end
 
 # Count the number of constants in an equation
-function count_constants(tree::Node{T})::Int where {T}
-    return _count_constants(tree, IdDict{Node{T},Bool}())
+function count_constants(tree::Node{T}; ignore_duplicates::Bool=true)::Int where {T}
+    return _count_constants(tree, ignore_duplicates ? IdDict{Node{T},Bool}() : nothing)
 end
 
-function _count_constants(tree::Node{T}, nodes_seen::ID)::Int where {T,ID}
+function _count_constants(tree::Node{T}, nodes_seen::Nothing)::Int where {T,ID}
+    if tree.degree == 0
+        return tree.constant ? 1 : 0
+    elseif tree.degree == 1
+        return _count_constants(tree.l, nodes_seen)
+    else
+        return _count_constants(tree.l, nodes_seen) + _count_constants(tree.r, nodes_seen)
+    end
+end
+
+function _count_constants(tree::Node{T}, nodes_seen::ID)::Int where {T,ID<:IdDict}
     haskey(nodes_seen, tree) && return 0
     count = if tree.degree == 0
         if tree.constant
