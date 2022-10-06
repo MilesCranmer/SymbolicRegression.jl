@@ -14,7 +14,9 @@ import ..MutationFunctionsModule:
     prepend_random_op,
     insert_random_op,
     delete_random_op,
-    crossover_trees
+    crossover_trees,
+    connect_random_nodes!,
+    break_random_connections!
 import ..SimplifyEquationModule: simplify_tree, combine_operators
 import ..RecorderModule: @recorder
 
@@ -137,6 +139,14 @@ function next_generation(
             @recorder tmp_recorder["type"] = "regenerate"
 
             is_success_always_possible = true
+        elseif mutationChoice < cweights[8]  # make random connection
+            connect_random_nodes!(tree)
+            is_success_always_possible = true
+            @recorder tmp_recorder["type"] = "connect"
+        elseif mutationChoice < cweights[9]  # break random connection
+            break_random_connections!(tree)
+            is_success_always_possible = true
+            @recorder tmp_recorder["type"] = "break"
         else # no mutation applied
             @recorder begin
                 tmp_recorder["type"] = "identity"

@@ -295,7 +295,7 @@ function Options(;
     annealing=false,
     batching=false,
     batchSize=50,
-    mutationWeights=[0.048, 0.47, 0.79, 5.1, 1.7, 0.0020, 0.00023, 0.21],
+    mutationWeights=[0.048, 0.47, 0.79, 5.1, 1.7, 0.0020, 0.00023, 0.0, 0.0, 0.21],
     crossoverProbability=0.066f0,
     warmupMaxsizeBy=0.0f0,
     useFrequency=true,
@@ -530,7 +530,7 @@ function Options(;
     end
 
     mutationWeights = map((x,) -> convert(Float64, x), mutationWeights)
-    if length(mutationWeights) != 8
+    if length(mutationWeights) != 10
         error("Not the right number of mutation probabilities given")
     end
 
