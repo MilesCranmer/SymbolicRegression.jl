@@ -24,6 +24,9 @@ base_tree.l.l = x3 * x2 - 1.5
 @test tree.l.l === tree.r
 @test hash(tree.l.l) == hash(tree.r)
 
+##############################################################################
+##### Copy: ##################################################################
+##############################################################################
 # When we copy with the normal copy, the topology breaks:
 copy_without_topology = copy_node(tree)
 @test !(copy_without_topology.l.l === copy_without_topology.r)
@@ -45,7 +48,11 @@ copy_with_topology
 @test copy_with_topology.l.l === copy_with_topology.r
 @test hash(copy_with_topology.l.l) == hash(copy_with_topology.r)
 @test string_tree(copy_with_topology.l.l, options) != string_tree(base_tree, options)
+##############################################################################
 
+##############################################################################
+##### Convert: ###############################################################
+##############################################################################
 # We also test whether `convert` breaks shared children.
 # The node type here should be Float64.
 @test typeof(tree).parameters[1] == Float64
@@ -54,3 +61,18 @@ float32_tree = convert(Node{Float32}, tree)
 @test typeof(float32_tree).parameters[1] == Float32
 # The linkage should be kept:
 @test float32_tree.l.l === float32_tree.r
+##############################################################################
+
+##############################################################################
+##### Strings: ###############################################################
+##############################################################################
+base_tree = x1
+tree = sin(base_tree) + base_tree
+s = string_tree(tree, options)
+@test s == "(sin(x1) + {x1})"
+
+base_tree = x1 + cos(x2) - 3.2
+tree = sin(base_tree) + base_tree
+s = string_tree(tree, options)
+@test s == "(sin((x1 + cos(x2)) - 3.2) + {(x1 + cos(x2)) - 3.2})"
+##############################################################################

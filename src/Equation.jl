@@ -273,29 +273,6 @@ function get_op_name(op::String)
     return get(OP_NAMES, op, op)
 end
 
-function string_op(
-    op::F,
-    tree::Node,
-    options::Options;
-    bracketed::Bool=false,
-    varMap::Union{Array{String,1},Nothing}=nothing,
-)::String where {F}
-    op_name = get_op_name(string(op))
-    if op_name in ["+", "-", "*", "/", "^"]
-        l = string_tree(tree.l, options; bracketed=false, varMap=varMap)
-        r = string_tree(tree.r, options; bracketed=false, varMap=varMap)
-        if bracketed
-            return "$l $op_name $r"
-        else
-            return "($l $op_name $r)"
-        end
-    else
-        l = string_tree(tree.l, options; bracketed=true, varMap=varMap)
-        r = string_tree(tree.r, options; bracketed=true, varMap=varMap)
-        return "$op_name($l, $r)"
-    end
-end
-
 """
     string_tree(tree::Node, options::Options; kws...)
 
@@ -307,28 +284,53 @@ Convert an equation to a string.
     to print for each feature.
 """
 function string_tree(
-    tree::Node,
+    tree::Node{T},
     options::Options;
     bracketed::Bool=false,
     varMap::Union{Array{String,1},Nothing}=nothing,
-)::String
-    if tree.degree == 0
-        if tree.constant
-            return string(tree.val)
-        else
-            if varMap === nothing
-                return "x$(tree.feature)"
+    id_map::IdDict{Node{T},String}=IdDict{Node{T},String}(),
+)::String where {T}
+    if haskey(id_map, tree)
+        return "{$(id_map[tree])}"
+    end
+    get!(id_map, tree) do
+        if tree.degree == 0
+            if tree.constant
+                string(tree.val)
             else
-                return varMap[tree.feature]
+                if varMap === nothing
+                    return "x$(tree.feature)"
+                else
+                    return varMap[tree.feature]
+                end
+            end
+        elseif tree.degree == 1
+            op_name = get_op_name(string(options.unaops[tree.op]))
+            return "$(op_name)($(string_tree(tree.l, options, bracketed=true, varMap=varMap, id_map=id_map)))"
+        else
+            op_name = get_op_name(string(options.binops[tree.op]))
+            if op_name in ["+", "-", "*", "/", "^"]
+                l = string_tree(
+                    tree.l, options; bracketed=false, varMap=varMap, id_map=id_map
+                )
+                r = string_tree(
+                    tree.r, options; bracketed=false, varMap=varMap, id_map=id_map
+                )
+                if bracketed
+                    return "$l $op_name $r"
+                else
+                    return "($l $op_name $r)"
+                end
+            else
+                l = string_tree(
+                    tree.l, options; bracketed=true, varMap=varMap, id_map=id_map
+                )
+                r = string_tree(
+                    tree.r, options; bracketed=true, varMap=varMap, id_map=id_map
+                )
+                return "$op_name($l, $r)"
             end
         end
-    elseif tree.degree == 1
-        op_name = get_op_name(string(options.unaops[tree.op]))
-        return "$(op_name)($(string_tree(tree.l, options, bracketed=true, varMap=varMap)))"
-    else
-        return string_op(
-            options.binops[tree.op], tree, options; bracketed=bracketed, varMap=varMap
-        )
     end
 end
 
