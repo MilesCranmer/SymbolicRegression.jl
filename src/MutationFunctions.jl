@@ -1,7 +1,8 @@
 module MutationFunctionsModule
 
 import ..CoreModule: Node, copy_node, set_node!, Options
-import ..EquationUtilsModule: count_nodes, has_constants, has_operators
+import ..EquationUtilsModule:
+    count_nodes, has_constants, has_operators, has_binary_operators
 
 # Return a random node from the tree
 function random_node(tree::Node{T})::Node{T} where {T}
@@ -290,6 +291,68 @@ function crossover_trees(tree1::Node{T}, tree2::Node{T})::Tuple{Node{T},Node{T}}
         tree2 = node1
     end
     return tree1, tree2
+end
+
+"""Is `ancestor` above or equal to `tree` in a tree?"""
+function is_ancestor(ancestor::Node{T}, tree::Node{T})::Bool where {T}
+    ancestor === tree && return true
+    if ancestor.degree == 0
+        return false
+    elseif ancestor.degree == 1
+        return is_ancestor(ancestor.l, tree)
+    else
+        return is_ancestor(ancestor.l, tree) || is_ancestor(ancestor.r, tree)
+    end
+end
+
+"""Connect two random nodes in the tree, deleting the children."""
+function connect_random_nodes!(tree::Node)::Nothing
+    !has_binary_operators(tree) && return nothing
+
+    # We require that one child is not an ancestor of the other.
+    node_to_connect = tree
+    parent = tree
+    side = 'l'
+    max_loops = 100
+    i = 0
+    while i < max_loops
+        i += 1
+        node1, parent1, side1 = random_node_and_parent(tree)
+        parent1 === nothing && continue
+        node2, parent2, side2 = random_node_and_parent(tree)
+        parent2 === nothing && continue
+        # Don't want to simply connect to the same node.
+        node2 === node1 && continue
+        # Want to put node2 to (parent1).(side1)
+        # To have this working, we need to make sure that node2 is not above or equal to parent1.
+        is_ancestor(node2, parent1) && continue
+        node_to_connect = node2::Node
+        parent = parent1::Node
+        side = side1::Char
+        break
+    end
+    if i == max_loops
+        return nothing
+    elseif side == 'l'
+        parent.l = node_to_connect
+    else
+        parent.r = node_to_connect
+    end
+    return nothing
+end
+
+"""Break all shared nodes below a random node."""
+function break_random_connections!(tree::Node)
+    node, parent, side = random_node_and_parent(tree)
+    if parent === nothing
+        return nothing
+    end
+    parent::Node
+    if side == 'l'
+        parent.l = copy_node(node; preserve_topology=false)
+    else
+        parent.r = copy_node(node; preserve_topology=false)
+    end
 end
 
 end
