@@ -57,6 +57,16 @@ function _count_constants(tree::Node{T}, nodes_seen::ID)::Int where {T,ID}
     return count
 end
 
+function has_binary_operators(tree::Node{T})::Bool where {T}
+    if tree.degree == 0
+        return false
+    elseif tree.degree == 1
+        return has_binary_operators(tree.l)
+    else
+        return true
+    end
+end
+
 function has_constants(tree::Node)::Bool
     if tree.degree == 0
         return tree.constant
