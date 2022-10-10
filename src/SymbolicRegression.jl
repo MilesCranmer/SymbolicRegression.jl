@@ -58,6 +58,7 @@ using Distributed
 using JSON3: JSON3
 import Printf: @printf, @sprintf
 using Pkg: Pkg
+using TOML
 import Random: seed!, shuffle!
 using Reexport
 @reexport import LossFunctions:
@@ -87,6 +88,14 @@ using Reexport
     LogitDistLoss,
     QuantileLoss,
     LogCoshLoss
+
+using TOML
+
+# https://discourse.julialang.org/t/how-to-find-out-the-version-of-a-package-from-its-module/37755/15
+const PACKAGE_VERSION = let
+    project = TOML.parsefile(joinpath(pkgdir(@__MODULE__), "Project.toml"))
+    VersionNumber(project["version"])
+end
 
 include("Core.jl")
 include("Recorder.jl")
