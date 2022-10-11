@@ -5,7 +5,7 @@ using StatsBase: StatsBase
 import Random: AbstractRNG
 import LossFunctions: SupervisedLoss
 
-mutable struct MutationWeightings
+mutable struct MutationWeights
     mutate_constant::Float64
     mutate_operator::Float64
     add_node::Float64
@@ -16,10 +16,10 @@ mutable struct MutationWeightings
     do_nothing::Float64
 end
 
-const mutations = fieldnames(MutationWeightings)
+const mutations = fieldnames(MutationWeights)
 
 """
-    MutationWeightings(;kws...)
+    MutationWeights(;kws...)
 
 This defines how often different mutations occur. These weightings
 will be normalized to sum to 1.0 after initialization.
@@ -33,7 +33,7 @@ will be normalized to sum to 1.0 after initialization.
 - `randomize::Float64`: How often to create a random tree.
 - `do_nothing::Float64`: How often to do nothing.
 """
-function MutationWeightings(;
+function MutationWeights(;
     mutate_constant=0.048,
     mutate_operator=0.47,
     add_node=0.79,
@@ -43,7 +43,7 @@ function MutationWeightings(;
     randomize=0.00023,
     do_nothing=0.21,
 )
-    return MutationWeightings(
+    return MutationWeights(
         mutate_constant,
         mutate_operator,
         add_node,
@@ -55,16 +55,16 @@ function MutationWeightings(;
     )
 end
 
-"""Convert MutationWeightings to a vector."""
+"""Convert MutationWeights to a vector."""
 @generated function Base.convert(
-    ::Type{V}, weightings::MutationWeightings
+    ::Type{V}, weightings::MutationWeights
 ) where {V<:AbstractVector}
     fields = [:(weightings.$(mut)) for mut in mutations]
     return :(V([$(fields...)]))
 end
 
 """Sample a mutation, given the weightings."""
-function Base.rand(rng::AbstractRNG, weightings::MutationWeightings)::Symbol
+function Base.rand(rng::AbstractRNG, weightings::MutationWeights)::Symbol
     weights = convert(Vector, weightings)
     return mutations[StatsBase.sample(rng, 1:length(mutations), StatsBase.Weights(weights))]
 end
@@ -125,7 +125,7 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function},D}
     annealing::Bool
     batching::Bool
     batchSize::Int
-    mutation_weights::MutationWeightings
+    mutation_weights::MutationWeights
     crossoverProbability::Float32
     warmupMaxsizeBy::Float32
     useFrequency::Bool
@@ -178,7 +178,7 @@ function Base.print(io::IO, options::Options)
 # Constant tuning:
     perturbationFactor=$(options.perturbationFactor), probNegate=$(options.probNegate), shouldOptimizeConstants=$(options.shouldOptimizeConstants), optimizer_algorithm=$(options.optimizer_algorithm), optimize_probability=$(options.optimize_probability), optimizer_nrestarts=$(options.optimizer_nrestarts), optimizer_iterations=$(options.optimizer_options.iterations),
 # Mutations:
-    mutationWeights=$(options.mutationWeights), crossoverProbability=$(options.crossoverProbability), skip_mutation_failures=$(options.skip_mutation_failures)
+    mutation_weights=$(options.mutation_weights), crossoverProbability=$(options.crossoverProbability), skip_mutation_failures=$(options.skip_mutation_failures)
 # Annealing:
     annealing=$(options.annealing), alpha=$(options.alpha), 
 # Speed Tweaks:
