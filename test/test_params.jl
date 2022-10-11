@@ -1,4 +1,4 @@
-import SymbolicRegression: L2DistLoss
+import SymbolicRegression: L2DistLoss, MutationWeights
 
 maximum_residual = 1e-2
 custom_cos(x) = cos(x)
