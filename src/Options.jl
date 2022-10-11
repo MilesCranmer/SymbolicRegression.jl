@@ -295,7 +295,7 @@ function Options(;
     annealing=false,
     batching=false,
     batchSize=50,
-    mutationWeights=[0.048, 0.47, 0.79, 5.1, 1.7, 0.0020, 0.00023, 0.0, 0.0, 0.21],
+    mutationWeights=[0.048, 0.47, 0.79, 5.1, 1.7, 0.0020, 0.00023, 0.05, 0.05, 0.21],  # (..., make random connection, break random connection, copy)
     crossoverProbability=0.066f0,
     warmupMaxsizeBy=0.0f0,
     useFrequency=true,
