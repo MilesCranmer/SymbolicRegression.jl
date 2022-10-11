@@ -89,7 +89,6 @@ node_to_symbolic(tree::Node, options::Options;
 
 ## Pareto frontier
 
-
 ```@docs
 calculate_pareto_frontier(X::AbstractMatrix{T}, y::AbstractVector{T},
                         hallOfFame::HallOfFame{T}, options::Options;
