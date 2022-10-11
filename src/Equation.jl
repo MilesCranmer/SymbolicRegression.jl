@@ -199,7 +199,7 @@ preserve linkage between a node and
 multiple parents, whereas without, this would create
 duplicate child node copies.
 """
-function copy_node(tree::Node{T}; preserve_topology::Bool=false)::Node{T} where {T}
+function copy_node(tree::Node{T}; preserve_topology::Bool=true)::Node{T} where {T}
     if preserve_topology
         copy_node_with_topology(tree, IdDict{Node{T},Node{T}}())
     else
