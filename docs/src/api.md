@@ -40,7 +40,7 @@ Options(;
     annealing=true,
     batching=false,
     batchSize=50,
-    mutationWeights=[10.000000, 1.000000, 1.000000, 3.000000, 3.000000, 0.010000, 1.000000, 1.000000],
+    mutationWeights=MutationWeights(),
     warmupMaxsize=0,
     useFrequency=false,
     npop=1000,
@@ -50,6 +50,7 @@ Options(;
     probNegate=0.01f0,
     seed=nothing
    ) where {nuna,nbin}
+MutationWeights(;)
 ```
 
 ## Printing
