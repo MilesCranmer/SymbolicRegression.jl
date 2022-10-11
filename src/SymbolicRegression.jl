@@ -5,6 +5,7 @@ export Population,
     PopMember,
     HallOfFame,
     Options,
+    MutationWeightings,
     Node,
 
     #Functions:
@@ -128,6 +129,7 @@ import .CoreModule:
     copy_node,
     set_node!,
     Options,
+    MutationWeightings,
     plus,
     sub,
     mult,

@@ -1,6 +1,7 @@
 module MutateModule
 
-import ..CoreModule: Node, copy_node, Options, Dataset, RecordType
+import ..CoreModule:
+    Node, copy_node, Options, Dataset, RecordType, get_mutation_probabilities
 import ..EquationUtilsModule: compute_complexity, count_constants, count_depth
 import ..LossFunctionsModule: score_func, score_func_batch
 import ..CheckConstraintsModule: check_constraints
@@ -46,21 +47,21 @@ function next_generation(
 
     nfeatures = dataset.nfeatures
 
-    mutationChoice = rand()
+    cur_weights = deepcopy(options.mutationWeights)
+
     #More constants => more likely to do constant mutation
-    weightAdjustmentMutateConstant = min(8, count_constants(prev)) / 8.0
-    cur_weights = copy(options.mutationWeights) .* 1.0
-    cur_weights[1] *= weightAdjustmentMutateConstant
+    cur_weights.mutate_constant *= min(8, count_constants(prev)) / 8.0
     n = compute_complexity(prev, options)
     depth = count_depth(prev)
 
     # If equation too big, don't add new operators
     if n >= curmaxsize || depth >= options.maxdepth
-        cur_weights[3] = 0.0
-        cur_weights[4] = 0.0
+        cur_weights.add_node = 0.0
+        cur_weights.insert_node = 0.0
     end
-    cur_weights /= sum(cur_weights)
-    cweights = cumsum(cur_weights)
+
+    # This will be a symbol from fields of the MutationWeights struct:
+    mutation_choice = rand(cur_weights)
 
     successful_mutation = false
     #TODO: Currently we dont take this \/ into account
@@ -74,22 +75,18 @@ function next_generation(
     while (!successful_mutation) && attempts < max_attempts
         tree = copy_node(prev)
         successful_mutation = true
-        if mutationChoice < cweights[1]
+        if mutation_choice == :mutate_constant
             tree = mutate_constant(tree, temperature, options)
             @recorder tmp_recorder["type"] = "constant"
-
             is_success_always_possible = true
             # Mutating a constant shouldn't invalidate an already-valid function
-
-        elseif mutationChoice < cweights[2]
+        elseif mutation_choice == :mutate_operator
             tree = mutate_operator(tree, options)
-
             @recorder tmp_recorder["type"] = "operator"
-
             is_success_always_possible = true
             # Can always mutate to the same operator
 
-        elseif mutationChoice < cweights[3]
+        elseif mutation_choice == :add_node
             if rand() < 0.5
                 tree = append_random_op(tree, options, nfeatures)
                 @recorder tmp_recorder["type"] = "append_op"
@@ -99,17 +96,17 @@ function next_generation(
             end
             is_success_always_possible = false
             # Can potentially have a situation without success
-        elseif mutationChoice < cweights[4]
+        elseif mutation_choice == :insert_node
             tree = insert_random_op(tree, options, nfeatures)
             @recorder tmp_recorder["type"] = "insert_op"
             is_success_always_possible = false
-        elseif mutationChoice < cweights[5]
+        elseif mutation_choice == :delete_node
             tree = delete_random_op(tree, options, nfeatures)
             @recorder tmp_recorder["type"] = "delete_op"
             is_success_always_possible = true
-        elseif mutationChoice < cweights[6]
-            tree = simplify_tree(tree, options) # Sometimes we simplify tree
-            tree = combine_operators(tree, options) # See if repeated constants at outer levels
+        elseif mutation_choice == :simplify
+            tree = simplify_tree(tree, options)
+            tree = combine_operators(tree, options)
             @recorder tmp_recorder["type"] = "partial_simplify"
             mutation_accepted = true
             return (
@@ -128,8 +125,7 @@ function next_generation(
             # Simplification shouldn't hurt complexity; unless some non-symmetric constraint
             # to commutative operator...
 
-        elseif mutationChoice < cweights[7]
-            # Sometimes we generate a new tree completely tree
+        elseif mutation_choice == :randomize
             # We select a random size, though the generated tree
             # may have fewer nodes than we request.
             tree_size_to_generate = rand(1:curmaxsize)
@@ -137,7 +133,7 @@ function next_generation(
             @recorder tmp_recorder["type"] = "regenerate"
 
             is_success_always_possible = true
-        else # no mutation applied
+        else # mutation_choice == :do_nothing
             @recorder begin
                 tmp_recorder["type"] = "identity"
                 tmp_recorder["result"] = "accept"
