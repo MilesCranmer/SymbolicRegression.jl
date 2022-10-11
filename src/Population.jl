@@ -70,7 +70,7 @@ end
 
 # Sample the population, and get the best member from that sample
 function best_of_sample(
-    pop::Population, running_search_statistics::RunningSearchStatistics, options::Options
+    pop::Population{T}, running_search_statistics::RunningSearchStatistics, options::Options
 )::PopMember where {T<:Real}
     sample = sample_pop(pop, options)
 
