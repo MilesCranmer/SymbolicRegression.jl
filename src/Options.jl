@@ -22,7 +22,7 @@ import ..OperatorsModule:
     safe_acosh,
     atanh_clip
 import ..EquationModule: Node, string_tree
-import ..OptionsStructModule: Options, ComplexityMapping, MutationWeightings
+import ..OptionsStructModule: Options, ComplexityMapping, MutationWeights
 
 """
          build_constraints(una_constraints, bin_constraints,
@@ -233,8 +233,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `probNegate`: Probability of negating a constant in the equation
     when mutating it.
 - `mutationWeights`: Relative probabilities of the mutations. The struct
-    `MutationWeightings` should be passed to these options.
-    See its documentation on `MutationWeightings` for the different weights.
+    `MutationWeights` should be passed to these options.
+    See its documentation on `MutationWeights` for the different weights.
 - `annealing`: Whether to use simulated annealing.
 - `warmupMaxsize`: Whether to slowly increase the max size from 5 up to
     `maxsize`. If nonzero, specifies how many cycles (populations*iterations)
@@ -295,7 +295,7 @@ function Options(;
     annealing=false,
     batching=false,
     batchSize=50,
-    mutationWeights::Union{Vector{AbstractFloat},MutationWeightings}=MutationWeightings(),
+    mutationWeights::Union{AbstractVector{<:AbstractFloat},MutationWeights}=MutationWeights(),
     crossoverProbability=0.066f0,
     warmupMaxsizeBy=0.0f0,
     useFrequency=true,
@@ -529,12 +529,12 @@ function Options(;
     end
 
     if typeof(mutationWeights) <: AbstractVector
-        @warn "Passing a vector for `mutationWeights` is deprecated. Please pass a `MutationWeightings` object instead."
+        @warn "Passing a vector for `mutationWeights` is deprecated. Please pass a `MutationWeights` object instead."
         mutationWeights = map((x,) -> convert(Float64, x), mutationWeights)
         if length(mutationWeights) != 8
             error("Not the right number of mutation probabilities given")
         end
-        mutationWeights = MutationWeightings(mutationWeights...)
+        mutationWeights = MutationWeights(mutationWeights...)
     end
 
     for (op, f) in enumerate(map(Symbol, binary_operators))
