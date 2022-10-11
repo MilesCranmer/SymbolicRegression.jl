@@ -47,7 +47,7 @@ function next_generation(
 
     nfeatures = dataset.nfeatures
 
-    cur_weights = deepcopy(options.mutationWeights)
+    cur_weights = deepcopy(options.mutation_weights)
 
     #More constants => more likely to do constant mutation
     cur_weights.mutate_constant *= min(8, count_constants(prev)) / 8.0
