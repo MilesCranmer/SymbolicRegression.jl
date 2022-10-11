@@ -18,7 +18,7 @@ import .ProgramConstantsModule:
     SRThreaded,
     SRDistributed
 import .DatasetModule: Dataset
-import .OptionsStructModule: Options
+import .OptionsStructModule: Options, MutationWeightings
 import .EquationModule: Node, copy_node, set_node!, string_tree, print_tree
 import .OptionsModule: Options
 import .OperatorsModule:
