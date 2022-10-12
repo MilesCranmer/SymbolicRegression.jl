@@ -28,7 +28,7 @@ base_tree.l.l = x3 * x2 - 1.5
 ##### Copy: ##################################################################
 ##############################################################################
 # When we copy with the normal copy, the topology breaks:
-copy_without_topology = copy_node(tree)
+copy_without_topology = copy_node(tree; preserve_topology=false)
 @test !(copy_without_topology.l.l === copy_without_topology.r)
 
 # But with the topology preserved in the copy, it should be the same:
