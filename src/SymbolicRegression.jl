@@ -5,6 +5,7 @@ export Population,
     PopMember,
     HallOfFame,
     Options,
+    MutationWeights,
     Node,
 
     #Functions:
@@ -58,6 +59,7 @@ using Distributed
 using JSON3: JSON3
 import Printf: @printf, @sprintf
 using Pkg: Pkg
+import TOML: parsefile
 import Random: seed!, shuffle!
 using Reexport
 @reexport import LossFunctions:
@@ -87,6 +89,12 @@ using Reexport
     LogitDistLoss,
     QuantileLoss,
     LogCoshLoss
+
+# https://discourse.julialang.org/t/how-to-find-out-the-version-of-a-package-from-its-module/37755/15
+const PACKAGE_VERSION = let
+    project = parsefile(joinpath(pkgdir(@__MODULE__), "Project.toml"))
+    VersionNumber(project["version"])
+end
 
 include("Core.jl")
 include("Recorder.jl")
@@ -121,6 +129,7 @@ import .CoreModule:
     copy_node,
     set_node!,
     Options,
+    MutationWeights,
     plus,
     sub,
     mult,

@@ -1,7 +1,81 @@
 module OptionsStructModule
 
 using Optim: Optim
+using StatsBase: StatsBase
+import Random: AbstractRNG
 import LossFunctions: SupervisedLoss
+
+mutable struct MutationWeights
+    mutate_constant::Float64
+    mutate_operator::Float64
+    add_node::Float64
+    insert_node::Float64
+    delete_node::Float64
+    simplify::Float64
+    randomize::Float64
+    make_connection::Float64
+    break_connection::Float64
+    do_nothing::Float64
+end
+
+const mutations = fieldnames(MutationWeights)
+
+"""
+    MutationWeights(;kws...)
+
+This defines how often different mutations occur. These weightings
+will be normalized to sum to 1.0 after initialization.
+# Arguments
+- `mutate_constant::Float64`: How often to mutate a constant.
+- `mutate_operator::Float64`: How often to mutate an operator.
+- `add_node::Float64`: How often to append a node to the tree.
+- `insert_node::Float64`: How often to insert a node into the tree.
+- `delete_node::Float64`: How often to delete a node from the tree.
+- `simplify::Float64`: How often to simplify the tree.
+- `randomize::Float64`: How often to create a random tree.
+- `make_connection::Float64`: How often to make a shared connection between two random nodes.
+- `break_connection::Float64`: How often to break all connections under a random nodes.
+- `do_nothing::Float64`: How often to do nothing.
+"""
+function MutationWeights(;
+    mutate_constant=0.048,
+    mutate_operator=0.47,
+    add_node=0.79,
+    insert_node=5.1,
+    delete_node=1.7,
+    simplify=0.0020,
+    randomize=0.00023,
+    make_connection=0.05,
+    break_connection=0.05,
+    do_nothing=0.21,
+)
+    return MutationWeights(
+        mutate_constant,
+        mutate_operator,
+        add_node,
+        insert_node,
+        delete_node,
+        simplify,
+        randomize,
+        make_connection,
+        break_connection,
+        do_nothing,
+    )
+end
+
+"""Convert MutationWeights to a vector."""
+@generated function Base.convert(
+    ::Type{V}, weightings::MutationWeights
+) where {V<:AbstractVector}
+    fields = [:(weightings.$(mut)) for mut in mutations]
+    return :(V([$(fields...)]))
+end
+
+"""Sample a mutation, given the weightings."""
+function Base.rand(rng::AbstractRNG, weightings::MutationWeights)::Symbol
+    weights = convert(Vector, weightings)
+    return mutations[StatsBase.sample(rng, 1:length(mutations), StatsBase.Weights(weights))]
+end
 
 """This struct defines how complexity is calculated."""
 struct ComplexityMapping{T<:Real}
@@ -59,7 +133,7 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function},D}
     annealing::Bool
     batching::Bool
     batchSize::Int
-    mutationWeights::Array{Float64,1}
+    mutation_weights::MutationWeights
     crossoverProbability::Float32
     warmupMaxsizeBy::Float32
     useFrequency::Bool
@@ -113,7 +187,7 @@ function Base.print(io::IO, options::Options)
 # Constant tuning:
     perturbationFactor=$(options.perturbationFactor), probNegate=$(options.probNegate), shouldOptimizeConstants=$(options.shouldOptimizeConstants), optimizer_algorithm=$(options.optimizer_algorithm), optimize_probability=$(options.optimize_probability), optimizer_nrestarts=$(options.optimizer_nrestarts), optimizer_iterations=$(options.optimizer_options.iterations),
 # Mutations:
-    mutationWeights=$(options.mutationWeights), crossoverProbability=$(options.crossoverProbability), skip_mutation_failures=$(options.skip_mutation_failures)
+    mutation_weights=$(options.mutation_weights), crossoverProbability=$(options.crossoverProbability), skip_mutation_failures=$(options.skip_mutation_failures)
 # Annealing:
     annealing=$(options.annealing), alpha=$(options.alpha), 
 # Speed Tweaks:
