@@ -133,7 +133,7 @@ function next_generation(
             @recorder tmp_recorder["type"] = "regenerate"
 
             is_success_always_possible = true
-        else # mutation_choice == :do_nothing
+        elseif mutation_choice == :do_nothing
             @recorder begin
                 tmp_recorder["type"] = "identity"
                 tmp_recorder["result"] = "accept"
@@ -151,6 +151,8 @@ function next_generation(
                 mutation_accepted,
                 num_evals,
             )
+        else
+            error("Unknown mutation choice: $mutation_choice")
         end
 
         successful_mutation =
