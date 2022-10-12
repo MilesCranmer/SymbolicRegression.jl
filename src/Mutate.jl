@@ -1,7 +1,7 @@
 module MutateModule
 
 import ..CoreModule:
-    Node, copy_node, Options, Dataset, RecordType, get_mutation_probabilities
+    Node, copy_node, Options, Dataset, RecordType
 import ..EquationUtilsModule: compute_complexity, count_constants, count_depth
 import ..LossFunctionsModule: score_func, score_func_batch
 import ..CheckConstraintsModule: check_constraints
