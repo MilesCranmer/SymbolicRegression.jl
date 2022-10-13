@@ -56,6 +56,7 @@ export Population,
 
 using Distributed
 using JSON3: JSON3
+import SnoopPrecompile: @precompile_all_calls, @precompile_setup
 import Printf: @printf, @sprintf
 using Pkg: Pkg
 import TOML: parsefile
@@ -925,6 +926,23 @@ function _EquationSearch(
             return hallOfFame[1]
         else
             return hallOfFame
+        end
+    end
+end
+
+@precompile_setup begin
+    for type in [Float16, Float32, Float64]
+        example_X = randn(type, 5, 20)
+        example_y = example_X[1, :]
+        @precompile_all_calls begin
+            options = Options(;
+                binary_operators=(+, -, *, /, ^),
+                unary_operators=(cos, exp, tanh),
+                verbosity=0,
+                progress=false,
+                max_evals=1000,
+            )
+            EquationSearch(example_X, example_y; options=options, multithreading=true)
         end
     end
 end
