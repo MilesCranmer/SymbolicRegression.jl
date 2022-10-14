@@ -5,6 +5,7 @@ export Population,
     PopMember,
     HallOfFame,
     Options,
+    Dataset,
     Node,
 
     #Functions:
