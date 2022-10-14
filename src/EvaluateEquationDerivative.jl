@@ -53,12 +53,15 @@ end
 function _eval_diff_tree_array(
     tree::Node{T}, cX::AbstractMatrix{T}, options::Options, direction::Int
 )::Tuple{AbstractVector{T},AbstractVector{T},Bool} where {T<:Real}
+    max_possible_op = max(length(options.binops), length(options.unaops))
+    vals = ntuple(i -> Val(i), max_possible_op)
+
     if tree.degree == 0
         diff_deg0_eval(tree, cX, options, direction)
     elseif tree.degree == 1
-        diff_deg1_eval(tree, cX, Val(tree.op), options, direction)
+        diff_deg1_eval(tree, cX, vals[tree.op], options, direction)
     else
-        diff_deg2_eval(tree, cX, Val(tree.op), options, direction)
+        diff_deg2_eval(tree, cX, vals[tree.op], options, direction)
     end
 end
 
@@ -179,15 +182,18 @@ function _eval_grad_tree_array(
     options::Options,
     ::Val{variable},
 )::Tuple{AbstractVector{T},AbstractMatrix{T},Bool} where {T<:Real,variable}
+    max_possible_op = max(length(options.binops), length(options.unaops))
+    vals = ntuple(i -> Val(i), max_possible_op)
+
     if tree.degree == 0
         grad_deg0_eval(tree, n, n_gradients, index_tree, cX, options, Val(variable))
     elseif tree.degree == 1
         grad_deg1_eval(
-            tree, n, n_gradients, index_tree, cX, Val(tree.op), options, Val(variable)
+            tree, n, n_gradients, index_tree, cX, vals[tree.op], options, Val(variable)
         )
     else
         grad_deg2_eval(
-            tree, n, n_gradients, index_tree, cX, Val(tree.op), options, Val(variable)
+            tree, n, n_gradients, index_tree, cX, vals[tree.op], options, Val(variable)
         )
     end
 end
