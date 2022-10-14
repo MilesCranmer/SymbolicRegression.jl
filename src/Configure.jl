@@ -86,38 +86,44 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
     for function_set in 1:6
         if function_set == 1
             ops = options.unaops
-            nargs = 1
+            example_inputs = (zero(T),)
         elseif function_set == 2
             ops = options.binops
-            nargs = 2
+            example_inputs = (zero(T), zero(T))
         elseif function_set == 3
             if !options.enable_autodiff
                 continue
             end
             ops = options.diff_unaops
             nargs = 1
+            example_inputs = (zero(T),)
         elseif function_set == 4
             if !options.enable_autodiff
                 continue
             end
             ops = options.diff_binops
-            nargs = 2
+            example_inputs = (zero(T), zero(T))
         elseif function_set == 5
-            if typeof(options.loss) <: SupervisedLoss
+            if typeof(options.elementwise_loss) <: SupervisedLoss
                 continue
             end
-            ops = (options.loss,)
+            ops = (options.elementwise_loss,)
             nargs = dataset.weighted ? 3 : 2
+            example_inputs = if dataset.weighted
+                (zero(T), zero(T), zero(T))
+            else
+                (zero(T), zero(T))
+            end
         elseif function_set == 6
             if !(typeof(options.earlyStopCondition) <: Function)
                 continue
             end
             ops = (options.earlyStopCondition,)
-            nargs = 2
+            example_inputs = (zero(T), zero(T))
         end
         for op in ops
             try
-                test_function_on_workers(T, nargs, op, procs)
+                test_function_on_workers(example_inputs, op, procs)
             catch e
                 undefined_on_workers = isa(e.captured.ex, UndefVarError)
                 if undefined_on_workers
@@ -126,7 +132,7 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
                     throw(e)
                 end
             end
-            test_function_on_workers(T, nargs, op, procs)
+            test_function_on_workers(example_inputs, op, procs)
         end
     end
 end
@@ -146,16 +152,10 @@ function copy_definition_to_workers(op, procs, options::Options)
     return debug((options.verbosity > 0 || options.progress), "Finished!")
 end
 
-function test_function_on_workers(T, nargs, op, procs)
+function test_function_on_workers(example_inputs, op, procs)
     futures = []
     for proc in procs
-        if nargs == 1
-            push!(futures, @spawnat proc op(convert(T, 0)))
-        elseif nargs == 2 #2D ops, and loss function
-            push!(futures, @spawnat proc op(convert(T, 0), convert(T, 0)))
-        elseif nargs == 3 #weighted loss function
-            push!(futures, @spawnat proc op(convert(T, 0), convert(T, 0), convert(T, 0)))
-        end
+        push!(futures, @spawnat proc op(example_inputs...))
     end
     for future in futures
         fetch(future)

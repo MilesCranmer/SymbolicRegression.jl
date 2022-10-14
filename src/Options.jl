@@ -342,7 +342,7 @@ function Options(;
     end
 
     if loss !== nothing
-        @warn "`loss` is deprecated. Please use `elementwise_loss` instead.",
+        @warn "`loss` is deprecated. Please use `elementwise_loss` instead."
         elementwise_loss = loss
     end
 
