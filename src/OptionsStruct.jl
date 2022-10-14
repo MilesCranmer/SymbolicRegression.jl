@@ -35,7 +35,7 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function},D}
+struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function},D,E}
     binops::A
     unaops::B
     diff_binops::dA
@@ -73,7 +73,8 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function},D}
     nuna::Int
     nbin::Int
     seed::Union{Int,Nothing}
-    loss::C
+    elementwise_loss::C
+    loss_function::E
     progress::Bool
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::String
@@ -100,7 +101,7 @@ function Base.print(io::IO, options::Options)
 # Operators:
     binops=$(options.binops), unaops=$(options.unaops),
 # Loss:
-    loss=$(options.loss),
+    elementwise_loss=$(options.elementwise_loss),
 # Complexity Management:
     maxsize=$(options.maxsize), maxdepth=$(options.maxdepth), bin_constraints=$(options.bin_constraints), una_constraints=$(options.una_constraints), useFrequency=$(options.useFrequency), useFrequencyInTournament=$(options.useFrequencyInTournament), parsimony=$(options.parsimony), warmupMaxsizeBy=$(options.warmupMaxsizeBy), 
 # Search Size:

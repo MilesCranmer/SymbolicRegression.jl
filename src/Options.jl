@@ -149,7 +149,7 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `batching`: Whether to evolve based on small mini-batches of data,
     rather than the entire dataset.
 - `batchSize`: What batch size to use if using batching.
-- `loss`: What loss function to use. Can be one of
+- `elementwise_loss`: What elementwise loss function to use. Can be one of
     the following losses, or any other loss of type
     `SupervisedLoss`. You can also pass a function that takes
     a scalar target (left argument), and scalar predicted (right
@@ -177,6 +177,13 @@ https://github.com/MilesCranmer/PySR/discussions/115.
             - `ExpLoss()`,
             - `SigmoidLoss()`,
             - `DWDMarginLoss(q)`.
+- `loss_function`: Alternatively, you may redefine the loss used
+    as any function of `tree::Node{T}`, `dataset::Dataset{T}`,
+    and `options::Options`, so long as you output a non-negative
+    scalar of type `T`. This is useful if you want to use a loss
+    that takes into account derivatives, or correlations across
+    the dataset. This also means you could use a custom evaluation
+    for a particular expression.
 - `npopulations`: How many populations of equations to use. By default
     this is set equal to the number of cores
 - `npop`: How many equations in each population.
@@ -272,7 +279,8 @@ function Options(;
     binary_operators::NTuple{nbin,Any}=(+, -, /, *),
     unary_operators::NTuple{nuna,Any}=(),
     constraints=nothing,
-    loss=L2DistLoss(),
+    elementwise_loss=nothing,
+    loss_function=nothing,
     ns=12, #1 sampled from every ns per mutation
     topn=12, #samples to return per population
     complexity_of_operators=nothing,
@@ -325,12 +333,27 @@ function Options(;
     enable_autodiff::Bool=false,
     nested_constraints=nothing,
     deterministic=false,
+    loss=nothing,
 ) where {nuna,nbin}
     if warmupMaxsize !== nothing
         error(
             "warmupMaxsize is deprecated. Please use warmupMaxsizeBy, and give the time at which the warmup will end as a fraction of the total search cycles.",
         )
     end
+
+    if loss !== nothing
+        @warn "`loss` is deprecated. Please use `elementwise_loss` instead.",
+        elementwise_loss = loss
+    end
+
+    if elementwise_loss === nothing
+        elementwise_loss = L2DistLoss()
+    else
+        if loss_function !== nothing
+            error("You cannot specify both `elementwise_loss` and `loss_function`.")
+        end
+    end
+
 
     if hofFile === nothing
         hofFile = "hall_of_fame.csv" #TODO - put in date/time string here
@@ -615,8 +638,9 @@ function Options(;
         typeof(unary_operators),
         typeof(diff_binary_operators),
         typeof(diff_unary_operators),
-        typeof(loss),
+        typeof(elementwise_loss),
         eltype(complexity_mapping),
+        typeof(loss_function),
     }(
         binary_operators,
         unary_operators,
@@ -655,7 +679,8 @@ function Options(;
         nuna,
         nbin,
         seed,
-        loss,
+        elementwise_loss,
+        loss_function,
         progress,
         terminal_width,
         optimizer_algorithm,

@@ -12,9 +12,9 @@ function loss( # fmt: off
     options::Options{A,B,dA,dB,C,D}, # fmt: on
 )::T where {T<:Real,A,B,dA,dB,C,D}
     if C <: SupervisedLoss
-        return value(options.loss, y, x, AggMode.Mean())
+        return value(options.elementwise_loss, y, x, AggMode.Mean())
     elseif C <: Function
-        return sum(options.loss.(x, y)) / length(y)
+        return sum(options.elementwise_loss.(x, y)) / length(y)
     else
         error("Unrecognized type for loss function: $(C)")
     end
@@ -27,16 +27,16 @@ function loss(
     options::Options{A,B,dA,dB,C,D},
 )::T where {T<:Real,A,B,dA,dB,C,D}
     if C <: SupervisedLoss
-        return value(options.loss, y, x, AggMode.WeightedMean(w))
+        return value(options.elementwise_loss, y, x, AggMode.WeightedMean(w))
     elseif C <: Function
-        return sum(options.loss.(x, y, w)) / sum(w)
+        return sum(options.elementwise_loss.(x, y, w)) / sum(w)
     else
         error("Unrecognized type for loss function: $(C)")
     end
 end
 
-# Evaluate the loss of a particular expression on the input dataset.
-function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
+
+function _eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
     (prediction, completion) = eval_tree_array(tree, dataset.X, options)
     if !completion
         return T(Inf)
@@ -46,6 +46,15 @@ function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T wher
         return loss(prediction, dataset.y, dataset.weights, options)
     else
         return loss(prediction, dataset.y, options)
+    end
+end
+
+# Evaluate the loss of a particular expression on the input dataset.
+function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
+    if options.loss_function === nothing
+        return _eval_loss(tree, dataset, options)
+    else
+        return options.loss_function(tree, dataset, options)
     end
 end
 
