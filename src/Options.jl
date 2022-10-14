@@ -354,7 +354,6 @@ function Options(;
         end
     end
 
-
     if hofFile === nothing
         hofFile = "hall_of_fame.csv" #TODO - put in date/time string here
     end

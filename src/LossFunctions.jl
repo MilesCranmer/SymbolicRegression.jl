@@ -35,7 +35,6 @@ function loss(
     end
 end
 
-
 function _eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
     (prediction, completion) = eval_tree_array(tree, dataset.X, options)
     if !completion
