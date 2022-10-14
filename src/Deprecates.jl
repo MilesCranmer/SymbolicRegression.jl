@@ -14,12 +14,9 @@ using Base: @deprecate
 @deprecate combineOperators combine_operators
 @deprecate copyNode copy_node
 @deprecate copyPopMember copy_pop_member
-@deprecate countBinaryOperators count_binary_operators
 @deprecate countConstants count_constants
 @deprecate countDepth count_depth
 @deprecate countNodes count_nodes
-@deprecate countOperators count_operators
-@deprecate countUnaryOperators count_unary_operators
 @deprecate crossoverGeneration crossover_generation
 @deprecate crossoverTrees crossover_trees
 @deprecate deleteRandomOp delete_random_op

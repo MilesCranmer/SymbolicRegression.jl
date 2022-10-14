@@ -7,6 +7,7 @@ import ..SimplifyEquationModule: simplify_tree, combine_operators
 import ..PopMemberModule: copy_pop_member, generate_reference
 import ..PopulationModule: Population, finalize_scores, best_sub_pop
 import ..HallOfFameModule: HallOfFame
+import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..RegularizedEvolutionModule: reg_evol_cycle
 import ..ConstantOptimizationModule: optimize_constants
 import ..RecorderModule: @recorder
@@ -15,11 +16,10 @@ import ..RecorderModule: @recorder
 # printing the fittest equation every 10% through
 function s_r_cycle(
     dataset::Dataset{T},
-    baseline::T,
     pop::Population,
     ncycles::Int,
     curmaxsize::Int,
-    frequencyComplexity::AbstractVector{T};
+    running_search_statistics::RunningSearchStatistics;
     verbosity::Int=0,
     options::Options,
     record::RecordType,
@@ -36,11 +36,10 @@ function s_r_cycle(
     for temperature in all_temperatures
         pop, tmp_num_evals = reg_evol_cycle(
             dataset,
-            baseline,
             pop,
             temperature,
             curmaxsize,
-            frequencyComplexity,
+            running_search_statistics,
             options,
             record,
         )
@@ -63,7 +62,6 @@ end
 
 function optimize_and_simplify_population(
     dataset::Dataset{T},
-    baseline::T,
     pop::Population,
     options::Options,
     curmaxsize::Int,
@@ -76,12 +74,12 @@ function optimize_and_simplify_population(
         pop.members[j].tree = combine_operators(pop.members[j].tree, options)
         if options.shouldOptimizeConstants && do_optimization[j]
             pop.members[j], array_num_evals[j] = optimize_constants(
-                dataset, baseline, pop.members[j], options
+                dataset, pop.members[j], options
             )
         end
     end
     num_evals = sum(array_num_evals)
-    pop, tmp_num_evals = finalize_scores(dataset, baseline, pop, options)
+    pop, tmp_num_evals = finalize_scores(dataset, pop, options)
     num_evals += tmp_num_evals
 
     # Now, we create new references for every member,

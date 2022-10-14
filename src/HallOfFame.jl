@@ -101,9 +101,9 @@ function calculate_pareto_frontier(
     )
 end
 
-function string_dominating_pareto_curve(hallOfFame, baselineMSE, dataset, options, avgy)
+function string_dominating_pareto_curve(hallOfFame, dataset, options)
     output = ""
-    curMSE = Float64(baselineMSE)
+    curMSE = Float64(dataset.baseline_loss)
     lastMSE = curMSE
     lastComplexity = 0
     output *= "Hall of Fame:\n"
@@ -123,8 +123,6 @@ function string_dominating_pareto_curve(hallOfFame, baselineMSE, dataset, option
                 ),
             )
         end
-        # User higher precision when finding the original loss:
-        relu(x) = x < 0 ? 0 : x
         curMSE = member.loss
 
         delta_c = complexity - lastComplexity

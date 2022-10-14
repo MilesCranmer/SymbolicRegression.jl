@@ -30,6 +30,18 @@ You can convert the type of a node using `convert`:
 convert(::Type{Node{T1}}, tree::Node{T2}) where {T1, T2}
 ```
 
+You can set a `tree` (in-place) with `set_node!`:
+
+```@docs
+set_node!(tree::Node{T}, new_tree::Node{T}) where {T}
+```
+
+You can create a copy of a node with `copy_node`:
+
+```@docs
+copy_node(tree::Node)
+```
+
 ## Population
 
 Groups of equations are given as a population, which is
@@ -38,11 +50,11 @@ values are given in the `PopMember`.
 
 ```@docs
 Population(pop::Array{PopMember{T}, 1}) where {T<:Real}
-Population(dataset::Dataset{T}, baseline::T;
+Population(dataset::Dataset{T};
            npop::Int, nlength::Int=3,
            options::Options,
            nfeatures::Int) where {T<:Real}
-Population(X::AbstractMatrix{T}, y::AbstractVector{T}, baseline::T;
+Population(X::AbstractMatrix{T}, y::AbstractVector{T};
            npop::Int, nlength::Int=3,
            options::Options,
            nfeatures::Int) where {T<:Real}
@@ -52,7 +64,7 @@ Population(X::AbstractMatrix{T}, y::AbstractVector{T}, baseline::T;
 
 ```@docs
 PopMember(t::Node{T}, score::T, loss::T) where {T<:Real}
-PopMember(dataset::Dataset{T}, baseline::T, t::Node{T}, options::Options) where {T<:Real}
+PopMember(dataset::Dataset{T}, t::Node{T}, options::Options) where {T<:Real}
 ```
 
 ## Hall of Fame
@@ -70,4 +82,5 @@ Dataset(X::AbstractMatrix{T},
         weights::Union{AbstractVector{T}, Nothing}=nothing,
         varMap::Union{Array{String, 1}, Nothing}=nothing
        ) where {T<:Real}
+update_baseline_loss!(dataset::Dataset{T}, options::Options) where {T<:Real}
 ```

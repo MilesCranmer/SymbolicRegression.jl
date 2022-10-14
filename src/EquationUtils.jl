@@ -24,31 +24,8 @@ function count_depth(tree::Node)::Int
     end
 end
 
-# Count the number of unary operators in the equation
-function count_unary_operators(tree::Node)::Int
-    if tree.degree == 0
-        return 0
-    elseif tree.degree == 1
-        return 1 + count_unary_operators(tree.l)
-    else
-        return 0 + count_unary_operators(tree.l) + count_unary_operators(tree.r)
-    end
-end
-
-# Count the number of binary operators in the equation
-function count_binary_operators(tree::Node)::Int
-    if tree.degree == 0
-        return 0
-    elseif tree.degree == 1
-        return 0 + count_binary_operators(tree.l)
-    else
-        return 1 + count_binary_operators(tree.l) + count_binary_operators(tree.r)
-    end
-end
-
-# Count the number of operators in the equation
-function count_operators(tree::Node)::Int
-    return count_unary_operators(tree) + count_binary_operators(tree)
+function has_operators(tree::Node)::Bool
+    return tree.degree > 0
 end
 
 # Count the number of constants in an equation
@@ -63,6 +40,16 @@ function count_constants(tree::Node)::Int
         return 0 + count_constants(tree.l)
     else
         return 0 + count_constants(tree.l) + count_constants(tree.r)
+    end
+end
+
+function has_constants(tree::Node)::Bool
+    if tree.degree == 0
+        return tree.constant
+    elseif tree.degree == 1
+        return has_constants(tree.l)
+    else
+        return has_constants(tree.l) || has_constants(tree.r)
     end
 end
 

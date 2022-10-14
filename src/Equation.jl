@@ -66,22 +66,29 @@ Convert a `Node{T2}` to a `Node{T1}`.
 This will recursively convert all children nodes to `Node{T1}`,
 using `convert(T1, tree.val)` at constant nodes.
 """
-function Base.convert(::Type{Node{T1}}, tree::Node{T2}) where {T1,T2}
+function Base.convert(
+    ::Type{Node{T1}},
+    tree::Node{T2},
+    id_map::IdDict{Node{T2},Node{T1}}=IdDict{Node{T2},Node{T1}}(),
+) where {T1,T2}
     if T1 == T2
         return tree
-    elseif tree.degree == 0
-        if tree.constant
-            return Node(0, tree.constant, convert(T1, tree.val))
+    end
+    get!(id_map, tree) do
+        if tree.degree == 0
+            if tree.constant
+                Node(0, tree.constant, convert(T1, tree.val))
+            else
+                Node(0, tree.constant, convert(T1, tree.val), tree.feature)
+            end
+        elseif tree.degree == 1
+            l = convert(Node{T1}, tree.l, id_map)
+            Node(1, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l)
         else
-            return Node(0, tree.constant, convert(T1, tree.val), tree.feature)
+            l = convert(Node{T1}, tree.l, id_map)
+            r = convert(Node{T1}, tree.r, id_map)
+            Node(2, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l, r)
         end
-    elseif tree.degree == 1
-        l = convert(Node{T1}, tree.l)
-        return Node(1, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l)
-    else
-        l = convert(Node{T1}, tree.l)
-        r = convert(Node{T1}, tree.r)
-        return Node(2, tree.constant, convert(T1, tree.val), tree.feature, tree.op, l, r)
     end
 end
 
@@ -159,22 +166,96 @@ function Node(var_string::String, varMap::Array{String,1})
 end
 
 """
-    copy_node(tree::Node)
+    set_node!(tree::Node{T}, new_tree::Node{T}) where {T}
+
+Set every field of `tree` equal to the corresponding field of `new_tree`.
+"""
+function set_node!(tree::Node{T}, new_tree::Node{T}) where {T}
+    tree.degree = new_tree.degree
+    if new_tree.degree == 0
+        tree.constant = new_tree.constant
+        if new_tree.constant
+            tree.val = new_tree.val
+        else
+            tree.feature = new_tree.feature
+        end
+    else
+        tree.op = new_tree.op
+        tree.l = new_tree.l
+        if new_tree.degree == 2
+            tree.r = new_tree.r
+        end
+    end
+    return nothing
+end
+
+"""
+    copy_node(tree::Node; preserve_topology::Bool=false)
 
 Copy a node, recursively copying all children nodes.
 This is more efficient than the built-in copy.
+With `preserve_topology=true`, this will also
+preserve linkage between a node and
+multiple parents, whereas without, this would create
+duplicate child node copies.
 """
-function copy_node(tree::Node{T})::Node{T} where {T}
+function copy_node(tree::Node{T}; preserve_topology::Bool=false)::Node{T} where {T}
+    if preserve_topology
+        copy_node_with_topology(tree, IdDict{Node{T},Node{T}}())
+    else
+        copy_node_break_topology(tree)
+    end
+end
+
+function copy_node_break_topology(tree::Node{T})::Node{T} where {T}
     if tree.degree == 0
         if tree.constant
-            return Node(; val=copy(tree.val))
+            Node(; val=copy(tree.val))
         else
-            return Node(T; feature=copy(tree.feature))
+            Node(T; feature=copy(tree.feature))
         end
     elseif tree.degree == 1
-        return Node(copy(tree.op), copy_node(tree.l))
+        Node(copy(tree.op), copy_node_break_topology(tree.l))
     else
-        return Node(copy(tree.op), copy_node(tree.l), copy_node(tree.r))
+        Node(
+            copy(tree.op),
+            copy_node_break_topology(tree.l),
+            copy_node_break_topology(tree.r),
+        )
+    end
+end
+
+"""
+    copy_node_with_topology(
+        tree::Node{T}, id_map::IdDict{Node{T},Node{T}}
+    )::Node{T} where {T}
+
+id_map is a map from `objectid(tree)` to `copy(tree)`.
+We check against the map before making a new copy; otherwise
+we can simply reference the existing copy.
+[Thanks to Ted Hopp.](https://stackoverflow.com/questions/49285475/how-to-copy-a-full-non-binary-tree-including-loops)
+
+Note that this will *not* preserve loops in graphs.
+"""
+function copy_node_with_topology(
+    tree::Node{T}, id_map::IdDict{Node{T},Node{T}}
+)::Node{T} where {T}
+    get!(id_map, tree) do
+        if tree.degree == 0
+            if tree.constant
+                Node(; val=copy(tree.val))
+            else
+                Node(T; feature=copy(tree.feature))
+            end
+        elseif tree.degree == 1
+            Node(copy(tree.op), copy_node_with_topology(tree.l, id_map))
+        else
+            Node(
+                copy(tree.op),
+                copy_node_with_topology(tree.l, id_map),
+                copy_node_with_topology(tree.r, id_map),
+            )
+        end
     end
 end
 

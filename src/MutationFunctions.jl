@@ -1,7 +1,7 @@
 module MutationFunctionsModule
 
-import ..CoreModule: Node, copy_node, Options
-import ..EquationUtilsModule: count_nodes, count_constants, count_operators, count_depth
+import ..CoreModule: Node, copy_node, set_node!, Options
+import ..EquationUtilsModule: count_nodes, has_constants, has_operators
 
 # Return a random node from the tree
 function random_node(tree::Node{T})::Node{T} where {T}
@@ -30,7 +30,7 @@ end
 # Randomly convert an operator into another one (binary->binary;
 # unary->unary)
 function mutate_operator(tree::Node{T}, options::Options)::Node{T} where {T}
-    if count_operators(tree) == 0
+    if !(has_operators(tree))
         return tree
     end
     node = random_node(tree)
@@ -51,7 +51,7 @@ function mutate_constant(
 )::Node{T} where {T<:Real}
     # T is between 0 and 1.
 
-    if count_constants(tree) == 0
+    if !(has_constants(tree))
         return tree
     end
     node = random_node(tree)
@@ -104,15 +104,7 @@ function append_random_op(
         newnode = Node(rand(1:(options.nuna)), make_random_leaf(nfeatures, T))
     end
 
-    if newnode.degree == 2
-        node.r = newnode.r
-    end
-    node.l = newnode.l
-    node.op = newnode.op
-    node.degree = newnode.degree
-    node.val = newnode.val
-    node.feature = newnode.feature
-    node.constant = newnode.constant
+    set_node!(node, newnode)
 
     return tree
 end
@@ -132,15 +124,7 @@ function insert_random_op(
     else
         newnode = Node(rand(1:(options.nuna)), left)
     end
-    if newnode.degree == 2
-        node.r = newnode.r
-    end
-    node.l = newnode.l
-    node.op = newnode.op
-    node.degree = newnode.degree
-    node.val = newnode.val
-    node.feature = newnode.feature
-    node.constant = newnode.constant
+    set_node!(node, newnode)
     return tree
 end
 
@@ -159,15 +143,7 @@ function prepend_random_op(
     else
         newnode = Node(rand(1:(options.nuna)), left)
     end
-    if newnode.degree == 2
-        node.r = newnode.r
-    end
-    node.l = newnode.l
-    node.op = newnode.op
-    node.degree = newnode.degree
-    node.val = newnode.val
-    node.feature = newnode.feature
-    node.constant = newnode.constant
+    set_node!(node, newnode)
     return node
 end
 
@@ -222,12 +198,7 @@ function delete_random_op(
     if node.degree == 0
         # Replace with new constant
         newnode = make_random_leaf(nfeatures, T)
-        node.degree = newnode.degree
-        node.val = newnode.val
-        node.constant = newnode.constant
-        if !newnode.constant
-            node.feature = newnode.feature
-        end
+        set_node!(node, newnode)
     elseif node.degree == 1
         # Join one of the children with the parent
         if isroot

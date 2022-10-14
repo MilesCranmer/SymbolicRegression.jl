@@ -29,9 +29,11 @@ for reverse in [false, true]
 
     pop = Population(members, n)
 
-    dummy_frequencies = [0.0f-10 for i in 1:100]
+    dummy_running_stats = SymbolicRegression.AdaptiveParsimonyModule.RunningSearchStatistics(;
+        options=options
+    )
     best_pop_member = [
-        SymbolicRegression.best_of_sample(pop, dummy_frequencies, options).score for
+        SymbolicRegression.best_of_sample(pop, dummy_running_stats, options).score for
         j in 1:100
     ]
 

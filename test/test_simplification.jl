@@ -79,3 +79,17 @@ output3, flag3 = eval_tree_array(tree_copy2, X, options)
 # Simplified equation may give a different answer due to rounding errors,
 # so we weaken the requirement:
 @test isapprox(output1, output3, atol=1e-2 * sqrt(N))
+
+# Test that simplification (within the library) preserves shared nodes:
+options = Options(; binary_operators=(+, -, *, /))
+base_tree = Node(1, Node(; val=0.3), Node(; val=0.2))
+tree = x1 * base_tree + base_tree
+SymbolicRegression.SimplifyEquationModule.simplify_tree(tree, options)
+@test tree.l.r === tree.r
+
+base_tree = (x1 + Node(; val=0.3)) + Node(; val=0.2)
+true_simplification_value = 0.5
+tree = x2 * base_tree + base_tree
+SymbolicRegression.SimplifyEquationModule.combine_operators(tree, options)
+# Should not combine twice!
+@test tree.l.r.r.val == true_simplification_value

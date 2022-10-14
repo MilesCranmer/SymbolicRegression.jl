@@ -22,7 +22,6 @@ IDLE = collect("╱   ")
 
 PRINTING_DELAY = 0.05 * 1e9
 
-# export ProgressBar, tqdm, set_description, set_postfix, set_multiline_postfix
 """
 Decorate an iterable object, returning an iterator which acts exactly
 like the original iterable, but prints a dynamically updating
@@ -42,7 +41,6 @@ mutable struct ProgressBar
     extra_lines::Int
     last_extra_lines::Int
     multilinepostfix::AbstractString
-    mutex::Threads.SpinLock
 
     function ProgressBar(wrapped::Any; total::Int=-2, width=nothing, leave=true)
         this = new()
@@ -62,7 +60,6 @@ mutable struct ProgressBar
         this.multilinepostfix = ""
         this.extra_lines = 0
         this.last_extra_lines = 0
-        this.mutex = Threads.SpinLock()
         this.current = 0
 
         if total == -2  # No total given
@@ -78,9 +75,6 @@ mutable struct ProgressBar
         return this
     end
 end
-
-# Keep the old name as an alias
-tqdm = ProgressBar
 
 function format_time(seconds)
     if isfinite(seconds)
@@ -195,7 +189,7 @@ function clear_progress(t::ProgressBar)
     return erase_line()
 end
 
-function set_multiline_postfix(t::ProgressBar, postfix::AbstractString)
+function set_multiline_postfix!(t::ProgressBar, postfix::AbstractString)
     mistakenly_used_newline_at_start = postfix[1] == '\n' && length(postfix) > 1
     if mistakenly_used_newline_at_start
         postfix = postfix[2:end]
@@ -246,65 +240,6 @@ end
 Base.length(iter::ProgressBar) = length(iter.wrapped)
 Base.eltype(iter::ProgressBar) = eltype(iter.wrapped)
 
-function Base.unsafe_getindex(iter::ProgressBar, index::Int64)
-    """
-    Base.unsafe_getindex is used by the `Threads.@threads for ... in ...` macro
-    in julia 1.3.
-    This wrapper will do weird things when used directly.
-    """
-    item = Base.unsafe_getindex(iter.wrapped, index)
-    lock(iter.mutex)
-    iter.current += 1
-    if time_ns() - iter.last_print > PRINTING_DELAY
-        display_progress(iter)
-        iter.last_print = time_ns()
-    elseif iter.current == iter.total
-        # Reached end of iteration
-        display_progress(iter)
-        if iter.leave
-            println()
-        else
-            clear_progress(iter)
-        end
-    end
-    unlock(iter.mutex)
-    return item
-end
-
-function Base.firstindex(iter::ProgressBar)
-    lock(iter.mutex)
-    iter.start_time = time_ns() - PRINTING_DELAY
-    iter.current = 0
-    display_progress(iter)
-    unlock(iter.mutex)
-    return Base.firstindex(iter.wrapped)
-end
-
-function Base.getindex(iter::ProgressBar, index::Int64)
-    """
-    Base.getindex is used by the `Threads.@threads for ... in ...` macro
-    from julia 1.4 on.
-    This wrapper will do weird things when used directly.
-    """
-    item = Base.getindex(iter.wrapped, index)
-    lock(iter.mutex)
-    iter.current += 1
-    if time_ns() - iter.last_print > PRINTING_DELAY
-        display_progress(iter)
-        iter.last_print = time_ns()
-    elseif iter.current == iter.total
-        # Reached end of iteration
-        display_progress(iter)
-        if iter.leave
-            println()
-        else
-            clear_progress(iter)
-        end
-    end
-    unlock(iter.mutex)
-    return item
-end
-
 function newline_to_spaces(string, terminal_width)
     new_string = ""
     width_cumulator = 0
@@ -324,6 +259,33 @@ function newline_to_spaces(string, terminal_width)
     return new_string
 end
 
-# end
+# Simple wrapper for a progress bar which stores its own state
+mutable struct WrappedProgressBar
+    bar::ProgressBar
+    state::Union{Int,Nothing}
+    cycle::Union{Int,Nothing}
+
+    function WrappedProgressBar(args...; kwargs...)
+        return new(ProgressBar(args...; kwargs...), nothing, nothing)
+    end
+end
+
+"""Iterate a progress bar without needing to store cycle/state externally."""
+function manually_iterate!(progress_bar::WrappedProgressBar)
+    cur_cycle = progress_bar.cycle
+    cur_state = progress_bar.state
+    if cur_cycle === nothing
+        cur_cycle, cur_state = iterate(progress_bar.bar)
+    else
+        cur_cycle, cur_state = iterate(progress_bar.bar, cur_state)
+    end
+    progress_bar.cycle = cur_cycle
+    progress_bar.state = cur_state
+    return nothing
+end
+
+function set_multiline_postfix!(t::WrappedProgressBar, postfix::AbstractString)
+    return set_multiline_postfix!(t.bar, postfix)
+end
 
 end
