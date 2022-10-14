@@ -68,9 +68,9 @@ function test_dataset_configuration(dataset::Dataset{T}, options::Options) where
         end
     end
 
-    if !(typeof(options.loss) <: SupervisedLoss)
+    if !(typeof(options.elementwise_loss) <: SupervisedLoss)
         if dataset.weighted
-            if !(3 in [m.nargs - 1 for m in methods(options.loss)])
+            if !(3 in [m.nargs - 1 for m in methods(options.elementwise_loss)])
                 throw(
                     AssertionError(
                         "When you create a custom loss function, and are using weights, you need to define your loss function with three scalar arguments: f(prediction, target, weight).",
@@ -83,7 +83,7 @@ end
 
 """ Move custom operators and loss functions to workers, if undefined """
 function move_functions_to_workers(procs, options::Options, dataset::Dataset{T}) where {T}
-    for function_set in 1:6
+    for function_set in 1:7
         if function_set == 1
             ops = options.unaops
             example_inputs = (zero(T),)
@@ -120,6 +120,12 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
             end
             ops = (options.earlyStopCondition,)
             example_inputs = (zero(T), zero(T))
+        elseif function_set == 7
+            if options.loss_function === nothing
+                continue
+            end
+            ops = (options.loss_function,)
+            example_inputs = (Node(T; val=zero(T)), dataset, options)
         end
         for op in ops
             try
