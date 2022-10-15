@@ -119,6 +119,63 @@ function unaopmap(op)
     return op
 end
 
+"""Define +(Node, Node), +(Node, Float), etc., based on the user-passed operators"""
+function create_helper_functions(binary_operators, unary_operators)
+    for (op, f) in enumerate(map(Symbol, binary_operators))
+        _f = if f in [Symbol(pow), Symbol(safe_pow)]
+            Symbol(^)
+        else
+            f
+        end
+        if !isdefined(Base, _f)
+            continue
+        end
+        @eval begin
+            function Base.$_f(l::Node{T1}, r::Node{T2}) where {T1<:Real,T2<:Real}
+                T = promote_type(T1, T2)
+                l = convert(Node{T}, l)
+                r = convert(Node{T}, r)
+                if (l.constant && r.constant)
+                    return Node(; val=$f(l.val, r.val))
+                else
+                    return Node($op, l, r)
+                end
+            end
+            function Base.$_f(l::Node{T1}, r::T2) where {T1<:Real,T2<:Real}
+                T = promote_type(T1, T2)
+                l = convert(Node{T}, l)
+                r = convert(T, r)
+                return l.constant ? Node(; val=$f(l.val, r)) : Node($op, l, Node(; val=r))
+            end
+            function Base.$_f(l::T1, r::Node{T2}) where {T1<:Real,T2<:Real}
+                T = promote_type(T1, T2)
+                l = convert(T, l)
+                r = convert(Node{T}, r)
+                return r.constant ? Node(; val=$f(l, r.val)) : Node($op, Node(; val=l), r)
+            end
+        end
+    end
+
+    # Redefine Base operations:
+    for (op, f) in enumerate(map(Symbol, unary_operators))
+        if !isdefined(Base, f)
+            continue
+        end
+        @eval begin
+            function Base.$f(l::Node{T})::Node{T} where {T<:Real}
+                return l.constant ? Node(; val=$f(l.val)) : Node($op, l)
+            end
+        end
+    end
+end
+
+function create_print_function(options::Options)
+    @eval begin
+        Base.print(io::IO, tree::Node) = print(io, string_tree(tree, $options))
+        Base.show(io::IO, tree::Node) = print(io, string_tree(tree, $options))
+    end
+end
+
 """
     Options(;kws...)
 
@@ -267,6 +324,10 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `deterministic`: Use a global counter for the birth time, rather than calls to `time()`. This gives
     perfect resolution, and is therefore deterministic. However, it is not thread safe, and must be used
     in serial mode.
+- `define_helper_functions`: Whether to re-define functions like `println`, `show`, `+()`, etc., based on these
+    options. For example, if the operators passed are `binary_operators=(+, -)`, then a new function will be
+    created for `-` on `Node` types, so that `Node("x1") - 3.2` will construct the tree `x1 - 3.2` in the
+    format specified.
 """
 function Options(;
     binary_operators::NTuple{nbin,Any}=(+, -, /, *),
@@ -325,6 +386,7 @@ function Options(;
     enable_autodiff::Bool=false,
     nested_constraints=nothing,
     deterministic=false,
+    define_helper_functions=true,
 ) where {nuna,nbin}
     if warmupMaxsize !== nothing
         error(
@@ -531,51 +593,8 @@ function Options(;
         error("Not the right number of mutation probabilities given")
     end
 
-    for (op, f) in enumerate(map(Symbol, binary_operators))
-        _f = if f in [Symbol(pow), Symbol(safe_pow)]
-            Symbol(^)
-        else
-            f
-        end
-        if !isdefined(Base, _f)
-            continue
-        end
-        @eval begin
-            function Base.$_f(l::Node{T1}, r::Node{T2}) where {T1<:Real,T2<:Real}
-                T = promote_type(T1, T2)
-                l = convert(Node{T}, l)
-                r = convert(Node{T}, r)
-                if (l.constant && r.constant)
-                    return Node(; val=$f(l.val, r.val))
-                else
-                    return Node($op, l, r)
-                end
-            end
-            function Base.$_f(l::Node{T1}, r::T2) where {T1<:Real,T2<:Real}
-                T = promote_type(T1, T2)
-                l = convert(Node{T}, l)
-                r = convert(T, r)
-                return l.constant ? Node(; val=$f(l.val, r)) : Node($op, l, Node(; val=r))
-            end
-            function Base.$_f(l::T1, r::Node{T2}) where {T1<:Real,T2<:Real}
-                T = promote_type(T1, T2)
-                l = convert(T, l)
-                r = convert(Node{T}, r)
-                return r.constant ? Node(; val=$f(l, r.val)) : Node($op, Node(; val=l), r)
-            end
-        end
-    end
-
-    # Redefine Base operations:
-    for (op, f) in enumerate(map(Symbol, unary_operators))
-        if !isdefined(Base, f)
-            continue
-        end
-        @eval begin
-            function Base.$f(l::Node{T})::Node{T} where {T<:Real}
-                return l.constant ? Node(; val=$f(l.val)) : Node($op, l)
-            end
-        end
+    if define_helper_functions
+        create_helper_functions(binary_operators, unary_operators)
     end
 
     if progress
@@ -675,9 +694,8 @@ function Options(;
         deterministic,
     )
 
-    @eval begin
-        Base.print(io::IO, tree::Node) = print(io, string_tree(tree, $options))
-        Base.show(io::IO, tree::Node) = print(io, string_tree(tree, $options))
+    if define_helper_functions
+        create_print_function(options)
     end
 
     return options
