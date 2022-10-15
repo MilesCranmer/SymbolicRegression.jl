@@ -692,6 +692,7 @@ function Options(;
         enable_autodiff,
         nested_constraints,
         deterministic,
+        define_helper_functions,
     )
 
     if define_helper_functions

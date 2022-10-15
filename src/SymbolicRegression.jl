@@ -377,7 +377,7 @@ function _EquationSearch(
     stdin_reader = watch_stream(stdin)
 
     # Redefine print, show:
-    @eval begin
+    options.define_helper_functions && @eval begin
         function Base.print(io::IO, tree::Node)
             return print(io, string_tree(tree, $options; varMap=$(datasets[1].varMap)))
         end

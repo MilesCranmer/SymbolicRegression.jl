@@ -91,6 +91,7 @@ struct Options{A,B,dA,dB,C<:Union{SupervisedLoss,Function},D}
     enable_autodiff::Bool
     nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
     deterministic::Bool
+    define_helper_functions::Bool
 end
 
 function Base.print(io::IO, options::Options)
