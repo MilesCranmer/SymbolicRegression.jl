@@ -132,10 +132,10 @@ for i in 0:5
         residual = simplify(eqn - true_eqn) + x4 * 1e-10
 
         # Test the score
-        @test best.loss < maximum_residual / 10
+        @test best.loss < maximum_residual
         # Test the actual equation found:
         # eval evaluates inside global
-        @test abs(eval(Meta.parse(string(residual)))) < maximum_residual
+        @test abs(eval(Meta.parse(string(residual)))) < maximum_residual * 10
     end
 
     println("Passed.")
