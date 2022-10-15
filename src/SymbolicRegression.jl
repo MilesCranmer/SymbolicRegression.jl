@@ -931,16 +931,24 @@ function _EquationSearch(
 end
 
 @precompile_setup begin
-    for type in [Float16, Float32, Float64]
+    precompiled_types = [Float32, Float64]
+    precompiled_operators = (
+        binary_operators=(+, -, *, /, ^),
+        unary_operators=(sin, cos, exp, log, sqrt, square, cube),
+    )
+
+    for type in precompiled_types
         example_X = randn(type, 5, 20)
         example_y = example_X[1, :]
         @precompile_all_calls begin
             options = Options(;
-                binary_operators=(+, -, *, /, ^),
-                unary_operators=(cos, exp, tanh),
                 verbosity=0,
                 progress=false,
-                max_evals=1000,
+                max_evals=10000,
+                # Disables helper functions (like overloading `print`)
+                # from being pre-compiled:
+                define_helper_functions=false,
+                precompiled_operators...,
             )
             EquationSearch(example_X, example_y; options=options, multithreading=true)
         end
