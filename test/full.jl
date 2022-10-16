@@ -1,14 +1,9 @@
 include("test_params.jl")
-using SymbolicRegression, SymbolicUtils
+using SymbolicRegression
 using Test
 using SymbolicRegression: string_tree
 using Random
 
-x1 = 0.1f0;
-x2 = 0.1f0;
-x3 = 0.1f0;
-x4 = 0.1f0;
-x5 = 0.1f0;
 for i in 0:5
     batching = i in [0, 1]
     weighted = i in [0, 2]
@@ -118,24 +113,21 @@ for i in 0:5
         end
     end
 
-    # Always assume multi
+    # For brevity, always assume multi-output in this test:
     for dom in dominating
         best = dom[end]
         # Assert we created the correct type of trees:
         @test typeof(best.tree) == Node{T}
 
-        # Look at the symbolic version:
-        eqn = node_to_symbolic(best.tree, options)
-
-        local x4 = SymbolicUtils.Sym{Real}(Symbol("x4"))
-        true_eqn = 2 * cos(x4)
-        residual = simplify(eqn - true_eqn) + x4 * 1e-10
-
         # Test the score
         @test best.loss < maximum_residual
         # Test the actual equation found:
+        testX = randn(MersenneTwister(1), T, 5, 100)
+        true_y = 2 * cos.(testX[4, :])
+        predicted_y, flag = eval_tree_array(best.tree, testX, options)
+        @test flag
+        @test sum(abs, true_y .- predicted_y) < maximum_residual
         # eval evaluates inside global
-        @test abs(eval(Meta.parse(string(residual)))) < maximum_residual * 10
     end
 
     println("Passed.")
@@ -161,22 +153,8 @@ dominating = calculate_pareto_frontier(X, y, hallOfFame, options)
 
 best = dominating[end]
 
-eqn = node_to_symbolic(best.tree, options; varMap=varMap)
-
-t4 = SymbolicUtils.Sym{Real}(Symbol("t4"))
-true_eqn = 2 * cos(t4)
-residual = simplify(eqn - true_eqn) + t4 * 1e-10
-
 # Test the score
 @test best.loss < maximum_residual / 10
-# Test the actual equation found:
-t1 = 0.1f0;
-t2 = 0.1f0;
-t3 = 0.1f0;
-t4 = 0.1f0;
-t5 = 0.1f0;
-residual_value = abs(eval(Meta.parse(string(residual))))
-@test residual_value < maximum_residual
 
 # Do search again, but with saved state:
 # We do 0 iterations to make sure the state is used.
@@ -189,8 +167,6 @@ state, hallOfFame = EquationSearch(
 dominating = calculate_pareto_frontier(X, y, hallOfFame, options)
 best = dominating[end]
 print_tree(best.tree, options)
-eqn = node_to_symbolic(best.tree, options; varMap=varMap)
-residual = simplify(eqn - true_eqn) + t4 * 1e-10
 @test best.loss < maximum_residual / 10
 
 println("Passed.")
