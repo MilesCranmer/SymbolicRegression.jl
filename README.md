@@ -2,7 +2,7 @@
 
 <img src="docs/assets/symbolic_regression_logo.svg" height="400"></img>
 
-SymbolicRegression.jl uses genetic algorithms to search for symbolic expressions which optimize a particular objective.
+SymbolicRegression.jl searches for symbolic expressions which optimize a particular objective.
 
 
 | Latest release | Documentation | Build status | Coverage |
