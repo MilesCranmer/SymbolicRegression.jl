@@ -904,7 +904,7 @@ function _EquationSearch(
     if we_created_procs
         rmprocs(procs)
     end
-    # TODO - also stop threads here.
+    # TODO - also stop threads here?
 
     ##########################################################################
     ### Distributed code^
