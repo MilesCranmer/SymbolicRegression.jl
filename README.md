@@ -1,19 +1,19 @@
 <div align="center">
 
-![Symbolic Regression Logo](docs/assets/symbolic_regression_logo.svg)
+<img src="docs/assets/symbolic_regression_logo.svg" height="400"></img>
 
-SymbolicRegression.jl is a library for distributed high-performance symbolic regression in Julia.
+SymbolicRegression.jl uses genetic algorithms to search for symbolic expressions which optimize a particular objective.
 
 
 | Latest release | Documentation | Build status | Coverage |
 | --- | --- | --- | --- |
 | [![version](https://juliahub.com/docs/SymbolicRegression/version.svg)](https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS) | [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://astroautomata.com/SymbolicRegression.jl/dev/) [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://astroautomata.com/SymbolicRegression.jl/stable/)  | [![CI](https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/CI/badge.svg)](.github/workflows/CI.yml) | [![Coverage Status](https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master)](https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master) |
 
-</div>
-
 
 Check out [PySR](https://github.com/MilesCranmer/PySR) for
 a Python frontend.
+
+</div>
 
 <img src="https://astroautomata.com/data/sr_demo_image1.png" alt="demo1" width="700"/> <img src="https://astroautomata.com/data/sr_demo_image2.png" alt="demo2" width="700"/>
 
