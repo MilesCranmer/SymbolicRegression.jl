@@ -1,10 +1,16 @@
-# SymbolicRegression.jl
+<div align="center">
+
+![Symbolic Regression Logo](docs/assets/symbolic_regression_logo.svg)
+
+SymbolicRegression.jl is a library for distributed high-performance symbolic regression in Julia.
+
 
 | Latest release | Documentation | Build status | Coverage |
 | --- | --- | --- | --- |
 | [![version](https://juliahub.com/docs/SymbolicRegression/version.svg)](https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS) | [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://astroautomata.com/SymbolicRegression.jl/dev/) [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://astroautomata.com/SymbolicRegression.jl/stable/)  | [![CI](https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/CI/badge.svg)](.github/workflows/CI.yml) | [![Coverage Status](https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master)](https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master) |
 
-Distributed High-Performance symbolic regression in Julia.
+</div>
+
 
 Check out [PySR](https://github.com/MilesCranmer/PySR) for
 a Python frontend.
