@@ -23,6 +23,7 @@ import ..OperatorsModule:
     atanh_clip
 import ..EquationModule: Node, string_tree
 import ..OptionsStructModule: Options, ComplexityMapping
+import ..UtilsModule: max_ops
 
 """
          build_constraints(una_constraints, bin_constraints,
@@ -338,6 +339,7 @@ function Options(;
 
     @assert maxsize > 3
     @assert warmupMaxsizeBy >= 0.0f0
+    @assert nuna <= max_ops && nbin <= max_ops
 
     # Make sure nested_constraints contains functions within our operator set:
     if nested_constraints !== nothing

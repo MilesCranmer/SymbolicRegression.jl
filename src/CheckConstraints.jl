@@ -1,5 +1,6 @@
 module CheckConstraintsModule
 
+import ..UtilsModule: vals
 import ..CoreModule: Node, Options
 import ..EquationUtilsModule: compute_complexity
 
@@ -10,7 +11,7 @@ function flag_bin_operator_complexity(
     if tree.degree == 0
         return false
     elseif tree.degree == 1
-        return flag_bin_operator_complexity(tree.l, Val(op), options)
+        return flag_bin_operator_complexity(tree.l, vals[op], options)
     else
         if tree.op == op
             overly_complex::Bool = (
@@ -31,8 +32,8 @@ function flag_bin_operator_complexity(
             end
         end
         return (
-            flag_bin_operator_complexity(tree.l, Val(op), options) ||
-            flag_bin_operator_complexity(tree.r, Val(op), options)
+            flag_bin_operator_complexity(tree.l, vals[op], options) ||
+            flag_bin_operator_complexity(tree.r, vals[op], options)
         )
     end
 end
@@ -53,11 +54,11 @@ function flag_una_operator_complexity(
                 return true
             end
         end
-        return flag_una_operator_complexity(tree.l, Val(op), options)
+        return flag_una_operator_complexity(tree.l, vals[op], options)
     else
         return (
-            flag_una_operator_complexity(tree.l, Val(op), options) ||
-            flag_una_operator_complexity(tree.r, Val(op), options)
+            flag_una_operator_complexity(tree.l, vals[op], options) ||
+            flag_una_operator_complexity(tree.r, vals[op], options)
         )
     end
 end
