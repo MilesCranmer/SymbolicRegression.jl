@@ -4,7 +4,6 @@ using Optim: Optim
 import DynamicExpressions: OperatorEnum, Node, string_tree
 import Distributed: nworkers
 import LossFunctions: L2DistLoss
-import Zygote: gradient
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
