@@ -1,7 +1,5 @@
 using SymbolicUtils: SymbolicUtils
 
-# TODO: Implement (::Node)(X)
-
 function eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
     return eval_tree_array(tree, X, options.operators; kws...)
 end
@@ -44,10 +42,12 @@ function Base.convert(
     return convert(n, x, options.operators; kws...)
 end
 
-function node_to_symbolic(tree::Node, options::Options)
-    return node_to_symbolic(tree, options.operators)
+function node_to_symbolic(tree::Node, options::Options; kws...)
+    return node_to_symbolic(tree, options.operators; kws...)
 end
 
-function symbolic_to_node(eqn::T, options::Options) where {T<:SymbolicUtils.Symbolic}
-    return symbolic_to_node(eqn, options.operators)
+function symbolic_to_node(
+    eqn::T, options::Options; kws...
+) where {T<:SymbolicUtils.Symbolic}
+    return symbolic_to_node(eqn, options.operators; kws...)
 end
