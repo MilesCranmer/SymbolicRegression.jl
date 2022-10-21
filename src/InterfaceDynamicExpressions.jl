@@ -43,3 +43,11 @@ function Base.convert(
 )
     return convert(n, x, options.operators; kws...)
 end
+
+function node_to_symbolic(tree::Node, options::Options)
+    return node_to_symbolic(tree, options.operators)
+end
+
+function symbolic_to_node(eqn::T, options::Options) where {T<:SymbolicUtils.Symbolic}
+    return symbolic_to_node(eqn, options.operators)
+end
