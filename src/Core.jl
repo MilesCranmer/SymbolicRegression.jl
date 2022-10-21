@@ -4,12 +4,10 @@ include("Utils.jl")
 include("ProgramConstants.jl")
 include("Dataset.jl")
 include("OptionsStruct.jl")
-include("Equation.jl")
 include("Operators.jl")
 include("Options.jl")
 
 import .ProgramConstantsModule:
-    CONST_TYPE,
     MAX_DEGREE,
     BATCH_DIM,
     FEATURE_DIM,
@@ -20,7 +18,6 @@ import .ProgramConstantsModule:
     SRDistributed
 import .DatasetModule: Dataset
 import .OptionsStructModule: Options
-import .EquationModule: Node, copy_node, set_node!, string_tree, print_tree
 import .OptionsModule: Options
 import .OperatorsModule:
     plus,

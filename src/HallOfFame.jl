@@ -1,7 +1,8 @@
 module HallOfFameModule
 
-import ..CoreModule: MAX_DEGREE, Node, Options, Dataset, string_tree
-import ..EquationUtilsModule: compute_complexity
+import DynamicExpressions: Node, string_tree
+import ..CoreModule: MAX_DEGREE, Options, Dataset
+import ..ComplexityModule: compute_complexity
 import ..PopMemberModule: PopMember, copy_pop_member
 import ..LossFunctionsModule: eval_loss
 using Printf: @sprintf
@@ -134,7 +135,7 @@ function string_dominating_pareto_curve(hallOfFame, dataset, options)
             complexity,
             curMSE,
             score,
-            string_tree(member.tree, options, varMap=dataset.varMap)
+            string_tree(member.tree, options.operators, varMap=dataset.varMap)
         )
         lastMSE = curMSE
         lastComplexity = complexity

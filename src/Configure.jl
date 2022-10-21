@@ -1,15 +1,17 @@
+const TEST_TYPE = Float32
+
 function assert_operators_defined_over_reals(T, options::Options)
     test_input = map(x -> convert(T, x), LinRange(-100, 100, 99))
     cur_op = nothing
     try
         for left in test_input
             for right in test_input
-                for binop in options.binops
+                for binop in options.operators.binops
                     cur_op = binop
                     test_output = binop.(left, right)
                 end
             end
-            for unaop in options.unaops
+            for unaop in options.operators.unaops
                 cur_op = unaop
                 test_output = unaop.(left)
             end
@@ -25,7 +27,7 @@ end
 
 # Check for errors before they happen
 function test_option_configuration(T, options::Options)
-    for op in (options.binops..., options.unaops...)
+    for op in (options.operators.binops..., options.operators.unaops...)
         if is_anonymous_function(op)
             throw(
                 AssertionError(
@@ -37,8 +39,8 @@ function test_option_configuration(T, options::Options)
 
     assert_operators_defined_over_reals(T, options)
 
-    for binop in options.binops
-        if binop in options.unaops
+    for binop in options.operators.binops
+        if binop in options.operators.unaops
             throw(
                 AssertionError(
                     "Your configuration is invalid - one operator ($binop) appears in both the binary operators and unary operators.",
@@ -83,24 +85,26 @@ end
 
 """ Move custom operators and loss functions to workers, if undefined """
 function move_functions_to_workers(procs, options::Options, dataset::Dataset{T}) where {T}
+    enable_autodiff = (options.operators.diff_binops !== nothing || options.operators.diff_unaops !== nothing)
+
     for function_set in 1:6
         if function_set == 1
-            ops = options.unaops
+            ops = options.operators.unaops
             nargs = 1
         elseif function_set == 2
-            ops = options.binops
+            ops = options.operators.binops
             nargs = 2
         elseif function_set == 3
-            if !options.enable_autodiff
+            if !enable_autodiff
                 continue
             end
-            ops = options.diff_unaops
+            ops = options.operators.diff_unaops
             nargs = 1
         elseif function_set == 4
-            if !options.enable_autodiff
+            if !enable_autodiff
                 continue
             end
-            ops = options.diff_binops
+            ops = options.operators.diff_binops
             nargs = 2
         elseif function_set == 5
             if typeof(options.loss) <: SupervisedLoss
@@ -211,7 +215,7 @@ function test_module_on_workers(procs, options::Options)
     for proc in procs
         push!(
             futures,
-            @spawnat proc SymbolicRegression.gen_random_tree(3, options, 5, CONST_TYPE)
+            @spawnat proc SymbolicRegression.gen_random_tree(3, options, 5, TEST_TYPE)
         )
     end
     for future in futures

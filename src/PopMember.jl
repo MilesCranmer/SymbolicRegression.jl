@@ -1,6 +1,7 @@
 module PopMemberModule
 
-import ..CoreModule: Options, Dataset, Node, copy_node
+import DynamicExpressions: Node, copy_node
+import ..CoreModule: Options, Dataset
 import ..UtilsModule: get_birth_order
 import ..LossFunctionsModule: score_func
 

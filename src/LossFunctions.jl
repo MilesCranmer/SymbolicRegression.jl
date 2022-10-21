@@ -2,15 +2,16 @@ module LossFunctionsModule
 
 import Random: randperm
 import LossFunctions: value, AggMode, SupervisedLoss
-import ..CoreModule: Options, Dataset, Node
-import ..EquationUtilsModule: compute_complexity
-import ..EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
+import DynamicExpressions:
+    eval_tree_array, eval_tree_array, differentiable_eval_tree_array, Node
+import ..CoreModule: Options, Dataset
+import ..ComplexityModule: compute_complexity
 
 function loss( # fmt: off
     x::AbstractArray{T},
     y::AbstractArray{T},
-    options::Options{A,B,dA,dB,C,D}, # fmt: on
-)::T where {T<:Real,A,B,dA,dB,C,D}
+    options::Options{C,D}, # fmt: on
+)::T where {T<:Real,C,D}
     if C <: SupervisedLoss
         return value(options.loss, y, x, AggMode.Mean())
     elseif C <: Function
@@ -21,11 +22,8 @@ function loss( # fmt: off
 end
 
 function loss(
-    x::AbstractArray{T},
-    y::AbstractArray{T},
-    w::AbstractArray{T},
-    options::Options{A,B,dA,dB,C,D},
-)::T where {T<:Real,A,B,dA,dB,C,D}
+    x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options{C,D}
+)::T where {T<:Real,C,D}
     if C <: SupervisedLoss
         return value(options.loss, y, x, AggMode.WeightedMean(w))
     elseif C <: Function
@@ -37,7 +35,7 @@ end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
-    (prediction, completion) = eval_tree_array(tree, dataset.X, options)
+    (prediction, completion) = eval_tree_array(tree, dataset.X, options.operators)
     if !completion
         return T(Inf)
     end
@@ -81,7 +79,7 @@ function score_func_batch(
     batch_idx = randperm(dataset.n)[1:(options.batchSize)]
     batch_X = dataset.X[:, batch_idx]
     batch_y = dataset.y[batch_idx]
-    (prediction, completion) = eval_tree_array(tree, batch_X, options)
+    (prediction, completion) = eval_tree_array(tree, batch_X, options.operators)
     if !completion
         return T(0), T(Inf)
     end

@@ -7,7 +7,7 @@ import Printf: @printf, @sprintf
 using Distributed
 
 import ..CoreModule: SRThreaded, SRSerial, SRDistributed, Dataset, Options
-import ..EquationUtilsModule: compute_complexity
+import ..ComplexityModule: compute_complexity
 import ..PopulationModule: Population
 import ..HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve

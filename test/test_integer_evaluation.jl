@@ -18,7 +18,7 @@ X = Int32.(rand(MersenneTwister(0), -5:5, 3, 100))
 
 true_out = nodefnc.(X[1, :], X[2, :], X[3, :])
 @test eltype(true_out) == Int32
-out, flag = eval_tree_array(tree, X, options)
+out, flag = eval_tree_array(tree, X, options.operators)
 @test flag
 @test isapprox(out, true_out)
 @test eltype(out) == Int32

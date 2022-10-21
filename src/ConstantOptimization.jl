@@ -2,9 +2,9 @@ module ConstantOptimizationModule
 
 using LineSearches: LineSearches
 using Optim: Optim
-import ..CoreModule: Node, Options, Dataset
+import DynamicExpressions: Node, get_constants, set_constants, count_constants
+import ..CoreModule: Options, Dataset
 import ..UtilsModule: get_birth_order
-import ..EquationUtilsModule: get_constants, set_constants, count_constants
 import ..LossFunctionsModule: score_func, eval_loss
 import ..PopMemberModule: PopMember
 

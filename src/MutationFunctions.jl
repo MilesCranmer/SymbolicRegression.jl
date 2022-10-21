@@ -1,7 +1,8 @@
 module MutationFunctionsModule
 
-import ..CoreModule: Node, copy_node, set_node!, Options
-import ..EquationUtilsModule: count_nodes, has_constants, has_operators
+import DynamicExpressions:
+    Node, copy_node, set_node!, count_nodes, has_constants, has_operators
+import ..CoreModule: Options
 
 # Return a random node from the tree
 function random_node(tree::Node{T})::Node{T} where {T}

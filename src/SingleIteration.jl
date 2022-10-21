@@ -1,9 +1,9 @@
 module SingleIterationModule
 
-import ..CoreModule: Options, Dataset, RecordType, string_tree
-import ..EquationUtilsModule: compute_complexity
+import DynamicExpressions: string_tree, simplify_tree, combine_operators
+import ..CoreModule: Options, Dataset, RecordType
+import ..ComplexityModule: compute_complexity
 import ..UtilsModule: debug
-import ..SimplifyEquationModule: simplify_tree, combine_operators
 import ..PopMemberModule: copy_pop_member, generate_reference
 import ..PopulationModule: Population, finalize_scores, best_sub_pop
 import ..HallOfFameModule: HallOfFame
@@ -70,8 +70,8 @@ function optimize_and_simplify_population(
     array_num_evals = zeros(Float64, pop.n)
     do_optimization = rand(pop.n) .< options.optimize_probability
     @inbounds @simd for j in 1:(pop.n)
-        pop.members[j].tree = simplify_tree(pop.members[j].tree, options)
-        pop.members[j].tree = combine_operators(pop.members[j].tree, options)
+        pop.members[j].tree = simplify_tree(pop.members[j].tree, options.operators)
+        pop.members[j].tree = combine_operators(pop.members[j].tree, options.operators)
         if options.shouldOptimizeConstants && do_optimization[j]
             pop.members[j], array_num_evals[j] = optimize_constants(
                 dataset, pop.members[j], options
@@ -98,7 +98,7 @@ function optimize_and_simplify_population(
             if !haskey(record["mutations"], "$(member.ref)")
                 record["mutations"]["$(member.ref)"] = RecordType(
                     "events" => Vector{RecordType}(),
-                    "tree" => string_tree(member.tree, options),
+                    "tree" => string_tree(member.tree, options.operators),
                     "score" => member.score,
                     "loss" => member.loss,
                     "parent" => member.parent,

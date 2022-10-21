@@ -23,6 +23,7 @@ export Population,
     copy_node,
     node_to_symbolic,
     symbolic_to_node,
+    simplify_tree,
     combine_operators,
     gen_random_tree,
     gen_random_tree_fixed_size,
@@ -61,6 +62,25 @@ using Pkg: Pkg
 import TOML: parsefile
 import Random: seed!, shuffle!
 using Reexport
+import DynamicExpressions:
+    Node,
+    copy_node,
+    set_node!,
+    string_tree,
+    print_tree,
+    count_nodes,
+    get_constants,
+    set_constants,
+    index_constants,
+    NodeIndex,
+    eval_tree_array,
+    differentiable_eval_tree_array,
+    eval_diff_tree_array,
+    eval_grad_tree_array,
+    node_to_symbolic,
+    symbolic_to_node,
+    combine_operators,
+    simplify_tree
 @reexport import LossFunctions:
     MarginLoss,
     DistanceLoss,
@@ -98,9 +118,7 @@ end
 include("Core.jl")
 include("Recorder.jl")
 include("Utils.jl")
-include("EquationUtils.jl")
-include("EvaluateEquation.jl")
-include("EvaluateEquationDerivative.jl")
+include("Complexity.jl")
 include("CheckConstraints.jl")
 include("AdaptiveParsimony.jl")
 include("MutationFunctions.jl")
@@ -109,8 +127,6 @@ include("PopMember.jl")
 include("ConstantOptimization.jl")
 include("Population.jl")
 include("HallOfFame.jl")
-include("InterfaceSymbolicUtils.jl")
-include("SimplifyEquation.jl")
 include("Mutate.jl")
 include("RegularizedEvolution.jl")
 include("SingleIteration.jl")
@@ -118,15 +134,11 @@ include("ProgressBars.jl")
 include("SearchUtils.jl")
 
 import .CoreModule:
-    CONST_TYPE,
     MAX_DEGREE,
     BATCH_DIM,
     FEATURE_DIM,
     RecordType,
     Dataset,
-    Node,
-    copy_node,
-    set_node!,
     Options,
     plus,
     sub,
@@ -155,19 +167,9 @@ import .CoreModule:
     SRConcurrency,
     SRSerial,
     SRThreaded,
-    SRDistributed,
-    string_tree,
-    print_tree
+    SRDistributed
 import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge
-import .EquationUtilsModule:
-    count_nodes,
-    compute_complexity,
-    get_constants,
-    set_constants,
-    index_constants,
-    NodeIndex
-import .EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
-import .EvaluateEquationDerivativeModule: eval_diff_tree_array, eval_grad_tree_array
+import .ComplexityModule: compute_complexity
 import .CheckConstraintsModule: check_constraints
 import .AdaptiveParsimonyModule:
     RunningSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
@@ -183,8 +185,6 @@ import .PopulationModule: Population, best_sub_pop, record_population, best_of_s
 import .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 import .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
-import .InterfaceSymbolicUtilsModule: node_to_symbolic, symbolic_to_node
-import .SimplifyEquationModule: combine_operators, simplify_tree
 import .ProgressBarsModule: WrappedProgressBar
 import .RecorderModule: @recorder, find_iteration_from_record
 import .SearchUtilsModule:
@@ -202,6 +202,7 @@ import .SearchUtilsModule:
 
 include("Configure.jl")
 include("Deprecates.jl")
+include("InterfaceDynamicExpressions.jl")
 
 StateType{T} = Tuple{
     Union{Vector{Vector{Population{T}}},Matrix{Population{T}}},
@@ -378,10 +379,14 @@ function _EquationSearch(
     # Redefine print, show:
     @eval begin
         function Base.print(io::IO, tree::Node)
-            return print(io, string_tree(tree, $options; varMap=$(datasets[1].varMap)))
+            return print(
+                io, string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap))
+            )
         end
         function Base.show(io::IO, tree::Node)
-            return print(io, string_tree(tree, $options; varMap=$(datasets[1].varMap)))
+            return print(
+                io, string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap))
+            )
         end
     end
 
@@ -720,7 +725,8 @@ function _EquationSearch(
                     for member in dominating
                         println(
                             io,
-                            "$(compute_complexity(member.tree, options)),$(member.loss),\"$(string_tree(member.tree, options, varMap=dataset.varMap))\"",
+                            "$(compute_complexity(member.tree, options)),$(member.loss),\"" *
+                            "$(string_tree(member.tree, options.operators, varMap=dataset.varMap))\"",
                         )
                     end
                 end

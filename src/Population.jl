@@ -1,8 +1,9 @@
 module PopulationModule
 
 import Random: randperm
-import ..CoreModule: Options, Dataset, RecordType, string_tree
-import ..EquationUtilsModule: compute_complexity
+import DynamicExpressions: string_tree
+import ..CoreModule: Options, Dataset, RecordType
+import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, update_baseline_loss!
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..MutationFunctionsModule: gen_random_tree
@@ -70,7 +71,7 @@ end
 
 # Sample the population, and get the best member from that sample
 function best_of_sample(
-    pop::Population, running_search_statistics::RunningSearchStatistics, options::Options
+    pop::Population{T}, running_search_statistics::RunningSearchStatistics, options::Options
 )::PopMember where {T<:Real}
     sample = sample_pop(pop, options)
 
@@ -146,7 +147,7 @@ function record_population(pop::Population{T}, options::Options)::RecordType whe
     return RecordType(
         "population" => [
             RecordType(
-                "tree" => string_tree(member.tree, options),
+                "tree" => string_tree(member.tree, options.operators),
                 "loss" => member.loss,
                 "score" => member.score,
                 "complexity" => compute_complexity(member.tree, options),
