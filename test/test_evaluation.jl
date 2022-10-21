@@ -67,7 +67,7 @@ for fnc in [
     nfeatures = 3
     X = randn(MersenneTwister(0), Float32, nfeatures, N)
 
-    test_y = eval_tree_array(tree, X, options.operators)[1]
+    test_y = eval_tree_array(tree, X, options)[1]
     true_y = realfnc.(X[1, :], X[2, :], X[3, :])
 
     zero_tolerance = 1e-6

@@ -37,8 +37,7 @@ for unaop in [safe_log, safe_log2, safe_log10, safe_log1p, safe_sqrt, safe_acosh
         default_params..., binary_operators=(+, *, /, -), unary_operators=(unaop,)
     )
     minitree = Node(1, Node("x1"))
-    @test string_tree(minitree, opts.operators) ==
-        replace(string(unaop), "safe_" => "") * "(x1)"
+    @test string_tree(minitree, opts) == replace(string(unaop), "safe_" => "") * "(x1)"
 end
 
 for binop in [safe_pow, ^]
@@ -46,5 +45,5 @@ for binop in [safe_pow, ^]
         default_params..., binary_operators=(+, *, /, -, binop), unary_operators=(cos,)
     )
     minitree = Node(5, Node("x1"), Node("x2"))
-    @test string_tree(minitree, opts.operators) == "(x1 ^ x2)"
+    @test string_tree(minitree, opts) == "(x1 ^ x2)"
 end

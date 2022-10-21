@@ -64,7 +64,7 @@ for type in [Float16, Float32, Float64]
         end
 
         tree = convert(Node{type}, equation(nx1, nx2, nx3))
-        predicted_output = eval_tree_array(tree, X, options.operators)[1]
+        predicted_output = eval_tree_array(tree, X, options)[1]
         true_output = equation.([X[i, :] for i in 1:nfeatures]...)
         true_output = convert(AbstractArray{type}, true_output)
 
@@ -76,14 +76,10 @@ for type in [Float16, Float32, Float64]
         )
         # Convert tuple of vectors to matrix:
         true_grad = reduce(hcat, true_grad)'
-        predicted_grad = eval_grad_tree_array(tree, X, options.operators; variable=true)[2]
+        predicted_grad = eval_grad_tree_array(tree, X, options; variable=true)[2]
         predicted_grad2 =
             reduce(
-                hcat,
-                [
-                    eval_diff_tree_array(tree, X, options.operators, i)[2] for
-                    i in 1:nfeatures
-                ],
+                hcat, [eval_diff_tree_array(tree, X, options, i)[2] for i in 1:nfeatures]
             )'
 
         # Print largest difference between predicted_grad, true_grad:
@@ -102,7 +98,7 @@ for type in [Float16, Float32, Float64]
     # The gradient should be: (C * x1) => x1 is gradient with respect to C.
     tree = equation4(nx1, nx2, nx3)
     tree = convert(Node{type}, tree)
-    predicted_grad = eval_grad_tree_array(tree, X, options.operators; variable=false)[2]
+    predicted_grad = eval_grad_tree_array(tree, X, options; variable=false)[2]
     @test array_test(predicted_grad[1, :], X[1, :])
 
     # More complex expression:
@@ -127,7 +123,7 @@ for type in [Float16, Float32, Float64]
         [X[i, :] for i in 1:nfeatures]...,
     )[1:2]
     true_grad = reduce(hcat, true_grad)'
-    predicted_grad = eval_grad_tree_array(tree, X, options.operators; variable=false)[2]
+    predicted_grad = eval_grad_tree_array(tree, X, options; variable=false)[2]
 
     @test array_test(predicted_grad, true_grad)
     println("Done.")
