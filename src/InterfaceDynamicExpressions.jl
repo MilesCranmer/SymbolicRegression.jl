@@ -4,8 +4,8 @@ function eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
     return eval_tree_array(tree, X, options.operators; kws...)
 end
 
-function eval_diff_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
-    return eval_diff_tree_array(tree, X, options.operators; kws...)
+function eval_diff_tree_array(tree::Node, X::AbstractArray, options::Options, direction::Int)
+    return eval_diff_tree_array(tree, X, options.operators, direction)
 end
 
 function eval_grad_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
