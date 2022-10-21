@@ -18,12 +18,14 @@ function differentiable_eval_tree_array(
     return differentiable_eval_tree_array(tree, X, options.operators; kws...)
 end
 
-function string_tree(tree::Node, options::Options)
-    return string_tree(tree, options.operators)
+function string_tree(tree::Node, options::Options; kws...)
+    return string_tree(tree, options.operators; kws...)
 end
-
-function print_tree(tree::Node, options::Options)
-    return print_tree(tree, options.operators)
+function print_tree(tree::Node, options::Options; kws...)
+    return print_tree(tree, options.operators; kws...)
+end
+function print_tree(io::IO, tree::Node, options::Options; kws...)
+    return print_tree(io, tree, options.operators; kws...)
 end
 
 function Base.convert(::Type{Node{T}}, tree::Node, options::Options) where {T}
