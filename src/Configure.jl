@@ -85,7 +85,10 @@ end
 
 """ Move custom operators and loss functions to workers, if undefined """
 function move_functions_to_workers(procs, options::Options, dataset::Dataset{T}) where {T}
-    enable_autodiff = (options.operators.diff_binops !== nothing || options.operators.diff_unaops !== nothing)
+    enable_autodiff = (
+        options.operators.diff_binops !== nothing ||
+        options.operators.diff_unaops !== nothing
+    )
 
     for function_set in 1:6
         if function_set == 1

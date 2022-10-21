@@ -1,6 +1,6 @@
 module CheckConstraintsModule
 
-import DynamicExpressions: Node 
+import DynamicExpressions: Node
 import ..UtilsModule: vals
 import ..CoreModule: Options
 import ..ComplexityModule: compute_complexity

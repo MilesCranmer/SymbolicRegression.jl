@@ -35,16 +35,20 @@ copy_with_topology = copy_node(tree; preserve_topology=true)
 # We can also tweak the new tree, and the edits should be propagated:
 copied_base_tree = copy_with_topology.l.l
 # (First, assert that it is the same as the old base tree)
-@test string_tree(copied_base_tree, options.operators) == string_tree(base_tree, options.operators)
+@test string_tree(copied_base_tree, options.operators) ==
+    string_tree(base_tree, options.operators)
 
 # Now, let's tweak the new tree's base tree:
 copied_base_tree.l.l = x1 * x2 * 5.2 - exp(x3)
 # "exp" should appear *twice* now:
 copy_with_topology
-@test length(collect(eachmatch(r"exp", string_tree(copy_with_topology, options.operators)))) == 2
+@test length(
+    collect(eachmatch(r"exp", string_tree(copy_with_topology, options.operators)))
+) == 2
 @test copy_with_topology.l.l === copy_with_topology.r
 @test hash(copy_with_topology.l.l) == hash(copy_with_topology.r)
-@test string_tree(copy_with_topology.l.l, options.operators) != string_tree(base_tree, options.operators)
+@test string_tree(copy_with_topology.l.l, options.operators) !=
+    string_tree(base_tree, options.operators)
 
 # We also test whether `convert` breaks shared children.
 # The node type here should be Float64.
