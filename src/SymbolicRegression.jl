@@ -229,20 +229,33 @@ which is useful for debugging and profiling.
     More iterations will improve the results.
 - `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
     weight the loss for each `y` by this value (same shape as `y`).
-- `varMap::Union{Array{String, 1}, Nothing}=nothing`: The names
+- `varMap::Union{Vector{String}, Nothing}=nothing`: The names
     of each feature in `X`, which will be used during printing of equations.
 - `options::Options=Options()`: The options for the search, such as
     which operators to use, evolution hyperparameters, etc.
+- `parallelism=:multithreading`: What parallelism mode to use.
+    The options are `:multithreading`, `:multiprocessing`, and `:serial`.
+    By default, multithreading will be used. Multithreading uses less memory,
+    but multiprocessing can handle multi-node compute. If using `:multithreading`
+    mode, the number of threads available to julia are used. If using
+    `:multiprocessing`, `numprocs` processes will be created dynamically if
+    `procs` is unset. If you have already allocated processes, pass them
+    to the `procs` argument and they will be used.
 - `numprocs::Union{Int, Nothing}=nothing`:  The number of processes to use,
     if you want `EquationSearch` to set this up automatically. By default
     this will be `4`, but can be any number (you should pick a number <=
     the number of cores available).
-- `procs::Union{Array{Int, 1}, Nothing}=nothing`: If you have set up
+- `procs::Union{Vector{Int}, Nothing}=nothing`: If you have set up
     a distributed run manually with `procs = addprocs()` and `@everywhere`,
     pass the `procs` to this keyword argument.
-- `multithreading::Bool=false`: Whether to use multithreading. Otherwise,
-    will use multiprocessing. Multithreading uses less memory, but multiprocessing
-    can handle multi-node compute.
+- `addprocs_function::Union{Function, Nothing}=nothing`: If using multiprocessing
+    (`parallelism=:multithreading`), and are not passing `procs` manually,
+    then they will be allocated dynamically using `addprocs`. However,
+    you may also pass a custom function to use instead of `addprocs`.
+    This function should take a single positional argument,
+    which is the number of processes to use, as well as the `lazy` keyword argument.
+    For example, if set up on a slurm cluster, you could pass
+    `addprocs_function = addprocs_slurm`, which will set up slurm processes.
 - `runtests::Bool=true`: Whether to run (quick) tests before starting the
     search, to see if there will be any problems during the equation search
     related to the host environment.
@@ -252,12 +265,6 @@ which is useful for debugging and profiling.
     which will cause `EquationSearch` to return the state. Note that
     you cannot change the operators or dataset, but most other options
     should be changeable.
-- `addprocs_function::Union{Function, Nothing}=nothing`: If using distributed
-    mode (`multithreading=false`), you may pass a custom function to use
-    instead of `addprocs`. This function should take a single positional argument,
-    which is the number of processes to use, as well as the `lazy` keyword argument.
-    For example, if set up on a slurm cluster, you could pass
-    `addprocs_function = addprocs_slurm`, which will set up slurm processes.
 
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
@@ -271,15 +278,22 @@ function EquationSearch(
     y::AbstractMatrix{T};
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
-    varMap::Union{Array{String,1},Nothing}=nothing,
+    varMap::Union{Vector{String},Nothing}=nothing,
     options::Options=Options(),
+    parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
-    procs::Union{Array{Int,1},Nothing}=nothing,
-    multithreading::Bool=false,
+    procs::Union{Vector{Int},Nothing}=nothing,
+    addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
     saved_state::Union{StateType{T},Nothing}=nothing,
-    addprocs_function::Union{Function,Nothing}=nothing,
+    multithreaded=nothing,
 ) where {T<:Real}
+    if multithreaded !== nothing
+        error(
+            "`multithreaded` is deprecated. Use the `parallelism` argument instead. " *
+            "Choose one of :multithreaded, :multiprocessing, or :serial.",
+        )
+    end
     nout = size(y, FEATURE_DIM)
     if weights !== nothing
         weights = reshape(weights, size(y))
@@ -297,12 +311,12 @@ function EquationSearch(
         datasets;
         niterations=niterations,
         options=options,
+        parallelism=parallelism,
         numprocs=numprocs,
         procs=procs,
-        multithreading=multithreading,
+        addprocs_function=addprocs_function,
         runtests=runtests,
         saved_state=saved_state,
-        addprocs_function=addprocs_function,
     )
 end
 
@@ -322,27 +336,35 @@ function EquationSearch(
 end
 
 function EquationSearch(
-    datasets::Array{Dataset{T},1};
+    datasets::Vector{Dataset{T}};
     niterations::Int=10,
     options::Options=Options(),
+    parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
-    procs::Union{Array{Int,1},Nothing}=nothing,
-    multithreading::Bool=false,
+    procs::Union{Vector{Int},Nothing}=nothing,
+    addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
     saved_state::Union{StateType{T},Nothing}=nothing,
-    addprocs_function::Union{Function,Nothing}=nothing,
 ) where {T<:Real}
-    noprocs = (procs === nothing && numprocs == 0)
-    someprocs = !noprocs
-
-    concurrency = if multithreading
-        @assert procs === nothing && numprocs in [0, nothing]
+    concurrency = if parallelism == :multithreading
         SRThreaded()
-    elseif someprocs
+    elseif parallelism == :multiprocessing
         SRDistributed()
-    else #noprocs, multithreading=false
+    elseif parallelism == :serial
         SRSerial()
+    else
+        error(
+            "Invalid parallelism mode: $parallelism. " *
+            "You must choose one of :multithreading, :multiprocessing, or :serial.",
+        )
     end
+    not_distributed = parallelism in (:serial, :multithreading)
+    not_distributed &&
+        procs !== nothing &&
+        error("`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.")
+    not_distributed &&
+        numprocs !== nothing &&
+        error("`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.")
 
     return _EquationSearch(
         concurrency,
@@ -351,26 +373,31 @@ function EquationSearch(
         options=options,
         numprocs=numprocs,
         procs=procs,
+        addprocs_function=addprocs_function,
         runtests=runtests,
         saved_state=saved_state,
-        addprocs_function=addprocs_function,
     )
 end
 
 function _EquationSearch(
     ::ConcurrencyType,
-    datasets::Array{Dataset{T},1};
-    niterations::Int=10,
-    options::Options=Options(),
-    numprocs::Union{Int,Nothing}=nothing,
-    procs::Union{Array{Int,1},Nothing}=nothing,
-    runtests::Bool=true,
-    saved_state::Union{StateType{T},Nothing}=nothing,
-    addprocs_function::Union{Function,Nothing}=nothing,
+    datasets::Vector{Dataset{T}};
+    niterations::Int,
+    options::Options,
+    numprocs::Union{Int,Nothing},
+    procs::Union{Vector{Int},Nothing},
+    addprocs_function::Union{Function,Nothing},
+    runtests::Bool,
+    saved_state::Union{StateType{T},Nothing},
 ) where {T<:Real,ConcurrencyType<:SRConcurrency}
     if options.deterministic
         if ConcurrencyType != SRSerial
             error("Determinism is only guaranteed for serial mode.")
+        end
+    end
+    if ConcurrencyType == SRThreaded
+        if Threads.nthreads() == 1
+            @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
         end
     end
 
@@ -472,7 +499,7 @@ function _EquationSearch(
         end
         if numprocs === nothing && procs === nothing
             numprocs = 4
-            procs = addprocs_function(4; lazy=false)
+            procs = addprocs_function(numprocs; lazy=false)
             we_created_procs = true
         elseif numprocs === nothing
             numprocs = length(procs)
