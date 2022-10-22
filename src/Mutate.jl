@@ -219,12 +219,12 @@ function next_generation(
         oldSize = compute_complexity(prev, options)
         newSize = compute_complexity(tree, options)
         old_frequency = if (oldSize <= options.maxsize)
-            running_search_statistics.frequencies[oldSize]
+            running_search_statistics.normalized_frequencies[oldSize]
         else
             1e-6
         end
         new_frequency = if (newSize <= options.maxsize)
-            running_search_statistics.frequencies[newSize]
+            running_search_statistics.normalized_frequencies[newSize]
         else
             1e-6
         end
