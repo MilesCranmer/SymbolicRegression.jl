@@ -36,12 +36,13 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{A<:Union{SupervisedLoss,Function},B}
+struct Options{LossType<:Union{SupervisedLoss,Function},ComplexityType,_prob_pick_first,_ns}
     operators::AbstractOperatorEnum
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
-    complexity_mapping::ComplexityMapping{B}
+    complexity_mapping::ComplexityMapping{ComplexityType}
     ns::Int
+    _val_ns::Val{_ns}
     parsimony::Float32
     alpha::Float32
     maxsize::Int
@@ -71,7 +72,7 @@ struct Options{A<:Union{SupervisedLoss,Function},B}
     nuna::Int
     nbin::Int
     seed::Union{Int,Nothing}
-    loss::A
+    loss::LossType
     progress::Bool
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::String
@@ -80,7 +81,8 @@ struct Options{A<:Union{SupervisedLoss,Function},B}
     optimizer_options::Optim.Options
     recorder::Bool
     recorder_file::String
-    probPickFirst::Float32
+    prob_pick_first::Float32
+    _val_prob_pick_first::Val{_prob_pick_first}
     earlyStopCondition::Union{Function,Nothing}
     stateReturn::Bool
     timeout_in_seconds::Union{Float64,Nothing}
@@ -105,7 +107,7 @@ function Base.print(io::IO, options::Options)
     # Migration:
         migration=$(options.migration), hofMigration=$(options.hofMigration), fractionReplaced=$(options.fractionReplaced), fractionReplacedHof=$(options.fractionReplacedHof),
     # Tournaments:
-        probPickFirst=$(options.probPickFirst), ns=$(options.ns), topn=$(options.topn), 
+        prob_pick_first=$(options.prob_pick_first), ns=$(options.ns), topn=$(options.topn), 
     # Constant tuning:
         perturbationFactor=$(options.perturbationFactor), probNegate=$(options.probNegate), shouldOptimizeConstants=$(options.shouldOptimizeConstants), optimizer_algorithm=$(options.optimizer_algorithm), optimize_probability=$(options.optimize_probability), optimizer_nrestarts=$(options.optimizer_nrestarts), optimizer_iterations=$(options.optimizer_options.iterations),
     # Mutations:

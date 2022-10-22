@@ -71,8 +71,10 @@ end
 
 # Sample the population, and get the best member from that sample
 function best_of_sample(
-    pop::Population{T}, running_search_statistics::RunningSearchStatistics, options::Options
-)::PopMember where {T<:Real}
+    pop::Population{T},
+    running_search_statistics::RunningSearchStatistics,
+    options::Options{A,B,p,ns},
+)::PopMember where {T<:Real,A,B,p,ns}
     sample = sample_pop(pop, options)
 
     if options.useFrequencyInTournament
@@ -81,28 +83,28 @@ function best_of_sample(
         frequency_scaling = 20
         # e.g., for 100% occupied at one size, exp(-20*1) = 2.061153622438558e-9; which seems like a good punishment for dominating the population.
 
-        scores = []
-        for member in 1:(options.ns)
-            size = compute_complexity(sample.members[member].tree, options)
+        scores = Vector{T}(undef, ns)
+        for (i, member) in enumerate(sample.members)
+            size = compute_complexity(member.tree, options)
             frequency = if (size <= options.maxsize)
                 running_search_statistics.normalized_frequencies[size]
             else
                 T(0)
             end
-            score = sample.members[member].score * exp(frequency_scaling * frequency)
-            push!(scores, score)
+            scores[i] = member.score * exp(frequency_scaling * frequency)
         end
     else
-        scores = [sample.members[member].score for member in 1:(options.ns)]
+        scores = [member.score for member in sample.members]
     end
-
-    p = options.probPickFirst
 
     if p == 1.0
         chosen_idx = argmin(scores)
     else
-        sort_idx = sortperm(scores)
-        chosen_idx = sort_idx[sample_tournament(Val(p), Val(options.ns))]
+        # First, decide what place we take (usually 1st place wins):
+        tournament_winner = sample_tournament(Val(p), Val(ns))
+        # Then, find the member that won that place, given
+        # their fitness:
+        chosen_idx = partialsortperm(scores, tournament_winner)
     end
     return sample.members[chosen_idx]
 end
@@ -111,8 +113,10 @@ end
 @generated function sample_tournament(::Val{p}, ::Val{ns})::Int where {p,ns}
     k = collect(0:(ns - 1))
     prob_each = p * ((1 - p) .^ k)
+    indexes = collect(1:(ns))
+    weights = StatsBase.Weights(prob_each, sum(prob_each))
     return quote
-        StatsBase.sample(1:($ns), StatsBase.Weights($prob_each))
+        StatsBase.sample($indexes, $weights)
     end
 end
 

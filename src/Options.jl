@@ -527,12 +527,13 @@ function Options(;
         end
     end
 
-    options = Options{typeof(loss),eltype(complexity_mapping)}(
+    options = Options{typeof(loss),eltype(complexity_mapping),probPickFirst,ns}(
         operators,
         bin_constraints,
         una_constraints,
         complexity_mapping,
         ns,
+        Val(ns::Int),
         parsimony,
         alpha,
         maxsize,
@@ -572,6 +573,7 @@ function Options(;
         recorder,
         recorder_file,
         probPickFirst,
+        Val(probPickFirst::AbstractFloat),
         earlyStopCondition,
         stateReturn,
         timeout_in_seconds,
