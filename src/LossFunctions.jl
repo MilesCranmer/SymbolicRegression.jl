@@ -7,26 +7,24 @@ import DynamicExpressions:
 import ..CoreModule: Options, Dataset
 import ..ComplexityModule: compute_complexity
 
-function loss( # fmt: off
-    x::AbstractArray{T},
-    y::AbstractArray{T},
-    options::Options{C,D}, # fmt: on
-)::T where {T<:Real,C,D}
-    if C <: SupervisedLoss
+function _loss(
+    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{LossType}
+)::T where {T<:Real,LossType}
+    if LossType <: SupervisedLoss
         return value(options.loss, y, x, AggMode.Mean())
-    elseif C <: Function
+    elseif LossType <: Function
         return sum(options.loss.(x, y)) / length(y)
     else
         error("Unrecognized type for loss function: $(C)")
     end
 end
 
-function loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options{C,D}
-)::T where {T<:Real,C,D}
-    if C <: SupervisedLoss
+function _weighted_loss(
+    x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options{LossType}
+)::T where {T<:Real,LossType}
+    if LossType <: SupervisedLoss
         return value(options.loss, y, x, AggMode.WeightedMean(w))
-    elseif C <: Function
+    elseif LossType <: Function
         return sum(options.loss.(x, y, w)) / sum(w)
     else
         error("Unrecognized type for loss function: $(C)")
@@ -41,9 +39,9 @@ function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T wher
     end
 
     if dataset.weighted
-        return loss(prediction, dataset.y, dataset.weights, options)
+        return _weighted_loss(prediction, dataset.y, dataset.weights, options)
     else
-        return loss(prediction, dataset.y, options)
+        return _loss(prediction, dataset.y, options)
     end
 end
 
@@ -85,10 +83,10 @@ function score_func_batch(
     end
 
     if !dataset.weighted
-        result_loss = loss(prediction, batch_y, options)
+        result_loss = _loss(prediction, batch_y, options)
     else
         batch_w = dataset.weights[batch_idx]
-        result_loss = loss(prediction, batch_y, batch_w, options)
+        result_loss = _weighted_loss(prediction, batch_y, batch_w, options)
     end
     score = loss_to_score(result_loss, dataset.baseline_loss, tree, options)
     return score, result_loss
@@ -96,9 +94,9 @@ end
 
 function update_baseline_loss!(dataset::Dataset{T}, options::Options) where {T<:Real}
     dataset.baseline_loss = if dataset.weighted
-        loss(dataset.y, ones(T, dataset.n) .* dataset.avg_y, dataset.weights, options)
+        _weighted_loss(dataset.y, ones(T, dataset.n) .* dataset.avg_y, dataset.weights, options)
     else
-        loss(dataset.y, ones(T, dataset.n) .* dataset.avg_y, options)
+        _loss(dataset.y, ones(T, dataset.n) .* dataset.avg_y, options)
     end
     return nothing
 end

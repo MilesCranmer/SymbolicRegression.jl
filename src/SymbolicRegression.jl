@@ -179,7 +179,7 @@ import .MutationFunctionsModule:
     random_node,
     random_node_and_parent,
     crossover_trees
-import .LossFunctionsModule: eval_loss, loss, score_func, update_baseline_loss!
+import .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
 import .PopMemberModule: PopMember, copy_pop_member
 import .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 import .HallOfFameModule:
