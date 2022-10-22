@@ -20,7 +20,7 @@ y = 1.2f0 .+ 2 ./ X[3, :]
 options = SymbolicRegression.Options(;
     default_params..., binary_operators=(+, *), unary_operators=(_inv,), npopulations=8
 )
-hallOfFame = EquationSearch(X, y; niterations=8, options=options, procs=procs)
+hallOfFame = EquationSearch(X, y; niterations=8, options=options, parallelism=:multiprocessing, procs=procs)
 rmprocs(procs)
 
 dominating = calculate_pareto_frontier(X, y, hallOfFame, options)
