@@ -325,6 +325,8 @@ function Options(;
     enable_autodiff::Bool=false,
     nested_constraints=nothing,
     deterministic=false,
+    extend_user_operators=true,
+    define_helper_functions=true,
 ) where {nuna,nbin}
     if warmupMaxsize !== nothing
         error(
@@ -483,6 +485,8 @@ function Options(;
         binary_operators=binary_operators,
         unary_operators=unary_operators,
         enable_autodiff=enable_autodiff,
+        extend_user_operators=extend_user_operators,
+        define_helper_functions=define_helper_functions,
     )
 
     mutationWeights = map((x,) -> convert(Float64, x), mutationWeights)
