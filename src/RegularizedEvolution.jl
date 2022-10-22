@@ -35,7 +35,7 @@ function reg_evol_cycle(
         @recorder error(
             "You cannot have the recorder and fast_cycle set to true at the same time!"
         )
-        @assert options.probPickFirst == 1.0
+        @assert options.prob_pick_first == 1.0
         @assert options.crossoverProbability == 0.0
 
         shuffle!(pop.members)
