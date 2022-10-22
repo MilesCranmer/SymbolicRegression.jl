@@ -71,6 +71,9 @@ function move_window!(running_search_statistics::RunningSearchStatistics)
         while difference_in_size > 0
             indices_to_subtract = findall(frequencies .> smallest_frequency_allowed)
             num_remaining = size(indices_to_subtract, 1)
+            if num_remaining == 0
+                break
+            end
             amount_to_subtract = min(
                 difference_in_size / num_remaining,
                 min(frequencies[indices_to_subtract]...) - smallest_frequency_allowed,
