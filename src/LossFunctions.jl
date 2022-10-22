@@ -8,8 +8,8 @@ import ..CoreModule: Options, Dataset
 import ..ComplexityModule: compute_complexity
 
 function _loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{LossType}
-)::T where {T<:Real,LossType}
+    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{LossType,B}
+)::T where {T<:Real,LossType,B}
     if LossType <: SupervisedLoss
         return value(options.loss, y, x, AggMode.Mean())
     elseif LossType <: Function
@@ -20,8 +20,8 @@ function _loss(
 end
 
 function _weighted_loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options{LossType}
-)::T where {T<:Real,LossType}
+    x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, options::Options{LossType,B}
+)::T where {T<:Real,LossType,B}
     if LossType <: SupervisedLoss
         return value(options.loss, y, x, AggMode.WeightedMean(w))
     elseif LossType <: Function
@@ -39,7 +39,7 @@ function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T wher
     end
 
     if dataset.weighted
-        return _weighted_loss(prediction, dataset.y, dataset.weights, options)
+        return _weighted_loss(prediction, dataset.y, dataset.weights::AbstractVector{T}, options)
     else
         return _loss(prediction, dataset.y, options)
     end
@@ -94,7 +94,7 @@ end
 
 function update_baseline_loss!(dataset::Dataset{T}, options::Options) where {T<:Real}
     dataset.baseline_loss = if dataset.weighted
-        _weighted_loss(dataset.y, ones(T, dataset.n) .* dataset.avg_y, dataset.weights, options)
+        _weighted_loss(dataset.y, ones(T, dataset.n) .* dataset.avg_y, dataset.weights::AbstractVector{T}, options)
     else
         _loss(dataset.y, ones(T, dataset.n) .* dataset.avg_y, options)
     end
