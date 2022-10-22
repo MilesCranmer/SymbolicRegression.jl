@@ -42,7 +42,6 @@ struct Options{LossType<:Union{SupervisedLoss,Function},ComplexityType,_prob_pic
     una_constraints::Vector{Int}
     complexity_mapping::ComplexityMapping{ComplexityType}
     ns::Int
-    _val_ns::Val{_ns}
     parsimony::Float32
     alpha::Float32
     maxsize::Int
@@ -82,7 +81,6 @@ struct Options{LossType<:Union{SupervisedLoss,Function},ComplexityType,_prob_pic
     recorder::Bool
     recorder_file::String
     prob_pick_first::Float32
-    _val_prob_pick_first::Val{_prob_pick_first}
     earlyStopCondition::Union{Function,Nothing}
     stateReturn::Bool
     timeout_in_seconds::Union{Float64,Nothing}
