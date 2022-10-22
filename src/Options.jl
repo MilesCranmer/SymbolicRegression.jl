@@ -325,6 +325,7 @@ function Options(;
     enable_autodiff::Bool=false,
     nested_constraints=nothing,
     deterministic=false,
+    # Not search options; just construction options:
     extend_user_operators=true,
     define_helper_functions=true,
 ) where {nuna,nbin}
