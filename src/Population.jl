@@ -64,10 +64,9 @@ function Population(
     return Population(dataset; npop=npop, options=options, nfeatures=nfeatures)
 end
 
-# Sample 10 random members of the population, and make a new one
-function sample_pop(pop::Population, options::Options)::Population
-    idx = randperm(pop.n)[1:(options.ns)]
-    return Population(pop.members[idx])
+# Sample random members of the population, and make a new one
+function sample_pop(pop::Population{T}, options::Options)::Population{T} where {T}
+    return Population(StatsBase.sample(pop.members, options.ns; replace=false))
 end
 
 # Sample the population, and get the best member from that sample
