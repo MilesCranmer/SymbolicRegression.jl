@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/symbolic_regression_logo.svg" height="400"></img>
+<img src="https://user-images.githubusercontent.com/7593028/196054732-5c399e82-23a8-4200-945a-67605f7501ab.png" height="50%" width="50%"></img>
 
 SymbolicRegression.jl searches for symbolic expressions which optimize a particular objective.
 

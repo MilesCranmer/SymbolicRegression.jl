@@ -1,5 +1,6 @@
 module CoreModule
 
+include("Utils.jl")
 include("ProgramConstants.jl")
 include("Dataset.jl")
 include("OptionsStruct.jl")

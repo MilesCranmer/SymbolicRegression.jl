@@ -1,7 +1,7 @@
 module EvaluateEquationModule
 
 import ..CoreModule: Node, Options
-import ..UtilsModule: @return_on_false, is_bad_array, debug
+import ..UtilsModule: @return_on_false, is_bad_array, debug, vals
 import ..EquationUtilsModule: is_constant
 
 macro return_on_check(val, T, n)
@@ -79,8 +79,6 @@ end
 function _eval_tree_array(
     tree::Node{T}, cX::AbstractMatrix{T}, options::Options
 )::Tuple{AbstractVector{T},Bool} where {T<:Real}
-    max_possible_op = max(length(options.binops), length(options.unaops))
-    vals = ntuple(i -> Val(i), max_possible_op)
     # First, we see if there are only constants in the tree - meaning
     # we can just return the constant result.
     if tree.degree == 0
@@ -345,9 +343,6 @@ gives better performance, as we do not need to perform computation
 over an entire array when the values are all the same.
 """
 function _eval_constant_tree(tree::Node{T}, options::Options)::Tuple{T,Bool} where {T<:Real}
-    max_possible_op = max(length(options.binops), length(options.unaops))
-    vals = ntuple(i -> Val(i), max_possible_op)
-
     if tree.degree == 0
         return deg0_eval_constant(tree)
     elseif tree.degree == 1
@@ -396,9 +391,9 @@ function differentiable_eval_tree_array(
             return (cX[tree.feature, :], true)
         end
     elseif tree.degree == 1
-        return deg1_diff_eval(tree, cX, Val(tree.op), options)
+        return deg1_diff_eval(tree, cX, vals[tree.op], options)
     else
-        return deg2_diff_eval(tree, cX, Val(tree.op), options)
+        return deg2_diff_eval(tree, cX, vals[tree.op], options)
     end
 end
 

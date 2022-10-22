@@ -75,4 +75,7 @@ end
 # (due to optimizations in sum())
 is_bad_array(array) = !isfinite(sum(array))
 
+const max_ops = 1024
+const vals = ntuple(i -> Val(i), max_ops)
+
 end
