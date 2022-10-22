@@ -39,14 +39,13 @@ function test_option_configuration(T, options::Options)
 
     assert_operators_defined_over_reals(T, options)
 
-    for binop in options.operators.binops
-        if binop in options.operators.unaops
-            throw(
-                AssertionError(
-                    "Your configuration is invalid - one operator ($binop) appears in both the binary operators and unary operators.",
-                ),
-            )
-        end
+    operator_intersection = intersect(options.operators.binops, options.operators.unaops) 
+    if length(operator_intersection) > 0
+        throw(
+            AssertionError(
+                "Your configuration is invalid - $(operator_intersection) appear in both the binary operators and unary operators.",
+            ),
+        )
     end
 end
 
