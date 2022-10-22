@@ -1,5 +1,6 @@
 module PopulationModule
 
+using StatsBase: StatsBase
 import Random: randperm
 import DynamicExpressions: string_tree
 import ..CoreModule: Options, Dataset, RecordType
@@ -102,23 +103,18 @@ function best_of_sample(
         chosen_idx = argmin(scores)
     else
         sort_idx = sortperm(scores)
-        # scores[sort_idx] would put smallest first.
-
-        k = collect(0:(options.ns - 1))
-        prob_each = p * (1 - p) .^ k
-        prob_each /= sum(prob_each)
-        cumprob = cumsum(prob_each)
-        raw_chosen_idx = findfirst(cumprob .> rand())
-
-        # Sometimes, due to precision issues, we might have cumprob[end] < 1,
-        # so we must check for nothing returned:
-        if raw_chosen_idx === nothing
-            chosen_idx = sort_idx[end]
-        else
-            chosen_idx = sort_idx[raw_chosen_idx]
-        end
+        chosen_idx = sort_idx[sample_tournament(Val(p), Val(options.ns))]
     end
     return sample.members[chosen_idx]
+end
+
+# This will compile the tournament probabilities, so it's a bit faster:
+@generated function sample_tournament(::Val{p}, ::Val{ns})::Int where {p,ns}
+    k = collect(0:(ns - 1))
+    prob_each = p * ((1 - p) .^ k)
+    return quote
+        StatsBase.sample(1:($ns), StatsBase.Weights($prob_each))
+    end
 end
 
 function finalize_scores(
