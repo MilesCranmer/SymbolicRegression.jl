@@ -1,7 +1,7 @@
 include("test_params.jl")
 
 using Distributed
-procs = addprocs(4)
+procs = addprocs(2)
 using Test, Pkg
 project_path = splitdir(Pkg.project().path)[1]
 @everywhere procs begin

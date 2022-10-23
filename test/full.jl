@@ -8,7 +8,7 @@ for i in 0:5
     batching = i in [0, 1]
     weighted = i in [0, 2]
 
-    numprocs = 4
+    numprocs = 2
     progress = false
     warmupMaxsizeBy = 0.0f0
     optimizer_algorithm = "NelderMead"
