@@ -128,6 +128,8 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
             end
             ops = (options.earlyStopCondition,)
             nargs = 2
+        else
+            error("Invalid function set: $function_set")
         end
         for op in ops
             try
