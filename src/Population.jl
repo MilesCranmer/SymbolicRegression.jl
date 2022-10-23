@@ -126,7 +126,7 @@ function finalize_scores(
     need_recalculate = options.batching
     num_evals = 0.0
     if need_recalculate
-        @inbounds @simd for member in 1:(pop.n)
+        for member in 1:(pop.n)
             score, loss = score_func(dataset, pop.members[member].tree, options)
             pop.members[member].score = score
             pop.members[member].loss = loss
