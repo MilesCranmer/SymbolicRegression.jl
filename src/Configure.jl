@@ -94,7 +94,7 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
 
     # All the types of functions we need to move to workers:
     function_sets = (
-        :unaops, :binops, :diff_unaops, diff_binops, :loss, :early_stop_condition
+        :unaops, :binops, :diff_unaops, :diff_binops, :loss, :early_stop_condition
     )
 
     for function_set in function_sets
