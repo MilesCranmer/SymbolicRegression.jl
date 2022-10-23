@@ -97,13 +97,20 @@ for i in 0:5
         dominating = [calculate_pareto_frontier(X, y, hallOfFame, options; weights=weights)]
     else
         y = 2 * cos.(X[4, :])
+        niterations = 2
         if multi
             # Copy the same output twice; make sure we can find it twice
             y = repeat(y, 1, 2)
             y = transpose(y)
+            niterations = 20
         end
         hallOfFame = EquationSearch(
-            X, y; niterations=2, options=options, parallelism=parallelism, numprocs=numprocs
+            X,
+            y;
+            niterations=niterations,
+            options=options,
+            parallelism=parallelism,
+            numprocs=numprocs,
         )
         dominating = if multi
             [calculate_pareto_frontier(X, y[j, :], hallOfFame[j], options) for j in 1:2]
