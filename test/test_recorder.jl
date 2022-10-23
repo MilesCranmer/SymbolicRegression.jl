@@ -17,7 +17,9 @@ options = SymbolicRegression.Options(;
     complexity_of_operators=[cos => 2],
 )
 
-hall_of_fame = EquationSearch(X, y; niterations=5, options=options, paralelism=:multithreading)
+hall_of_fame = EquationSearch(
+    X, y; niterations=5, options=options, paralelism=:multithreading
+)
 
 data = open(options.recorder_file, "r") do io
     JSON3.read(io; allow_inf=true)

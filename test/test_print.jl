@@ -25,7 +25,7 @@ EquationSearch(
     options=options,
     varMap=["v1", "v2", "v3"],
     niterations=0,
-    parallelism=:multithreading
+    parallelism=:multithreading,
 )
 
 s = repr(tree)

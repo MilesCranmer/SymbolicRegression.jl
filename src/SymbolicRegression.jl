@@ -361,10 +361,14 @@ function EquationSearch(
     not_distributed = parallelism in (:serial, :multithreading)
     not_distributed &&
         procs !== nothing &&
-        error("`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.")
+        error(
+            "`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
+        )
     not_distributed &&
         numprocs !== nothing &&
-        error("`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.")
+        error(
+            "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
+        )
 
     return _EquationSearch(
         concurrency,
