@@ -131,6 +131,7 @@ include("Mutate.jl")
 include("RegularizedEvolution.jl")
 include("SingleIteration.jl")
 include("ProgressBars.jl")
+include("Migration.jl")
 include("SearchUtils.jl")
 
 import .CoreModule:
@@ -181,12 +182,14 @@ import .MutationFunctionsModule:
     crossover_trees
 import .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
 import .PopMemberModule: PopMember, copy_pop_member, copy_pop_member_reset_birth
-import .PopulationModule: Population, copy_population, best_sub_pop, record_population, best_of_sample
+import .PopulationModule:
+    Population, copy_population, best_sub_pop, record_population, best_of_sample
 import .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 import .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
 import .ProgressBarsModule: WrappedProgressBar
 import .RecorderModule: @recorder, find_iteration_from_record
+import .MigrationModule: migrate!
 import .SearchUtilsModule:
     next_worker,
     @sr_spawner,
@@ -206,7 +209,6 @@ import .SearchUtilsModule:
 include("Configure.jl")
 include("Deprecates.jl")
 include("InterfaceDynamicExpressions.jl")
-
 
 """
     EquationSearch(X, y[; kws...])
@@ -747,24 +749,13 @@ function _EquationSearch(
 
             ###################################################################
             # Migration #######################################################
-            # Try normal copy otherwise.
             if options.migration
-                for k in rand(
-                    1:(options.npop), round(Int, options.npop * options.fractionReplaced)
+                migrate!(
+                    bestPops.members => cur_pop, options; frac=options.fractionReplaced
                 )
-                    to_copy = rand(1:size(bestPops.members, 1))
-                    cur_pop.members[k] = copy_pop_member_reset_birth(bestPops.members[to_copy]; deterministic=options.deterministic)
-                end
             end
-
-            if options.hofMigration && size(dominating, 1) > 0
-                for k in rand(
-                    1:(options.npop), round(Int, options.npop * options.fractionReplacedHof)
-                )
-                    # Copy in case one gets used twice
-                    to_copy = rand(1:size(dominating, 1))
-                    cur_pop.members[k] = copy_pop_member_reset_birth(dominating[to_copy]; deterministic=options.deterministic)
-                end
+            if options.hofMigration && length(dominating) > 0
+                migrate!(dominating => cur_pop, options; frac=options.fractionReplacedHof)
             end
             ###################################################################
 
