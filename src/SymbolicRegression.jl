@@ -753,17 +753,7 @@ function _EquationSearch(
                     1:(options.npop), round(Int, options.npop * options.fractionReplaced)
                 )
                     to_copy = rand(1:size(bestPops.members, 1))
-
-                    # Explicit copy here resets the birth. 
-                    cur_pop.members[k] = PopMember(
-                        copy_node(bestPops.members[to_copy].tree),
-                        copy(bestPops.members[to_copy].score),
-                        copy(bestPops.members[to_copy].loss);
-                        ref=copy(bestPops.members[to_copy].ref),
-                        parent=copy(bestPops.members[to_copy].parent),
-                        deterministic=options.deterministic,
-                    )
-                    # TODO: Clean this up using copy_pop_member.
+                    cur_pop.members[k] = copy_pop_member_reset_birth(bestPops.members[to_copy]; deterministic=options.deterministic)
                 end
             end
 
@@ -773,15 +763,7 @@ function _EquationSearch(
                 )
                     # Copy in case one gets used twice
                     to_copy = rand(1:size(dominating, 1))
-                    cur_pop.members[k] = PopMember(
-                        copy_node(dominating[to_copy].tree),
-                        copy(dominating[to_copy].score),
-                        copy(dominating[to_copy].loss);
-                        ref=copy(dominating[to_copy].ref),
-                        parent=copy(dominating[to_copy].parent),
-                        deterministic=options.deterministic,
-                    )
-                    # TODO: Clean this up with copy_pop_member.
+                    cur_pop.members[k] = copy_pop_member_reset_birth(dominating[to_copy]; deterministic=options.deterministic)
                 end
             end
             ###################################################################

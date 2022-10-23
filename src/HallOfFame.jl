@@ -44,6 +44,13 @@ function HallOfFame(options::Options, ::Type{T}) where {T<:Real}
     )
 end
 
+function copy_hall_of_fame(hof::HallOfFame{T})::HallOfFame{T} where {T<:Real}
+    return HallOfFame(
+        [copy_pop_member(member) for member in hof.members],
+        [exists for exists in hof.exists],
+    )
+end
+
 """
     calculate_pareto_frontier(dataset::Dataset{T}, hallOfFame::HallOfFame{T},
                             options::Options) where {T<:Real}

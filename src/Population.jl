@@ -8,7 +8,7 @@ import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, update_baseline_loss!
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..MutationFunctionsModule: gen_random_tree
-import ..PopMemberModule: PopMember
+import ..PopMemberModule: PopMember, copy_pop_member
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
 mutable struct Population{T<:Real}
@@ -62,6 +62,10 @@ function Population(
     dataset = Dataset(X, y)
     update_baseline_loss!(dataset, options)
     return Population(dataset; npop=npop, options=options, nfeatures=nfeatures)
+end
+
+function copy_population(pop::Population{T})::Population{T} where {T<:Real}
+    return Population([copy_pop_member(pm) for pm in pop.members])
 end
 
 # Sample random members of the population, and make a new one
