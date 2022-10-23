@@ -1,7 +1,8 @@
 module HallOfFameModule
 
-import ..CoreModule: MAX_DEGREE, Node, Options, Dataset, string_tree
-import ..EquationUtilsModule: compute_complexity
+import DynamicExpressions: Node, string_tree
+import ..CoreModule: MAX_DEGREE, Options, Dataset
+import ..ComplexityModule: compute_complexity
 import ..PopMemberModule: PopMember, copy_pop_member
 import ..LossFunctionsModule: eval_loss
 using Printf: @sprintf
@@ -43,16 +44,23 @@ function HallOfFame(options::Options, ::Type{T}) where {T<:Real}
     )
 end
 
+function copy_hall_of_fame(hof::HallOfFame{T})::HallOfFame{T} where {T<:Real}
+    return HallOfFame(
+        [copy_pop_member(member) for member in hof.members],
+        [exists for exists in hof.exists],
+    )
+end
+
 """
     calculate_pareto_frontier(dataset::Dataset{T}, hallOfFame::HallOfFame{T},
                             options::Options) where {T<:Real}
 """
 function calculate_pareto_frontier(
     dataset::Dataset{T}, hallOfFame::HallOfFame{T}, options::Options
-)::Array{PopMember,1} where {T<:Real}
+)::Vector{PopMember{T}} where {T<:Real}
     # TODO - remove dataset from args.
     # Dominating pareto curve - must be better than all simpler equations
-    dominating = PopMember[]
+    dominating = PopMember{T}[]
     actualMaxsize = options.maxsize + MAX_DEGREE
     for size in 1:actualMaxsize
         if !hallOfFame.exists[size]
@@ -95,7 +103,7 @@ function calculate_pareto_frontier(
     options::Options;
     weights=nothing,
     varMap=nothing,
-) where {T<:Real}
+)::Vector{PopMember{T}} where {T<:Real}
     return calculate_pareto_frontier(
         Dataset(X, y; weights=weights, varMap=varMap), hallOfFame, options
     )
@@ -134,7 +142,7 @@ function string_dominating_pareto_curve(hallOfFame, dataset, options)
             complexity,
             curMSE,
             score,
-            string_tree(member.tree, options, varMap=dataset.varMap)
+            string_tree(member.tree, options.operators, varMap=dataset.varMap)
         )
         lastMSE = curMSE
         lastComplexity = complexity

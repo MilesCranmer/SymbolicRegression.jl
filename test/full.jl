@@ -8,13 +8,13 @@ for i in 0:5
     batching = i in [0, 1]
     weighted = i in [0, 2]
 
-    numprocs = 4
+    numprocs = 2
     progress = false
     warmupMaxsizeBy = 0.0f0
     optimizer_algorithm = "NelderMead"
     multi = false
     probPickFirst = 1.0
-    multithreading = false
+    parallelism = :multiprocessing
     crossoverProbability = 0.0f0
     skip_mutation_failures = false
     useFrequency = false
@@ -23,7 +23,8 @@ for i in 0:5
     print("Testing with batching=$(batching) and weighted=$(weighted), ")
     if i == 0
         println("with serial & progress bar & warmup & BFGS")
-        numprocs = 0 #Try serial computation here.
+        numprocs = nothing #Try serial computation here.
+        parallelism = :serial
         progress = true #Also try the progress bar.
         warmupMaxsizeBy = 0.5f0 #Smaller maxsize at first, build up slowly
         optimizer_algorithm = "BFGS"
@@ -34,8 +35,8 @@ for i in 0:5
         useFrequency = true
     elseif i == 3
         println("with multi-threading and crossover and useFrequencyInTournament")
-        multithreading = true
-        numprocs = 0
+        parallelism = :multithreading
+        numprocs = nothing
         crossoverProbability = 0.02f0
         useFrequencyInTournament = true
     elseif i == 4
@@ -90,31 +91,37 @@ for i in 0:5
             weights=weights,
             niterations=2,
             options=options,
+            parallelism=parallelism,
             numprocs=numprocs,
-            multithreading=multithreading,
         )
         dominating = [calculate_pareto_frontier(X, y, hallOfFame, options; weights=weights)]
     else
         y = 2 * cos.(X[4, :])
+        niterations = 2
         if multi
             # Copy the same output twice; make sure we can find it twice
             y = repeat(y, 1, 2)
             y = transpose(y)
+            niterations = 20
         end
         hallOfFame = EquationSearch(
-            X, y; niterations=2, options=options, multithreading=multithreading
+            X,
+            y;
+            niterations=niterations,
+            options=options,
+            parallelism=parallelism,
+            numprocs=numprocs,
         )
-        if multi
-            dominating = [
-                calculate_pareto_frontier(X, y[j, :], hallOfFame[j], options) for j in 1:2
-            ]
+        dominating = if multi
+            [calculate_pareto_frontier(X, y[j, :], hallOfFame[j], options) for j in 1:2]
         else
-            dominating = [calculate_pareto_frontier(X, y, hallOfFame, options)]
+            [calculate_pareto_frontier(X, y, hallOfFame, options)]
         end
     end
 
     # For brevity, always assume multi-output in this test:
     for dom in dominating
+        @test length(dom) > 0
         best = dom[end]
         # Assert we created the correct type of trees:
         @test typeof(best.tree) == Node{T}
@@ -174,7 +181,8 @@ println("Passed.")
 println("Testing whether we can stop based on clock time.")
 options = Options(; default_params..., timeout_in_seconds=1)
 start_time = time()
-EquationSearch(X, y; niterations=10000000, options=options, multithreading=true)
+# With multithreading:
+EquationSearch(X, y; niterations=10000000, options=options, parallelism=:multithreading)
 end_time = time()
 @test end_time - start_time < 100
 println("Passed.")

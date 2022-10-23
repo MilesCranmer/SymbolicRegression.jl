@@ -71,3 +71,7 @@ end
 @safetestset "Test topology-preserving copy" begin
     include("test_preserve_multiple_parents.jl")
 end
+
+@safetestset "Test migration" begin
+    include("test_migration.jl")
+end

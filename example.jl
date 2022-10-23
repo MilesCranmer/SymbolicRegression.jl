@@ -7,7 +7,9 @@ options = SymbolicRegression.Options(;
     binary_operators=(+, *, /, -), unary_operators=(cos, exp), npopulations=20
 )
 
-hall_of_fame = EquationSearch(X, y; niterations=40, options=options, numprocs=4)
+hall_of_fame = EquationSearch(
+    X, y; niterations=40, options=options, parallelism=:multithreading
+)
 
 dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
 
