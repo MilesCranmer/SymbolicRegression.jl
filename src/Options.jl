@@ -269,8 +269,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     in serial mode.
 """
 function Options(;
-    binary_operators::NTuple{nbin,Any}=(+, -, /, *),
-    unary_operators::NTuple{nuna,Any}=(),
+    binary_operators=[+, -, /, *],
+    unary_operators=[],
     constraints=nothing,
     loss=L2DistLoss(),
     ns=12, #1 sampled from every ns per mutation
@@ -326,9 +326,9 @@ function Options(;
     nested_constraints=nothing,
     deterministic=false,
     # Not search options; just construction options:
-    extend_user_operators=true,
+    extend_user_operators=false,
     define_helper_functions=true,
-) where {nuna,nbin}
+)
     if warmupMaxsize !== nothing
         error(
             "warmupMaxsize is deprecated. Please use warmupMaxsizeBy, and give the time at which the warmup will end as a fraction of the total search cycles.",
@@ -339,6 +339,8 @@ function Options(;
         hofFile = "hall_of_fame.csv" #TODO - put in date/time string here
     end
 
+    nuna = length(unary_operators)
+    nbin = length(binary_operators)
     @assert maxsize > 3
     @assert warmupMaxsizeBy >= 0.0f0
     @assert nuna <= max_ops && nbin <= max_ops
