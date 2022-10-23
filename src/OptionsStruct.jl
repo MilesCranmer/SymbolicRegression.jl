@@ -49,7 +49,6 @@ struct Options{LossType<:Union{SupervisedLoss,Function},ComplexityType,_prob_pic
     fast_cycle::Bool
     migration::Bool
     hofMigration::Bool
-    fractionReplacedHof::Float32
     shouldOptimizeConstants::Bool
     hofFile::String
     npopulations::Int
@@ -65,6 +64,7 @@ struct Options{LossType<:Union{SupervisedLoss,Function},ComplexityType,_prob_pic
     npop::Int
     ncyclesperiteration::Int
     fractionReplaced::Float32
+    fractionReplacedHof::Float32
     topn::Int
     verbosity::Int
     probNegate::Float32
