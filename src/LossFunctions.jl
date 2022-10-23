@@ -2,36 +2,30 @@ module LossFunctionsModule
 
 import Random: randperm
 import LossFunctions: value, AggMode, SupervisedLoss
-import DynamicExpressions:
-    eval_tree_array, eval_tree_array, differentiable_eval_tree_array, Node
+import DynamicExpressions: eval_tree_array, differentiable_eval_tree_array, Node
 import ..CoreModule: Options, Dataset
 import ..ComplexityModule: compute_complexity
 
 function _loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, options::Options{LossType,B}
-)::T where {T<:Real,LossType,B}
-    if LossType <: SupervisedLoss
-        return value(options.loss, y, x, AggMode.Mean())
-    elseif LossType <: Function
-        return sum(options.loss.(x, y)) / length(y)
-    else
-        error("Unrecognized type for loss function: $(C)")
-    end
+    x::AbstractArray{T}, y::AbstractArray{T}, loss::SupervisedLoss
+)::T where {T<:Real}
+    return value(loss, y, x, AggMode.Mean())
+end
+
+function _loss(x::AbstractArray{T}, y::AbstractArray{T}, loss::Function)::T where {T<:Real}
+    return sum(loss.(x, y)) / length(y)
 end
 
 function _weighted_loss(
-    x::AbstractArray{T},
-    y::AbstractArray{T},
-    w::AbstractArray{T},
-    options::Options{LossType,B},
-)::T where {T<:Real,LossType,B}
-    if LossType <: SupervisedLoss
-        return value(options.loss, y, x, AggMode.WeightedMean(w))
-    elseif LossType <: Function
-        return sum(options.loss.(x, y, w)) / sum(w)
-    else
-        error("Unrecognized type for loss function: $(C)")
-    end
+    x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::SupervisedLoss
+)::T where {T<:Real}
+    return value(loss, y, x, AggMode.WeightedMean(w))
+end
+
+function _weighted_loss(
+    x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::Function
+)::T where {T<:Real}
+    return sum(loss.(x, y, w)) / sum(w)
 end
 
 # Evaluate the loss of a particular expression on the input dataset.
@@ -43,10 +37,10 @@ function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T wher
 
     if dataset.weighted
         return _weighted_loss(
-            prediction, dataset.y, dataset.weights::AbstractVector{T}, options
+            prediction, dataset.y, dataset.weights::AbstractVector{T}, options.loss
         )
     else
-        return _loss(prediction, dataset.y, options)
+        return _loss(prediction, dataset.y, options.loss)
     end
 end
 
@@ -79,6 +73,7 @@ end
 function score_func_batch(
     dataset::Dataset{T}, tree::Node{T}, options::Options
 )::Tuple{T,T} where {T<:Real}
+    # TODO: Use StatsBase.sample here.
     batch_idx = randperm(dataset.n)[1:(options.batchSize)]
     batch_X = dataset.X[:, batch_idx]
     batch_y = dataset.y[batch_idx]
@@ -88,10 +83,11 @@ function score_func_batch(
     end
 
     if !dataset.weighted
-        result_loss = _loss(prediction, batch_y, options)
+        result_loss = _loss(prediction, batch_y, options.loss)
     else
-        batch_w = dataset.weights[batch_idx]
-        result_loss = _weighted_loss(prediction, batch_y, batch_w, options)
+        w = dataset.weights::AbstractVector{T}
+        batch_w = w[batch_idx]
+        result_loss = _weighted_loss(prediction, batch_y, batch_w, options.loss)
     end
     score = loss_to_score(result_loss, dataset.baseline_loss, tree, options)
     return score, result_loss
@@ -103,10 +99,10 @@ function update_baseline_loss!(dataset::Dataset{T}, options::Options) where {T<:
             dataset.y,
             ones(T, dataset.n) .* dataset.avg_y,
             dataset.weights::AbstractVector{T},
-            options,
+            options.loss,
         )
     else
-        _loss(dataset.y, ones(T, dataset.n) .* dataset.avg_y, options)
+        _loss(dataset.y, ones(T, dataset.n) .* dataset.avg_y, options.loss)
     end
     return nothing
 end
