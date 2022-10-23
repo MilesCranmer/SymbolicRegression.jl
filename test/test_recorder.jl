@@ -18,7 +18,7 @@ options = SymbolicRegression.Options(;
 )
 
 hall_of_fame = EquationSearch(
-    X, y; niterations=5, options=options, paralelism=:multithreading
+    X, y; niterations=5, options=options, parallelism=:multithreading
 )
 
 data = open(options.recorder_file, "r") do io
