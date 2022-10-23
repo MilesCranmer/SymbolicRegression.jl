@@ -127,8 +127,9 @@ The current arguments have been tuned using the median values from
 https://github.com/MilesCranmer/PySR/discussions/115.
 
 # Arguments
-- `binary_operators`: Tuple of binary operators to use. Each operator should
-    be defined for two input scalars, and one output scalar. All operators
+- `binary_operators`: Vector of binary operators (functions) to use.
+    Each operator should be defined for two input scalars,
+    and one output scalar. All operators
     need to be defined over the entire real line (excluding infinity - these
     are stopped before they are input), or return `NaN` where not defined.
     Thus, `log` should be replaced with `safe_log`, etc.
@@ -267,6 +268,12 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `deterministic`: Use a global counter for the birth time, rather than calls to `time()`. This gives
     perfect resolution, and is therefore deterministic. However, it is not thread safe, and must be used
     in serial mode.
+- `define_helper_functions`: Whether to define helper functions
+    for constructing and evaluating trees.
+- `extend_user_operators`: Whether to extend the user's operators
+    to `Node` type, so it is easier to construct
+    trees manually. By default, all operators 
+    defined in `Base` are extended automatically.
 """
 function Options(;
     binary_operators=[+, -, /, *],
@@ -326,8 +333,8 @@ function Options(;
     nested_constraints=nothing,
     deterministic=false,
     # Not search options; just construction options:
-    extend_user_operators=false,
     define_helper_functions=true,
+    extend_user_operators=false,
 )
     if warmupMaxsize !== nothing
         error(
