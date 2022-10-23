@@ -179,8 +179,6 @@ start_time = time()
 EquationSearch(X, y; niterations=10000000, options=options, parallelism=:multithreading)
 end_time = time()
 @test end_time - start_time < 100
-end_time = time()
-@test end_time - start_time < 100
 println("Passed.")
 
 println("Running README example.")
