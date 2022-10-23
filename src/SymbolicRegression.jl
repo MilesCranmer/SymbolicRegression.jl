@@ -180,8 +180,8 @@ import .MutationFunctionsModule:
     random_node_and_parent,
     crossover_trees
 import .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
-import .PopMemberModule: PopMember, copy_pop_member
-import .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
+import .PopMemberModule: PopMember, copy_pop_member, copy_pop_member_reset_birth
+import .PopulationModule: Population, copy_population, best_sub_pop, record_population, best_of_sample
 import .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 import .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
@@ -198,16 +198,15 @@ import .SearchUtilsModule:
     check_max_evals,
     update_progress_bar!,
     print_search_state,
-    init_dummy_pops
+    init_dummy_pops,
+    StateType,
+    load_saved_hall_of_fame,
+    load_saved_population
 
 include("Configure.jl")
 include("Deprecates.jl")
 include("InterfaceDynamicExpressions.jl")
 
-StateType{T} = Tuple{
-    Union{Vector{Vector{Population{T}}},Matrix{Population{T}}},
-    Union{HallOfFame{T},Vector{HallOfFame{T}}},
-}
 
 """
     EquationSearch(X, y[; kws...])
@@ -467,15 +466,6 @@ function _EquationSearch(
     # These initial populations are discarded:
     bestSubPops = init_dummy_pops(nout, options.npopulations, datasets, options)
 
-    if saved_state === nothing
-        hallOfFame = [HallOfFame(options, T) for j in 1:nout]
-    else
-        hallOfFame = saved_state[2]::Union{HallOfFame{T},Vector{HallOfFame{T}}}
-        if !isa(hallOfFame, Vector{HallOfFame{T}})
-            hallOfFame = [hallOfFame]
-        end
-        hallOfFame::Vector{HallOfFame{T}}
-    end
     actualMaxsize = options.maxsize + MAX_DEGREE
 
     all_running_search_statistics = [
@@ -529,13 +519,31 @@ function _EquationSearch(
     # Get the next worker process to give a job:
     worker_assignment = Dict{Tuple{Int,Int},Int}()
 
+    hallOfFame = load_saved_hall_of_fame(saved_state)
+    if hallOfFame === nothing
+        hallOfFame = [HallOfFame(options, T) for j in 1:nout]
+    end
+    @assert length(hallOfFame) == nout
+    hallOfFame::Vector{HallOfFame{T}}
+
     for j in 1:nout
         for i in 1:(options.npopulations)
             worker_idx = next_worker(worker_assignment, procs)
             if ConcurrencyType == SRDistributed
                 worker_assignment[(j, i)] = worker_idx
             end
-            if saved_state === nothing
+
+            saved_pop = load_saved_population(saved_state; out=j, pop=i)
+
+            if saved_pop !== nothing && length(saved_pop.members) == options.npop
+                saved_pop::Population{T}
+                new_pop = @sr_spawner ConcurrencyType worker_idx (
+                    saved_pop, HallOfFame(options, T), RecordType(), 0.0
+                )
+            else
+                if saved_pop !== nothing
+                    @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
+                end
                 new_pop = @sr_spawner ConcurrencyType worker_idx (
                     Population(
                         datasets[j];
@@ -549,32 +557,6 @@ function _EquationSearch(
                     Float64(options.npop),
                 )
                 # This involves npop evaluations, on the full dataset:
-            else
-                is_vector = typeof(saved_state[1]) <: Vector{Vector{Population{T}}}
-                cur_saved_state = is_vector ? saved_state[1][j][i] : saved_state[1][j, i]
-
-                if length(cur_saved_state.members) >= options.npop
-                    new_pop = @sr_spawner ConcurrencyType worker_idx (
-                        cur_saved_state, HallOfFame(options, T), RecordType(), 0.0
-                    )
-                else
-                    # If population has not yet been created (e.g., exited too early)
-                    println(
-                        "Warning: recreating population (output=$(j), population=$(i)), as the saved one only has $(length(cur_saved_state.members)) members.",
-                    )
-                    new_pop = @sr_spawner ConcurrencyType worker_idx (
-                        Population(
-                            datasets[j];
-                            npop=options.npop,
-                            nlength=3,
-                            options=options,
-                            nfeatures=datasets[j].nfeatures,
-                        ),
-                        HallOfFame(options, T),
-                        RecordType(),
-                        Float64(options.npop),
-                    )
-                end
             end
             push!(init_pops[j], new_pop)
         end

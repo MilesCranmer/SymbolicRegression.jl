@@ -8,9 +8,9 @@ using Distributed
 
 import ..CoreModule: SRThreaded, SRSerial, SRDistributed, Dataset, Options
 import ..ComplexityModule: compute_complexity
-import ..PopulationModule: Population
+import ..PopulationModule: Population, copy_population
 import ..HallOfFameModule:
-    HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
+    HallOfFame, copy_hall_of_fame, calculate_pareto_frontier, string_dominating_pareto_curve
 import ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
 
 function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Vector{Int})::Int
@@ -188,5 +188,38 @@ function print_search_state(
     end
     @printf("Press 'q' and then <enter> to stop execution early.\n")
 end
+
+const StateType{T} = Tuple{
+    Union{Vector{Vector{Population{T}}},Matrix{Population{T}}},
+    Union{HallOfFame{T},Vector{HallOfFame{T}}},
+}
+
+function load_saved_hall_of_fame(saved_state::StateType{T})::Vector{HallOfFame{T}} where {T}
+    hall_of_fame = saved_state[2]
+    if !isa(hall_of_fame, Vector{HallOfFame{T}})
+        hall_of_fame = [hall_of_fame]
+    end
+    return [copy_hall_of_fame(hof) for hof in hall_of_fame]
+end
+load_saved_hall_of_fame(::Nothing)::Nothing = nothing
+
+function get_population(
+    pops::Vector{Vector{Population{T}}}; out::Int, pop::Int
+)::Population{T} where {T}
+    return pops[out][pop]
+end
+function get_population(
+    pops::Matrix{Population{T}}; out::Int, pop::Int
+)::Population{T} where {T}
+    return pops[out, pop]
+end
+function load_saved_population(
+    saved_state::StateType{T}; out::Int, pop::Int
+)::Population{T} where {T}
+    saved_pop = get_population(saved_state[1]; out=out, pop=pop)
+    return copy_population(saved_pop)
+end
+
+load_saved_population(::Nothing; kws...) = nothing
 
 end
