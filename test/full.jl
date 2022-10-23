@@ -105,17 +105,16 @@ for i in 0:5
         hallOfFame = EquationSearch(
             X, y; niterations=2, options=options, parallelism=parallelism, numprocs=numprocs
         )
-        if multi
-            dominating = [
-                calculate_pareto_frontier(X, y[j, :], hallOfFame[j], options) for j in 1:2
-            ]
+        dominating = if multi
+            [calculate_pareto_frontier(X, y[j, :], hallOfFame[j], options) for j in 1:2]
         else
-            dominating = [calculate_pareto_frontier(X, y, hallOfFame, options)]
+            [calculate_pareto_frontier(X, y, hallOfFame, options)]
         end
     end
 
     # For brevity, always assume multi-output in this test:
     for dom in dominating
+        @test length(dom) > 0
         best = dom[end]
         # Assert we created the correct type of trees:
         @test typeof(best.tree) == Node{T}
