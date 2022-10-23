@@ -84,37 +84,43 @@ end
 
 """ Move custom operators and loss functions to workers, if undefined """
 function move_functions_to_workers(procs, options::Options, dataset::Dataset{T}) where {T}
-    enable_autodiff = (
-        options.operators.diff_binops !== nothing ||
-        options.operators.diff_unaops !== nothing
-    )
+    enable_autodiff =
+        :diff_binops in fieldnames(typeof(options.operators)) &&
+        :diff_unaops in fieldnames(typeof(options.operators)) &&
+        (
+            options.operators.diff_binops !== nothing ||
+            options.operators.diff_unaops !== nothing
+        )
 
-    for function_set in 1:6
-        if function_set == 1
+    # All the types of functions we need to move to workers:
+    function_sets = (:unaops, :binops, :diff_unaops, diff_binops, :loss, :early_stop_condition)
+
+    for function_set in function_sets
+        if function_set == :unaops
             ops = options.operators.unaops
             nargs = 1
-        elseif function_set == 2
+        elseif function_set == :binops
             ops = options.operators.binops
             nargs = 2
-        elseif function_set == 3
+        elseif function_set == :diff_unaops
             if !enable_autodiff
                 continue
             end
             ops = options.operators.diff_unaops
             nargs = 1
-        elseif function_set == 4
+        elseif function_set == :diff_binops
             if !enable_autodiff
                 continue
             end
             ops = options.operators.diff_binops
             nargs = 2
-        elseif function_set == 5
+        elseif function_set == :loss
             if typeof(options.loss) <: SupervisedLoss
                 continue
             end
             ops = (options.loss,)
             nargs = dataset.weighted ? 3 : 2
-        elseif function_set == 6
+        elseif function_set == :early_stop_condition
             if !(typeof(options.earlyStopCondition) <: Function)
                 continue
             end
