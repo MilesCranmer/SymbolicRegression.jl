@@ -33,7 +33,9 @@ which speed up evaluation significantly.
     or nan was encountered, and a large loss should be assigned
     to the equation.
 """
-function eval_tree_array(tree::Node{T}, X::AbstractArray{T}, options::Options; kws...) where {T}
+function eval_tree_array(
+    tree::Node{T}, X::AbstractArray{T}, options::Options; kws...
+) where {T}
     return eval_tree_array(tree, X, options.operators; kws...)
 end
 
@@ -88,7 +90,9 @@ to every constant in the expression.
 - `(evaluation, gradient, complete)::Tuple{AbstractVector{T}, AbstractMatrix{T}, Bool}`: the normal evaluation,
     the gradient, and whether the evaluation completed as normal (or encountered a nan or inf).
 """
-function eval_grad_tree_array(tree::Node{T}, X::AbstractArray{T}, options::Options; kws...) where {T}
+function eval_grad_tree_array(
+    tree::Node{T}, X::AbstractArray{T}, options::Options; kws...
+) where {T}
     return eval_grad_tree_array(tree, X, options.operators; kws...)
 end
 
