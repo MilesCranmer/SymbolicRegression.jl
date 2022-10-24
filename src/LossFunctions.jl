@@ -1,6 +1,7 @@
 module LossFunctionsModule
 
 import Random: randperm
+using StatsBase: StatsBase
 import LossFunctions: value, AggMode, SupervisedLoss
 import DynamicExpressions: eval_tree_array, differentiable_eval_tree_array, Node
 import ..CoreModule: Options, Dataset
@@ -74,9 +75,9 @@ function score_func_batch(
     dataset::Dataset{T}, tree::Node{T}, options::Options
 )::Tuple{T,T} where {T<:Real}
     # TODO: Use StatsBase.sample here.
-    batch_idx = randperm(dataset.n)[1:(options.batch_size)]
-    batch_X = dataset.X[:, batch_idx]
-    batch_y = dataset.y[batch_idx]
+    batch_idx = StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)
+    batch_X = view(dataset.X, :, batch_idx)
+    batch_y = view(dataset.y, batch_idx)
     (prediction, completion) = eval_tree_array(tree, batch_X, options.operators)
     if !completion
         return T(0), T(Inf)
@@ -86,7 +87,7 @@ function score_func_batch(
         result_loss = _loss(prediction, batch_y, options.loss)
     else
         w = dataset.weights::AbstractVector{T}
-        batch_w = w[batch_idx]
+        batch_w = view(w, batch_idx)
         result_loss = _weighted_loss(prediction, batch_y, batch_w, options.loss)
     end
     score = loss_to_score(result_loss, dataset.baseline_loss, tree, options)
