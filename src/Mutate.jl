@@ -2,7 +2,7 @@ module MutateModule
 
 import DynamicExpressions:
     Node, copy_node, count_constants, count_depth, simplify_tree, combine_operators
-import ..CoreModule: Options, Dataset, RecordType, get_mutation_probabilities
+import ..CoreModule: Options, Dataset, RecordType
 import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, score_func_batch
 import ..CheckConstraintsModule: check_constraints
@@ -39,7 +39,7 @@ function next_generation(
     #TODO - reconsider this
     if options.batching
         beforeScore, beforeLoss = score_func_batch(dataset, prev, options)
-        num_evals += (options.batchSize / dataset.n)
+        num_evals += (options.batch_size / dataset.n)
     else
         beforeScore = member.score
         beforeLoss = member.loss
@@ -183,7 +183,7 @@ function next_generation(
 
     if options.batching
         afterScore, afterLoss = score_func_batch(dataset, tree, options)
-        num_evals += (options.batchSize / dataset.n)
+        num_evals += (options.batch_size / dataset.n)
     else
         afterScore, afterLoss = score_func(dataset, tree, options)
         num_evals += 1
@@ -213,7 +213,7 @@ function next_generation(
         delta = afterScore - beforeScore
         probChange *= exp(-delta / (temperature * options.alpha))
     end
-    if options.useFrequency
+    if options.use_frequency
         oldSize = compute_complexity(prev, options)
         newSize = compute_complexity(tree, options)
         old_frequency = if (oldSize <= options.maxsize)
@@ -299,11 +299,11 @@ function crossover_generation(
     if options.batching
         afterScore1, afterLoss1 = score_func_batch(dataset, child_tree1, options)
         afterScore2, afterLoss2 = score_func_batch(dataset, child_tree2, options)
-        num_evals += 2 * (options.batchSize / dataset.n)
+        num_evals += 2 * (options.batch_size / dataset.n)
     else
         afterScore1, afterLoss1 = score_func(dataset, child_tree1, options)
         afterScore2, afterLoss2 = score_func(dataset, child_tree2, options)
-        num_evals += options.batchSize / dataset.n
+        num_evals += options.batch_size / dataset.n
     end
 
     baby1 = PopMember(

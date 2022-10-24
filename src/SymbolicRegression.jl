@@ -264,7 +264,7 @@ which is useful for debugging and profiling.
     related to the host environment.
 - `saved_state::Union{StateType, Nothing}=nothing`: If you have already
     run `EquationSearch` and want to resume it, pass the state here.
-    To get this to work, you need to have stateReturn=true in the options,
+    To get this to work, you need to have return_state=true in the options,
     which will cause `EquationSearch` to return the state. Note that
     you cannot change the operators or dataset, but most other options
     should be changeable.
@@ -479,7 +479,7 @@ function _EquationSearch(
     curmaxsizes = [3 for j in 1:nout]
     record = RecordType("options" => "$(options)")
 
-    if options.warmupMaxsizeBy == 0.0f0
+    if options.warmup_maxsize_by == 0.0f0
         curmaxsizes = [options.maxsize for j in 1:nout]
     end
 
@@ -595,7 +595,7 @@ function _EquationSearch(
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
                     in_pop,
-                    options.ncyclesperiteration,
+                    options.ncycles_per_iteration,
                     curmaxsize,
                     running_search_statistics;
                     verbosity=options.verbosity,
@@ -731,12 +731,12 @@ function _EquationSearch(
 
             # Dominating pareto curve - must be better than all simpler equations
             dominating = calculate_pareto_frontier(dataset, hallOfFame[j], options)
-            hofFile = options.hofFile
+            output_file = options.output_file
             if nout > 1
-                hofFile = hofFile * ".out$j"
+                output_file = output_file * ".out$j"
             end
             # Write file twice in case exit in middle of filewrite
-            for out_file in [hofFile, hofFile * ".bkup"]
+            for out_file in [output_file, output_file * ".bkup"]
                 open(out_file, "w") do io
                     println(io, "Complexity,Loss,Equation")
                     for member in dominating
@@ -753,11 +753,11 @@ function _EquationSearch(
             # Migration #######################################################
             if options.migration
                 migrate!(
-                    bestPops.members => cur_pop, options; frac=options.fractionReplaced
+                    bestPops.members => cur_pop, options; frac=options.fraction_replaced
                 )
             end
-            if options.hofMigration && length(dominating) > 0
-                migrate!(dominating => cur_pop, options; frac=options.fractionReplacedHof)
+            if options.hof_migration && length(dominating) > 0
+                migrate!(dominating => cur_pop, options; frac=options.fraction_replaced_hof)
             end
             ###################################################################
 
@@ -784,7 +784,7 @@ function _EquationSearch(
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
                     cur_pop,
-                    options.ncyclesperiteration,
+                    options.ncycles_per_iteration,
                     curmaxsize,
                     all_running_search_statistics[j];
                     verbosity=options.verbosity,
@@ -818,20 +818,20 @@ function _EquationSearch(
             end
 
             cycles_elapsed = total_cycles - cycles_remaining[j]
-            if options.warmupMaxsizeBy > 0
+            if options.warmup_maxsize_by > 0
                 fraction_elapsed = 1.0f0 * cycles_elapsed / total_cycles
-                if fraction_elapsed > options.warmupMaxsizeBy
+                if fraction_elapsed > options.warmup_maxsize_by
                     curmaxsizes[j] = options.maxsize
                 else
                     curmaxsizes[j] =
                         3 + floor(
                             Int,
                             (options.maxsize - 3) * fraction_elapsed /
-                            options.warmupMaxsizeBy,
+                            options.warmup_maxsize_by,
                         )
                 end
             end
-            num_equations += options.ncyclesperiteration * options.npop / 10.0
+            num_equations += options.ncycles_per_iteration * options.npop / 10.0
 
             if options.progress && nout == 1
                 head_node_occupation =
@@ -910,7 +910,7 @@ function _EquationSearch(
         end
     end
 
-    if options.stateReturn
+    if options.return_state
         state = (returnPops, (nout == 1 ? hallOfFame[1] : hallOfFame))
         state::StateType{T}
         return state

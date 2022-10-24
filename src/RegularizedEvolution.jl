@@ -23,7 +23,7 @@ function reg_evol_cycle(
     # Batch over each subsample. Can give 15% improvement in speed; probably moreso for large pops.
     # but is ultimately a different algorithm than regularized evolution, and might not be
     # as good.
-    if options.crossoverProbability > 0.0
+    if options.crossover_probability > 0.0
         @recorder error("You cannot have the recorder on when using crossover")
     end
 
@@ -36,20 +36,21 @@ function reg_evol_cycle(
             "You cannot have the recorder and fast_cycle set to true at the same time!"
         )
         @assert options.prob_pick_first == 1.0
-        @assert options.crossoverProbability == 0.0
+        @assert options.crossover_probability == 0.0
 
         shuffle!(pop.members)
-        n_evol_cycles = round(Int, pop.n / options.ns)
+        n_evol_cycles = round(Int, pop.n / options.tournament_selection_n)
         babies = Array{PopMember}(undef, n_evol_cycles)
         accepted = Array{Bool}(undef, n_evol_cycles)
         array_num_evals = Array{Float64}(undef, n_evol_cycles)
 
-        # Iterate each ns-member sub-sample
+        # Iterate each tournament_selection_n-member sub-sample
         Threads.@threads for i in 1:n_evol_cycles
             best_score = Inf
-            best_idx = 1 + (i - 1) * options.ns
+            best_idx = 1 + (i - 1) * options.tournament_selection_n
             # Calculate best member of the subsample:
-            for sub_i in (1 + (i - 1) * options.ns):(i * options.ns)
+            for sub_i in
+                (1 + (i - 1) * options.tournament_selection_n):(i * options.tournament_selection_n)
                 if pop.members[sub_i].score < best_score
                     best_score = pop.members[sub_i].score
                     best_idx = sub_i
@@ -77,8 +78,8 @@ function reg_evol_cycle(
             end
         end
     else
-        for i in 1:round(Int, pop.n / options.ns)
-            if rand() > options.crossoverProbability
+        for i in 1:round(Int, pop.n / options.tournament_selection_n)
+            if rand() > options.crossover_probability
                 allstar = best_of_sample(pop, running_search_statistics, options)
                 mutation_recorder = RecordType()
                 baby, mutation_accepted, tmp_num_evals = next_generation(
