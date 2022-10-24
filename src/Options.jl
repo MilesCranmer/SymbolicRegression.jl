@@ -369,8 +369,30 @@ function Options(;
             "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.", :Options
         )
         # Now, set the new key to the old value:
-        val = kws[$k]
-        @eval $new_key = $val
+        #! format: off
+        k == :mutationWeights && (mutation_weights = kws[k]; true) && continue
+        k == :hofMigration && (hof_migration = kws[k]; true) && continue
+        k == :shouldOptimizeConstants && (should_optimize_constants = kws[k]; true) && continue
+        k == :hofFile && (output_file = kws[k]; true) && continue
+        k == :perturbationFactor && (perturbation_factor = kws[k]; true) && continue
+        k == :batchSize && (batch_size = kws[k]; true) && continue
+        k == :crossoverProbability && (crossover_probability = kws[k]; true) && continue
+        k == :warmupMaxsizeBy && (warmup_maxsize_by = kws[k]; true) && continue
+        k == :useFrequency && (use_frequency = kws[k]; true) && continue
+        k == :useFrequencyInTournament && (use_frequency_in_tournament = kws[k]; true) && continue
+        k == :ncyclesperiteration && (ncycles_per_iteration = kws[k]; true) && continue
+        k == :fractionReplaced && (fraction_replaced = kws[k]; true) && continue
+        k == :fractionReplacedHof && (fraction_replaced_hof = kws[k]; true) && continue
+        k == :probNegate && (probability_negate_constant = kws[k]; true) && continue
+        k == :optimize_probability && (optimizer_probability = kws[k]; true) && continue
+        k == :probPickFirst && (tournament_selection_p = kws[k]; true) && continue
+        k == :earlyStopCondition && (early_stop_condition = kws[k]; true) && continue
+        k == :stateReturn && (return_state = kws[k]; true) && continue
+        k == :ns && (tournament_selection_n = kws[k]; true) && continue
+        #! format: on
+        error(
+            "Unknown deprecated keyword argument: $k. Please update `Options(;)` to transfer this key.",
+        )
     end
 
     if output_file === nothing

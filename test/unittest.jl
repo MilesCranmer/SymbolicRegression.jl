@@ -75,3 +75,7 @@ end
 @safetestset "Test migration" begin
     include("test_migration.jl")
 end
+
+@safetestset "Test deprecated options" begin
+    include("test_deprecation.jl")
+end
