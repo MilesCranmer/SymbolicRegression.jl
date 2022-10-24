@@ -74,7 +74,6 @@ end
 function score_func_batch(
     dataset::Dataset{T}, tree::Node{T}, options::Options
 )::Tuple{T,T} where {T<:Real}
-    # TODO: Use StatsBase.sample here.
     batch_idx = StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)
     batch_X = view(dataset.X, :, batch_idx)
     batch_y = view(dataset.y, batch_idx)
