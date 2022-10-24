@@ -29,7 +29,7 @@ string_tree(tree::Node, options::Options; kws...)
 ## Evaluation
 
 ```@docs
-eval_tree_array(tree::Node, X::AbstractMatrix, options::Options; kws...) where {T<:Real}
+eval_tree_array(tree::Node, X::AbstractMatrix, options::Options; kws...)
 ```
 
 ## Derivatives
@@ -42,8 +42,8 @@ all variables (or, all constants). Both use forward-mode automatic, but use
 `Zygote.jl` to compute derivatives of each operator, so this is very efficient.
 
 ```@docs
-eval_diff_tree_array(tree::Node, X::AbstractMatrix, options::Options, direction::Int) where {T<:Real}
-eval_grad_tree_array(tree::Node, X::AbstractMatrix, options::Options; kws...) where {T<:Real}
+eval_diff_tree_array(tree::Node, X::AbstractMatrix, options::Options, direction::Int)
+eval_grad_tree_array(tree::Node, X::AbstractMatrix, options::Options; kws...)
 ```
 
 ## SymbolicUtils.jl interface
