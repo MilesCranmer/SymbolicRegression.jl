@@ -93,6 +93,11 @@ function score_func_batch(
     return score, result_loss
 end
 
+"""
+    update_baseline_loss!(dataset::Dataset{T}, options::Options) where {T<:Real}
+
+Update the baseline loss of the dataset using the loss function specified in `options`.
+"""
 function update_baseline_loss!(dataset::Dataset{T}, options::Options) where {T<:Real}
     dataset.baseline_loss = if dataset.weighted
         _weighted_loss(

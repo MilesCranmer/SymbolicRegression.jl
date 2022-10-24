@@ -1,6 +1,9 @@
-using Documenter, SymbolicRegression
-using SymbolicRegression:
-    Node, PopMember, Population, eval_tree_array, Dataset, HallOfFame, string_tree
+using Documenter
+using SymbolicRegression
+using SymbolicRegression: Dataset, update_baseline_loss!
+
+DocMeta.setdocmeta!(SymbolicRegression, :DocTestSetup, :(using LossFunctions); recursive=true)
+DocMeta.setdocmeta!(SymbolicRegression, :DocTestSetup, :(using DynamicExpressions); recursive=true)
 
 readme = open(dirname(@__FILE__) * "/../README.md") do io
     read(io, String)
