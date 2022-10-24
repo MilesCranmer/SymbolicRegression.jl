@@ -30,9 +30,10 @@ for i in 0:5
         optimizer_algorithm = "BFGS"
         tournament_selection_p = 0.8
     elseif i == 1
-        println("with multi-output and use_frequency.")
+        println("with multi-output and use_frequency and string-specified parallelism.")
         multi = true
         use_frequency = true
+        parallelism = "multiprocessing"
     elseif i == 3
         println("with multi-threading and crossover and use_frequency_in_tournament")
         parallelism = :multithreading

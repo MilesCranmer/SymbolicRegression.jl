@@ -244,6 +244,7 @@ which is useful for debugging and profiling.
     `:multiprocessing`, `numprocs` processes will be created dynamically if
     `procs` is unset. If you have already allocated processes, pass them
     to the `procs` argument and they will be used.
+    You may also pass a string instead of a symbol, like `"multithreading"`.
 - `numprocs::Union{Int, Nothing}=nothing`:  The number of processes to use,
     if you want `EquationSearch` to set this up automatically. By default
     this will be `4`, but can be any number (you should pick a number <=
@@ -349,11 +350,11 @@ function EquationSearch(
     runtests::Bool=true,
     saved_state::Union{StateType{T},Nothing}=nothing,
 ) where {T<:Real}
-    concurrency = if parallelism == :multithreading
+    concurrency = if parallelism in (:multithreading, "multithreading")
         SRThreaded()
-    elseif parallelism == :multiprocessing
+    elseif parallelism in (:multiprocessing, "multiprocessing")
         SRDistributed()
-    elseif parallelism == :serial
+    elseif parallelism in (:serial, "serial")
         SRSerial()
     else
         error(
@@ -361,7 +362,7 @@ function EquationSearch(
             "You must choose one of :multithreading, :multiprocessing, or :serial.",
         )
     end
-    not_distributed = parallelism in (:serial, :multithreading)
+    not_distributed = isa(concurrency, Union{SRSerial,SRThreaded})
     not_distributed &&
         procs !== nothing &&
         error(
