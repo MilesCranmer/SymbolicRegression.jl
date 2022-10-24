@@ -10,15 +10,15 @@ for i in 0:5
 
     numprocs = 2
     progress = false
-    warmupMaxsizeBy = 0.0f0
+    warmup_maxsize_by = 0.0f0
     optimizer_algorithm = "NelderMead"
     multi = false
-    probPickFirst = 1.0
+    tournament_selection_p = 1.0
     parallelism = :multiprocessing
-    crossoverProbability = 0.0f0
+    crossover_probability = 0.0f0
     skip_mutation_failures = false
-    useFrequency = false
-    useFrequencyInTournament = false
+    use_frequency = false
+    use_frequency_in_tournament = false
     T = Float32
     print("Testing with batching=$(batching) and weighted=$(weighted), ")
     if i == 0
@@ -26,27 +26,27 @@ for i in 0:5
         numprocs = nothing #Try serial computation here.
         parallelism = :serial
         progress = true #Also try the progress bar.
-        warmupMaxsizeBy = 0.5f0 #Smaller maxsize at first, build up slowly
+        warmup_maxsize_by = 0.5f0 #Smaller maxsize at first, build up slowly
         optimizer_algorithm = "BFGS"
-        probPickFirst = 0.8
+        tournament_selection_p = 0.8
     elseif i == 1
-        println("with multi-output and useFrequency.")
+        println("with multi-output and use_frequency.")
         multi = true
-        useFrequency = true
+        use_frequency = true
     elseif i == 3
-        println("with multi-threading and crossover and useFrequencyInTournament")
+        println("with multi-threading and crossover and use_frequency_in_tournament")
         parallelism = :multithreading
         numprocs = nothing
-        crossoverProbability = 0.02f0
-        useFrequencyInTournament = true
+        crossover_probability = 0.02f0
+        use_frequency_in_tournament = true
     elseif i == 4
         println(
             "with crossover and skip mutation failures and both frequencies options, and Float16 type",
         )
-        crossoverProbability = 0.02f0
+        crossover_probability = 0.02f0
         skip_mutation_failures = true
-        useFrequency = true
-        useFrequencyInTournament = true
+        use_frequency = true
+        use_frequency_in_tournament = true
         T = Float16
     elseif i == 5
         println("with default hyperparameters, and Float64 type")
@@ -65,16 +65,16 @@ for i in 0:5
             unary_operators=(cos,),
             npopulations=4,
             batching=batching,
-            crossoverProbability=crossoverProbability,
+            crossover_probability=crossover_probability,
             skip_mutation_failures=skip_mutation_failures,
             seed=0,
             progress=progress,
-            warmupMaxsizeBy=warmupMaxsizeBy,
+            warmup_maxsize_by=warmup_maxsize_by,
             optimizer_algorithm=optimizer_algorithm,
-            probPickFirst=probPickFirst,
+            tournament_selection_p=tournament_selection_p,
             parsimony=0.0f0,
-            useFrequency=useFrequency,
-            useFrequencyInTournament=useFrequencyInTournament,
+            use_frequency=use_frequency,
+            use_frequency_in_tournament=use_frequency_in_tournament,
         )
     end
 
@@ -150,7 +150,7 @@ options = SymbolicRegression.Options(;
     constraints=((*) => (-1, 10), cos => (5)),
     fast_cycle=true,
     skip_mutation_failures=true,
-    stateReturn=true,
+    return_state=true,
 )
 X = randn(MersenneTwister(0), Float32, 5, 100)
 y = 2 * cos.(X[4, :])

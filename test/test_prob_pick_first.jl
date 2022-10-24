@@ -1,4 +1,4 @@
-println("Testing whether probPickFirst works.")
+println("Testing whether tournament_selection_p works.")
 using SymbolicRegression
 using Test
 include("test_params.jl")
@@ -9,8 +9,8 @@ options = Options(;
     default_params...,
     binary_operators=(+, -, *, /),
     unary_operators=(cos, sin),
-    probPickFirst=0.999,
-    ns=n,
+    tournament_selection_p=0.999,
+    tournament_selection_n=n,
 )
 
 for reverse in [false, true]

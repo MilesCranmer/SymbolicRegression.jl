@@ -17,7 +17,7 @@ import .ProgramConstantsModule:
     SRThreaded,
     SRDistributed
 import .DatasetModule: Dataset
-import .OptionsStructModule: Options
+import .OptionsStructModule: Options, MutationWeights, sample_mutation
 import .OptionsModule: Options
 import .OperatorsModule:
     plus,

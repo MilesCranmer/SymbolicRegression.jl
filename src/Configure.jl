@@ -123,10 +123,10 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
             ops = (options.loss,)
             nargs = dataset.weighted ? 3 : 2
         elseif function_set == :early_stop_condition
-            if !(typeof(options.earlyStopCondition) <: Function)
+            if !(typeof(options.early_stop_condition) <: Function)
                 continue
             end
-            ops = (options.earlyStopCondition,)
+            ops = (options.early_stop_condition,)
             nargs = 2
         else
             error("Invalid function set: $function_set")

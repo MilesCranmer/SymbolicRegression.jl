@@ -74,7 +74,7 @@ function score_func_batch(
     dataset::Dataset{T}, tree::Node{T}, options::Options
 )::Tuple{T,T} where {T<:Real}
     # TODO: Use StatsBase.sample here.
-    batch_idx = randperm(dataset.n)[1:(options.batchSize)]
+    batch_idx = randperm(dataset.n)[1:(options.batch_size)]
     batch_X = dataset.X[:, batch_idx]
     batch_y = dataset.y[batch_idx]
     (prediction, completion) = eval_tree_array(tree, batch_X, options.operators)

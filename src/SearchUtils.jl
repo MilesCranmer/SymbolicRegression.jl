@@ -108,7 +108,7 @@ function check_for_loss_threshold(
     hallOfFame::AbstractVector{HallOfFame{T}},
     options::Options,
 )::Bool where {T}
-    options.earlyStopCondition === nothing && return false
+    options.early_stop_condition === nothing && return false
 
     # Check if all nout are below stopping condition.
     for (dataset, hof) in zip(datasets, hallOfFame)
@@ -117,7 +117,7 @@ function check_for_loss_threshold(
         length(dominating) == 0 && return false
 
         stop_conditions = [
-            options.earlyStopCondition(
+            options.early_stop_condition(
                 member.loss, compute_complexity(member.tree, options)
             ) for member in dominating
         ]
