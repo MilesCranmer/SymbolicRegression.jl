@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/symbolic_regression_logo.svg" height="400"></img>
+<img src="https://user-images.githubusercontent.com/7593028/196054732-5c399e82-23a8-4200-945a-67605f7501ab.png" height="50%" width="50%"></img>
 
 SymbolicRegression.jl searches for symbolic expressions which optimize a particular objective.
 
@@ -15,7 +15,8 @@ a Python frontend.
 
 </div>
 
-<img src="https://astroautomata.com/data/sr_demo_image1.png" alt="demo1" width="700"/> <img src="https://astroautomata.com/data/sr_demo_image2.png" alt="demo2" width="700"/>
+<img src="https://astroautomata.com/data/sr_demo_image1.png" alt="demo1" width="700">
+<img src="https://astroautomata.com/data/sr_demo_image2.png" alt="demo2" width="700">
 
 [Cite this software](https://github.com/MilesCranmer/PySR/blob/master/CITATION.md)
 
@@ -33,7 +34,7 @@ a 2D array (shape [features, rows]) and attempts
 to model a 1D array (shape [rows])
 using analytic functional forms.
 
-Run distributed on four processes with:
+Run with:
 ```julia
 using SymbolicRegression
 
@@ -46,7 +47,10 @@ options = SymbolicRegression.Options(
     npopulations=20
 )
 
-hall_of_fame = EquationSearch(X, y, niterations=40, options=options, numprocs=4)
+hall_of_fame = EquationSearch(
+    X, y, niterations=40, options=options,
+    parallelism=:multithreading
+)
 ```
 You can view the resultant equations in the dominating Pareto front (best expression
 seen at each complexity) with:

@@ -1,43 +1,44 @@
 name = "SymbolicRegression"
 uuid = "8254be44-1295-4e6a-a16d-46603ac705cb"
 authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
-version = "0.12.3"
+version = "0.13.0"
 
 [deps]
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+DynamicExpressions = "a40a106e-89c9-4ca8-8020-a735e8728b6b"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 LineSearches = "d3d80556-e9d4-5f37-9878-2ab0fcc64255"
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LossFunctions = "30fc2ffe-d236-52d8-8643-a9d8f7c094a7"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-PreallocationTools = "d236fae5-4411-538c-8e31-a6e3d9e00b46"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 SnoopPrecompile = "66db9d55-30c0-4569-8b51-7e840670fc0c"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
-Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
+DynamicExpressions = "0.3.0"
 JSON3 = "1"
 LineSearches = "7"
 LossFunctions = "0.6, 0.7, 0.8"
 Optim = "0.19, 1.1"
 Pkg = "1"
-PreallocationTools = "< 0.4.2"
 Reexport = "1"
 SpecialFunctions = "0.10.1, 1, 2"
+StatsBase = "0.33"
 SymbolicUtils = "0.19"
-Zygote = "0.6"
 julia = "1.6"
 
 [extras]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Test", "SafeTestsets", "ForwardDiff"]
+test = ["Test", "SafeTestsets", "ForwardDiff", "LinearAlgebra", "Zygote"]

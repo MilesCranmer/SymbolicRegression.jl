@@ -36,7 +36,7 @@ for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma,
 
         true_result = f_true(x1)
 
-        result = eval(Meta.parse(string_tree(const_tree, make_options())))
+        result = eval(Meta.parse(string_tree(const_tree, make_options().operators)))
 
         # Test Basics
         @test n == 9
@@ -72,8 +72,10 @@ for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma,
 
             y = T.(f_true.(X[1, :]))
             dataset = Dataset(X, y)
-            test_y, complete = eval_tree_array(tree, X, make_options())
-            test_y2, complete2 = differentiable_eval_tree_array(tree, X, make_options())
+            test_y, complete = eval_tree_array(tree, X, make_options().operators)
+            test_y2, complete2 = differentiable_eval_tree_array(
+                tree, X, make_options().operators
+            )
 
             # Test Evaluation
             @test complete == true
@@ -102,7 +104,10 @@ for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma,
             df_true = x -> ForwardDiff.derivative(f_true, x)
             dy = T.(df_true.(X[1, :]))
             test_dy = ForwardDiff.gradient(
-                _x -> sum(differentiable_eval_tree_array(tree, _x, make_options())[1]), X
+                _x -> sum(
+                    differentiable_eval_tree_array(tree, _x, make_options().operators)[1],
+                ),
+                X,
             )
             test_dy = test_dy[1, 1:end]
             @test all(abs.(test_dy .- dy) / N .< zero_tolerance)
