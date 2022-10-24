@@ -17,7 +17,7 @@ mutable struct MutationWeights
     do_nothing::Float64
 end
 
-const mutations = fieldnames(MutationWeights)
+const mutations = [fieldnames(MutationWeights)...]
 
 """
     MutationWeights(;kws...)
@@ -34,7 +34,7 @@ will be normalized to sum to 1.0 after initialization.
 - `randomize::Float64`: How often to create a random tree.
 - `do_nothing::Float64`: How often to do nothing.
 """
-function MutationWeights(;
+@generated function MutationWeights(;
     mutate_constant=0.048,
     mutate_operator=0.47,
     add_node=0.79,
@@ -44,30 +44,27 @@ function MutationWeights(;
     randomize=0.00023,
     do_nothing=0.21,
 )
-    return MutationWeights(
-        mutate_constant,
-        mutate_operator,
-        add_node,
-        insert_node,
-        delete_node,
-        simplify,
-        randomize,
-        do_nothing,
-    )
+    return :(MutationWeights($(mutations...)))
 end
 
 """Convert MutationWeights to a vector."""
 @generated function Base.convert(
-    ::Type{V}, weightings::MutationWeights
-) where {V<:AbstractVector}
+    ::Type{Vector}, weightings::MutationWeights
+)::Vector{Float64}
     fields = [:(weightings.$(mut)) for mut in mutations]
-    return :(V([$(fields...)]))
+    return :([$(fields...)])
+end
+
+"""Copy MutationWeights."""
+@generated function Base.copy(weightings::MutationWeights)
+    fields = [:(weightings.$(mut)) for mut in mutations]
+    return :(MutationWeights($(fields...)))
 end
 
 """Sample a mutation, given the weightings."""
-function Base.rand(rng::AbstractRNG, weightings::MutationWeights)::Symbol
+function sample_mutation(weightings::MutationWeights)
     weights = convert(Vector, weightings)
-    return mutations[StatsBase.sample(rng, 1:length(mutations), StatsBase.Weights(weights))]
+    return StatsBase.sample(mutations, StatsBase.Weights(weights))
 end
 
 """This struct defines how complexity is calculated."""

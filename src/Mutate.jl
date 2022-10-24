@@ -2,7 +2,7 @@ module MutateModule
 
 import DynamicExpressions:
     Node, copy_node, count_constants, count_depth, simplify_tree, combine_operators
-import ..CoreModule: Options, Dataset, RecordType
+import ..CoreModule: Options, Dataset, RecordType, sample_mutation
 import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, score_func_batch
 import ..CheckConstraintsModule: check_constraints
@@ -47,21 +47,20 @@ function next_generation(
 
     nfeatures = dataset.nfeatures
 
-    cur_weights = deepcopy(options.mutation_weights)
+    weights = copy(options.mutation_weights)
 
     #More constants => more likely to do constant mutation
-    cur_weights.mutate_constant *= min(8, count_constants(prev)) / 8.0
+    weights.mutate_constant *= min(8, count_constants(prev)) / 8.0
     n = compute_complexity(prev, options)
     depth = count_depth(prev)
 
     # If equation too big, don't add new operators
     if n >= curmaxsize || depth >= options.maxdepth
-        cur_weights.add_node = 0.0
-        cur_weights.insert_node = 0.0
+        weights.add_node = 0.0
+        weights.insert_node = 0.0
     end
 
-    # This will be a symbol from fields of the MutationWeights struct:
-    mutation_choice = rand(cur_weights)
+    mutation_choice = sample_mutation(weights)
 
     successful_mutation = false
     #TODO: Currently we dont take this \/ into account
