@@ -1,7 +1,7 @@
 using SymbolicUtils: SymbolicUtils
 
 """
-    eval_tree_array(tree::Node, X::AbstractMatrix{T}, options::Options; kws...)
+    eval_tree_array(tree::Node, X::AbstractMatrix, options::Options; kws...)
 
 Evaluate a binary tree (equation) over a given input data matrix. The
 operators contain all of the operators used. This function fuses doublets
@@ -23,24 +23,22 @@ which speed up evaluation significantly.
 
 # Arguments
 - `tree::Node`: The root node of the tree to evaluate.
-- `X::AbstractMatrix{T}`: The input data to evaluate the tree on.
+- `X::AbstractMatrix`: The input data to evaluate the tree on.
 - `options::Options`: Options used to define the operators used in the tree.
 
 # Returns
-- `(output, complete)::Tuple{AbstractVector{T}, Bool}`: the result,
+- `(output, complete)::Tuple{AbstractVector, Bool}`: the result,
     which is a 1D array, as well as if the evaluation completed
     successfully (true/false). A `false` complete means an infinity
     or nan was encountered, and a large loss should be assigned
     to the equation.
 """
-function eval_tree_array(
-    tree::Node{T}, X::AbstractArray{T}, options::Options; kws...
-) where {T}
+function eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
     return eval_tree_array(tree, X, options.operators; kws...)
 end
 
 """
-    eval_diff_tree_array(tree::Node{T}, X::AbstractMatrix{T}, options::Options, direction::Int)
+    eval_diff_tree_array(tree::Node, X::AbstractMatrix, options::Options, direction::Int)
 
 Compute the forward derivative of an expression, using a similar
 structure and optimization to eval_tree_array. `direction` is the index of a particular
@@ -50,7 +48,7 @@ respect to `x1`.
 # Arguments
 
 - `tree::Node`: The expression tree to evaluate.
-- `X::AbstractMatrix{T}`: The data matrix, with each column being a data point.
+- `X::AbstractMatrix`: The data matrix, with each column being a data point.
 - `options::Options`: The options containing the operators used to create the `tree`.
     `enable_autodiff` must be set to `true` when creating the options.
     This is needed to create the derivative operations.
@@ -58,17 +56,17 @@ respect to `x1`.
 
 # Returns
 
-- `(evaluation, derivative, complete)::Tuple{AbstractVector{T}, AbstractVector{T}, Bool}`: the normal evaluation,
+- `(evaluation, derivative, complete)::Tuple{AbstractVector, AbstractVector, Bool}`: the normal evaluation,
     the derivative, and whether the evaluation completed as normal (or encountered a nan or inf).
 """
 function eval_diff_tree_array(
-    tree::Node{T}, X::AbstractArray{T}, options::Options, direction::Int
-) where {T}
+    tree::Node, X::AbstractArray, options::Options, direction::Int
+)
     return eval_diff_tree_array(tree, X, options.operators, direction)
 end
 
 """
-    eval_grad_tree_array(tree::Node{T}, X::AbstractMatrix{T}, options::Options; variable::Bool=false)
+    eval_grad_tree_array(tree::Node, X::AbstractMatrix, options::Options; variable::Bool=false)
 
 Compute the forward-mode derivative of an expression, using a similar
 structure and optimization to eval_tree_array. `variable` specifies whether
@@ -77,8 +75,8 @@ to every constant in the expression.
 
 # Arguments
 
-- `tree::Node{T}`: The expression tree to evaluate.
-- `X::AbstractMatrix{T}`: The data matrix, with each column being a data point.
+- `tree::Node`: The expression tree to evaluate.
+- `X::AbstractMatrix`: The data matrix, with each column being a data point.
 - `options::Options`: The options containing the operators used to create the `tree`.
     `enable_autodiff` must be set to `true` when creating the options.
     This is needed to create the derivative operations.
@@ -87,23 +85,21 @@ to every constant in the expression.
 
 # Returns
 
-- `(evaluation, gradient, complete)::Tuple{AbstractVector{T}, AbstractMatrix{T}, Bool}`: the normal evaluation,
+- `(evaluation, gradient, complete)::Tuple{AbstractVector, AbstractMatrix, Bool}`: the normal evaluation,
     the gradient, and whether the evaluation completed as normal (or encountered a nan or inf).
 """
-function eval_grad_tree_array(
-    tree::Node{T}, X::AbstractArray{T}, options::Options; kws...
-) where {T}
+function eval_grad_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
     return eval_grad_tree_array(tree, X, options.operators; kws...)
 end
 
 """
-    differentiable_eval_tree_array(tree::Node{T}, X::AbstractMatrix{T}, options::Options)
+    differentiable_eval_tree_array(tree::Node, X::AbstractMatrix, options::Options)
 
 Evaluate an expression tree in a way that can be auto-differentiated.
 """
 function differentiable_eval_tree_array(
-    tree::Node{T}, X::AbstractArray{T}, options::Options; kws...
-) where {T}
+    tree::Node, X::AbstractArray, options::Options; kws...
+)
     return differentiable_eval_tree_array(tree, X, options.operators; kws...)
 end
 
