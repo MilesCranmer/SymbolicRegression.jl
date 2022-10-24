@@ -1,8 +1,10 @@
 using SymbolicRegression
-using SymbolicRegression: loss
 using Random
 using Test
 include("test_params.jl")
+
+_loss = SymbolicRegression.LossFunctionsModule._loss
+_weighted_loss = SymbolicRegression.LossFunctionsModule._weighted_loss
 
 customloss(x, y) = abs(x - y)^2.5
 customloss(x, y, w) = w * (abs(x - y)^2.5)
@@ -20,6 +22,7 @@ for (loss_fnc, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
     x = randn(MersenneTwister(0), Float32, 100)
     y = randn(MersenneTwister(1), Float32, 100)
     w = abs.(randn(MersenneTwister(2), Float32, 100))
-    @test abs(loss(x, y, options) - sum(evaluator.(x, y)) / length(x)) < 1e-6
-    @test abs(loss(x, y, w, options) - sum(evaluator.(x, y, w)) / sum(w)) < 1e-6
+    @test abs(_loss(x, y, options.loss) - sum(evaluator.(x, y)) / length(x)) < 1e-6
+    @test abs(_weighted_loss(x, y, w, options.loss) - sum(evaluator.(x, y, w)) / sum(w)) <
+        1e-6
 end

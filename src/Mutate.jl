@@ -1,7 +1,9 @@
 module MutateModule
 
-import ..CoreModule: Node, copy_node, Options, Dataset, RecordType
-import ..EquationUtilsModule: compute_complexity, count_constants, count_depth
+import DynamicExpressions:
+    Node, copy_node, count_constants, count_depth, simplify_tree, combine_operators
+import ..CoreModule: Options, Dataset, RecordType
+import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, score_func_batch
 import ..CheckConstraintsModule: check_constraints
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
@@ -15,7 +17,6 @@ import ..MutationFunctionsModule:
     insert_random_op,
     delete_random_op,
     crossover_trees
-import ..SimplifyEquationModule: simplify_tree, combine_operators
 import ..RecorderModule: @recorder
 
 # Go through one simulated options.annealing mutation cycle
@@ -108,8 +109,8 @@ function next_generation(
             @recorder tmp_recorder["type"] = "delete_op"
             is_success_always_possible = true
         elseif mutationChoice < cweights[6]
-            tree = simplify_tree(tree, options) # Sometimes we simplify tree
-            tree = combine_operators(tree, options) # See if repeated constants at outer levels
+            tree = simplify_tree(tree, options.operators) # Sometimes we simplify tree
+            tree = combine_operators(tree, options.operators) # See if repeated constants at outer levels
             @recorder tmp_recorder["type"] = "partial_simplify"
             mutation_accepted = true
             return (
@@ -219,12 +220,12 @@ function next_generation(
         oldSize = compute_complexity(prev, options)
         newSize = compute_complexity(tree, options)
         old_frequency = if (oldSize <= options.maxsize)
-            running_search_statistics.frequencies[oldSize]
+            running_search_statistics.normalized_frequencies[oldSize]
         else
             1e-6
         end
         new_frequency = if (newSize <= options.maxsize)
-            running_search_statistics.frequencies[newSize]
+            running_search_statistics.normalized_frequencies[newSize]
         else
             1e-6
         end

@@ -16,3 +16,4 @@ Manifest.toml
 build
 *.csv.out*
 pysr_recorder.json
+docs/src/index.md
