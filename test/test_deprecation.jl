@@ -13,4 +13,4 @@ options = Options(;
 @test options.should_optimize_constants == true
 
 options = Options(; mutationWeights=[1.0 for i in 1:8])
-@test options.mutation_weights.add_node == 0.0
+@test options.mutation_weights.add_node == 1.0

@@ -370,7 +370,6 @@ function Options(;
         )
         # Now, set the new key to the old value:
         #! format: off
-        k == :mutationWeights && (mutation_weights = (typeof(kws[k]) <: AbstractVector) ? MutationWeights(kws[k]...) : kws[k]; true) && continue
         k == :hofMigration && (hof_migration = kws[k]; true) && continue
         k == :shouldOptimizeConstants && (should_optimize_constants = kws[k]; true) && continue
         k == :hofFile && (output_file = kws[k]; true) && continue
@@ -389,6 +388,14 @@ function Options(;
         k == :earlyStopCondition && (early_stop_condition = kws[k]; true) && continue
         k == :stateReturn && (return_state = kws[k]; true) && continue
         k == :ns && (tournament_selection_n = kws[k]; true) && continue
+        if k == :mutationWeights
+            if typeof(kws[k]) <: AbstractVector
+                mutation_weights = MutationWeights(kws[k]...)
+            else
+                mutation_weights = kws[k]
+            end
+            continue
+        end
         #! format: on
         error(
             "Unknown deprecated keyword argument: $k. Please update `Options(;)` to transfer this key.",
