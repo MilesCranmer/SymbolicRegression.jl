@@ -325,7 +325,7 @@ function Options(;
     annealing=false,
     batching=false,
     batch_size=50,
-    mutation_weights::MutationWeights=MutationWeights(),
+    mutation_weights::Union{MutationWeights,AbstractVector}=MutationWeights(),
     crossover_probability=0.066f0,
     warmup_maxsize_by=0.0f0,
     use_frequency=true,
@@ -370,7 +370,7 @@ function Options(;
         )
         # Now, set the new key to the old value:
         #! format: off
-        k == :mutationWeights && (mutation_weights = kws[k]; true) && continue
+        k == :mutationWeights && (mutation_weights = (typeof(kws[k]) <: AbstractVector) ? MutationWeights(kws[k]...) : kws[k]; true) && continue
         k == :hofMigration && (hof_migration = kws[k]; true) && continue
         k == :shouldOptimizeConstants && (should_optimize_constants = kws[k]; true) && continue
         k == :hofFile && (output_file = kws[k]; true) && continue
