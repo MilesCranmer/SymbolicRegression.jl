@@ -2,7 +2,6 @@ module OptionsStructModule
 
 using Optim: Optim
 using StatsBase: StatsBase
-import Random: AbstractRNG
 import DynamicExpressions: AbstractOperatorEnum
 import LossFunctions: SupervisedLoss
 
