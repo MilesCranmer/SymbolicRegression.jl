@@ -1,8 +1,9 @@
 module MutateModule
 
-import ..CoreModule:
-    Node, copy_node, Options, Dataset, RecordType, get_mutation_probabilities
-import ..EquationUtilsModule: compute_complexity, count_constants, count_depth
+import DynamicExpressions:
+    Node, copy_node, count_constants, count_depth, simplify_tree, combine_operators
+import ..CoreModule: Options, Dataset, RecordType, get_mutation_probabilities
+import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, score_func_batch
 import ..CheckConstraintsModule: check_constraints
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
@@ -16,7 +17,6 @@ import ..MutationFunctionsModule:
     insert_random_op,
     delete_random_op,
     crossover_trees
-import ..SimplifyEquationModule: simplify_tree, combine_operators
 import ..RecorderModule: @recorder
 
 # Go through one simulated options.annealing mutation cycle
@@ -105,8 +105,8 @@ function next_generation(
             @recorder tmp_recorder["type"] = "delete_op"
             is_success_always_possible = true
         elseif mutation_choice == :simplify
-            tree = simplify_tree(tree, options)
-            tree = combine_operators(tree, options)
+            tree = simplify_tree(tree, options.operators)
+            tree = combine_operators(tree, options.operators)
             @recorder tmp_recorder["type"] = "partial_simplify"
             mutation_accepted = true
             return (

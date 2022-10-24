@@ -1,12 +1,14 @@
 module PopulationModule
 
+using StatsBase: StatsBase
 import Random: randperm
-import ..CoreModule: Options, Dataset, RecordType, string_tree
-import ..EquationUtilsModule: compute_complexity
+import DynamicExpressions: string_tree
+import ..CoreModule: Options, Dataset, RecordType
+import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, update_baseline_loss!
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..MutationFunctionsModule: gen_random_tree
-import ..PopMemberModule: PopMember
+import ..PopMemberModule: PopMember, copy_pop_member
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
 mutable struct Population{T<:Real}
@@ -62,16 +64,21 @@ function Population(
     return Population(dataset; npop=npop, options=options, nfeatures=nfeatures)
 end
 
-# Sample 10 random members of the population, and make a new one
-function sample_pop(pop::Population, options::Options)::Population
-    idx = randperm(pop.n)[1:(options.ns)]
-    return Population(pop.members[idx])
+function copy_population(pop::Population{T})::Population{T} where {T<:Real}
+    return Population([copy_pop_member(pm) for pm in pop.members])
+end
+
+# Sample random members of the population, and make a new one
+function sample_pop(pop::Population{T}, options::Options)::Population{T} where {T}
+    return Population(StatsBase.sample(pop.members, options.ns; replace=false))
 end
 
 # Sample the population, and get the best member from that sample
 function best_of_sample(
-    pop::Population, running_search_statistics::RunningSearchStatistics, options::Options
-)::PopMember where {T<:Real}
+    pop::Population{T},
+    running_search_statistics::RunningSearchStatistics,
+    options::Options{A,B,p,ns},
+)::PopMember where {T<:Real,A,B,p,ns}
     sample = sample_pop(pop, options)
 
     if options.useFrequencyInTournament
@@ -80,44 +87,41 @@ function best_of_sample(
         frequency_scaling = 20
         # e.g., for 100% occupied at one size, exp(-20*1) = 2.061153622438558e-9; which seems like a good punishment for dominating the population.
 
-        scores = []
-        for member in 1:(options.ns)
-            size = compute_complexity(sample.members[member].tree, options)
+        scores = Vector{T}(undef, ns)
+        for (i, member) in enumerate(sample.members)
+            size = compute_complexity(member.tree, options)
             frequency = if (size <= options.maxsize)
                 running_search_statistics.normalized_frequencies[size]
             else
                 T(0)
             end
-            score = sample.members[member].score * exp(frequency_scaling * frequency)
-            push!(scores, score)
+            scores[i] = member.score * exp(frequency_scaling * frequency)
         end
     else
-        scores = [sample.members[member].score for member in 1:(options.ns)]
+        scores = [member.score for member in sample.members]
     end
-
-    p = options.probPickFirst
 
     if p == 1.0
         chosen_idx = argmin(scores)
     else
-        sort_idx = sortperm(scores)
-        # scores[sort_idx] would put smallest first.
-
-        k = collect(0:(options.ns - 1))
-        prob_each = p * (1 - p) .^ k
-        prob_each /= sum(prob_each)
-        cumprob = cumsum(prob_each)
-        raw_chosen_idx = findfirst(cumprob .> rand())
-
-        # Sometimes, due to precision issues, we might have cumprob[end] < 1,
-        # so we must check for nothing returned:
-        if raw_chosen_idx === nothing
-            chosen_idx = sort_idx[end]
-        else
-            chosen_idx = sort_idx[raw_chosen_idx]
-        end
+        # First, decide what place we take (usually 1st place wins):
+        tournament_winner = sample_tournament(Val(p), Val(ns))
+        # Then, find the member that won that place, given
+        # their fitness:
+        chosen_idx = partialsortperm(scores, tournament_winner)
     end
     return sample.members[chosen_idx]
+end
+
+# This will compile the tournament probabilities, so it's a bit faster:
+@generated function sample_tournament(::Val{p}, ::Val{ns})::Int where {p,ns}
+    k = collect(0:(ns - 1))
+    prob_each = p * ((1 - p) .^ k)
+    indexes = collect(1:(ns))
+    weights = StatsBase.Weights(prob_each, sum(prob_each))
+    return quote
+        StatsBase.sample($indexes, $weights)
+    end
 end
 
 function finalize_scores(
@@ -126,7 +130,7 @@ function finalize_scores(
     need_recalculate = options.batching
     num_evals = 0.0
     if need_recalculate
-        @inbounds @simd for member in 1:(pop.n)
+        for member in 1:(pop.n)
             score, loss = score_func(dataset, pop.members[member].tree, options)
             pop.members[member].score = score
             pop.members[member].loss = loss
@@ -146,7 +150,7 @@ function record_population(pop::Population{T}, options::Options)::RecordType whe
     return RecordType(
         "population" => [
             RecordType(
-                "tree" => string_tree(member.tree, options),
+                "tree" => string_tree(member.tree, options.operators),
                 "loss" => member.loss,
                 "score" => member.score,
                 "complexity" => compute_complexity(member.tree, options),

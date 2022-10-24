@@ -1,7 +1,8 @@
 module RegularizedEvolutionModule
 
 import Random: shuffle!
-import ..CoreModule: Options, Dataset, RecordType, string_tree
+import DynamicExpressions: string_tree
+import ..CoreModule: Options, Dataset, RecordType
 import ..PopMemberModule: PopMember
 import ..PopulationModule: Population, best_of_sample
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
@@ -34,7 +35,7 @@ function reg_evol_cycle(
         @recorder error(
             "You cannot have the recorder and fast_cycle set to true at the same time!"
         )
-        @assert options.probPickFirst == 1.0
+        @assert options.prob_pick_first == 1.0
         @assert options.crossoverProbability == 0.0
 
         shuffle!(pop.members)
@@ -44,7 +45,7 @@ function reg_evol_cycle(
         array_num_evals = Array{Float64}(undef, n_evol_cycles)
 
         # Iterate each ns-member sub-sample
-        @inbounds Threads.@threads for i in 1:n_evol_cycles
+        Threads.@threads for i in 1:n_evol_cycles
             best_score = Inf
             best_idx = 1 + (i - 1) * options.ns
             # Calculate best member of the subsample:
@@ -69,7 +70,7 @@ function reg_evol_cycle(
         num_evals = sum(array_num_evals)
 
         # Replace the n_evol_cycles-oldest members of each population
-        @inbounds for i in 1:n_evol_cycles
+        for i in 1:n_evol_cycles
             oldest = argmin([pop.members[member].birth for member in 1:(pop.n)])
             if accepted[i] || !options.skip_mutation_failures
                 pop.members[oldest] = babies[i]
@@ -106,7 +107,7 @@ function reg_evol_cycle(
                         if !haskey(record["mutations"], "$(member.ref)")
                             record["mutations"]["$(member.ref)"] = RecordType(
                                 "events" => Vector{RecordType}(),
-                                "tree" => string_tree(member.tree, options),
+                                "tree" => string_tree(member.tree, options.operators),
                                 "score" => member.score,
                                 "loss" => member.loss,
                                 "parent" => member.parent,

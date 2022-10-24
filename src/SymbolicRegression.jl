@@ -24,6 +24,7 @@ export Population,
     copy_node,
     node_to_symbolic,
     symbolic_to_node,
+    simplify_tree,
     combine_operators,
     gen_random_tree,
     gen_random_tree_fixed_size,
@@ -62,6 +63,25 @@ using Pkg: Pkg
 import TOML: parsefile
 import Random: seed!, shuffle!
 using Reexport
+import DynamicExpressions:
+    Node,
+    copy_node,
+    set_node!,
+    string_tree,
+    print_tree,
+    count_nodes,
+    get_constants,
+    set_constants,
+    index_constants,
+    NodeIndex,
+    eval_tree_array,
+    differentiable_eval_tree_array,
+    eval_diff_tree_array,
+    eval_grad_tree_array,
+    node_to_symbolic,
+    symbolic_to_node,
+    combine_operators,
+    simplify_tree
 @reexport import LossFunctions:
     MarginLoss,
     DistanceLoss,
@@ -99,9 +119,7 @@ end
 include("Core.jl")
 include("Recorder.jl")
 include("Utils.jl")
-include("EquationUtils.jl")
-include("EvaluateEquation.jl")
-include("EvaluateEquationDerivative.jl")
+include("Complexity.jl")
 include("CheckConstraints.jl")
 include("AdaptiveParsimony.jl")
 include("MutationFunctions.jl")
@@ -110,24 +128,19 @@ include("PopMember.jl")
 include("ConstantOptimization.jl")
 include("Population.jl")
 include("HallOfFame.jl")
-include("InterfaceSymbolicUtils.jl")
-include("SimplifyEquation.jl")
 include("Mutate.jl")
 include("RegularizedEvolution.jl")
 include("SingleIteration.jl")
 include("ProgressBars.jl")
+include("Migration.jl")
 include("SearchUtils.jl")
 
 import .CoreModule:
-    CONST_TYPE,
     MAX_DEGREE,
     BATCH_DIM,
     FEATURE_DIM,
     RecordType,
     Dataset,
-    Node,
-    copy_node,
-    set_node!,
     Options,
     MutationWeights,
     plus,
@@ -157,19 +170,9 @@ import .CoreModule:
     SRConcurrency,
     SRSerial,
     SRThreaded,
-    SRDistributed,
-    string_tree,
-    print_tree
+    SRDistributed
 import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge
-import .EquationUtilsModule:
-    count_nodes,
-    compute_complexity,
-    get_constants,
-    set_constants,
-    index_constants,
-    NodeIndex
-import .EvaluateEquationModule: eval_tree_array, differentiable_eval_tree_array
-import .EvaluateEquationDerivativeModule: eval_diff_tree_array, eval_grad_tree_array
+import .ComplexityModule: compute_complexity
 import .CheckConstraintsModule: check_constraints
 import .AdaptiveParsimonyModule:
     RunningSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
@@ -179,16 +182,16 @@ import .MutationFunctionsModule:
     random_node,
     random_node_and_parent,
     crossover_trees
-import .LossFunctionsModule: eval_loss, loss, score_func, update_baseline_loss!
-import .PopMemberModule: PopMember, copy_pop_member
-import .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
+import .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
+import .PopMemberModule: PopMember, copy_pop_member, copy_pop_member_reset_birth
+import .PopulationModule:
+    Population, copy_population, best_sub_pop, record_population, best_of_sample
 import .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 import .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
-import .InterfaceSymbolicUtilsModule: node_to_symbolic, symbolic_to_node
-import .SimplifyEquationModule: combine_operators, simplify_tree
 import .ProgressBarsModule: WrappedProgressBar
 import .RecorderModule: @recorder, find_iteration_from_record
+import .MigrationModule: migrate!
 import .SearchUtilsModule:
     next_worker,
     @sr_spawner,
@@ -200,15 +203,14 @@ import .SearchUtilsModule:
     check_max_evals,
     update_progress_bar!,
     print_search_state,
-    init_dummy_pops
+    init_dummy_pops,
+    StateType,
+    load_saved_hall_of_fame,
+    load_saved_population
 
 include("Configure.jl")
 include("Deprecates.jl")
-
-StateType{T} = Tuple{
-    Union{Vector{Vector{Population{T}}},Matrix{Population{T}}},
-    Union{HallOfFame{T},Vector{HallOfFame{T}}},
-}
+include("InterfaceDynamicExpressions.jl")
 
 """
     EquationSearch(X, y[; kws...])
@@ -230,20 +232,33 @@ which is useful for debugging and profiling.
     More iterations will improve the results.
 - `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
     weight the loss for each `y` by this value (same shape as `y`).
-- `varMap::Union{Array{String, 1}, Nothing}=nothing`: The names
+- `varMap::Union{Vector{String}, Nothing}=nothing`: The names
     of each feature in `X`, which will be used during printing of equations.
 - `options::Options=Options()`: The options for the search, such as
     which operators to use, evolution hyperparameters, etc.
+- `parallelism=:multithreading`: What parallelism mode to use.
+    The options are `:multithreading`, `:multiprocessing`, and `:serial`.
+    By default, multithreading will be used. Multithreading uses less memory,
+    but multiprocessing can handle multi-node compute. If using `:multithreading`
+    mode, the number of threads available to julia are used. If using
+    `:multiprocessing`, `numprocs` processes will be created dynamically if
+    `procs` is unset. If you have already allocated processes, pass them
+    to the `procs` argument and they will be used.
 - `numprocs::Union{Int, Nothing}=nothing`:  The number of processes to use,
     if you want `EquationSearch` to set this up automatically. By default
     this will be `4`, but can be any number (you should pick a number <=
     the number of cores available).
-- `procs::Union{Array{Int, 1}, Nothing}=nothing`: If you have set up
+- `procs::Union{Vector{Int}, Nothing}=nothing`: If you have set up
     a distributed run manually with `procs = addprocs()` and `@everywhere`,
     pass the `procs` to this keyword argument.
-- `multithreading::Bool=false`: Whether to use multithreading. Otherwise,
-    will use multiprocessing. Multithreading uses less memory, but multiprocessing
-    can handle multi-node compute.
+- `addprocs_function::Union{Function, Nothing}=nothing`: If using multiprocessing
+    (`parallelism=:multithreading`), and are not passing `procs` manually,
+    then they will be allocated dynamically using `addprocs`. However,
+    you may also pass a custom function to use instead of `addprocs`.
+    This function should take a single positional argument,
+    which is the number of processes to use, as well as the `lazy` keyword argument.
+    For example, if set up on a slurm cluster, you could pass
+    `addprocs_function = addprocs_slurm`, which will set up slurm processes.
 - `runtests::Bool=true`: Whether to run (quick) tests before starting the
     search, to see if there will be any problems during the equation search
     related to the host environment.
@@ -253,12 +268,6 @@ which is useful for debugging and profiling.
     which will cause `EquationSearch` to return the state. Note that
     you cannot change the operators or dataset, but most other options
     should be changeable.
-- `addprocs_function::Union{Function, Nothing}=nothing`: If using distributed
-    mode (`multithreading=false`), you may pass a custom function to use
-    instead of `addprocs`. This function should take a single positional argument,
-    which is the number of processes to use, as well as the `lazy` keyword argument.
-    For example, if set up on a slurm cluster, you could pass
-    `addprocs_function = addprocs_slurm`, which will set up slurm processes.
 
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
@@ -272,15 +281,22 @@ function EquationSearch(
     y::AbstractMatrix{T};
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
-    varMap::Union{Array{String,1},Nothing}=nothing,
+    varMap::Union{Vector{String},Nothing}=nothing,
     options::Options=Options(),
+    parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
-    procs::Union{Array{Int,1},Nothing}=nothing,
-    multithreading::Bool=false,
+    procs::Union{Vector{Int},Nothing}=nothing,
+    addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
     saved_state::Union{StateType{T},Nothing}=nothing,
-    addprocs_function::Union{Function,Nothing}=nothing,
+    multithreaded=nothing,
 ) where {T<:Real}
+    if multithreaded !== nothing
+        error(
+            "`multithreaded` is deprecated. Use the `parallelism` argument instead. " *
+            "Choose one of :multithreaded, :multiprocessing, or :serial.",
+        )
+    end
     nout = size(y, FEATURE_DIM)
     if weights !== nothing
         weights = reshape(weights, size(y))
@@ -298,12 +314,12 @@ function EquationSearch(
         datasets;
         niterations=niterations,
         options=options,
+        parallelism=parallelism,
         numprocs=numprocs,
         procs=procs,
-        multithreading=multithreading,
+        addprocs_function=addprocs_function,
         runtests=runtests,
         saved_state=saved_state,
-        addprocs_function=addprocs_function,
     )
 end
 
@@ -323,27 +339,39 @@ function EquationSearch(
 end
 
 function EquationSearch(
-    datasets::Array{Dataset{T},1};
+    datasets::Vector{Dataset{T}};
     niterations::Int=10,
     options::Options=Options(),
+    parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
-    procs::Union{Array{Int,1},Nothing}=nothing,
-    multithreading::Bool=false,
+    procs::Union{Vector{Int},Nothing}=nothing,
+    addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
     saved_state::Union{StateType{T},Nothing}=nothing,
-    addprocs_function::Union{Function,Nothing}=nothing,
 ) where {T<:Real}
-    noprocs = (procs === nothing && numprocs == 0)
-    someprocs = !noprocs
-
-    concurrency = if multithreading
-        @assert procs === nothing && numprocs in [0, nothing]
+    concurrency = if parallelism == :multithreading
         SRThreaded()
-    elseif someprocs
+    elseif parallelism == :multiprocessing
         SRDistributed()
-    else #noprocs, multithreading=false
+    elseif parallelism == :serial
         SRSerial()
+    else
+        error(
+            "Invalid parallelism mode: $parallelism. " *
+            "You must choose one of :multithreading, :multiprocessing, or :serial.",
+        )
     end
+    not_distributed = parallelism in (:serial, :multithreading)
+    not_distributed &&
+        procs !== nothing &&
+        error(
+            "`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
+        )
+    not_distributed &&
+        numprocs !== nothing &&
+        error(
+            "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
+        )
 
     return _EquationSearch(
         concurrency,
@@ -352,26 +380,31 @@ function EquationSearch(
         options=options,
         numprocs=numprocs,
         procs=procs,
+        addprocs_function=addprocs_function,
         runtests=runtests,
         saved_state=saved_state,
-        addprocs_function=addprocs_function,
     )
 end
 
 function _EquationSearch(
     ::ConcurrencyType,
-    datasets::Array{Dataset{T},1};
-    niterations::Int=10,
-    options::Options=Options(),
-    numprocs::Union{Int,Nothing}=nothing,
-    procs::Union{Array{Int,1},Nothing}=nothing,
-    runtests::Bool=true,
-    saved_state::Union{StateType{T},Nothing}=nothing,
-    addprocs_function::Union{Function,Nothing}=nothing,
+    datasets::Vector{Dataset{T}};
+    niterations::Int,
+    options::Options,
+    numprocs::Union{Int,Nothing},
+    procs::Union{Vector{Int},Nothing},
+    addprocs_function::Union{Function,Nothing},
+    runtests::Bool,
+    saved_state::Union{StateType{T},Nothing},
 ) where {T<:Real,ConcurrencyType<:SRConcurrency}
     if options.deterministic
         if ConcurrencyType != SRSerial
             error("Determinism is only guaranteed for serial mode.")
+        end
+    end
+    if ConcurrencyType == SRThreaded
+        if Threads.nthreads() == 1
+            @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
         end
     end
 
@@ -380,10 +413,14 @@ function _EquationSearch(
     # Redefine print, show:
     @eval begin
         function Base.print(io::IO, tree::Node)
-            return print(io, string_tree(tree, $options; varMap=$(datasets[1].varMap)))
+            return print(
+                io, string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap))
+            )
         end
         function Base.show(io::IO, tree::Node)
-            return print(io, string_tree(tree, $options; varMap=$(datasets[1].varMap)))
+            return print(
+                io, string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap))
+            )
         end
     end
 
@@ -433,15 +470,6 @@ function _EquationSearch(
     # These initial populations are discarded:
     bestSubPops = init_dummy_pops(nout, options.npopulations, datasets, options)
 
-    if saved_state === nothing
-        hallOfFame = [HallOfFame(options, T) for j in 1:nout]
-    else
-        hallOfFame = saved_state[2]::Union{HallOfFame{T},Vector{HallOfFame{T}}}
-        if !isa(hallOfFame, Vector{HallOfFame{T}})
-            hallOfFame = [hallOfFame]
-        end
-        hallOfFame::Vector{HallOfFame{T}}
-    end
     actualMaxsize = options.maxsize + MAX_DEGREE
 
     all_running_search_statistics = [
@@ -469,7 +497,7 @@ function _EquationSearch(
         end
         if numprocs === nothing && procs === nothing
             numprocs = 4
-            procs = addprocs_function(4; lazy=false)
+            procs = addprocs_function(numprocs; lazy=false)
             we_created_procs = true
         elseif numprocs === nothing
             numprocs = length(procs)
@@ -495,13 +523,31 @@ function _EquationSearch(
     # Get the next worker process to give a job:
     worker_assignment = Dict{Tuple{Int,Int},Int}()
 
+    hallOfFame = load_saved_hall_of_fame(saved_state)
+    if hallOfFame === nothing
+        hallOfFame = [HallOfFame(options, T) for j in 1:nout]
+    end
+    @assert length(hallOfFame) == nout
+    hallOfFame::Vector{HallOfFame{T}}
+
     for j in 1:nout
         for i in 1:(options.npopulations)
             worker_idx = next_worker(worker_assignment, procs)
             if ConcurrencyType == SRDistributed
                 worker_assignment[(j, i)] = worker_idx
             end
-            if saved_state === nothing
+
+            saved_pop = load_saved_population(saved_state; out=j, pop=i)
+
+            if saved_pop !== nothing && length(saved_pop.members) == options.npop
+                saved_pop::Population{T}
+                new_pop = @sr_spawner ConcurrencyType worker_idx (
+                    saved_pop, HallOfFame(options, T), RecordType(), 0.0
+                )
+            else
+                if saved_pop !== nothing
+                    @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
+                end
                 new_pop = @sr_spawner ConcurrencyType worker_idx (
                     Population(
                         datasets[j];
@@ -515,32 +561,6 @@ function _EquationSearch(
                     Float64(options.npop),
                 )
                 # This involves npop evaluations, on the full dataset:
-            else
-                is_vector = typeof(saved_state[1]) <: Vector{Vector{Population{T}}}
-                cur_saved_state = is_vector ? saved_state[1][j][i] : saved_state[1][j, i]
-
-                if length(cur_saved_state.members) >= options.npop
-                    new_pop = @sr_spawner ConcurrencyType worker_idx (
-                        cur_saved_state, HallOfFame(options, T), RecordType(), 0.0
-                    )
-                else
-                    # If population has not yet been created (e.g., exited too early)
-                    println(
-                        "Warning: recreating population (output=$(j), population=$(i)), as the saved one only has $(length(cur_saved_state.members)) members.",
-                    )
-                    new_pop = @sr_spawner ConcurrencyType worker_idx (
-                        Population(
-                            datasets[j];
-                            npop=options.npop,
-                            nlength=3,
-                            options=options,
-                            nfeatures=datasets[j].nfeatures,
-                        ),
-                        HallOfFame(options, T),
-                        RecordType(),
-                        Float64(options.npop),
-                    )
-                end
             end
             push!(init_pops[j], new_pop)
         end
@@ -722,7 +742,8 @@ function _EquationSearch(
                     for member in dominating
                         println(
                             io,
-                            "$(compute_complexity(member.tree, options)),$(member.loss),\"$(string_tree(member.tree, options, varMap=dataset.varMap))\"",
+                            "$(compute_complexity(member.tree, options)),$(member.loss),\"" *
+                            "$(string_tree(member.tree, options.operators, varMap=dataset.varMap))\"",
                         )
                     end
                 end
@@ -730,42 +751,13 @@ function _EquationSearch(
 
             ###################################################################
             # Migration #######################################################
-            # Try normal copy otherwise.
             if options.migration
-                for k in rand(
-                    1:(options.npop), round(Int, options.npop * options.fractionReplaced)
+                migrate!(
+                    bestPops.members => cur_pop, options; frac=options.fractionReplaced
                 )
-                    to_copy = rand(1:size(bestPops.members, 1))
-
-                    # Explicit copy here resets the birth. 
-                    cur_pop.members[k] = PopMember(
-                        copy_node(bestPops.members[to_copy].tree),
-                        copy(bestPops.members[to_copy].score),
-                        copy(bestPops.members[to_copy].loss);
-                        ref=copy(bestPops.members[to_copy].ref),
-                        parent=copy(bestPops.members[to_copy].parent),
-                        deterministic=options.deterministic,
-                    )
-                    # TODO: Clean this up using copy_pop_member.
-                end
             end
-
-            if options.hofMigration && size(dominating, 1) > 0
-                for k in rand(
-                    1:(options.npop), round(Int, options.npop * options.fractionReplacedHof)
-                )
-                    # Copy in case one gets used twice
-                    to_copy = rand(1:size(dominating, 1))
-                    cur_pop.members[k] = PopMember(
-                        copy_node(dominating[to_copy].tree),
-                        copy(dominating[to_copy].score),
-                        copy(dominating[to_copy].loss);
-                        ref=copy(dominating[to_copy].ref),
-                        parent=copy(dominating[to_copy].parent),
-                        deterministic=options.deterministic,
-                    )
-                    # TODO: Clean this up with copy_pop_member.
-                end
+            if options.hofMigration && length(dominating) > 0
+                migrate!(dominating => cur_pop, options; frac=options.fractionReplacedHof)
             end
             ###################################################################
 

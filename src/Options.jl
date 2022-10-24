@@ -1,9 +1,9 @@
 module OptionsModule
 
 using Optim: Optim
+import DynamicExpressions: OperatorEnum, Node, string_tree
 import Distributed: nworkers
 import LossFunctions: L2DistLoss
-import Zygote: gradient
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
@@ -21,7 +21,6 @@ import ..OperatorsModule:
     safe_sqrt,
     safe_acosh,
     atanh_clip
-import ..EquationModule: Node, string_tree
 import ..OptionsStructModule: Options, ComplexityMapping, MutationWeights
 import ..UtilsModule: max_ops
 
@@ -128,8 +127,9 @@ The current arguments have been tuned using the median values from
 https://github.com/MilesCranmer/PySR/discussions/115.
 
 # Arguments
-- `binary_operators`: Tuple of binary operators to use. Each operator should
-    be defined for two input scalars, and one output scalar. All operators
+- `binary_operators`: Vector of binary operators (functions) to use.
+    Each operator should be defined for two input scalars,
+    and one output scalar. All operators
     need to be defined over the entire real line (excluding infinity - these
     are stopped before they are input), or return `NaN` where not defined.
     Thus, `log` should be replaced with `safe_log`, etc.
@@ -270,10 +270,16 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `deterministic`: Use a global counter for the birth time, rather than calls to `time()`. This gives
     perfect resolution, and is therefore deterministic. However, it is not thread safe, and must be used
     in serial mode.
+- `define_helper_functions`: Whether to define helper functions
+    for constructing and evaluating trees.
+- `extend_user_operators`: Whether to extend the user's operators
+    to `Node` type, so it is easier to construct
+    trees manually. By default, all operators 
+    defined in `Base` are extended automatically.
 """
 function Options(;
-    binary_operators::NTuple{nbin,Any}=(+, -, /, *),
-    unary_operators::NTuple{nuna,Any}=(),
+    binary_operators=[+, -, /, *],
+    unary_operators=[],
     constraints=nothing,
     loss=L2DistLoss(),
     ns=12, #1 sampled from every ns per mutation
@@ -288,7 +294,6 @@ function Options(;
     fast_cycle=false,
     migration=true,
     hofMigration=true,
-    fractionReplacedHof=0.035f0,
     shouldOptimizeConstants=true,
     hofFile=nothing,
     npopulations=15,
@@ -304,6 +309,7 @@ function Options(;
     npop=33,
     ncyclesperiteration=550,
     fractionReplaced=0.00036f0,
+    fractionReplacedHof=0.035f0,
     verbosity=convert(Int, 1e9),
     probNegate=0.01f0,
     seed=nothing,
@@ -328,7 +334,10 @@ function Options(;
     enable_autodiff::Bool=false,
     nested_constraints=nothing,
     deterministic=false,
-) where {nuna,nbin}
+    # Not search options; just construction options:
+    define_helper_functions=true,
+    extend_user_operators=false,
+)
     if warmupMaxsize !== nothing
         error(
             "warmupMaxsize is deprecated. Please use warmupMaxsizeBy, and give the time at which the warmup will end as a fraction of the total search cycles.",
@@ -339,6 +348,8 @@ function Options(;
         hofFile = "hall_of_fame.csv" #TODO - put in date/time string here
     end
 
+    nuna = length(unary_operators)
+    nbin = length(binary_operators)
     @assert maxsize > 3
     @assert warmupMaxsizeBy >= 0.0f0
     @assert nuna <= max_ops && nbin <= max_ops
@@ -482,53 +493,13 @@ function Options(;
     binary_operators = map(binopmap, binary_operators)
     unary_operators = map(unaopmap, unary_operators)
 
-    if enable_autodiff
-        diff_binary_operators = Any[]
-        diff_unary_operators = Any[]
-
-        test_inputs = map(x -> convert(Float32, x), LinRange(-100, 100, 99))
-        # Create grid over [-100, 100]^2:
-        test_inputs_xy = reduce(
-            hcat, reduce(hcat, ([[[x, y] for x in test_inputs] for y in test_inputs]))
-        )
-        for op in binary_operators
-            diff_op(x, y) = gradient(op, x, y)
-
-            test_output = diff_op.(test_inputs_xy[1, :], test_inputs_xy[2, :])
-            gradient_exists = all((x) -> x !== nothing, Iterators.flatten(test_output))
-            if gradient_exists
-                push!(diff_binary_operators, diff_op)
-            else
-                if verbosity > 0
-                    @warn "Automatic differentiation has been turned off, since operator $(op) does not have well-defined gradients."
-                end
-                enable_autodiff = false
-                break
-            end
-        end
-
-        for op in unary_operators
-            diff_op(x) = gradient(op, x)[1]
-            test_output = diff_op.(test_inputs)
-            gradient_exists = all((x) -> x !== nothing, test_output)
-            if gradient_exists
-                push!(diff_unary_operators, diff_op)
-            else
-                if verbosity > 0
-                    @warn "Automatic differentiation has been turned off, since operator $(op) does not have well-defined gradients."
-                end
-                enable_autodiff = false
-                break
-            end
-        end
-        diff_binary_operators = Tuple(diff_binary_operators)
-        diff_unary_operators = Tuple(diff_unary_operators)
-    end
-
-    if !enable_autodiff
-        diff_binary_operators = nothing
-        diff_unary_operators = nothing
-    end
+    operators = OperatorEnum(;
+        binary_operators=binary_operators,
+        unary_operators=unary_operators,
+        enable_autodiff=enable_autodiff,
+        extend_user_operators=extend_user_operators,
+        define_helper_functions=define_helper_functions,
+    )
 
     if typeof(mutationWeights) <: AbstractVector
         @warn "Passing a vector for `mutationWeights` is deprecated. Please pass a `MutationWeights` object instead."
@@ -537,53 +508,6 @@ function Options(;
             error("Not the right number of mutation probabilities given")
         end
         mutationWeights = MutationWeights(mutationWeights...)
-    end
-
-    for (op, f) in enumerate(map(Symbol, binary_operators))
-        _f = if f in [Symbol(pow), Symbol(safe_pow)]
-            Symbol(^)
-        else
-            f
-        end
-        if !isdefined(Base, _f)
-            continue
-        end
-        @eval begin
-            function Base.$_f(l::Node{T1}, r::Node{T2}) where {T1<:Real,T2<:Real}
-                T = promote_type(T1, T2)
-                l = convert(Node{T}, l)
-                r = convert(Node{T}, r)
-                if (l.constant && r.constant)
-                    return Node(; val=$f(l.val, r.val))
-                else
-                    return Node($op, l, r)
-                end
-            end
-            function Base.$_f(l::Node{T1}, r::T2) where {T1<:Real,T2<:Real}
-                T = promote_type(T1, T2)
-                l = convert(Node{T}, l)
-                r = convert(T, r)
-                return l.constant ? Node(; val=$f(l.val, r)) : Node($op, l, Node(; val=r))
-            end
-            function Base.$_f(l::T1, r::Node{T2}) where {T1<:Real,T2<:Real}
-                T = promote_type(T1, T2)
-                l = convert(T, l)
-                r = convert(Node{T}, r)
-                return r.constant ? Node(; val=$f(l, r.val)) : Node($op, Node(; val=l), r)
-            end
-        end
-    end
-
-    # Redefine Base operations:
-    for (op, f) in enumerate(map(Symbol, unary_operators))
-        if !isdefined(Base, f)
-            continue
-        end
-        @eval begin
-            function Base.$f(l::Node{T})::Node{T} where {T<:Real}
-                return l.constant ? Node(; val=$f(l.val)) : Node($op, l)
-            end
-        end
     end
 
     if progress
@@ -618,18 +542,8 @@ function Options(;
         end
     end
 
-    options = Options{
-        typeof(binary_operators),
-        typeof(unary_operators),
-        typeof(diff_binary_operators),
-        typeof(diff_unary_operators),
-        typeof(loss),
-        eltype(complexity_mapping),
-    }(
-        binary_operators,
-        unary_operators,
-        diff_binary_operators,
-        diff_unary_operators,
+    options = Options{typeof(loss),eltype(complexity_mapping),probPickFirst,ns}(
+        operators,
         bin_constraints,
         una_constraints,
         complexity_mapping,
@@ -641,7 +555,6 @@ function Options(;
         fast_cycle,
         migration,
         hofMigration,
-        fractionReplacedHof,
         shouldOptimizeConstants,
         hofFile,
         npopulations,
@@ -657,6 +570,7 @@ function Options(;
         npop,
         ncyclesperiteration,
         fractionReplaced,
+        fractionReplacedHof,
         topn,
         verbosity,
         probNegate,
@@ -678,15 +592,9 @@ function Options(;
         timeout_in_seconds,
         max_evals,
         skip_mutation_failures,
-        enable_autodiff,
         nested_constraints,
         deterministic,
     )
-
-    @eval begin
-        Base.print(io::IO, tree::Node) = print(io, string_tree(tree, $options))
-        Base.show(io::IO, tree::Node) = print(io, string_tree(tree, $options))
-    end
 
     return options
 end

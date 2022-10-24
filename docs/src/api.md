@@ -17,52 +17,20 @@ EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
 ## Options
 
 ```@docs
-Options(;
-    binary_operators::NTuple{nbin, Any}=(div, plus, mult),
-    unary_operators::NTuple{nuna, Any}=(exp, cos),
-    bin_constraints=nothing,
-    una_constraints=nothing,
-    ns=10, #1 sampled from every ns per mutation
-    topn=10, #samples to return per population
-    parsimony=0.000100f0,
-    alpha=0.100000f0,
-    maxsize=20,
-    maxdepth=nothing,
-    fast_cycle=false,
-    migration=true,
-    hofMigration=true,
-    fractionReplacedHof=0.1f0,
-    shouldOptimizeConstants=true,
-    hofFile=nothing,
-    npopulations=nothing,
-    nrestarts=3,
-    perturbationFactor=1.000000f0,
-    annealing=true,
-    batching=false,
-    batchSize=50,
-    mutationWeights=MutationWeights(),
-    warmupMaxsize=0,
-    useFrequency=false,
-    npop=1000,
-    ncyclesperiteration=300,
-    fractionReplaced=0.1f0,
-    verbosity=convert(Int, 1e9),
-    probNegate=0.01f0,
-    seed=nothing
-   ) where {nuna,nbin}
+Options(;)
 MutationWeights(;)
 ```
 
 ## Printing
 
 ```@docs
-string_tree(tree::Node, options::Options)
+string_tree(tree::Node, options::Options; kws...)
 ```
 
 ## Evaluation
 
 ```@docs
-eval_tree_array(tree::Node{T}, cX::AbstractMatrix{T}, options::Options) where {T<:Real}
+eval_tree_array(tree::Node, X::AbstractMatrix, options::Options; kws...)
 ```
 
 ## Derivatives
@@ -75,8 +43,8 @@ all variables (or, all constants). Both use forward-mode automatic, but use
 `Zygote.jl` to compute derivatives of each operator, so this is very efficient.
 
 ```@docs
-eval_diff_tree_array(tree::Node{T}, cX::AbstractMatrix{T}, options::Options, direction::Int) where {T<:Real}
-eval_grad_tree_array(tree::Node{T}, cX::AbstractMatrix{T}, options::Options; variable::Bool=false) where {T<:Real}
+eval_diff_tree_array(tree::Node, X::AbstractMatrix, options::Options, direction::Int)
+eval_grad_tree_array(tree::Node, X::AbstractMatrix, options::Options; kws...)
 ```
 
 ## SymbolicUtils.jl interface

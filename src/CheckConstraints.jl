@@ -1,8 +1,9 @@
 module CheckConstraintsModule
 
+import DynamicExpressions: Node
 import ..UtilsModule: vals
-import ..CoreModule: Node, Options
-import ..EquationUtilsModule: compute_complexity
+import ..CoreModule: Options
+import ..ComplexityModule: compute_complexity
 
 # Check if any binary operator are overly complex
 function flag_bin_operator_complexity(
