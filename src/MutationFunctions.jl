@@ -61,7 +61,7 @@ function mutate_constant(
     end
 
     bottom = 1//10
-    maxChange = T(options.perturbationFactor) * temperature + T(1 + bottom)
+    maxChange = T(options.perturbation_factor) * temperature + T(1 + bottom)
     factor = maxChange^rand(T)
     makeConstBigger = rand() > 0.5
 
@@ -71,7 +71,7 @@ function mutate_constant(
         node.val::T /= factor
     end
 
-    if rand() > options.probNegate
+    if rand() > options.probability_negate_constant
         node.val::T *= -1
     end
 

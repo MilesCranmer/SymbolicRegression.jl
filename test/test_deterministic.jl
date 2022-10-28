@@ -9,7 +9,7 @@ begin
     options = SymbolicRegression.Options(;
         binary_operators=(+, *, /, -),
         unary_operators=(cos,),
-        crossoverProbability=0.0,  # required for recording, as not set up to track crossovers.
+        crossover_probability=0.0,  # required for recording, as not set up to track crossovers.
         max_evals=10000,
         deterministic=true,
         seed=0,
