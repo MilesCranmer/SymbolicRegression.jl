@@ -98,9 +98,9 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
         :binops,
         :diff_unaops,
         :diff_binops,
-        :scalar_loss,
+        :elementwise_loss,
         :early_stop_condition,
-        :full_loss,
+        :loss_function,
     )
 
     for function_set in function_sets
@@ -122,8 +122,8 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
             end
             ops = options.operators.diff_binops
             example_inputs = (zero(T), zero(T))
-        elseif function_set == :scalar_loss
-            if typeof(options.loss) <: SupervisedLoss
+        elseif function_set == :elementwise_loss
+            if typeof(options.elementwise_loss) <: SupervisedLoss
                 continue
             end
             ops = (options.elementwise_loss,)
@@ -136,9 +136,9 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
             if !(typeof(options.early_stop_condition) <: Function)
                 continue
             end
-            ops = (options.earlyStopCondition,)
-            example_inputs = (zero(T), Int)
-        elseif function_set == :full_loss
+            ops = (options.early_stop_condition,)
+            example_inputs = (zero(T), 0)
+        elseif function_set == :loss_function
             if options.loss_function === nothing
                 continue
             end
