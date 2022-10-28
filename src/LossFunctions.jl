@@ -32,7 +32,7 @@ end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
-    (prediction, completion) = eval_tree_array(tree, dataset.X, options.operators)
+    (prediction, completion) = eval_tree_array(tree, dataset.X, options)
     if !completion
         return T(Inf)
     end
@@ -78,7 +78,7 @@ function score_func_batch(
     batch_idx = StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)
     batch_X = view(dataset.X, :, batch_idx)
     batch_y = view(dataset.y, batch_idx)
-    (prediction, completion) = eval_tree_array(tree, batch_X, options.operators)
+    (prediction, completion) = eval_tree_array(tree, batch_X, options)
     if !completion
         return T(0), T(Inf)
     end

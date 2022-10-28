@@ -109,6 +109,7 @@ struct Options{LossType<:Union{SupervisedLoss,Function},ComplexityType,_prob_pic
     maxsize::Int
     maxdepth::Int
     fast_cycle::Bool
+    turbo::Bool
     migration::Bool
     hof_migration::Bool
     should_optimize_constants::Bool
