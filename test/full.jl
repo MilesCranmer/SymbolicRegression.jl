@@ -19,6 +19,7 @@ for i in 0:5
     skip_mutation_failures = false
     use_frequency = false
     use_frequency_in_tournament = false
+    turbo = false
     T = Float32
     print("Testing with batching=$(batching) and weighted=$(weighted), ")
     if i == 0
@@ -50,8 +51,9 @@ for i in 0:5
         use_frequency_in_tournament = true
         T = Float16
     elseif i == 5
-        println("with default hyperparameters, and Float64 type")
+        println("with default hyperparameters, Float64 type, and turbo=true")
         T = Float64
+        turbo = true
     end
     if i == 5
         options = SymbolicRegression.Options(;
@@ -76,6 +78,7 @@ for i in 0:5
             parsimony=0.0f0,
             use_frequency=use_frequency,
             use_frequency_in_tournament=use_frequency_in_tournament,
+            turbo=turbo,
         )
     end
 
