@@ -98,7 +98,13 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{LossType<:Union{SupervisedLoss,Function},ComplexityType,_prob_pick_first,_ns,FullLossType}
+struct Options{
+    LossType<:Union{SupervisedLoss,Function},
+    ComplexityType,
+    _prob_pick_first,
+    _ns,
+    FullLossType,
+}
     operators::AbstractOperatorEnum
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}

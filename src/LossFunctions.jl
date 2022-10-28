@@ -7,7 +7,6 @@ import DynamicExpressions: eval_tree_array, differentiable_eval_tree_array, Node
 import ..CoreModule: Options, Dataset
 import ..ComplexityModule: compute_complexity
 
-
 function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::SupervisedLoss
 )::T where {T<:Real}
@@ -31,7 +30,7 @@ function _weighted_loss(
 end
 
 # Evaluate the loss of a particular expression on the input dataset.
-function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
+function _eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
     (prediction, completion) = eval_tree_array(tree, dataset.X, options.operators)
     if !completion
         return T(Inf)
@@ -39,7 +38,10 @@ function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T wher
 
     if dataset.weighted
         return _weighted_loss(
-            prediction, dataset.y, dataset.weights::AbstractVector{T}, options.elementwise_loss
+            prediction,
+            dataset.y,
+            dataset.weights::AbstractVector{T},
+            options.elementwise_loss,
         )
     else
         return _loss(prediction, dataset.y, options.elementwise_loss)
@@ -109,16 +111,8 @@ end
 Update the baseline loss of the dataset using the loss function specified in `options`.
 """
 function update_baseline_loss!(dataset::Dataset{T}, options::Options) where {T<:Real}
-    dataset.baseline_loss = if dataset.weighted
-        _weighted_loss(
-            dataset.y,
-            ones(T, dataset.n) .* dataset.avg_y,
-            dataset.weights::AbstractVector{T},
-            options.loss,
-        )
-    else
-        _loss(dataset.y, ones(T, dataset.n) .* dataset.avg_y, options.loss)
-    end
+    example_tree = Node(T; val=dataset.avg_y)
+    dataset.baseline_loss = eval_loss(example_tree, dataset, options)
     return nothing
 end
 

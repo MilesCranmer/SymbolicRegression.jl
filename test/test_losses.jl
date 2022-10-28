@@ -22,7 +22,10 @@ for (loss_fnc, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
     x = randn(MersenneTwister(0), Float32, 100)
     y = randn(MersenneTwister(1), Float32, 100)
     w = abs.(randn(MersenneTwister(2), Float32, 100))
-    @test abs(_loss(x, y, options.loss) - sum(evaluator.(x, y)) / length(x)) < 1e-6
-    @test abs(_weighted_loss(x, y, w, options.loss) - sum(evaluator.(x, y, w)) / sum(w)) <
+    @test abs(_loss(x, y, options.elementwise_loss) - sum(evaluator.(x, y)) / length(x)) <
         1e-6
+    @test abs(
+        _weighted_loss(x, y, w, options.elementwise_loss) -
+        sum(evaluator.(x, y, w)) / sum(w),
+    ) < 1e-6
 end

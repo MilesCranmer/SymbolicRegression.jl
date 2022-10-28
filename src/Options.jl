@@ -613,13 +613,12 @@ function Options(;
         end
     end
 
-
     options = Options{
         typeof(elementwise_loss),
         eltype(complexity_mapping),
         tournament_selection_p,
         tournament_selection_n,
-        typeof(loss_function)
+        typeof(loss_function),
     }(
         operators,
         bin_constraints,

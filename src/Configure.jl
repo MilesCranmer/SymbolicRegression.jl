@@ -100,7 +100,7 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
         :diff_binops,
         :scalar_loss,
         :early_stop_condition,
-        :full_loss
+        :full_loss,
     )
 
     for function_set in function_sets
