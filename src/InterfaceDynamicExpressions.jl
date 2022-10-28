@@ -1,7 +1,20 @@
+module InterfaceDynamicExpressionsModule
+
+import DynamicExpressions:
+    Node,
+    eval_tree_array,
+    eval_diff_tree_array,
+    eval_grad_tree_array,
+    symbolic_to_node,
+    node_to_symbolic,
+    print_tree,
+    string_tree,
+    differentiable_eval_tree_array
 using SymbolicUtils: SymbolicUtils
+import ..CoreModule: Options
 
 """
-    eval_tree_array(tree::Node, X::AbstractMatrix, options::Options; kws...)
+    eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
 
 Evaluate a binary tree (equation) over a given input data matrix. The
 operators contain all of the operators used. This function fuses doublets
@@ -177,4 +190,6 @@ function symbolic_to_node(
     eqn::T, options::Options; kws...
 ) where {T<:SymbolicUtils.Symbolic}
     return symbolic_to_node(eqn, options.operators; kws...)
+end
+
 end

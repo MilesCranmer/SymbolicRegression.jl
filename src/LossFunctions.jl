@@ -3,7 +3,8 @@ module LossFunctionsModule
 import Random: randperm
 using StatsBase: StatsBase
 import LossFunctions: value, AggMode, SupervisedLoss
-import DynamicExpressions: eval_tree_array, differentiable_eval_tree_array, Node
+import DynamicExpressions: Node
+import ..InterfaceDynamicExpressionsModule: eval_tree_array
 import ..CoreModule: Options, Dataset
 import ..ComplexityModule: compute_complexity
 

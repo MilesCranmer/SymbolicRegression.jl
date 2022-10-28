@@ -117,6 +117,7 @@ const PACKAGE_VERSION = let
 end
 
 include("Core.jl")
+include("InterfaceDynamicExpressions.jl")
 include("Recorder.jl")
 include("Utils.jl")
 include("Complexity.jl")
@@ -210,7 +211,6 @@ import .SearchUtilsModule:
 
 include("Configure.jl")
 include("Deprecates.jl")
-include("InterfaceDynamicExpressions.jl")
 
 """
     EquationSearch(X, y[; kws...])
