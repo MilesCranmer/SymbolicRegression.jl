@@ -28,6 +28,7 @@ export Population,
     combine_operators,
     gen_random_tree,
     gen_random_tree_fixed_size,
+    @extend_operators,
 
     #Operators
     plus,

@@ -1,4 +1,5 @@
 using SymbolicUtils: SymbolicUtils
+import DynamicExpressions
 
 """
     eval_tree_array(tree::Node, X::AbstractMatrix, options::Options; kws...)
@@ -177,4 +178,21 @@ function symbolic_to_node(
     eqn::T, options::Options; kws...
 ) where {T<:SymbolicUtils.Symbolic}
     return symbolic_to_node(eqn, options.operators; kws...)
+end
+
+"""
+    @extend_operators options
+
+Extends all operators defined in this options object to work on the
+`Node` type. While by default this is already done for operators defined
+in `Base` when you create an options and pass `define_helper_functions=true`,
+this does not apply to the user-defined operators. Thus, to do so, you must
+apply this macro to the operator enum in the same module you have the operators
+defined.
+"""
+macro extend_operators(options)
+    operators = :($(esc(options)).operators)
+    quote
+        DynamicExpressions.@extend_operators $operators
+    end
 end
