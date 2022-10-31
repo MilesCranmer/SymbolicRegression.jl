@@ -192,7 +192,11 @@ defined.
 """
 macro extend_operators(options)
     operators = :($(esc(options)).operators)
+    type_requirements = Options
     quote
+        if !isa($(esc(options)), $type_requirements)
+            error("You must pass an options type to `@extend_operators`.")
+        end
         DynamicExpressions.@extend_operators $operators
     end
 end
