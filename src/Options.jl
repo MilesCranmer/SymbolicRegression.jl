@@ -243,6 +243,9 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `fast_cycle`: Whether to thread over subsamples of equations during
     regularized evolution. Slightly improves performance, but is a different
     algorithm.
+- `turbo`: Whether to use `LoopVectorization.@turbo` to evaluate expressions.
+    This can be significantly faster, but is only compatible with certain
+    operators. *Experimental!*
 - `migration`: Whether to migrate equations between processes.
 - `hof_migration`: Whether to migrate equations from the hall of fame
     to processes.
@@ -302,10 +305,6 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     in serial mode.
 - `define_helper_functions`: Whether to define helper functions
     for constructing and evaluating trees.
-- `extend_user_operators`: Whether to extend the user's operators
-    to `Node` type, so it is easier to construct
-    trees manually. By default, all operators 
-    defined in `Base` are extended automatically.
 """
 function Options(;
     binary_operators=[+, -, /, *],
@@ -324,6 +323,7 @@ function Options(;
     maxsize=20,
     maxdepth=nothing,
     fast_cycle=false,
+    turbo=false,
     migration=true,
     hof_migration=true,
     should_optimize_constants=true,
@@ -367,7 +367,6 @@ function Options(;
     loss=nothing,
     # Not search options; just construction options:
     define_helper_functions=true,
-    extend_user_operators=false,
     # Deprecated args:
     kws...,
 )
@@ -577,7 +576,6 @@ function Options(;
         binary_operators=binary_operators,
         unary_operators=unary_operators,
         enable_autodiff=enable_autodiff,
-        extend_user_operators=extend_user_operators,
         define_helper_functions=define_helper_functions,
     )
 
@@ -630,6 +628,7 @@ function Options(;
         maxsize,
         maxdepth,
         fast_cycle,
+        turbo,
         migration,
         hof_migration,
         should_optimize_constants,
