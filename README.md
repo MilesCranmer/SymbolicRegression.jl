@@ -84,7 +84,7 @@ using SymbolicRegression
 options = Options(;
     binary_operators=(+, -, *, ^, /), unary_operators=(cos, exp, sin)
 )
-x1, x2, x3 = Node("x1"), Node("x2"), Node("x3")
+x1, x2, x3 = [Node(; feature=i) for i=1:3]
 tree = cos(x1 - 3.2 * x2) - x1^3.2
 ```
 This tree has `Float64` constants, so the type of the entire tree
