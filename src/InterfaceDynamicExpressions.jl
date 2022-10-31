@@ -1,5 +1,5 @@
 using SymbolicUtils: SymbolicUtils
-import DynamicExpressions
+using DynamicExpressions: DynamicExpressions
 
 """
     eval_tree_array(tree::Node, X::AbstractMatrix, options::Options; kws...)
