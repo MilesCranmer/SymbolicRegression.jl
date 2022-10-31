@@ -8,7 +8,8 @@ function make_options(; kw...)
     return Options(; binary_operators=(+, -, *, /, ^), unary_operators=(cos, sin), kw...)
 end
 options = make_options()
-tree = sin((x1 + x2 + x3)^2.3)
+@extend_operators options
+tree = sin(safe_pow(x1 + x2 + x3, 2.3))
 @test compute_complexity(tree, options) == 8
 
 options = make_options(; complexity_of_operators=[sin => 3])
