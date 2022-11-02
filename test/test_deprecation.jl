@@ -12,5 +12,5 @@ options = Options(;
 @test options.fraction_replaced_hof == 0.01f0
 @test options.should_optimize_constants == true
 
-options = Options(; mutationWeights=[1.0 for i in 1:8])
+options = Options(; mutationWeights=[1.0 for i in 1:9])
 @test options.mutation_weights.add_node == 1.0

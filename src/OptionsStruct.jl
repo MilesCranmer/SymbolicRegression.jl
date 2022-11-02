@@ -14,6 +14,7 @@ mutable struct MutationWeights
     simplify::Float64
     randomize::Float64
     do_nothing::Float64
+    optimize::Float64
 end
 
 const mutations = [fieldnames(MutationWeights)...]
@@ -32,6 +33,9 @@ will be normalized to sum to 1.0 after initialization.
 - `simplify::Float64`: How often to simplify the tree.
 - `randomize::Float64`: How often to create a random tree.
 - `do_nothing::Float64`: How often to do nothing.
+- `optimize::Float64`: How often to optimize the constants in the tree, as a mutation.
+  Note that this is different from `optimizer_probability`, which is
+  performed at the end of an iteration for all individuals.
 """
 @generated function MutationWeights(;
     mutate_constant=0.048,
@@ -42,6 +46,7 @@ will be normalized to sum to 1.0 after initialization.
     simplify=0.0020,
     randomize=0.00023,
     do_nothing=0.21,
+    optimize=0.0005,
 )
     return :(MutationWeights($(mutations...)))
 end
