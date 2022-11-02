@@ -46,7 +46,7 @@ will be normalized to sum to 1.0 after initialization.
     simplify=0.0020,
     randomize=0.00023,
     do_nothing=0.21,
-    optimize=0.0005,
+    optimize=0.0,
 )
     return :(MutationWeights($(mutations...)))
 end
