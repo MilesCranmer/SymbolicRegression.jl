@@ -83,3 +83,7 @@ end
 @safetestset "Test optimization mutation" begin
     include("test_optimizer_mutation.jl")
 end
+
+@safetestset "Test RunningSearchStatistics" begin
+    include("test_search_statistics.jl")
+end
