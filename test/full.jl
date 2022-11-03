@@ -202,3 +202,7 @@ println("Passed.")
 println("Testing whether deterministic mode works.")
 include("test_deterministic.jl")
 println("Passed.")
+
+println("Testing whether early stop criteria works.")
+include("test_early_stop.jl")
+println("Passed.")
