@@ -37,5 +37,7 @@ new_member, _, _ = next_generation(
 )
 
 resultant_constants = get_constants(new_member.tree)
-@test resultant_constants[1] ≈ 2.1 atol = 1e-3
-@test sin(resultant_constants[2]) ≈ sin(0.8) atol = 1e-3
+for k in [0.0, 0.2, 0.5, 1.0]
+    @test sin(resultant_constants[1] * k + resultant_constants[2]) ≈ sin(2.1 * k + 0.8) atol =
+        1e-3
+end
