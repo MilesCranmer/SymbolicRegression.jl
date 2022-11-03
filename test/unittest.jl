@@ -79,3 +79,7 @@ end
 @safetestset "Test deprecated options" begin
     include("test_deprecation.jl")
 end
+
+@safetestset "Test optimization mutation" begin
+    include("test_optimizer_mutation.jl")
+end
