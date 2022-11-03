@@ -233,6 +233,9 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     for every complexity.
 - `use_frequency_in_tournament`: Whether to use the adaptive parsimony described
     above inside the score, rather than just at the mutation accept/reject stage.
+- `adaptive_parsimony_scaling`: How much to scale the adaptive parsimony term
+    in the loss. Increase this if the search is spending too much time
+    optimizing the most complex equations.
 - `fast_cycle`: Whether to thread over subsamples of equations during
     regularized evolution. Slightly improves performance, but is a different
     algorithm.
@@ -330,6 +333,7 @@ function Options(;
     warmup_maxsize_by=0.0f0,
     use_frequency=true,
     use_frequency_in_tournament=true,
+    adaptive_parsimony_scaling=20.0,
     npop=33,
     ncycles_per_iteration=550,
     fraction_replaced=0.00036f0,
@@ -628,6 +632,7 @@ function Options(;
         warmup_maxsize_by,
         use_frequency,
         use_frequency_in_tournament,
+        adaptive_parsimony_scaling,
         npop,
         ncycles_per_iteration,
         fraction_replaced,

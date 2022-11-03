@@ -129,6 +129,7 @@ struct Options{LossType<:Union{SupervisedLoss,Function},ComplexityType,_prob_pic
     warmup_maxsize_by::Float32
     use_frequency::Bool
     use_frequency_in_tournament::Bool
+    adaptive_parsimony_scaling::Float64
     npop::Int
     ncycles_per_iteration::Int
     fraction_replaced::Float32
