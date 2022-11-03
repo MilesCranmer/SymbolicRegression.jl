@@ -1,5 +1,6 @@
 using SymbolicRegression
 using Test
+using Random
 include("test_params.jl")
 
 X = randn(MersenneTwister(0), Float32, 5, 100)
