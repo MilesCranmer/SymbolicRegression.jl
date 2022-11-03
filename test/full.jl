@@ -206,3 +206,7 @@ println("Passed.")
 println("Testing whether early stop criteria works.")
 include("test_early_stop.jl")
 println("Passed.")
+
+println("Testing whether we can move operators to workers.")
+include("test_custom_operators_multiprocessing.jl")
+println("Passed.")
