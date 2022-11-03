@@ -21,7 +21,7 @@ import ..OperatorsModule:
     safe_sqrt,
     safe_acosh,
     atanh_clip
-import ..OptionsStructModule: Options, ComplexityMapping, MutationWeights
+import ..OptionsStructModule: Options, ComplexityMapping, MutationWeights, mutations
 import ..UtilsModule: max_ops
 
 """
@@ -389,7 +389,15 @@ function Options(;
         k == :ns && (tournament_selection_n = kws[k]; true) && continue
         if k == :mutationWeights
             if typeof(kws[k]) <: AbstractVector
-                mutation_weights = MutationWeights(kws[k]...)
+                _mutation_weights = kws[k]
+                if length(_mutation_weights) < length(mutations)
+                    # Pad with zeros:
+                    _mutation_weights = vcat(
+                        _mutation_weights,
+                        zeros(length(mutations) - length(_mutation_weights))
+                    )
+                end
+                mutation_weights = MutationWeights(_mutation_weights...)
             else
                 mutation_weights = kws[k]
             end
