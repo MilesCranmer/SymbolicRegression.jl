@@ -26,3 +26,16 @@ normalize_frequencies!(statistics)
 
 @test sum(statistics.normalized_frequencies[1:5]) >
     sum(statistics.normalized_frequencies[10:15])
+
+for i in 1:500
+    update_frequencies!(statistics; size=rand(MersenneTwister(i), 10:15))
+end
+
+move_window!(statistics)
+
+@test sum(statistics.frequencies) ≈ 500.0
+
+normalize_frequencies!(statistics)
+
+@test sum(statistics.normalized_frequencies[1:5]) <
+    sum(statistics.normalized_frequencies[10:15])
