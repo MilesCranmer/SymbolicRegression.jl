@@ -154,7 +154,6 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     and one output scalar. All operators
     need to be defined over the entire real line (excluding infinity - these
     are stopped before they are input), or return `NaN` where not defined.
-    Thus, `log` should be replaced with `safe_log`, etc.
     For speed, define it so it takes two reals
     of the same type as input, and outputs the same type. For the SymbolicUtils
     simplification backend, you will need to define a generic method of the

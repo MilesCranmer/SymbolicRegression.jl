@@ -36,6 +36,10 @@ end
     include("test_evaluation.jl")
 end
 
+@safetestset "Test turbo mode with NaN" begin
+    include("test_turbo_nan.jl")
+end
+
 @safetestset "Test validity of integer expression evaluation" begin
     include("test_integer_evaluation.jl")
 end
