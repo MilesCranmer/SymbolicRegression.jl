@@ -97,7 +97,7 @@ function greater(x, y)
     return (x > y)
 end
 function relu(x::T)::T where {T}
-    return (x + abs(x)) * T(0.5)
+    return (x + abs(x)) / T(2)
 end
 
 function logical_or(x::T, y::T)::T where {T}
