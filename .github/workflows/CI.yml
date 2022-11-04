@@ -41,17 +41,8 @@ jobs:
         uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.julia-version }}
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-artifacts
-        with:
-          path: ~/.julia/artifacts
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+      - name: "Cache dependencies"
+        uses: julia-actions/cache@v1
       - name: "Build package"
         uses: julia-actions/julia-buildpkg@v1
       - name: "Run tests"
@@ -72,7 +63,7 @@ jobs:
             julia --color=yes --project=. coverage.jl
         shell: bash
         if: ${{ matrix.os == 'windows-latest' }}
-      - name: Coveralls
+      - name: "Coveralls"
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
