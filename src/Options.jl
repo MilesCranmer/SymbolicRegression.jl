@@ -83,7 +83,7 @@ function build_constraints(
     return una_constraints, bin_constraints
 end
 
-function binopmap(op; turbo)
+function binopmap(op)
     if op == plus
         return +
     elseif op == mult
@@ -93,17 +93,14 @@ function binopmap(op; turbo)
     elseif op == div
         return /
     elseif op == ^
-        turbo && return (^)
         return safe_pow
     elseif op == pow
-        turbo && return (^)
         return safe_pow
     end
     return op
 end
 
-function unaopmap(op; turbo)
-    turbo && return op
+function unaopmap(op)
     if op == log
         return safe_log
     elseif op == log10
@@ -561,8 +558,8 @@ function Options(;
         npopulations = nworkers()
     end
 
-    binary_operators = map(op -> binopmap(op; turbo=turbo), binary_operators)
-    unary_operators = map(op -> unaopmap(op; turbo=turbo), unary_operators)
+    binary_operators = map(binopmap, binary_operators)
+    unary_operators = map(unaopmap, unary_operators)
 
     operators = OperatorEnum(;
         binary_operators=binary_operators,

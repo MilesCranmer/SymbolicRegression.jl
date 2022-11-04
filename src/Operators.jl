@@ -34,7 +34,7 @@ end
 function cube(x::T)::T where {T<:Real}
     return x^3
 end
-function safe_pow(x::T, y::T)::T where {T<:Real}
+function safe_pow(x::T, y::T)::T where {T<:AbstractFloat}
     if isinteger(y)
         y < T(0) && x == T(0) && return T(NaN)
     else
@@ -43,35 +43,35 @@ function safe_pow(x::T, y::T)::T where {T<:Real}
     end
     return x^y
 end
-function div(x::T, y::T)::T where {T<:Real}
+function div(x::T, y::T)::T where {T<:AbstractFloat}
     return x / y
 end
-function safe_log(x::T)::T where {T<:Real}
+function safe_log(x::T)::T where {T<:AbstractFloat}
     x <= T(0) && return T(NaN)
     return log(x)
 end
-function safe_log2(x::T)::T where {T<:Real}
+function safe_log2(x::T)::T where {T<:AbstractFloat}
     x <= T(0) && return T(NaN)
     return log2(x)
 end
-function safe_log10(x::T)::T where {T<:Real}
+function safe_log10(x::T)::T where {T<:AbstractFloat}
     x <= T(0) && return T(NaN)
     return log10(x)
 end
-function safe_log1p(x::T)::T where {T<:Real}
+function safe_log1p(x::T)::T where {T<:AbstractFloat}
     x <= T(-1) && return T(NaN)
     return log1p(x)
 end
-function safe_acosh(x::T)::T where {T<:Real}
+function safe_acosh(x::T)::T where {T<:AbstractFloat}
     x < T(1) && return T(NaN)
     return acosh(x)
 end
-function safe_sqrt(x::T)::T where {T<:Real}
+function safe_sqrt(x::T)::T where {T<:AbstractFloat}
     x < T(0) && return T(NaN)
     return sqrt(x)
 end
 
-# Generics:
+# Generics (and SIMD)
 square(x) = x * x
 cube(x) = x * x * x
 plus(x, y) = x + y
@@ -97,7 +97,7 @@ function greater(x, y)
     return (x > y)
 end
 function relu(x::T)::T where {T}
-    return convert(T, (x > 0)) * x
+    return (x + abs(x)) * T(0.5)
 end
 
 function logical_or(x::T, y::T)::T where {T}
