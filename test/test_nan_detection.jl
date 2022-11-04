@@ -24,22 +24,14 @@ for T in [Float16, Float32, Float64], turbo in [true, false]
     @test !flag
 
     # Creating a NaN via sqrt(-1):
-    tree = if turbo
-        sqrt(Node(T; feature=1) - 1)
-    else
-        safe_sqrt(Node(T; feature=1) - 1)
-    end
+    tree = safe_sqrt(Node(T; feature=1) - 1)
     tree = convert(Node{T}, tree)
     X = fill(T(0), 1, 10)
     output, flag = eval_tree_array(tree, X, options)
     @test !flag
 
     # Creating a NaN via pow(-1, 0.5):
-    tree = if turbo
-        (Node(T; feature=1) - 1)^0.5
-    else
-        safe_pow(Node(T; feature=1) - 1, 0.5)
-    end
+    tree = safe_pow(Node(T; feature=1) - 1, 0.5)
     tree = convert(Node{T}, tree)
     X = fill(T(0), 1, 10)
     output, flag = eval_tree_array(tree, X, options)
