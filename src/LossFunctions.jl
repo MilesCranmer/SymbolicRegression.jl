@@ -31,7 +31,7 @@ function _weighted_loss(
 end
 
 # Evaluate the loss of a particular expression on the input dataset.
-function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
+function _eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
     (prediction, completion) = eval_tree_array(tree, dataset.X, options)
     if !completion
         return T(Inf)
