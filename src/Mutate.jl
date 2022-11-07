@@ -17,6 +17,7 @@ import ..MutationFunctionsModule:
     insert_random_op,
     delete_random_op,
     crossover_trees
+import ..ConstantOptimizationModule: optimize_constants
 import ..RecorderModule: @recorder
 
 # Go through one simulated options.annealing mutation cycle
@@ -130,6 +131,21 @@ function next_generation(
             tree_size_to_generate = rand(1:curmaxsize)
             tree = gen_random_tree_fixed_size(tree_size_to_generate, options, nfeatures, T)
             @recorder tmp_recorder["type"] = "regenerate"
+
+            is_success_always_possible = true
+        elseif mutation_choice == :optimize
+            cur_member = PopMember(
+                tree,
+                beforeScore,
+                beforeLoss;
+                parent=parent_ref,
+                deterministic=options.deterministic,
+            )
+            cur_member, new_num_evals = optimize_constants(dataset, cur_member, options)
+            num_evals += new_num_evals
+            @recorder tmp_recorder["type"] = "optimize"
+            mutation_accepted = true
+            return (cur_member, mutation_accepted, num_evals)
 
             is_success_always_possible = true
         elseif mutation_choice == :do_nothing

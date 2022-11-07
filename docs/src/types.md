@@ -20,8 +20,14 @@ Node(var_string::String)
 
 When you create an `Options` object, the operators
 passed are also re-defined for `Node` types.
-This allows you use, e.g., `t=Node("x1") * 3f0` to create a tree, so long as
-`*` was specified as a binary operator.
+This allows you use, e.g., `t=Node(; feature=1) * 3f0` to create a tree, so long as
+`*` was specified as a binary operator. This works automatically for
+operators defined in `Base`, although you can also get this to work
+for user-defined operators by using `@extend_operators`:
+
+```@docs
+@extend_operators options
+```
 
 When using these node constructors, types will automatically be promoted.
 You can convert the type of a node using `convert`:

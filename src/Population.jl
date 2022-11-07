@@ -86,7 +86,7 @@ function best_of_sample(
     if options.use_frequency_in_tournament
         # Score based on frequency of that size occuring.
         # In the end, all sizes should be just as common in the population.
-        frequency_scaling = 20
+        adaptive_parsimony_scaling = T(options.adaptive_parsimony_scaling)
         # e.g., for 100% occupied at one size, exp(-20*1) = 2.061153622438558e-9; which seems like a good punishment for dominating the population.
 
         scores = Vector{T}(undef, tournament_selection_n)
@@ -97,7 +97,7 @@ function best_of_sample(
             else
                 T(0)
             end
-            scores[i] = member.score * exp(frequency_scaling * frequency)
+            scores[i] = member.score * exp(adaptive_parsimony_scaling * frequency)
         end
     else
         scores = [member.score for member in sample.members]

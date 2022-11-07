@@ -185,6 +185,7 @@ import .MutationFunctionsModule:
     random_node,
     random_node_and_parent,
     crossover_trees
+import .InterfaceDynamicExpressionsModule: @extend_operators
 import .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
 import .PopMemberModule: PopMember, copy_pop_member, copy_pop_member_reset_birth
 import .PopulationModule:
@@ -925,5 +926,9 @@ function _EquationSearch(
         end
     end
 end
+
+macro ignore(args...) end
+# Hack to get static analysis to work from within tests:
+@ignore include("../test/runtests.jl")
 
 end #module SR

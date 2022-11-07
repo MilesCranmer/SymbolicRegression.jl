@@ -50,31 +50,6 @@ function recursive_merge(x...)
     return x[end]
 end
 
-isgood(x::T) where {T<:Number} = !(isnan(x) || !isfinite(x))
-isgood(x) = true
-isbad(x) = !isgood(x)
-
-macro return_on_false(flag, retval)
-    :(
-        if !$(esc(flag))
-            return ($(esc(retval)), false)
-        end
-    )
-end
-
-# Returns two arrays
-macro return_on_false2(flag, retval, retval2)
-    :(
-        if !$(esc(flag))
-            return ($(esc(retval)), $(esc(retval2)), false)
-        end
-    )
-end
-
-# Fastest way to check for NaN in an array.
-# (due to optimizations in sum())
-is_bad_array(array) = !isfinite(sum(array))
-
 const max_ops = 1024
 const vals = ntuple(i -> Val(i), max_ops)
 

@@ -21,7 +21,7 @@ import ..OperatorsModule:
     safe_sqrt,
     safe_acosh,
     atanh_clip
-import ..OptionsStructModule: Options, ComplexityMapping, MutationWeights
+import ..OptionsStructModule: Options, ComplexityMapping, MutationWeights, mutations
 import ..UtilsModule: max_ops
 
 """
@@ -154,7 +154,6 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     and one output scalar. All operators
     need to be defined over the entire real line (excluding infinity - these
     are stopped before they are input), or return `NaN` where not defined.
-    Thus, `log` should be replaced with `safe_log`, etc.
     For speed, define it so it takes two reals
     of the same type as input, and outputs the same type. For the SymbolicUtils
     simplification backend, you will need to define a generic method of the
@@ -240,6 +239,9 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     for every complexity.
 - `use_frequency_in_tournament`: Whether to use the adaptive parsimony described
     above inside the score, rather than just at the mutation accept/reject stage.
+- `adaptive_parsimony_scaling`: How much to scale the adaptive parsimony term
+    in the loss. Increase this if the search is spending too much time
+    optimizing the most complex equations.
 - `fast_cycle`: Whether to thread over subsamples of equations during
     regularized evolution. Slightly improves performance, but is a different
     algorithm.
@@ -338,6 +340,7 @@ function Options(;
     warmup_maxsize_by=0.0f0,
     use_frequency=true,
     use_frequency_in_tournament=true,
+    adaptive_parsimony_scaling=20.0,
     npop=33,
     ncycles_per_iteration=550,
     fraction_replaced=0.00036f0,
@@ -398,7 +401,15 @@ function Options(;
         k == :ns && (tournament_selection_n = kws[k]; true) && continue
         if k == :mutationWeights
             if typeof(kws[k]) <: AbstractVector
-                mutation_weights = MutationWeights(kws[k]...)
+                _mutation_weights = kws[k]
+                if length(_mutation_weights) < length(mutations)
+                    # Pad with zeros:
+                    _mutation_weights = vcat(
+                        _mutation_weights,
+                        zeros(length(mutations) - length(_mutation_weights))
+                    )
+                end
+                mutation_weights = MutationWeights(_mutation_weights...)
             else
                 mutation_weights = kws[k]
             end
@@ -643,6 +654,7 @@ function Options(;
         warmup_maxsize_by,
         use_frequency,
         use_frequency_in_tournament,
+        adaptive_parsimony_scaling,
         npop,
         ncycles_per_iteration,
         fraction_replaced,
