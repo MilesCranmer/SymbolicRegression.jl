@@ -21,7 +21,7 @@ import ..OperatorsModule:
     safe_sqrt,
     safe_acosh,
     atanh_clip
-import ..OptionsStructModule: Options, ComplexityMapping
+import ..OptionsStructModule: Options, ComplexityMapping, MutationWeights, mutations
 import ..UtilsModule: max_ops
 
 """
@@ -119,6 +119,28 @@ function unaopmap(op)
     return op
 end
 
+const deprecated_options_mapping = NamedTuple([
+    :mutationWeights => :mutation_weights,
+    :hofMigration => :hof_migration,
+    :shouldOptimizeConstants => :should_optimize_constants,
+    :hofFile => :output_file,
+    :perturbationFactor => :perturbation_factor,
+    :batchSize => :batch_size,
+    :crossoverProbability => :crossover_probability,
+    :warmupMaxsizeBy => :warmup_maxsize_by,
+    :useFrequency => :use_frequency,
+    :useFrequencyInTournament => :use_frequency_in_tournament,
+    :ncyclesperiteration => :ncycles_per_iteration,
+    :fractionReplaced => :fraction_replaced,
+    :fractionReplacedHof => :fraction_replaced_hof,
+    :probNegate => :probability_negate_constant,
+    :optimize_probability => :optimizer_probability,
+    :probPickFirst => :tournament_selection_p,
+    :earlyStopCondition => :early_stop_condition,
+    :stateReturn => :return_state,
+    :ns => :tournament_selection_n,
+])
+
 """
     Options(;kws...)
 
@@ -132,7 +154,6 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     and one output scalar. All operators
     need to be defined over the entire real line (excluding infinity - these
     are stopped before they are input), or return `NaN` where not defined.
-    Thus, `log` should be replaced with `safe_log`, etc.
     For speed, define it so it takes two reals
     of the same type as input, and outputs the same type. For the SymbolicUtils
     simplification backend, you will need to define a generic method of the
@@ -149,7 +170,7 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     no constraints.
 - `batching`: Whether to evolve based on small mini-batches of data,
     rather than the entire dataset.
-- `batchSize`: What batch size to use if using batching.
+- `batch_size`: What batch size to use if using batching.
 - `loss`: What loss function to use. Can be one of
     the following losses, or any other loss of type
     `SupervisedLoss`. You can also pass a function that takes
@@ -181,8 +202,11 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `npopulations`: How many populations of equations to use. By default
     this is set equal to the number of cores
 - `npop`: How many equations in each population.
-- `ncyclesperiteration`: How many generations to consider per iteration.
-- `ns`: Number of equations in each subsample during regularized evolution.
+- `ncycles_per_iteration`: How many generations to consider per iteration.
+- `tournament_selection_n`: Number of expressions considered in each tournament.
+- `tournament_selection_p`: The fittest expression in a tournament is to be
+    selected with probability `p`, the next fittest with probability `p*(1-p)`,
+    and so forth.
 - `topn`: Number of equations to return to the host process, and to
     consider for the hall of fame.
 - `complexity_of_operators`: What complexity should be assigned to each operator,
@@ -202,23 +226,29 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     this is set equal to the maxsize.
 - `parsimony`: A multiplicative factor for how much complexity is
     punished.
-- `useFrequency`: Whether to use a parsimony that adapts to the
+- `use_frequency`: Whether to use a parsimony that adapts to the
     relative proportion of equations at each complexity; this will
     ensure that there are a balanced number of equations considered
     for every complexity.
-- `useFrequencyInTournament`: Whether to use the adaptive parsimony described
+- `use_frequency_in_tournament`: Whether to use the adaptive parsimony described
     above inside the score, rather than just at the mutation accept/reject stage.
+- `adaptive_parsimony_scaling`: How much to scale the adaptive parsimony term
+    in the loss. Increase this if the search is spending too much time
+    optimizing the most complex equations.
 - `fast_cycle`: Whether to thread over subsamples of equations during
     regularized evolution. Slightly improves performance, but is a different
     algorithm.
+- `turbo`: Whether to use `LoopVectorization.@turbo` to evaluate expressions.
+    This can be significantly faster, but is only compatible with certain
+    operators. *Experimental!*
 - `migration`: Whether to migrate equations between processes.
-- `hofMigration`: Whether to migrate equations from the hall of fame
+- `hof_migration`: Whether to migrate equations from the hall of fame
     to processes.
-- `fractionReplaced`: What fraction of each population to replace with
+- `fraction_replaced`: What fraction of each population to replace with
     migrated equations at the end of each cycle.
-- `fractionReplacedHof`: What fraction to replace with hall of fame
+- `fraction_replaced_hof`: What fraction to replace with hall of fame
     equations at the end of each cycle.
-- `shouldOptimizeConstants`: Whether to use an optimization algorithm
+- `should_optimize_constants`: Whether to use an optimization algorithm
     to periodically optimize constants in equations.
 - `optimizer_nrestarts`: How many different random starting positions to consider
     for optimization of constants.
@@ -228,16 +258,18 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     we refer to the documentation on `Optim.Options` from the `Optim.jl` package.
     Options can be provided here as `NamedTuple`, e.g. `(iterations=16,)`, as a
     `Dict`, e.g. Dict(:x_tol => 1.0e-32,), or as an `Optim.Options` instance.
-- `hofFile`: What file to store equations to, as a backup.
-- `perturbationFactor`: When mutating a constant, either
-    multiply or divide by (1+perturbationFactor)^(rand()+1).
-- `probNegate`: Probability of negating a constant in the equation
+- `output_file`: What file to store equations to, as a backup.
+- `perturbation_factor`: When mutating a constant, either
+    multiply or divide by (1+perturbation_factor)^(rand()+1).
+- `probability_negate_constant`: Probability of negating a constant in the equation
     when mutating it.
-- `mutationWeights`: Relative probabilities of the mutations, in the order: MutateConstant, MutateOperator, AddNode, InsertNode, DeleteNode, Simplify, Randomize, DoNothing.
+- `mutation_weights`: Relative probabilities of the mutations. The struct
+    `MutationWeights` should be passed to these options.
+    See its documentation on `MutationWeights` for the different weights.
 - `annealing`: Whether to use simulated annealing.
-- `warmupMaxsize`: Whether to slowly increase the max size from 5 up to
-    `maxsize`. If nonzero, specifies how many cycles (populations*iterations)
-    before increasing by 1.
+- `warmup_maxsize_by`: Whether to slowly increase the max size from 5 up to
+    `maxsize`. If nonzero, specifies the fraction through the search
+    at which the maxsize should be reached.
 - `verbosity`: Whether to print debugging statements or
     not.
 - `bin_constraints`: See `constraints`. This is the same, but specified for binary
@@ -247,9 +279,7 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `seed`: What random seed to use. `nothing` uses no seed.
 - `progress`: Whether to use a progress bar output (`verbosity` will
     have no effect).
-- `probPickFirst`: Expressions in subsample are chosen based on, for
-    p=probPickFirst: p, p*(1-p), p*(1-p)^2, and so on.
-- `earlyStopCondition`: Float - whether to stop early if the mean loss gets below this value.
+- `early_stop_condition`: Float - whether to stop early if the mean loss gets below this value.
     Function - a function taking (loss, complexity) as arguments and returning true or false.
 - `timeout_in_seconds`: Float64 - the time in seconds after which to exit (as an alternative to the number of iterations).
 - `max_evals`: Int (or Nothing) - the maximum number of evaluations of expressions to perform.
@@ -270,17 +300,14 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     in serial mode.
 - `define_helper_functions`: Whether to define helper functions
     for constructing and evaluating trees.
-- `extend_user_operators`: Whether to extend the user's operators
-    to `Node` type, so it is easier to construct
-    trees manually. By default, all operators 
-    defined in `Base` are extended automatically.
 """
 function Options(;
     binary_operators=[+, -, /, *],
     unary_operators=[],
     constraints=nothing,
     loss=L2DistLoss(),
-    ns=12, #1 sampled from every ns per mutation
+    tournament_selection_n=12, #1 sampled from every tournament_selection_n per mutation
+    tournament_selection_p=0.86f0,
     topn=12, #samples to return per population
     complexity_of_operators=nothing,
     complexity_of_constants::Union{Nothing,Real}=nothing,
@@ -290,42 +317,42 @@ function Options(;
     maxsize=20,
     maxdepth=nothing,
     fast_cycle=false,
+    turbo=false,
     migration=true,
-    hofMigration=true,
-    shouldOptimizeConstants=true,
-    hofFile=nothing,
+    hof_migration=true,
+    should_optimize_constants=true,
+    output_file=nothing,
     npopulations=15,
-    perturbationFactor=0.076f0,
+    perturbation_factor=0.076f0,
     annealing=false,
     batching=false,
-    batchSize=50,
-    mutationWeights=[0.048, 0.47, 0.79, 5.1, 1.7, 0.0020, 0.00023, 0.21],
-    crossoverProbability=0.066f0,
-    warmupMaxsizeBy=0.0f0,
-    useFrequency=true,
-    useFrequencyInTournament=true,
+    batch_size=50,
+    mutation_weights::Union{MutationWeights,AbstractVector}=MutationWeights(),
+    crossover_probability=0.066f0,
+    warmup_maxsize_by=0.0f0,
+    use_frequency=true,
+    use_frequency_in_tournament=true,
+    adaptive_parsimony_scaling=20.0,
     npop=33,
-    ncyclesperiteration=550,
-    fractionReplaced=0.00036f0,
-    fractionReplacedHof=0.035f0,
+    ncycles_per_iteration=550,
+    fraction_replaced=0.00036f0,
+    fraction_replaced_hof=0.035f0,
     verbosity=convert(Int, 1e9),
-    probNegate=0.01f0,
+    probability_negate_constant=0.01f0,
     seed=nothing,
     bin_constraints=nothing,
     una_constraints=nothing,
     progress=true,
     terminal_width=nothing,
-    warmupMaxsize=nothing,
     optimizer_algorithm="BFGS",
     optimizer_nrestarts=2,
-    optimize_probability=0.14f0,
+    optimizer_probability=0.14f0,
     optimizer_iterations=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
     recorder=nothing,
     recorder_file="pysr_recorder.json",
-    probPickFirst=0.86f0,
-    earlyStopCondition::Union{Function,Real,Nothing}=nothing,
-    stateReturn::Bool=false,
+    early_stop_condition::Union{Function,Real,Nothing}=nothing,
+    return_state::Bool=false,
     timeout_in_seconds=nothing,
     max_evals=nothing,
     skip_mutation_failures::Bool=true,
@@ -333,22 +360,65 @@ function Options(;
     nested_constraints=nothing,
     deterministic=false,
     define_helper_functions=true,
-    extend_user_operators=false,
+    # Deprecated args:
+    kws...,
 )
-    if warmupMaxsize !== nothing
+    for k in keys(kws)
+        !haskey(deprecated_options_mapping, k) && error("Unknown keyword argument: $k")
+        new_key = deprecated_options_mapping[k]
+        Base.depwarn(
+            "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.", :Options
+        )
+        # Now, set the new key to the old value:
+        #! format: off
+        k == :hofMigration && (hof_migration = kws[k]; true) && continue
+        k == :shouldOptimizeConstants && (should_optimize_constants = kws[k]; true) && continue
+        k == :hofFile && (output_file = kws[k]; true) && continue
+        k == :perturbationFactor && (perturbation_factor = kws[k]; true) && continue
+        k == :batchSize && (batch_size = kws[k]; true) && continue
+        k == :crossoverProbability && (crossover_probability = kws[k]; true) && continue
+        k == :warmupMaxsizeBy && (warmup_maxsize_by = kws[k]; true) && continue
+        k == :useFrequency && (use_frequency = kws[k]; true) && continue
+        k == :useFrequencyInTournament && (use_frequency_in_tournament = kws[k]; true) && continue
+        k == :ncyclesperiteration && (ncycles_per_iteration = kws[k]; true) && continue
+        k == :fractionReplaced && (fraction_replaced = kws[k]; true) && continue
+        k == :fractionReplacedHof && (fraction_replaced_hof = kws[k]; true) && continue
+        k == :probNegate && (probability_negate_constant = kws[k]; true) && continue
+        k == :optimize_probability && (optimizer_probability = kws[k]; true) && continue
+        k == :probPickFirst && (tournament_selection_p = kws[k]; true) && continue
+        k == :earlyStopCondition && (early_stop_condition = kws[k]; true) && continue
+        k == :stateReturn && (return_state = kws[k]; true) && continue
+        k == :ns && (tournament_selection_n = kws[k]; true) && continue
+        if k == :mutationWeights
+            if typeof(kws[k]) <: AbstractVector
+                _mutation_weights = kws[k]
+                if length(_mutation_weights) < length(mutations)
+                    # Pad with zeros:
+                    _mutation_weights = vcat(
+                        _mutation_weights,
+                        zeros(length(mutations) - length(_mutation_weights))
+                    )
+                end
+                mutation_weights = MutationWeights(_mutation_weights...)
+            else
+                mutation_weights = kws[k]
+            end
+            continue
+        end
+        #! format: on
         error(
-            "warmupMaxsize is deprecated. Please use warmupMaxsizeBy, and give the time at which the warmup will end as a fraction of the total search cycles.",
+            "Unknown deprecated keyword argument: $k. Please update `Options(;)` to transfer this key.",
         )
     end
 
-    if hofFile === nothing
-        hofFile = "hall_of_fame.csv" #TODO - put in date/time string here
+    if output_file === nothing
+        output_file = "hall_of_fame.csv" #TODO - put in date/time string here
     end
 
     nuna = length(unary_operators)
     nbin = length(binary_operators)
     @assert maxsize > 3
-    @assert warmupMaxsizeBy >= 0.0f0
+    @assert warmup_maxsize_by >= 0.0f0
     @assert nuna <= max_ops && nbin <= max_ops
 
     # Make sure nested_constraints contains functions within our operator set:
@@ -494,14 +564,8 @@ function Options(;
         binary_operators=binary_operators,
         unary_operators=unary_operators,
         enable_autodiff=enable_autodiff,
-        extend_user_operators=extend_user_operators,
         define_helper_functions=define_helper_functions,
     )
-
-    mutationWeights = map((x,) -> convert(Float64, x), mutationWeights)
-    if length(mutationWeights) != 8
-        error("Not the right number of mutation probabilities given")
-    end
 
     if progress
         verbosity = 0
@@ -511,10 +575,10 @@ function Options(;
         recorder = haskey(ENV, "PYSR_RECORDER") && (ENV["PYSR_RECORDER"] == "1")
     end
 
-    if typeof(earlyStopCondition) <: Real
+    if typeof(early_stop_condition) <: Real
         # Need to make explicit copy here for this to work:
-        stopping_point = Float64(earlyStopCondition)
-        earlyStopCondition = (loss, complexity) -> loss < stopping_point
+        stopping_point = Float64(early_stop_condition)
+        early_stop_condition = (loss, complexity) -> loss < stopping_point
     end
 
     # Parse optimizer options
@@ -535,38 +599,45 @@ function Options(;
         end
     end
 
-    options = Options{typeof(loss),eltype(complexity_mapping),probPickFirst,ns}(
+    options = Options{
+        typeof(loss),
+        eltype(complexity_mapping),
+        tournament_selection_p,
+        tournament_selection_n,
+    }(
         operators,
         bin_constraints,
         una_constraints,
         complexity_mapping,
-        ns,
+        tournament_selection_n,
         parsimony,
         alpha,
         maxsize,
         maxdepth,
         fast_cycle,
+        turbo,
         migration,
-        hofMigration,
-        shouldOptimizeConstants,
-        hofFile,
+        hof_migration,
+        should_optimize_constants,
+        output_file,
         npopulations,
-        perturbationFactor,
+        perturbation_factor,
         annealing,
         batching,
-        batchSize,
-        mutationWeights,
-        crossoverProbability,
-        warmupMaxsizeBy,
-        useFrequency,
-        useFrequencyInTournament,
+        batch_size,
+        mutation_weights,
+        crossover_probability,
+        warmup_maxsize_by,
+        use_frequency,
+        use_frequency_in_tournament,
+        adaptive_parsimony_scaling,
         npop,
-        ncyclesperiteration,
-        fractionReplaced,
-        fractionReplacedHof,
+        ncycles_per_iteration,
+        fraction_replaced,
+        fraction_replaced_hof,
         topn,
         verbosity,
-        probNegate,
+        probability_negate_constant,
         nuna,
         nbin,
         seed,
@@ -574,14 +645,14 @@ function Options(;
         progress,
         terminal_width,
         optimizer_algorithm,
-        optimize_probability,
+        optimizer_probability,
         optimizer_nrestarts,
         optimizer_options,
         recorder,
         recorder_file,
-        probPickFirst,
-        earlyStopCondition,
-        stateReturn,
+        tournament_selection_p,
+        early_stop_condition,
+        return_state,
         timeout_in_seconds,
         max_evals,
         skip_mutation_failures,

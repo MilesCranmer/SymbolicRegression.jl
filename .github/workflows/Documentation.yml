@@ -15,17 +15,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
+      - name: "Cache dependencies"
+        uses: julia-actions/cache@v1
       - name: Force use of updated Julia registry
         run: |
           rm -rf ~/.julia/registries/General
           julia -e 'ENV["JULIA_PKG_SERVER"]=""; using Pkg; Pkg.update()'
-      - name: Install dependencies
+      - name: "Install dependencies"
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-      - name: Build and deploy
+      - name: "Build and deploy"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # For authentication with SSH deploy key

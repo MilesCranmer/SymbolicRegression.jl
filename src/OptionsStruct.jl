@@ -1,8 +1,75 @@
 module OptionsStructModule
 
 using Optim: Optim
+using StatsBase: StatsBase
 import DynamicExpressions: AbstractOperatorEnum
 import LossFunctions: SupervisedLoss
+
+mutable struct MutationWeights
+    mutate_constant::Float64
+    mutate_operator::Float64
+    add_node::Float64
+    insert_node::Float64
+    delete_node::Float64
+    simplify::Float64
+    randomize::Float64
+    do_nothing::Float64
+    optimize::Float64
+end
+
+const mutations = [fieldnames(MutationWeights)...]
+
+"""
+    MutationWeights(;kws...)
+
+This defines how often different mutations occur. These weightings
+will be normalized to sum to 1.0 after initialization.
+# Arguments
+- `mutate_constant::Float64`: How often to mutate a constant.
+- `mutate_operator::Float64`: How often to mutate an operator.
+- `add_node::Float64`: How often to append a node to the tree.
+- `insert_node::Float64`: How often to insert a node into the tree.
+- `delete_node::Float64`: How often to delete a node from the tree.
+- `simplify::Float64`: How often to simplify the tree.
+- `randomize::Float64`: How often to create a random tree.
+- `do_nothing::Float64`: How often to do nothing.
+- `optimize::Float64`: How often to optimize the constants in the tree, as a mutation.
+  Note that this is different from `optimizer_probability`, which is
+  performed at the end of an iteration for all individuals.
+"""
+@generated function MutationWeights(;
+    mutate_constant=0.048,
+    mutate_operator=0.47,
+    add_node=0.79,
+    insert_node=5.1,
+    delete_node=1.7,
+    simplify=0.0020,
+    randomize=0.00023,
+    do_nothing=0.21,
+    optimize=0.0,
+)
+    return :(MutationWeights($(mutations...)))
+end
+
+"""Convert MutationWeights to a vector."""
+@generated function Base.convert(
+    ::Type{Vector}, weightings::MutationWeights
+)::Vector{Float64}
+    fields = [:(weightings.$(mut)) for mut in mutations]
+    return :([$(fields...)])
+end
+
+"""Copy MutationWeights."""
+@generated function Base.copy(weightings::MutationWeights)
+    fields = [:(weightings.$(mut)) for mut in mutations]
+    return :(MutationWeights($(fields...)))
+end
+
+"""Sample a mutation, given the weightings."""
+function sample_mutation(weightings::MutationWeights)
+    weights = convert(Vector, weightings)
+    return StatsBase.sample(mutations, StatsBase.Weights(weights))
+end
 
 """This struct defines how complexity is calculated."""
 struct ComplexityMapping{T<:Real}
@@ -41,33 +108,35 @@ struct Options{LossType<:Union{SupervisedLoss,Function},ComplexityType,_prob_pic
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
     complexity_mapping::ComplexityMapping{ComplexityType}
-    ns::Int
+    tournament_selection_n::Int
     parsimony::Float32
     alpha::Float32
     maxsize::Int
     maxdepth::Int
     fast_cycle::Bool
+    turbo::Bool
     migration::Bool
-    hofMigration::Bool
-    shouldOptimizeConstants::Bool
-    hofFile::String
+    hof_migration::Bool
+    should_optimize_constants::Bool
+    output_file::String
     npopulations::Int
-    perturbationFactor::Float32
+    perturbation_factor::Float32
     annealing::Bool
     batching::Bool
-    batchSize::Int
-    mutationWeights::Array{Float64,1}
-    crossoverProbability::Float32
-    warmupMaxsizeBy::Float32
-    useFrequency::Bool
-    useFrequencyInTournament::Bool
+    batch_size::Int
+    mutation_weights::MutationWeights
+    crossover_probability::Float32
+    warmup_maxsize_by::Float32
+    use_frequency::Bool
+    use_frequency_in_tournament::Bool
+    adaptive_parsimony_scaling::Float64
     npop::Int
-    ncyclesperiteration::Int
-    fractionReplaced::Float32
-    fractionReplacedHof::Float32
+    ncycles_per_iteration::Int
+    fraction_replaced::Float32
+    fraction_replaced_hof::Float32
     topn::Int
     verbosity::Int
-    probNegate::Float32
+    probability_negate_constant::Float32
     nuna::Int
     nbin::Int
     seed::Union{Int,Nothing}
@@ -75,14 +144,14 @@ struct Options{LossType<:Union{SupervisedLoss,Function},ComplexityType,_prob_pic
     progress::Bool
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::String
-    optimize_probability::Float32
+    optimizer_probability::Float32
     optimizer_nrestarts::Int
     optimizer_options::Optim.Options
     recorder::Bool
     recorder_file::String
     prob_pick_first::Float32
-    earlyStopCondition::Union{Function,Nothing}
-    stateReturn::Bool
+    early_stop_condition::Union{Function,Nothing}
+    return_state::Bool
     timeout_in_seconds::Union{Float64,Nothing}
     max_evals::Union{Int,Nothing}
     skip_mutation_failures::Bool
@@ -100,25 +169,25 @@ function Base.print(io::IO, options::Options)
     # Loss:
         loss=$(options.loss),
     # Complexity Management:
-        maxsize=$(options.maxsize), maxdepth=$(options.maxdepth), bin_constraints=$(options.bin_constraints), una_constraints=$(options.una_constraints), useFrequency=$(options.useFrequency), useFrequencyInTournament=$(options.useFrequencyInTournament), parsimony=$(options.parsimony), warmupMaxsizeBy=$(options.warmupMaxsizeBy), 
+        maxsize=$(options.maxsize), maxdepth=$(options.maxdepth), bin_constraints=$(options.bin_constraints), una_constraints=$(options.una_constraints), use_frequency=$(options.use_frequency), use_frequency_in_tournament=$(options.use_frequency_in_tournament), parsimony=$(options.parsimony), warmup_maxsize_by=$(options.warmup_maxsize_by), 
     # Search Size:
-        npopulations=$(options.npopulations), ncyclesperiteration=$(options.ncyclesperiteration), npop=$(options.npop), 
+        npopulations=$(options.npopulations), ncycles_per_iteration=$(options.ncycles_per_iteration), npop=$(options.npop), 
     # Migration:
-        migration=$(options.migration), hofMigration=$(options.hofMigration), fractionReplaced=$(options.fractionReplaced), fractionReplacedHof=$(options.fractionReplacedHof),
+        migration=$(options.migration), hof_migration=$(options.hof_migration), fraction_replaced=$(options.fraction_replaced), fraction_replaced_hof=$(options.fraction_replaced_hof),
     # Tournaments:
-        prob_pick_first=$(options.prob_pick_first), ns=$(options.ns), topn=$(options.topn), 
+        prob_pick_first=$(options.prob_pick_first), tournament_selection_n=$(options.tournament_selection_n), topn=$(options.topn), 
     # Constant tuning:
-        perturbationFactor=$(options.perturbationFactor), probNegate=$(options.probNegate), shouldOptimizeConstants=$(options.shouldOptimizeConstants), optimizer_algorithm=$(options.optimizer_algorithm), optimize_probability=$(options.optimize_probability), optimizer_nrestarts=$(options.optimizer_nrestarts), optimizer_iterations=$(options.optimizer_options.iterations),
+        perturbation_factor=$(options.perturbation_factor), probability_negate_constant=$(options.probability_negate_constant), should_optimize_constants=$(options.should_optimize_constants), optimizer_algorithm=$(options.optimizer_algorithm), optimizer_probability=$(options.optimizer_probability), optimizer_nrestarts=$(options.optimizer_nrestarts), optimizer_iterations=$(options.optimizer_options.iterations),
     # Mutations:
-        mutationWeights=$(options.mutationWeights), crossoverProbability=$(options.crossoverProbability), skip_mutation_failures=$(options.skip_mutation_failures)
+        mutation_weights=$(options.mutation_weights), crossover_probability=$(options.crossover_probability), skip_mutation_failures=$(options.skip_mutation_failures)
     # Annealing:
         annealing=$(options.annealing), alpha=$(options.alpha), 
     # Speed Tweaks:
-        batching=$(options.batching), batchSize=$(options.batchSize), fast_cycle=$(options.fast_cycle), 
+        batching=$(options.batching), batch_size=$(options.batch_size), fast_cycle=$(options.fast_cycle), 
     # Logistics:
-        hofFile=$(options.hofFile), verbosity=$(options.verbosity), seed=$(options.seed), progress=$(options.progress),
+        output_file=$(options.output_file), verbosity=$(options.verbosity), seed=$(options.seed), progress=$(options.progress),
     # Early Exit:
-        earlyStopCondition=$(options.earlyStopCondition), timeout_in_seconds=$(options.timeout_in_seconds),
+        early_stop_condition=$(options.early_stop_condition), timeout_in_seconds=$(options.timeout_in_seconds),
 )""",
     )
 end

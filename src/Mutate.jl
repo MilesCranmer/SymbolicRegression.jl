@@ -2,7 +2,7 @@ module MutateModule
 
 import DynamicExpressions:
     Node, copy_node, count_constants, count_depth, simplify_tree, combine_operators
-import ..CoreModule: Options, Dataset, RecordType
+import ..CoreModule: Options, Dataset, RecordType, sample_mutation
 import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, score_func_batch
 import ..CheckConstraintsModule: check_constraints
@@ -17,6 +17,7 @@ import ..MutationFunctionsModule:
     insert_random_op,
     delete_random_op,
     crossover_trees
+import ..ConstantOptimizationModule: optimize_constants
 import ..RecorderModule: @recorder
 
 # Go through one simulated options.annealing mutation cycle
@@ -39,7 +40,7 @@ function next_generation(
     #TODO - reconsider this
     if options.batching
         beforeScore, beforeLoss = score_func_batch(dataset, prev, options)
-        num_evals += (options.batchSize / dataset.n)
+        num_evals += (options.batch_size / dataset.n)
     else
         beforeScore = member.score
         beforeLoss = member.loss
@@ -47,21 +48,20 @@ function next_generation(
 
     nfeatures = dataset.nfeatures
 
-    mutationChoice = rand()
+    weights = copy(options.mutation_weights)
+
     #More constants => more likely to do constant mutation
-    weightAdjustmentMutateConstant = min(8, count_constants(prev)) / 8.0
-    cur_weights = copy(options.mutationWeights) .* 1.0
-    cur_weights[1] *= weightAdjustmentMutateConstant
+    weights.mutate_constant *= min(8, count_constants(prev)) / 8.0
     n = compute_complexity(prev, options)
     depth = count_depth(prev)
 
     # If equation too big, don't add new operators
     if n >= curmaxsize || depth >= options.maxdepth
-        cur_weights[3] = 0.0
-        cur_weights[4] = 0.0
+        weights.add_node = 0.0
+        weights.insert_node = 0.0
     end
-    cur_weights /= sum(cur_weights)
-    cweights = cumsum(cur_weights)
+
+    mutation_choice = sample_mutation(weights)
 
     successful_mutation = false
     #TODO: Currently we dont take this \/ into account
@@ -75,22 +75,18 @@ function next_generation(
     while (!successful_mutation) && attempts < max_attempts
         tree = copy_node(prev)
         successful_mutation = true
-        if mutationChoice < cweights[1]
+        if mutation_choice == :mutate_constant
             tree = mutate_constant(tree, temperature, options)
             @recorder tmp_recorder["type"] = "constant"
-
             is_success_always_possible = true
             # Mutating a constant shouldn't invalidate an already-valid function
-
-        elseif mutationChoice < cweights[2]
+        elseif mutation_choice == :mutate_operator
             tree = mutate_operator(tree, options)
-
             @recorder tmp_recorder["type"] = "operator"
-
             is_success_always_possible = true
             # Can always mutate to the same operator
 
-        elseif mutationChoice < cweights[3]
+        elseif mutation_choice == :add_node
             if rand() < 0.5
                 tree = append_random_op(tree, options, nfeatures)
                 @recorder tmp_recorder["type"] = "append_op"
@@ -100,17 +96,17 @@ function next_generation(
             end
             is_success_always_possible = false
             # Can potentially have a situation without success
-        elseif mutationChoice < cweights[4]
+        elseif mutation_choice == :insert_node
             tree = insert_random_op(tree, options, nfeatures)
             @recorder tmp_recorder["type"] = "insert_op"
             is_success_always_possible = false
-        elseif mutationChoice < cweights[5]
+        elseif mutation_choice == :delete_node
             tree = delete_random_op(tree, options, nfeatures)
             @recorder tmp_recorder["type"] = "delete_op"
             is_success_always_possible = true
-        elseif mutationChoice < cweights[6]
-            tree = simplify_tree(tree, options.operators) # Sometimes we simplify tree
-            tree = combine_operators(tree, options.operators) # See if repeated constants at outer levels
+        elseif mutation_choice == :simplify
+            tree = simplify_tree(tree, options.operators)
+            tree = combine_operators(tree, options.operators)
             @recorder tmp_recorder["type"] = "partial_simplify"
             mutation_accepted = true
             return (
@@ -129,8 +125,7 @@ function next_generation(
             # Simplification shouldn't hurt complexity; unless some non-symmetric constraint
             # to commutative operator...
 
-        elseif mutationChoice < cweights[7]
-            # Sometimes we generate a new tree completely tree
+        elseif mutation_choice == :randomize
             # We select a random size, though the generated tree
             # may have fewer nodes than we request.
             tree_size_to_generate = rand(1:curmaxsize)
@@ -138,7 +133,22 @@ function next_generation(
             @recorder tmp_recorder["type"] = "regenerate"
 
             is_success_always_possible = true
-        else # no mutation applied
+        elseif mutation_choice == :optimize
+            cur_member = PopMember(
+                tree,
+                beforeScore,
+                beforeLoss;
+                parent=parent_ref,
+                deterministic=options.deterministic,
+            )
+            cur_member, new_num_evals = optimize_constants(dataset, cur_member, options)
+            num_evals += new_num_evals
+            @recorder tmp_recorder["type"] = "optimize"
+            mutation_accepted = true
+            return (cur_member, mutation_accepted, num_evals)
+
+            is_success_always_possible = true
+        elseif mutation_choice == :do_nothing
             @recorder begin
                 tmp_recorder["type"] = "identity"
                 tmp_recorder["result"] = "accept"
@@ -156,6 +166,8 @@ function next_generation(
                 mutation_accepted,
                 num_evals,
             )
+        else
+            error("Unknown mutation choice: $mutation_choice")
         end
 
         successful_mutation =
@@ -186,7 +198,7 @@ function next_generation(
 
     if options.batching
         afterScore, afterLoss = score_func_batch(dataset, tree, options)
-        num_evals += (options.batchSize / dataset.n)
+        num_evals += (options.batch_size / dataset.n)
     else
         afterScore, afterLoss = score_func(dataset, tree, options)
         num_evals += 1
@@ -216,7 +228,7 @@ function next_generation(
         delta = afterScore - beforeScore
         probChange *= exp(-delta / (temperature * options.alpha))
     end
-    if options.useFrequency
+    if options.use_frequency
         oldSize = compute_complexity(prev, options)
         newSize = compute_complexity(tree, options)
         old_frequency = if (oldSize <= options.maxsize)
@@ -302,11 +314,11 @@ function crossover_generation(
     if options.batching
         afterScore1, afterLoss1 = score_func_batch(dataset, child_tree1, options)
         afterScore2, afterLoss2 = score_func_batch(dataset, child_tree2, options)
-        num_evals += 2 * (options.batchSize / dataset.n)
+        num_evals += 2 * (options.batch_size / dataset.n)
     else
         afterScore1, afterLoss1 = score_func(dataset, child_tree1, options)
         afterScore2, afterLoss2 = score_func(dataset, child_tree2, options)
-        num_evals += options.batchSize / dataset.n
+        num_evals += options.batch_size / dataset.n
     end
 
     baby1 = PopMember(

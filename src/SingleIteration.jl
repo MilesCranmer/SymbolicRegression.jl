@@ -68,11 +68,11 @@ function optimize_and_simplify_population(
     record::RecordType,
 )::Tuple{Population,Float64} where {T<:Real}
     array_num_evals = zeros(Float64, pop.n)
-    do_optimization = rand(pop.n) .< options.optimize_probability
+    do_optimization = rand(pop.n) .< options.optimizer_probability
     for j in 1:(pop.n)
         pop.members[j].tree = simplify_tree(pop.members[j].tree, options.operators)
         pop.members[j].tree = combine_operators(pop.members[j].tree, options.operators)
-        if options.shouldOptimizeConstants && do_optimization[j]
+        if options.should_optimize_constants && do_optimization[j]
             pop.members[j], array_num_evals[j] = optimize_constants(
                 dataset, pop.members[j], options
             )
@@ -110,7 +110,7 @@ function optimize_and_simplify_population(
                 "child" => new_ref,
                 "mutation" => RecordType(
                     "type" =>
-                        if (do_optimization[j] && options.shouldOptimizeConstants)
+                        if (do_optimization[j] && options.should_optimize_constants)
                             "simplification_and_optimization"
                         else
                             "simplification"

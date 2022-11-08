@@ -1,7 +1,21 @@
+module InterfaceDynamicExpressionsModule
+
+import DynamicExpressions:
+    Node,
+    eval_tree_array,
+    eval_diff_tree_array,
+    eval_grad_tree_array,
+    symbolic_to_node,
+    node_to_symbolic,
+    print_tree,
+    string_tree,
+    differentiable_eval_tree_array
 using SymbolicUtils: SymbolicUtils
+using DynamicExpressions: DynamicExpressions
+import ..CoreModule: Options
 
 """
-    eval_tree_array(tree::Node, X::AbstractMatrix, options::Options; kws...)
+    eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
 
 Evaluate a binary tree (equation) over a given input data matrix. The
 operators contain all of the operators used. This function fuses doublets
@@ -23,7 +37,7 @@ which speed up evaluation significantly.
 
 # Arguments
 - `tree::Node`: The root node of the tree to evaluate.
-- `X::AbstractMatrix`: The input data to evaluate the tree on.
+- `X::AbstractArray`: The input data to evaluate the tree on.
 - `options::Options`: Options used to define the operators used in the tree.
 
 # Returns
@@ -34,11 +48,11 @@ which speed up evaluation significantly.
     to the equation.
 """
 function eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
-    return eval_tree_array(tree, X, options.operators; kws...)
+    return eval_tree_array(tree, X, options.operators; turbo=options.turbo, kws...)
 end
 
 """
-    eval_diff_tree_array(tree::Node, X::AbstractMatrix, options::Options, direction::Int)
+    eval_diff_tree_array(tree::Node, X::AbstractArray, options::Options, direction::Int)
 
 Compute the forward derivative of an expression, using a similar
 structure and optimization to eval_tree_array. `direction` is the index of a particular
@@ -48,7 +62,7 @@ respect to `x1`.
 # Arguments
 
 - `tree::Node`: The expression tree to evaluate.
-- `X::AbstractMatrix`: The data matrix, with each column being a data point.
+- `X::AbstractArray`: The data matrix, with each column being a data point.
 - `options::Options`: The options containing the operators used to create the `tree`.
     `enable_autodiff` must be set to `true` when creating the options.
     This is needed to create the derivative operations.
@@ -66,7 +80,7 @@ function eval_diff_tree_array(
 end
 
 """
-    eval_grad_tree_array(tree::Node, X::AbstractMatrix, options::Options; variable::Bool=false)
+    eval_grad_tree_array(tree::Node, X::AbstractArray, options::Options; variable::Bool=false)
 
 Compute the forward-mode derivative of an expression, using a similar
 structure and optimization to eval_tree_array. `variable` specifies whether
@@ -76,7 +90,7 @@ to every constant in the expression.
 # Arguments
 
 - `tree::Node`: The expression tree to evaluate.
-- `X::AbstractMatrix`: The data matrix, with each column being a data point.
+- `X::AbstractArray`: The data matrix, with each column being a data point.
 - `options::Options`: The options containing the operators used to create the `tree`.
     `enable_autodiff` must be set to `true` when creating the options.
     This is needed to create the derivative operations.
@@ -85,7 +99,7 @@ to every constant in the expression.
 
 # Returns
 
-- `(evaluation, gradient, complete)::Tuple{AbstractVector, AbstractMatrix, Bool}`: the normal evaluation,
+- `(evaluation, gradient, complete)::Tuple{AbstractVector, AbstractArray, Bool}`: the normal evaluation,
     the gradient, and whether the evaluation completed as normal (or encountered a nan or inf).
 """
 function eval_grad_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
@@ -93,7 +107,7 @@ function eval_grad_tree_array(tree::Node, X::AbstractArray, options::Options; kw
 end
 
 """
-    differentiable_eval_tree_array(tree::Node, X::AbstractMatrix, options::Options)
+    differentiable_eval_tree_array(tree::Node, X::AbstractArray, options::Options)
 
 Evaluate an expression tree in a way that can be auto-differentiated.
 """
@@ -177,4 +191,27 @@ function symbolic_to_node(
     eqn::T, options::Options; kws...
 ) where {T<:SymbolicUtils.Symbolic}
     return symbolic_to_node(eqn, options.operators; kws...)
+end
+
+"""
+    @extend_operators options
+
+Extends all operators defined in this options object to work on the
+`Node` type. While by default this is already done for operators defined
+in `Base` when you create an options and pass `define_helper_functions=true`,
+this does not apply to the user-defined operators. Thus, to do so, you must
+apply this macro to the operator enum in the same module you have the operators
+defined.
+"""
+macro extend_operators(options)
+    operators = :($(esc(options)).operators)
+    type_requirements = Options
+    quote
+        if !isa($(esc(options)), $type_requirements)
+            error("You must pass an options type to `@extend_operators`.")
+        end
+        DynamicExpressions.@extend_operators $operators
+    end
+end
+
 end

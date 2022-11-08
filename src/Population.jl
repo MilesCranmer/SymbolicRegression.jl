@@ -70,24 +70,26 @@ end
 
 # Sample random members of the population, and make a new one
 function sample_pop(pop::Population{T}, options::Options)::Population{T} where {T}
-    return Population(StatsBase.sample(pop.members, options.ns; replace=false))
+    return Population(
+        StatsBase.sample(pop.members, options.tournament_selection_n; replace=false)
+    )
 end
 
 # Sample the population, and get the best member from that sample
 function best_of_sample(
     pop::Population{T},
     running_search_statistics::RunningSearchStatistics,
-    options::Options{A,B,p,ns},
-)::PopMember where {T<:Real,A,B,p,ns}
+    options::Options{A,B,p,tournament_selection_n},
+)::PopMember where {T<:Real,A,B,p,tournament_selection_n}
     sample = sample_pop(pop, options)
 
-    if options.useFrequencyInTournament
+    if options.use_frequency_in_tournament
         # Score based on frequency of that size occuring.
         # In the end, all sizes should be just as common in the population.
-        frequency_scaling = 20
+        adaptive_parsimony_scaling = T(options.adaptive_parsimony_scaling)
         # e.g., for 100% occupied at one size, exp(-20*1) = 2.061153622438558e-9; which seems like a good punishment for dominating the population.
 
-        scores = Vector{T}(undef, ns)
+        scores = Vector{T}(undef, tournament_selection_n)
         for (i, member) in enumerate(sample.members)
             size = compute_complexity(member.tree, options)
             frequency = if (size <= options.maxsize)
@@ -95,7 +97,7 @@ function best_of_sample(
             else
                 T(0)
             end
-            scores[i] = member.score * exp(frequency_scaling * frequency)
+            scores[i] = member.score * exp(adaptive_parsimony_scaling * frequency)
         end
     else
         scores = [member.score for member in sample.members]
@@ -105,7 +107,7 @@ function best_of_sample(
         chosen_idx = argmin(scores)
     else
         # First, decide what place we take (usually 1st place wins):
-        tournament_winner = sample_tournament(Val(p), Val(ns))
+        tournament_winner = sample_tournament(Val(p), Val(tournament_selection_n))
         # Then, find the member that won that place, given
         # their fitness:
         chosen_idx = partialsortperm(scores, tournament_winner)
@@ -114,10 +116,12 @@ function best_of_sample(
 end
 
 # This will compile the tournament probabilities, so it's a bit faster:
-@generated function sample_tournament(::Val{p}, ::Val{ns})::Int where {p,ns}
-    k = collect(0:(ns - 1))
+@generated function sample_tournament(
+    ::Val{p}, ::Val{tournament_selection_n}
+)::Int where {p,tournament_selection_n}
+    k = collect(0:(tournament_selection_n - 1))
     prob_each = p * ((1 - p) .^ k)
-    indexes = collect(1:(ns))
+    indexes = collect(1:(tournament_selection_n))
     weights = StatsBase.Weights(prob_each, sum(prob_each))
     return quote
         StatsBase.sample($indexes, $weights)
@@ -135,7 +139,7 @@ function finalize_scores(
             pop.members[member].score = score
             pop.members[member].loss = loss
         end
-        num_evals += pop.n * (options.batchSize / dataset.n)
+        num_evals += pop.n * (options.batch_size / dataset.n)
     end
     return (pop, num_evals)
 end

@@ -36,6 +36,10 @@ end
     include("test_evaluation.jl")
 end
 
+@safetestset "Test turbo mode with NaN" begin
+    include("test_turbo_nan.jl")
+end
+
 @safetestset "Test validity of integer expression evaluation" begin
     include("test_integer_evaluation.jl")
 end
@@ -74,4 +78,16 @@ end
 
 @safetestset "Test migration" begin
     include("test_migration.jl")
+end
+
+@safetestset "Test deprecated options" begin
+    include("test_deprecation.jl")
+end
+
+@safetestset "Test optimization mutation" begin
+    include("test_optimizer_mutation.jl")
+end
+
+@safetestset "Test RunningSearchStatistics" begin
+    include("test_search_statistics.jl")
 end
