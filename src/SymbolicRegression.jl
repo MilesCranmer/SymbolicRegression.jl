@@ -408,7 +408,7 @@ function _EquationSearch(
     end
     if ConcurrencyType == SRThreaded
         if Threads.nthreads() == 1
-            @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
+            options.verbosity > 0 && @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
         end
     end
 
@@ -931,14 +931,11 @@ end
 
 @precompile_setup begin
     precompiled_types = [Float32, Float64]
-    precompiled_operators = (
-        binary_operators=(+, -, *, /, ^),
-        unary_operators=(sin, cos, exp, log, sqrt, square, cube),
-    )
+    precompiled_operators = (binary_operators=(+, -, *, /), unary_operators=(cos, exp))
 
     for type in precompiled_types
         example_X = randn(type, 5, 20)
-        example_y = example_X[1, :]
+        example_y = randn(type, 20)
         @precompile_all_calls begin
             options = Options(;
                 verbosity=0,
@@ -949,7 +946,7 @@ end
                 define_helper_functions=false,
                 precompiled_operators...,
             )
-            EquationSearch(example_X, example_y; options=options, multithreading=true)
+            EquationSearch(example_X, example_y; options=options, parallelism=:multithreading)
         end
     end
 end
