@@ -1,3 +1,3 @@
 using Base: @deprecate
 
-@deprecate EquationSearch equation_search
+@deprecate EquationSearch(args...; kwargs...) equation_search(args...; kwargs...)

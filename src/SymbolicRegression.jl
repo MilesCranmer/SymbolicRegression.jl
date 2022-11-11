@@ -55,7 +55,10 @@ export Population,
     gamma,
     erf,
     erfc,
-    atanh_clip
+    atanh_clip,
+
+    # Deprecates:
+    EquationSearch
 
 using JSON3: JSON3
 using Distributed: Distributed
