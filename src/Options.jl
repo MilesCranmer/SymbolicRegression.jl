@@ -144,7 +144,7 @@ const deprecated_options_mapping = NamedTuple([
 """
     Options(;kws...)
 
-Construct options for `EquationSearch` and other functions.
+Construct options for `equation_search` and other functions.
 The current arguments have been tuned using the median values from
 https://github.com/MilesCranmer/PySR/discussions/115.
 
@@ -486,7 +486,7 @@ function Options(;
     if constraints !== nothing
         @assert bin_constraints === nothing
         @assert una_constraints === nothing
-        # TODO: This is redundant with the checks in EquationSearch
+        # TODO: This is redundant with the checks in equation_search
         for op in binary_operators
             @assert !(op in unary_operators)
         end

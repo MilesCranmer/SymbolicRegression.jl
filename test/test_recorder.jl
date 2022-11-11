@@ -17,7 +17,7 @@ options = SymbolicRegression.Options(;
     complexity_of_operators=[cos => 2],
 )
 
-hall_of_fame = EquationSearch(
+hall_of_fame = equation_search(
     X, y; niterations=5, options=options, parallelism=:multithreading
 )
 

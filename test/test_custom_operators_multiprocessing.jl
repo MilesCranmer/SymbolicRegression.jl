@@ -23,7 +23,7 @@ options = SymbolicRegression.Options(;
     loss=my_loss,
 )
 
-hof = EquationSearch(
+hof = equation_search(
     X,
     y;
     weights=ones(Float32, 100),
