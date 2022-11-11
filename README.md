@@ -48,7 +48,9 @@ options = SymbolicRegression.Options(
 )
 
 hall_of_fame = equation_search(
-    X, y, niterations=40, options=options,
+    X, y;
+    niterations=40,
+    options=options,
     parallelism=:multithreading
 )
 ```
