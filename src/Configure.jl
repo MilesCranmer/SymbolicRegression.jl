@@ -155,9 +155,9 @@ function copy_definition_to_workers(op, procs, options::Options)
     )
     src_ms = methods(op).ms
     # Thanks https://discourse.julialang.org/t/easy-way-to-send-custom-function-to-distributed-workers/22118/2
-    @everywhere procs @eval function $name end
+    Distributed.@everywhere procs @eval function $name end
     for m in src_ms
-        @everywhere procs @eval $m
+        Distributed.@everywhere procs @eval $m
     end
     return debug((options.verbosity > 0 || options.progress), "Finished!")
 end
@@ -166,11 +166,14 @@ function test_function_on_workers(T, nargs, op, procs)
     futures = []
     for proc in procs
         if nargs == 1
-            push!(futures, @spawnat proc op(convert(T, 0)))
+            push!(futures, Distributed.@spawnat proc op(convert(T, 0)))
         elseif nargs == 2 #2D ops, and loss function
-            push!(futures, @spawnat proc op(convert(T, 0), convert(T, 0)))
+            push!(futures, Distributed.@spawnat proc op(convert(T, 0), convert(T, 0)))
         elseif nargs == 3 #weighted loss function
-            push!(futures, @spawnat proc op(convert(T, 0), convert(T, 0), convert(T, 0)))
+            push!(
+                futures,
+                Distributed.@spawnat proc op(convert(T, 0), convert(T, 0), convert(T, 0))
+            )
         end
     end
     for future in futures
@@ -180,10 +183,10 @@ end
 
 function activate_env_on_workers(procs, project_path::String, options::Options)
     debug((options.verbosity > 0 || options.progress), "Activating environment on workers.")
-    @everywhere procs begin
+    Distributed.@everywhere procs begin
         Base.MainInclude.eval(
             quote
-                using Pkg
+                using Pkg: Pkg
                 Pkg.activate($$project_path)
             end,
         )
@@ -197,7 +200,7 @@ function import_module_on_workers(procs, filename::String, options::Options)
             (options.verbosity > 0 || options.progress),
             "Importing local module ($filename) on workers...",
         )
-        @everywhere procs begin
+        Distributed.@everywhere procs begin
             # Parse functions on every worker node
             Base.MainInclude.eval(
                 quote
@@ -212,7 +215,7 @@ function import_module_on_workers(procs, filename::String, options::Options)
             (options.verbosity > 0 || options.progress),
             "Importing installed module on workers...",
         )
-        @everywhere procs begin
+        Distributed.@everywhere procs begin
             Base.MainInclude.eval(using SymbolicRegression)
         end
         debug((options.verbosity > 0 || options.progress), "Finished!")
@@ -227,7 +230,9 @@ function test_module_on_workers(procs, options::Options)
     for proc in procs
         push!(
             futures,
-            @spawnat proc SymbolicRegression.gen_random_tree(3, options, 5, TEST_TYPE)
+            Distributed.@spawnat proc SymbolicRegression.gen_random_tree(
+                3, options, 5, TEST_TYPE
+            )
         )
     end
     for future in futures
@@ -244,7 +249,7 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
     for proc in procs
         push!(
             futures,
-            @spawnat proc begin
+            Distributed.@spawnat proc begin
                 tmp_pop = Population(
                     dataset;
                     npop=20,

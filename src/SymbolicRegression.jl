@@ -57,13 +57,14 @@ export Population,
     erfc,
     atanh_clip
 
-using Distributed
 using JSON3: JSON3
+using Distributed: Distributed
+#  addprocs, rmprocs, @everywhere, @spawnat
 import Printf: @printf, @sprintf
 using Pkg: Pkg
 import TOML: parsefile
 import Random: seed!, shuffle!
-using Reexport
+import Reexport: @reexport
 import DynamicExpressions:
     Node,
     copy_node,
@@ -450,7 +451,7 @@ function _equation_search(
     allPopsType = if ConcurrencyType == SRSerial
         Tuple{Population,HallOfFame,RecordType,Float64}
     elseif ConcurrencyType == SRDistributed
-        Future
+        Distributed.Future
     else
         Task
     end
@@ -498,7 +499,7 @@ function _equation_search(
     ##########################################################################
     if ConcurrencyType == SRDistributed
         if addprocs_function === nothing
-            addprocs_function = addprocs
+            addprocs_function = Distributed.addprocs
         end
         if numprocs === nothing && procs === nothing
             numprocs = 4
@@ -901,7 +902,7 @@ function _equation_search(
     close_reader!(stdin_reader)
 
     if we_created_procs
-        rmprocs(procs)
+        Distributed.rmprocs(procs)
     end
     # TODO - also stop threads here?
 
