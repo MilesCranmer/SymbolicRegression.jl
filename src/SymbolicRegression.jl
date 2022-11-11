@@ -230,6 +230,8 @@ which is useful for debugging and profiling.
 - `y::Union{AbstractMatrix{T}, AbstractVector{T}}`: The values to predict. The first dimension
     is the output feature to predict with each equation, and the
     second dimension is rows.
+
+# Keywords
 - `niterations::Int=10`: The number of iterations to perform the search.
     More iterations will improve the results.
 - `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
@@ -273,7 +275,7 @@ which is useful for debugging and profiling.
     should be changeable.
 
 # Returns
-- `hallOfFame::HallOfFame`: The best equations seen during the search.
+- `HallOfFame`: The best equations seen during the search.
     hallOfFame.members gives an array of `PopMember` objects, which
     have their tree (equation) stored in `.tree`. Their score (loss)
     is given in `.score`. The array of `PopMember` objects
