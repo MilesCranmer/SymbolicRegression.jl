@@ -148,7 +148,7 @@ Construct options for `equation_search` and other functions.
 The current arguments have been tuned using the median values from
 https://github.com/MilesCranmer/PySR/discussions/115.
 
-# Arguments
+# Keywords
 - `binary_operators`: Vector of binary operators (functions) to use.
     Each operator should be defined for two input scalars,
     and one output scalar. All operators
