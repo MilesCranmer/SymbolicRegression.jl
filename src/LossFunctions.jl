@@ -2,9 +2,10 @@ module LossFunctionsModule
 
 import Random: randperm
 using StatsBase: StatsBase
+import Zygote: withgradient
 import LossFunctions: value, AggMode, SupervisedLoss
 import DynamicExpressions: Node
-import ..InterfaceDynamicExpressionsModule: eval_tree_array
+import ..InterfaceDynamicExpressionsModule: eval_tree_array, eval_grad_tree_array
 import ..CoreModule: Options, Dataset
 import ..ComplexityModule: compute_complexity
 
@@ -44,6 +45,35 @@ function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T wher
     else
         return _loss(prediction, dataset.y, options.loss)
     end
+end
+
+# Gradients with respect to constants::
+function d_eval_loss(
+    tree::Node{T}, dataset::Dataset{T}, options::Options
+)::Tuple{T,Vector{T}} where {T<:Real}
+    prediction, dprediction_dconstants, completion = eval_grad_tree_array(
+        tree, dataset.X, options; variable=false
+    )
+    # prediction: [nrows]
+    # dprediction_dconstants: [nconstants, nrows]
+    if !completion
+        return T(Inf), zeros(T, size(dprediction_dconstants, 1))
+    end
+
+    loss, (dloss_dprediction,) = if dataset.weighted
+        withgradient(prediction) do x
+            _weighted_loss(x, dataset.y, dataset.weights::AbstractVector{T}, options.loss)
+        end
+    else
+        withgradient(prediction) do x
+            _loss(x, dataset.y, options.loss)
+        end
+    end
+    # dloss_dprediction: [nrows]
+
+    dloss_dconstants = dprediction_dconstants * dloss_dprediction
+    # dloss_dconstants: [nconstants]
+    return loss, dloss_dconstants
 end
 
 # Compute a score which includes a complexity penalty in the loss

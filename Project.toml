@@ -19,6 +19,7 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 DynamicExpressions = "0.4"
@@ -32,6 +33,7 @@ Reexport = "1"
 SpecialFunctions = "0.10.1, 1, 2"
 StatsBase = "0.33"
 SymbolicUtils = "0.19"
+Zygote = "0.6"
 julia = "1.6"
 
 [extras]
