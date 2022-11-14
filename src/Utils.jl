@@ -3,15 +3,15 @@ module UtilsModule
 
 import Printf: @printf
 
-function debug(verbosity, string...)
+function debug(verbosity, string)
     if verbosity > 0
-        println(string...)
+        @info string
     end
 end
 
-function debug_inline(verbosity, string...)
+function debug_inline(verbosity, string)
     if verbosity > 0
-        print(string...)
+        @info string
     end
 end
 

@@ -626,7 +626,7 @@ function _EquationSearch(
         end
     end
 
-    debug(options.verbosity > 0 || options.progress, "Started!")
+    debug(options.verbosity > 0 || options.progress, "Starting search!")
     start_time = time()
     total_cycles = options.npopulations * niterations
     cycles_remaining = [total_cycles for j in 1:nout]
