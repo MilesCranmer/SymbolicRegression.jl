@@ -6,7 +6,7 @@ module SearchUtilsModule
 import Printf: @printf, @sprintf
 using Distributed
 
-import ..CoreModule: SRThreaded, SRSerial, SRDistributed, Dataset, Options
+import ..CoreModule: SRConcurrency, SRThreaded, SRSerial, SRDistributed, Dataset, Options
 import ..ComplexityModule: compute_complexity
 import ..PopulationModule: Population, copy_population
 import ..HallOfFameModule:
@@ -143,9 +143,14 @@ function update_progress_bar!(
     dataset::Dataset{T},
     options::Options,
     head_node_occupation::Float64,
+    ConcurrencyType=SRSerial,
 ) where {T}
     equation_strings = string_dominating_pareto_curve(hall_of_fame, dataset, options)
-    load_string = @sprintf("Head worker occupation: %.1f", head_node_occupation) * "%\n"
+    load_string = if ConcurrencyType == SRSerial
+        ""
+    else
+        @sprintf("Head worker occupation: %.1f", head_node_occupation) * "%\n"
+    end
     # TODO - include command about "q" here.
     load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
     equation_strings = load_string * equation_strings
@@ -156,19 +161,21 @@ end
 
 function print_search_state(
     hall_of_fames::Vector{HallOfFame{T}},
-    datasets::Vector{Dataset{T}},
-    options::Options;
+    datasets::Vector{Dataset{T}};
+    options::Options,
     equation_speed::Vector{Float32},
     total_cycles::Int,
     cycles_remaining::Vector{Int},
     head_node_occupation::Float64,
+    ConcurrencyType=SRSerial,
 ) where {T}
     nout = length(datasets)
     average_speed = sum(equation_speed) / length(equation_speed)
 
     @printf("\n")
     @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
-    @printf("Head worker occupation: %.1f%%\n", head_node_occupation)
+    ConcurrencyType != SRSerial &&
+        @printf("Head worker occupation: %.1f%%\n", head_node_occupation)
     cycles_elapsed = total_cycles * nout - sum(cycles_remaining)
     @printf(
         "Progress: %d / %d total iterations (%.3f%%)\n",

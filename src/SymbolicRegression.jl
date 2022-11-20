@@ -843,8 +843,9 @@ function _EquationSearch(
                     progress_bar;
                     hall_of_fame=hallOfFame[j],
                     dataset=datasets[j],
-                    options=options,
-                    head_node_occupation=head_node_occupation,
+                    options,
+                    head_node_occupation,
+                    ConcurrencyType,
                 )
             end
             head_node_end_work = time()
@@ -870,12 +871,13 @@ function _EquationSearch(
             if (options.verbosity > 0) || (options.progress && nout > 1)
                 print_search_state(
                     hallOfFame,
-                    datasets,
-                    options;
-                    equation_speed=equation_speed,
-                    total_cycles=total_cycles,
-                    cycles_remaining=cycles_remaining,
-                    head_node_occupation=head_node_occupation,
+                    datasets;
+                    options,
+                    equation_speed,
+                    total_cycles,
+                    cycles_remaining,
+                    head_node_occupation,
+                    ConcurrencyType,
                 )
             end
             last_print_time = time()
