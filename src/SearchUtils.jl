@@ -144,7 +144,9 @@ function get_load_string(;
 
     out = @sprintf("Head worker occupation: %.1f%%", head_node_occupation)
     if raise_usage_warning
-        out *= ". This is high, and will prevent efficient resource usage. Increase `ncyclesperiteration` to reduce load on the head worker."
+        out *= "."
+        out *= " This is high, and will prevent efficient resource usage."
+        out *= " Increase `ncyclesperiteration` to reduce load on head worker."
     end
     out *= "\n"
     return out
