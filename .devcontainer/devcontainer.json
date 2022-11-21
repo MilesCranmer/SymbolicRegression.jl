@@ -12,7 +12,11 @@
 				"singularitti.vscode-julia-formatter",
 				"VisualStudioExptTeam.vscodeintellicode",
 				"GitHub.vscode-pull-request-github",
-				"waderyan.gitblame"
+				"waderyan.gitblame",
+				"eamodio.gitlens",
+				"yzhang.markdown-all-in-one",
+				"bungcip.better-toml",
+				"mhutchie.git-graph"
 			]
 		}
 	},
