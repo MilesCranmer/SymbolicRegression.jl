@@ -137,21 +137,33 @@ function check_max_evals(num_evals, options::Options)::Bool
     return options.max_evals !== nothing && options.max_evals <= sum(sum, num_evals)
 end
 
+function get_load_string(;
+    head_node_occupation::Float64, raise_usage_warning::Bool, ConcurrencyType=SRSerial
+)
+    ConcurrencyType == SRSerial && return ""
+
+    out = @sprintf("Head worker occupation: %.1f%%", head_node_occupation)
+    if raise_usage_warning
+        out *= ". This is high, and will prevent efficient resource usage. Increase `ncyclesperiteration` to reduce load on the head worker."
+    end
+    out *= "\n"
+    return out
+end
+
 function update_progress_bar!(
     progress_bar::WrappedProgressBar;
     hall_of_fame::HallOfFame{T},
     dataset::Dataset{T},
     options::Options,
     head_node_occupation::Float64,
+    raise_usage_warning::Bool,
     ConcurrencyType=SRSerial,
 ) where {T}
     equation_strings = string_dominating_pareto_curve(hall_of_fame, dataset, options)
-    load_string = if ConcurrencyType == SRSerial
-        ""
-    else
-        @sprintf("Head worker occupation: %.1f", head_node_occupation) * "%\n"
-    end
     # TODO - include command about "q" here.
+    load_string = get_load_string(;
+        head_node_occupation, raise_usage_warning, ConcurrencyType
+    )
     load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
     equation_strings = load_string * equation_strings
     set_multiline_postfix!(progress_bar, equation_strings)
@@ -167,6 +179,7 @@ function print_search_state(
     total_cycles::Int,
     cycles_remaining::Vector{Int},
     head_node_occupation::Float64,
+    raise_usage_warning::Bool,
     ConcurrencyType=SRSerial,
 ) where {T}
     nout = length(datasets)
@@ -174,8 +187,10 @@ function print_search_state(
 
     @printf("\n")
     @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
-    ConcurrencyType != SRSerial &&
-        @printf("Head worker occupation: %.1f%%\n", head_node_occupation)
+    load_string = get_load_string(;
+        head_node_occupation, raise_usage_warning, ConcurrencyType
+    )
+    print(load_string)
     cycles_elapsed = total_cycles * nout - sum(cycles_remaining)
     @printf(
         "Progress: %d / %d total iterations (%.3f%%)\n",

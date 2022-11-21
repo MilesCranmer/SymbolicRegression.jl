@@ -841,11 +841,12 @@ function _EquationSearch(
                     100 * head_node_occupied_for / (time() - head_node_start)
                 update_progress_bar!(
                     progress_bar;
-                    hall_of_fame=hallOfFame[j],
-                    dataset=datasets[j],
+                    hall_of_fame=only(hallOfFame),
+                    dataset=only(datasets),
                     options,
                     head_node_occupation,
                     ConcurrencyType,
+                    raise_usage_warning=head_node_occupation > 50,
                 )
             end
             head_node_end_work = time()
@@ -878,6 +879,7 @@ function _EquationSearch(
                     cycles_remaining,
                     head_node_occupation,
                     ConcurrencyType,
+                    raise_usage_warning=head_node_occupation > 50,
                 )
             end
             last_print_time = time()
@@ -916,12 +918,12 @@ function _EquationSearch(
     end
 
     if options.return_state
-        state = (returnPops, (nout == 1 ? hallOfFame[1] : hallOfFame))
+        state = (returnPops, (nout == 1 ? only(hallOfFame) : hallOfFame))
         state::StateType{T}
         return state
     else
         if nout == 1
-            return hallOfFame[1]
+            return only(hallOfFame)
         else
             return hallOfFame
         end
