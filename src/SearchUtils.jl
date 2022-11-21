@@ -5,6 +5,7 @@ module SearchUtilsModule
 
 import Printf: @printf, @sprintf
 using Distributed
+import StatsBase: mean
 
 import ..CoreModule: SRConcurrency, SRThreaded, SRSerial, SRDistributed, Dataset, Options
 import ..ComplexityModule: compute_complexity
@@ -137,17 +138,72 @@ function check_max_evals(num_evals, options::Options)::Bool
     return options.max_evals !== nothing && options.max_evals <= sum(sum, num_evals)
 end
 
-function get_load_string(;
-    head_node_occupation::Float64, raise_usage_warning::Bool, ConcurrencyType=SRSerial
-)
-    ConcurrencyType == SRSerial && return ""
+const TIME_TYPE = Float64
 
-    out = @sprintf("Head worker occupation: %.1f%%", head_node_occupation)
+"""This struct is used to monitor resources."""
+Base.@kwdef mutable struct ResourceMonitor
+    """The time the search started."""
+    absolute_start_time::TIME_TYPE = time()
+    """The time the head worker started doing work."""
+    start_work::TIME_TYPE = Inf
+    """The time the head worker finished doing work."""
+    stop_work::TIME_TYPE = Inf
+    """Number of stops recorded."""
+    num_stops::Int = 0
+    """Intervals of work."""
+    work_intervals::Vector{TIME_TYPE} = TIME_TYPE[]
+    """Intervals of rest."""
+    rest_intervals::Vector{TIME_TYPE} = TIME_TYPE[]
+    """Number of intervals to store."""
+    num_intervals_to_store::Int
+end
+
+function start_work_monitor!(monitor::ResourceMonitor)
+    monitor.start_work = time()
+    if monitor.num_stops > 0
+        push!(monitor.rest_intervals, monitor.start_work - monitor.stop_work)
+        if length(monitor.rest_intervals) > monitor.num_intervals_to_store
+            popfirst!(monitor.rest_intervals)
+        end
+    end
+    return nothing
+end
+
+function stop_work_monitor!(monitor::ResourceMonitor)
+    monitor.stop_work = time()
+    push!(monitor.work_intervals, monitor.stop_work - monitor.start_work)
+    monitor.num_stops += 1
+    if length(monitor.work_intervals) > monitor.num_intervals_to_store
+        popfirst!(monitor.work_intervals)
+    end
+    return nothing
+end
+
+function estimate_work_fraction(monitor::ResourceMonitor)::Float64
+    if monitor.num_stops <= 1
+        return 0.0  # Can't estimate from only one interval, due to JIT.
+    end
+    work_intervals = monitor.work_intervals
+    rest_intervals = monitor.rest_intervals
+    # Trim 1st, in case we are still in the first interval.
+    if monitor.num_stops <= monitor.num_intervals_to_store + 1
+        work_intervals = work_intervals[2:end]
+        rest_intervals = rest_intervals[2:end]
+    end
+    return mean(work_intervals) / (mean(work_intervals) + mean(rest_intervals))
+end
+
+function get_load_string(; head_node_occupation::Float64, ConcurrencyType=SRSerial)
+    ConcurrencyType == SRSerial && return ""
+    out = @sprintf("Head worker occupation: %.1f%%", head_node_occupation * 100)
+
+    raise_usage_warning = head_node_occupation > 0.2
     if raise_usage_warning
         out *= "."
         out *= " This is high, and will prevent efficient resource usage."
         out *= " Increase `ncyclesperiteration` to reduce load on head worker."
     end
+
     out *= "\n"
     return out
 end
@@ -158,14 +214,11 @@ function update_progress_bar!(
     dataset::Dataset{T},
     options::Options,
     head_node_occupation::Float64,
-    raise_usage_warning::Bool,
     ConcurrencyType=SRSerial,
 ) where {T}
     equation_strings = string_dominating_pareto_curve(hall_of_fame, dataset, options)
     # TODO - include command about "q" here.
-    load_string = get_load_string(;
-        head_node_occupation, raise_usage_warning, ConcurrencyType
-    )
+    load_string = get_load_string(; head_node_occupation, ConcurrencyType)
     load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
     equation_strings = load_string * equation_strings
     set_multiline_postfix!(progress_bar, equation_strings)
@@ -181,7 +234,6 @@ function print_search_state(
     total_cycles::Int,
     cycles_remaining::Vector{Int},
     head_node_occupation::Float64,
-    raise_usage_warning::Bool,
     ConcurrencyType=SRSerial,
 ) where {T}
     nout = length(datasets)
@@ -189,9 +241,7 @@ function print_search_state(
 
     @printf("\n")
     @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
-    load_string = get_load_string(;
-        head_node_occupation, raise_usage_warning, ConcurrencyType
-    )
+    load_string = get_load_string(; head_node_occupation, ConcurrencyType)
     print(load_string)
     cycles_elapsed = total_cycles * nout - sum(cycles_remaining)
     @printf(

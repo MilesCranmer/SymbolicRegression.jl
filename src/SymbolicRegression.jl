@@ -204,6 +204,10 @@ import .SearchUtilsModule:
     check_for_loss_threshold,
     check_for_timeout,
     check_max_evals,
+    ResourceMonitor,
+    start_work_monitor!,
+    stop_work_monitor!,
+    estimate_work_fraction,
     update_progress_bar!,
     print_search_state,
     init_dummy_pops,
@@ -658,8 +662,12 @@ function _EquationSearch(
     all_idx = [(j, i) for j in 1:nout for i in 1:(options.npopulations)]
     shuffle!(all_idx)
     kappa = 0
-    head_node_occupied_for = 0.0
-    head_node_start = time()
+    resource_monitor = ResourceMonitor(;
+        absolute_start_time=time(),
+        # Storing n times as many monitoring intervals as populations seems like it will
+        # help get accurate resource estimates:
+        num_intervals_to_store=options.npopulations * 100 * nout,
+    )
     while sum(cycles_remaining) > 0
         kappa += 1
         if kappa > options.npopulations * nout
@@ -682,7 +690,7 @@ function _EquationSearch(
         # TODO - this might skip extra cycles?
         population_ready &= (cycles_remaining[j] > 0)
         if population_ready
-            head_node_start_work = time()
+            start_work_monitor!(resource_monitor)
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record, cur_num_evals) =
                 if ConcurrencyType in [SRDistributed, SRThreaded]
@@ -836,9 +844,10 @@ function _EquationSearch(
             end
             num_equations += options.ncycles_per_iteration * options.npop / 10.0
 
+            stop_work_monitor!(resource_monitor)
+            move_window!(all_running_search_statistics[j])
             if options.progress && nout == 1
-                head_node_occupation =
-                    100 * head_node_occupied_for / (time() - head_node_start)
+                head_node_occupation = estimate_work_fraction(resource_monitor)
                 update_progress_bar!(
                     progress_bar;
                     hall_of_fame=only(hallOfFame),
@@ -846,13 +855,8 @@ function _EquationSearch(
                     options,
                     head_node_occupation,
                     ConcurrencyType,
-                    raise_usage_warning=head_node_occupation > 50,
                 )
             end
-            head_node_end_work = time()
-            head_node_occupied_for += (head_node_end_work - head_node_start_work)
-
-            move_window!(all_running_search_statistics[j])
         end
         sleep(1e-6)
 
@@ -862,7 +866,6 @@ function _EquationSearch(
         #Update if time has passed, and some new equations generated.
         if elapsed > print_every_n_seconds && num_equations > 0.0
             # Dominating pareto curve - must be better than all simpler equations
-            head_node_occupation = 100 * head_node_occupied_for / (time() - head_node_start)
             current_speed = num_equations / elapsed
             average_over_m_measurements = 10 #for print_every...=5, this gives 50 second running average
             push!(equation_speed, current_speed)
@@ -870,6 +873,7 @@ function _EquationSearch(
                 deleteat!(equation_speed, 1)
             end
             if (options.verbosity > 0) || (options.progress && nout > 1)
+                head_node_occupation = estimate_work_fraction(resource_monitor)
                 print_search_state(
                     hallOfFame,
                     datasets;
@@ -879,7 +883,6 @@ function _EquationSearch(
                     cycles_remaining,
                     head_node_occupation,
                     ConcurrencyType,
-                    raise_usage_warning=head_node_occupation > 50,
                 )
             end
             last_print_time = time()
