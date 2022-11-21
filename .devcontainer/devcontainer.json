@@ -1,21 +1,22 @@
 // See https://github.com/julia-vscode/julia-devcontainer/blob/master/Dockerfile for image contents
 {
-	"name": "Julia (Community)",
+	"name": "SymbolicRegression.jl",
 	"image": "ghcr.io/julia-vscode/julia-devcontainer",
-
 	// Configure tool-specific properties.
 	"customizations": {
 		// Configure properties specific to VS Code.
 		"vscode": {
 			// Add the IDs of extensions you want installed when the container is created.
 			"extensions": [
-				"julialang.language-julia"
+				"julialang.language-julia",
+				"singularitti.vscode-julia-formatter",
+				"VisualStudioExptTeam.vscodeintellicode",
+				"GitHub.vscode-pull-request-github",
+				"waderyan.gitblame"
 			]
 		}
 	},
-
 	"postCreateCommand": "/julia-devcontainer-scripts/postcreate.jl",
-
 	"remoteUser": "vscode",
 	"features": {
 		"ghcr.io/devcontainers/features/github-cli:1": {}
