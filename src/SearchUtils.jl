@@ -7,7 +7,7 @@ import Printf: @printf, @sprintf
 using Distributed
 import StatsBase: mean
 
-import ..CoreModule: SRConcurrency, SRThreaded, SRSerial, SRDistributed, Dataset, Options
+import ..CoreModule: SRThreaded, SRSerial, SRDistributed, Dataset, Options
 import ..ComplexityModule: compute_complexity
 import ..PopulationModule: Population, copy_population
 import ..HallOfFameModule:
@@ -36,8 +36,10 @@ macro sr_spawner(parallel, p, expr)
             $(esc(expr))
         elseif $(esc(parallel)) == SRDistributed
             @spawnat($(esc(p)), $(esc(expr)))
-        else
+        elseif $(esc(parallel)) == SRThreaded
             Threads.@spawn($(esc(expr)))
+        else
+            error("Invalid parallel type.")
         end
     end
 end
@@ -148,18 +150,19 @@ Base.@kwdef mutable struct ResourceMonitor
     start_work::TIME_TYPE = Inf
     """The time the head worker finished doing work."""
     stop_work::TIME_TYPE = Inf
-    """Number of stops recorded."""
-    num_stops::Int = 0
-    """Intervals of work."""
+
+    num_starts::UInt = 0
+    num_stops::UInt = 0
     work_intervals::Vector{TIME_TYPE} = TIME_TYPE[]
-    """Intervals of rest."""
     rest_intervals::Vector{TIME_TYPE} = TIME_TYPE[]
+
     """Number of intervals to store."""
     num_intervals_to_store::Int
 end
 
 function start_work_monitor!(monitor::ResourceMonitor)
     monitor.start_work = time()
+    monitor.num_starts += 1
     if monitor.num_stops > 0
         push!(monitor.rest_intervals, monitor.start_work - monitor.stop_work)
         if length(monitor.rest_intervals) > monitor.num_intervals_to_store
@@ -173,6 +176,7 @@ function stop_work_monitor!(monitor::ResourceMonitor)
     monitor.stop_work = time()
     push!(monitor.work_intervals, monitor.stop_work - monitor.start_work)
     monitor.num_stops += 1
+    @assert monitor.num_stops == monitor.num_starts
     if length(monitor.work_intervals) > monitor.num_intervals_to_store
         popfirst!(monitor.work_intervals)
     end
