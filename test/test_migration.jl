@@ -18,6 +18,5 @@ SymbolicRegression.MigrationModule.migrate!(
     [PopMember(tree, 0.0, Inf)] => population1, options; frac=0.5
 )
 
-# TODO: Replace with equality operator.
 # Now we see that the tree is in the population:
-@test hash(tree) in [hash(p.tree) for p in population1.members]
+@test tree in [p.tree for p in population1.members]
