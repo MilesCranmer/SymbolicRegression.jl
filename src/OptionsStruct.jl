@@ -158,6 +158,7 @@ struct Options{CT}
     skip_mutation_failures::Bool
     nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
     deterministic::Bool
+    define_helper_functions::Bool
 end
 
 function Base.print(io::IO, options::Options)

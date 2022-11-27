@@ -600,9 +600,7 @@ function Options(;
         end
     end
 
-    options = Options{
-        eltype(complexity_mapping),
-    }(
+    options = Options{eltype(complexity_mapping)}(
         operators,
         bin_constraints,
         una_constraints,
@@ -657,6 +655,7 @@ function Options(;
         skip_mutation_failures,
         nested_constraints,
         deterministic,
+        define_helper_functions,
     )
 
     return options

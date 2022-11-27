@@ -418,15 +418,17 @@ function _EquationSearch(
     stdin_reader = watch_stream(stdin)
 
     # Redefine print, show:
-    @eval begin
+    options.define_helper_functions && @eval begin
         function Base.print(io::IO, tree::Node)
             return print(
-                io, string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap))
+                io,
+                string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap)),
             )
         end
         function Base.show(io::IO, tree::Node)
             return print(
-                io, string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap))
+                io,
+                string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap)),
             )
         end
     end
@@ -936,5 +938,8 @@ end
 macro ignore(args...) end
 # Hack to get static analysis to work from within tests:
 @ignore include("../test/runtests.jl")
+
+include("precompile.jl")
+do_precompilation(; mode=:precompile)
 
 end #module SR
