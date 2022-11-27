@@ -602,14 +602,13 @@ function Options(;
 
     options = Options{
         eltype(complexity_mapping),
-        tournament_selection_p,
-        tournament_selection_n,
     }(
         operators,
         bin_constraints,
         una_constraints,
         complexity_mapping,
         tournament_selection_n,
+        tournament_selection_p,
         parsimony,
         alpha,
         maxsize,
