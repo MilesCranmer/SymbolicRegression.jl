@@ -103,7 +103,7 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{LossType<:Union{SupervisedLoss,Function},ComplexityType,_prob_pick_first,_ns}
+struct Options{ComplexityType,_prob_pick_first,_ns}
     operators::AbstractOperatorEnum
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
@@ -140,7 +140,7 @@ struct Options{LossType<:Union{SupervisedLoss,Function},ComplexityType,_prob_pic
     nuna::Int
     nbin::Int
     seed::Union{Int,Nothing}
-    loss::LossType
+    loss::Union{SupervisedLoss,Function}
     progress::Bool
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::String

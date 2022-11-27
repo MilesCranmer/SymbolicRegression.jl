@@ -601,7 +601,6 @@ function Options(;
     end
 
     options = Options{
-        typeof(loss),
         eltype(complexity_mapping),
         tournament_selection_p,
         tournament_selection_n,

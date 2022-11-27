@@ -79,8 +79,8 @@ end
 function best_of_sample(
     pop::Population{T},
     running_search_statistics::RunningSearchStatistics,
-    options::Options{A,B,p,tournament_selection_n},
-)::PopMember where {T<:Real,A,B,p,tournament_selection_n}
+    options::Options{B,p,tournament_selection_n},
+)::PopMember where {T<:Real,B,p,tournament_selection_n}
     sample = sample_pop(pop, options)
 
     if options.use_frequency_in_tournament

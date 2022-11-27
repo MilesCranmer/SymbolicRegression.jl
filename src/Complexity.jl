@@ -19,8 +19,8 @@ function compute_complexity(tree::Node, options::Options)::Int
 end
 
 function _compute_complexity(
-    tree::Node, options::Options{C,complexity_type}
-)::complexity_type where {C,complexity_type<:Real}
+    tree::Node, options::Options{complexity_type}
+)::complexity_type where {complexity_type<:Real}
     if tree.degree == 0
         if tree.constant
             return options.complexity_mapping.constant_complexity
