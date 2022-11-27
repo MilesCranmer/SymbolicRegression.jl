@@ -728,7 +728,7 @@ function _EquationSearch(
                 end
                 actualMaxsize = options.maxsize + MAX_DEGREE
 
-                valid_size = size < actualMaxsize
+                valid_size = 0 < size < actualMaxsize
                 if valid_size
                     already_filled = hallOfFame[j].exists[size]
                     better_than_current = member.score < hallOfFame[j].members[size].score

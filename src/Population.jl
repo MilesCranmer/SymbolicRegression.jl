@@ -92,7 +92,7 @@ function best_of_sample(
         scores = Vector{T}(undef, tournament_selection_n)
         for (i, member) in enumerate(sample.members)
             size = compute_complexity(member.tree, options)
-            frequency = if (size <= options.maxsize)
+            frequency = if (0 < size <= options.maxsize)
                 running_search_statistics.normalized_frequencies[size]
             else
                 T(0)
