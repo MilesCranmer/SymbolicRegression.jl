@@ -458,7 +458,7 @@ function _EquationSearch(
     allPops = [allPopsType[] for j in 1:nout]
     init_pops = [allPopsType[] for j in 1:nout]
     # Set up a channel to send finished populations back to head node
-    if parallelism in [:multiprocessing, :multithreading]
+    if parallelism in (:multiprocessing, :multithreading)
         if parallelism == :multiprocessing
             channels = [
                 [RemoteChannel(1) for i in 1:(options.npopulations)] for j in 1:nout
@@ -585,7 +585,7 @@ function _EquationSearch(
             # TODO - why is this needed??
             # Multi-threaded doesn't like to fetch within a new task:
             updated_pop = @sr_spawner parallelism worker_idx let
-                in_pop = if parallelism in [:multiprocessing, :multithreading]
+                in_pop = if parallelism in (:multiprocessing, :multithreading)
                     fetch(init_pops[j][i])[1]
                 else
                     init_pops[j][i][1]
@@ -645,7 +645,7 @@ function _EquationSearch(
     print_every_n_seconds = 5
     equation_speed = Float32[]
 
-    if parallelism in [:multiprocessing, :multithreading]
+    if parallelism in (:multiprocessing, :multithreading)
         for j in 1:nout
             for i in 1:(options.npopulations)
                 # Start listening for each population to finish:
@@ -675,14 +675,14 @@ function _EquationSearch(
         j, i = all_idx[kappa]
 
         # Check if error on population:
-        if parallelism in [:multiprocessing, :multithreading]
+        if parallelism in (:multiprocessing, :multithreading)
             if istaskfailed(tasks[j][i])
                 fetch(tasks[j][i])
                 error("Task failed for population")
             end
         end
         # Non-blocking check if a population is ready:
-        population_ready = if parallelism in [:multiprocessing, :multithreading]
+        population_ready = if parallelism in (:multiprocessing, :multithreading)
             # TODO: Implement type assertions based on parallelism.
             isready(channels[j][i])
         else
@@ -695,7 +695,7 @@ function _EquationSearch(
             start_work_monitor!(resource_monitor)
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record, cur_num_evals) =
-                if parallelism in [:multiprocessing, :multithreading]
+                if parallelism in (:multiprocessing, :multithreading)
                     take!(channels[j][i])
                 else
                     allPops[j][i]
@@ -749,7 +749,7 @@ function _EquationSearch(
                 output_file = output_file * ".out$j"
             end
             # Write file twice in case exit in middle of filewrite
-            for out_file in [output_file, output_file * ".bkup"]
+            for out_file in (output_file, output_file * ".bkup")
                 open(out_file, "w") do io
                     println(io, "Complexity,Loss,Equation")
                     for member in dominating
@@ -826,7 +826,7 @@ function _EquationSearch(
 
                 (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
             end
-            if parallelism in [:multiprocessing, :multithreading]
+            if parallelism in (:multiprocessing, :multithreading)
                 tasks[j][i] = @async put!(channels[j][i], fetch(allPops[j][i]))
             end
 
