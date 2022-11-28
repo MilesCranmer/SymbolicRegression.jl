@@ -683,6 +683,7 @@ function _EquationSearch(
         end
         # Non-blocking check if a population is ready:
         population_ready = if parallelism in [:multiprocessing, :multithreading]
+            # TODO: Implement type assertions based on parallelism.
             isready(channels[j][i])
         else
             true
