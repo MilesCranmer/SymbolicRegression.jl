@@ -7,15 +7,7 @@ include("OptionsStruct.jl")
 include("Operators.jl")
 include("Options.jl")
 
-import .ProgramConstantsModule:
-    MAX_DEGREE,
-    BATCH_DIM,
-    FEATURE_DIM,
-    RecordType,
-    SRConcurrency,
-    SRSerial,
-    SRThreaded,
-    SRDistributed
+import .ProgramConstantsModule: MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType
 import .DatasetModule: Dataset
 import .OptionsStructModule: Options, MutationWeights, sample_mutation
 import .OptionsModule: Options

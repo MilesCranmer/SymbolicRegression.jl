@@ -47,7 +47,7 @@ function s_r_cycle(
         for member in pop.members
             size = compute_complexity(member.tree, options)
             score = member.score
-            if size <= options.maxsize && (
+            if 0 < size <= options.maxsize && (
                 !best_examples_seen.exists[size] ||
                 score < best_examples_seen.members[size].score
             )

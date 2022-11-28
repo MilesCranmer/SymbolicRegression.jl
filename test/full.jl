@@ -35,3 +35,7 @@ end
 @testset "Testing whether we can move operators to workers." begin
     include("test_custom_operators_multiprocessing.jl")
 end
+
+@testset "Test whether the precompilation script works." begin
+    include("test_precompilation.jl")
+end
