@@ -168,11 +168,7 @@ import .CoreModule:
     gamma,
     erf,
     erfc,
-    atanh_clip,
-    SRConcurrency,
-    SRSerial,
-    SRThreaded,
-    SRDistributed
+    atanh_clip
 import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge
 import .ComplexityModule: compute_complexity
 import .CheckConstraintsModule: check_constraints
@@ -357,18 +353,18 @@ function EquationSearch(
     saved_state::Union{StateType{T},Nothing}=nothing,
 ) where {T<:Real}
     concurrency = if parallelism in (:multithreading, "multithreading")
-        SRThreaded()
+        :multithreading
     elseif parallelism in (:multiprocessing, "multiprocessing")
-        SRDistributed()
+        :multiprocessing
     elseif parallelism in (:serial, "serial")
-        SRSerial()
+        :serial
     else
         error(
             "Invalid parallelism mode: $parallelism. " *
             "You must choose one of :multithreading, :multiprocessing, or :serial.",
         )
     end
-    not_distributed = isa(concurrency, Union{SRSerial,SRThreaded})
+    not_distributed = concurrency in (:multithreading, :serial)
     not_distributed &&
         procs !== nothing &&
         error(
@@ -394,7 +390,7 @@ function EquationSearch(
 end
 
 function _EquationSearch(
-    ::ConcurrencyType,
+    parallelism::Symbol,
     datasets::Vector{Dataset{T}};
     niterations::Int,
     options::Options,
@@ -403,13 +399,13 @@ function _EquationSearch(
     addprocs_function::Union{Function,Nothing},
     runtests::Bool,
     saved_state::Union{StateType{T},Nothing},
-) where {T<:Real,ConcurrencyType<:SRConcurrency}
+) where {T<:Real}
     if options.deterministic
-        if ConcurrencyType != SRSerial
+        if parallelism != :serial
             error("Determinism is only guaranteed for serial mode.")
         end
     end
-    if ConcurrencyType == SRThreaded
+    if parallelism == :multithreading
         if Threads.nthreads() == 1
             @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
         end
@@ -451,9 +447,9 @@ function _EquationSearch(
     end
     # Start a population on every process
     #    Store the population, hall of fame
-    allPopsType = if ConcurrencyType == SRSerial
+    allPopsType = if parallelism == :serial
         Tuple{Population,HallOfFame,RecordType,Float64}
-    elseif ConcurrencyType == SRDistributed
+    elseif parallelism == :multiprocessing
         Future
     else
         Task
@@ -462,8 +458,8 @@ function _EquationSearch(
     allPops = [allPopsType[] for j in 1:nout]
     init_pops = [allPopsType[] for j in 1:nout]
     # Set up a channel to send finished populations back to head node
-    if ConcurrencyType in [SRDistributed, SRThreaded]
-        if ConcurrencyType == SRDistributed
+    if parallelism in [:multiprocessing, :multithreading]
+        if parallelism == :multiprocessing
             channels = [
                 [RemoteChannel(1) for i in 1:(options.npopulations)] for j in 1:nout
             ]
@@ -500,7 +496,7 @@ function _EquationSearch(
     ##########################################################################
     ### Distributed code:
     ##########################################################################
-    if ConcurrencyType == SRDistributed
+    if parallelism == :multiprocessing
         if addprocs_function === nothing
             addprocs_function = addprocs
         end
@@ -542,7 +538,7 @@ function _EquationSearch(
     for j in 1:nout
         for i in 1:(options.npopulations)
             worker_idx = next_worker(worker_assignment, procs)
-            if ConcurrencyType == SRDistributed
+            if parallelism == :multiprocessing
                 worker_assignment[(j, i)] = worker_idx
             end
 
@@ -550,14 +546,14 @@ function _EquationSearch(
 
             if saved_pop !== nothing && length(saved_pop.members) == options.npop
                 saved_pop::Population{T}
-                new_pop = @sr_spawner ConcurrencyType worker_idx (
+                new_pop = @sr_spawner parallelism worker_idx (
                     saved_pop, HallOfFame(options, T), RecordType(), 0.0
                 )
             else
                 if saved_pop !== nothing
                     @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
                 end
-                new_pop = @sr_spawner ConcurrencyType worker_idx (
+                new_pop = @sr_spawner parallelism worker_idx (
                     Population(
                         datasets[j];
                         npop=options.npop,
@@ -582,14 +578,14 @@ function _EquationSearch(
         for i in 1:(options.npopulations)
             @recorder record["out$(j)_pop$(i)"] = RecordType()
             worker_idx = next_worker(worker_assignment, procs)
-            if ConcurrencyType == SRDistributed
+            if parallelism == :multiprocessing
                 worker_assignment[(j, i)] = worker_idx
             end
 
             # TODO - why is this needed??
             # Multi-threaded doesn't like to fetch within a new task:
-            updated_pop = @sr_spawner ConcurrencyType worker_idx let
-                in_pop = if ConcurrencyType in [SRDistributed, SRThreaded]
+            updated_pop = @sr_spawner parallelism worker_idx let
+                in_pop = if parallelism in [:multiprocessing, :multithreading]
                     fetch(init_pops[j][i])[1]
                 else
                     init_pops[j][i][1]
@@ -649,7 +645,7 @@ function _EquationSearch(
     print_every_n_seconds = 5
     equation_speed = Float32[]
 
-    if ConcurrencyType in [SRDistributed, SRThreaded]
+    if parallelism in [:multiprocessing, :multithreading]
         for j in 1:nout
             for i in 1:(options.npopulations)
                 # Start listening for each population to finish:
@@ -679,15 +675,18 @@ function _EquationSearch(
         j, i = all_idx[kappa]
 
         # Check if error on population:
-        if ConcurrencyType in [SRDistributed, SRThreaded]
+        if parallelism in [:multiprocessing, :multithreading]
             if istaskfailed(tasks[j][i])
                 fetch(tasks[j][i])
                 error("Task failed for population")
             end
         end
         # Non-blocking check if a population is ready:
-        population_ready =
-            ConcurrencyType in [SRDistributed, SRThreaded] ? isready(channels[j][i]) : true
+        population_ready = if parallelism in [:multiprocessing, :multithreading]
+            isready(channels[j][i])
+        else
+            true
+        end
         # Don't start more if this output has finished its cycles:
         # TODO - this might skip extra cycles?
         population_ready &= (cycles_remaining[j] > 0)
@@ -695,7 +694,7 @@ function _EquationSearch(
             start_work_monitor!(resource_monitor)
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record, cur_num_evals) =
-                if ConcurrencyType in [SRDistributed, SRThreaded]
+                if parallelism in [:multiprocessing, :multithreading]
                     take!(channels[j][i])
                 else
                     allPops[j][i]
@@ -779,7 +778,7 @@ function _EquationSearch(
                 break
             end
             worker_idx = next_worker(worker_assignment, procs)
-            if ConcurrencyType == SRDistributed
+            if parallelism == :multiprocessing
                 worker_assignment[(j, i)] = worker_idx
             end
             @recorder begin
@@ -787,7 +786,7 @@ function _EquationSearch(
                 iteration = find_iteration_from_record(key, record) + 1
             end
 
-            allPops[j][i] = @sr_spawner ConcurrencyType worker_idx let
+            allPops[j][i] = @sr_spawner parallelism worker_idx let
                 cur_record = RecordType()
                 @recorder cur_record[key] = RecordType(
                     "iteration$(iteration)" => record_population(cur_pop, options)
@@ -826,7 +825,7 @@ function _EquationSearch(
 
                 (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
             end
-            if ConcurrencyType in [SRDistributed, SRThreaded]
+            if parallelism in [:multiprocessing, :multithreading]
                 tasks[j][i] = @async put!(channels[j][i], fetch(allPops[j][i]))
             end
 
@@ -856,7 +855,7 @@ function _EquationSearch(
                     dataset=only(datasets),
                     options,
                     head_node_occupation,
-                    ConcurrencyType,
+                    parallelism,
                 )
             end
         end
@@ -884,7 +883,7 @@ function _EquationSearch(
                     total_cycles,
                     cycles_remaining,
                     head_node_occupation,
-                    ConcurrencyType,
+                    parallelism,
                 )
             end
             last_print_time = time()

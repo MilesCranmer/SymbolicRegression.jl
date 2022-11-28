@@ -7,7 +7,7 @@ import Printf: @printf, @sprintf
 using Distributed
 import StatsBase: mean
 
-import ..CoreModule: SRThreaded, SRSerial, SRDistributed, Dataset, Options
+import ..CoreModule: Dataset, Options
 import ..ComplexityModule: compute_complexity
 import ..PopulationModule: Population, copy_population
 import ..HallOfFameModule:
@@ -32,11 +32,11 @@ end
 
 macro sr_spawner(parallel, p, expr)
     quote
-        if $(esc(parallel)) == SRSerial
+        if $(esc(parallel)) == :serial
             $(esc(expr))
-        elseif $(esc(parallel)) == SRDistributed
+        elseif $(esc(parallel)) == :multiprocessing
             @spawnat($(esc(p)), $(esc(expr)))
-        elseif $(esc(parallel)) == SRThreaded
+        elseif $(esc(parallel)) == :multithreading
             Threads.@spawn($(esc(expr)))
         else
             error("Invalid parallel type.")
@@ -197,8 +197,8 @@ function estimate_work_fraction(monitor::ResourceMonitor)::Float64
     return mean(work_intervals) / (mean(work_intervals) + mean(rest_intervals))
 end
 
-function get_load_string(; head_node_occupation::Float64, ConcurrencyType=SRSerial)
-    ConcurrencyType == SRSerial && return ""
+function get_load_string(; head_node_occupation::Float64, parallelism=:serial)
+    parallelism == :serial && return ""
     out = @sprintf("Head worker occupation: %.1f%%", head_node_occupation * 100)
 
     raise_usage_warning = head_node_occupation > 0.2
@@ -218,11 +218,11 @@ function update_progress_bar!(
     dataset::Dataset{T},
     options::Options,
     head_node_occupation::Float64,
-    ConcurrencyType=SRSerial,
+    parallelism=:serial,
 ) where {T}
     equation_strings = string_dominating_pareto_curve(hall_of_fame, dataset, options)
     # TODO - include command about "q" here.
-    load_string = get_load_string(; head_node_occupation, ConcurrencyType)
+    load_string = get_load_string(; head_node_occupation, parallelism)
     load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
     equation_strings = load_string * equation_strings
     set_multiline_postfix!(progress_bar, equation_strings)
@@ -238,14 +238,14 @@ function print_search_state(
     total_cycles::Int,
     cycles_remaining::Vector{Int},
     head_node_occupation::Float64,
-    ConcurrencyType=SRSerial,
+    parallelism=:serial,
 ) where {T}
     nout = length(datasets)
     average_speed = sum(equation_speed) / length(equation_speed)
 
     @printf("\n")
     @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
-    load_string = get_load_string(; head_node_occupation, ConcurrencyType)
+    load_string = get_load_string(; head_node_occupation, parallelism)
     print(load_string)
     cycles_elapsed = total_cycles * nout - sum(cycles_remaining)
     @printf(
