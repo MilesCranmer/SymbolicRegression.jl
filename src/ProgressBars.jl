@@ -9,6 +9,11 @@ mutable struct WrappedProgressBar
     cycle::Union{Int,Nothing}
 
     function WrappedProgressBar(args...; kwargs...)
+        if haskey(ENV, "SYMBOLIC_REGRESSION_TEST") &&
+            ENV["SYMBOLIC_REGRESSION_TEST"] == "true"
+            output_stream = devnull
+            return new(ProgressBar(args...; output_stream, kwargs...), nothing, nothing)
+        end
         return new(ProgressBar(args...; kwargs...), nothing, nothing)
     end
 end
