@@ -19,6 +19,7 @@ atanh_clip(x) = atanh(mod(x + 1, 2) - 1)
 
 # Use some fast operators from https://github.com/JuliaLang/julia/blob/81597635c4ad1e8c2e1c5753fda4ec0e7397543f/base/fastmath.jl
 # Define allowed operators. Any julia operator can also be used.
+# TODO: Add all of these operators to the precompilation.
 function plus(x::T, y::T)::T where {T<:Real}
     return x + y #Do not change the name of this operator.
 end
