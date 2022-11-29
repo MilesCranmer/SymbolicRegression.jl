@@ -1,4 +1,5 @@
 import SnoopPrecompile: @precompile_all_calls, @precompile_setup
+using DynamicExpressions: DynamicExpressions
 
 macro maybe_precompile_setup(mode, ex)
     precompile_ex = Expr(
@@ -33,11 +34,24 @@ end
 """`mode=:precompile` will use `@precompile_*` directives; `mode=:compile` runs."""
 function do_precompilation(; mode=:precompile)
     @maybe_precompile_setup mode begin
+        # Only precompile the new ones; DynamicExpressions.jl should do the rest.
+        binary_operators = [[+, -, *, /, ^]]
+        unary_operators = [[log, sqrt, cube, square, log]]
+        @maybe_precompile_all_calls mode begin
+            DynamicExpressions.test_all_combinations(;
+                binary_operators,
+                unary_operators,
+                turbo=[true, false],
+                types=[Float32, Float64],
+            )
+        end
+    end
+    @maybe_precompile_setup mode begin
         types = [Float32, Float64]
         for T in types
+            X = randn(T, 5, 100)
+            y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
             @maybe_precompile_all_calls mode begin
-                X = randn(T, 5, 100)
-                y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
                 options = SymbolicRegression.Options(;
                     binary_operators=[+, *, /, -],
                     unary_operators=[cos, exp],
