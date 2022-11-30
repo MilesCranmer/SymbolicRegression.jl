@@ -622,18 +622,14 @@ function Options(;
         end
     end
 
-    options = Options{
-        typeof(elementwise_loss),
-        eltype(complexity_mapping),
-        tournament_selection_p,
-        tournament_selection_n,
-        typeof(loss_function),
-    }(
+
+    options = Options{eltype(complexity_mapping)}(
         operators,
         bin_constraints,
         una_constraints,
         complexity_mapping,
         tournament_selection_n,
+        tournament_selection_p,
         parsimony,
         alpha,
         maxsize,
@@ -683,6 +679,7 @@ function Options(;
         skip_mutation_failures,
         nested_constraints,
         deterministic,
+        define_helper_functions,
     )
 
     return options

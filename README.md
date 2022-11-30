@@ -42,8 +42,8 @@ X = randn(Float32, 5, 100)
 y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
 
 options = SymbolicRegression.Options(
-    binary_operators=(+, *, /, -),
-    unary_operators=(cos, exp),
+    binary_operators=[+, *, /, -],
+    unary_operators=[cos, exp],
     npopulations=20
 )
 
@@ -82,7 +82,7 @@ You can also manipulate and construct trees directly. For example:
 using SymbolicRegression
 
 options = Options(;
-    binary_operators=(+, -, *, ^, /), unary_operators=(cos, exp, sin)
+    binary_operators=[+, -, *, ^, /], unary_operators=[cos, exp, sin]
 )
 x1, x2, x3 = [Node(; feature=i) for i=1:3]
 tree = cos(x1 - 3.2 * x2) - x1^3.2

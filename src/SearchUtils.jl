@@ -5,8 +5,9 @@ module SearchUtilsModule
 
 import Printf: @printf, @sprintf
 using Distributed
+import StatsBase: mean
 
-import ..CoreModule: SRThreaded, SRSerial, SRDistributed, Dataset, Options
+import ..CoreModule: Dataset, Options
 import ..ComplexityModule: compute_complexity
 import ..PopulationModule: Population, copy_population
 import ..HallOfFameModule:
@@ -31,12 +32,14 @@ end
 
 macro sr_spawner(parallel, p, expr)
     quote
-        if $(esc(parallel)) == SRSerial
+        if $(esc(parallel)) == :serial
             $(esc(expr))
-        elseif $(esc(parallel)) == SRDistributed
+        elseif $(esc(parallel)) == :multiprocessing
             @spawnat($(esc(p)), $(esc(expr)))
-        else
+        elseif $(esc(parallel)) == :multithreading
             Threads.@spawn($(esc(expr)))
+        else
+            error("Invalid parallel type.")
         end
     end
 end
@@ -137,16 +140,89 @@ function check_max_evals(num_evals, options::Options)::Bool
     return options.max_evals !== nothing && options.max_evals <= sum(sum, num_evals)
 end
 
+const TIME_TYPE = Float64
+
+"""This struct is used to monitor resources."""
+Base.@kwdef mutable struct ResourceMonitor
+    """The time the search started."""
+    absolute_start_time::TIME_TYPE = time()
+    """The time the head worker started doing work."""
+    start_work::TIME_TYPE = Inf
+    """The time the head worker finished doing work."""
+    stop_work::TIME_TYPE = Inf
+
+    num_starts::UInt = 0
+    num_stops::UInt = 0
+    work_intervals::Vector{TIME_TYPE} = TIME_TYPE[]
+    rest_intervals::Vector{TIME_TYPE} = TIME_TYPE[]
+
+    """Number of intervals to store."""
+    num_intervals_to_store::Int
+end
+
+function start_work_monitor!(monitor::ResourceMonitor)
+    monitor.start_work = time()
+    monitor.num_starts += 1
+    if monitor.num_stops > 0
+        push!(monitor.rest_intervals, monitor.start_work - monitor.stop_work)
+        if length(monitor.rest_intervals) > monitor.num_intervals_to_store
+            popfirst!(monitor.rest_intervals)
+        end
+    end
+    return nothing
+end
+
+function stop_work_monitor!(monitor::ResourceMonitor)
+    monitor.stop_work = time()
+    push!(monitor.work_intervals, monitor.stop_work - monitor.start_work)
+    monitor.num_stops += 1
+    @assert monitor.num_stops == monitor.num_starts
+    if length(monitor.work_intervals) > monitor.num_intervals_to_store
+        popfirst!(monitor.work_intervals)
+    end
+    return nothing
+end
+
+function estimate_work_fraction(monitor::ResourceMonitor)::Float64
+    if monitor.num_stops <= 1
+        return 0.0  # Can't estimate from only one interval, due to JIT.
+    end
+    work_intervals = monitor.work_intervals
+    rest_intervals = monitor.rest_intervals
+    # Trim 1st, in case we are still in the first interval.
+    if monitor.num_stops <= monitor.num_intervals_to_store + 1
+        work_intervals = work_intervals[2:end]
+        rest_intervals = rest_intervals[2:end]
+    end
+    return mean(work_intervals) / (mean(work_intervals) + mean(rest_intervals))
+end
+
+function get_load_string(; head_node_occupation::Float64, parallelism=:serial)
+    parallelism == :serial && return ""
+    out = @sprintf("Head worker occupation: %.1f%%", head_node_occupation * 100)
+
+    raise_usage_warning = head_node_occupation > 0.2
+    if raise_usage_warning
+        out *= "."
+        out *= " This is high, and will prevent efficient resource usage."
+        out *= " Increase `ncyclesperiteration` to reduce load on head worker."
+    end
+
+    out *= "\n"
+    return out
+end
+
 function update_progress_bar!(
     progress_bar::WrappedProgressBar;
     hall_of_fame::HallOfFame{T},
     dataset::Dataset{T},
     options::Options,
     head_node_occupation::Float64,
+    parallelism=:serial,
 ) where {T}
     equation_strings = string_dominating_pareto_curve(hall_of_fame, dataset, options)
-    load_string = @sprintf("Head worker occupation: %.1f", head_node_occupation) * "%\n"
     # TODO - include command about "q" here.
+    load_string = get_load_string(; head_node_occupation, parallelism)
     load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
     equation_strings = load_string * equation_strings
     set_multiline_postfix!(progress_bar, equation_strings)
@@ -156,19 +232,21 @@ end
 
 function print_search_state(
     hall_of_fames::Vector{HallOfFame{T}},
-    datasets::Vector{Dataset{T}},
-    options::Options;
+    datasets::Vector{Dataset{T}};
+    options::Options,
     equation_speed::Vector{Float32},
     total_cycles::Int,
     cycles_remaining::Vector{Int},
     head_node_occupation::Float64,
+    parallelism=:serial,
 ) where {T}
     nout = length(datasets)
     average_speed = sum(equation_speed) / length(equation_speed)
 
     @printf("\n")
     @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
-    @printf("Head worker occupation: %.1f%%\n", head_node_occupation)
+    load_string = get_load_string(; head_node_occupation, parallelism)
+    print(load_string)
     cycles_elapsed = total_cycles * nout - sum(cycles_remaining)
     @printf(
         "Progress: %d / %d total iterations (%.3f%%)\n",

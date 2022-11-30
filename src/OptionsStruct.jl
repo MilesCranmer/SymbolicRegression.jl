@@ -103,18 +103,14 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{
-    LossType<:Union{SupervisedLoss,Function},
-    ComplexityType,
-    _prob_pick_first,
-    _ns,
-    FullLossType,
-}
+
+struct Options{CT}
     operators::AbstractOperatorEnum
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
-    complexity_mapping::ComplexityMapping{ComplexityType}
+    complexity_mapping::ComplexityMapping{CT}
     tournament_selection_n::Int
+    tournament_selection_p::Float32
     parsimony::Float32
     alpha::Float32
     maxsize::Int
@@ -146,8 +142,8 @@ struct Options{
     nuna::Int
     nbin::Int
     seed::Union{Int,Nothing}
-    elementwise_loss::LossType
-    loss_function::FullLossType
+    elementwise_loss::Union{SupervisedLoss,Function,Nothing}
+    loss_function::Union{Function,Nothing}
     progress::Bool
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::String
@@ -164,6 +160,7 @@ struct Options{
     skip_mutation_failures::Bool
     nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
     deterministic::Bool
+    define_helper_functions::Bool
 end
 
 function Base.print(io::IO, options::Options)

@@ -79,9 +79,12 @@ end
 function best_of_sample(
     pop::Population{T},
     running_search_statistics::RunningSearchStatistics,
-    options::Options{A,B,p,tournament_selection_n},
-)::PopMember where {T<:Real,A,B,p,tournament_selection_n}
+    options::Options{CT},
+)::PopMember where {T<:Real,CT}
     sample = sample_pop(pop, options)
+
+    p = options.tournament_selection_p
+    tournament_selection_n = options.tournament_selection_n
 
     if options.use_frequency_in_tournament
         # Score based on frequency of that size occuring.
@@ -92,7 +95,7 @@ function best_of_sample(
         scores = Vector{T}(undef, tournament_selection_n)
         for (i, member) in enumerate(sample.members)
             size = compute_complexity(member.tree, options)
-            frequency = if (size <= options.maxsize)
+            frequency = if (0 < size <= options.maxsize)
                 running_search_statistics.normalized_frequencies[size]
             else
                 T(0)

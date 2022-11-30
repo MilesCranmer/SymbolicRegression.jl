@@ -1,7 +1,7 @@
 name = "SymbolicRegression"
 uuid = "8254be44-1295-4e6a-a16d-46603ac705cb"
 authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
-version = "0.14.3"
+version = "0.14.5"
 
 [deps]
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
@@ -15,13 +15,14 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 ProgressBars = "49802e3a-d2f1-5c88-81d8-b72133a6f568"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+SnoopPrecompile = "66db9d55-30c0-4569-8b51-7e840670fc0c"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
-DynamicExpressions = "0.4"
+DynamicExpressions = "0.4.2"
 JSON3 = "1"
 LineSearches = "7"
 LossFunctions = "0.6, 0.7, 0.8"
@@ -29,6 +30,7 @@ Optim = "0.19, 1.1"
 Pkg = "1"
 ProgressBars = "1.4"
 Reexport = "1"
+SnoopPrecompile = "1"
 SpecialFunctions = "0.10.1, 1, 2"
 StatsBase = "0.33"
 SymbolicUtils = "0.19"

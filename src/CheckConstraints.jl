@@ -140,7 +140,8 @@ end
 
 """Check if user-passed constraints are violated or not"""
 function check_constraints(tree::Node, options::Options, maxsize::Int)::Bool
-    if compute_complexity(tree, options) > maxsize
+    size = compute_complexity(tree, options)
+    if 0 > size > maxsize
         return false
     end
     for i in 1:(options.nbin)

@@ -42,7 +42,7 @@ for an equation at size `size`.
 @inline function update_frequencies!(
     running_search_statistics::RunningSearchStatistics; size=nothing
 )
-    if size <= length(running_search_statistics.frequencies)
+    if 0 < size <= length(running_search_statistics.frequencies)
         running_search_statistics.frequencies[size] += 1
     end
     return nothing
