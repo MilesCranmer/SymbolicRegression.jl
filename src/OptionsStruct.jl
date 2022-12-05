@@ -142,7 +142,7 @@ struct Options{CT}
     nuna::Int
     nbin::Int
     seed::Union{Int,Nothing}
-    elementwise_loss::Union{SupervisedLoss,Function,Nothing}
+    elementwise_loss::Union{SupervisedLoss,Function}
     loss_function::Union{Function,Nothing}
     progress::Bool
     terminal_width::Union{Int,Nothing}
