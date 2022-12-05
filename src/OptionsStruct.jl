@@ -103,7 +103,6 @@ function ComplexityMapping(;
     )
 end
 
-
 struct Options{CT}
     operators::AbstractOperatorEnum
     bin_constraints::Vector{Tuple{Int,Int}}

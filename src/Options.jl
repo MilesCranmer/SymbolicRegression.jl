@@ -622,7 +622,6 @@ function Options(;
         end
     end
 
-
     options = Options{eltype(complexity_mapping)}(
         operators,
         bin_constraints,
