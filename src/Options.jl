@@ -265,6 +265,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     `MutationWeights` should be passed to these options.
     See its documentation on `MutationWeights` for the different weights.
 - `crossover_probability`: Probability of performing crossover.
+- `expected_extra_mutations`: Average number of extra mutations to perform.
+    The number of extra mutations is sampled from a Poisson distribution.
 - `annealing`: Whether to use simulated annealing.
 - `warmup_maxsize_by`: Whether to slowly increase the max size from 5 up to
     `maxsize`. If nonzero, specifies the fraction through the search
@@ -327,6 +329,7 @@ function Options(;
     batch_size=50,
     mutation_weights::Union{MutationWeights,AbstractVector}=MutationWeights(),
     crossover_probability=0.066f0,
+    expected_extra_mutations=0,
     warmup_maxsize_by=0.0f0,
     use_frequency=true,
     use_frequency_in_tournament=true,
@@ -372,7 +375,8 @@ function Options(;
             continue
         else
             Base.depwarn(
-                "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.", :Options
+                "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.",
+                :Options,
             )
         end
         # Now, set the new key to the old value:
@@ -628,6 +632,7 @@ function Options(;
         batch_size,
         mutation_weights,
         crossover_probability,
+        expected_extra_mutations,
         warmup_maxsize_by,
         use_frequency,
         use_frequency_in_tournament,

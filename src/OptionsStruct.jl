@@ -126,6 +126,7 @@ struct Options{CT}
     batch_size::Int
     mutation_weights::MutationWeights
     crossover_probability::Float32
+    expected_extra_mutations::Float32
     warmup_maxsize_by::Float32
     use_frequency::Bool
     use_frequency_in_tournament::Bool

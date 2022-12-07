@@ -1,6 +1,7 @@
 module RegularizedEvolutionModule
 
 import Random: shuffle!
+import Distributions: Poisson
 import DynamicExpressions: string_tree
 import ..CoreModule: Options, Dataset, RecordType
 import ..PopMemberModule: PopMember
@@ -42,6 +43,28 @@ function reg_evol_cycle(
                 options;
                 tmp_recorder=mutation_recorder,
             )
+            if options.expected_extra_mutations > 0.0f0
+                # Sample a Poisson process:
+                num_extra_mutations = rand(Poisson(options.expected_extra_mutations))
+                for _ in 1:num_extra_mutations
+                    # TODO: Want to make it so that initial mutation is allowed
+                    # to fail, because we can fix it on the second.
+                    new_baby, new_mutation_accepted, new_tmp_num_evals = next_generation(
+                        dataset,
+                        baby,
+                        temperature,
+                        curmaxsize,
+                        running_search_statistics,
+                        options;
+                        tmp_recorder=mutation_recorder,
+                    )
+
+                    baby = new_baby
+                    mutation_accepted |= new_mutation_accepted
+                    tmp_num_evals += new_tmp_num_evals
+                end
+            end
+
             num_evals += tmp_num_evals
 
             if !mutation_accepted && options.skip_mutation_failures
@@ -77,8 +100,7 @@ function reg_evol_cycle(
                 # Put in random key rather than vector; otherwise there are collisions!
                 push!(record["mutations"]["$(allstar.ref)"]["events"], mutate_event)
                 push!(
-                    record["mutations"]["$(pop.members[oldest].ref)"]["events"],
-                    death_event,
+                    record["mutations"]["$(pop.members[oldest].ref)"]["events"], death_event
                 )
             end
 
