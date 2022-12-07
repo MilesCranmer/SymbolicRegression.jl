@@ -14,7 +14,6 @@ default_params = (
     alpha=0.100000f0,
     maxsize=20,
     maxdepth=nothing,
-    fast_cycle=false,
     migration=true,
     hof_migration=true,
     fraction_replaced_hof=0.1f0,

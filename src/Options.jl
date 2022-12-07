@@ -139,6 +139,7 @@ const deprecated_options_mapping = NamedTuple([
     :earlyStopCondition => :early_stop_condition,
     :stateReturn => :return_state,
     :ns => :tournament_selection_n,
+    :fast_cycle => nothing,
 ])
 
 """
@@ -235,9 +236,6 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `adaptive_parsimony_scaling`: How much to scale the adaptive parsimony term
     in the loss. Increase this if the search is spending too much time
     optimizing the most complex equations.
-- `fast_cycle`: Whether to thread over subsamples of equations during
-    regularized evolution. Slightly improves performance, but is a different
-    algorithm.
 - `turbo`: Whether to use `LoopVectorization.@turbo` to evaluate expressions.
     This can be significantly faster, but is only compatible with certain
     operators. *Experimental!*
@@ -317,7 +315,6 @@ function Options(;
     alpha=0.100000f0,
     maxsize=20,
     maxdepth=nothing,
-    fast_cycle=false,
     turbo=false,
     migration=true,
     hof_migration=true,
@@ -368,9 +365,16 @@ function Options(;
     for k in keys(kws)
         !haskey(deprecated_options_mapping, k) && error("Unknown keyword argument: $k")
         new_key = deprecated_options_mapping[k]
-        Base.depwarn(
-            "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.", :Options
-        )
+        if new_key === nothing
+            Base.depwarn(
+                "The keyword argument `$(k)` is deprecated, and has no effect.", :Options
+            )
+            continue
+        else
+            Base.depwarn(
+                "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.", :Options
+            )
+        end
         # Now, set the new key to the old value:
         #! format: off
         k == :hofMigration && (hof_migration = kws[k]; true) && continue
@@ -612,7 +616,6 @@ function Options(;
         alpha,
         maxsize,
         maxdepth,
-        fast_cycle,
         turbo,
         migration,
         hof_migration,

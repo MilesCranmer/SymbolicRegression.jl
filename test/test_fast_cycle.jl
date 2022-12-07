@@ -9,7 +9,6 @@ options = SymbolicRegression.Options(;
     unary_operators=(cos,),
     npopulations=4,
     constraints=((*) => (-1, 10), cos => (5)),
-    fast_cycle=true,
     skip_mutation_failures=true,
     return_state=true,
 )

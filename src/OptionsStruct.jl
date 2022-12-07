@@ -114,7 +114,6 @@ struct Options{CT}
     alpha::Float32
     maxsize::Int
     maxdepth::Int
-    fast_cycle::Bool
     turbo::Bool
     migration::Bool
     hof_migration::Bool
@@ -184,7 +183,7 @@ function Base.print(io::IO, options::Options)
     # Annealing:
         annealing=$(options.annealing), alpha=$(options.alpha), 
     # Speed Tweaks:
-        batching=$(options.batching), batch_size=$(options.batch_size), fast_cycle=$(options.fast_cycle), 
+        batching=$(options.batching), batch_size=$(options.batch_size),
     # Logistics:
         output_file=$(options.output_file), verbosity=$(options.verbosity), seed=$(options.seed), progress=$(options.progress),
     # Early Exit:
