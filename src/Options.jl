@@ -266,6 +266,7 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `mutation_weights`: Relative probabilities of the mutations. The struct
     `MutationWeights` should be passed to these options.
     See its documentation on `MutationWeights` for the different weights.
+- `crossover_probability`: Probability of performing crossover.
 - `annealing`: Whether to use simulated annealing.
 - `warmup_maxsize_by`: Whether to slowly increase the max size from 5 up to
     `maxsize`. If nonzero, specifies the fraction through the search
