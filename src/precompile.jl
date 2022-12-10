@@ -35,8 +35,8 @@ end
 function do_precompilation(; mode=:precompile)
     @maybe_precompile_setup mode begin
         # Only precompile the new ones; DynamicExpressions.jl should do the rest.
-        binary_operators = [[+, -, *, /, ^]]
-        unary_operators = [[log, sqrt, cube, square, log]]
+        binary_operators = [[plus, sub, mult, div, safe_pow]]
+        unary_operators = [[square, cube, safe_log, safe_sqrt, sin, cos]]
         @maybe_precompile_all_calls mode begin
             DynamicExpressions.test_all_combinations(;
                 binary_operators,
