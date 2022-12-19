@@ -425,7 +425,7 @@ function Options(;
         Base.depwarn(
             "`loss` is deprecated. Please use `elementwise_loss` instead. " *
             "You may also use `loss_function` to specify the entire objective given an expression.",
-            Options,
+            :Options,
         )
         @assert loss_function === nothing
         @assert elementwise_loss === nothing
