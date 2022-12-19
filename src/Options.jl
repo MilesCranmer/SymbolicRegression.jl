@@ -205,7 +205,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     scalar of type `T`. This is useful if you want to use a loss
     that takes into account derivatives, or correlations across
     the dataset. This also means you could use a custom evaluation
-    for a particular expression.
+    for a particular expression. Take a look at `_eval_loss` in
+    the file `src/LossFunctions.jl` for an example.
 - `npopulations`: How many populations of equations to use. By default
     this is set equal to the number of cores
 - `npop`: How many equations in each population.
