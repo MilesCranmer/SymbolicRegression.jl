@@ -20,7 +20,7 @@ options = SymbolicRegression.Options(;
     npopulations=20,
     early_stop_condition=early_stop,
     enable_autodiff=true,
-    loss=my_loss,
+    elementwise_loss=my_loss,
 )
 
 hof = EquationSearch(
