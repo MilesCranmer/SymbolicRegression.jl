@@ -139,6 +139,7 @@ const deprecated_options_mapping = NamedTuple([
     :earlyStopCondition => :early_stop_condition,
     :stateReturn => :return_state,
     :ns => :tournament_selection_n,
+    :loss => :elementwise_loss,
 ])
 
 """
@@ -370,7 +371,6 @@ function Options(;
     enable_autodiff::Bool=false,
     nested_constraints=nothing,
     deterministic=false,
-    loss=nothing,
     # Not search options; just construction options:
     define_helper_functions=true,
     # Deprecated args:
@@ -402,6 +402,7 @@ function Options(;
         k == :earlyStopCondition && (early_stop_condition = kws[k]; true) && continue
         k == :stateReturn && (return_state = kws[k]; true) && continue
         k == :ns && (tournament_selection_n = kws[k]; true) && continue
+        k == :loss && (elementwise_loss = kws[k]; true) && continue
         if k == :mutationWeights
             if typeof(kws[k]) <: AbstractVector
                 _mutation_weights = kws[k]
@@ -422,17 +423,6 @@ function Options(;
         error(
             "Unknown deprecated keyword argument: $k. Please update `Options(;)` to transfer this key.",
         )
-    end
-
-    if loss !== nothing
-        Base.depwarn(
-            "`loss` is deprecated. Please use `elementwise_loss` instead. " *
-            "You may also use `loss_function` to specify the entire objective given an expression.",
-            :Options,
-        )
-        @assert loss_function === nothing
-        @assert elementwise_loss === nothing
-        elementwise_loss = loss
     end
 
     if elementwise_loss === nothing
