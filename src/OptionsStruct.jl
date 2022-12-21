@@ -137,6 +137,7 @@ struct Options{CT}
     fraction_replaced_hof::Float32
     topn::Int
     verbosity::Int
+    save_to_file::Bool
     probability_negate_constant::Float32
     nuna::Int
     nbin::Int

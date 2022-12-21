@@ -280,6 +280,7 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     at which the maxsize should be reached.
 - `verbosity`: Whether to print debugging statements or
     not.
+- `save_to_file`: Whether to save equations to a file during the search.
 - `bin_constraints`: See `constraints`. This is the same, but specified for binary
     operators only (for example, if you have an operator that is both a binary
     and unary operator).
@@ -347,6 +348,7 @@ function Options(;
     fraction_replaced=0.00036f0,
     fraction_replaced_hof=0.035f0,
     verbosity=convert(Int, 1e9),
+    save_to_file=true,
     probability_negate_constant=0.01f0,
     seed=nothing,
     bin_constraints=nothing,
@@ -663,6 +665,7 @@ function Options(;
         fraction_replaced_hof,
         topn,
         verbosity,
+        save_to_file,
         probability_negate_constant,
         nuna,
         nbin,
