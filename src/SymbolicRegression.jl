@@ -584,6 +584,7 @@ function _EquationSearch(
 
             # TODO - why is this needed??
             # Multi-threaded doesn't like to fetch within a new task:
+            copy_search_stats = deepcopy(running_search_statistics)
             updated_pop = @sr_spawner parallelism worker_idx let
                 in_pop = if parallelism in (:multiprocessing, :multithreading)
                     fetch(init_pops[j][i])[1]
@@ -596,13 +597,13 @@ function _EquationSearch(
                     "iteration0" => record_population(in_pop, options)
                 )
                 tmp_num_evals = 0.0
-                normalize_frequencies!(running_search_statistics)
+                normalize_frequencies!(copy_search_stats)
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
                     in_pop,
                     options.ncycles_per_iteration,
                     curmaxsize,
-                    running_search_statistics;
+                    copy_search_stats;
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
@@ -787,19 +788,21 @@ function _EquationSearch(
                 iteration = find_iteration_from_record(key, record) + 1
             end
 
+            copy_search_stats = deepcopy(all_running_search_statistics[j])
+            copy_cur_pop = copy_population(cur_pop)
             allPops[j][i] = @sr_spawner parallelism worker_idx let
                 cur_record = RecordType()
                 @recorder cur_record[key] = RecordType(
-                    "iteration$(iteration)" => record_population(cur_pop, options)
+                    "iteration$(iteration)" => record_population(copy_cur_pop, options)
                 )
                 tmp_num_evals = 0.0
-                normalize_frequencies!(all_running_search_statistics[j])
+                normalize_frequencies!(copy_search_stats)
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
-                    cur_pop,
+                    copy_cur_pop,
                     options.ncycles_per_iteration,
                     curmaxsize,
-                    all_running_search_statistics[j];
+                    copy_search_stats;
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
