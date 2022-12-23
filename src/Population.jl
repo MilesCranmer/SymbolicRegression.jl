@@ -5,7 +5,7 @@ import Random: randperm
 import DynamicExpressions: string_tree
 import ..CoreModule: Options, Dataset, RecordType
 import ..ComplexityModule: compute_complexity
-import ..LossFunctionsModule: score_func, update_baseline_loss!
+import ..LossFunctionsModule: score_func
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..MutationFunctionsModule: gen_random_tree
 import ..PopMemberModule: PopMember, copy_pop_member
@@ -60,7 +60,6 @@ function Population(
     nfeatures::Int,
 ) where {T<:Real}
     dataset = Dataset(X, y)
-    update_baseline_loss!(dataset, options)
     return Population(dataset; npop=npop, options=options, nfeatures=nfeatures)
 end
 
