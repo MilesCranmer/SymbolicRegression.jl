@@ -17,6 +17,7 @@ function assert_operators_defined_over_reals(T, options::Options)
             end
         end
     catch error
+        # TODO: Only raise error if domain error.
         throw(
             AssertionError(
                 "Your configuration is invalid - one of your operators ($cur_op) is not well-defined over the real line. You can get around this by returning `NaN` for invalid inputs.",
