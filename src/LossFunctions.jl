@@ -31,7 +31,7 @@ function _weighted_loss(
 end
 
 # Evaluate the loss of a particular expression on the input dataset.
-function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
+function _eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
     (prediction, completion) = eval_tree_array(tree, dataset.X, options)
     if !completion
         return T(Inf)
@@ -39,10 +39,30 @@ function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T wher
 
     if dataset.weighted
         return _weighted_loss(
-            prediction, dataset.y, dataset.weights::AbstractVector{T}, options.loss
+            prediction,
+            dataset.y,
+            dataset.weights::AbstractVector{T},
+            options.elementwise_loss,
         )
     else
-        return _loss(prediction, dataset.y, options.loss)
+        return _loss(prediction, dataset.y, options.elementwise_loss)
+    end
+end
+
+# This evaluates function F:
+function evaluator(
+    f::F, tree::Node{T}, dataset::Dataset{T}, options::Options
+)::T where {T<:Real,F}
+    return f(tree, dataset, options)
+end
+
+# Evaluate the loss of a particular expression on the input dataset.
+function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
+    if options.loss_function === nothing
+        return _eval_loss(tree, dataset, options)
+    else
+        f = options.loss_function::Function
+        return evaluator(f, tree, dataset, options)
     end
 end
 
@@ -84,11 +104,11 @@ function score_func_batch(
     end
 
     if !dataset.weighted
-        result_loss = _loss(prediction, batch_y, options.loss)
+        result_loss = _loss(prediction, batch_y, options.elementwise_loss)
     else
         w = dataset.weights::AbstractVector{T}
         batch_w = view(w, batch_idx)
-        result_loss = _weighted_loss(prediction, batch_y, batch_w, options.loss)
+        result_loss = _weighted_loss(prediction, batch_y, batch_w, options.elementwise_loss)
     end
     score = loss_to_score(result_loss, dataset.baseline_loss, tree, options)
     return score, result_loss
@@ -100,16 +120,8 @@ end
 Update the baseline loss of the dataset using the loss function specified in `options`.
 """
 function update_baseline_loss!(dataset::Dataset{T}, options::Options) where {T<:Real}
-    dataset.baseline_loss = if dataset.weighted
-        _weighted_loss(
-            dataset.y,
-            ones(T, dataset.n) .* dataset.avg_y,
-            dataset.weights::AbstractVector{T},
-            options.loss,
-        )
-    else
-        _loss(dataset.y, ones(T, dataset.n) .* dataset.avg_y, options.loss)
-    end
+    example_tree = Node(T; val=dataset.avg_y)
+    dataset.baseline_loss = eval_loss(example_tree, dataset, options)
     return nothing
 end
 

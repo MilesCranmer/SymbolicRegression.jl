@@ -139,6 +139,7 @@ const deprecated_options_mapping = NamedTuple([
     :earlyStopCondition => :early_stop_condition,
     :stateReturn => :return_state,
     :ns => :tournament_selection_n,
+    :loss => :elementwise_loss,
 ])
 
 """
@@ -171,7 +172,7 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `batching`: Whether to evolve based on small mini-batches of data,
     rather than the entire dataset.
 - `batch_size`: What batch size to use if using batching.
-- `loss`: What loss function to use. Can be one of
+- `elementwise_loss`: What elementwise loss function to use. Can be one of
     the following losses, or any other loss of type
     `SupervisedLoss`. You can also pass a function that takes
     a scalar target (left argument), and scalar predicted (right
@@ -199,6 +200,14 @@ https://github.com/MilesCranmer/PySR/discussions/115.
             - `ExpLoss()`,
             - `SigmoidLoss()`,
             - `DWDMarginLoss(q)`.
+- `loss_function`: Alternatively, you may redefine the loss used
+    as any function of `tree::Node{T}`, `dataset::Dataset{T}`,
+    and `options::Options`, so long as you output a non-negative
+    scalar of type `T`. This is useful if you want to use a loss
+    that takes into account derivatives, or correlations across
+    the dataset. This also means you could use a custom evaluation
+    for a particular expression. Take a look at `_eval_loss` in
+    the file `src/LossFunctions.jl` for an example.
 - `npopulations`: How many populations of equations to use. By default
     this is set equal to the number of cores
 - `npop`: How many equations in each population.
@@ -273,6 +282,7 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     at which the maxsize should be reached.
 - `verbosity`: Whether to print debugging statements or
     not.
+- `save_to_file`: Whether to save equations to a file during the search.
 - `bin_constraints`: See `constraints`. This is the same, but specified for binary
     operators only (for example, if you have an operator that is both a binary
     and unary operator).
@@ -306,7 +316,8 @@ function Options(;
     binary_operators=[+, -, /, *],
     unary_operators=[],
     constraints=nothing,
-    loss=L2DistLoss(),
+    elementwise_loss=nothing,
+    loss_function=nothing,
     tournament_selection_n=12, #1 sampled from every tournament_selection_n per mutation
     tournament_selection_p=0.86f0,
     topn=12, #samples to return per population
@@ -339,6 +350,7 @@ function Options(;
     fraction_replaced=0.00036f0,
     fraction_replaced_hof=0.035f0,
     verbosity=convert(Int, 1e9),
+    save_to_file=true,
     probability_negate_constant=0.01f0,
     seed=nothing,
     bin_constraints=nothing,
@@ -391,6 +403,7 @@ function Options(;
         k == :earlyStopCondition && (early_stop_condition = kws[k]; true) && continue
         k == :stateReturn && (return_state = kws[k]; true) && continue
         k == :ns && (tournament_selection_n = kws[k]; true) && continue
+        k == :loss && (elementwise_loss = kws[k]; true) && continue
         if k == :mutationWeights
             if typeof(kws[k]) <: AbstractVector
                 _mutation_weights = kws[k]
@@ -411,6 +424,14 @@ function Options(;
         error(
             "Unknown deprecated keyword argument: $k. Please update `Options(;)` to transfer this key.",
         )
+    end
+
+    if elementwise_loss === nothing
+        elementwise_loss = L2DistLoss()
+    else
+        if loss_function !== nothing
+            error("You cannot specify both `elementwise_loss` and `loss_function`.")
+        end
     end
 
     if output_file === nothing
@@ -635,11 +656,13 @@ function Options(;
         fraction_replaced_hof,
         topn,
         verbosity,
+        save_to_file,
         probability_negate_constant,
         nuna,
         nbin,
         seed,
-        loss,
+        elementwise_loss,
+        loss_function,
         progress,
         terminal_width,
         optimizer_algorithm,

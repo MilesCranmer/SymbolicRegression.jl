@@ -5,6 +5,7 @@ export Population,
     PopMember,
     HallOfFame,
     Options,
+    Dataset,
     MutationWeights,
     Node,
 
@@ -744,20 +745,23 @@ function _EquationSearch(
 
             # Dominating pareto curve - must be better than all simpler equations
             dominating = calculate_pareto_frontier(dataset, hallOfFame[j], options)
-            output_file = options.output_file
-            if nout > 1
-                output_file = output_file * ".out$j"
-            end
-            # Write file twice in case exit in middle of filewrite
-            for out_file in (output_file, output_file * ".bkup")
-                open(out_file, "w") do io
-                    println(io, "Complexity,Loss,Equation")
-                    for member in dominating
-                        println(
-                            io,
-                            "$(compute_complexity(member.tree, options)),$(member.loss),\"" *
-                            "$(string_tree(member.tree, options.operators, varMap=dataset.varMap))\"",
-                        )
+
+            if options.save_to_file
+                output_file = options.output_file
+                if nout > 1
+                    output_file = output_file * ".out$j"
+                end
+                # Write file twice in case exit in middle of filewrite
+                for out_file in (output_file, output_file * ".bkup")
+                    open(out_file, "w") do io
+                        println(io, "Complexity,Loss,Equation")
+                        for member in dominating
+                            println(
+                                io,
+                                "$(compute_complexity(member.tree, options)),$(member.loss),\"" *
+                                "$(string_tree(member.tree, options.operators, varMap=dataset.varMap))\"",
+                            )
+                        end
                     end
                 end
             end

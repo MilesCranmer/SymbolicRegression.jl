@@ -69,9 +69,9 @@ function test_dataset_configuration(dataset::Dataset{T}, options::Options) where
         end
     end
 
-    if !(typeof(options.loss) <: SupervisedLoss)
+    if !(typeof(options.elementwise_loss) <: SupervisedLoss)
         if dataset.weighted
-            if !(3 in [m.nargs - 1 for m in methods(options.loss)])
+            if !(3 in [m.nargs - 1 for m in methods(options.elementwise_loss)])
                 throw(
                     AssertionError(
                         "When you create a custom loss function, and are using weights, you need to define your loss function with three scalar arguments: f(prediction, target, weight).",
@@ -94,46 +94,62 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
 
     # All the types of functions we need to move to workers:
     function_sets = (
-        :unaops, :binops, :diff_unaops, :diff_binops, :loss, :early_stop_condition
+        :unaops,
+        :binops,
+        :diff_unaops,
+        :diff_binops,
+        :elementwise_loss,
+        :early_stop_condition,
+        :loss_function,
     )
 
     for function_set in function_sets
         if function_set == :unaops
             ops = options.operators.unaops
-            nargs = 1
+            example_inputs = (zero(T),)
         elseif function_set == :binops
             ops = options.operators.binops
-            nargs = 2
+            example_inputs = (zero(T), zero(T))
         elseif function_set == :diff_unaops
             if !enable_autodiff
                 continue
             end
             ops = options.operators.diff_unaops
-            nargs = 1
+            example_inputs = (zero(T),)
         elseif function_set == :diff_binops
             if !enable_autodiff
                 continue
             end
             ops = options.operators.diff_binops
-            nargs = 2
-        elseif function_set == :loss
-            if typeof(options.loss) <: SupervisedLoss
+            example_inputs = (zero(T), zero(T))
+        elseif function_set == :elementwise_loss
+            if typeof(options.elementwise_loss) <: SupervisedLoss
                 continue
             end
-            ops = (options.loss,)
-            nargs = dataset.weighted ? 3 : 2
+            ops = (options.elementwise_loss,)
+            example_inputs = if dataset.weighted
+                (zero(T), zero(T), zero(T))
+            else
+                (zero(T), zero(T))
+            end
         elseif function_set == :early_stop_condition
             if !(typeof(options.early_stop_condition) <: Function)
                 continue
             end
             ops = (options.early_stop_condition,)
-            nargs = 2
+            example_inputs = (zero(T), 0)
+        elseif function_set == :loss_function
+            if options.loss_function === nothing
+                continue
+            end
+            ops = (options.loss_function,)
+            example_inputs = (Node(T; val=zero(T)), dataset, options)
         else
             error("Invalid function set: $function_set")
         end
         for op in ops
             try
-                test_function_on_workers(T, nargs, op, procs)
+                test_function_on_workers(example_inputs, op, procs)
             catch e
                 undefined_on_workers = isa(e.captured.ex, UndefVarError)
                 if undefined_on_workers
@@ -142,7 +158,7 @@ function move_functions_to_workers(procs, options::Options, dataset::Dataset{T})
                     throw(e)
                 end
             end
-            test_function_on_workers(T, nargs, op, procs)
+            test_function_on_workers(example_inputs, op, procs)
         end
     end
 end
@@ -162,16 +178,10 @@ function copy_definition_to_workers(op, procs, options::Options)
     return debug((options.verbosity > 0 || options.progress), "Finished!")
 end
 
-function test_function_on_workers(T, nargs, op, procs)
+function test_function_on_workers(example_inputs, op, procs)
     futures = []
     for proc in procs
-        if nargs == 1
-            push!(futures, @spawnat proc op(convert(T, 0)))
-        elseif nargs == 2 #2D ops, and loss function
-            push!(futures, @spawnat proc op(convert(T, 0), convert(T, 0)))
-        elseif nargs == 3 #weighted loss function
-            push!(futures, @spawnat proc op(convert(T, 0), convert(T, 0), convert(T, 0)))
-        end
+        push!(futures, @spawnat proc op(example_inputs...))
     end
     for future in futures
         fetch(future)

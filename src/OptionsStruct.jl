@@ -137,11 +137,13 @@ struct Options{CT}
     fraction_replaced_hof::Float32
     topn::Int
     verbosity::Int
+    save_to_file::Bool
     probability_negate_constant::Float32
     nuna::Int
     nbin::Int
     seed::Union{Int,Nothing}
-    loss::Union{SupervisedLoss,Function}
+    elementwise_loss::Union{SupervisedLoss,Function}
+    loss_function::Union{Function,Nothing}
     progress::Bool
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::String
@@ -168,7 +170,7 @@ function Base.print(io::IO, options::Options)
     # Operators:
         binops=$(options.operators.binops), unaops=$(options.operators.unaops),
     # Loss:
-        loss=$(options.loss),
+        loss=$(options.elementwise_loss),
     # Complexity Management:
         maxsize=$(options.maxsize), maxdepth=$(options.maxdepth), bin_constraints=$(options.bin_constraints), una_constraints=$(options.una_constraints), use_frequency=$(options.use_frequency), use_frequency_in_tournament=$(options.use_frequency_in_tournament), parsimony=$(options.parsimony), warmup_maxsize_by=$(options.warmup_maxsize_by), 
     # Search Size:

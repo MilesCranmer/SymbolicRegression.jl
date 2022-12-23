@@ -58,7 +58,8 @@ function do_precompilation(; mode=:precompile)
                     fraction_replaced=0.2,
                     fraction_replaced_hof=0.2,
                     define_helper_functions=false,
-                    optimize_probability=0.05,
+                    optimizer_probability=0.05,
+                    save_to_file=false,
                 )
                 redirect_stderr(devnull) do
                     redirect_stdout(devnull) do
