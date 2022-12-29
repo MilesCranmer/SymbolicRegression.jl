@@ -63,4 +63,18 @@ function Dataset(
     return Dataset{T}(X, y, n, nfeatures, weighted, weights, avg_y, baseline, varMap)
 end
 
+function copy_dataset(dataset::Dataset{T}) where {T<:Real}
+    return Dataset{T}(
+        copy(dataset.X),
+        copy(dataset.y),
+        dataset.n,
+        dataset.nfeatures,
+        dataset.weighted,
+        dataset.weighted ? copy(dataset.weights) : nothing,
+        dataset.avg_y,
+        dataset.baseline_loss,
+        copy(dataset.varMap),
+    )
+end
+
 end

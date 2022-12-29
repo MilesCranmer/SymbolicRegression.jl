@@ -143,6 +143,7 @@ import .CoreModule:
     FEATURE_DIM,
     RecordType,
     Dataset,
+    copy_dataset,
     Options,
     MutationWeights,
     plus,
@@ -546,16 +547,18 @@ function _EquationSearch(
 
             if saved_pop !== nothing && length(saved_pop.members) == options.npop
                 saved_pop::Population{T}
+                copy_saved_pop = copy_population(saved_pop)
                 new_pop = @sr_spawner parallelism worker_idx (
-                    saved_pop, HallOfFame(options, T), RecordType(), 0.0
+                    copy_saved_pop, HallOfFame(options, T), RecordType(), 0.0
                 )
             else
                 if saved_pop !== nothing
                     @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
                 end
+                cdataset = copy_dataset(datasets[j])
                 new_pop = @sr_spawner parallelism worker_idx (
                     Population(
-                        datasets[j];
+                        cdataset;
                         npop=options.npop,
                         nlength=3,
                         options=options,
@@ -585,6 +588,7 @@ function _EquationSearch(
             # TODO - why is this needed??
             # Multi-threaded doesn't like to fetch within a new task:
             copy_search_stats = deepcopy(running_search_statistics)
+            cdataset = copy_dataset(dataset)
             updated_pop = @sr_spawner parallelism worker_idx let
                 in_pop = if parallelism in (:multiprocessing, :multithreading)
                     fetch(init_pops[j][i])[1]
@@ -599,7 +603,7 @@ function _EquationSearch(
                 tmp_num_evals = 0.0
                 normalize_frequencies!(copy_search_stats)
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
-                    dataset,
+                    cdataset,
                     in_pop,
                     options.ncycles_per_iteration,
                     curmaxsize,
@@ -610,13 +614,13 @@ function _EquationSearch(
                 )
                 tmp_num_evals += evals_from_cycle
                 tmp_pop, evals_from_optimize = optimize_and_simplify_population(
-                    dataset, tmp_pop, options, curmaxsize, cur_record
+                    cdataset, tmp_pop, options, curmaxsize, cur_record
                 )
                 tmp_num_evals += evals_from_optimize
                 if options.batching
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
                         score, result_loss = score_func(
-                            dataset, tmp_best_seen.members[i_member].tree, options
+                            cdataset, tmp_best_seen.members[i_member].tree, options
                         )
                         tmp_best_seen.members[i_member].score = score
                         tmp_best_seen.members[i_member].loss = result_loss
@@ -790,6 +794,7 @@ function _EquationSearch(
 
             copy_search_stats = deepcopy(all_running_search_statistics[j])
             copy_cur_pop = copy_population(cur_pop)
+            cdataset = copy_dataset(dataset)
             allPops[j][i] = @sr_spawner parallelism worker_idx let
                 cur_record = RecordType()
                 @recorder cur_record[key] = RecordType(
@@ -798,7 +803,7 @@ function _EquationSearch(
                 tmp_num_evals = 0.0
                 normalize_frequencies!(copy_search_stats)
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
-                    dataset,
+                    cdataset,
                     copy_cur_pop,
                     options.ncycles_per_iteration,
                     curmaxsize,
@@ -809,7 +814,7 @@ function _EquationSearch(
                 )
                 tmp_num_evals += evals_from_cycle
                 tmp_pop, evals_from_optimize = optimize_and_simplify_population(
-                    dataset, tmp_pop, options, curmaxsize, cur_record
+                    cdataset, tmp_pop, options, curmaxsize, cur_record
                 )
                 tmp_num_evals += evals_from_optimize
 
@@ -818,7 +823,7 @@ function _EquationSearch(
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
                         if tmp_best_seen.exists[i_member]
                             score, result_loss = score_func(
-                                dataset, tmp_best_seen.members[i_member].tree, options
+                                cdataset, tmp_best_seen.members[i_member].tree, options
                             )
                             tmp_best_seen.members[i_member].score = score
                             tmp_best_seen.members[i_member].loss = result_loss

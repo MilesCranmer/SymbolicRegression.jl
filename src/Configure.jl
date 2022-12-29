@@ -243,18 +243,19 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
         (options.verbosity > 0 || options.progress), "Testing entire pipeline on workers..."
     )
     for proc in procs
+        cdataset = copy_dataset(dataset)
         push!(
             futures,
             @spawnat proc begin
                 tmp_pop = Population(
-                    dataset;
+                    cdataset;
                     npop=20,
                     nlength=3,
                     options=options,
                     nfeatures=dataset.nfeatures,
                 )
                 tmp_pop = s_r_cycle(
-                    dataset,
+                    cdataset,
                     tmp_pop,
                     5,
                     5,
@@ -264,7 +265,7 @@ function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) wher
                     record=RecordType(),
                 )[1]
                 tmp_pop = optimize_and_simplify_population(
-                    dataset, tmp_pop, options, options.maxsize, RecordType()
+                    cdataset, tmp_pop, options, options.maxsize, RecordType()
                 )
             end
         )

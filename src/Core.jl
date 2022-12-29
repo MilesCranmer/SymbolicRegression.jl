@@ -8,7 +8,7 @@ include("Operators.jl")
 include("Options.jl")
 
 import .ProgramConstantsModule: MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType
-import .DatasetModule: Dataset
+import .DatasetModule: Dataset, copy_dataset
 import .OptionsStructModule: Options, MutationWeights, sample_mutation
 import .OptionsModule: Options
 import .OperatorsModule:
