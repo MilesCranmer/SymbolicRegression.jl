@@ -130,92 +130,138 @@ end
 
 # Code structure
 
-The dependency structure is as follows:
+SymbolicRegression.jl is organized roughly as follows.
+Rounded rectangles indicate objects, and rectangles indicate functions.
+> (if you can't see this diagram being rendered, try pasting it into [mermaid-js.github.io/mermaid-live-editor](https://mermaid-js.github.io/mermaid-live-editor))
+
+```mermaid
+flowchart TB
+    op([Options])
+    d([Dataset])
+    op --> ES
+    d --> ES
+    subgraph ES[EquationSearch]
+        direction TB
+        IP[sr_spawner]
+        IP --> p1
+        IP --> p2
+        subgraph p1[Thread 1]
+            direction LR
+            pop1([Population])
+            pop1 --> src[s_r_cycle]
+            src --> opt[optimize_and_simplify_population]
+            opt --> pop1
+        end
+        subgraph p2[Thread 2]
+            direction LR
+            pop2([Population])
+            pop2 --> src2[s_r_cycle]
+            src2 --> opt2[optimize_and_simplify_population]
+            opt2 --> pop2
+        end
+        pop1 --> hof
+        pop2 --> hof
+        hof([HallOfFame])
+        hof --> migration
+        pop1 <-.-> migration
+        pop2 <-.-> migration
+        migration[migrate!]
+    end
+    ES --> output([HallOfFame])
+```
+
+The `HallOfFame` objects store the expressions with the lowest loss seen at each complexity.
+
+The dependency structure of the code itself is as follows:
 
 ```mermaid
 stateDiagram-v2
-AdaptiveParsimony --> Mutate
-AdaptiveParsimony --> Population
-AdaptiveParsimony --> RegularizedEvolution
-AdaptiveParsimony --> SingleIteration
-AdaptiveParsimony --> SymbolicRegression
-CheckConstraints --> Mutate
-CheckConstraints --> SymbolicRegression
-Complexity --> CheckConstraints
-Complexity --> HallOfFame
-Complexity --> LossFunctions
-Complexity --> Mutate
-Complexity --> Population
-Complexity --> SearchUtils
-Complexity --> SingleIteration
-Complexity --> SymbolicRegression
-ConstantOptimization --> SingleIteration
-Core --> AdaptiveParsimony
-Core --> CheckConstraints
-Core --> Complexity
-Core --> ConstantOptimization
-Core --> HallOfFame
-Core --> LossFunctions
-Core --> Migration
-Core --> Mutate
-Core --> MutationFunctions
-Core --> PopMember
-Core --> Population
-Core --> Recorder
-Core --> RegularizedEvolution
-Core --> SearchUtils
-Core --> SingleIteration
-Core --> SymbolicRegression
-Dataset --> Core
-HallOfFame --> SearchUtils
-HallOfFame --> SingleIteration
-HallOfFame --> SymbolicRegression
-LossFunctions --> ConstantOptimization
-LossFunctions --> HallOfFame
-LossFunctions --> Mutate
-LossFunctions --> PopMember
-LossFunctions --> Population
-LossFunctions --> SymbolicRegression
-Migration --> SymbolicRegression
-Mutate --> RegularizedEvolution
-MutationFunctions --> Mutate
-MutationFunctions --> Population
-MutationFunctions --> SymbolicRegression
-Operators --> Core
-Operators --> Options
-Options --> Core
-OptionsStruct --> Core
-OptionsStruct --> Options
-PopMember --> ConstantOptimization
-PopMember --> HallOfFame
-PopMember --> Migration
-PopMember --> Mutate
-PopMember --> Population
-PopMember --> RegularizedEvolution
-PopMember --> SingleIteration
-PopMember --> SymbolicRegression
-Population --> Migration
-Population --> RegularizedEvolution
-Population --> SearchUtils
-Population --> SingleIteration
-Population --> SymbolicRegression
-ProgramConstants --> Core
-ProgramConstants --> Dataset
-ProgressBars --> SearchUtils
-ProgressBars --> SymbolicRegression
-Recorder --> Mutate
-Recorder --> RegularizedEvolution
-Recorder --> SingleIteration
-Recorder --> SymbolicRegression
-RegularizedEvolution --> SingleIteration
-SearchUtils --> SymbolicRegression
-SingleIteration --> SymbolicRegression
-Utils --> CheckConstraints
-Utils --> ConstantOptimization
-Utils --> Options
-Utils --> PopMember
-Utils --> SingleIteration
-Utils --> SymbolicRegression
+    AdaptiveParsimony --> Mutate
+    AdaptiveParsimony --> Population
+    AdaptiveParsimony --> RegularizedEvolution
+    AdaptiveParsimony --> SingleIteration
+    AdaptiveParsimony --> SymbolicRegression
+    CheckConstraints --> Mutate
+    CheckConstraints --> SymbolicRegression
+    Complexity --> CheckConstraints
+    Complexity --> HallOfFame
+    Complexity --> LossFunctions
+    Complexity --> Mutate
+    Complexity --> Population
+    Complexity --> SearchUtils
+    Complexity --> SingleIteration
+    Complexity --> SymbolicRegression
+    ConstantOptimization --> Mutate
+    ConstantOptimization --> SingleIteration
+    Core --> AdaptiveParsimony
+    Core --> CheckConstraints
+    Core --> Complexity
+    Core --> ConstantOptimization
+    Core --> HallOfFame
+    Core --> InterfaceDynamicExpressions
+    Core --> LossFunctions
+    Core --> Migration
+    Core --> Mutate
+    Core --> MutationFunctions
+    Core --> PopMember
+    Core --> Population
+    Core --> Recorder
+    Core --> RegularizedEvolution
+    Core --> SearchUtils
+    Core --> SingleIteration
+    Core --> SymbolicRegression
+    Dataset --> Core
+    HallOfFame --> SearchUtils
+    HallOfFame --> SingleIteration
+    HallOfFame --> SymbolicRegression
+    InterfaceDynamicExpressions --> LossFunctions
+    InterfaceDynamicExpressions --> SymbolicRegression
+    LossFunctions --> ConstantOptimization
+    LossFunctions --> HallOfFame
+    LossFunctions --> Mutate
+    LossFunctions --> PopMember
+    LossFunctions --> Population
+    LossFunctions --> SymbolicRegression
+    Migration --> SymbolicRegression
+    Mutate --> RegularizedEvolution
+    MutationFunctions --> Mutate
+    MutationFunctions --> Population
+    MutationFunctions --> SymbolicRegression
+    Operators --> Core
+    Operators --> Options
+    Options --> Core
+    OptionsStruct --> Core
+    OptionsStruct --> Options
+    PopMember --> ConstantOptimization
+    PopMember --> HallOfFame
+    PopMember --> Migration
+    PopMember --> Mutate
+    PopMember --> Population
+    PopMember --> RegularizedEvolution
+    PopMember --> SingleIteration
+    PopMember --> SymbolicRegression
+    Population --> Migration
+    Population --> RegularizedEvolution
+    Population --> SearchUtils
+    Population --> SingleIteration
+    Population --> SymbolicRegression
+    ProgramConstants --> Core
+    ProgramConstants --> Dataset
+    ProgressBars --> SearchUtils
+    ProgressBars --> SymbolicRegression
+    Recorder --> Mutate
+    Recorder --> RegularizedEvolution
+    Recorder --> SingleIteration
+    Recorder --> SymbolicRegression
+    RegularizedEvolution --> SingleIteration
+    SearchUtils --> SymbolicRegression
+    SingleIteration --> SymbolicRegression
+    Utils --> CheckConstraints
+    Utils --> ConstantOptimization
+    Utils --> Options
+    Utils --> PopMember
+    Utils --> SingleIteration
+    Utils --> SymbolicRegression
 ```
 
 
