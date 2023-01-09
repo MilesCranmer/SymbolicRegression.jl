@@ -22,6 +22,18 @@ readme = replace(readme, r"<img src=\"([^\"]+)\"[^>]+>.*" => s"![](\1)")
 # Then, we remove any line with "<div" on it:
 readme = replace(readme, r"<[/]?div.*" => s"")
 
+# Then, we init mermaid.js:
+init_mermaid = """
+```@raw html
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true });
+</script>
+```
+"""
+
+readme = init_mermaid * readme
+
 # Finally, we read in file docs/src/index_base.md:
 index_base = open(dirname(@__FILE__) * "/src/index_base.md") do io
     read(io, String)
