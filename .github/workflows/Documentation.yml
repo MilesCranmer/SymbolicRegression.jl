@@ -8,6 +8,7 @@ on:
     paths:
       - 'src/**'
       - 'docs/**'
+      - 'README.md'
       - '.github/workflows/**'
     tags: '*'
 
