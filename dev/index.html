@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Quickstart · SymbolicRegression.jl</title><script data-outdated-warner src="assets/warner.js"></script><link rel="canonical" href="https://astroautomata.com/SymbolicRegression.jl/stable/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href><img src="assets/logo.svg" alt="SymbolicRegression.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href>SymbolicRegression.jl</a></span></div><form class="docs-search" action="search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>Quickstart</a><ul class="internal"><li><a class="tocitem" href="#Constructing-trees"><span>Constructing trees</span></a></li><li><a class="tocitem" href="#Exporting-to-SymbolicUtils.jl"><span>Exporting to SymbolicUtils.jl</span></a></li><li><a class="tocitem" href="#Search-options"><span>Search options</span></a></li><li class="toplevel"><a class="tocitem" href="#Contents"><span>Contents</span></a></li></ul></li><li><a class="tocitem" href="api/">API</a></li><li><a class="tocitem" href="index_base/">Contents</a></li><li><a class="tocitem" href="losses/">Losses</a></li><li><a class="tocitem" href="types/">Types</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Quickstart</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Quickstart</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/MilesCranmer/SymbolicRegression.jl/blob/master/docs/src/index.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><p><img src="https://user-images.githubusercontent.com/7593028/196054732-5c399e82-23a8-4200-945a-67605f7501ab.png" alt/></p><p>SymbolicRegression.jl searches for symbolic expressions which optimize a particular objective.</p><table><tr><th style="text-align: right">Latest release</th><th style="text-align: right">Documentation</th><th style="text-align: right">Build status</th><th style="text-align: right">Coverage</th></tr><tr><td style="text-align: right"><a href="https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS"><img src="https://juliahub.com/docs/SymbolicRegression/version.svg" alt="version"/></a></td><td style="text-align: right"><a href="https://astroautomata.com/SymbolicRegression.jl/dev/"><img src="https://img.shields.io/badge/docs-dev-blue.svg" alt="Dev"/></a> <a href="https://astroautomata.com/SymbolicRegression.jl/stable/"><img src="https://img.shields.io/badge/docs-stable-blue.svg" alt="Stable"/></a></td><td style="text-align: right"><a href=".github/workflows/CI.yml"><img src="https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/CI/badge.svg" alt="CI"/></a></td><td style="text-align: right"><a href="https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master"><img src="https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master" alt="Coverage Status"/></a></td></tr></table><p>Check out <a href="https://github.com/MilesCranmer/PySR">PySR</a> for a Python frontend.</p><p><img src="https://astroautomata.com/data/sr_demo_image1.png" alt/> <img src="https://astroautomata.com/data/sr_demo_image2.png" alt/></p><p><a href="https://github.com/MilesCranmer/PySR/blob/master/CITATION.md">Cite this software</a></p><h1 id="Quickstart"><a class="docs-heading-anchor" href="#Quickstart">Quickstart</a><a id="Quickstart-1"></a><a class="docs-heading-anchor-permalink" href="#Quickstart" title="Permalink"></a></h1><p>Install in Julia with:</p><pre><code class="language-julia hljs">using Pkg
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Quickstart · SymbolicRegression.jl</title><script data-outdated-warner src="assets/warner.js"></script><link rel="canonical" href="https://astroautomata.com/SymbolicRegression.jl/stable/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href><img src="assets/logo.svg" alt="SymbolicRegression.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href>SymbolicRegression.jl</a></span></div><form class="docs-search" action="search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>Quickstart</a><ul class="internal"><li><a class="tocitem" href="#Constructing-trees"><span>Constructing trees</span></a></li><li><a class="tocitem" href="#Exporting-to-SymbolicUtils.jl"><span>Exporting to SymbolicUtils.jl</span></a></li><li class="toplevel"><a class="tocitem" href="#Code-structure"><span>Code structure</span></a></li><li><a class="tocitem" href="#Search-options"><span>Search options</span></a></li><li class="toplevel"><a class="tocitem" href="#Contents"><span>Contents</span></a></li></ul></li><li><a class="tocitem" href="api/">API</a></li><li><a class="tocitem" href="index_base/">Contents</a></li><li><a class="tocitem" href="losses/">Losses</a></li><li><a class="tocitem" href="types/">Types</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Quickstart</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Quickstart</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/MilesCranmer/SymbolicRegression.jl/blob/master/docs/src/index.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true });
+</script><p><img src="https://user-images.githubusercontent.com/7593028/196054732-5c399e82-23a8-4200-945a-67605f7501ab.png" alt/></p><p>SymbolicRegression.jl searches for symbolic expressions which optimize a particular objective.</p><table><tr><th style="text-align: right">Latest release</th><th style="text-align: right">Documentation</th><th style="text-align: right">Build status</th><th style="text-align: right">Coverage</th></tr><tr><td style="text-align: right"><a href="https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS"><img src="https://juliahub.com/docs/SymbolicRegression/version.svg" alt="version"/></a></td><td style="text-align: right"><a href="https://astroautomata.com/SymbolicRegression.jl/dev/"><img src="https://img.shields.io/badge/docs-dev-blue.svg" alt="Dev"/></a> <a href="https://astroautomata.com/SymbolicRegression.jl/stable/"><img src="https://img.shields.io/badge/docs-stable-blue.svg" alt="Stable"/></a></td><td style="text-align: right"><a href=".github/workflows/CI.yml"><img src="https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/CI/badge.svg" alt="CI"/></a></td><td style="text-align: right"><a href="https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master"><img src="https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master" alt="Coverage Status"/></a></td></tr></table><p>Check out <a href="https://github.com/MilesCranmer/PySR">PySR</a> for a Python frontend.</p><p><img src="https://astroautomata.com/data/sr_demo_image1.png" alt/> <img src="https://astroautomata.com/data/sr_demo_image2.png" alt/></p><p><a href="https://github.com/MilesCranmer/PySR/blob/master/CITATION.md">Cite this software</a></p><h1 id="Quickstart"><a class="docs-heading-anchor" href="#Quickstart">Quickstart</a><a id="Quickstart-1"></a><a class="docs-heading-anchor-permalink" href="#Quickstart" title="Permalink"></a></h1><p>Install in Julia with:</p><pre><code class="language-julia hljs">using Pkg
 Pkg.add(&quot;SymbolicRegression&quot;)</code></pre><p>The heart of this package is the <code>EquationSearch</code> function, which takes a 2D array (shape [features, rows]) and attempts to model a 1D array (shape [rows]) using analytic functional forms.</p><p>Run with:</p><pre><code class="language-julia hljs">using SymbolicRegression
 
 X = randn(Float32, 5, 100)
@@ -31,4 +34,136 @@ for member in dominating
     string = string_tree(member.tree, options)
 
     println(&quot;$(complexity)\t$(loss)\t$(string)&quot;)
-end</code></pre><h2 id="Search-options"><a class="docs-heading-anchor" href="#Search-options">Search options</a><a id="Search-options-1"></a><a class="docs-heading-anchor-permalink" href="#Search-options" title="Permalink"></a></h2><p>See https://astroautomata.com/SymbolicRegression.jl/stable/api/#Options</p><h1 id="Contents"><a class="docs-heading-anchor" href="#Contents">Contents</a><a id="Contents-1"></a><a class="docs-heading-anchor-permalink" href="#Contents" title="Permalink"></a></h1><ul><li><a href="api/#API">API</a></li><li class="no-marker"><ul><li><a href="api/#EquationSearch">EquationSearch</a></li><li><a href="api/#Options">Options</a></li><li><a href="api/#Printing">Printing</a></li><li><a href="api/#Evaluation">Evaluation</a></li><li><a href="api/#Derivatives">Derivatives</a></li><li><a href="api/#SymbolicUtils.jl-interface">SymbolicUtils.jl interface</a></li><li><a href="api/#Pareto-frontier">Pareto frontier</a></li></ul></li><li><a href="types/#Types">Types</a></li><li class="no-marker"><ul><li><a href="types/#Equations">Equations</a></li><li><a href="types/#Population">Population</a></li><li><a href="types/#Population-members">Population members</a></li><li><a href="types/#Hall-of-Fame">Hall of Fame</a></li><li><a href="types/#Dataset">Dataset</a></li></ul></li><li><a href="losses/#Losses">Losses</a></li><li class="no-marker"><ul><li><a href="losses/#Regression:">Regression:</a></li><li><a href="losses/#Classification:">Classification:</a></li></ul></li></ul></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Monday 9 January 2023 17:25">Monday 9 January 2023</span>. Using Julia version 1.8.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><h1 id="Code-structure"><a class="docs-heading-anchor" href="#Code-structure">Code structure</a><a id="Code-structure-1"></a><a class="docs-heading-anchor-permalink" href="#Code-structure" title="Permalink"></a></h1><p>SymbolicRegression.jl is organized roughly as follows. Rounded rectangles indicate objects, and rectangles indicate functions.</p><blockquote><p>(if you can&#39;t see this diagram being rendered, try pasting it into <a href="https://mermaid-js.github.io/mermaid-live-editor">mermaid-js.github.io/mermaid-live-editor</a>)</p></blockquote><div class="mermaid">
+
+flowchart TB
+    op([Options])
+    d([Dataset])
+    op --> ES
+    d --> ES
+    subgraph ES[EquationSearch]
+        direction TB
+        IP[sr_spawner]
+        IP --> p1
+        IP --> p2
+        subgraph p1[Thread 1]
+            direction LR
+            pop1([Population])
+            pop1 --> src[s_r_cycle]
+            src --> opt[optimize_and_simplify_population]
+            opt --> pop1
+        end
+        subgraph p2[Thread 2]
+            direction LR
+            pop2([Population])
+            pop2 --> src2[s_r_cycle]
+            src2 --> opt2[optimize_and_simplify_population]
+            opt2 --> pop2
+        end
+        pop1 --> hof
+        pop2 --> hof
+        hof([HallOfFame])
+        hof --> migration
+        pop1 <-.-> migration
+        pop2 <-.-> migration
+        migration[migrate!]
+    end
+    ES --> output([HallOfFame])
+
+</div><p>The <code>HallOfFame</code> objects store the expressions with the lowest loss seen at each complexity.</p><p>The dependency structure of the code itself is as follows:</p><div class="mermaid">
+
+stateDiagram-v2
+    AdaptiveParsimony --> Mutate
+    AdaptiveParsimony --> Population
+    AdaptiveParsimony --> RegularizedEvolution
+    AdaptiveParsimony --> SingleIteration
+    AdaptiveParsimony --> SymbolicRegression
+    CheckConstraints --> Mutate
+    CheckConstraints --> SymbolicRegression
+    Complexity --> CheckConstraints
+    Complexity --> HallOfFame
+    Complexity --> LossFunctions
+    Complexity --> Mutate
+    Complexity --> Population
+    Complexity --> SearchUtils
+    Complexity --> SingleIteration
+    Complexity --> SymbolicRegression
+    ConstantOptimization --> Mutate
+    ConstantOptimization --> SingleIteration
+    Core --> AdaptiveParsimony
+    Core --> CheckConstraints
+    Core --> Complexity
+    Core --> ConstantOptimization
+    Core --> HallOfFame
+    Core --> InterfaceDynamicExpressions
+    Core --> LossFunctions
+    Core --> Migration
+    Core --> Mutate
+    Core --> MutationFunctions
+    Core --> PopMember
+    Core --> Population
+    Core --> Recorder
+    Core --> RegularizedEvolution
+    Core --> SearchUtils
+    Core --> SingleIteration
+    Core --> SymbolicRegression
+    Dataset --> Core
+    HallOfFame --> SearchUtils
+    HallOfFame --> SingleIteration
+    HallOfFame --> SymbolicRegression
+    InterfaceDynamicExpressions --> LossFunctions
+    InterfaceDynamicExpressions --> SymbolicRegression
+    LossFunctions --> ConstantOptimization
+    LossFunctions --> HallOfFame
+    LossFunctions --> Mutate
+    LossFunctions --> PopMember
+    LossFunctions --> Population
+    LossFunctions --> SymbolicRegression
+    Migration --> SymbolicRegression
+    Mutate --> RegularizedEvolution
+    MutationFunctions --> Mutate
+    MutationFunctions --> Population
+    MutationFunctions --> SymbolicRegression
+    Operators --> Core
+    Operators --> Options
+    Options --> Core
+    OptionsStruct --> Core
+    OptionsStruct --> Options
+    PopMember --> ConstantOptimization
+    PopMember --> HallOfFame
+    PopMember --> Migration
+    PopMember --> Mutate
+    PopMember --> Population
+    PopMember --> RegularizedEvolution
+    PopMember --> SingleIteration
+    PopMember --> SymbolicRegression
+    Population --> Migration
+    Population --> RegularizedEvolution
+    Population --> SearchUtils
+    Population --> SingleIteration
+    Population --> SymbolicRegression
+    ProgramConstants --> Core
+    ProgramConstants --> Dataset
+    ProgressBars --> SearchUtils
+    ProgressBars --> SymbolicRegression
+    Recorder --> Mutate
+    Recorder --> RegularizedEvolution
+    Recorder --> SingleIteration
+    Recorder --> SymbolicRegression
+    RegularizedEvolution --> SingleIteration
+    SearchUtils --> SymbolicRegression
+    SingleIteration --> SymbolicRegression
+    Utils --> CheckConstraints
+    Utils --> ConstantOptimization
+    Utils --> Options
+    Utils --> PopMember
+    Utils --> SingleIteration
+    Utils --> SymbolicRegression
+
+</div><p>Bash command to generate dependency structure from <code>src</code> directory (requires <code>vim-stream</code>):</p><pre><code class="language-bash hljs">echo &#39;stateDiagram-v2&#39;
+IFS=$&#39;\n&#39;
+for f in *.jl; do
+    for line in $(cat $f | grep -e &#39;import \.\.&#39; -e &#39;import \.&#39;); do
+        echo $(echo $line | vims -s &#39;dwf:d$&#39; -t &#39;%s/^\.*//g&#39; &#39;%s/Module//g&#39;) $(basename &quot;$f&quot; .jl);
+    done;
+done | vims -l &#39;f a--&gt; &#39; | sort</code></pre><h2 id="Search-options"><a class="docs-heading-anchor" href="#Search-options">Search options</a><a id="Search-options-1"></a><a class="docs-heading-anchor-permalink" href="#Search-options" title="Permalink"></a></h2><p>See https://astroautomata.com/SymbolicRegression.jl/stable/api/#Options</p><h1 id="Contents"><a class="docs-heading-anchor" href="#Contents">Contents</a><a id="Contents-1"></a><a class="docs-heading-anchor-permalink" href="#Contents" title="Permalink"></a></h1><ul><li><a href="api/#API">API</a></li><li class="no-marker"><ul><li><a href="api/#EquationSearch">EquationSearch</a></li><li><a href="api/#Options">Options</a></li><li><a href="api/#Printing">Printing</a></li><li><a href="api/#Evaluation">Evaluation</a></li><li><a href="api/#Derivatives">Derivatives</a></li><li><a href="api/#SymbolicUtils.jl-interface">SymbolicUtils.jl interface</a></li><li><a href="api/#Pareto-frontier">Pareto frontier</a></li></ul></li><li><a href="types/#Types">Types</a></li><li class="no-marker"><ul><li><a href="types/#Equations">Equations</a></li><li><a href="types/#Population">Population</a></li><li><a href="types/#Population-members">Population members</a></li><li><a href="types/#Hall-of-Fame">Hall of Fame</a></li><li><a href="types/#Dataset">Dataset</a></li></ul></li><li><a href="losses/#Losses">Losses</a></li><li class="no-marker"><ul><li><a href="losses/#Regression:">Regression:</a></li><li><a href="losses/#Classification:">Classification:</a></li></ul></li></ul></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Monday 9 January 2023 17:50">Monday 9 January 2023</span>. Using Julia version 1.8.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
