@@ -9,18 +9,15 @@ readme = open(dirname(@__FILE__) * "/../README.md") do io
     read(io, String)
 end
 
-# First, we want to delete from "# Code structure" to before "## Search options".
-readme = let
-    i = findfirst("# Code structure", readme)[begin]
-    j = findfirst("## Search options", readme)[begin] - 1
-    readme[1:(i - 1)] * readme[j:end]
-end
-
-# Then, we replace every instance of <img src="IMAGE" ...> with ![](IMAGE).
+# We replace every instance of <img src="IMAGE" ...> with ![](IMAGE).
 readme = replace(readme, r"<img src=\"([^\"]+)\"[^>]+>.*" => s"![](\1)")
 
 # Then, we remove any line with "<div" on it:
 readme = replace(readme, r"<[/]?div.*" => s"")
+
+# Then, we surround ```mermaid\n...\n``` snippets
+# with ```@raw html\n<div class="mermaid">\n...\n</div>```:
+readme = replace(readme, r"```mermaid([^`]*)```" => s"```@raw html\n<div class=\"mermaid\">\n\1\n</div>\n```")
 
 # Then, we init mermaid.js:
 init_mermaid = """
