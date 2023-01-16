@@ -63,9 +63,9 @@ end
 
 """Start watching stream (like stdin) for user input."""
 function watch_stream(stream)
-    can_read_user_input = true
-    stream = stream
-    try
+    can_read_user_input = isreadable(stream)
+
+    can_read_user_input && try
         Base.start_reading(stream)
         bytes = bytesavailable(stream)
         if bytes > 0
