@@ -86,6 +86,10 @@ end
 function score_func(
     dataset::Dataset{T}, tree::Node{T}, options::Options
 )::Tuple{T,T} where {T<:Real}
+    # Skip evaluation (which might be very slow)
+    if compute_complexity(tree, options) > options.maxsize
+        return T(Inf), T(Inf)
+    end
     result_loss = eval_loss(tree, dataset, options)
     score = loss_to_score(result_loss, dataset.baseline_loss, tree, options)
     return score, result_loss
@@ -95,6 +99,10 @@ end
 function score_func_batch(
     dataset::Dataset{T}, tree::Node{T}, options::Options
 )::Tuple{T,T} where {T<:Real}
+    # Skip evaluation (which might be very slow)
+    if compute_complexity(tree, options) > options.maxsize
+        return T(Inf), T(Inf)
+    end
     batch_idx = StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)
     batch_X = view(dataset.X, :, batch_idx)
     batch_y = view(dataset.y, batch_idx)
