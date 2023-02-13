@@ -35,7 +35,9 @@ options = Options(; binary_operators=(+, *), maxsize=5, complexity_of_operators=
 @test check_constraints(violating_tree, options) == true
 
 # Test for depth constraints:
-options = Options(; binary_operators=(+, *), unary_operators=(cos,), maxsize=100, maxdepth=3)
+options = Options(;
+    binary_operators=(+, *), unary_operators=(cos,), maxsize=100, maxdepth=3
+)
 @extend_operators options
 x1, x2, x3 = [Node(; feature=i) for i in 1:3]
 
