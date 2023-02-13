@@ -1,7 +1,7 @@
 module MutateModule
 
 import DynamicExpressions:
-    Node, copy_node, count_constants, count_depth, simplify_tree, combine_operators
+    Node, copy_node, count_constants, simplify_tree, combine_operators
 import ..CoreModule: Options, Dataset, RecordType, sample_mutation
 import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, score_func_batch
@@ -53,10 +53,9 @@ function next_generation(
     #More constants => more likely to do constant mutation
     weights.mutate_constant *= min(8, count_constants(prev)) / 8.0
     n = compute_complexity(prev, options)
-    depth = count_depth(prev)
 
     # If equation too big, don't add new operators
-    if n >= curmaxsize || depth >= options.maxdepth
+    if n >= curmaxsize
         weights.add_node = 0.0
         weights.insert_node = 0.0
     end
