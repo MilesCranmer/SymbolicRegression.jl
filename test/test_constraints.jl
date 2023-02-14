@@ -1,3 +1,4 @@
+import DynamicExpressions: count_depth
 using SymbolicRegression
 using SymbolicRegression: check_constraints
 using Test
@@ -32,3 +33,26 @@ options = Options(; binary_operators=(+, *), maxsize=5, complexity_of_operators=
 @test check_constraints(tree, options) == false
 options = Options(; binary_operators=(+, *), maxsize=5, complexity_of_operators=[(*) => 0])
 @test check_constraints(violating_tree, options) == true
+
+# Test for depth constraints:
+options = Options(;
+    binary_operators=(+, *), unary_operators=(cos,), maxsize=100, maxdepth=3
+)
+@extend_operators options
+x1, x2, x3 = [Node(; feature=i) for i in 1:3]
+
+tree = (x1 + x2) + (x3 + x1)
+@test count_depth(tree) == 3
+@test check_constraints(tree, options) == true
+
+tree = (x1 + x2) + (x3 + x1) * x1
+@test count_depth(tree) == 4
+@test check_constraints(tree, options) == false
+
+tree = cos(cos(x1))
+@test count_depth(tree) == 3
+@test check_constraints(tree, options) == true
+
+tree = cos(cos(cos(x1)))
+@test count_depth(tree) == 4
+@test check_constraints(tree, options) == false

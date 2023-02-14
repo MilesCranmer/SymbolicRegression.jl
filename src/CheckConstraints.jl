@@ -1,6 +1,6 @@
 module CheckConstraintsModule
 
-import DynamicExpressions: Node
+import DynamicExpressions: Node, count_depth
 import ..UtilsModule: vals
 import ..CoreModule: Options
 import ..ComplexityModule: compute_complexity
@@ -140,10 +140,8 @@ end
 
 """Check if user-passed constraints are violated or not"""
 function check_constraints(tree::Node, options::Options, maxsize::Int)::Bool
-    size = compute_complexity(tree, options)
-    if size > maxsize
-        return false
-    end
+    compute_complexity(tree, options) > maxsize && return false
+    count_depth(tree) > options.maxdepth && return false
     for i in 1:(options.nbin)
         if options.bin_constraints[i] == (-1, -1)
             continue
