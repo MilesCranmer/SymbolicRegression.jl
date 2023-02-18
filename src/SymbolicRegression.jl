@@ -701,11 +701,11 @@ function _EquationSearch(
                 else
                     allPops[j][i]
                 end
-            returnPops[j][i] = cur_pop
             cur_pop::Population
             best_seen::HallOfFame
             cur_record::RecordType
             cur_num_evals::Float64
+            returnPops[j][i] = copy_population(cur_pop)
             bestSubPops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
             @recorder record = recursive_merge(record, cur_record)
             num_evals[j][i] += cur_num_evals
