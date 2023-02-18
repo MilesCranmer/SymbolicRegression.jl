@@ -911,10 +911,14 @@ function _EquationSearch(
 
     close_reader!(stdin_reader)
 
-    if we_created_procs
-        rmprocs(procs)
+    # Safely close all processes or threads
+    if parallelism == :multiprocessing
+        we_created_procs && rmprocs(procs)
+    elseif parallelism == :multithreading
+        for j in 1:nout, i in 1:(options.npopulations)
+            wait(allPops[j][i])
+        end
     end
-    # TODO - also stop threads here?
 
     ##########################################################################
     ### Distributed code^
