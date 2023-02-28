@@ -58,10 +58,16 @@ end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function eval_loss(tree::Node{T}, dataset::Dataset{T}, options::Options)::T where {T<:Real}
-    if options.loss_function === nothing
-        return _eval_loss(tree, dataset, options)
+    #if custom_loss_function === nothing run normally, otherwise use this loss
+    if options.custom_loss_function === nothing
+        if options.loss_function === nothing
+            return _eval_loss(tree, dataset, options)
+        else
+            f = options.loss_function::Function
+            return evaluator(f, tree, dataset, options)
+        end
     else
-        f = options.loss_function::Function
+        f = options.custom_loss_function::Function
         return evaluator(f, tree, dataset, options)
     end
 end

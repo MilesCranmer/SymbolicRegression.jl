@@ -318,6 +318,7 @@ function Options(;
     constraints=nothing,
     elementwise_loss=nothing,
     loss_function=nothing,
+    custom_loss_function=nothing,
     tournament_selection_n=12, #1 sampled from every tournament_selection_n per mutation
     tournament_selection_p=0.86f0,
     topn=12, #samples to return per population
@@ -663,6 +664,7 @@ function Options(;
         seed,
         elementwise_loss,
         loss_function,
+        custom_loss_function,
         progress,
         terminal_width,
         optimizer_algorithm,
