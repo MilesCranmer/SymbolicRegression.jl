@@ -558,6 +558,12 @@ function _EquationSearch(
 
             if saved_pop !== nothing && length(saved_pop.members) == options.npop
                 saved_pop::Population{T}
+                ## Update losses:
+                for member in saved_pop.members
+                    score, result_loss = score_func(datasets[j], member.tree, options)
+                    member.score = score
+                    member.loss = result_loss
+                end
                 new_pop = @sr_spawner parallelism worker_idx (
                     saved_pop, HallOfFame(options, T), RecordType(), 0.0
                 )
