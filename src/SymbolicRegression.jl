@@ -535,6 +535,7 @@ function _EquationSearch(
     else
         # Recompute losses for the hall of fame, in
         # case the dataset changed:
+        hallOfFame::Vector{HallOfFame{T}}
         for (hof, dataset) in zip(hallOfFame, datasets)
             for member in hof.members[hof.exists]
                 score, result_loss = score_func(dataset, member.tree, options)
