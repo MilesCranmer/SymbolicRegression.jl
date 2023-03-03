@@ -532,6 +532,17 @@ function _EquationSearch(
     hallOfFame = load_saved_hall_of_fame(saved_state)
     if hallOfFame === nothing
         hallOfFame = [HallOfFame(options, T) for j in 1:nout]
+    else
+        # Recompute losses for the hall of fame, in
+        # case the dataset changed:
+        hallOfFame::Vector{HallOfFame{T}}
+        for (hof, dataset) in zip(hallOfFame, datasets)
+            for member in hof.members[hof.exists]
+                score, result_loss = score_func(dataset, member.tree, options)
+                member.score = score
+                member.loss = result_loss
+            end
+        end
     end
     @assert length(hallOfFame) == nout
     hallOfFame::Vector{HallOfFame{T}}
@@ -547,6 +558,12 @@ function _EquationSearch(
 
             if saved_pop !== nothing && length(saved_pop.members) == options.npop
                 saved_pop::Population{T}
+                ## Update losses:
+                for member in saved_pop.members
+                    score, result_loss = score_func(datasets[j], member.tree, options)
+                    member.score = score
+                    member.loss = result_loss
+                end
                 new_pop = @sr_spawner parallelism worker_idx (
                     saved_pop, HallOfFame(options, T), RecordType(), 0.0
                 )
