@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Losses · SymbolicRegression.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://astroautomata.com/SymbolicRegression.jl/stable/losses/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../"><img src="../assets/logo.svg" alt="SymbolicRegression.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../">SymbolicRegression.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Quickstart</a></li><li><a class="tocitem" href="../api/">API</a></li><li><a class="tocitem" href="../index_base/">Contents</a></li><li class="is-active"><a class="tocitem" href>Losses</a><ul class="internal"><li><a class="tocitem" href="#Regression:"><span>Regression:</span></a></li><li><a class="tocitem" href="#Classification:"><span>Classification:</span></a></li></ul></li><li><a class="tocitem" href="../types/">Types</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Losses</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Losses</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/MilesCranmer/SymbolicRegression.jl/blob/master/docs/src/losses.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Losses"><a class="docs-heading-anchor" href="#Losses">Losses</a><a id="Losses-1"></a><a class="docs-heading-anchor-permalink" href="#Losses" title="Permalink"></a></h1><p>These losses, and their documentation, are included from the <a href="https://github.com/JuliaML/LossFunctions.jl">LossFunctions.jl</a> package.</p><p>Pass the function as, e.g., <code>loss=L1DistLoss()</code>.</p><p>You can also declare your own loss as a function that takes two (unweighted) or three (weighted) scalar arguments. For example,</p><pre><code class="nohighlight hljs">f(x, y, w) = abs(x-y)*w
+options = Options(loss=f)</code></pre><h2 id="Regression:"><a class="docs-heading-anchor" href="#Regression:">Regression:</a><a id="Regression:-1"></a><a class="docs-heading-anchor-permalink" href="#Regression:" title="Permalink"></a></h2><p>Regression losses work on the distance between targets and predictions: <code>r = x - y</code>.</p><h3 id="LPDistLoss{P}-:-DistanceLoss"><a class="docs-heading-anchor" href="#LPDistLoss{P}-:-DistanceLoss"><code>LPDistLoss{P} &lt;: DistanceLoss</code></a><a id="LPDistLoss{P}-:-DistanceLoss-1"></a><a class="docs-heading-anchor-permalink" href="#LPDistLoss{P}-:-DistanceLoss" title="Permalink"></a></h3><p>The P-th power absolute distance loss. It is Lipschitz continuous iff <code>P == 1</code>, convex if and only if <code>P &gt;= 1</code>, and strictly convex iff <code>P &gt; 1</code>.</p><p class="math-container">\[L(r) = |r|^P\]</p><h3 id="L1DistLoss-:-DistanceLoss"><a class="docs-heading-anchor" href="#L1DistLoss-:-DistanceLoss"><code>L1DistLoss &lt;: DistanceLoss</code></a><a id="L1DistLoss-:-DistanceLoss-1"></a><a class="docs-heading-anchor-permalink" href="#L1DistLoss-:-DistanceLoss" title="Permalink"></a></h3><p>The absolute distance loss. Special case of the <a href="@ref"><code>LPDistLoss</code></a> with <code>P=1</code>. It is Lipschitz continuous and convex, but not strictly convex.</p><p class="math-container">\[L(r) = |r|\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction                     Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    3 │\.                     ./│    1 │            ┌------------│
+      │ &#39;\.                 ./&#39; │      │            |            │
+      │   \.               ./   │      │            |            │
+      │    &#39;\.           ./&#39;    │      │_           |           _│
+    L │      \.         ./      │   L&#39; │            |            │
+      │       &#39;\.     ./&#39;       │      │            |            │
+      │         \.   ./         │      │            |            │
+    0 │          &#39;\./&#39;          │   -1 │------------┘            │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -3                        3      -3                        3
+                 ŷ - y                            ŷ - y</code></pre><h3 id="L2DistLoss-:-DistanceLoss"><a class="docs-heading-anchor" href="#L2DistLoss-:-DistanceLoss"><code>L2DistLoss &lt;: DistanceLoss</code></a><a id="L2DistLoss-:-DistanceLoss-1"></a><a class="docs-heading-anchor-permalink" href="#L2DistLoss-:-DistanceLoss" title="Permalink"></a></h3><p>The least squares loss. Special case of the <a href="@ref"><code>LPDistLoss</code></a> with <code>P=2</code>. It is strictly convex.</p><p class="math-container">\[L(r) = |r|^2\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction                     Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    9 │\                       /│    3 │                   .r/   │
+      │&quot;.                     .&quot;│      │                 .r&#39;     │
+      │ &quot;.                   .&quot; │      │              _./&#39;       │
+      │  &quot;.                 .&quot;  │      │_           .r/         _│
+    L │   &quot;.               .&quot;   │   L&#39; │         _:/&#39;            │
+      │    &#39;\.           ./&#39;    │      │       .r&#39;               │
+      │      \.         ./      │      │     .r&#39;                 │
+    0 │        &quot;-.___.-&quot;        │   -3 │  _/r&#39;                   │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -3                        3      -2                        2
+                 ŷ - y                            ŷ - y</code></pre><h3 id="PeriodicLoss-:-DistanceLoss"><a class="docs-heading-anchor" href="#PeriodicLoss-:-DistanceLoss"><code>PeriodicLoss &lt;: DistanceLoss</code></a><a id="PeriodicLoss-:-DistanceLoss-1"></a><a class="docs-heading-anchor-permalink" href="#PeriodicLoss-:-DistanceLoss" title="Permalink"></a></h3><p>Measures distance on a circle of specified circumference <code>c</code>.</p><p class="math-container">\[L(r) = 1 - \cos \left( \frac{2 r \pi}{c} \right)\]</p><h3 id="HuberLoss-:-DistanceLoss"><a class="docs-heading-anchor" href="#HuberLoss-:-DistanceLoss"><code>HuberLoss &lt;: DistanceLoss</code></a><a id="HuberLoss-:-DistanceLoss-1"></a><a class="docs-heading-anchor-permalink" href="#HuberLoss-:-DistanceLoss" title="Permalink"></a></h3><p>Loss function commonly used for robustness to outliers. For large values of <code>d</code> it becomes close to the <a href="@ref"><code>L1DistLoss</code></a>, while for small values of <code>d</code> it resembles the <a href="@ref"><code>L2DistLoss</code></a>. It is Lipschitz continuous and convex, but not strictly convex.</p><p class="math-container">\[L(r) = \begin{cases} \frac{r^2}{2} &amp; \quad \text{if } | r | \le \alpha \\ \alpha | r | - \frac{\alpha^3}{2} &amp; \quad \text{otherwise}\\ \end{cases}\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction (d=1)               Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    2 │                         │    1 │                .+-------│
+      │                         │      │              ./&#39;        │
+      │\.                     ./│      │             ./          │
+      │ &#39;.                   .&#39; │      │_           ./          _│
+    L │   \.               ./   │   L&#39; │           /&#39;            │
+      │     \.           ./     │      │          /&#39;             │
+      │      &#39;.         .&#39;      │      │        ./&#39;              │
+    0 │        &#39;-.___.-&#39;        │   -1 │-------+&#39;                │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -2                        2      -2                        2
+                 ŷ - y                            ŷ - y</code></pre><h3 id="L1EpsilonInsLoss-:-DistanceLoss"><a class="docs-heading-anchor" href="#L1EpsilonInsLoss-:-DistanceLoss"><code>L1EpsilonInsLoss &lt;: DistanceLoss</code></a><a id="L1EpsilonInsLoss-:-DistanceLoss-1"></a><a class="docs-heading-anchor-permalink" href="#L1EpsilonInsLoss-:-DistanceLoss" title="Permalink"></a></h3><p>The <span>$ϵ$</span>-insensitive loss. Typically used in linear support vector regression. It ignores deviances smaller than <span>$ϵ$</span>, but penalizes larger deviances linearly. It is Lipschitz continuous and convex, but not strictly convex.</p><p class="math-container">\[L(r) = \max \{ 0, | r | - \epsilon \}\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction (ϵ=1)               Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    2 │\                       /│    1 │                  ┌------│
+      │ \                     / │      │                  |      │
+      │  \                   /  │      │                  |      │
+      │   \                 /   │      │_      ___________!     _│
+    L │    \               /    │   L&#39; │      |                  │
+      │     \             /     │      │      |                  │
+      │      \           /      │      │      |                  │
+    0 │       \_________/       │   -1 │------┘                  │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -3                        3      -2                        2
+                 ŷ - y                            ŷ - y</code></pre><h3 id="L2EpsilonInsLoss-:-DistanceLoss"><a class="docs-heading-anchor" href="#L2EpsilonInsLoss-:-DistanceLoss"><code>L2EpsilonInsLoss &lt;: DistanceLoss</code></a><a id="L2EpsilonInsLoss-:-DistanceLoss-1"></a><a class="docs-heading-anchor-permalink" href="#L2EpsilonInsLoss-:-DistanceLoss" title="Permalink"></a></h3><p>The quadratic <span>$ϵ$</span>-insensitive loss. Typically used in linear support vector regression. It ignores deviances smaller than <span>$ϵ$</span>, but penalizes larger deviances quadratically. It is convex, but not strictly convex.</p><p class="math-container">\[L(r) = \max \{ 0, | r | - \epsilon \}^2\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction (ϵ=0.5)             Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    8 │                         │    1 │                  /      │
+      │:                       :│      │                 /       │
+      │&#39;.                     .&#39;│      │                /        │
+      │ \.                   ./ │      │_         _____/        _│
+    L │  \.                 ./  │   L&#39; │         /               │
+      │   \.               ./   │      │        /                │
+      │    &#39;\.           ./&#39;    │      │       /                 │
+    0 │      &#39;-._______.-&#39;      │   -1 │      /                  │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -3                        3      -2                        2
+                 ŷ - y                            ŷ - y</code></pre><h3 id="LogitDistLoss-:-DistanceLoss"><a class="docs-heading-anchor" href="#LogitDistLoss-:-DistanceLoss"><code>LogitDistLoss &lt;: DistanceLoss</code></a><a id="LogitDistLoss-:-DistanceLoss-1"></a><a class="docs-heading-anchor-permalink" href="#LogitDistLoss-:-DistanceLoss" title="Permalink"></a></h3><p>The distance-based logistic loss for regression. It is strictly convex and Lipschitz continuous.</p><p class="math-container">\[L(r) = - \ln \frac{4 e^r}{(1 + e^r)^2}\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction                     Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    2 │                         │    1 │                   _--&#39;&#39;&#39;│
+      │\                       /│      │                ./&#39;      │
+      │ \.                   ./ │      │              ./         │
+      │  &#39;.                 .&#39;  │      │_           ./          _│
+    L │   &#39;.               .&#39;   │   L&#39; │           ./            │
+      │     \.           ./     │      │         ./              │
+      │      &#39;.         .&#39;      │      │       ./                │
+    0 │        &#39;-.___.-&#39;        │   -1 │___.-&#39;&#39;                  │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -3                        3      -4                        4
+                 ŷ - y                            ŷ - y</code></pre><h3 id="QuantileLoss-:-DistanceLoss"><a class="docs-heading-anchor" href="#QuantileLoss-:-DistanceLoss"><code>QuantileLoss &lt;: DistanceLoss</code></a><a id="QuantileLoss-:-DistanceLoss-1"></a><a class="docs-heading-anchor-permalink" href="#QuantileLoss-:-DistanceLoss" title="Permalink"></a></h3><p>The distance-based quantile loss, also known as pinball loss, can be used to estimate conditional τ-quantiles. It is Lipschitz continuous and convex, but not strictly convex. Furthermore it is symmetric if and only if <code>τ = 1/2</code>.</p><p class="math-container">\[L(r) = \begin{cases} -\left( 1 - \tau  \right) r &amp; \quad \text{if } r &lt; 0 \\ \tau r &amp; \quad \text{if } r \ge 0 \\ \end{cases}\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction (τ=0.7)             Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    2 │&#39;\                       │  0.3 │            ┌------------│
+      │  \.                     │      │            |            │
+      │   &#39;\                    │      │_           |           _│
+      │     \.                  │      │            |            │
+    L │      &#39;\              ._-│   L&#39; │            |            │
+      │        \.         ..-&#39;  │      │            |            │
+      │         &#39;.     _r/&#39;     │      │            |            │
+    0 │           &#39;_./&#39;         │ -0.7 │------------┘            │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -3                        3      -3                        3
+                 ŷ - y                            ŷ - y</code></pre><h2 id="Classification:"><a class="docs-heading-anchor" href="#Classification:">Classification:</a><a id="Classification:-1"></a><a class="docs-heading-anchor-permalink" href="#Classification:" title="Permalink"></a></h2><p>Classifications losses (assuming binary) work on the margin between targets and predictions: <code>r = x y</code>, assuming the target <code>y</code> is either <code>-1</code> or <code>+1</code>.</p><h3 id="ZeroOneLoss-:-MarginLoss"><a class="docs-heading-anchor" href="#ZeroOneLoss-:-MarginLoss"><code>ZeroOneLoss &lt;: MarginLoss</code></a><a id="ZeroOneLoss-:-MarginLoss-1"></a><a class="docs-heading-anchor-permalink" href="#ZeroOneLoss-:-MarginLoss" title="Permalink"></a></h3><p>The classical classification loss. It penalizes every misclassified observation with a loss of <code>1</code> while every correctly classified observation has a loss of <code>0</code>. It is not convex nor continuous and thus seldom used directly. Instead one usually works with some classification-calibrated surrogate loss, such as <a href="@ref">L1HingeLoss</a>.</p><p class="math-container">\[L(a) = \begin{cases} 1 &amp; \quad \text{if } a &lt; 0 \\ 0 &amp; \quad \text{if } a &gt;= 0\\ \end{cases}\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction                     Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    1 │------------┐            │    1 │                         │
+      │            |            │      │                         │
+      │            |            │      │                         │
+      │            |            │      │_________________________│
+      │            |            │      │                         │
+      │            |            │      │                         │
+      │            |            │      │                         │
+    0 │            └------------│   -1 │                         │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -2                        2      -2                        2
+                y * h(x)                         y * h(x)</code></pre><h3 id="PerceptronLoss-:-MarginLoss"><a class="docs-heading-anchor" href="#PerceptronLoss-:-MarginLoss"><code>PerceptronLoss &lt;: MarginLoss</code></a><a id="PerceptronLoss-:-MarginLoss-1"></a><a class="docs-heading-anchor-permalink" href="#PerceptronLoss-:-MarginLoss" title="Permalink"></a></h3><p>The perceptron loss linearly penalizes every prediction where the resulting <code>agreement &lt;= 0</code>. It is Lipschitz continuous and convex, but not strictly convex.</p><p class="math-container">\[L(a) = \max \{ 0, -a \}\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction                     Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    2 │\.                       │    0 │            ┌------------│
+      │ &#39;..                     │      │            |            │
+      │   \.                    │      │            |            │
+      │     &#39;.                  │      │            |            │
+    L │      &#39;.                 │   L&#39; │            |            │
+      │        \.               │      │            |            │
+      │         &#39;.              │      │            |            │
+    0 │           \.____________│   -1 │------------┘            │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -2                        2      -2                        2
+                 y ⋅ ŷ                            y ⋅ ŷ</code></pre><h3 id="LogitMarginLoss-:-MarginLoss"><a class="docs-heading-anchor" href="#LogitMarginLoss-:-MarginLoss"><code>LogitMarginLoss &lt;: MarginLoss</code></a><a id="LogitMarginLoss-:-MarginLoss-1"></a><a class="docs-heading-anchor-permalink" href="#LogitMarginLoss-:-MarginLoss" title="Permalink"></a></h3><p>The margin version of the logistic loss. It is infinitely many times differentiable, strictly convex, and Lipschitz continuous.</p><p class="math-container">\[L(a) = \ln (1 + e^{-a})\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction                     Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    2 │ \.                      │    0 │                  ._--/&quot;&quot;│
+      │   \.                    │      │               ../&#39;      │
+      │     \.                  │      │              ./         │
+      │       \..               │      │            ./&#39;          │
+    L │         &#39;-_             │   L&#39; │          .,&#39;            │
+      │            &#39;-_          │      │         ./              │
+      │               &#39;\-._     │      │      .,/&#39;               │
+    0 │                    &#39;&quot;&quot;*-│   -1 │__.--&#39;&#39;                  │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -2                        2      -4                        4
+                 y ⋅ ŷ                            y ⋅ ŷ</code></pre><h3 id="L1HingeLoss-:-MarginLoss"><a class="docs-heading-anchor" href="#L1HingeLoss-:-MarginLoss"><code>L1HingeLoss &lt;: MarginLoss</code></a><a id="L1HingeLoss-:-MarginLoss-1"></a><a class="docs-heading-anchor-permalink" href="#L1HingeLoss-:-MarginLoss" title="Permalink"></a></h3><p>The hinge loss linearly penalizes every prediction where the resulting <code>agreement &lt; 1</code> . It is Lipschitz continuous and convex, but not strictly convex.</p><p class="math-container">\[L(a) = \max \{ 0, 1 - a \}\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction                     Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    3 │&#39;\.                      │    0 │                  ┌------│
+      │  &#39;&#39;_                    │      │                  |      │
+      │     \.                  │      │                  |      │
+      │       &#39;.                │      │                  |      │
+    L │         &#39;&#39;_             │   L&#39; │                  |      │
+      │            \.           │      │                  |      │
+      │              &#39;.         │      │                  |      │
+    0 │                &#39;&#39;_______│   -1 │------------------┘      │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -2                        2      -2                        2
+                 y ⋅ ŷ                            y ⋅ ŷ</code></pre><h3 id="L2HingeLoss-:-MarginLoss"><a class="docs-heading-anchor" href="#L2HingeLoss-:-MarginLoss"><code>L2HingeLoss &lt;: MarginLoss</code></a><a id="L2HingeLoss-:-MarginLoss-1"></a><a class="docs-heading-anchor-permalink" href="#L2HingeLoss-:-MarginLoss" title="Permalink"></a></h3><p>The truncated least squares loss quadratically penalizes every prediction where the resulting <code>agreement &lt; 1</code>. It is locally Lipschitz continuous and convex, but not strictly convex.</p><p class="math-container">\[L(a) = \max \{ 0, 1 - a \}^2\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction                     Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    5 │     .                   │    0 │                 ,r------│
+      │     &#39;.                  │      │               ,/        │
+      │      &#39;\                 │      │             ,/          │
+      │        \                │      │           ,/            │
+    L │         &#39;.              │   L&#39; │         ./              │
+      │          &#39;.             │      │       ./                │
+      │            \.           │      │     ./                  │
+    0 │              &#39;-.________│   -5 │   ./                    │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -2                        2      -2                        2
+                 y ⋅ ŷ                            y ⋅ ŷ</code></pre><h3 id="SmoothedL1HingeLoss-:-MarginLoss"><a class="docs-heading-anchor" href="#SmoothedL1HingeLoss-:-MarginLoss"><code>SmoothedL1HingeLoss &lt;: MarginLoss</code></a><a id="SmoothedL1HingeLoss-:-MarginLoss-1"></a><a class="docs-heading-anchor-permalink" href="#SmoothedL1HingeLoss-:-MarginLoss" title="Permalink"></a></h3><p>As the name suggests a smoothed version of the L1 hinge loss. It is Lipschitz continuous and convex, but not strictly convex.</p><p class="math-container">\[L(a) = \begin{cases} \frac{0.5}{\gamma} \cdot \max \{ 0, 1 - a \} ^2 &amp; \quad \text{if } a \ge 1 - \gamma \\ 1 - \frac{\gamma}{2} - a &amp; \quad \text{otherwise}\\ \end{cases}\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction (γ=2)               Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    2 │\.                       │    0 │                 ,r------│
+      │ &#39;.                      │      │               ./&#39;       │
+      │   \.                    │      │              ,/         │
+      │     &#39;.                  │      │            ./&#39;          │
+    L │      &#39;.                 │   L&#39; │           ,&#39;            │
+      │        \.               │      │         ,/              │
+      │          &#39;,             │      │       ./&#39;               │
+    0 │            &#39;*-._________│   -1 │______./                 │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -2                        2      -2                        2
+                 y ⋅ ŷ                            y ⋅ ŷ</code></pre><h3 id="ModifiedHuberLoss-:-MarginLoss"><a class="docs-heading-anchor" href="#ModifiedHuberLoss-:-MarginLoss"><code>ModifiedHuberLoss &lt;: MarginLoss</code></a><a id="ModifiedHuberLoss-:-MarginLoss-1"></a><a class="docs-heading-anchor-permalink" href="#ModifiedHuberLoss-:-MarginLoss" title="Permalink"></a></h3><p>A special (4 times scaled) case of the <a href="@ref"><code>SmoothedL1HingeLoss</code></a> with <code>γ=2</code>. It is Lipschitz continuous and convex, but not strictly convex.</p><p class="math-container">\[L(a) = \begin{cases} \max \{ 0, 1 - a \} ^2 &amp; \quad \text{if } a \ge -1 \\ - 4 a &amp; \quad \text{otherwise}\\ \end{cases}\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction                     Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    5 │    &#39;.                   │    0 │                .+-------│
+      │     &#39;.                  │      │              ./&#39;        │
+      │      &#39;\                 │      │             ,/          │
+      │        \                │      │           ,/            │
+    L │         &#39;.              │   L&#39; │         ./              │
+      │          &#39;.             │      │       ./&#39;               │
+      │            \.           │      │______/&#39;                 │
+    0 │              &#39;-.________│   -5 │                         │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -2                        2      -2                        2
+                 y ⋅ ŷ                            y ⋅ ŷ</code></pre><h3 id="L2MarginLoss-:-MarginLoss"><a class="docs-heading-anchor" href="#L2MarginLoss-:-MarginLoss"><code>L2MarginLoss &lt;: MarginLoss</code></a><a id="L2MarginLoss-:-MarginLoss-1"></a><a class="docs-heading-anchor-permalink" href="#L2MarginLoss-:-MarginLoss" title="Permalink"></a></h3><p>The margin-based least-squares loss for classification, which penalizes every prediction where <code>agreement != 1</code> quadratically. It is locally Lipschitz continuous and strongly convex.</p><p class="math-container">\[L(a) = {\left( 1 - a \right)}^2\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction                     Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    5 │     .                   │    2 │                       ,r│
+      │     &#39;.                  │      │                     ,/  │
+      │      &#39;\                 │      │                   ,/    │
+      │        \                │      ├                 ,/      ┤
+    L │         &#39;.              │   L&#39; │               ./        │
+      │          &#39;.             │      │             ./          │
+      │            \.          .│      │           ./            │
+    0 │              &#39;-.____.-&#39; │   -3 │         ./              │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -2                        2      -2                        2
+                 y ⋅ ŷ                            y ⋅ ŷ</code></pre><h3 id="ExpLoss-:-MarginLoss"><a class="docs-heading-anchor" href="#ExpLoss-:-MarginLoss"><code>ExpLoss &lt;: MarginLoss</code></a><a id="ExpLoss-:-MarginLoss-1"></a><a class="docs-heading-anchor-permalink" href="#ExpLoss-:-MarginLoss" title="Permalink"></a></h3><p>The margin-based exponential loss for classification, which penalizes every prediction exponentially. It is infinitely many times differentiable, locally Lipschitz continuous and strictly convex, but not clipable.</p><p class="math-container">\[L(a) = e^{-a}\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction                     Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    5 │  \.                     │    0 │               _,,---:&#39;&quot;&quot;│
+      │   l                     │      │           _r/&quot;&#39;         │
+      │    l.                   │      │        .r/&#39;             │
+      │     &quot;:                  │      │      .r&#39;                │
+    L │       \.                │   L&#39; │     ./                  │
+      │        &quot;\..             │      │    .&#39;                   │
+      │           &#39;&quot;:,_         │      │   ,&#39;                    │
+    0 │                &quot;&quot;---:.__│   -5 │  ./                     │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -2                        2      -2                        2
+                 y ⋅ ŷ                            y ⋅ ŷ</code></pre><h3 id="SigmoidLoss-:-MarginLoss"><a class="docs-heading-anchor" href="#SigmoidLoss-:-MarginLoss"><code>SigmoidLoss &lt;: MarginLoss</code></a><a id="SigmoidLoss-:-MarginLoss-1"></a><a class="docs-heading-anchor-permalink" href="#SigmoidLoss-:-MarginLoss" title="Permalink"></a></h3><p>Continuous loss which penalizes every prediction with a loss within in the range (0,2). It is infinitely many times differentiable, Lipschitz continuous but nonconvex.</p><p class="math-container">\[L(a) = 1 - \tanh(a)\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction                     Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    2 │&quot;&quot;&#39;--,.                  │    0 │..                     ..│
+      │      &#39;\.                │      │ &quot;\.                 ./&quot; │
+      │         &#39;.              │      │    &#39;,             ,&#39;    │
+      │           \.            │      │      \           /      │
+    L │            &quot;\.          │   L&#39; │       \         /       │
+      │              \.         │      │        \.     ./        │
+      │                \,       │      │         \.   ./         │
+    0 │                  &#39;&quot;-:.__│   -1 │          &#39;,_,&#39;          │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -2                        2      -2                        2
+                 y ⋅ ŷ                            y ⋅ ŷ</code></pre><h3 id="DWDMarginLoss-:-MarginLoss"><a class="docs-heading-anchor" href="#DWDMarginLoss-:-MarginLoss"><code>DWDMarginLoss &lt;: MarginLoss</code></a><a id="DWDMarginLoss-:-MarginLoss-1"></a><a class="docs-heading-anchor-permalink" href="#DWDMarginLoss-:-MarginLoss" title="Permalink"></a></h3><p>The distance weighted discrimination margin loss. It is a differentiable generalization of the <a href="@ref">L1HingeLoss</a> that is different than the <a href="@ref">SmoothedL1HingeLoss</a>. It is Lipschitz continuous and convex, but not strictly convex.</p><p class="math-container">\[L(a) = \begin{cases} 1 - a &amp; \quad \text{if } a \ge \frac{q}{q+1} \\ \frac{1}{a^q} \frac{q^q}{(q+1)^{q+1}} &amp; \quad \text{otherwise}\\ \end{cases}\]</p><hr/><pre><code class="nohighlight hljs">              Lossfunction (q=1)               Derivative
+      ┌────────────┬────────────┐      ┌────────────┬────────────┐
+    2 │      &quot;.                 │    0 │                     ._r-│
+      │        \.               │      │                   ./    │
+      │         &#39;,              │      │                 ./      │
+      │           \.            │      │                 /       │
+    L │            &quot;\.          │   L&#39; │                .        │
+      │              \.         │      │                /        │
+      │               &quot;:__      │      │               ;         │
+    0 │                   &#39;&quot;&quot;---│   -1 │---------------┘         │
+      └────────────┴────────────┘      └────────────┴────────────┘
+      -2                        2      -2                        2
+                 y ⋅ ŷ                            y ⋅ ŷ</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../index_base/">« Contents</a><a class="docs-footer-nextpage" href="../types/">Types »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Friday 3 March 2023 19:49">Friday 3 March 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
