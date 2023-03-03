@@ -300,4 +300,18 @@ end
 
 load_saved_population(::Nothing; kws...) = nothing
 
+"""Return (procs, numprocs, we_created_procs)."""
+function create_procs(addprocs_function::F, numprocs::Int, procs::Nothing) where {F<:Function}
+    addprocs_function(numprocs; lazy=false), numprocs, true
+end
+function create_procs(addprocs_function::F, numprocs::Nothing, procs::Nothing) where {F<:Function}
+    # TODO: Use `nthreads()` here:
+    return create_procs(addprocs_function, 4, procs)
+end
+function create_procs(addprocs_function::F, numprocs::Nothing, procs::Vector{Int}) where {F<:Function}
+    return procs, length(procs), false
+end
+create_procs(::Nothing, numprocs, procs) = create_procs(addprocs, numprocs, procs)
+
+
 end

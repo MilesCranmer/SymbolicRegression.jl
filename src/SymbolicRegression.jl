@@ -210,7 +210,8 @@ import .SearchUtilsModule:
     init_dummy_pops,
     StateType,
     load_saved_hall_of_fame,
-    load_saved_population
+    load_saved_population,
+    create_procs
 
 include("Configure.jl")
 include("Deprecates.jl")
@@ -378,7 +379,7 @@ function EquationSearch(
         )
 
     return _EquationSearch(
-        concurrency,
+        Val(concurrency),
         datasets;
         niterations=niterations,
         options=options,
@@ -391,16 +392,21 @@ function EquationSearch(
 end
 
 function _EquationSearch(
-    parallelism::Symbol,
+    ::Val{parallelism},
     datasets::Vector{Dataset{T}};
     niterations::Int,
     options::Options,
-    numprocs::Union{Int,Nothing},
-    procs::Union{Vector{Int},Nothing},
-    addprocs_function::Union{Function,Nothing},
+    numprocs,
+    procs,
+    addprocs_function,
     runtests::Bool,
-    saved_state::Union{StateType{T},Nothing},
-) where {T<:Real}
+    saved_state,
+) where {T<:Real,parallelism}
+    numprocs::Union{Int,Nothing}
+    procs::Union{Vector{Int},Nothing}
+    addprocs_function::Union{Function,Nothing}
+    saved_state::Union{StateType{T},Nothing}
+
     if options.deterministic
         if parallelism != :serial
             error("Determinism is only guaranteed for serial mode.")
@@ -498,19 +504,7 @@ function _EquationSearch(
     ### Distributed code:
     ##########################################################################
     if parallelism == :multiprocessing
-        if addprocs_function === nothing
-            addprocs_function = addprocs
-        end
-        if numprocs === nothing && procs === nothing
-            numprocs = 4
-            procs = addprocs_function(numprocs; lazy=false)
-            we_created_procs = true
-        elseif numprocs === nothing
-            numprocs = length(procs)
-        elseif procs === nothing
-            procs = addprocs_function(numprocs; lazy=false)
-            we_created_procs = true
-        end
+        procs, numprocs, we_created_procs = create_procs(addprocs_function, numprocs, procs)::Tuple{Vector{Int},Int,Bool}
 
         if we_created_procs
             project_path = splitdir(Pkg.project().path)[1]
