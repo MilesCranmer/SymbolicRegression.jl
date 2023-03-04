@@ -33,17 +33,16 @@ end
 """`mode=:precompile` will use `@precompile_*` directives; `mode=:compile` runs."""
 function do_precompilation(; mode=:precompile)
     @maybe_precompile_setup mode begin
-        types = [Float32, Float64]
-        for T in types
+        for T in [Float32, Float64]
             @maybe_precompile_all_calls mode begin
-                X = randn(T, 5, 100)
+                X = randn(T, 5, 10)
                 y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
                 options = SymbolicRegression.Options(;
                     binary_operators=[+, *, /, -],
                     unary_operators=[cos, exp],
                     npopulations=3,
-                    npop=50,
-                    ncycles_per_iteration=100,
+                    npop=20,
+                    ncycles_per_iteration=20,
                     mutation_weights=MutationWeights(;
                         mutate_constant=1.0,
                         mutate_operator=1.0,
@@ -76,4 +75,27 @@ function do_precompilation(; mode=:precompile)
             end
         end
     end
+end
+
+for data_type in [Float16, Float32, Float64],
+    parallelism in [:serial, :multithreading, :multiprocessing],
+    numprocs_type in [Int, Nothing],
+    procs_type in [Vector{Int}, Nothing],
+    addprocs_function_type in [Function, Nothing],
+    saved_state_type in [Nothing, StateType{data_type}]
+
+    precompile(
+        _EquationSearch,
+        (
+            Val{parallelism},
+            Vector{Dataset{data_type}},
+            Int,
+            Options{Int},
+            numprocs_type,
+            procs_type,
+            addprocs_function_type,
+            Bool,
+            saved_state_type
+        ),
+    )
 end
