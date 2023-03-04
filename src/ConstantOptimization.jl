@@ -29,22 +29,22 @@ function optimize_constants(
     end
     x0 = get_constants(member.tree)
     f(x::Vector{T})::T = opt_func(x, dataset, member.tree, options)
-    if nconst == 1
-        algorithm = Optim.Newton(; linesearch=LineSearches.BackTracking())
+    algorithm = if nconst == 1
+        Optim.Newton(; linesearch=LineSearches.BackTracking())
     else
         if options.optimizer_algorithm == "NelderMead"
-            algorithm = Optim.NelderMead(; linesearch=LineSearches.BackTracking())
-        elseif options.optimizer_algorithm == "BFGS"
-            algorithm = Optim.BFGS(; linesearch=LineSearches.BackTracking())#order=3))
+            Optim.NelderMead(; linesearch=LineSearches.BackTracking())
         else
-            error("Optimization function not implemented.")
+            options.optimizer_algorithm == "BFGS" || error("Optimization function not implemented.")
+            Optim.BFGS(; linesearch=LineSearches.BackTracking())
+            # TODO: Let order be parameter
         end
     end
     result = Optim.optimize(f, x0, algorithm, options.optimizer_options)
     num_evals += result.f_calls
     # Try other initial conditions:
     for i in 1:(options.optimizer_nrestarts)
-        new_start = x0 .* (T(1) .+ T(1//2) * randn(T, size(x0, 1)))
+        new_start = x0 .* (one(T) .+ T(1//2) * randn(T, size(x0, 1)))
         tmpresult = Optim.optimize(f, new_start, algorithm, options.optimizer_options)
         num_evals += tmpresult.f_calls
 
