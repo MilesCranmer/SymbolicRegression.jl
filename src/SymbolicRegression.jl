@@ -538,8 +538,8 @@ function _EquationSearch(
             end
         end
     end
-    @assert length(hallOfFame) == nout
     hallOfFame::Vector{HallOfFame{T}}
+    @assert length(hallOfFame) == nout
 
     for j in 1:nout
         for i in 1:(options.npopulations)
