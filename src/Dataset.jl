@@ -33,9 +33,9 @@ mutable struct Dataset{T<:Real}
     weights::Union{AbstractVector{T},Nothing}
     avg_y::T
     baseline_loss::T
-    varMap::Array{String,1}
+    varMap::Vector{String}
     has_units::Bool
-    units::Array{Unitful.FreeUnits,1}
+    units::Vector{Unitful.FreeUnits{N,D,nothing} where {N,D}}
 end
 
 """
@@ -49,8 +49,8 @@ function Dataset(
     X::AbstractMatrix{T},
     y::AbstractVector{T};
     weights::Union{AbstractVector{T},Nothing}=nothing,
-    varMap::Union{Array{String,1},Nothing}=nothing,
-    units::Union{Array{Unitful.FreeUnits,1},Nothing}=nothing,
+    varMap::Union{Vector{String},Nothing}=nothing,
+    units::Union{Vector{Unitful.FreeUnits{N,D,nothing} where {N,D}},Nothing}=nothing,
 ) where {T<:Real}
     Base.require_one_based_indexing(X, y)
     n = size(X, BATCH_DIM)

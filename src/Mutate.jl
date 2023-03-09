@@ -170,7 +170,7 @@ function next_generation(
         end
 
         successful_mutation =
-            successful_mutation && check_constraints(tree, options, curmaxsize)
+            successful_mutation && check_constraints(tree, options, curmaxsize; dataset)
 
         attempts += 1
     end
@@ -299,8 +299,8 @@ function crossover_generation(
     num_evals = 0.0
     while true
         # Both trees satisfy constraints
-        if check_constraints(child_tree1, options, curmaxsize) &&
-            check_constraints(child_tree2, options, curmaxsize)
+        if check_constraints(child_tree1, options, curmaxsize; dataset) &&
+            check_constraints(child_tree2, options, curmaxsize; dataset)
             break
         end
         if num_tries > max_tries
