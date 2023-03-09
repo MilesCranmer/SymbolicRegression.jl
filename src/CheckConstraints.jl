@@ -178,33 +178,47 @@ function _get_units_deg2(
     end
 end
 
+x = Unitful.@u_str "kg"
+const DIMENSIONLESS = (x / x)
+
+"""Get the units of a tree.
+
+Returns a tuple of (units, is_wildcarded, completed_successfully).
+"""
 function get_units(
     tree::Node, dataset::Dataset{T}, options::Options
-)::Tuple{Unitful.FreeUnits,Bool} where {T}
+)::Tuple{Unitful.FreeUnits,Bool,Bool} where {T}
     if tree.degree == 0
         if tree.constant
-            x = Unitful.@u_str "kg"
             # TODO: Here is where we give the wildcard unit.
-            return (x / x), true
+            return DIMENSIONLESS, true, true
         else
-            return dataset.units[tree.feature], true
+            return dataset.units[tree.feature], false, true
         end
     elseif tree.degree == 1
-        left, completion = get_units(tree.l, dataset, options)
-        !completion && return (left, false)
+        left, wildcard, completion = get_units(tree.l, dataset, options)
+        !completion && return (left, false, false)
         op = options.operators.unaops[tree.op]
-        return _get_units_deg1(left, op, T)  # TODO: This is a hack.
+        out, completion = _get_units_deg1(left, op, T)  # TODO: This is a hack.
+
+        if !completion && wildcard
+            # Wildcard can save!
+            return DIMENSIONLESS, false, true
+        end
+        return out, wildcard, completion
     else
-        left, completion = get_units(tree.l, dataset, options)
-        !completion && return (left, false)
-        right, completion = get_units(tree.r, dataset, options)
-        !completion && return (right, false)
+        left, left_wildcard, completion = get_units(tree.l, dataset, options)
+        !completion && return (left, false, false)
+        right, right_wildcard, completion = get_units(tree.r, dataset, options)
+        !completion && return (right, false, false)
         op = options.operators.binops[tree.op]
         if op == (^) && !(is_dimensionless(left) && is_dimensionless(right))
             # Otherwise, will blow up multiple dispatch!
-            return (left, false)
+            return (left, false, false)
         end
-        return _get_units_deg2(left, right, op, T)
+        out, completion = _get_units_deg2(left, right, op, T)
+
+        # TODO: Finish this off.
     end
 end
 
