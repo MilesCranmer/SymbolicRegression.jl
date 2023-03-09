@@ -1,5 +1,6 @@
 module DatasetModule
 
+using Unitful: Unitful
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM
 
 """
@@ -20,6 +21,8 @@ import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM
     `update_baseline_loss!`.
 - `varMap::Array{String,1}`: The names of the features,
     with shape `(nfeatures,)`.
+- `units::Array{Unitful.FreeUnits,1}`: The units of the features,
+    with shape `(nfeatures,)`.
 """
 mutable struct Dataset{T<:Real}
     X::AbstractMatrix{T}
@@ -31,6 +34,8 @@ mutable struct Dataset{T<:Real}
     avg_y::T
     baseline_loss::T
     varMap::Array{String,1}
+    has_units::Bool
+    units::Array{Unitful.FreeUnits,1}
 end
 
 """
@@ -45,6 +50,7 @@ function Dataset(
     y::AbstractVector{T};
     weights::Union{AbstractVector{T},Nothing}=nothing,
     varMap::Union{Array{String,1},Nothing}=nothing,
+    units::Union{Array{Unitful.FreeUnits,1},Nothing}=nothing,
 ) where {T<:Real}
     Base.require_one_based_indexing(X, y)
     n = size(X, BATCH_DIM)
@@ -53,6 +59,14 @@ function Dataset(
     if varMap === nothing
         varMap = ["x$(i)" for i in 1:nfeatures]
     end
+    has_units = true
+    if units === nothing
+        has_units = false
+        make_dimensionless = () -> let x = Unitful.@u_str "kg"
+            x / x
+        end
+        units = [make_dimensionless() for _ in 1:nfeatures]
+    end
     avg_y = if weighted
         sum(y .* weights) / sum(weights)
     else
@@ -60,7 +74,9 @@ function Dataset(
     end
     baseline = one(T)
 
-    return Dataset{T}(X, y, n, nfeatures, weighted, weights, avg_y, baseline, varMap)
+    return Dataset{T}(
+        X, y, n, nfeatures, weighted, weights, avg_y, baseline, varMap, has_units, units
+    )
 end
 
 end

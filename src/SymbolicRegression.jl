@@ -60,6 +60,7 @@ export Population,
 
 using Distributed
 using JSON3: JSON3
+using Unitful: Unitful
 import Printf: @printf, @sprintf
 using Pkg: Pkg
 import TOML: parsefile
@@ -286,6 +287,7 @@ function EquationSearch(
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
     varMap::Union{Vector{String},Nothing}=nothing,
+    units::Union{Vector{Unitful.FreeUnits},Nothing}=nothing,
     options::Options=Options(),
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
@@ -311,6 +313,7 @@ function EquationSearch(
             y[j, :];
             weights=(weights === nothing ? weights : weights[j, :]),
             varMap=varMap,
+            units=units,
         ) for j in 1:nout
     ]
 
