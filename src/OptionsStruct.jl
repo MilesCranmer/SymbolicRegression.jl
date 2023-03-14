@@ -110,6 +110,7 @@ struct Options{CT}
     complexity_mapping::ComplexityMapping{CT}
     tournament_selection_n::Int
     tournament_selection_p::Float32
+    integer_constants::Bool
     parsimony::Float32
     alpha::Float32
     maxsize::Int

@@ -2,7 +2,7 @@ module PopulationModule
 
 using StatsBase: StatsBase
 import Random: randperm
-import DynamicExpressions: string_tree
+import ..InterfaceDynamicExpressionsModule: string_tree
 import ..CoreModule: Options, Dataset, RecordType
 import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, update_baseline_loss!
@@ -157,7 +157,7 @@ function record_population(pop::Population{T}, options::Options)::RecordType whe
     return RecordType(
         "population" => [
             RecordType(
-                "tree" => string_tree(member.tree, options.operators),
+                "tree" => string_tree(member.tree, options),
                 "loss" => member.loss,
                 "score" => member.score,
                 "complexity" => compute_complexity(member.tree, options),

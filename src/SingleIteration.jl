@@ -1,6 +1,7 @@
 module SingleIterationModule
 
-import DynamicExpressions: string_tree, simplify_tree, combine_operators
+import DynamicExpressions: simplify_tree, combine_operators
+import ..InterfaceDynamicExpressionsModule: string_tree
 import ..CoreModule: Options, Dataset, RecordType
 import ..ComplexityModule: compute_complexity
 import ..UtilsModule: debug
@@ -70,8 +71,11 @@ function optimize_and_simplify_population(
     array_num_evals = zeros(Float64, pop.n)
     do_optimization = rand(pop.n) .< options.optimizer_probability
     for j in 1:(pop.n)
-        pop.members[j].tree = simplify_tree(pop.members[j].tree, options.operators)
-        pop.members[j].tree = combine_operators(pop.members[j].tree, options.operators)
+        if !options.integer_constants
+            # TODO: Need to tweak these to simplify using constants.
+            pop.members[j].tree = simplify_tree(pop.members[j].tree, options.operators)
+            pop.members[j].tree = combine_operators(pop.members[j].tree, options.operators)
+        end
         if options.should_optimize_constants && do_optimization[j]
             pop.members[j], array_num_evals[j] = optimize_constants(
                 dataset, pop.members[j], options
@@ -98,7 +102,7 @@ function optimize_and_simplify_population(
             if !haskey(record["mutations"], "$(member.ref)")
                 record["mutations"]["$(member.ref)"] = RecordType(
                     "events" => Vector{RecordType}(),
-                    "tree" => string_tree(member.tree, options.operators),
+                    "tree" => string_tree(member.tree, options),
                     "score" => member.score,
                     "loss" => member.loss,
                     "parent" => member.parent,

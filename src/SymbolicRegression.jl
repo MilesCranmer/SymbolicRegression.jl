@@ -181,7 +181,7 @@ import .MutationFunctionsModule:
     random_node,
     random_node_and_parent,
     crossover_trees
-import .InterfaceDynamicExpressionsModule: @extend_operators
+import .InterfaceDynamicExpressionsModule: @extend_operators, string_tree
 import .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
 import .PopMemberModule: PopMember, copy_pop_member, copy_pop_member_reset_birth
 import .PopulationModule:
@@ -417,16 +417,10 @@ function _EquationSearch(
     # Redefine print, show:
     options.define_helper_functions && @eval begin
         function Base.print(io::IO, tree::Node)
-            return print(
-                io,
-                string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap)),
-            )
+            return print(io, string_tree(tree, $(options); varMap=$(datasets[1].varMap)))
         end
         function Base.show(io::IO, tree::Node)
-            return print(
-                io,
-                string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap)),
-            )
+            return print(io, string_tree(tree, $(options); varMap=$(datasets[1].varMap)))
         end
     end
 

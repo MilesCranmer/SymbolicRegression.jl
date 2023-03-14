@@ -1,7 +1,7 @@
 module RegularizedEvolutionModule
 
 import Random: shuffle!
-import DynamicExpressions: string_tree
+import ..InterfaceDynamicExpressionsModule: string_tree
 import ..CoreModule: Options, Dataset, RecordType
 import ..PopMemberModule: PopMember
 import ..PopulationModule: Population, best_of_sample
@@ -108,7 +108,7 @@ function reg_evol_cycle(
                         if !haskey(record["mutations"], "$(member.ref)")
                             record["mutations"]["$(member.ref)"] = RecordType(
                                 "events" => Vector{RecordType}(),
-                                "tree" => string_tree(member.tree, options.operators),
+                                "tree" => string_tree(member.tree, options),
                                 "score" => member.score,
                                 "loss" => member.loss,
                                 "parent" => member.parent,

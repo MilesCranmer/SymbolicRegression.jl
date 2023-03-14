@@ -14,6 +14,20 @@ using SymbolicUtils: SymbolicUtils
 using DynamicExpressions: DynamicExpressions
 import ..CoreModule: Options
 
+function map_constants(f, tree::Node{T}) where {T}
+    if tree.degree == 0
+        if tree.constant
+            Node(T; val=f(tree.val::T))
+        else
+            Node(T; feature=tree.feature)
+        end
+    elseif tree.degree == 1
+        Node(tree.op, map_constants(f, tree.l))
+    else
+        Node(tree.op, map_constants(f, tree.l), map_constants(f, tree.r))
+    end
+end
+
 """
     eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
 
@@ -48,6 +62,9 @@ which speed up evaluation significantly.
     to the equation.
 """
 function eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
+    if options.integer_constants
+        tree = map_constants(round, tree)
+    end
     return eval_tree_array(tree, X, options.operators; turbo=options.turbo, kws...)
 end
 
@@ -130,6 +147,9 @@ Convert an equation to a string.
     to print for each feature.
 """
 function string_tree(tree::Node, options::Options; kws...)
+    if options.integer_constants
+        tree = map_constants(round, tree)
+    end
     return string_tree(tree, options.operators; kws...)
 end
 
@@ -146,10 +166,10 @@ Print an equation
     to print for each feature.
 """
 function print_tree(tree::Node, options::Options; kws...)
-    return print_tree(tree, options.operators; kws...)
+    return println(string_tree(tree, options.operators; kws...))
 end
 function print_tree(io::IO, tree::Node, options::Options; kws...)
-    return print_tree(io, tree, options.operators; kws...)
+    return println(string_tree(tree, options.operators; kws...))
 end
 
 """

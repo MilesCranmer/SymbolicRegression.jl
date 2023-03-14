@@ -142,7 +142,7 @@ function string_dominating_pareto_curve(hallOfFame, dataset, options)
             complexity,
             curMSE,
             score,
-            string_tree(member.tree, options.operators, varMap=dataset.varMap)
+            string_tree(member.tree, options, varMap=dataset.varMap)
         )
         lastMSE = curMSE
         lastComplexity = complexity
