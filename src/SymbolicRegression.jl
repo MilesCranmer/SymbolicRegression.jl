@@ -956,14 +956,15 @@ function _EquationSearch(
     end
 
     if options.return_state
-        state = (returnPops, (nout == 1 ? only(hallOfFame) : hallOfFame))
+        # Copy hall of fame to prevent data race issues:
+        state = (returnPops, deepcopy(nout == 1 ? only(hallOfFame) : hallOfFame))
         state::StateType{T}
         return state
     else
         if nout == 1
-            return only(hallOfFame)
+            return deepcopy(only(hallOfFame))
         else
-            return hallOfFame
+            return deepcopy(hallOfFame)
         end
     end
 end
