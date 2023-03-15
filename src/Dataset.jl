@@ -21,7 +21,7 @@ import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM
 - `varMap::Array{String,1}`: The names of the features,
     with shape `(nfeatures,)`.
 """
-mutable struct Dataset{T<:Real}
+struct Dataset{T<:Real}
     X::AbstractMatrix{T}
     y::AbstractVector{T}
     n::Int
@@ -29,7 +29,7 @@ mutable struct Dataset{T<:Real}
     weighted::Bool
     weights::Union{AbstractVector{T},Nothing}
     avg_y::T
-    baseline_loss::T
+    baseline_loss::Threads.Atomic{T}
     varMap::Array{String,1}
 end
 
@@ -58,7 +58,7 @@ function Dataset(
     else
         sum(y) / n
     end
-    baseline = one(T)
+    baseline = Threads.Atomic{T}(1)
 
     return Dataset{T}(X, y, n, nfeatures, weighted, weights, avg_y, baseline, varMap)
 end

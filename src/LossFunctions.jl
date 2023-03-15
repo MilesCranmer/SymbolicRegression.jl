@@ -121,7 +121,7 @@ Update the baseline loss of the dataset using the loss function specified in `op
 """
 function update_baseline_loss!(dataset::Dataset{T}, options::Options) where {T<:Real}
     example_tree = Node(T; val=dataset.avg_y)
-    dataset.baseline_loss = eval_loss(example_tree, dataset, options)
+    Threads.atomic_xchg!(dataset.baseline_loss, eval_loss(example_tree, dataset, options))
     return nothing
 end
 
