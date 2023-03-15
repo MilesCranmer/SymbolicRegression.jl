@@ -478,6 +478,7 @@ function _EquationSearch(
 
     actualMaxsize = options.maxsize + MAX_DEGREE
 
+    # TODO: Should really be one per population too.
     all_running_search_statistics = [
         RunningSearchStatistics(; options=options) for i in 1:nout
     ]
@@ -810,19 +811,21 @@ function _EquationSearch(
                 iteration = find_iteration_from_record(key, record) + 1
             end
 
+            c_rss = deepcopy(all_running_search_statistics[j])
+            c_cur_pop = copy_population(cur_pop)
             allPops[j][i] = @sr_spawner parallelism worker_idx let
                 cur_record = RecordType()
                 @recorder cur_record[key] = RecordType(
-                    "iteration$(iteration)" => record_population(cur_pop, options)
+                    "iteration$(iteration)" => record_population(c_cur_pop, options)
                 )
                 tmp_num_evals = 0.0
-                normalize_frequencies!(all_running_search_statistics[j])
+                normalize_frequencies!(c_rss)
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
-                    cur_pop,
+                    c_cur_pop,
                     options.ncycles_per_iteration,
                     curmaxsize,
-                    all_running_search_statistics[j];
+                    c_rss;
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
