@@ -18,6 +18,9 @@ end
 - `weighted::Bool`: Whether the dataset is non-uniformly weighted.
 - `weights::Union{AbstractVector{T},Nothing}`: If the dataset is weighted,
     these specify the per-sample weight (with shape `(n,)`).
+- `extra::NamedTuple`: Extra information to pass to a custom evaluation
+    function. Since this is an arbitrary named tuple, you could pass
+    any sort of dataset you wish to here.
 - `avg_y`: The average value of `y` (weighted, if `weights` are passed).
 - `baseline_loss`: The loss of a constant function which predicts the average
     value of `y`. This is loss-dependent and should be updated with
@@ -26,7 +29,11 @@ end
     with shape `(nfeatures,)`.
 """
 struct Dataset{
-    T<:Real,AX<:AbstractMatrix{T},AY<:AbstractVector{T},AW<:Union{AbstractVector{T},Nothing}
+    T<:Real,
+    AX<:AbstractMatrix{T},
+    AY<:AbstractVector{T},
+    AW<:Union{AbstractVector{T},Nothing},
+    NT<:NamedTuple,
 }
     X::AX
     y::AY
@@ -34,6 +41,7 @@ struct Dataset{
     nfeatures::Int
     weighted::Bool
     weights::AW
+    extra::NT
     avg_y::T
     baseline_loss::Atomic{T}
     varMap::Array{String,1}
@@ -42,7 +50,8 @@ end
 """
     Dataset(X::AbstractMatrix{T}, y::AbstractVector{T};
             weights::Union{AbstractVector{T}, Nothing}=nothing,
-            varMap::Union{Array{String, 1}, Nothing}=nothing)
+            varMap::Union{Array{String, 1}, Nothing}=nothing,
+            extra::NamedTuple=NamedTuple())
 
 Construct a dataset to pass between internal functions.
 """
@@ -51,6 +60,7 @@ function Dataset(
     y::AbstractVector{T};
     weights::Union{AbstractVector{T},Nothing}=nothing,
     varMap::Union{Array{String,1},Nothing}=nothing,
+    extra::NamedTuple=NamedTuple(),
 ) where {T<:Real}
     Base.require_one_based_indexing(X, y)
     n = size(X, BATCH_DIM)
@@ -66,8 +76,8 @@ function Dataset(
     end
     baseline = Atomic(one(T))
 
-    return Dataset{T,typeof(X),typeof(y),typeof(weights)}(
-        X, y, n, nfeatures, weighted, weights, avg_y, baseline, varMap
+    return Dataset{T,typeof(X),typeof(y),typeof(weights),typeof(extra)}(
+        X, y, n, nfeatures, weighted, weights, extra, avg_y, baseline, varMap
     )
 end
 
