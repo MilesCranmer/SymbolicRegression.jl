@@ -1,8 +1,8 @@
 module MutateModule
 
 import DynamicExpressions:
-    Node, copy_node, count_constants, simplify_tree, combine_operators
-import ..CoreModule: Options, Dataset, RecordType, sample_mutation
+    Node, copy_node, count_nodes, count_constants, simplify_tree, combine_operators
+import ..CoreModule: Options, MutationWeights, Dataset, RecordType, sample_mutation
 import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, score_func_batch
 import ..CheckConstraintsModule: check_constraints
@@ -19,6 +19,36 @@ import ..MutationFunctionsModule:
     crossover_trees
 import ..ConstantOptimizationModule: optimize_constants
 import ..RecorderModule: @recorder
+
+function condition_mutation_weights!(
+    weights::MutationWeights, tree::Node, options::Options, curmaxsize::Int
+)
+    if tree.degree == 0
+        # If equation is too small, don't delete operators
+        # or simplify
+        weights.mutate_operator = 0.0
+        weights.delete_node = 0.0
+        weights.simplify = 0.0
+        if !tree.constant
+            weights.optimize = 0.0
+            weights.mutate_constant = 0.0
+        end
+        return nothing
+    end
+
+    #More constants => more likely to do constant mutation
+    n_constants = count_constants(tree)
+    weights.mutate_constant *= min(8, n_constants) / 8.0
+    complexity = compute_complexity(tree, options)
+
+    if complexity >= curmaxsize
+        # If equation is too big, don't add new operators
+        weights.add_node = 0.0
+        weights.insert_node = 0.0
+    end
+
+    return nothing
+end
 
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
@@ -50,15 +80,7 @@ function next_generation(
 
     weights = copy(options.mutation_weights)
 
-    #More constants => more likely to do constant mutation
-    weights.mutate_constant *= min(8, count_constants(prev)) / 8.0
-    n = compute_complexity(prev, options)
-
-    # If equation too big, don't add new operators
-    if n >= curmaxsize
-        weights.add_node = 0.0
-        weights.insert_node = 0.0
-    end
+    condition_mutation_weights!(weights, prev, options, curmaxsize)
 
     mutation_choice = sample_mutation(weights)
 
