@@ -99,7 +99,7 @@ for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma,
                 score_func(dataset, tree_bad, make_options())[1]
 
             dataset_with_larger_baseline = deepcopy(dataset)
-            Threads.atomic_xchg!(dataset_with_larger_baseline.baseline_loss, one(T) * 10)
+            @atomic dataset_with_larger_baseline.baseline_loss.value = one(T) * 10
             @test score_func(dataset_with_larger_baseline, tree_bad, make_options())[1] <
                 score_func(dataset, tree_bad, make_options())[1]
 

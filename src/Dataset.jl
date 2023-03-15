@@ -2,6 +2,10 @@ module DatasetModule
 
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM
 
+mutable struct Atomic{T}
+    @atomic value::T
+end
+
 """
     Dataset{T<:Real}
 
@@ -31,7 +35,7 @@ struct Dataset{
     weighted::Bool
     weights::AW
     avg_y::T
-    baseline_loss::Threads.Atomic{T}
+    baseline_loss::Atomic{T}
     varMap::Array{String,1}
 end
 
@@ -60,7 +64,7 @@ function Dataset(
     else
         sum(y) / n
     end
-    baseline = Threads.Atomic{T}(1)
+    baseline = Atomic(one(T))
 
     return Dataset{T,typeof(X),typeof(y),typeof(weights)}(
         X, y, n, nfeatures, weighted, weights, avg_y, baseline, varMap
