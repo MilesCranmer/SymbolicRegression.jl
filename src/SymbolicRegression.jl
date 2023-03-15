@@ -342,6 +342,10 @@ function EquationSearch(
     return EquationSearch(X, reshape(y, (1, size(y, 1))); kw...)
 end
 
+function EquationSearch(dataset::Dataset; kws...)
+    return EquationSearch([dataset]; kws...)
+end
+
 function EquationSearch(
     datasets::Vector{D};
     niterations::Int=10,
