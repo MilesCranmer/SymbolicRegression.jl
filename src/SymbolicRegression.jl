@@ -343,7 +343,7 @@ function EquationSearch(
 end
 
 function EquationSearch(
-    datasets::Vector{Dataset{T}};
+    datasets::Vector{D};
     niterations::Int=10,
     options::Options=Options(),
     parallelism=:multithreading,
@@ -352,7 +352,7 @@ function EquationSearch(
     addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
     saved_state::Union{StateType{T},Nothing}=nothing,
-) where {T<:Real}
+) where {T<:Real,D<:Dataset{T}}
     concurrency = if parallelism in (:multithreading, "multithreading")
         :multithreading
     elseif parallelism in (:multiprocessing, "multiprocessing")
@@ -392,7 +392,7 @@ end
 
 function _EquationSearch(
     parallelism::Symbol,
-    datasets::Vector{Dataset{T}};
+    datasets::Vector{D};
     niterations::Int,
     options::Options,
     numprocs::Union{Int,Nothing},
@@ -400,7 +400,7 @@ function _EquationSearch(
     addprocs_function::Union{Function,Nothing},
     runtests::Bool,
     saved_state::Union{StateType{T},Nothing},
-) where {T<:Real}
+) where {T<:Real,D<:Dataset{T}}
     if options.deterministic
         if parallelism != :serial
             error("Determinism is only guaranteed for serial mode.")
@@ -820,6 +820,9 @@ function _EquationSearch(
                 )
                 tmp_num_evals = 0.0
                 normalize_frequencies!(c_rss)
+                # TODO: Could the dataset objects themselves be modified during the search??
+                # Perhaps inside the evaluation kernels?
+                # It shouldn't be too expensive to copy the dataset.
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
                     c_cur_pop,
