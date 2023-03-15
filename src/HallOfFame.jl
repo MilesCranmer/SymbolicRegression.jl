@@ -111,7 +111,7 @@ end
 
 function string_dominating_pareto_curve(hallOfFame, dataset, options)
     output = ""
-    curMSE = Float64(dataset.baseline_loss)
+    curMSE = Float64(dataset.baseline_loss.value)
     lastMSE = curMSE
     lastComplexity = 0
     output *= "Hall of Fame:\n"

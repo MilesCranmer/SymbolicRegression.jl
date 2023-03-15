@@ -87,7 +87,7 @@ function score_func(
     dataset::Dataset{T}, tree::Node{T}, options::Options
 )::Tuple{T,T} where {T<:Real}
     result_loss = eval_loss(tree, dataset, options)
-    score = loss_to_score(result_loss, dataset.baseline_loss, tree, options)
+    score = loss_to_score(result_loss, dataset.baseline_loss.value, tree, options)
     return score, result_loss
 end
 
@@ -110,7 +110,7 @@ function score_func_batch(
         batch_w = view(w, batch_idx)
         result_loss = _weighted_loss(prediction, batch_y, batch_w, options.elementwise_loss)
     end
-    score = loss_to_score(result_loss, dataset.baseline_loss, tree, options)
+    score = loss_to_score(result_loss, dataset.baseline_loss.value, tree, options)
     return score, result_loss
 end
 
