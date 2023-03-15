@@ -564,8 +564,9 @@ function _EquationSearch(
                     member.score = score
                     member.loss = result_loss
                 end
+                copy_pop = copy_population(saved_pop)
                 new_pop = @sr_spawner parallelism worker_idx (
-                    saved_pop, HallOfFame(options, T), RecordType(), 0.0
+                    copy_pop, HallOfFame(options, T), RecordType(), 0.0
                 )
             else
                 if saved_pop !== nothing
