@@ -603,6 +603,7 @@ function _EquationSearch(
 
             # TODO - why is this needed??
             # Multi-threaded doesn't like to fetch within a new task:
+            c_rss = deepcopy(running_search_statistics)
             updated_pop = @sr_spawner parallelism worker_idx let
                 in_pop = if parallelism in (:multiprocessing, :multithreading)
                     fetch(init_pops[j][i])[1]
@@ -615,13 +616,13 @@ function _EquationSearch(
                     "iteration0" => record_population(in_pop, options)
                 )
                 tmp_num_evals = 0.0
-                normalize_frequencies!(running_search_statistics)
+                normalize_frequencies!(c_rss)
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
                     in_pop,
                     options.ncycles_per_iteration,
                     curmaxsize,
-                    running_search_statistics;
+                    c_rss;
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
