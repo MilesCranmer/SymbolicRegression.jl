@@ -10,7 +10,7 @@ You can also declare your own loss as a function that takes
 two (unweighted) or three (weighted) scalar arguments. For example,
 ```
 f(x, y, w) = abs(x-y)*w
-options = Options(loss=f)
+options = Options(elementwise_loss=f)
 ```
 
 ## Regression:
