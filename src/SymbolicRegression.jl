@@ -308,6 +308,10 @@ function EquationSearch(
     if weights !== nothing
         weights = reshape(weights, size(y))
     end
+    if T <: Complex && loss_type == Nothing
+        get_base_type(::Type{Complex{BT}}) where {BT} = BT
+        loss_type = get_base_type(T)
+    end
     datasets = [
         Dataset(
             X,
