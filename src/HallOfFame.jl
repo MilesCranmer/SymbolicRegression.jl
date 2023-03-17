@@ -1,22 +1,22 @@
 module HallOfFameModule
 
 import DynamicExpressions: Node, string_tree
-import ..CoreModule: MAX_DEGREE, Options, Dataset
+import ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 import ..PopMemberModule: PopMember, copy_pop_member
 import ..LossFunctionsModule: eval_loss
 using Printf: @sprintf
 
 """ List of the best members seen all time in `.members` """
-mutable struct HallOfFame{T<:Real}
-    members::Array{PopMember{T},1}
+mutable struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE}
+    members::Array{PopMember{T,L},1}
     exists::Array{Bool,1} #Whether it has been set
 
     # Arranged by complexity - store one at each.
 end
 
 """
-    HallOfFame(options::Options, ::Type{T}) where {T<:Real}
+    HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 
 Create empty HallOfFame. The HallOfFame stores a list
 of `PopMember` objects in `.members`, which is enumerated
@@ -28,14 +28,16 @@ Arguments:
 - `options`: Options containing specification about deterministic.
 - `T`: Type of Nodes to use in the population. e.g., `Float64`.
 """
-function HallOfFame(options::Options, ::Type{T}) where {T<:Real}
+function HallOfFame(
+    options::Options, ::Type{T}, ::Type{L}
+) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     actualMaxsize = options.maxsize + MAX_DEGREE
-    return HallOfFame(
+    return HallOfFame{T,L}(
         [
             PopMember(
                 Node(; val=convert(T, 1)),
-                T(0),
-                T(Inf);
+                L(0),
+                L(Inf);
                 parent=-1,
                 deterministic=options.deterministic,
             ) for i in 1:actualMaxsize
@@ -44,7 +46,9 @@ function HallOfFame(options::Options, ::Type{T}) where {T<:Real}
     )
 end
 
-function copy_hall_of_fame(hof::HallOfFame{T})::HallOfFame{T} where {T<:Real}
+function copy_hall_of_fame(
+    hof::HallOfFame{T,L}
+)::HallOfFame{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     return HallOfFame(
         [copy_pop_member(member) for member in hof.members],
         [exists for exists in hof.exists],
@@ -52,15 +56,15 @@ function copy_hall_of_fame(hof::HallOfFame{T})::HallOfFame{T} where {T<:Real}
 end
 
 """
-    calculate_pareto_frontier(dataset::Dataset{T}, hallOfFame::HallOfFame{T},
-                            options::Options) where {T<:Real}
+    calculate_pareto_frontier(dataset::Dataset{T,L}, hallOfFame::HallOfFame{T,L},
+                            options::Options) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 """
 function calculate_pareto_frontier(
-    dataset::Dataset{T}, hallOfFame::HallOfFame{T}, options::Options
-)::Vector{PopMember{T}} where {T<:Real}
+    dataset::Dataset{T,L}, hallOfFame::HallOfFame{T,L}, options::Options
+)::Vector{PopMember{T,L}} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     # TODO - remove dataset from args.
     # Dominating pareto curve - must be better than all simpler equations
-    dominating = PopMember{T}[]
+    dominating = PopMember{T,L}[]
     actualMaxsize = options.maxsize + MAX_DEGREE
     for size in 1:actualMaxsize
         if !hallOfFame.exists[size]
@@ -89,8 +93,8 @@ end
 
 """
     calculate_pareto_frontier(X::AbstractMatrix{T}, y::AbstractVector{T},
-                            hallOfFame::HallOfFame{T}, options::Options;
-                            weights=nothing, varMap=nothing) where {T<:Real}
+                            hallOfFame::HallOfFame{T,L}, options::Options;
+                            weights=nothing, varMap=nothing) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 
 Compute the dominating Pareto frontier for a given hallOfFame. This
 is the list of equations where each equation has a better loss than all
@@ -99,13 +103,13 @@ simpler equations.
 function calculate_pareto_frontier(
     X::AbstractMatrix{T},
     y::AbstractVector{T},
-    hallOfFame::HallOfFame{T},
+    hallOfFame::HallOfFame{T,L},
     options::Options;
     weights=nothing,
     varMap=nothing,
-)::Vector{PopMember{T}} where {T<:Real}
+)::Vector{PopMember{T,L}} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     return calculate_pareto_frontier(
-        Dataset(X, y; weights=weights, varMap=varMap), hallOfFame, options
+        Dataset(X, y; weights=weights, varMap=varMap, loss_type=L), hallOfFame, options
     )
 end
 

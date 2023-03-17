@@ -6,13 +6,13 @@ Equations are specified as binary trees with the `Node` type, defined
 as follows:
 
 ```@docs
-Node{T<:Real}
+Node{T<:DATA_TYPE}
 ```
 
 There are a variety of constructors for `Node` objects, including:
 
 ```@docs
-Node(; val::Real=nothing, feature::Integer=nothing)
+Node(; val::DATA_TYPE=nothing, feature::Integer=nothing)
 Node(op::Int, l::Node)
 Node(op::Int, l::Node, r::Node)
 Node(var_string::String)
@@ -55,38 +55,40 @@ an array of trees tagged with score, loss, and birthdate---these
 values are given in the `PopMember`.
 
 ```@docs
-Population(pop::Array{PopMember{T}, 1}) where {T<:Real}
-Population(dataset::Dataset{T};
+Population(pop::Array{PopMember{T,L}, 1}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+Population(dataset::Dataset{T,L};
            npop::Int, nlength::Int=3,
            options::Options,
-           nfeatures::Int) where {T<:Real}
+           nfeatures::Int) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 Population(X::AbstractMatrix{T}, y::AbstractVector{T};
            npop::Int, nlength::Int=3,
            options::Options,
-           nfeatures::Int) where {T<:Real}
+           nfeatures::Int,
+           loss_type::Type=Nothing) where {T<:DATA_TYPE}
 ```
 
 ## Population members
 
 ```@docs
-PopMember(t::Node{T}, score::T, loss::T) where {T<:Real}
-PopMember(dataset::Dataset{T}, t::Node{T}, options::Options) where {T<:Real}
+PopMember(t::Node{T}, score::L, loss::L) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+PopMember(dataset::Dataset{T,L}, t::Node{T}, options::Options) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 ```
 
 ## Hall of Fame
 
 ```@docs
-HallOfFame(options::Options, ::Type{T}) where {T<:Real}
+HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 ```
 
 ## Dataset
 
 ```@docs
-Dataset{T<:Real}
+Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
 Dataset(X::AbstractMatrix{T},
         y::AbstractVector{T};
         weights::Union{AbstractVector{T}, Nothing}=nothing,
-        varMap::Union{Array{String, 1}, Nothing}=nothing
-       ) where {T<:Real}
-update_baseline_loss!(dataset::Dataset{T}, options::Options) where {T<:Real}
+        varMap::Union{Array{String, 1}, Nothing}=nothing,
+        loss_type::Type=Nothing,
+       ) where {T<:DATA_TYPE}
+update_baseline_loss!(dataset::Dataset{T,L}, options::Options) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 ```

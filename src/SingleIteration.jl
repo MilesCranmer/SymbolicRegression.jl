@@ -1,7 +1,7 @@
 module SingleIterationModule
 
 import DynamicExpressions: string_tree, simplify_tree, combine_operators
-import ..CoreModule: Options, Dataset, RecordType
+import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 import ..UtilsModule: debug
 import ..PopMemberModule: copy_pop_member, generate_reference
@@ -15,22 +15,22 @@ import ..RecorderModule: @recorder
 # Cycle through regularized evolution many times,
 # printing the fittest equation every 10% through
 function s_r_cycle(
-    dataset::Dataset{T},
-    pop::Population,
+    dataset::Dataset{T,L},
+    pop::Population{T,L},
     ncycles::Int,
     curmaxsize::Int,
     running_search_statistics::RunningSearchStatistics;
     verbosity::Int=0,
     options::Options,
     record::RecordType,
-)::Tuple{Population{T},HallOfFame{T},Float64} where {T<:Real}
-    max_temp = T(1.0)
-    min_temp = T(0.0)
+)::Tuple{Population{T,L},HallOfFame{T,L},Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    max_temp = L(1.0)
+    min_temp = L(0.0)
     if !options.annealing
         min_temp = max_temp
     end
     all_temperatures = LinRange(max_temp, min_temp, ncycles)
-    best_examples_seen = HallOfFame(options, T)
+    best_examples_seen = HallOfFame(options, T, L)
     num_evals = 0.0
 
     for temperature in all_temperatures
@@ -61,12 +61,12 @@ function s_r_cycle(
 end
 
 function optimize_and_simplify_population(
-    dataset::Dataset{T},
-    pop::Population,
+    dataset::Dataset{T,L},
+    pop::Population{T,L},
     options::Options,
     curmaxsize::Int,
     record::RecordType,
-)::Tuple{Population,Float64} where {T<:Real}
+)::Tuple{Population{T,L},Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     array_num_evals = zeros(Float64, pop.n)
     do_optimization = rand(pop.n) .< options.optimizer_probability
     for j in 1:(pop.n)

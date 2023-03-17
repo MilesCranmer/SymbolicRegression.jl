@@ -1,9 +1,9 @@
 module DatasetModule
 
-import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM
+import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 
 """
-    Dataset{T<:Real}
+    Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
 
 # Fields
 
@@ -21,7 +21,7 @@ import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM
 - `varMap::Array{String,1}`: The names of the features,
     with shape `(nfeatures,)`.
 """
-mutable struct Dataset{T<:Real}
+mutable struct Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
     X::AbstractMatrix{T}
     y::AbstractVector{T}
     n::Int
@@ -29,14 +29,15 @@ mutable struct Dataset{T<:Real}
     weighted::Bool
     weights::Union{AbstractVector{T},Nothing}
     avg_y::T
-    baseline_loss::T
+    baseline_loss::L
     varMap::Array{String,1}
 end
 
 """
     Dataset(X::AbstractMatrix{T}, y::AbstractVector{T};
             weights::Union{AbstractVector{T}, Nothing}=nothing,
-            varMap::Union{Array{String, 1}, Nothing}=nothing)
+            varMap::Union{Array{String, 1}, Nothing}=nothing,
+            loss_type::Type=Nothing)
 
 Construct a dataset to pass between internal functions.
 """
@@ -45,7 +46,8 @@ function Dataset(
     y::AbstractVector{T};
     weights::Union{AbstractVector{T},Nothing}=nothing,
     varMap::Union{Array{String,1},Nothing}=nothing,
-) where {T<:Real}
+    loss_type::Type=Nothing,
+) where {T<:DATA_TYPE}
     Base.require_one_based_indexing(X, y)
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
@@ -58,9 +60,12 @@ function Dataset(
     else
         sum(y) / n
     end
-    baseline = one(T)
+    loss_type = (loss_type == Nothing) ? T : loss_type
+    baseline = one(loss_type)
 
-    return Dataset{T}(X, y, n, nfeatures, weighted, weights, avg_y, baseline, varMap)
+    return Dataset{T,loss_type}(
+        X, y, n, nfeatures, weighted, weights, avg_y, baseline, varMap
+    )
 end
 
 end

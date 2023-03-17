@@ -2,7 +2,7 @@ module MutationFunctionsModule
 
 import DynamicExpressions:
     Node, copy_node, set_node!, count_nodes, has_constants, has_operators
-import ..CoreModule: Options
+import ..CoreModule: Options, DATA_TYPE
 
 # Return a random node from the tree
 function random_node(tree::Node{T})::Node{T} where {T}
@@ -48,8 +48,8 @@ end
 
 # Randomly perturb a constant
 function mutate_constant(
-    tree::Node{T}, temperature::T, options::Options
-)::Node{T} where {T<:Real}
+    tree::Node{T}, temperature::L, options::Options
+)::Node{T} where {T<:DATA_TYPE,L<:DATA_TYPE}
     # T is between 0 and 1.
 
     if !(has_constants(tree))
@@ -61,7 +61,7 @@ function mutate_constant(
     end
 
     bottom = 1//10
-    maxChange = T(options.perturbation_factor) * temperature + T(1 + bottom)
+    maxChange = L(options.perturbation_factor) * temperature + L(1 + bottom)
     factor = maxChange^rand(T)
     makeConstBigger = rand() > 0.5
 
@@ -84,7 +84,7 @@ function append_random_op(
     options::Options,
     nfeatures::Int;
     makeNewBinOp::Union{Bool,Nothing}=nothing,
-)::Node{T} where {T<:Real}
+)::Node{T} where {T<:DATA_TYPE}
     node = random_node(tree)
     while node.degree != 0
         node = random_node(tree)
@@ -113,7 +113,7 @@ end
 # Insert random node
 function insert_random_op(
     tree::Node{T}, options::Options, nfeatures::Int
-)::Node{T} where {T<:Real}
+)::Node{T} where {T<:DATA_TYPE}
     node = random_node(tree)
     choice = rand()
     makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
@@ -132,7 +132,7 @@ end
 # Add random node to the top of a tree
 function prepend_random_op(
     tree::Node{T}, options::Options, nfeatures::Int
-)::Node{T} where {T<:Real}
+)::Node{T} where {T<:DATA_TYPE}
     node = tree
     choice = rand()
     makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
@@ -148,7 +148,7 @@ function prepend_random_op(
     return node
 end
 
-function make_random_leaf(nfeatures::Int, ::Type{T})::Node{T} where {T<:Real}
+function make_random_leaf(nfeatures::Int, ::Type{T})::Node{T} where {T<:DATA_TYPE}
     if rand() > 0.5
         return Node(; val=randn(T))
     else
@@ -192,7 +192,7 @@ end
 # with a variable or constant
 function delete_random_op(
     tree::Node{T}, options::Options, nfeatures::Int
-)::Node{T} where {T<:Real}
+)::Node{T} where {T<:DATA_TYPE}
     node, parent, side = random_node_and_parent(tree)
     isroot = (parent === nothing)
 
@@ -235,7 +235,7 @@ end
 # Create a random equation by appending random operators
 function gen_random_tree(
     length::Int, options::Options, nfeatures::Int, ::Type{T}
-)::Node{T} where {T<:Real}
+)::Node{T} where {T<:DATA_TYPE}
     # Note that this base tree is just a placeholder; it will be replaced.
     tree = Node(; val=convert(T, 1))
     for i in 1:length
@@ -247,7 +247,7 @@ end
 
 function gen_random_tree_fixed_size(
     node_count::Int, options::Options, nfeatures::Int, ::Type{T}
-)::Node{T} where {T<:Real}
+)::Node{T} where {T<:DATA_TYPE}
     tree = make_random_leaf(nfeatures, T)
     cur_size = count_nodes(tree)
     while cur_size < node_count

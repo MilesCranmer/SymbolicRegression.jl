@@ -2,7 +2,7 @@ module RegularizedEvolutionModule
 
 import Random: shuffle!
 import DynamicExpressions: string_tree
-import ..CoreModule: Options, Dataset, RecordType
+import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 import ..PopMemberModule: PopMember
 import ..PopulationModule: Population, best_of_sample
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
@@ -12,14 +12,14 @@ import ..RecorderModule: @recorder
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample
 function reg_evol_cycle(
-    dataset::Dataset{T},
-    pop::Population,
-    temperature::T,
+    dataset::Dataset{T,L},
+    pop::Population{T,L},
+    temperature,
     curmaxsize::Int,
     running_search_statistics::RunningSearchStatistics,
     options::Options,
     record::RecordType,
-)::Tuple{Population,Float64} where {T<:Real}
+)::Tuple{Population{T,L},Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     # Batch over each subsample. Can give 15% improvement in speed; probably moreso for large pops.
     # but is ultimately a different algorithm than regularized evolution, and might not be
     # as good.

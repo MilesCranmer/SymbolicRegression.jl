@@ -3,7 +3,7 @@ module PopulationModule
 using StatsBase: StatsBase
 import Random: randperm
 import DynamicExpressions: string_tree
-import ..CoreModule: Options, Dataset, RecordType
+import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, update_baseline_loss!
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
@@ -11,8 +11,8 @@ import ..MutationFunctionsModule: gen_random_tree
 import ..PopMemberModule: PopMember, copy_pop_member
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
-mutable struct Population{T<:Real}
-    members::Array{PopMember{T},1}
+mutable struct Population{T<:DATA_TYPE,L<:LOSS_TYPE}
+    members::Array{PopMember{T,L},1}
     n::Int
 end
 """
@@ -20,7 +20,9 @@ end
 
 Create population from list of PopMembers.
 """
-Population(pop::Array{PopMember{T},1}) where {T<:Real} = Population{T}(pop, size(pop, 1))
+function Population(pop::Array{PopMember{T,L},1}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    return Population{T,L}(pop, size(pop, 1))
+end
 """
     Population(dataset::Dataset{T};
                npop::Int, nlength::Int=3, options::Options,
@@ -29,9 +31,9 @@ Population(pop::Array{PopMember{T},1}) where {T<:Real} = Population{T}(pop, size
 Create random population and score them on the dataset.
 """
 function Population(
-    dataset::Dataset{T}; npop::Int, nlength::Int=3, options::Options, nfeatures::Int
-) where {T<:Real}
-    return Population{T}(
+    dataset::Dataset{T,L}; npop::Int, nlength::Int=3, options::Options, nfeatures::Int
+) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    return Population{T,L}(
         [
             PopMember(
                 dataset,
@@ -58,18 +60,19 @@ function Population(
     nlength::Int=3,
     options::Options,
     nfeatures::Int,
-) where {T<:Real}
-    dataset = Dataset(X, y)
+    loss_type::Type=nothing,
+) where {T<:DATA_TYPE}
+    dataset = Dataset(X, y; loss_type=loss_type)
     update_baseline_loss!(dataset, options)
     return Population(dataset; npop=npop, options=options, nfeatures=nfeatures)
 end
 
-function copy_population(pop::Population{T})::Population{T} where {T<:Real}
+function copy_population(pop::P)::P where {P<:Population}
     return Population([copy_pop_member(pm) for pm in pop.members])
 end
 
 # Sample random members of the population, and make a new one
-function sample_pop(pop::Population{T}, options::Options)::Population{T} where {T}
+function sample_pop(pop::P, options::Options)::P where {P<:Population}
     return Population(
         StatsBase.sample(pop.members, options.tournament_selection_n; replace=false)
     )
@@ -77,10 +80,10 @@ end
 
 # Sample the population, and get the best member from that sample
 function best_of_sample(
-    pop::Population{T},
+    pop::Population{T,L},
     running_search_statistics::RunningSearchStatistics,
     options::Options{CT},
-)::PopMember where {T<:Real,CT}
+)::PopMember{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE,CT}
     sample = sample_pop(pop, options)
 
     p = options.tournament_selection_p
@@ -89,16 +92,16 @@ function best_of_sample(
     if options.use_frequency_in_tournament
         # Score based on frequency of that size occuring.
         # In the end, all sizes should be just as common in the population.
-        adaptive_parsimony_scaling = T(options.adaptive_parsimony_scaling)
+        adaptive_parsimony_scaling = L(options.adaptive_parsimony_scaling)
         # e.g., for 100% occupied at one size, exp(-20*1) = 2.061153622438558e-9; which seems like a good punishment for dominating the population.
 
-        scores = Vector{T}(undef, tournament_selection_n)
+        scores = Vector{L}(undef, tournament_selection_n)
         for (i, member) in enumerate(sample.members)
             size = compute_complexity(member.tree, options)
             frequency = if (0 < size <= options.maxsize)
                 running_search_statistics.normalized_frequencies[size]
             else
-                T(0)
+                L(0)
             end
             scores[i] = member.score * exp(adaptive_parsimony_scaling * frequency)
         end
@@ -132,8 +135,8 @@ end
 end
 
 function finalize_scores(
-    dataset::Dataset{T}, pop::Population, options::Options
-)::Tuple{Population,Float64} where {T<:Real}
+    dataset::Dataset{T,L}, pop::Population{T,L}, options::Options
+)::Tuple{Population{T,L},Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     need_recalculate = options.batching
     num_evals = 0.0
     if need_recalculate
@@ -148,12 +151,12 @@ function finalize_scores(
 end
 
 # Return best 10 examples
-function best_sub_pop(pop::Population; topn::Int=10)::Population
+function best_sub_pop(pop::Population; topn::Int=10)
     best_idx = sortperm([pop.members[member].score for member in 1:(pop.n)])
     return Population(pop.members[best_idx[1:topn]])
 end
 
-function record_population(pop::Population{T}, options::Options)::RecordType where {T<:Real}
+function record_population(pop::Population, options::Options)::RecordType
     return RecordType(
         "population" => [
             RecordType(

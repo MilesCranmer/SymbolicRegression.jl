@@ -45,8 +45,8 @@ macro sr_spawner(parallel, p, expr)
 end
 
 function init_dummy_pops(
-    nout::Int, npops::Int, datasets::Vector{Dataset{T}}, options::Options
-)::Vector{Vector{Population{T}}} where {T}
+    nout::Int, npops::Int, datasets::Vector{Dataset{T,L}}, options::Options
+)::Vector{Vector{Population{T,L}}} where {T,L}
     return [
         [
             Population(
@@ -107,10 +107,10 @@ function check_for_user_quit(reader::StdinReader)::Bool
 end
 
 function check_for_loss_threshold(
-    datasets::AbstractVector{Dataset{T}},
-    hallOfFame::AbstractVector{HallOfFame{T}},
+    datasets::AbstractVector{Dataset{T,L}},
+    hallOfFame::AbstractVector{HallOfFame{T,L}},
     options::Options,
-)::Bool where {T}
+)::Bool where {T,L}
     options.early_stop_condition === nothing && return false
 
     # Check if all nout are below stopping condition.
@@ -214,12 +214,12 @@ end
 
 function update_progress_bar!(
     progress_bar::WrappedProgressBar;
-    hall_of_fame::HallOfFame{T},
-    dataset::Dataset{T},
+    hall_of_fame::HallOfFame{T,L},
+    dataset::Dataset{T,L},
     options::Options,
     head_node_occupation::Float64,
     parallelism=:serial,
-) where {T}
+) where {T,L}
     equation_strings = string_dominating_pareto_curve(hall_of_fame, dataset, options)
     # TODO - include command about "q" here.
     load_string = get_load_string(; head_node_occupation, parallelism)
@@ -231,15 +231,15 @@ function update_progress_bar!(
 end
 
 function print_search_state(
-    hall_of_fames::Vector{HallOfFame{T}},
-    datasets::Vector{Dataset{T}};
+    hall_of_fames::Vector{HallOfFame{T,L}},
+    datasets::Vector{Dataset{T,L}};
     options::Options,
     equation_speed::Vector{Float32},
     total_cycles::Int,
     cycles_remaining::Vector{Int},
     head_node_occupation::Float64,
     parallelism=:serial,
-) where {T}
+) where {T,L}
     nout = length(datasets)
     average_speed = sum(equation_speed) / length(equation_speed)
 
@@ -267,14 +267,16 @@ function print_search_state(
     @printf("Press 'q' and then <enter> to stop execution early.\n")
 end
 
-const StateType{T} = Tuple{
-    Union{Vector{Vector{Population{T}}},Matrix{Population{T}}},
-    Union{HallOfFame{T},Vector{HallOfFame{T}}},
+const StateType{T,L} = Tuple{
+    Union{Vector{Vector{Population{T,L}}},Matrix{Population{T,L}}},
+    Union{HallOfFame{T,L},Vector{HallOfFame{T,L}}},
 }
 
-function load_saved_hall_of_fame(saved_state::StateType{T})::Vector{HallOfFame{T}} where {T}
+function load_saved_hall_of_fame(
+    saved_state::StateType{T,L}
+)::Vector{HallOfFame{T,L}} where {T,L}
     hall_of_fame = saved_state[2]
-    if !isa(hall_of_fame, Vector{HallOfFame{T}})
+    if !isa(hall_of_fame, Vector{HallOfFame{T,L}})
         hall_of_fame = [hall_of_fame]
     end
     return [copy_hall_of_fame(hof) for hof in hall_of_fame]
@@ -282,18 +284,18 @@ end
 load_saved_hall_of_fame(::Nothing)::Nothing = nothing
 
 function get_population(
-    pops::Vector{Vector{Population{T}}}; out::Int, pop::Int
-)::Population{T} where {T}
+    pops::Vector{Vector{Population{T,L}}}; out::Int, pop::Int
+)::Population{T,L} where {T,L}
     return pops[out][pop]
 end
 function get_population(
-    pops::Matrix{Population{T}}; out::Int, pop::Int
-)::Population{T} where {T}
+    pops::Matrix{Population{T,L}}; out::Int, pop::Int
+)::Population{T,L} where {T,L}
     return pops[out, pop]
 end
 function load_saved_population(
-    saved_state::StateType{T}; out::Int, pop::Int
-)::Population{T} where {T}
+    saved_state::StateType{T,L}; out::Int, pop::Int
+)::Population{T,L} where {T,L}
     saved_pop = get_population(saved_state[1]; out=out, pop=pop)
     return copy_population(saved_pop)
 end
