@@ -46,7 +46,8 @@ end
 makedocs(;
     sitename="SymbolicRegression.jl",
     authors="Miles Cranmer",
-    doctest=false,
+    doctest=true,
+    strict=:doctest,
     clean=true,
     format=Documenter.HTML(;
         canonical="https://astroautomata.com/SymbolicRegression.jl/stable"
