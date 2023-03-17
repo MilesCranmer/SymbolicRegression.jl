@@ -113,13 +113,15 @@ function calculate_pareto_frontier(
     )
 end
 
-function string_dominating_pareto_curve(hallOfFame, dataset, options)
+function string_dominating_pareto_curve(hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing)
+    twidth = (width === nothing) ? 100 : max(100, width::Integer)
     output = ""
     curMSE = Float64(dataset.baseline_loss)
     lastMSE = curMSE
     lastComplexity = 0
     output *= "Hall of Fame:\n"
-    output *= "-----------------------------------------\n"
+    # TODO: Get user's terminal width.
+    output *= "-"^twidth * "\n"
     output *= @sprintf(
         "%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation"
     )
@@ -141,16 +143,37 @@ function string_dominating_pareto_curve(hallOfFame, dataset, options)
         ZERO_POINT = 1e-10
         delta_l_mse = log(abs(curMSE / lastMSE) + ZERO_POINT)
         score = convert(Float32, -delta_l_mse / delta_c)
+        eqn_string = string_tree(member.tree, options.operators; varMap=dataset.varMap)
+        split_at = twidth - 40
         output *= @sprintf(
             "%-10d  %-8.3e  %-8.3e  %-s\n",
             complexity,
             curMSE,
             score,
-            string_tree(member.tree, options.operators, varMap=dataset.varMap)
+            length(eqn_string) < split_at ? eqn_string : eqn_string[1:split_at] * "..."
         )
+        hit = false
+        while length(eqn_string) > split_at
+            eqn_string = eqn_string[(split_at + 1 + (hit ? 3 : 0)):end]
+            output *= @sprintf(
+                "%-10s  %-10s   %-10s  %-s\n",
+                "",
+                "",
+                "",
+                (
+                    if length(eqn_string) < split_at
+                        eqn_string
+                    else
+                        eqn_string[1:(split_at - 3)] * "..."
+                    end
+                )
+            )
+            hit = true
+        end
         lastMSE = curMSE
         lastComplexity = complexity
     end
+    output *= "-"^twidth * "\n"
     output *= "\n"
     return output
 end

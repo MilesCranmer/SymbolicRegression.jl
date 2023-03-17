@@ -910,6 +910,7 @@ function _EquationSearch(
                     cycles_remaining,
                     head_node_occupation,
                     parallelism,
+                    width=options.terminal_width,
                 )
             end
             last_print_time = time()

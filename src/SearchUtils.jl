@@ -220,7 +220,9 @@ function update_progress_bar!(
     head_node_occupation::Float64,
     parallelism=:serial,
 ) where {T,L}
-    equation_strings = string_dominating_pareto_curve(hall_of_fame, dataset, options)
+    equation_strings = string_dominating_pareto_curve(
+        hall_of_fame, dataset, options; width=progress_bar.bar.width
+    )
     # TODO - include command about "q" here.
     load_string = get_load_string(; head_node_occupation, parallelism)
     load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
@@ -239,7 +241,9 @@ function print_search_state(
     cycles_remaining::Vector{Int},
     head_node_occupation::Float64,
     parallelism=:serial,
+    width::Union{Integer,Nothing}=nothing,
 ) where {T,L}
+    twidth = (width === nothing) ? 100 : max(100, width::Integer)
     nout = length(datasets)
     average_speed = sum(equation_speed) / length(equation_speed)
 
@@ -255,16 +259,18 @@ function print_search_state(
         100.0 * cycles_elapsed / total_cycles / nout
     )
 
-    @printf("==============================\n")
+    print("="^twidth * "\n")
     for (j, (hall_of_fame, dataset)) in enumerate(zip(hall_of_fames, datasets))
         if nout > 1
             @printf("Best equations for output %d\n", j)
         end
-        equation_strings = string_dominating_pareto_curve(hall_of_fame, dataset, options)
+        equation_strings = string_dominating_pareto_curve(
+            hall_of_fame, dataset, options; width=width
+        )
         print(equation_strings)
-        @printf("==============================\n")
+        print("="^twidth * "\n")
     end
-    @printf("Press 'q' and then <enter> to stop execution early.\n")
+    return print("Press 'q' and then <enter> to stop execution early.\n")
 end
 
 const StateType{T,L} = Tuple{
