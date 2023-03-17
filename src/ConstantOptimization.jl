@@ -29,7 +29,10 @@ function optimize_constants(
     end
     x0 = get_constants(member.tree)
     f(x::Vector{T})::L = opt_func(x, dataset, member.tree, options)
-    if nconst == 1
+    if T <: Complex
+        # TODO: Make this more general. Also, do we even need Newton here at all??
+        algorithm = Optim.BFGS(; linesearch=LineSearches.BackTracking())#order=3))
+    elseif nconst == 1
         algorithm = Optim.Newton(; linesearch=LineSearches.BackTracking())
     else
         if options.optimizer_algorithm == "NelderMead"

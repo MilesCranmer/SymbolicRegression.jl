@@ -114,7 +114,9 @@ function score_func_batch(
     else
         w = dataset.weights::AbstractVector{T}
         batch_w = view(w, batch_idx)
-        result_loss = L(_weighted_loss(prediction, batch_y, batch_w, options.elementwise_loss))
+        result_loss = L(
+            _weighted_loss(prediction, batch_y, batch_w, options.elementwise_loss)
+        )
     end
     score = loss_to_score(result_loss, dataset.baseline_loss, tree, options)
     return score, result_loss
