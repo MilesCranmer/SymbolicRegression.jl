@@ -20,9 +20,12 @@ end
 
 Create population from list of PopMembers.
 """
-function Population(pop::Array{PopMember{T,L},1}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+function Population(
+    pop::AP
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,AP<:AbstractArray{PopMember{T,L},1}}
     return Population{T,L}(pop, size(pop, 1))
 end
+
 """
     Population(dataset::Dataset{T};
                npop::Int, nlength::Int=3, options::Options,
@@ -49,7 +52,8 @@ end
 """
     Population(X::AbstractMatrix{T}, y::AbstractVector{T};
                npop::Int, nlength::Int=3,
-               options::Options, nfeatures::Int)
+               options::Options, nfeatures::Int,
+               loss_type::Type=Nothing)
 
 Create random population and score them on the dataset.
 """
@@ -60,7 +64,7 @@ function Population(
     nlength::Int=3,
     options::Options,
     nfeatures::Int,
-    loss_type::Type=nothing,
+    loss_type::Type=Nothing,
 ) where {T<:DATA_TYPE}
     dataset = Dataset(X, y; loss_type=loss_type)
     update_baseline_loss!(dataset, options)
