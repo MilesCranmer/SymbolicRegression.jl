@@ -8,6 +8,8 @@ export Population,
     Dataset,
     MutationWeights,
     Node,
+    LOSS_TYPE,
+    DATA_TYPE,
 
     #Functions:
     EquationSearch,
