@@ -54,4 +54,32 @@ makedocs(;
     ),
 )
 
+# Next, we fix links in the docs/build/losses/index.html file:
+using Gumbo
+
+html_type(::HTMLElement{S}) where {S} = S
+
+function apply_to_a_href!(f!, element::HTMLElement)
+    if html_type(element) == :a && haskey(element.attributes, "href") && element.attributes["href"] == "@ref"
+        f!(element)
+    else
+        for child in element.children
+            typeof(child) <: HTMLElement && apply_to_a_href!(f!, child)
+        end
+    end
+end
+
+html_content = read("docs/build/losses/index.html", String)
+html = parsehtml(html_content)
+
+apply_to_a_href!(html.root) do element
+    # Replace the "href" to be equal to the contents of the tag, prefixed with #:
+    element.attributes["href"] = "#LossFunctions." * element.children[1].text
+end
+
+# Then, we write the new html to the file:
+open("docs/build/losses/index.html", "w") do io
+    write(io, string(html))
+end
+
 deploydocs(; repo="github.com/MilesCranmer/SymbolicRegression.jl.git")
