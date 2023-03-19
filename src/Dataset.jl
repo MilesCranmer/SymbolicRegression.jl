@@ -29,6 +29,7 @@ mutable struct Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
     weighted::Bool
     weights::Union{AbstractVector{T},Nothing}
     avg_y::T
+    use_baseline::Bool
     baseline_loss::L
     varMap::Array{String,1}
 end
@@ -61,10 +62,11 @@ function Dataset(
         sum(y) / n
     end
     loss_type = (loss_type == Nothing) ? T : loss_type
+    use_baseline = true
     baseline = one(loss_type)
 
     return Dataset{T,loss_type}(
-        X, y, n, nfeatures, weighted, weights, avg_y, baseline, varMap
+        X, y, n, nfeatures, weighted, weights, avg_y, use_baseline, baseline, varMap
     )
 end
 

@@ -74,12 +74,13 @@ end
 
 # Compute a score which includes a complexity penalty in the loss
 function loss_to_score(
-    loss::L, baseline::L, tree::Node{T}, options::Options
+    loss::L, use_baseline::Bool, baseline::L, tree::Node{T}, options::Options
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    normalization = if baseline < L(0.01)
-        L(0.01)
-    else
+    # TODO: Come up with a more general normalization scheme.
+    normalization = if baseline >= L(0.01) && use_baseline
         baseline
+    else
+        L(0.01)
     end
     normalized_loss_term = loss / normalization
     size = compute_complexity(tree, options)
@@ -93,7 +94,9 @@ function score_func(
     dataset::Dataset{T,L}, tree::Node{T}, options::Options
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     result_loss = eval_loss(tree, dataset, options)
-    score = loss_to_score(result_loss, dataset.baseline_loss, tree, options)
+    score = loss_to_score(
+        result_loss, dataset.use_baseline, dataset.baseline_loss, tree, options
+    )
     return score, result_loss
 end
 
@@ -118,7 +121,9 @@ function score_func_batch(
             _weighted_loss(prediction, batch_y, batch_w, options.elementwise_loss)
         )
     end
-    score = loss_to_score(result_loss, dataset.baseline_loss, tree, options)
+    score = loss_to_score(
+        result_loss, dataset.use_baseline, dataset.baseline_loss, tree, options
+    )
     return score, result_loss
 end
 
@@ -131,7 +136,14 @@ function update_baseline_loss!(
     dataset::Dataset{T,L}, options::Options
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     example_tree = Node(T; val=dataset.avg_y)
-    dataset.baseline_loss = eval_loss(example_tree, dataset, options)
+    baseline_loss = eval_loss(example_tree, dataset, options)
+    if isfinite(baseline_loss)
+        dataset.baseline_loss = baseline_loss
+        dataset.use_baseline = true
+    else
+        dataset.baseline_loss = one(L)
+        dataset.use_baseline = false
+    end
     return nothing
 end
 
