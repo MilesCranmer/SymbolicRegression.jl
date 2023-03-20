@@ -1,9 +1,9 @@
 module DatasetModule
 
-import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM
+import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 
 """
-    Dataset{T<:Real}
+    Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
 
 # Fields
 
@@ -15,13 +15,15 @@ import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM
 - `weights::Union{AbstractVector{T},Nothing}`: If the dataset is weighted,
     these specify the per-sample weight (with shape `(n,)`).
 - `avg_y`: The average value of `y` (weighted, if `weights` are passed).
+- `use_baseline`: Whether to use a baseline loss. This will be set to `false`
+    if the baseline loss is calculated to be `Inf`.
 - `baseline_loss`: The loss of a constant function which predicts the average
     value of `y`. This is loss-dependent and should be updated with
     `update_baseline_loss!`.
 - `varMap::Array{String,1}`: The names of the features,
     with shape `(nfeatures,)`.
 """
-mutable struct Dataset{T<:Real}
+mutable struct Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
     X::AbstractMatrix{T}
     y::AbstractVector{T}
     n::Int
@@ -29,14 +31,16 @@ mutable struct Dataset{T<:Real}
     weighted::Bool
     weights::Union{AbstractVector{T},Nothing}
     avg_y::T
-    baseline_loss::T
+    use_baseline::Bool
+    baseline_loss::L
     varMap::Array{String,1}
 end
 
 """
     Dataset(X::AbstractMatrix{T}, y::AbstractVector{T};
             weights::Union{AbstractVector{T}, Nothing}=nothing,
-            varMap::Union{Array{String, 1}, Nothing}=nothing)
+            varMap::Union{Array{String, 1}, Nothing}=nothing,
+            loss_type::Type=Nothing)
 
 Construct a dataset to pass between internal functions.
 """
@@ -45,7 +49,8 @@ function Dataset(
     y::AbstractVector{T};
     weights::Union{AbstractVector{T},Nothing}=nothing,
     varMap::Union{Array{String,1},Nothing}=nothing,
-) where {T<:Real}
+    loss_type::Type=Nothing,
+) where {T<:DATA_TYPE}
     Base.require_one_based_indexing(X, y)
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
@@ -58,9 +63,13 @@ function Dataset(
     else
         sum(y) / n
     end
-    baseline = one(T)
+    loss_type = (loss_type == Nothing) ? T : loss_type
+    use_baseline = true
+    baseline = one(loss_type)
 
-    return Dataset{T}(X, y, n, nfeatures, weighted, weights, avg_y, baseline, varMap)
+    return Dataset{T,loss_type}(
+        X, y, n, nfeatures, weighted, weights, avg_y, use_baseline, baseline, varMap
+    )
 end
 
 end

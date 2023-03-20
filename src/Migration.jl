@@ -1,22 +1,22 @@
 module MigrationModule
 
 using StatsBase: StatsBase
-import ..CoreModule: Options
+import ..CoreModule: Options, DATA_TYPE, LOSS_TYPE
 import ..PopulationModule: Population
 import ..PopMemberModule: PopMember, copy_pop_member_reset_birth
 
 """
-    migrate!(migration::Pair{Population{T},Population{T}}, options::Options; frac::AbstractFloat)
+    migrate!(migration::Pair{Population{T,L},Population{T,L}}, options::Options; frac::AbstractFloat)
 
 Migrate a fraction of the population from one population to the other, creating copies
 to do so. The original migrant population is not modified. Pass with, e.g.,
 `migrate!(migration_candidates => destination, options; frac=0.1)`
 """
 function migrate!(
-    migration::Pair{Vector{PopMember{T}},Population{T}},
+    migration::Pair{Vector{PopMember{T,L}},Population{T,L}},
     options::Options;
     frac::AbstractFloat,
-) where {T}
+) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     base_pop = migration.second
     npop = length(base_pop.members)
     num_replace = round(Int, npop * frac)

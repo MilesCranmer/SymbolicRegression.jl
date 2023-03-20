@@ -11,7 +11,7 @@ two (unweighted) or three (weighted) scalar arguments. For example,
 
 ```
 f(x, y, w) = abs(x-y)*w
-options = Options(loss=f)
+options = Options(elementwise_loss=f)
 ```
 
 ## Regression

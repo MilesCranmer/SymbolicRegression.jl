@@ -2,8 +2,12 @@ using Documenter
 using SymbolicRegression
 using SymbolicRegression: Dataset, update_baseline_loss!
 
-DocMeta.setdocmeta!(SymbolicRegression, :DocTestSetup, :(using LossFunctions); recursive=true)
-DocMeta.setdocmeta!(SymbolicRegression, :DocTestSetup, :(using DynamicExpressions); recursive=true)
+DocMeta.setdocmeta!(
+    SymbolicRegression, :DocTestSetup, :(using LossFunctions); recursive=true
+)
+DocMeta.setdocmeta!(
+    SymbolicRegression, :DocTestSetup, :(using DynamicExpressions); recursive=true
+)
 
 readme = open(dirname(@__FILE__) * "/../README.md") do io
     read(io, String)
@@ -17,7 +21,10 @@ readme = replace(readme, r"<[/]?div.*" => s"")
 
 # Then, we surround ```mermaid\n...\n``` snippets
 # with ```@raw html\n<div class="mermaid">\n...\n</div>```:
-readme = replace(readme, r"```mermaid([^`]*)```" => s"```@raw html\n<div class=\"mermaid\">\n\1\n</div>\n```")
+readme = replace(
+    readme,
+    r"```mermaid([^`]*)```" => s"```@raw html\n<div class=\"mermaid\">\n\1\n</div>\n```",
+)
 
 # Then, we init mermaid.js:
 init_mermaid = """
@@ -52,6 +59,14 @@ makedocs(;
     format=Documenter.HTML(;
         canonical="https://astroautomata.com/SymbolicRegression.jl/stable"
     ),
+    pages=[
+        "Contents" => "index_base.md",
+        "Home" => "index.md",
+        "Examples" => "examples.md",
+        "API" => "api.md",
+        "Losses" => "losses.md",
+        "Types" => "types.md",
+    ],
 )
 
 # Next, we fix links in the docs/build/losses/index.html file:

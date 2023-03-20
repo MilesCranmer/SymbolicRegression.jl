@@ -3,9 +3,10 @@ module OperatorsModule
 using SpecialFunctions: SpecialFunctions
 import SpecialFunctions: erf, erfc
 import Base: @deprecate
+import ..ProgramConstantsModule: DATA_TYPE
 #TODO - actually add these operators to the module!
 
-function gamma(x::T)::T where {T<:Real}
+function gamma(x::T)::T where {T<:DATA_TYPE}
     out = SpecialFunctions.gamma(x)
     return isinf(out) ? T(NaN) : out
 end
@@ -20,19 +21,20 @@ atanh_clip(x) = atanh(mod(x + 1, 2) - 1)
 # Use some fast operators from https://github.com/JuliaLang/julia/blob/81597635c4ad1e8c2e1c5753fda4ec0e7397543f/base/fastmath.jl
 # Define allowed operators. Any julia operator can also be used.
 # TODO: Add all of these operators to the precompilation.
-function plus(x::T, y::T)::T where {T<:Real}
+# TODO: Since simplification is done in DynamicExpressions.jl, are these names correct anymore?
+function plus(x::T, y::T)::T where {T<:DATA_TYPE}
     return x + y #Do not change the name of this operator.
 end
-function sub(x::T, y::T)::T where {T<:Real}
+function sub(x::T, y::T)::T where {T<:DATA_TYPE}
     return x - y #Do not change the name of this operator.
 end
-function mult(x::T, y::T)::T where {T<:Real}
+function mult(x::T, y::T)::T where {T<:DATA_TYPE}
     return x * y #Do not change the name of this operator.
 end
-function square(x::T)::T where {T<:Real}
+function square(x::T)::T where {T<:DATA_TYPE}
     return x * x
 end
-function cube(x::T)::T where {T<:Real}
+function cube(x::T)::T where {T<:DATA_TYPE}
     return x^3
 end
 function safe_pow(x::T, y::T)::T where {T<:AbstractFloat}

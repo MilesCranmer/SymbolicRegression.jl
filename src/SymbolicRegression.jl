@@ -8,6 +8,8 @@ export Population,
     Dataset,
     MutationWeights,
     Node,
+    LOSS_TYPE,
+    DATA_TYPE,
 
     #Functions:
     EquationSearch,
@@ -142,6 +144,8 @@ import .CoreModule:
     MAX_DEGREE,
     BATCH_DIM,
     FEATURE_DIM,
+    DATA_TYPE,
+    LOSS_TYPE,
     RecordType,
     Dataset,
     Options,
@@ -272,6 +276,10 @@ which is useful for debugging and profiling.
     which will cause `EquationSearch` to return the state. Note that
     you cannot change the operators or dataset, but most other options
     should be changeable.
+- `loss_type::Type=Nothing`: If you would like to use a different type
+    for the loss than for the data you passed, specify the type here.
+    Note that if you pass complex data `::Complex{L}`, then the loss
+    type will automatically be set to `L`.
 
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
@@ -292,9 +300,10 @@ function EquationSearch(
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
-    saved_state::Union{StateType{T},Nothing}=nothing,
+    saved_state::Union{StateType{T,L},Nothing}=nothing,
     multithreaded=nothing,
-) where {T<:Real}
+    loss_type::Type=Nothing,
+) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if multithreaded !== nothing
         error(
             "`multithreaded` is deprecated. Use the `parallelism` argument instead. " *
@@ -305,12 +314,17 @@ function EquationSearch(
     if weights !== nothing
         weights = reshape(weights, size(y))
     end
+    if T <: Complex && loss_type == Nothing
+        get_base_type(::Type{Complex{BT}}) where {BT} = BT
+        loss_type = get_base_type(T)
+    end
     datasets = [
         Dataset(
             X,
             y[j, :];
             weights=(weights === nothing ? weights : weights[j, :]),
             varMap=varMap,
+            loss_type=loss_type,
         ) for j in 1:nout
     ]
 
@@ -329,7 +343,7 @@ end
 
 function EquationSearch(
     X::AbstractMatrix{T1}, y::AbstractMatrix{T2}; kw...
-) where {T1<:Real,T2<:Real}
+) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
     U = promote_type(T1, T2)
     return EquationSearch(
         convert(AbstractMatrix{U}, X), convert(AbstractMatrix{U}, y); kw...
@@ -338,12 +352,12 @@ end
 
 function EquationSearch(
     X::AbstractMatrix{T1}, y::AbstractVector{T2}; kw...
-) where {T1<:Real,T2<:Real}
+) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
     return EquationSearch(X, reshape(y, (1, size(y, 1))); kw...)
 end
 
 function EquationSearch(
-    datasets::Vector{Dataset{T}};
+    datasets::Vector{Dataset{T,L}};
     niterations::Int=10,
     options::Options=Options(),
     parallelism=:multithreading,
@@ -351,8 +365,8 @@ function EquationSearch(
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
-    saved_state::Union{StateType{T},Nothing}=nothing,
-) where {T<:Real}
+    saved_state::Union{StateType{T,L},Nothing}=nothing,
+) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     concurrency = if parallelism in (:multithreading, "multithreading")
         :multithreading
     elseif parallelism in (:multiprocessing, "multiprocessing")
@@ -392,15 +406,15 @@ end
 
 function _EquationSearch(
     parallelism::Symbol,
-    datasets::Vector{Dataset{T}};
+    datasets::Vector{Dataset{T,L}};
     niterations::Int,
     options::Options,
     numprocs::Union{Int,Nothing},
     procs::Union{Vector{Int},Nothing},
     addprocs_function::Union{Function,Nothing},
     runtests::Bool,
-    saved_state::Union{StateType{T},Nothing},
-) where {T<:Real}
+    saved_state::Union{StateType{T,L},Nothing},
+) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if options.deterministic
         if parallelism != :serial
             error("Determinism is only guaranteed for serial mode.")
@@ -531,11 +545,11 @@ function _EquationSearch(
 
     hallOfFame = load_saved_hall_of_fame(saved_state)
     if hallOfFame === nothing
-        hallOfFame = [HallOfFame(options, T) for j in 1:nout]
+        hallOfFame = [HallOfFame(options, T, L) for j in 1:nout]
     else
         # Recompute losses for the hall of fame, in
         # case the dataset changed:
-        hallOfFame::Vector{HallOfFame{T}}
+        hallOfFame::Vector{HallOfFame{T,L}}
         for (hof, dataset) in zip(hallOfFame, datasets)
             for member in hof.members[hof.exists]
                 score, result_loss = score_func(dataset, member.tree, options)
@@ -545,7 +559,7 @@ function _EquationSearch(
         end
     end
     @assert length(hallOfFame) == nout
-    hallOfFame::Vector{HallOfFame{T}}
+    hallOfFame::Vector{HallOfFame{T,L}}
 
     for j in 1:nout
         for i in 1:(options.npopulations)
@@ -557,7 +571,7 @@ function _EquationSearch(
             saved_pop = load_saved_population(saved_state; out=j, pop=i)
 
             if saved_pop !== nothing && length(saved_pop.members) == options.npop
-                saved_pop::Population{T}
+                saved_pop::Population{T,L}
                 ## Update losses:
                 for member in saved_pop.members
                     score, result_loss = score_func(datasets[j], member.tree, options)
@@ -565,7 +579,7 @@ function _EquationSearch(
                     member.loss = result_loss
                 end
                 new_pop = @sr_spawner parallelism worker_idx (
-                    saved_pop, HallOfFame(options, T), RecordType(), 0.0
+                    saved_pop, HallOfFame(options, T, L), RecordType(), 0.0
                 )
             else
                 if saved_pop !== nothing
@@ -579,7 +593,7 @@ function _EquationSearch(
                         options=options,
                         nfeatures=datasets[j].nfeatures,
                     ),
-                    HallOfFame(options, T),
+                    HallOfFame(options, T, L),
                     RecordType(),
                     Float64(options.npop),
                 )
@@ -906,6 +920,7 @@ function _EquationSearch(
                     cycles_remaining,
                     head_node_occupation,
                     parallelism,
+                    width=options.terminal_width,
                 )
             end
             last_print_time = time()
@@ -949,7 +964,7 @@ function _EquationSearch(
 
     if options.return_state
         state = (returnPops, (nout == 1 ? only(hallOfFame) : hallOfFame))
-        state::StateType{T}
+        state::StateType{T,L}
         return state
     else
         if nout == 1
