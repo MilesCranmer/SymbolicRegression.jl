@@ -24,8 +24,8 @@ function s_r_cycle(
     options::Options,
     record::RecordType,
 )::Tuple{Population{T,L},HallOfFame{T,L},Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    max_temp = L(1.0)
-    min_temp = L(0.0)
+    max_temp = 1.0
+    min_temp = 0.0
     if !options.annealing
         min_temp = max_temp
     end

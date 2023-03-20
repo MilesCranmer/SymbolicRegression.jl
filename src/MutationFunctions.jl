@@ -48,8 +48,8 @@ end
 
 # Randomly perturb a constant
 function mutate_constant(
-    tree::Node{T}, temperature::L, options::Options
-)::Node{T} where {T<:DATA_TYPE,L<:DATA_TYPE}
+    tree::Node{T}, temperature, options::Options
+)::Node{T} where {T<:DATA_TYPE}
     # T is between 0 and 1.
 
     if !(has_constants(tree))
@@ -61,8 +61,8 @@ function mutate_constant(
     end
 
     bottom = 1//10
-    maxChange = L(options.perturbation_factor) * temperature + L(1 + bottom)
-    factor = maxChange^rand(T)
+    maxChange = options.perturbation_factor * temperature + 1 + bottom
+    factor = T(maxChange^rand(T))
     makeConstBigger = rand() > 0.5
 
     if makeConstBigger
