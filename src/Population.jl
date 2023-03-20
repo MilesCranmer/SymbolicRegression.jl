@@ -149,7 +149,7 @@ function finalize_scores(
             pop.members[member].score = score
             pop.members[member].loss = loss
         end
-        num_evals += pop.n * (options.batch_size / dataset.n)
+        num_evals += pop.n
     end
     return (pop, num_evals)
 end
