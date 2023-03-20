@@ -22,7 +22,7 @@ SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
-DynamicExpressions = "0.4.2"
+DynamicExpressions = "0.4.2, 0.5"
 JSON3 = "1"
 LineSearches = "7"
 LossFunctions = "0.6, 0.7, 0.8"
