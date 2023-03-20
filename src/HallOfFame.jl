@@ -176,8 +176,7 @@ function string_dominating_pareto_curve(
         lastMSE = curMSE
         lastComplexity = complexity
     end
-    output *= "-"^(twidth - 1) * "\n"
-    output *= "\n"^2
+    output *= "-"^(twidth - 1)
     return output
 end
 
