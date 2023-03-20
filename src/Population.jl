@@ -155,7 +155,7 @@ function finalize_scores(
 end
 
 # Return best 10 examples
-function best_sub_pop(pop::Population; topn::Int=10)
+function best_sub_pop(pop::P; topn::Int=10)::P where {P<:Population}
     best_idx = sortperm([pop.members[member].score for member in 1:(pop.n)])
     return Population(pop.members[best_idx[1:topn]])
 end

@@ -80,7 +80,9 @@ function copy_pop_member(
     return PopMember{T,L}(tree, score, loss, birth, ref, parent)
 end
 
-function copy_pop_member_reset_birth(p::P; deterministic::Bool)::P where {P<:PopMember}
+function copy_pop_member_reset_birth(
+    p::PopMember{T,L}; deterministic::Bool
+)::PopMember{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     new_member = copy_pop_member(p)
     new_member.birth = get_birth_order(; deterministic=deterministic)
     return new_member
