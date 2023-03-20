@@ -7,12 +7,22 @@ import ..PopMemberModule: PopMember, copy_pop_member
 import ..LossFunctionsModule: eval_loss
 using Printf: @sprintf
 
-""" List of the best members seen all time in `.members` """
+"""
+HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE}
+
+List of the best members seen all time in `.members`, with `.members[c]` being
+the best member seen at complexity c. Including only the members which actually
+have been set, you can run `.members[exists]`.
+
+# Fields
+
+- `members::Array{PopMember{T,L},1}`: List of the best members seen all time.
+    These are ordered by complexity, with `.members[1]` the member with complexity 1.
+- `exists::Array{Bool,1}`: Whether the member at the given complexity has been set.
+"""
 mutable struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE}
     members::Array{PopMember{T,L},1}
     exists::Array{Bool,1} #Whether it has been set
-
-    # Arranged by complexity - store one at each.
 end
 
 """
@@ -27,6 +37,7 @@ has been instantiated or not.
 Arguments:
 - `options`: Options containing specification about deterministic.
 - `T`: Type of Nodes to use in the population. e.g., `Float64`.
+- `L`: Type of loss to use in the population. e.g., `Float64`.
 """
 function HallOfFame(
     options::Options, ::Type{T}, ::Type{L}

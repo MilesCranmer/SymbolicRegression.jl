@@ -16,7 +16,7 @@ mutable struct Population{T<:DATA_TYPE,L<:LOSS_TYPE}
     n::Int
 end
 """
-    Population(pop::Array{PopMember{T}, 1})
+    Population(pop::Array{PopMember{T,L}, 1})
 
 Create population from list of PopMembers.
 """
@@ -27,7 +27,7 @@ function Population(
 end
 
 """
-    Population(dataset::Dataset{T};
+    Population(dataset::Dataset{T,L};
                npop::Int, nlength::Int=3, options::Options,
                nfeatures::Int)
 

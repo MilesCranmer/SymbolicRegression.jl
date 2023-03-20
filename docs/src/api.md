@@ -12,7 +12,7 @@ EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
         procs::Union{Array{Int, 1}, Nothing}=nothing,
         runtests::Bool=true,
         loss_type::Type=Nothing,
-) where {T<:Number}
+) where {T<:DATA_TYPE}
 ```
 
 ## Options

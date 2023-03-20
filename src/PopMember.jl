@@ -23,12 +23,14 @@ generate_reference() = abs(rand(Int))
     PopMember(t::Node{T}, score::L, loss::L)
 
 Create a population member with a birth date at the current time.
+The type of the `Node` may be different from the type of the score
+and loss.
 
 # Arguments
 
-- `t::Node`: The tree for the population member.
-- `score::T`: The score (normalized to a baseline, and offset by a complexity penalty)
-- `loss::T`: The raw loss to assign.
+- `t::Node{T}`: The tree for the population member.
+- `score::L`: The score (normalized to a baseline, and offset by a complexity penalty)
+- `loss::L`: The raw loss to assign.
 """
 function PopMember(
     t::Node{T}, score::L, loss::L; ref::Int=-1, parent::Int=-1, deterministic=false
@@ -42,16 +44,16 @@ function PopMember(
 end
 
 """
-    PopMember(dataset::Dataset{T},
-              t::Node, options::Options)
+    PopMember(dataset::Dataset{T,L},
+              t::Node{T}, options::Options)
 
 Create a population member with a birth date at the current time.
 Automatically compute the score for this tree.
 
 # Arguments
 
-- `dataset::Dataset{T}`: The dataset to evaluate the tree on.
-- `t::Node`: The tree for the population member.
+- `dataset::Dataset{T,L}`: The dataset to evaluate the tree on.
+- `t::Node{T}`: The tree for the population member.
 - `options::Options`: What options to use.
 """
 function PopMember(
