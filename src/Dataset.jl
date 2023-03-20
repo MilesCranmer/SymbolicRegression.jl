@@ -15,6 +15,8 @@ import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 - `weights::Union{AbstractVector{T},Nothing}`: If the dataset is weighted,
     these specify the per-sample weight (with shape `(n,)`).
 - `avg_y`: The average value of `y` (weighted, if `weights` are passed).
+- `use_baseline`: Whether to use a baseline loss. This will be set to `false`
+    if the baseline loss is calculated to be `Inf`.
 - `baseline_loss`: The loss of a constant function which predicts the average
     value of `y`. This is loss-dependent and should be updated with
     `update_baseline_loss!`.

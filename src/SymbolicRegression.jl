@@ -276,6 +276,10 @@ which is useful for debugging and profiling.
     which will cause `EquationSearch` to return the state. Note that
     you cannot change the operators or dataset, but most other options
     should be changeable.
+- `loss_type::Type=Nothing`: If you would like to use a different type
+    for the loss than for the data you passed, specify the type here.
+    Note that if you pass complex data `::Complex{L}`, then the loss
+    type will automatically be set to `L`.
 
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
