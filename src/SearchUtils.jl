@@ -267,7 +267,7 @@ function print_search_state(
         equation_strings = string_dominating_pareto_curve(
             hall_of_fame, dataset, options; width=width
         )
-        print(equation_strings)
+        print(equation_strings * "\n")
         print("="^twidth * "\n")
     end
     return print("Press 'q' and then <enter> to stop execution early.\n")
