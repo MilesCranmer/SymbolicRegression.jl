@@ -1,3 +1,4 @@
+import Random: MersenneTwister
 import SnoopPrecompile: @precompile_all_calls, @precompile_setup
 
 macro maybe_precompile_setup(mode, ex)
@@ -36,7 +37,7 @@ function do_precompilation(; mode=:precompile)
         types = [Float32]
         for T in types
             @maybe_precompile_all_calls mode begin
-                X = randn(T, 5, 100)
+                X = randn(MersenneTwister(0), T, 5, 100)
                 y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
                 options = SymbolicRegression.Options(;
                     binary_operators=[+, *, /, -],
@@ -60,15 +61,13 @@ function do_precompilation(; mode=:precompile)
                     define_helper_functions=false,
                     optimizer_probability=0.05,
                     save_to_file=false,
+                    deterministic=true,
+                    seed=1,
                 )
                 redirect_stderr(devnull) do
                     redirect_stdout(devnull) do
                         hall_of_fame = EquationSearch(
-                            X,
-                            y;
-                            niterations=3,
-                            options=options,
-                            parallelism=:multithreading,
+                            X, y; niterations=3, options=options, parallelism=:serial
                         )
                         calculate_pareto_frontier(X, y, hall_of_fame, options)
                     end
