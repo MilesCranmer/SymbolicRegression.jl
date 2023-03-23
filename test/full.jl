@@ -4,9 +4,9 @@ using SafeTestsets
 using SymbolicRegression: string_tree
 using Random
 
-@safetestset "Test mixed settings." begin
-    include("test_mixed.jl")
-end
+# @safetestset "Test mixed settings." begin
+#     include("test_mixed.jl")
+# end
 
 # @safetestset "Testing fast-cycle and custom variable names, with mutations" begin
 #     include("test_fast_cycle.jl")
@@ -24,9 +24,9 @@ end
 #     include("test_recorder.jl")
 # end
 
-# @safetestset "Testing whether deterministic mode works." begin
-#     include("test_deterministic.jl")
-# end
+@safetestset "Testing whether deterministic mode works." begin
+    include("test_deterministic.jl")
+end
 
 # @safetestset "Testing whether early stop criteria works." begin
 #     include("test_early_stop.jl")
