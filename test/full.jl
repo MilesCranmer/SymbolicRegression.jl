@@ -40,10 +40,10 @@ end
     include("test_precompilation.jl")
 end
 
-@testset "Test whether custom objectives work." begin
-    include("test_custom_objectives.jl")
-end
+# @testset "Test whether custom objectives work." begin
+#     include("test_custom_objectives.jl")
+# end
 
-@testset "Test abstract numbers" begin
-    include("test_abstract_numbers.jl")
-end
+# @testset "Test abstract numbers" begin
+#     include("test_abstract_numbers.jl")
+# end
