@@ -33,7 +33,7 @@ end
 """`mode=:precompile` will use `@precompile_*` directives; `mode=:compile` runs."""
 function do_precompilation(; mode=:precompile)
     @maybe_precompile_setup mode begin
-        types = [Float32, Float64]
+        types = [Float32]
         for T in types
             @maybe_precompile_all_calls mode begin
                 X = randn(T, 5, 100)
