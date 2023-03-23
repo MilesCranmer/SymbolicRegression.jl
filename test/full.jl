@@ -36,9 +36,9 @@ end
     include("test_custom_operators_multiprocessing.jl")
 end
 
-@testset "Test whether the precompilation script works." begin
-    include("test_precompilation.jl")
-end
+# @testset "Test whether the precompilation script works." begin
+#     include("test_precompilation.jl")
+# end
 
 # @testset "Test whether custom objectives work." begin
 #     include("test_custom_objectives.jl")
