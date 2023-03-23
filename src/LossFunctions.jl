@@ -143,9 +143,15 @@ Update the baseline loss of the dataset using the loss function specified in `op
 function update_baseline_loss!(
     dataset::Dataset{T,L}, options::Options
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    example_tree = Node(T; val=dataset.avg_y)
-    baseline_loss = eval_loss(example_tree, dataset, options)
-    if isfinite(baseline_loss)
+    can_set_baseline = dataset.avg_y !== nothing
+
+    if can_set_baseline
+        example_tree = Node(T; val=dataset.avg_y::T)
+        baseline_loss = eval_loss(example_tree, dataset, options)
+        can_set_baseline = isfinite(baseline_loss)
+    end
+
+    if can_set_baseline
         @atomic dataset.baseline_loss.value = baseline_loss
         @atomic dataset.use_baseline.value = true
     else

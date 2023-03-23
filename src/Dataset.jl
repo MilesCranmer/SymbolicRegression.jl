@@ -34,7 +34,7 @@ struct Dataset{
     T<:DATA_TYPE,
     L<:LOSS_TYPE,
     AX<:AbstractMatrix{T},
-    AY<:AbstractVector{T},
+    AY<:Union{AbstractVector{T},Nothing},
     AW<:Union{AbstractVector{T},Nothing},
     NT<:NamedTuple,
 }
@@ -45,14 +45,14 @@ struct Dataset{
     weighted::Bool
     weights::AW
     extra::NT
-    avg_y::T
+    avg_y::Union{T,Nothing}
     use_baseline::Atomic{Bool}
     baseline_loss::Atomic{L}
     varMap::Array{String,1}
 end
 
 """
-    Dataset(X::AbstractMatrix{T}, y::AbstractVector{T};
+    Dataset(X::AbstractMatrix{T}, y::Union{AbstractVector{T},Nothing}=nothing;
             weights::Union{AbstractVector{T}, Nothing}=nothing,
             varMap::Union{Array{String, 1}, Nothing}=nothing,
             extra::NamedTuple=NamedTuple(),
@@ -62,23 +62,29 @@ Construct a dataset to pass between internal functions.
 """
 function Dataset(
     X::AbstractMatrix{T},
-    y::AbstractVector{T};
+    y::Union{AbstractVector{T},Nothing}=nothing;
     weights::Union{AbstractVector{T},Nothing}=nothing,
     varMap::Union{Array{String,1},Nothing}=nothing,
     extra::NamedTuple=NamedTuple(),
     loss_type::Type=Nothing,
 ) where {T<:DATA_TYPE}
-    Base.require_one_based_indexing(X, y)
+    Base.require_one_based_indexing(X)
+    y !== nothing && Base.require_one_based_indexing(y)
+
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
     weighted = weights !== nothing
     if varMap === nothing
         varMap = ["x$(i)" for i in 1:nfeatures]
     end
-    avg_y = if weighted
-        sum(y .* weights) / sum(weights)
+    avg_y = if y === nothing
+        nothing
     else
-        sum(y) / n
+        if weighted
+            sum(y .* weights) / sum(weights)
+        else
+            sum(y) / n
+        end
     end
     loss_type = (loss_type == Nothing) ? T : loss_type
     use_baseline = Atomic(true)
