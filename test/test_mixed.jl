@@ -4,6 +4,8 @@ using SymbolicRegression: string_tree
 using Random
 include("test_params.jl")
 
+const IS_WINDOWS = Sys.iswindows()
+
 for i in 0:5
     local options, X, y, tree
     batching = i in [0, 1]
@@ -15,7 +17,7 @@ for i in 0:5
     optimizer_algorithm = "NelderMead"
     multi = false
     tournament_selection_p = 1.0
-    parallelism = :multiprocessing
+    parallelism = IS_WINDOWS ? :multithreading : :multiprocessing
     crossover_probability = 0.0f0
     skip_mutation_failures = false
     use_frequency = false
@@ -35,7 +37,7 @@ for i in 0:5
         println("with multi-output and use_frequency and string-specified parallelism.")
         multi = true
         use_frequency = true
-        parallelism = "multiprocessing"
+        parallelism = IS_WINDOWS ? "multithreading" : "multiprocessing"
     elseif i == 3
         println("with multi-threading and crossover and use_frequency_in_tournament")
         parallelism = :multithreading

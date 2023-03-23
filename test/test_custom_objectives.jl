@@ -29,8 +29,14 @@ y = X[1, :] .+ X[2, :]
 # The best tree should be 0.5 * (x1 + x2), since the custom loss function
 # multiplies the tree by 2.0.
 
+parallelism_kws = if Sys.iswindows()
+    (parallelism=:multithreading, numprocs=nothing)
+else
+    (parallelism=:multiprocessing, numprocs=1)
+end
+
 hall_of_fame = EquationSearch(
-    X, y; niterations=100, options=options, parallelism=:multiprocessing, numprocs=1
+    X, y; niterations=100, options=options, parallelism_kws...
 )
 dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
 
