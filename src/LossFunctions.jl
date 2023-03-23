@@ -34,8 +34,8 @@ end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function _eval_loss(
-    tree::Node{T}, dataset::Dataset{T,L}, options::Options
-)::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    tree::Node{T}, dataset::Dataset{T,L,AX,AY}, options::Options
+)::L where {T<:DATA_TYPE,L<:LOSS_TYPE,AX<:AbstractArray{T},AY<:AbstractArray{T}}
     (prediction, completion) = eval_tree_array(tree, dataset.X, options)
     if !completion
         return L(Inf)
@@ -44,12 +44,12 @@ function _eval_loss(
     if dataset.weighted
         return _weighted_loss(
             prediction,
-            dataset.y,
+            dataset.y::AY,
             dataset.weights::AbstractVector{T},
             options.elementwise_loss,
         )
     else
-        return _loss(prediction, dataset.y, options.elementwise_loss)
+        return _loss(prediction, dataset.y::AY, options.elementwise_loss)
     end
 end
 
@@ -108,14 +108,17 @@ end
 function score_func_batch(
     dataset::Dataset{T,L}, tree::Node{T}, options::Options
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    if options.loss_function !== nothing
+        error("Batched losses for custom objectives are not yet implemented.")
+    end
     batch_idx = StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)
     batch_X = view(dataset.X, :, batch_idx)
-    batch_y = view(dataset.y, batch_idx)
     (prediction, completion) = eval_tree_array(tree, batch_X, options)
     if !completion
         return L(0), L(Inf)
     end
 
+    batch_y = view(dataset.y::AbstractVector{T}, batch_idx)
     if !dataset.weighted
         result_loss = L(_loss(prediction, batch_y, options.elementwise_loss))
     else
