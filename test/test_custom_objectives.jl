@@ -35,9 +35,7 @@ else
     (parallelism=:multiprocessing, numprocs=1)
 end
 
-hall_of_fame = EquationSearch(
-    X, y; niterations=100, options=options, parallelism_kws...
-)
+hall_of_fame = EquationSearch(X, y; niterations=100, options=options, parallelism_kws...)
 dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
 
 testX = rand(2, 100) .* 10

@@ -11,13 +11,13 @@ for i in 0:5
     batching = i in [0, 1]
     weighted = i in [0, 2]
 
-    numprocs = 2
     progress = false
     warmup_maxsize_by = 0.0f0
     optimizer_algorithm = "NelderMead"
     multi = false
     tournament_selection_p = 1.0
     parallelism = IS_WINDOWS ? :multithreading : :multiprocessing
+    numprocs = IS_WINDOWS ? nothing : 2
     crossover_probability = 0.0f0
     skip_mutation_failures = false
     use_frequency = false
