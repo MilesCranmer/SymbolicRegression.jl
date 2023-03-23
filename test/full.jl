@@ -28,22 +28,22 @@ using Random
     include("test_deterministic.jl")
 end
 
-# @safetestset "Testing whether early stop criteria works." begin
-#     include("test_early_stop.jl")
-# end
+@safetestset "Testing whether early stop criteria works." begin
+    include("test_early_stop.jl")
+end
 
 @testset "Testing whether we can move operators to workers." begin
     include("test_custom_operators_multiprocessing.jl")
 end
 
-# @testset "Test whether the precompilation script works." begin
-#     include("test_precompilation.jl")
-# end
+@testset "Test whether the precompilation script works." begin
+    include("test_precompilation.jl")
+end
 
-# @testset "Test whether custom objectives work." begin
-#     include("test_custom_objectives.jl")
-# end
+@testset "Test whether custom objectives work." begin
+    include("test_custom_objectives.jl")
+end
 
-# @testset "Test abstract numbers" begin
-#     include("test_abstract_numbers.jl")
-# end
+@testset "Test abstract numbers" begin
+    include("test_abstract_numbers.jl")
+end
