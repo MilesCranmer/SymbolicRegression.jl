@@ -10,8 +10,9 @@ EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
         options::Options=Options(),
         numprocs::Union{Int, Nothing}=nothing,
         procs::Union{Array{Int, 1}, Nothing}=nothing,
-        runtests::Bool=true
-       ) where {T<:Real}
+        runtests::Bool=true,
+        loss_type::Type=Nothing,
+) where {T<:DATA_TYPE}
 ```
 
 ## Options
@@ -59,8 +60,8 @@ node_to_symbolic(tree::Node, options::Options;
 
 ```@docs
 calculate_pareto_frontier(X::AbstractMatrix{T}, y::AbstractVector{T},
-                        hallOfFame::HallOfFame{T}, options::Options;
-                        weights=nothing, varMap=nothing) where {T<:Real}
-calculate_pareto_frontier(dataset::Dataset{T}, hallOfFame::HallOfFame{T},
-                          options::Options) where {T<:Real}
+                        hallOfFame::HallOfFame{T,L}, options::Options;
+                        weights=nothing, varMap=nothing) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+calculate_pareto_frontier(dataset::Dataset{T,L}, hallOfFame::HallOfFame{T,L},
+                          options::Options) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 ```

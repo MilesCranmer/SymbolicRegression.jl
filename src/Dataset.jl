@@ -1,13 +1,13 @@
 module DatasetModule
 
-import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM
+import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 
 mutable struct Atomic{T}
     @atomic value::T
 end
 
 """
-    Dataset{T<:Real}
+    Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
 
 # Fields
 
@@ -22,6 +22,8 @@ end
     function. Since this is an arbitrary named tuple, you could pass
     any sort of dataset you wish to here.
 - `avg_y`: The average value of `y` (weighted, if `weights` are passed).
+- `use_baseline`: Whether to use a baseline loss. This will be set to `false`
+    if the baseline loss is calculated to be `Inf`.
 - `baseline_loss`: The loss of a constant function which predicts the average
     value of `y`. This is loss-dependent and should be updated with
     `update_baseline_loss!`.
@@ -29,7 +31,8 @@ end
     with shape `(nfeatures,)`.
 """
 struct Dataset{
-    T<:Real,
+    T<:DATA_TYPE,
+    L<:LOSS_TYPE,
     AX<:AbstractMatrix{T},
     AY<:AbstractVector{T},
     AW<:Union{AbstractVector{T},Nothing},
@@ -43,7 +46,8 @@ struct Dataset{
     weights::AW
     extra::NT
     avg_y::T
-    baseline_loss::Atomic{T}
+    use_baseline::Atomic{Bool}
+    baseline_loss::Atomic{L}
     varMap::Array{String,1}
 end
 
@@ -51,7 +55,8 @@ end
     Dataset(X::AbstractMatrix{T}, y::AbstractVector{T};
             weights::Union{AbstractVector{T}, Nothing}=nothing,
             varMap::Union{Array{String, 1}, Nothing}=nothing,
-            extra::NamedTuple=NamedTuple())
+            extra::NamedTuple=NamedTuple(),
+            loss_type::Type=Nothing)
 
 Construct a dataset to pass between internal functions.
 """
@@ -61,7 +66,8 @@ function Dataset(
     weights::Union{AbstractVector{T},Nothing}=nothing,
     varMap::Union{Array{String,1},Nothing}=nothing,
     extra::NamedTuple=NamedTuple(),
-) where {T<:Real}
+    loss_type::Type=Nothing,
+) where {T<:DATA_TYPE}
     Base.require_one_based_indexing(X, y)
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
@@ -74,10 +80,12 @@ function Dataset(
     else
         sum(y) / n
     end
-    baseline = Atomic(one(T))
+    loss_type = (loss_type == Nothing) ? T : loss_type
+    use_baseline = Atomic(true)
+    baseline = Atomic(one(loss_type))
 
-    return Dataset{T,typeof(X),typeof(y),typeof(weights),typeof(extra)}(
-        X, y, n, nfeatures, weighted, weights, extra, avg_y, baseline, varMap
+    return Dataset{T,loss_type,typeof(X),typeof(y),typeof(weights),typeof(extra)}(
+        X, y, n, nfeatures, weighted, weights, extra, avg_y, use_baseline, baseline, varMap
     )
 end
 

@@ -3,15 +3,15 @@ module ConstantOptimizationModule
 using LineSearches: LineSearches
 using Optim: Optim
 import DynamicExpressions: Node, get_constants, set_constants, count_constants
-import ..CoreModule: Options, Dataset
+import ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..UtilsModule: get_birth_order
 import ..LossFunctionsModule: score_func, eval_loss
 import ..PopMemberModule: PopMember
 
 # Proxy function for optimization
 function opt_func(
-    x::Vector{T}, dataset::Dataset{T}, tree::Node{T}, options::Options
-)::T where {T<:Real}
+    x::Vector{T}, dataset::Dataset{T,L}, tree::Node{T}, options::Options
+)::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
     set_constants(tree, x)
     # TODO(mcranmer): This should use score_func batching.
     loss = eval_loss(tree, dataset, options)
@@ -20,16 +20,19 @@ end
 
 # Use Nelder-Mead to optimize the constants in an equation
 function optimize_constants(
-    dataset::Dataset{T}, member::PopMember{T}, options::Options
-)::Tuple{PopMember{T},Float64} where {T<:Real}
+    dataset::Dataset{T,L}, member::PopMember{T,L}, options::Options
+)::Tuple{PopMember{T,L},Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     nconst = count_constants(member.tree)
     num_evals = 0.0
     if nconst == 0
         return (member, 0.0)
     end
     x0 = get_constants(member.tree)
-    f(x::Vector{T})::T = opt_func(x, dataset, member.tree, options)
-    if nconst == 1
+    f(x::Vector{T})::L = opt_func(x, dataset, member.tree, options)
+    if T <: Complex
+        # TODO: Make this more general. Also, do we even need Newton here at all??
+        algorithm = Optim.BFGS(; linesearch=LineSearches.BackTracking())#order=3))
+    elseif nconst == 1
         algorithm = Optim.Newton(; linesearch=LineSearches.BackTracking())
     else
         if options.optimizer_algorithm == "NelderMead"

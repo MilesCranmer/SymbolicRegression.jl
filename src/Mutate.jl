@@ -2,7 +2,8 @@ module MutateModule
 
 import DynamicExpressions:
     Node, copy_node, count_nodes, count_constants, simplify_tree, combine_operators
-import ..CoreModule: Options, MutationWeights, Dataset, RecordType, sample_mutation
+import ..CoreModule:
+    Options, MutationWeights, Dataset, RecordType, sample_mutation, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, score_func_batch
 import ..CheckConstraintsModule: check_constraints
@@ -53,14 +54,14 @@ end
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
 function next_generation(
-    dataset::Dataset{T},
-    member::PopMember{T},
-    temperature::T,
+    dataset::Dataset{T,L},
+    member::PopMember{T,L},
+    temperature,
     curmaxsize::Int,
     running_search_statistics::RunningSearchStatistics,
     options::Options;
     tmp_recorder::RecordType,
-)::Tuple{PopMember{T},Bool,Float64} where {T<:Real}
+)::Tuple{PopMember{T,L},Bool,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     prev = member.tree
     parent_ref = member.ref
     tree = prev
@@ -304,12 +305,12 @@ end
 
 """Generate a generation via crossover of two members."""
 function crossover_generation(
-    member1::PopMember,
-    member2::PopMember,
-    dataset::Dataset{T},
+    member1::PopMember{T,L},
+    member2::PopMember{T,L},
+    dataset::Dataset{T,L},
     curmaxsize::Int,
     options::Options,
-)::Tuple{PopMember,PopMember,Bool,Float64} where {T<:Real}
+)::Tuple{PopMember{T,L},PopMember{T,L},Bool,Float64} where {T<:DATA_TYPE,L<:DATA_TYPE}
     tree1 = member1.tree
     tree2 = member2.tree
     crossover_accepted = false

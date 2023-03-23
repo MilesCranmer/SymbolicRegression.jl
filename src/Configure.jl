@@ -50,7 +50,9 @@ function test_option_configuration(T, options::Options)
 end
 
 # Check for errors before they happen
-function test_dataset_configuration(dataset::Dataset{T}, options::Options) where {T<:Real}
+function test_dataset_configuration(
+    dataset::Dataset{T}, options::Options
+) where {T<:DATA_TYPE}
     n = dataset.n
     if n != size(dataset.X, 2) || n != size(dataset.y, 1)
         throw(
@@ -246,7 +248,9 @@ function test_module_on_workers(procs, options::Options)
     return debug((options.verbosity > 0 || options.progress), "Finished!")
 end
 
-function test_entire_pipeline(procs, dataset::Dataset{T}, options::Options) where {T<:Real}
+function test_entire_pipeline(
+    procs, dataset::Dataset{T}, options::Options
+) where {T<:DATA_TYPE}
     futures = []
     debug_inline(
         (options.verbosity > 0 || options.progress), "Testing entire pipeline on workers..."

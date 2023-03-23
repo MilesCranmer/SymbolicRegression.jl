@@ -1,6 +1,7 @@
 module OptionsModule
 
 using Optim: Optim
+using Dates: Dates
 import DynamicExpressions: OperatorEnum, Node, string_tree
 import Distributed: nworkers
 import LossFunctions: L2DistLoss
@@ -435,7 +436,9 @@ function Options(;
     end
 
     if output_file === nothing
-        output_file = "hall_of_fame.csv" #TODO - put in date/time string here
+        # "%Y-%m-%d_%H%M%S.%f"
+        date_time_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS.sss")
+        output_file = "hall_of_fame_" * date_time_str * ".csv"
     end
 
     nuna = length(unary_operators)

@@ -1,9 +1,10 @@
 name = "SymbolicRegression"
 uuid = "8254be44-1295-4e6a-a16d-46603ac705cb"
 authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
-version = "0.15.3"
+version = "0.16.1"
 
 [deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 DynamicExpressions = "a40a106e-89c9-4ca8-8020-a735e8728b6b"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
@@ -22,7 +23,7 @@ SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
-DynamicExpressions = "0.4.2"
+DynamicExpressions = "0.5"
 JSON3 = "1"
 LineSearches = "7"
 LossFunctions = "0.6, 0.7, 0.8"
