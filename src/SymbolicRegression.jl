@@ -957,10 +957,16 @@ function _EquationSearch(
 
     # Safely close all processes or threads
     if parallelism == :multiprocessing
-        we_created_procs && rmprocs(procs)
+        if we_created_procs
+            rmprocs(procs)
+        else
+            for j in 1:nout, i in 1:(options.npopulations)
+                wait(tasks[j][i])
+            end
+        end
     elseif parallelism == :multithreading
         for j in 1:nout, i in 1:(options.npopulations)
-            wait(allPops[j][i])
+            wait(tasks[j][i])
         end
     end
 
