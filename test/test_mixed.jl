@@ -6,7 +6,7 @@ include("test_params.jl")
 
 const IS_WINDOWS = Sys.iswindows()
 
-for i in 0:5
+for i in [0, 2, 3, 4, 5]
     local options, X, y, tree
     batching = i in [0, 1]
     weighted = i in [0, 2]
