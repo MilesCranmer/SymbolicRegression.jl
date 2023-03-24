@@ -69,7 +69,9 @@ end
 """
     calculate_pareto_frontier(hallOfFame::HallOfFame{T,L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 """
-function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L})::Vector{PopMember{T,L}} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+function calculate_pareto_frontier(
+    hallOfFame::HallOfFame{T,L}
+)::Vector{PopMember{T,L}} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     # TODO - remove dataset from args.
     # Dominating pareto curve - must be better than all simpler equations
     dominating = PopMember{T,L}[]

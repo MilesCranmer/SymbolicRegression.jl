@@ -18,9 +18,7 @@ options = SymbolicRegression.Options(;
 
 all_outputs = []
 for i in 1:2
-    hall_of_fame = EquationSearch(
-        X, y; niterations=5, options=options, parallelism=:serial
-    )
+    hall_of_fame = EquationSearch(X, y; niterations=5, options=options, parallelism=:serial)
     dominating = calculate_pareto_frontier(hall_of_fame)
     push!(all_outputs, dominating[end].tree)
 end
