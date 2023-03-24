@@ -24,13 +24,13 @@ using Random
 #     include("test_recorder.jl")
 # end
 
-@safetestset "Testing whether deterministic mode works." begin
-    include("test_deterministic.jl")
-end
-
-# @safetestset "Testing whether early stop criteria works." begin
-#     include("test_early_stop.jl")
+# @safetestset "Testing whether deterministic mode works." begin
+#     include("test_deterministic.jl")
 # end
+
+@safetestset "Testing whether early stop criteria works." begin
+    include("test_early_stop.jl")
+end
 
 # @testset "Testing whether we can move operators to workers." begin
 #     include("test_custom_operators_multiprocessing.jl")
