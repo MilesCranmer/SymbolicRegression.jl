@@ -970,6 +970,7 @@ function _EquationSearch(
         println("Checked.")
         ################################################################
     end
+    println("Exited loop.")
 
     close_reader!(stdin_reader)
 
