@@ -572,8 +572,6 @@ function _EquationSearch(
     @assert length(hallOfFame) == nout
     hallOfFame::Vector{HallOfFame{T,L}}
 
-    qdebug("Here??")
-
     for j in 1:nout
         for i in 1:(options.npopulations)
             worker_idx = next_worker(worker_assignment, procs)
@@ -616,6 +614,8 @@ function _EquationSearch(
             push!(init_pops[j], new_pop)
         end
     end
+    qdebug("Here??")
+
     # 2. Start the cycle on every process:
     for j in 1:nout
         dataset = datasets[j]
