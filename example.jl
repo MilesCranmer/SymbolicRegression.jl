@@ -11,7 +11,7 @@ hall_of_fame = EquationSearch(
     X, y; niterations=40, options=options, parallelism=:multithreading
 )
 
-dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
+dominating = calculate_pareto_frontier(hall_of_fame)
 
 trees = [member.tree for member in dominating]
 

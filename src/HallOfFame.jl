@@ -67,16 +67,13 @@ function copy_hall_of_fame(
 end
 
 """
-    calculate_pareto_frontier(dataset::Dataset{T,L}, hallOfFame::HallOfFame{T,L},
-                            options::Options) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    calculate_pareto_frontier(hallOfFame::HallOfFame{T,L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 """
-function calculate_pareto_frontier(
-    dataset::Dataset{T,L}, hallOfFame::HallOfFame{T,L}, options::Options
-)::Vector{PopMember{T,L}} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L})::Vector{PopMember{T,L}} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     # TODO - remove dataset from args.
     # Dominating pareto curve - must be better than all simpler equations
     dominating = PopMember{T,L}[]
-    actualMaxsize = options.maxsize + MAX_DEGREE
+    actualMaxsize = length(hallOfFame.members)
     for size in 1:actualMaxsize
         if !hallOfFame.exists[size]
             continue
@@ -102,28 +99,6 @@ function calculate_pareto_frontier(
     return dominating
 end
 
-"""
-    calculate_pareto_frontier(X::AbstractMatrix{T}, y::AbstractVector{T},
-                            hallOfFame::HallOfFame{T,L}, options::Options;
-                            weights=nothing, varMap=nothing) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-
-Compute the dominating Pareto frontier for a given hallOfFame. This
-is the list of equations where each equation has a better loss than all
-simpler equations.
-"""
-function calculate_pareto_frontier(
-    X::AbstractMatrix{T},
-    y::AbstractVector{T},
-    hallOfFame::HallOfFame{T,L},
-    options::Options;
-    weights=nothing,
-    varMap=nothing,
-)::Vector{PopMember{T,L}} where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    return calculate_pareto_frontier(
-        Dataset(X, y; weights=weights, varMap=varMap, loss_type=L), hallOfFame, options
-    )
-end
-
 function string_dominating_pareto_curve(
     hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing
 )
@@ -139,7 +114,7 @@ function string_dominating_pareto_curve(
         "%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation"
     )
 
-    dominating = calculate_pareto_frontier(dataset, hallOfFame, options)
+    dominating = calculate_pareto_frontier(hallOfFame)
     for member in dominating
         complexity = compute_complexity(member.tree, options)
         if member.loss < 0.0

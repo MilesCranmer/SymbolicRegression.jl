@@ -16,7 +16,7 @@ options = SymbolicRegression.Options(;
 )
 hallOfFame = EquationSearch(X, y; niterations=8, options=options, parallelism_kws...)
 
-dominating = calculate_pareto_frontier(X, y, hallOfFame, options)
+dominating = calculate_pareto_frontier(hallOfFame)
 
 best = dominating[end]
 # Test the score

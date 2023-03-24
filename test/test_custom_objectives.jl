@@ -36,7 +36,7 @@ else
 end
 
 hall_of_fame = EquationSearch(X, y; niterations=100, options=options, parallelism_kws...)
-dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
+dominating = calculate_pareto_frontier(hall_of_fame)
 
 testX = rand(2, 100) .* 10
 expected_y = 0.5 .* (testX[1, :] .+ testX[2, :])

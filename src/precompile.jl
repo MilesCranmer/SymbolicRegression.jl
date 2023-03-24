@@ -69,7 +69,7 @@ function do_precompilation(; mode=:precompile)
                         hall_of_fame = EquationSearch(
                             X, y; niterations=3, options=options, parallelism=:serial
                         )
-                        calculate_pareto_frontier(X, y, hall_of_fame, options)
+                        calculate_pareto_frontier(hall_of_fame)
                     end
                 end
             end

@@ -25,7 +25,7 @@ hallOfFame = EquationSearch(
 )
 rmprocs(procs)
 
-dominating = calculate_pareto_frontier(X, y, hallOfFame, options)
+dominating = calculate_pareto_frontier(hallOfFame)
 best = dominating[end]
 # Test the score
 @test best.loss < maximum_residual / 10

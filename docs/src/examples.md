@@ -10,8 +10,8 @@ using DataFrames
 We'll also code up a simple function to print a single expression:
 
 ```julia
-function get_best(; X, y, hof::HallOfFame{T,L}, options) where {T,L}
-    dominating = calculate_pareto_frontier(X, y, hof, options)
+function get_best(; hof::HallOfFame{T,L}, options) where {T,L}
+    dominating = calculate_pareto_frontier(hof, options)
 
     df = DataFrame(;
         tree=[m.tree for m in dominating],
@@ -49,7 +49,7 @@ hof = EquationSearch(X, y; options=options, niterations=30)
 Let's look at the most accurate expression:
 
 ```julia
-best, df = get_best(; X, y, hof, options)
+best, df = get_best(; hof, options)
 println(best)
 ```
 
@@ -63,7 +63,7 @@ y = @. 1/X[1, :]
 
 options = Options(; binary_operators=[+, *], unary_operators=[inv])
 hof = EquationSearch(X, y; options=options)
-println(get_best(; X, y, hof, options)[1])
+println(get_best(; hof, options)[1])
 ```
 
 ## 3. Multiple outputs
@@ -76,7 +76,7 @@ X = 2rand(5, 1000) .+ 0.1
 y = @. 1/X[1:3, :]
 options = Options(; binary_operators=[+, *], unary_operators=[inv])
 hofs = EquationSearch(X, y; options=options)
-bests = [get_best(; X, y=y[i, :], hof=hofs[i], options)[1] for i=1:3]
+bests = [get_best(; hof=hofs[i], options)[1] for i=1:3]
 println(bests)
 ```
 
@@ -130,7 +130,7 @@ hof = EquationSearch(X, y; options=options, niterations=30)
 we can see that the output types are `Float32`:
 
 ```julia
-best, df = get_best(; X, y, hof, options)
+best, df = get_best(; hof, options)
 println(typeof(best))
 # Node{Float32}
 ```
