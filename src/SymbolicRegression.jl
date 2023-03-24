@@ -688,8 +688,9 @@ function _EquationSearch(
     tasks = if parallelism in (:multiprocessing, :multithreading)
         [
             [
-                @async put!(channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i])) for
-                i in 1:(options.npopulations)
+                @async put!(
+                    channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i])
+                ) for i in 1:(options.npopulations)
             ] for j in 1:nout
         ]
     else
@@ -876,7 +877,9 @@ function _EquationSearch(
                 (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
             end
             if parallelism in (:multiprocessing, :multithreading)
-                tasks[j][i]::Task = @async put!(channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i]))
+                tasks[j][i]::Task = @async put!(
+                    channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i])
+                )
             end
 
             cycles_elapsed = total_cycles - cycles_remaining[j]

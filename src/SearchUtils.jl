@@ -113,16 +113,14 @@ function check_for_loss_threshold(
 
     # Check if all nout are below stopping condition.
     for hof in hallOfFame
-        dominating = calculate_pareto_frontier(hof)
-        # Check if zero size:
-        length(dominating) == 0 && return false
-
         stop_conditions = [
-            options.early_stop_condition(
+            exists && options.early_stop_condition(
                 member.loss, compute_complexity(member.tree, options)
-            ) for member in dominating
+            ) for (exists, member) in zip(hof.exists, hof.members)
         ]
-        if !(any(stop_conditions))
+        if any(stop_conditions)
+            # This means some expressions hit the stop condition.
+        else
             return false
         end
     end
