@@ -614,8 +614,6 @@ function _EquationSearch(
             push!(init_pops[j], new_pop)
         end
     end
-    qdebug("Here??")
-
     # 2. Start the cycle on every process:
     for j in 1:nout
         dataset = datasets[j]
@@ -674,6 +672,8 @@ function _EquationSearch(
             push!(allPops[j], updated_pop)
         end
     end
+    qdebug("Here??")
+
     start_time = time()
     total_cycles = options.npopulations * niterations
     cycles_remaining = [total_cycles for j in 1:nout]
