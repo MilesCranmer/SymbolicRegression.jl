@@ -679,6 +679,7 @@ function _EquationSearch(
             1:sum_cycle_remaining; width=options.terminal_width
         )
     end
+    println("Created progress bar.")
 
     last_print_time = time()
     num_equations = 0.0
@@ -688,14 +689,14 @@ function _EquationSearch(
     tasks = if parallelism in (:multiprocessing, :multithreading)
         [
             [
-                @async put!(
-                    channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i])
-                ) for i in 1:(options.npopulations)
+                @async put!(channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i])) for
+                i in 1:(options.npopulations)
             ] for j in 1:nout
         ]
     else
         nothing
     end
+    println("Created tasks.")
 
     # Randomly order which order to check populations:
     # This is done so that we do work on all nout equally.
@@ -708,6 +709,8 @@ function _EquationSearch(
         # help get accurate resource estimates:
         num_intervals_to_store=options.npopulations * 100 * nout,
     )
+    println("Created resource monitor.")
+    println("Starting loop!")
     while sum(cycles_remaining) > 0
         kappa += 1
         if kappa > options.npopulations * nout
@@ -734,6 +737,7 @@ function _EquationSearch(
         # TODO - this might skip extra cycles?
         population_ready &= (cycles_remaining[j] > 0)
         if population_ready
+            println("Checking population!")
             start_work_monitor!(resource_monitor)
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record, cur_num_evals) =
@@ -755,12 +759,14 @@ function _EquationSearch(
             curmaxsize = curmaxsizes[j]
 
             #Try normal copy...
+            println("Copying population.")
             bestPops = Population([
                 member for pop in bestSubPops[j] for member in pop.members
             ])
 
             ###################################################################
             # Hall Of Fame updating ###########################################
+            println("Updating HOF.")
             for (i_member, member) in enumerate(
                 Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists]))
             )
@@ -782,6 +788,7 @@ function _EquationSearch(
                     end
                 end
             end
+            println("Updated!")
             ###################################################################
 
             # Dominating pareto curve - must be better than all simpler equations
@@ -807,6 +814,7 @@ function _EquationSearch(
                 end
             end
 
+            println("Doing migration.")
             ###################################################################
             # Migration #######################################################
             if options.migration
@@ -834,6 +842,7 @@ function _EquationSearch(
 
             c_rss = deepcopy(all_running_search_statistics[j])
             c_cur_pop = copy_population(cur_pop)
+            println("Passing next task.")
             allPops[j][i] = @sr_spawner parallelism worker_idx let
                 cur_record = RecordType()
                 @recorder cur_record[key] = RecordType(
@@ -876,10 +885,9 @@ function _EquationSearch(
 
                 (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
             end
+            println("Async for waiting.")
             if parallelism in (:multiprocessing, :multithreading)
-                tasks[j][i]::Task = @async put!(
-                    channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i])
-                )
+                tasks[j][i]::Task = @async put!(channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i]))
             end
 
             cycles_elapsed = total_cycles - cycles_remaining[j]
@@ -898,6 +906,7 @@ function _EquationSearch(
             end
             num_equations += options.ncycles_per_iteration * options.npop / 10.0
 
+            println("Stopping work monitor.")
             stop_work_monitor!(resource_monitor)
             move_window!(all_running_search_statistics[j])
             if options.progress && nout == 1
