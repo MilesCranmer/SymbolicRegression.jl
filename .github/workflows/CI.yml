@@ -44,5 +44,5 @@ jobs:
         uses: julia-actions/julia-buildpkg@v1
       - name: "Run tests"
         run: |
-            julia --color=yes --threads=auto --check-bounds=yes --depwarn=yes --project=. -e 'import Pkg; Pkg.test()'
+            julia --color=yes --check-bounds=yes --depwarn=yes --project=. -e 'import Pkg; Pkg.test()'
         shell: bash
