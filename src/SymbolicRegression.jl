@@ -516,17 +516,19 @@ function _EquationSearch(
     ### Distributed code:
     ##########################################################################
     if parallelism == :multiprocessing
-        if addprocs_function === nothing
-            addprocs_function = addprocs
+        _addprocs_function = if addprocs_function === nothing
+            addprocs
+        else
+            addprocs_function
         end
         if numprocs === nothing && procs === nothing
             numprocs = 4
-            procs = addprocs_function(numprocs; lazy=false)
+            procs = _addprocs_function(numprocs; lazy=false)
             we_created_procs = true
         elseif numprocs === nothing
             numprocs = length(procs)
         elseif procs === nothing
-            procs = addprocs_function(numprocs; lazy=false)
+            procs = _addprocs_function(numprocs; lazy=false)
             we_created_procs = true
         end
 
