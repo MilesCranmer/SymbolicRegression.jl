@@ -13,7 +13,7 @@ options = SymbolicRegression.Options(;
     early_stop_condition=early_stop,
 )
 
-hof = EquationSearch(X, y; options=options, niterations=1_000_000_000)
+hof = EquationSearch(X, y; options=options, niterations=1_000)
 
 @test any(
     early_stop(member.loss, count_nodes(member.tree)) for member in hof.members[hof.exists]
