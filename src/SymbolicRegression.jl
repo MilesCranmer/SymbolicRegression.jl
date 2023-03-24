@@ -672,7 +672,6 @@ function _EquationSearch(
             push!(allPops[j], updated_pop)
         end
     end
-    qdebug("Here??")
 
     start_time = time()
     total_cycles = options.npopulations * niterations
@@ -690,6 +689,7 @@ function _EquationSearch(
     print_every_n_seconds = 5
     equation_speed = Float32[]
 
+    qdebug("Here??")
     tasks = if parallelism in (:multiprocessing, :multithreading)
         [
             [
