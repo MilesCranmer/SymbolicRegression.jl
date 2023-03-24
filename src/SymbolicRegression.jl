@@ -673,7 +673,6 @@ function _EquationSearch(
         end
     end
 
-    debug(options.verbosity > 0 || options.progress, "Started!")
     qdebug("Test??")
     start_time = time()
     total_cycles = options.npopulations * niterations
