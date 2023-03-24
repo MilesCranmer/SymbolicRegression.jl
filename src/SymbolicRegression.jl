@@ -712,7 +712,6 @@ function _EquationSearch(
         # help get accurate resource estimates:
         num_intervals_to_store=options.npopulations * 100 * nout,
     )
-    qdebug("Here??")
     while sum(cycles_remaining) > 0
         kappa += 1
         if kappa > options.npopulations * nout
@@ -739,6 +738,7 @@ function _EquationSearch(
         # TODO - this might skip extra cycles?
         population_ready &= (cycles_remaining[j] > 0)
         if population_ready
+            qdebug("Here??")
             start_work_monitor!(resource_monitor)
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record, cur_num_evals) =
