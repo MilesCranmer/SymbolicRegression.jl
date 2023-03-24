@@ -485,7 +485,6 @@ function _EquationSearch(
         else
             channels = [[Channel(1) for i in 1:(options.npopulations)] for j in 1:nout]
         end
-        tasks = [Task[] for j in 1:nout]
     end
 
     # This is a recorder for populations, but is not actually used for processing, just
@@ -684,14 +683,15 @@ function _EquationSearch(
     print_every_n_seconds = 5
     equation_speed = Float32[]
 
-    if parallelism in (:multiprocessing, :multithreading)
-        for j in 1:nout
-            for i in 1:(options.npopulations)
-                # Start listening for each population to finish:
-                t = @async put!(channels[j][i], fetch(allPops[j][i]))
-                push!(tasks[j], t)
-            end
-        end
+    tasks = if parallelism in (:multiprocessing, :multithreading)
+        [
+            [
+                @async put!(channels[j][i], fetch(allPops[j][i])) for
+                i in 1:(options.npopulations)
+            ] for j in 1:nout
+        ]
+    else
+        nothing
     end
 
     # Randomly order which order to check populations:
@@ -715,8 +715,8 @@ function _EquationSearch(
 
         # Check if error on population:
         if parallelism in (:multiprocessing, :multithreading)
-            if istaskfailed(tasks[j][i])
-                fetch(tasks[j][i])
+            if istaskfailed(tasks[j][i]::Task)
+                fetch(tasks[j][i]::Task)
                 error("Task failed for population")
             end
         end
@@ -874,7 +874,7 @@ function _EquationSearch(
                 (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
             end
             if parallelism in (:multiprocessing, :multithreading)
-                tasks[j][i] = @async put!(channels[j][i], fetch(allPops[j][i]))
+                tasks[j][i]::Task = @async put!(channels[j][i], fetch(allPops[j][i]))
             end
 
             cycles_elapsed = total_cycles - cycles_remaining[j]
@@ -954,12 +954,12 @@ function _EquationSearch(
                     rmprocs(procs)
                 else
                     for j in 1:nout, i in 1:(options.npopulations)
-                        wait(tasks[j][i])
+                        wait(tasks[j][i]::Task)
                     end
                 end
             elseif parallelism == :multithreading
                 for j in 1:nout, i in 1:(options.npopulations)
-                    wait(tasks[j][i])
+                    wait(tasks[j][i]::Task)
                 end
             end
             break
@@ -975,12 +975,12 @@ function _EquationSearch(
             rmprocs(procs)
         else
             for j in 1:nout, i in 1:(options.npopulations)
-                wait(tasks[j][i])
+                wait(tasks[j][i]::Task)
             end
         end
     elseif parallelism == :multithreading
         for j in 1:nout, i in 1:(options.npopulations)
-            wait(tasks[j][i])
+            wait(tasks[j][i]::Task)
         end
     end
 
