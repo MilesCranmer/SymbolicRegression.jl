@@ -701,7 +701,6 @@ function _EquationSearch(
         nothing
     end
 
-    qdebug("Here??")
     # Randomly order which order to check populations:
     # This is done so that we do work on all nout equally.
     all_idx = [(j, i) for j in 1:nout for i in 1:(options.npopulations)]
@@ -713,6 +712,7 @@ function _EquationSearch(
         # help get accurate resource estimates:
         num_intervals_to_store=options.npopulations * 100 * nout,
     )
+    qdebug("Here??")
     while sum(cycles_remaining) > 0
         kappa += 1
         if kappa > options.npopulations * nout
