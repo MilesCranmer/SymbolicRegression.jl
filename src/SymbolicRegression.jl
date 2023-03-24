@@ -689,13 +689,6 @@ function _EquationSearch(
     print_every_n_seconds = 5
     equation_speed = Float32[]
 
-    for j in 1:nout, i in 1:(options.npopulations)
-        fetch(allPops[j][i])
-    end
-    qdebug("Here??")
-
-    return nothing
-
     # This block of code is where Windows breaks (test_early_stop.jl test)
     tasks = if parallelism in (:multiprocessing, :multithreading)
         [
@@ -708,6 +701,7 @@ function _EquationSearch(
     else
         nothing
     end
+    qdebug("Here??")
 
     # Randomly order which order to check populations:
     # This is done so that we do work on all nout equally.
