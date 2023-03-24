@@ -477,14 +477,14 @@ function _EquationSearch(
     allPops = [allPopsType[] for j in 1:nout]
     init_pops = [allPopsType[] for j in 1:nout]
     # Set up a channel to send finished populations back to head node
-    if parallelism in (:multiprocessing, :multithreading)
+    channels = if parallelism in (:multiprocessing, :multithreading)
         if parallelism == :multiprocessing
-            channels = [
-                [RemoteChannel(1) for i in 1:(options.npopulations)] for j in 1:nout
-            ]
+            [[RemoteChannel(1) for i in 1:(options.npopulations)] for j in 1:nout]
         else
-            channels = [[Channel(1) for i in 1:(options.npopulations)] for j in 1:nout]
+            [[Channel(1) for i in 1:(options.npopulations)] for j in 1:nout]
         end
+    else
+        nothing
     end
 
     # This is a recorder for populations, but is not actually used for processing, just
@@ -686,7 +686,7 @@ function _EquationSearch(
     tasks = if parallelism in (:multiprocessing, :multithreading)
         [
             [
-                @async put!(channels[j][i], fetch(allPops[j][i])) for
+                @async put!(channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i])) for
                 i in 1:(options.npopulations)
             ] for j in 1:nout
         ]
@@ -723,7 +723,7 @@ function _EquationSearch(
         # Non-blocking check if a population is ready:
         population_ready = if parallelism in (:multiprocessing, :multithreading)
             # TODO: Implement type assertions based on parallelism.
-            isready(channels[j][i])
+            isready(channels[j][i]::Union{Channel,RemoteChannel})
         else
             true
         end
@@ -735,7 +735,7 @@ function _EquationSearch(
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record, cur_num_evals) =
                 if parallelism in (:multiprocessing, :multithreading)
-                    take!(channels[j][i])
+                    take!(channels[j][i]::Union{Channel,RemoteChannel})
                 else
                     allPops[j][i]
                 end
@@ -874,7 +874,7 @@ function _EquationSearch(
                 (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
             end
             if parallelism in (:multiprocessing, :multithreading)
-                tasks[j][i]::Task = @async put!(channels[j][i], fetch(allPops[j][i]))
+                tasks[j][i]::Task = @async put!(channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i]))
             end
 
             cycles_elapsed = total_cycles - cycles_remaining[j]
