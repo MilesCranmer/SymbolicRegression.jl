@@ -944,6 +944,7 @@ function _EquationSearch(
 
         ################################################################
         ## Early stopping code
+        println("Checking loss threshold.")
         if any((
             check_for_loss_threshold(hallOfFame, options),
             check_for_user_quit(stdin_reader),
@@ -966,6 +967,7 @@ function _EquationSearch(
             end
             break
         end
+        println("Checked.")
         ################################################################
     end
 
