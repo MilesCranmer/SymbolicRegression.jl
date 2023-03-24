@@ -948,6 +948,20 @@ function _EquationSearch(
             check_for_timeout(start_time, options),
             check_max_evals(num_evals, options),
         ))
+            # Safely close all processes or threads
+            if parallelism == :multiprocessing
+                if we_created_procs
+                    rmprocs(procs)
+                else
+                    for j in 1:nout, i in 1:(options.npopulations)
+                        wait(tasks[j][i])
+                    end
+                end
+            elseif parallelism == :multithreading
+                for j in 1:nout, i in 1:(options.npopulations)
+                    wait(tasks[j][i])
+                end
+            end
             break
         end
         ################################################################
