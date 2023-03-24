@@ -396,7 +396,7 @@ function EquationSearch(
         )
 
     return _EquationSearch(
-        concurrency,
+        Val(concurrency),
         datasets;
         niterations=niterations,
         options=options,
@@ -409,7 +409,7 @@ function EquationSearch(
 end
 
 function _EquationSearch(
-    parallelism::Symbol,
+    ::Val{parallelism},
     datasets::Vector{D};
     niterations::Int,
     options::Options,
@@ -418,7 +418,7 @@ function _EquationSearch(
     addprocs_function::Union{Function,Nothing},
     runtests::Bool,
     saved_state::Union{StateType{T,L},Nothing},
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},parallelism}
     if options.deterministic
         if parallelism != :serial
             error("Determinism is only guaranteed for serial mode.")
