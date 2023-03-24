@@ -689,7 +689,6 @@ function _EquationSearch(
     print_every_n_seconds = 5
     equation_speed = Float32[]
 
-    qdebug("Here??")
     tasks = if parallelism in (:multiprocessing, :multithreading)
         [
             [
@@ -702,6 +701,7 @@ function _EquationSearch(
         nothing
     end
 
+    qdebug("Here??")
     # Randomly order which order to check populations:
     # This is done so that we do work on all nout equally.
     all_idx = [(j, i) for j in 1:nout for i in 1:(options.npopulations)]
