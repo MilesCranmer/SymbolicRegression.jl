@@ -670,6 +670,7 @@ function _EquationSearch(
 
     debug(options.verbosity > 0 || options.progress, "Started!")
     println("Test??")
+    flush(stdout)
     start_time = time()
     total_cycles = options.npopulations * niterations
     cycles_remaining = [total_cycles for j in 1:nout]
@@ -681,6 +682,7 @@ function _EquationSearch(
         )
     end
     println("Created progress bar.")
+    flush(stdout)
 
     last_print_time = time()
     num_equations = 0.0
@@ -690,14 +692,16 @@ function _EquationSearch(
     tasks = if parallelism in (:multiprocessing, :multithreading)
         [
             [
-                @async put!(channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i])) for
-                i in 1:(options.npopulations)
+                @async put!(
+                    channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i])
+                ) for i in 1:(options.npopulations)
             ] for j in 1:nout
         ]
     else
         nothing
     end
     println("Created tasks.")
+    flush(stdout)
 
     # Randomly order which order to check populations:
     # This is done so that we do work on all nout equally.
@@ -711,7 +715,9 @@ function _EquationSearch(
         num_intervals_to_store=options.npopulations * 100 * nout,
     )
     println("Created resource monitor.")
+    flush(stdout)
     println("Starting loop!")
+    flush(stdout)
     while sum(cycles_remaining) > 0
         kappa += 1
         if kappa > options.npopulations * nout
@@ -739,6 +745,7 @@ function _EquationSearch(
         population_ready &= (cycles_remaining[j] > 0)
         if population_ready
             println("Checking population!")
+            flush(stdout)
             start_work_monitor!(resource_monitor)
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record, cur_num_evals) =
@@ -761,6 +768,7 @@ function _EquationSearch(
 
             #Try normal copy...
             println("Copying population.")
+            flush(stdout)
             bestPops = Population([
                 member for pop in bestSubPops[j] for member in pop.members
             ])
@@ -768,6 +776,7 @@ function _EquationSearch(
             ###################################################################
             # Hall Of Fame updating ###########################################
             println("Updating HOF.")
+            flush(stdout)
             for (i_member, member) in enumerate(
                 Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists]))
             )
@@ -790,6 +799,7 @@ function _EquationSearch(
                 end
             end
             println("Updated!")
+            flush(stdout)
             ###################################################################
 
             # Dominating pareto curve - must be better than all simpler equations
@@ -816,6 +826,7 @@ function _EquationSearch(
             end
 
             println("Doing migration.")
+            flush(stdout)
             ###################################################################
             # Migration #######################################################
             if options.migration
@@ -844,6 +855,7 @@ function _EquationSearch(
             c_rss = deepcopy(all_running_search_statistics[j])
             c_cur_pop = copy_population(cur_pop)
             println("Passing next task.")
+            flush(stdout)
             allPops[j][i] = @sr_spawner parallelism worker_idx let
                 cur_record = RecordType()
                 @recorder cur_record[key] = RecordType(
@@ -887,8 +899,11 @@ function _EquationSearch(
                 (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
             end
             println("Async for waiting.")
+            flush(stdout)
             if parallelism in (:multiprocessing, :multithreading)
-                tasks[j][i]::Task = @async put!(channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i]))
+                tasks[j][i]::Task = @async put!(
+                    channels[j][i]::Union{Channel,RemoteChannel}, fetch(allPops[j][i])
+                )
             end
 
             cycles_elapsed = total_cycles - cycles_remaining[j]
@@ -908,6 +923,7 @@ function _EquationSearch(
             num_equations += options.ncycles_per_iteration * options.npop / 10.0
 
             println("Stopping work monitor.")
+            flush(stdout)
             stop_work_monitor!(resource_monitor)
             move_window!(all_running_search_statistics[j])
             if options.progress && nout == 1
@@ -958,6 +974,7 @@ function _EquationSearch(
         ################################################################
         ## Early stopping code
         println("Checking loss threshold.")
+        flush(stdout)
         if any((
             check_for_loss_threshold(hallOfFame, options),
             check_for_user_quit(stdin_reader),
@@ -981,9 +998,11 @@ function _EquationSearch(
             break
         end
         println("Checked.")
+        flush(stdout)
         ################################################################
     end
     println("Exited loop.")
+    flush(stdout)
 
     close_reader!(stdin_reader)
 
