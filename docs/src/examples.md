@@ -11,7 +11,7 @@ We'll also code up a simple function to print a single expression:
 
 ```julia
 function get_best(; hof::HallOfFame{T,L}, options) where {T,L}
-    dominating = calculate_pareto_frontier(hof, options)
+    dominating = calculate_pareto_frontier(hof)
 
     df = DataFrame(;
         tree=[m.tree for m in dominating],
