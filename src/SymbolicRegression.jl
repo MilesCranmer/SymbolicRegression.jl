@@ -356,6 +356,10 @@ function EquationSearch(
     return EquationSearch(X, reshape(y, (1, size(y, 1))); kw...)
 end
 
+function EquationSearch(dataset::Dataset; kws...)
+    return EquationSearch([dataset]; kws...)
+end
+
 function EquationSearch(
     datasets::Vector{D};
     niterations::Int=10,
@@ -492,6 +496,7 @@ function _EquationSearch(
 
     actualMaxsize = options.maxsize + MAX_DEGREE
 
+    # TODO: Should really be one per population too.
     all_running_search_statistics = [
         RunningSearchStatistics(; options=options) for i in 1:nout
     ]
