@@ -70,8 +70,10 @@ function optimize_and_simplify_population(
     array_num_evals = zeros(Float64, pop.n)
     do_optimization = rand(pop.n) .< options.optimizer_probability
     for j in 1:(pop.n)
-        pop.members[j].tree = simplify_tree(pop.members[j].tree, options.operators)
-        pop.members[j].tree = combine_operators(pop.members[j].tree, options.operators)
+        if options.should_simplify
+            pop.members[j].tree = simplify_tree(pop.members[j].tree, options.operators)
+            pop.members[j].tree = combine_operators(pop.members[j].tree, options.operators)
+        end
         if options.should_optimize_constants && do_optimization[j]
             pop.members[j], array_num_evals[j] = optimize_constants(
                 dataset, pop.members[j], options
