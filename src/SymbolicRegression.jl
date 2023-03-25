@@ -583,8 +583,9 @@ function _EquationSearch(
                     member.score = score
                     member.loss = result_loss
                 end
+                copy_pop = copy_population(saved_pop)
                 new_pop = @sr_spawner parallelism worker_idx (
-                    saved_pop, HallOfFame(options, T, L), RecordType(), 0.0
+                    copy_pop, HallOfFame(options, T, L), RecordType(), 0.0
                 )
             else
                 if saved_pop !== nothing
@@ -828,16 +829,20 @@ function _EquationSearch(
             end
 
             c_rss = deepcopy(all_running_search_statistics[j])
+            c_cur_pop = copy_population(cur_pop)
             allPops[j][i] = @sr_spawner parallelism worker_idx let
                 cur_record = RecordType()
                 @recorder cur_record[key] = RecordType(
-                    "iteration$(iteration)" => record_population(cur_pop, options)
+                    "iteration$(iteration)" => record_population(c_cur_pop, options)
                 )
                 tmp_num_evals = 0.0
                 normalize_frequencies!(c_rss)
+                # TODO: Could the dataset objects themselves be modified during the search??
+                # Perhaps inside the evaluation kernels?
+                # It shouldn't be too expensive to copy the dataset.
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
-                    cur_pop,
+                    c_cur_pop,
                     options.ncycles_per_iteration,
                     curmaxsize,
                     c_rss;
