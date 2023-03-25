@@ -23,6 +23,8 @@ options = Options(;
     mutation_weights=MutationWeights(; optimize=0.01),
 )
 
+@test options.should_simplify == false
+
 X = rand(2, 100) .* 10
 y = X[1, :] .+ X[2, :]
 
