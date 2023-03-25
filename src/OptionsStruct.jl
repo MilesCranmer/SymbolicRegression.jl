@@ -118,6 +118,7 @@ struct Options{CT}
     turbo::Bool
     migration::Bool
     hof_migration::Bool
+    should_simplify::Bool
     should_optimize_constants::Bool
     output_file::String
     npopulations::Int

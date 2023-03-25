@@ -258,6 +258,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     migrated equations at the end of each cycle.
 - `fraction_replaced_hof`: What fraction to replace with hall of fame
     equations at the end of each cycle.
+- `should_simplify`: Whether to simplify equations. If you
+    pass a custom objective, this will be set to `false`.
 - `should_optimize_constants`: Whether to use an optimization algorithm
     to periodically optimize constants in equations.
 - `optimizer_nrestarts`: How many different random starting positions to consider
@@ -333,6 +335,7 @@ function Options(;
     turbo=false,
     migration=true,
     hof_migration=true,
+    should_simplify=nothing,
     should_optimize_constants=true,
     output_file=nothing,
     npopulations=15,
@@ -433,6 +436,16 @@ function Options(;
         if loss_function !== nothing
             error("You cannot specify both `elementwise_loss` and `loss_function`.")
         end
+    end
+
+    if should_simplify === nothing
+        should_simplify = (
+            loss_function === nothing &&
+            nested_constraints === nothing &&
+            constraints === nothing &&
+            bin_constraints === nothing &&
+            una_constraints === nothing
+        )
     end
 
     if output_file === nothing
@@ -640,6 +653,7 @@ function Options(;
         turbo,
         migration,
         hof_migration,
+        should_simplify,
         should_optimize_constants,
         output_file,
         npopulations,

@@ -83,6 +83,10 @@ function next_generation(
 
     condition_mutation_weights!(weights, prev, options, curmaxsize)
 
+    if !options.should_simplify
+        weights.simplify = 0.0
+    end
+
     mutation_choice = sample_mutation(weights)
 
     successful_mutation = false
@@ -127,6 +131,7 @@ function next_generation(
             @recorder tmp_recorder["type"] = "delete_op"
             is_success_always_possible = true
         elseif mutation_choice == :simplify
+            @assert options.should_simplify
             tree = simplify_tree(tree, options.operators)
             tree = combine_operators(tree, options.operators)
             @recorder tmp_recorder["type"] = "partial_simplify"
