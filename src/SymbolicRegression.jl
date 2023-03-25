@@ -775,7 +775,7 @@ function _EquationSearch(
             ###################################################################
 
             # Dominating pareto curve - must be better than all simpler equations
-            dominating = calculate_pareto_frontier(dataset, hallOfFame[j], options)
+            dominating = calculate_pareto_frontier(hallOfFame[j])
 
             if options.save_to_file
                 output_file = options.output_file
@@ -796,7 +796,6 @@ function _EquationSearch(
                     end
                 end
             end
-
             ###################################################################
             # Migration #######################################################
             if options.migration
@@ -931,7 +930,7 @@ function _EquationSearch(
         ################################################################
         ## Early stopping code
         if any((
-            check_for_loss_threshold(datasets, hallOfFame, options),
+            check_for_loss_threshold(hallOfFame, options),
             check_for_user_quit(stdin_reader),
             check_for_timeout(start_time, options),
             check_max_evals(num_evals, options),
