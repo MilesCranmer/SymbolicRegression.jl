@@ -45,8 +45,8 @@ macro sr_spawner(parallel, p, expr)
 end
 
 function init_dummy_pops(
-    nout::Int, npops::Int, datasets::Vector{Dataset{T,L}}, options::Options
-)::Vector{Vector{Population{T,L}}} where {T,L}
+    nout::Int, npops::Int, datasets::Vector{D}, options::Options
+)::Vector{Vector{Population{T,L}}} where {T,L,D<:Dataset{T,L}}
     return [
         [
             Population(
@@ -107,10 +107,10 @@ function check_for_user_quit(reader::StdinReader)::Bool
 end
 
 function check_for_loss_threshold(
-    datasets::AbstractVector{Dataset{T,L}},
-    hallOfFame::AbstractVector{HallOfFame{T,L}},
+    datasets::AbstractVector{D},
+    hallOfFame::AbstractVector{H},
     options::Options,
-)::Bool where {T,L}
+)::Bool where {T,L,D<:Dataset{T,L},H<:HallOfFame{T,L}}
     options.early_stop_condition === nothing && return false
 
     # Check if all nout are below stopping condition.
@@ -233,8 +233,8 @@ function update_progress_bar!(
 end
 
 function print_search_state(
-    hall_of_fames::Vector{HallOfFame{T,L}},
-    datasets::Vector{Dataset{T,L}};
+    hall_of_fames::Vector{H},
+    datasets::Vector{D};
     options::Options,
     equation_speed::Vector{Float32},
     total_cycles::Int,
@@ -242,7 +242,7 @@ function print_search_state(
     head_node_occupation::Float64,
     parallelism=:serial,
     width::Union{Integer,Nothing}=nothing,
-) where {T,L}
+) where {T,L,D<:Dataset{T,L},H<:HallOfFame{T,L}}
     twidth = (width === nothing) ? 100 : max(100, width::Integer)
     nout = length(datasets)
     average_speed = sum(equation_speed) / length(equation_speed)
