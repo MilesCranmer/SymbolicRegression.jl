@@ -2,6 +2,10 @@ module DatasetModule
 
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 
+mutable struct Atomic{T}
+    @atomic value::T
+end
+
 """
     Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
 
@@ -30,9 +34,9 @@ mutable struct Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
     nfeatures::Int
     weighted::Bool
     weights::Union{AbstractVector{T},Nothing}
-    avg_y::T
-    use_baseline::Bool
-    baseline_loss::L
+    avg_y::Union{T,Nothing}
+    use_baseline::Atomic{Bool}
+    baseline_loss::Atomic{L}
     varMap::Array{String,1}
 end
 
@@ -51,7 +55,9 @@ function Dataset(
     varMap::Union{Array{String,1},Nothing}=nothing,
     loss_type::Type=Nothing,
 ) where {T<:DATA_TYPE}
-    Base.require_one_based_indexing(X, y)
+    Base.require_one_based_indexing(X)
+    Base.require_one_based_indexing(y)
+
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
     weighted = weights !== nothing
@@ -64,8 +70,8 @@ function Dataset(
         sum(y) / n
     end
     loss_type = (loss_type == Nothing) ? T : loss_type
-    use_baseline = true
-    baseline = one(loss_type)
+    use_baseline = Atomic(true)
+    baseline = Atomic(one(loss_type))
 
     return Dataset{T,loss_type}(
         X, y, n, nfeatures, weighted, weights, avg_y, use_baseline, baseline, varMap

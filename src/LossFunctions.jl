@@ -95,7 +95,11 @@ function score_func(
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     result_loss = eval_loss(tree, dataset, options)
     score = loss_to_score(
-        result_loss, dataset.use_baseline, dataset.baseline_loss, tree, options
+        result_loss,
+        (@atomic dataset.use_baseline.value),
+        (@atomic dataset.baseline_loss.value),
+        tree,
+        options,
     )
     return score, result_loss
 end
@@ -122,7 +126,11 @@ function score_func_batch(
         )
     end
     score = loss_to_score(
-        result_loss, dataset.use_baseline, dataset.baseline_loss, tree, options
+        result_loss,
+        (@atomic dataset.use_baseline.value),
+        (@atomic dataset.baseline_loss.value),
+        tree,
+        options,
     )
     return score, result_loss
 end
@@ -135,14 +143,20 @@ Update the baseline loss of the dataset using the loss function specified in `op
 function update_baseline_loss!(
     dataset::Dataset{T,L}, options::Options
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    example_tree = Node(T; val=dataset.avg_y)
-    baseline_loss = eval_loss(example_tree, dataset, options)
-    if isfinite(baseline_loss)
-        dataset.baseline_loss = baseline_loss
-        dataset.use_baseline = true
+    can_set_baseline = dataset.avg_y !== nothing
+
+    if can_set_baseline
+        example_tree = Node(T; val=dataset.avg_y::T)
+        baseline_loss = eval_loss(example_tree, dataset, options)
+        can_set_baseline = isfinite(baseline_loss)
+    end
+
+    if can_set_baseline
+        @atomic dataset.baseline_loss.value = baseline_loss
+        @atomic dataset.use_baseline.value = true
     else
-        dataset.baseline_loss = one(L)
-        dataset.use_baseline = false
+        @atomic dataset.baseline_loss.value = one(L)
+        @atomic dataset.use_baseline.value = false
     end
     return nothing
 end

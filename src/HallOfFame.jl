@@ -129,7 +129,7 @@ function string_dominating_pareto_curve(
 )
     twidth = (width === nothing) ? 100 : max(100, width::Integer)
     output = ""
-    curMSE = Float64(dataset.baseline_loss)
+    curMSE = Float64(@atomic dataset.baseline_loss.value)
     lastMSE = curMSE
     lastComplexity = 0
     output *= "Hall of Fame:\n"
