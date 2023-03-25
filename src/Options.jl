@@ -209,6 +209,9 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     the dataset. This also means you could use a custom evaluation
     for a particular expression. Take a look at `_eval_loss` in
     the file `src/LossFunctions.jl` for an example.
+- `string_function`: Custom function to use for printing a given
+    expression. This will both be used to print the expression
+    during logging, and to print the expression to the output file.
 - `npopulations`: How many populations of equations to use. By default
     this is set equal to the number of cores
 - `npop`: How many equations in each population.
@@ -321,6 +324,7 @@ function Options(;
     constraints=nothing,
     elementwise_loss=nothing,
     loss_function=nothing,
+    string_function=nothing,
     tournament_selection_n=12, #1 sampled from every tournament_selection_n per mutation
     tournament_selection_p=0.86f0,
     topn=12, #samples to return per population
@@ -680,6 +684,7 @@ function Options(;
         seed,
         elementwise_loss,
         loss_function,
+        string_function,
         progress,
         terminal_width,
         optimizer_algorithm,

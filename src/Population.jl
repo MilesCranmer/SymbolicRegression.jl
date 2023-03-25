@@ -164,7 +164,7 @@ function record_population(pop::Population, options::Options)::RecordType
     return RecordType(
         "population" => [
             RecordType(
-                "tree" => string_tree(member.tree, options.operators),
+                "tree" => string_tree(member.tree, options),
                 "loss" => member.loss,
                 "score" => member.score,
                 "complexity" => compute_complexity(member.tree, options),

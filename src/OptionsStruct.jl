@@ -145,6 +145,7 @@ struct Options{CT}
     seed::Union{Int,Nothing}
     elementwise_loss::Union{SupervisedLoss,Function}
     loss_function::Union{Function,Nothing}
+    string_function::Union{Function,Nothing}
     progress::Bool
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::String

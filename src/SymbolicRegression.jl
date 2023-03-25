@@ -437,13 +437,13 @@ function _EquationSearch(
         function Base.print(io::IO, tree::Node)
             return print(
                 io,
-                string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap)),
+                string_tree(tree, $(options); varMap=$(datasets[1].varMap)),
             )
         end
         function Base.show(io::IO, tree::Node)
             return print(
                 io,
-                string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap)),
+                string_tree(tree, $(options); varMap=$(datasets[1].varMap)),
             )
         end
     end
@@ -797,7 +797,7 @@ function _EquationSearch(
                             println(
                                 io,
                                 "$(compute_complexity(member.tree, options)),$(member.loss),\"" *
-                                "$(string_tree(member.tree, options.operators, varMap=dataset.varMap))\"",
+                                "$(string_tree(member.tree, options, varMap=dataset.varMap))\"",
                             )
                         end
                     end

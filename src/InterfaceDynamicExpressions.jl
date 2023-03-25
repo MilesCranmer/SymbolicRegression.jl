@@ -130,7 +130,11 @@ Convert an equation to a string.
     to print for each feature.
 """
 function string_tree(tree::Node, options::Options; kws...)
-    return string_tree(tree, options.operators; kws...)
+    options.string_function === nothing && return string_tree(tree, options.operators; kws...)
+    return _string_tree_evaluator(options.string_function, tree, options; kws...)
+end
+function _string_tree_evaluator(f::F, tree::Node, options::Options; kws...) where {F}
+    return f(tree, options; kws...)
 end
 
 """
@@ -146,10 +150,10 @@ Print an equation
     to print for each feature.
 """
 function print_tree(tree::Node, options::Options; kws...)
-    return print_tree(tree, options.operators; kws...)
+    return println(string_tree(tree, options; kws...))
 end
 function print_tree(io::IO, tree::Node, options::Options; kws...)
-    return print_tree(io, tree, options.operators; kws...)
+    return println(io, string_tree(tree, options; kws...))
 end
 
 """
