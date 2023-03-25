@@ -70,7 +70,7 @@ function do_precompilation(; mode=:precompile)
                             options=options,
                             parallelism=:multithreading,
                         )
-                        calculate_pareto_frontier(X, y, hall_of_fame, options)
+                        calculate_pareto_frontier(hall_of_fame)
                     end
                 end
             end

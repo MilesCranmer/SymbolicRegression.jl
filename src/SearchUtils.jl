@@ -107,24 +107,20 @@ function check_for_user_quit(reader::StdinReader)::Bool
 end
 
 function check_for_loss_threshold(
-    datasets::AbstractVector{D},
-    hallOfFame::AbstractVector{H},
-    options::Options,
-)::Bool where {T,L,D<:Dataset{T,L},H<:HallOfFame{T,L}}
+    hallOfFame::AbstractVector{H}, options::Options
+)::Bool where {T,L,H<:HallOfFame{T,L}}
     options.early_stop_condition === nothing && return false
 
     # Check if all nout are below stopping condition.
-    for (dataset, hof) in zip(datasets, hallOfFame)
-        dominating = calculate_pareto_frontier(dataset, hof, options)
-        # Check if zero size:
-        length(dominating) == 0 && return false
-
+    for hof in hallOfFame
         stop_conditions = [
-            options.early_stop_condition(
+            exists && options.early_stop_condition(
                 member.loss, compute_complexity(member.tree, options)
-            ) for member in dominating
+            ) for (exists, member) in zip(hof.exists, hof.members)
         ]
-        if !(any(stop_conditions))
+        if any(stop_conditions)
+            # This means some expressions hit the stop condition.
+        else
             return false
         end
     end

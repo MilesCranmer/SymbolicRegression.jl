@@ -28,7 +28,7 @@ for T in (ComplexF16, ComplexF32, ComplexF64)
             EquationSearch(X, y; options=options, niterations=1_000_000_000)
         end
 
-        dominating = calculate_pareto_frontier(dataset, hof, options)
+        dominating = calculate_pareto_frontier(hof)
         @test typeof(dominating[end].loss) == L
         output, _ = eval_tree_array(dominating[end].tree, X, options)
         @test typeof(output) <: AbstractArray{T}
