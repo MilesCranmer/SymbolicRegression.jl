@@ -108,6 +108,9 @@ end
 function score_func_batch(
     dataset::Dataset{T,L}, tree::Node{T}, options::Options
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    if options.loss_function !== nothing
+        error("Batched losses for custom objectives are not yet implemented.")
+    end
     batch_idx = StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)
     batch_X = view(dataset.X, :, batch_idx)
     (prediction, completion) = eval_tree_array(tree, batch_X, options)
