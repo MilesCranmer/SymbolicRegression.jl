@@ -27,15 +27,15 @@ jobs:
       fail-fast: false
       matrix:
         julia-version:
-          - '1.6.7'
-          - '1.7.3'
-          - '1.8.2'
+          - '1.6'
+          - '1.8'
+          - '1.9.0-rc1'
         os:
           - ubuntu-latest
           - macOS-latest
         include:
           - os: windows-latest
-            julia-version: '1.8.2'
+            julia-version: '1.8'
 
     steps:
       - uses: actions/checkout@v3
