@@ -36,7 +36,7 @@ function create_evaluation_benchmark()
         local X, tree
         X = T.(randn(MersenneTwister(0), Float32, 5, 1000))
         tree = convert(Node{T}, copy_node(simple_tree))
-        suite[string(T)] = @benchmarkable eval_tree_array($tree, $X, $options) evals = 1000
+        suite[string(T)] = @benchmarkable eval_tree_array($tree, $X, $options)
     end
     return suite
 end
@@ -78,7 +78,7 @@ function create_search_benchmark()
                 EquationSearch(X, y; options, parallelism, niterations)
             end
         end
-        suite[string(parallelism)] = @benchmarkable ($f)() evals = 10
+        suite[string(parallelism)] = @benchmarkable ($f)()
     end
     return suite
 end
