@@ -4,18 +4,15 @@ using SymbolicRegression: eval_tree_array
 
 function create_evaluation_benchmark()
     suite = BenchmarkGroup()
-    extra_kws = hasfield(Options, :turbo) ? (turbo=true,) : NamedTuple()
-    extra_kws = merge(
-        extra_kws, hasfield(Options, :save_to_file) ? (save_to_file=false,) : NamedTuple()
-    )
-    options = Options(;
-        binary_operators=(+, -, /, *),
-        unary_operators=(cos, exp),
-        verbosity=0,
-        progress=false,
-        define_helper_functions=false,
-        extra_kws...,
-    )
+    make_options =
+        extra_kws -> Options(;
+            binary_operators=(+, -, /, *),
+            unary_operators=(cos, exp),
+            verbosity=0,
+            progress=false,
+            define_helper_functions=false,
+            extra_kws...,
+        )
     simple_tree = Node(
         2,
         Node(
@@ -38,11 +35,25 @@ function create_evaluation_benchmark()
         ),
     )
     for T in (Float32, Float64, BigFloat)
+        extra_kws = NamedTuple()
+        if hasfield(Options, :turbo) && T in (Float32, Float64)
+            extra_kws = merge(extra_kws, (turbo=true,))
+        end
+        if hasfield(Options, :save_to_file)
+            extra_kws = merge(extra_kws, (save_to_file=false,))
+        end
+        options = make_options(extra_kws)
         X = T.(randn(MersenneTwister(0), Float32, 5, 1000))
         tree = convert(Node{T}, copy_node(simple_tree))
         f() = eval_tree_array(tree, X, options)
-        suite[string(T)] = @benchmarkable ($f)() evals = 10 samples =
-            1_000 seconds = 5.0
+        f() # Warmup
+        evals = 10
+        samples = 1_000
+        if T == BigFloat
+            samples = 100
+        end
+        suite[string(T)] = @benchmarkable ($f)() evals = evals samples = samples seconds =
+            5.0
     end
     return suite
 end
@@ -68,7 +79,7 @@ function create_search_benchmark()
         extra_kws...,
     )
     seeds = 1:3
-    niterations = 100
+    niterations = 30
     # We create an equation that cannot be found exactly, so the search
     # is more realistic.
     eqn(x) = Float32(cos(2.13 * x[1]) + 0.5 * x[2] * abs(x[3])^0.9 - 0.3 * abs(x[4])^1.5)
@@ -86,7 +97,8 @@ function create_search_benchmark()
                 EquationSearch(X, y; options, parallelism, niterations)
             end
         end
-        suite[string(parallelism)] = @benchmarkable ($f)() evals = 3 samples = 3 seconds =
+        f() # Warmup
+        suite[string(parallelism)] = @benchmarkable ($f)() evals = 1 samples = 10 seconds =
             10_000
     end
     return suite
