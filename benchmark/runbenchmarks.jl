@@ -10,46 +10,39 @@ if length(names) == 0
 end
 
 shas = String[]
-module_names = Symbol[]
 
 for arg in names
     sha = readchomp(`git rev-parse $(arg)`)
     push!(shas, sha)
-    push!(module_names, Symbol("Module_" * sha))
 end
 
 # Evaluate benchmarks defined in benchmarks.jl, at different revisions:
 combined_results = Dict{String,Any}()
-for (name, sha, module_name) in zip(names, shas, module_names)
-    @eval module $module_name
-    using Pkg
-    # Create temp env:
+const DIR = @__DIR__
+for (name, sha) in zip(names, shas)
     tmp_env = mktempdir()
-    Pkg.activate(tmp_env)
+    cmd_string = """
+    using Pkg
     Pkg.add([
-        PackageSpec(; name="SymbolicRegression", rev=$sha),
+        PackageSpec(; name="SymbolicRegression", rev="$sha"),
+        PackageSpec(; name="DynamicExpressions"),
         PackageSpec(; name="BenchmarkTools"),
         PackageSpec(; name="Random"),
+        PackageSpec(; name="JSON3"),
     ])
 
     using BenchmarkTools: run
+    using JSON3
 
     # Include benchmark, defining SUITE:
-    const bench_path = joinpath(@__DIR__, "benchmarks.jl")
+    const bench_path = joinpath("$DIR", "benchmarks.jl")
     include(bench_path)
-    println("Running benchmarks for ", $name, "==", $sha, ".")
+    println("Running benchmarks for $name==$sha.")
     results = run(SUITE)
-    println("Finished benchmarks for ", $name, "==", $sha, ".")
+    println("Finished benchmarks for $name==$sha.")
+    open(joinpath("$DIR", "results_$(name).json"), "w") do io
+        write(io, JSON3.write(results))
     end
-
-    @eval import .$(module_name): results as $(Symbol("results_" * sha))
-    combined_results[name] = @eval $(Symbol("results_" * sha))
-    open(joinpath(@__DIR__, "results_$(name).json"), "w") do io
-        write(io, JSON3.write(combined_results[name]))
-    end
-end
-
-# Store as big json, as well as json per revision:
-open(joinpath(@__DIR__, "combined_results.json"), "w") do io
-    write(io, JSON3.write(combined_results))
+    """
+    run(`julia -O3 --threads=4 --project=$tmp_env -e $cmd_string`)
 end
