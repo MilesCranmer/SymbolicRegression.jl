@@ -1,15 +1,20 @@
+using BenchmarkTools
 using SymbolicRegression, BenchmarkTools, Random
 using SymbolicRegression: eval_tree_array
 
 function create_evaluation_benchmark()
     suite = BenchmarkGroup()
+    extra_kws = hasfield(Options, :turbo) ? (turbo=true,) : NamedTuple()
+    extra_kws = merge(
+        extra_kws, hasfield(Options, :save_to_file) ? (save_to_file=false,) : NamedTuple()
+    )
     options = Options(;
         binary_operators=(+, -, /, *),
         unary_operators=(cos, exp),
         verbosity=0,
         progress=false,
         define_helper_functions=false,
-        save_to_file=false,
+        extra_kws...,
     )
     simple_tree = Node(
         2,
@@ -33,10 +38,11 @@ function create_evaluation_benchmark()
         ),
     )
     for T in (Float32, Float64, BigFloat)
-        local X, tree
         X = T.(randn(MersenneTwister(0), Float32, 5, 1000))
         tree = convert(Node{T}, copy_node(simple_tree))
-        suite[string(T)] = @benchmarkable eval_tree_array($tree, $X, $options)
+        f() = eval_tree_array(tree, X, options)
+        suite[string(T)] = @benchmarkable ($f)() evals = 10 samples =
+            1_000 seconds = 5.0
     end
     return suite
 end
@@ -48,6 +54,9 @@ function create_search_benchmark()
     T = Float32
 
     extra_kws = hasfield(Options, :turbo) ? (turbo=true,) : NamedTuple()
+    extra_kws = merge(
+        extra_kws, hasfield(Options, :save_to_file) ? (save_to_file=false,) : NamedTuple()
+    )
     option_kws = (;
         binary_operators=(+, -, /, *),
         unary_operators=(exp, abs),
@@ -56,7 +65,6 @@ function create_search_benchmark()
         progress=false,
         deterministic=true,
         define_helper_functions=false,
-        save_to_file=false,
         extra_kws...,
     )
     seeds = 1:3
@@ -78,7 +86,8 @@ function create_search_benchmark()
                 EquationSearch(X, y; options, parallelism, niterations)
             end
         end
-        suite[string(parallelism)] = @benchmarkable ($f)()
+        suite[string(parallelism)] = @benchmarkable ($f)() evals = 3 samples = 3 seconds =
+            10_000
     end
     return suite
 end
@@ -87,7 +96,6 @@ function create_benchmark()
     suite = BenchmarkGroup()
     suite["evaluation"] = create_evaluation_benchmark()
     suite["search"] = create_search_benchmark()
-
     return suite
 end
 
