@@ -1,6 +1,6 @@
 using BenchmarkTools
 using SymbolicRegression, BenchmarkTools, Random
-using SymbolicRegression: eval_tree_array
+using SymbolicRegression: eval_tree_array, gen_random_tree_fixed_size
 
 function create_evaluation_benchmark()
     suite = BenchmarkGroup()
@@ -12,28 +12,7 @@ function create_evaluation_benchmark()
             progress=false,
             extra_kws...,
         )
-    simple_tree = Node(
-        2,
-        Node(
-            1,
-            Node(
-                3,
-                Node(1, Node(; val=1.0f0), Node(; feature=2)),
-                Node(2, Node(; val=-1.0f0)),
-            ),
-            Node(1, Node(; feature=3), Node(; feature=4)),
-        ),
-        Node(
-            4,
-            Node(
-                3,
-                Node(1, Node(; val=1.0f0), Node(; feature=2)),
-                Node(2, Node(; val=-1.0f0)),
-            ),
-            Node(1, Node(; feature=3), Node(; feature=4)),
-        ),
-    )
-    for T in (Float32, Float64, BigFloat)
+    for T in (Float32, Float64), node_count in (2 .^ (2:5))
         extra_kws = NamedTuple()
         if hasfield(Options, :define_helper_functions)
             extra_kws = merge(extra_kws, (define_helper_functions=false,))
@@ -45,17 +24,16 @@ function create_evaluation_benchmark()
             extra_kws = merge(extra_kws, (save_to_file=false,))
         end
         options = make_options(extra_kws)
-        X = T.(randn(MersenneTwister(0), Float32, 5, 1000))
-        tree = convert(Node{T}, copy_node(simple_tree))
-        f() = eval_tree_array(tree, X, options)
-        f() # Warmup
-        evals = 10
-        samples = 1_000
-        if T == BigFloat
-            samples = 100
+        evals = 100
+        samples = 10_000
+        if !haskey(suite, string(T))
+            suite[T] = BenchmarkGroup()
         end
-        suite[string(T)] = @benchmarkable ($f)() evals = evals samples = samples seconds =
-            5.0
+        suite[T][node_count] = @benchmarkable eval_tree_array(tree, X, $options) evals = evals samples =
+            samples seconds = 50.0 setup = (
+            X=randn($T, 5, 1000);
+            tree=gen_random_tree_fixed_size($node_count, $options, 5, $T)
+        )
     end
     return suite
 end
@@ -114,7 +92,7 @@ function create_search_benchmark()
         else
             5
         end
-        suite[string(parallelism)] = @benchmarkable ($f)() evals = 1 samples = samples seconds =
+        suite[parallelism] = @benchmarkable ($f)() evals = 1 samples = samples seconds =
             1_000
     end
     return suite
@@ -123,7 +101,7 @@ end
 function create_benchmark()
     suite = BenchmarkGroup()
     suite["evaluation"] = create_evaluation_benchmark()
-    suite["search"] = create_search_benchmark()
+    # suite["search"] = create_search_benchmark()
     return suite
 end
 
