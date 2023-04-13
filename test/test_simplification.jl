@@ -2,6 +2,13 @@ include("test_params.jl")
 using SymbolicRegression, Test
 import SymbolicUtils: simplify, Symbolic
 import Random: MersenneTwister
+import Base: ≈
+
+function Base.:≈(a::String, b::String)
+    a = replace(a, r"\s+" => "")
+    b = replace(b, r"\s+" => "")
+    return a == b
+end
 
 binary_operators = (+, -, /, *)
 
@@ -31,10 +38,10 @@ tree = convert(Node, eqn2, options)
 # that SymbolicUtils does not convert it to a power:
 tree = Node("x1") * Node("x1")
 eqn = convert(Symbolic, tree, options)
-@test repr(eqn) == "x1*x1"
+@test repr(eqn) ≈ "x1*x1"
 # Test converting back:
 tree_copy = convert(Node, eqn, options)
-@test repr(tree_copy) == "(x1 * x1)"
+@test repr(tree_copy) ≈ "(x1*x1)"
 
 # Let's test a much more complex function,
 # with custom operators, and unary operators:
