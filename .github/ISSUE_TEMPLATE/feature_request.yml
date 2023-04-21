@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest an idea for this project
+title: "[Feature]: "
+labels: ["enhancement"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a feature for SymbolicRegression.jl! Your interest in the project helps improve the software for everyone 🚀
+  - type: textarea
+    id: feature
+    attributes:
+      label: Feature Request
+      description: Describe your desired feature request here! The more details the better.
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        Be sure to check out the [forums](https://github.com/MilesCranmer/PySR/discussions) to chat with other users about use-cases!
