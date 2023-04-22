@@ -21,7 +21,7 @@ tree = op1(op2(x1, x2), op3(x1))
 @test repr(tree) == "op1(op2(x1, x2), op3(x1))"
 # Test evaluation:
 X = randn(MersenneTwister(0), Float32, 2, 10);
-@test tree(X) ≈ ((x1, x2) -> op1(op2(x1, x2), op3(x1))).(X[1, :], X[2, :])
+@test tree(X, options) ≈ ((x1, x2) -> op1(op2(x1, x2), op3(x1))).(X[1, :], X[2, :])
 
 # Now, test that we can work with operators defined in modules
 module A
@@ -47,7 +47,7 @@ function create_and_eval_tree()
     tree = my_func_a(my_func_a(x2, 0.2), my_func_b(x1))
     func = (x1, x2) -> my_func_a(my_func_a(x2, 0.2), my_func_b(x1))
     X = randn(MersenneTwister(0), 2, 20)
-    return tree(X), func.(X[1, :], X[2, :])
+    return tree(X, options), func.(X[1, :], X[2, :])
 end
 
 end
@@ -74,4 +74,4 @@ c1 = Node(Float64; val=0.2)
 tree = my_func_c(my_func_c(x2, 0.2), my_func_d(x1))
 func = (x1, x2) -> my_func_c(my_func_c(x2, 0.2), my_func_d(x1))
 X = randn(MersenneTwister(0), 2, 20)
-@test tree(X) ≈ func.(X[1, :], X[2, :])
+@test tree(X, options) ≈ func.(X[1, :], X[2, :])

@@ -17,7 +17,7 @@ tree = Node(3, Node(1, Node(; val=-π / 2)))
 
 # Should still be safe against domain errors:
 try
-    tree([0.0]')
+    tree([0.0]', options)
     @test true
 catch e
     @test false
@@ -26,7 +26,7 @@ end
 tree = Node(3, Node(1, Node(; feature=1)))
 
 try
-    tree([-π / 2]')
+    tree([-π / 2]', options)
     @test true
 catch e
     @test false
