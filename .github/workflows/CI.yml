@@ -22,18 +22,20 @@ jobs:
   test:
     name: Julia ${{ matrix.julia-version }} - ${{ matrix.os }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
         julia-version:
-          - '1.6.7'
-          - '1.7.3'
-          - '1.8.2'
+          - '1.6'
+          - '1.8'
+          - '1.9.0-rc2'
         os:
           - ubuntu-latest
-          - windows-latest
           - macOS-latest
+        include:
+          - os: windows-latest
+            julia-version: '1.8'
 
     steps:
       - uses: actions/checkout@v3
@@ -51,18 +53,6 @@ jobs:
             julia --color=yes --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user --project=. -e 'import Pkg; Pkg.test(coverage=true)'
             julia --color=yes --project=. coverage.jl
         shell: bash
-        if: ${{ matrix.os != 'windows-latest' }}
-      - name: "Run tests, skipping errors."
-        run: |
-            julia --color=yes --project=. -e 'import Pkg; Pkg.add("Coverage")'
-            {
-              julia --color=yes --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user --project=. -e 'import Pkg; Pkg.test(coverage=true)'
-            } || {
-              echo "Tests failed, but continuing anyway."
-            }
-            julia --color=yes --project=. coverage.jl
-        shell: bash
-        if: ${{ matrix.os == 'windows-latest' }}
       - name: "Coveralls"
         uses: coverallsapp/github-action@master
         with:

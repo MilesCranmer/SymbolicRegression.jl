@@ -18,3 +18,5 @@ build
 pysr_recorder.json
 docs/src/index.md
 *.code-workspace
+.vscode
+**/*.json

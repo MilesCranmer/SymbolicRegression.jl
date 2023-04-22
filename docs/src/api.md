@@ -59,9 +59,5 @@ node_to_symbolic(tree::Node, options::Options;
 ## Pareto frontier
 
 ```@docs
-calculate_pareto_frontier(X::AbstractMatrix{T}, y::AbstractVector{T},
-                        hallOfFame::HallOfFame{T,L}, options::Options;
-                        weights=nothing, varMap=nothing) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-calculate_pareto_frontier(dataset::Dataset{T,L}, hallOfFame::HallOfFame{T,L},
-                          options::Options) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+calculate_pareto_frontier(hallOfFame::HallOfFame{T,L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 ```
