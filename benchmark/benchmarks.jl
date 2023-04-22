@@ -2,41 +2,6 @@ using BenchmarkTools
 using SymbolicRegression, BenchmarkTools, Random
 using SymbolicRegression: eval_tree_array, gen_random_tree_fixed_size
 
-function create_evaluation_benchmark()
-    suite = BenchmarkGroup()
-    make_options =
-        extra_kws -> Options(;
-            binary_operators=(+, -, /, *),
-            unary_operators=(cos, exp),
-            verbosity=0,
-            progress=false,
-            extra_kws...,
-        )
-    for T in (Float32, Float64), node_count in (2 .^ (2:5))
-        extra_kws = NamedTuple()
-        if hasfield(Options, :define_helper_functions)
-            extra_kws = merge(extra_kws, (define_helper_functions=false,))
-        end
-        if hasfield(Options, :turbo) && T in (Float32, Float64)
-            extra_kws = merge(extra_kws, (turbo=true,))
-        end
-        if hasfield(Options, :save_to_file)
-            extra_kws = merge(extra_kws, (save_to_file=false,))
-        end
-        options = make_options(extra_kws)
-        evals = 100
-        samples = 10_000
-        if !haskey(suite, string(T))
-            suite[T] = BenchmarkGroup()
-        end
-        suite[T][node_count] = @benchmarkable eval_tree_array(tree, X, $options) evals = evals samples =
-            samples seconds = 50.0 setup = (
-            X=randn($T, 5, 1000);
-            tree=gen_random_tree_fixed_size($node_count, $options, 5, $T)
-        )
-    end
-    return suite
-end
 
 function create_search_benchmark()
     suite = BenchmarkGroup()
@@ -88,20 +53,23 @@ function create_search_benchmark()
         end
         f() # Warmup
         samples = if parallelism == :serial
-            1
-        else
             5
+        else
+            10
         end
-        suite[parallelism] = @benchmarkable ($f)() evals = 1 samples = samples seconds =
-            1_000
+        suite[parallelism] = @benchmarkable(
+            ($f)(),
+            evals=1,
+            samples=samples,
+            seconds=2_000
+        )
     end
     return suite
 end
 
 function create_benchmark()
     suite = BenchmarkGroup()
-    suite["evaluation"] = create_evaluation_benchmark()
-    # suite["search"] = create_search_benchmark()
+    suite["search"] = create_search_benchmark()
     return suite
 end
 
