@@ -1,7 +1,5 @@
 using BenchmarkTools
 using SymbolicRegression, BenchmarkTools, Random
-using SymbolicRegression: eval_tree_array, gen_random_tree_fixed_size
-
 
 function create_search_benchmark()
     suite = BenchmarkGroup()
@@ -58,10 +56,7 @@ function create_search_benchmark()
             10
         end
         suite[parallelism] = @benchmarkable(
-            ($f)(),
-            evals=1,
-            samples=samples,
-            seconds=2_000
+            ($f)(), evals = 1, samples = samples, seconds = 2_000
         )
     end
     return suite
