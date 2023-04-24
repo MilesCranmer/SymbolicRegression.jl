@@ -1,8 +1,8 @@
-import SnoopPrecompile: @precompile_all_calls, @precompile_setup
+import PrecompileTools: @compile_workload, @setup_workload
 
 macro maybe_precompile_setup(mode, ex)
     precompile_ex = Expr(
-        :macrocall, Symbol("@precompile_setup"), LineNumberNode(@__LINE__), ex
+        :macrocall, Symbol("@setup_workload"), LineNumberNode(@__LINE__), ex
     )
     return quote
         if $(esc(mode)) == :compile
@@ -17,7 +17,7 @@ end
 
 macro maybe_precompile_all_calls(mode, ex)
     precompile_ex = Expr(
-        :macrocall, Symbol("@precompile_all_calls"), LineNumberNode(@__LINE__), ex
+        :macrocall, Symbol("@compile_workload"), LineNumberNode(@__LINE__), ex
     )
     return quote
         if $(esc(mode)) == :compile
