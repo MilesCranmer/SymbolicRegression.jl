@@ -99,7 +99,7 @@ for i in 0:5
             parallelism=parallelism,
             numprocs=numprocs,
         )
-        dominating = [calculate_pareto_frontier(X, y, hallOfFame, options; weights=weights)]
+        dominating = [calculate_pareto_frontier(hallOfFame)]
     else
         y = 2 * cos.(X[4, :])
         niterations = 2
@@ -118,9 +118,9 @@ for i in 0:5
             numprocs=numprocs,
         )
         dominating = if multi
-            [calculate_pareto_frontier(X, y[j, :], hallOfFame[j], options) for j in 1:2]
+            [calculate_pareto_frontier(hallOfFame[j]) for j in 1:2]
         else
-            [calculate_pareto_frontier(X, y, hallOfFame, options)]
+            [calculate_pareto_frontier(hallOfFame)]
         end
     end
 

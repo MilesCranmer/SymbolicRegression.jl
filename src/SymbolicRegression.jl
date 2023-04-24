@@ -356,8 +356,12 @@ function EquationSearch(
     return EquationSearch(X, reshape(y, (1, size(y, 1))); kw...)
 end
 
+function EquationSearch(dataset::Dataset; kws...)
+    return EquationSearch([dataset]; kws...)
+end
+
 function EquationSearch(
-    datasets::Vector{Dataset{T,L}};
+    datasets::Vector{D};
     niterations::Int=10,
     options::Options=Options(),
     parallelism=:multithreading,
@@ -366,7 +370,7 @@ function EquationSearch(
     addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
     saved_state::Union{StateType{T,L},Nothing}=nothing,
-) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
     concurrency = if parallelism in (:multithreading, "multithreading")
         :multithreading
     elseif parallelism in (:multiprocessing, "multiprocessing")
@@ -406,7 +410,7 @@ end
 
 function _EquationSearch(
     parallelism::Symbol,
-    datasets::Vector{Dataset{T,L}};
+    datasets::Vector{D};
     niterations::Int,
     options::Options,
     numprocs::Union{Int,Nothing},
@@ -414,7 +418,7 @@ function _EquationSearch(
     addprocs_function::Union{Function,Nothing},
     runtests::Bool,
     saved_state::Union{StateType{T,L},Nothing},
-) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
     if options.deterministic
         if parallelism != :serial
             error("Determinism is only guaranteed for serial mode.")
@@ -492,6 +496,7 @@ function _EquationSearch(
 
     actualMaxsize = options.maxsize + MAX_DEGREE
 
+    # TODO: Should really be one per population too.
     all_running_search_statistics = [
         RunningSearchStatistics(; options=options) for i in 1:nout
     ]
@@ -578,8 +583,9 @@ function _EquationSearch(
                     member.score = score
                     member.loss = result_loss
                 end
+                copy_pop = copy_population(saved_pop)
                 new_pop = @sr_spawner parallelism worker_idx (
-                    saved_pop, HallOfFame(options, T, L), RecordType(), 0.0
+                    copy_pop, HallOfFame(options, T, L), RecordType(), 0.0
                 )
             else
                 if saved_pop !== nothing
@@ -616,6 +622,7 @@ function _EquationSearch(
 
             # TODO - why is this needed??
             # Multi-threaded doesn't like to fetch within a new task:
+            c_rss = deepcopy(running_search_statistics)
             updated_pop = @sr_spawner parallelism worker_idx let
                 in_pop = if parallelism in (:multiprocessing, :multithreading)
                     fetch(init_pops[j][i])[1]
@@ -628,13 +635,13 @@ function _EquationSearch(
                     "iteration0" => record_population(in_pop, options)
                 )
                 tmp_num_evals = 0.0
-                normalize_frequencies!(running_search_statistics)
+                normalize_frequencies!(c_rss)
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
                     in_pop,
                     options.ncycles_per_iteration,
                     curmaxsize,
-                    running_search_statistics;
+                    c_rss;
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
@@ -775,7 +782,7 @@ function _EquationSearch(
             ###################################################################
 
             # Dominating pareto curve - must be better than all simpler equations
-            dominating = calculate_pareto_frontier(dataset, hallOfFame[j], options)
+            dominating = calculate_pareto_frontier(hallOfFame[j])
 
             if options.save_to_file
                 output_file = options.output_file
@@ -796,7 +803,6 @@ function _EquationSearch(
                     end
                 end
             end
-
             ###################################################################
             # Migration #######################################################
             if options.migration
@@ -822,19 +828,24 @@ function _EquationSearch(
                 iteration = find_iteration_from_record(key, record) + 1
             end
 
+            c_rss = deepcopy(all_running_search_statistics[j])
+            c_cur_pop = copy_population(cur_pop)
             allPops[j][i] = @sr_spawner parallelism worker_idx let
                 cur_record = RecordType()
                 @recorder cur_record[key] = RecordType(
-                    "iteration$(iteration)" => record_population(cur_pop, options)
+                    "iteration$(iteration)" => record_population(c_cur_pop, options)
                 )
                 tmp_num_evals = 0.0
-                normalize_frequencies!(all_running_search_statistics[j])
+                normalize_frequencies!(c_rss)
+                # TODO: Could the dataset objects themselves be modified during the search??
+                # Perhaps inside the evaluation kernels?
+                # It shouldn't be too expensive to copy the dataset.
                 tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
                     dataset,
-                    cur_pop,
+                    c_cur_pop,
                     options.ncycles_per_iteration,
                     curmaxsize,
-                    all_running_search_statistics[j];
+                    c_rss;
                     verbosity=options.verbosity,
                     options=options,
                     record=cur_record,
@@ -931,7 +942,7 @@ function _EquationSearch(
         ################################################################
         ## Early stopping code
         if any((
-            check_for_loss_threshold(datasets, hallOfFame, options),
+            check_for_loss_threshold(hallOfFame, options),
             check_for_user_quit(stdin_reader),
             check_for_timeout(start_time, options),
             check_max_evals(num_evals, options),

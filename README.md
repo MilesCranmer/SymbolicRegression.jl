@@ -5,9 +5,13 @@
 SymbolicRegression.jl searches for symbolic expressions which optimize a particular objective.
 
 
-| Latest release | Documentation | Build status | Coverage |
-| --- | --- | --- | --- |
-| [![version](https://juliahub.com/docs/SymbolicRegression/version.svg)](https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS) | [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://astroautomata.com/SymbolicRegression.jl/dev/) [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://astroautomata.com/SymbolicRegression.jl/stable/)  | [![CI](https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/CI/badge.svg)](.github/workflows/CI.yml) | [![Coverage Status](https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master)](https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master) |
+| Latest release | Documentation | Forums |
+| :---: | :---: | :---: |
+| [![version](https://juliahub.com/docs/SymbolicRegression/version.svg)](https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS) | [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://astroautomata.com/SymbolicRegression.jl/dev/) | [![Discussions](https://img.shields.io/badge/discussions-github-informational)](https://github.com/MilesCranmer/PySR/discussions) |
+
+| Build status | Coverage |
+| :---: | :---: |
+| [![CI](https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/CI/badge.svg)](.github/workflows/CI.yml) | [![Coverage Status](https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master)](https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master) |
 
 
 Check out [PySR](https://github.com/MilesCranmer/PySR) for
@@ -55,7 +59,7 @@ hall_of_fame = EquationSearch(
 You can view the resultant equations in the dominating Pareto front (best expression
 seen at each complexity) with:
 ```julia
-dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
+dominating = calculate_pareto_frontier(hall_of_fame)
 ```
 This is a vector of `PopMember` type - which contains the expression along with the score.
 We can get the expressions with:
@@ -105,7 +109,7 @@ output, did_succeed = eval_tree_array(tree, X, options)
 We can view the equations in the dominating
 Pareto frontier with:
 ```julia
-dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
+dominating = calculate_pareto_frontier(hall_of_fame)
 ```
 We can convert the best equation
 to [SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl)

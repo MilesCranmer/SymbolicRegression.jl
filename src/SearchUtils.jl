@@ -45,8 +45,8 @@ macro sr_spawner(parallel, p, expr)
 end
 
 function init_dummy_pops(
-    nout::Int, npops::Int, datasets::Vector{Dataset{T,L}}, options::Options
-)::Vector{Vector{Population{T,L}}} where {T,L}
+    nout::Int, npops::Int, datasets::Vector{D}, options::Options
+)::Vector{Vector{Population{T,L}}} where {T,L,D<:Dataset{T,L}}
     return [
         [
             Population(
@@ -107,24 +107,20 @@ function check_for_user_quit(reader::StdinReader)::Bool
 end
 
 function check_for_loss_threshold(
-    datasets::AbstractVector{Dataset{T,L}},
-    hallOfFame::AbstractVector{HallOfFame{T,L}},
-    options::Options,
-)::Bool where {T,L}
+    hallOfFame::AbstractVector{H}, options::Options
+)::Bool where {T,L,H<:HallOfFame{T,L}}
     options.early_stop_condition === nothing && return false
 
     # Check if all nout are below stopping condition.
-    for (dataset, hof) in zip(datasets, hallOfFame)
-        dominating = calculate_pareto_frontier(dataset, hof, options)
-        # Check if zero size:
-        length(dominating) == 0 && return false
-
+    for hof in hallOfFame
         stop_conditions = [
-            options.early_stop_condition(
+            exists && options.early_stop_condition(
                 member.loss, compute_complexity(member.tree, options)
-            ) for member in dominating
+            ) for (exists, member) in zip(hof.exists, hof.members)
         ]
-        if !(any(stop_conditions))
+        if any(stop_conditions)
+            # This means some expressions hit the stop condition.
+        else
             return false
         end
     end
@@ -233,8 +229,8 @@ function update_progress_bar!(
 end
 
 function print_search_state(
-    hall_of_fames::Vector{HallOfFame{T,L}},
-    datasets::Vector{Dataset{T,L}};
+    hall_of_fames::Vector{H},
+    datasets::Vector{D};
     options::Options,
     equation_speed::Vector{Float32},
     total_cycles::Int,
@@ -242,7 +238,7 @@ function print_search_state(
     head_node_occupation::Float64,
     parallelism=:serial,
     width::Union{Integer,Nothing}=nothing,
-) where {T,L}
+) where {T,L,D<:Dataset{T,L},H<:HallOfFame{T,L}}
     twidth = (width === nothing) ? 100 : max(100, width::Integer)
     nout = length(datasets)
     average_speed = sum(equation_speed) / length(equation_speed)

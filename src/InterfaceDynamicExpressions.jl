@@ -214,4 +214,15 @@ macro extend_operators(options)
     end
 end
 
+function (tree::Node)(X, options::Options; kws...)
+    return tree(X, options.operators; turbo=options.turbo, kws...)
+end
+function DynamicExpressions.EvaluationHelpersModule._grad_evaluator(
+    tree::Node, X, options::Options; kws...
+)
+    return DynamicExpressions.EvaluationHelpersModule._grad_evaluator(
+        tree, X, options.operators; turbo=options.turbo, kws...
+    )
+end
+
 end

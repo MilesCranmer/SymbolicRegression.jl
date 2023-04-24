@@ -17,7 +17,7 @@ X = randn(MersenneTwister(0), Float32, 5, 100)
 y = 2 * cos.(X[4, :]) .- X[2, :]
 varMap = ["t1", "t2", "t3", "t4", "t5"]
 state, hall_of_fame = EquationSearch(X, y; varMap=varMap, niterations=2, options=options)
-dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
+dominating = calculate_pareto_frontier(hall_of_fame)
 
 best = dominating[end]
 
@@ -37,7 +37,7 @@ new_state, new_hall_of_fame = EquationSearch(
     saved_state=(deepcopy(state), deepcopy(hall_of_fame)),
 )
 
-dominating = calculate_pareto_frontier(X, y, new_hall_of_fame, options)
+dominating = calculate_pareto_frontier(new_hall_of_fame)
 best = dominating[end]
 print_tree(best.tree, options)
 @test best.loss < maximum_residual / 10
@@ -59,6 +59,6 @@ options = SymbolicRegression.Options(;
 state, hall_of_fame = EquationSearch(
     X, y; varMap=varMap, niterations=0, options=options, saved_state=(state, hall_of_fame)
 )
-dominating = calculate_pareto_frontier(X, y, hall_of_fame, options)
+dominating = calculate_pareto_frontier(hall_of_fame)
 best = dominating[end]
 @test best.loss ≈ previous_loss * 0.1
