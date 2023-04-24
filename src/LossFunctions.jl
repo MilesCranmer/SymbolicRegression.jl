@@ -23,7 +23,7 @@ end
 function _weighted_loss(
     x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::SupervisedLoss
 ) where {T<:DATA_TYPE}
-    return value(loss, y, x, AggMode.WeightedMean(w))
+    return value(loss, y, x, AggMode.WeightedSum(w)) / sum(w)
 end
 
 function _weighted_loss(
