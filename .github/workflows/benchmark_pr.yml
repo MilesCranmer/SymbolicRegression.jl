@@ -38,7 +38,7 @@ jobs:
                 echo $PATH
                 ls -l ~/.julia/bin
                 mkdir results
-                benchpkg ${{ steps.extract-package-name.outputs.package_name }} --rev="${{github.event.repository.default_branch}},${{github.event.pull_request.head.sha}}" --url=${{ github.event.repository.clone_url }} --bench-on="${{github.event.repository.default_branch}}" --output-dir=results/
+                benchpkg ${{ steps.extract-package-name.outputs.package_name }} --rev="${{github.event.repository.default_branch}},${{github.event.pull_request.head.sha}}" --url=${{ github.event.repository.clone_url }} --bench-on="${{github.event.repository.default_branch}}" --output-dir=results/ --tune
             - name: Create plots from benchmarks
               run: |
                 mkdir -p plots
@@ -61,8 +61,18 @@ jobs:
                 echo 'A plot of the benchmark results have been uploaded as an artifact to the workflow run for this PR.' >> body.md
                 echo 'Go to "Actions"->"Benchmark a pull request"->[the most recent run]->"Artifacts" (at the bottom).' >> body.md
 
+            - name: Find Comment
+              uses: peter-evans/find-comment@v2
+              id: fcbenchmark
+              with:
+                issue-number: ${{ github.event.pull_request.number }}
+                comment-author: 'github-actions[bot]'
+                body-includes: Benchmark Results
+
             - name: Comment on PR
               uses: peter-evans/create-or-update-comment@v3
               with:
+                comment-id: ${{ steps.fcbenchmark.outputs.comment-id }}
                 issue-number: ${{ github.event.pull_request.number }}
                 body-path: body.md
+                edit-mode: replace
