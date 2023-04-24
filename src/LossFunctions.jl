@@ -17,7 +17,8 @@ end
 function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::Function
 ) where {T<:DATA_TYPE}
-    return sum(loss.(x, y)) / length(y)
+    l(i) = loss(x[i], y[i])
+    return sum(l, eachindex(x)) / length(y)
 end
 
 function _weighted_loss(
@@ -29,7 +30,8 @@ end
 function _weighted_loss(
     x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::Function
 ) where {T<:DATA_TYPE}
-    return sum(loss.(x, y, w)) / sum(w)
+    l(i) = loss(x[i], y[i], w[i])
+    return sum(l, eachindex(x)) / sum(w)
 end
 
 # Evaluate the loss of a particular expression on the input dataset.

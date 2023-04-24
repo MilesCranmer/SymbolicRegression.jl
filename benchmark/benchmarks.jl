@@ -23,6 +23,7 @@ function create_search_benchmark()
         maxsize=30,
         verbosity=0,
         progress=false,
+        loss=(pred, target) -> (pred - target)^2,
         extra_kws...,
     )
     seeds = 1:3
