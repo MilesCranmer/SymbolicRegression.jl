@@ -1,8 +1,8 @@
-import SnoopPrecompile: @precompile_all_calls, @precompile_setup
+import PrecompileTools: @compile_workload, @setup_workload
 
-macro maybe_precompile_setup(mode, ex)
+macro maybe_setup_workload(mode, ex)
     precompile_ex = Expr(
-        :macrocall, Symbol("@precompile_setup"), LineNumberNode(@__LINE__), ex
+        :macrocall, Symbol("@setup_workload"), LineNumberNode(@__LINE__), ex
     )
     return quote
         if $(esc(mode)) == :compile
@@ -15,9 +15,9 @@ macro maybe_precompile_setup(mode, ex)
     end
 end
 
-macro maybe_precompile_all_calls(mode, ex)
+macro maybe_compile_workload(mode, ex)
     precompile_ex = Expr(
-        :macrocall, Symbol("@precompile_all_calls"), LineNumberNode(@__LINE__), ex
+        :macrocall, Symbol("@compile_workload"), LineNumberNode(@__LINE__), ex
     )
     return quote
         if $(esc(mode)) == :compile
@@ -32,10 +32,10 @@ end
 
 """`mode=:precompile` will use `@precompile_*` directives; `mode=:compile` runs."""
 function do_precompilation(; mode=:precompile)
-    @maybe_precompile_setup mode begin
+    @maybe_setup_workload mode begin
         types = [Float32]
         for T in types
-            @maybe_precompile_all_calls mode begin
+            @maybe_compile_workload mode begin
                 X = randn(T, 5, 100)
                 y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
                 options = SymbolicRegression.Options(;
