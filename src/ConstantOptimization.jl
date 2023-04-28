@@ -2,7 +2,7 @@ module ConstantOptimizationModule
 
 using LineSearches: LineSearches
 using Optim: Optim
-import DynamicExpressions: Node, get_constants, set_constants, count_constants
+import DynamicExpressions: Node, count_constants
 import ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..UtilsModule: get_birth_order
 import ..LossFunctionsModule: score_func, eval_loss
@@ -10,12 +10,19 @@ import ..PopMemberModule: PopMember
 
 # Proxy function for optimization
 function opt_func(
-    x::Vector{T}, dataset::Dataset{T,L}, tree::Node{T}, options::Options
-)::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    set_constants(tree, x)
+    x, dataset::Dataset{T,L}, tree, constant_nodes, options
+) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    _set_constants!(x, constant_nodes)
     # TODO(mcranmer): This should use score_func batching.
     loss = eval_loss(tree, dataset, options)
-    return loss
+    return loss::L
+end
+
+function _set_constants!(x::AbstractArray{T}, constant_nodes) where {T}
+    for (xi, node) in zip(x, constant_nodes)
+        node.val::T = xi
+    end
+    return nothing
 end
 
 # Use Nelder-Mead to optimize the constants in an equation
@@ -27,8 +34,9 @@ function optimize_constants(
     if nconst == 0
         return (member, 0.0)
     end
-    x0 = get_constants(member.tree)
-    f(x::Vector{T})::L = opt_func(x, dataset, member.tree, options)
+    constant_nodes = filter(t -> t.degree == 0 && t.constant, member.tree)
+    x0 = [n.val::T for n in constant_nodes]
+    f(x) = opt_func(x, dataset, member.tree, constant_nodes, options)
     if T <: Complex
         # TODO: Make this more general. Also, do we even need Newton here at all??
         algorithm = Optim.BFGS(; linesearch=LineSearches.BackTracking())#order=3))
@@ -57,12 +65,12 @@ function optimize_constants(
     end
 
     if Optim.converged(result)
-        set_constants(member.tree, result.minimizer)
+        _set_constants!(result.minimizer, constant_nodes)
         member.score, member.loss = score_func(dataset, member.tree, options)
         num_evals += 1
         member.birth = get_birth_order(; deterministic=options.deterministic)
     else
-        set_constants(member.tree, x0)
+        _set_constants!(x0, constant_nodes)
     end
     return member, num_evals
 end
