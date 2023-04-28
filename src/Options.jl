@@ -603,7 +603,7 @@ function Options(;
         OperatorEnum(;
             binary_operators=binary_operators,
             unary_operators=unary_operators,
-            enable_autodiff=enable_autodiff,
+            enable_autodiff=false,  # Not needed; we just want the constructors
             define_helper_functions=define_helper_functions,
         )
     end
