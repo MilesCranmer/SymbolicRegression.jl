@@ -14,7 +14,7 @@ using DataFrames
 using Noise
 
 Random.seed!(1234)
-
+export load_data, samplenewdata, append_one_data_point
 
 using CSV
 

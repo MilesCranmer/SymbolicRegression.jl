@@ -75,7 +75,7 @@ text_file = open("EquationI815noise0_01_divconstraintv2.txt","a");
 	write(text_file,"run#$(i) completed","\n")
 	end 
 
-        new_point,new_index= Committee.CommiteeEvaluation(sample_X,dominating;disagreement_measure="IBMD");
+        new_point,new_index= Committee.CommiteeEvaluation(sample_X,dominating,QBC.options2;disagreement_measure="IBMD");
         global train_X,train_y,sample_X,sample_y=Committee.AppendnewData(train_X,train_y,sample_X,sample_y,new_index);
         println(j)
      end

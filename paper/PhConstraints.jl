@@ -4,6 +4,7 @@ using SymbolicRegression
 using Random
 using Distributions
 
+export select_constraint, symmetry_loss, divergency
 
 function select_constraint(typeofconstraint::AbstractString,lambda = 100; vars)
    if typeofconstraint == "symmetry"
@@ -168,27 +169,7 @@ function Asymptote_loss(tree::SymbolicRegression.Node , dataset::SymbolicRegress
     return predictive_loss_L2Dis + ph_loss
     end
 
-n_data = 10
-Random.seed!(1234)
-data = Float32.(rand(1:10000,2,n_data)) # 10 points
 
-distance = Float32.(rand(1:100,1,n_data)) #10 points)
-
-G = Float32(6.6743e-11)
-F = G .*data[1,:] .*data[2,:]./(distance[1,:] .^2) 
-d = Normal()
-noise = rand(d,n_data)
-NoisyF = F + Float32.(0.01.*noise.*F)
-#F1 = 2*G .*mass .*mass2 ./(distance .^2) 
-#mass = reshape(mass,2,10)
-#distance = reshape(distance,1,10)    #todo use the size of mass and distance
-#F1 = reshape(F1,1,15)
-
-#nondimensional
-
-
-X = vcat(data,distance)
-shape = size(X)
 
 
 end
