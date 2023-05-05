@@ -29,7 +29,6 @@ function append_one_data_point(train_X,train_y, sample_X,sample_y,index)
     end
 end
 
-index= QBC.index
 
 function regression_with_constraints(train_X, train_y, niterations, options1, options2, split; max_loops=nothing, target_error=nothing,convergence_jump = nothing )
 
@@ -53,7 +52,7 @@ function regression_with_constraints(train_X, train_y, niterations, options1, op
         end
 
         try
-            hof = SymbolicRegression.equation_search(train_X, train_y, niterations=niterationconst, options=options1)
+            hof = SymbolicRegression.EquationSearch(train_X, train_y, niterations=niterationconst, options=options1)
 			dataset = SymbolicRegression.Dataset(train_X,train_y)
 			SymbolicRegression.LossFunctionsModule.update_baseline_loss!(dataset,options2)
 			for population in hof[1][1]
@@ -94,6 +93,81 @@ function regression_with_constraints(train_X, train_y, niterations, options1, op
 
     return hof2
 end
+
+function regression_with_qbc(train_X, train_y, sample_X, sample_y, niterations, options1, options2, QBC, split; max_loops=nothing, target_error=nothing,convergence_jump = nothing, max_qbc_iterations=nothing,disagreement_measure = "IBMD" )
+
+    # Validate the input for split value
+    if split <= 0 || split >= 1
+        throw(ArgumentError("Split value should be between 0 and 1 (exclusive)."))
+    end
+
+    # Calculate the number of iterations for each part based on the split value
+    niterationconst = Int(round(niterations * split))
+    niterationconst2 = niterations - niterationconst
+
+    # Initialize loop variables
+    loop_count = 0
+    error = Inf
+    qbc_loop_count = 0
+
+    # Initialize hof2 before the try block
+    hof2 = nothing
+
+    while true
+        # Break the loop if the maximum number of loops is reached
+        if max_loops !== nothing && loop_count >= max_loops
+            break
+        end
+
+        try
+            hof = SymbolicRegression.EquationSearch(train_X, train_y, niterations=niterationconst, options=options1)
+            dataset = SymbolicRegression.Dataset(train_X,train_y)
+            SymbolicRegression.LossFunctionsModule.update_baseline_loss!(dataset,options2)
+            for population in hof[1][1]
+                for mem in population.members
+                    mem.score, mem.loss = SymbolicRegression.PopMemberModule.score_func(dataset,mem.tree,options2)
+                end
+            end
+
+            hof2 = SymbolicRegression.EquationSearch(train_X, train_y, niterations=niterationconst2, options=options2, saved_state=hof)
+            dominating = calculate_pareto_frontier(train_X,train_y,hof2,options2);
+            losses = [member.loss for member in dominating]
+            
+            # Calculate the error and break the loop if the target error is reached
+            if target_error !== nothing
+                #error is lower loss in the pareto frontier
+                error = minimum(losses)
+                if error <= target_error
+                    return hof2
+                end
+            end
+
+            # Perform QBC iteration
+            if max_qbc_iterations !== nothing && qbc_loop_count < max_qbc_iterations
+                new_point, new_index = Committee.CommiteeEvaluation(sample_X, dominating, QBC.options2; disagreement_measure=disagreement_measure)
+                train_X, train_y, sample_X, sample_y = Committee.AppendnewData(train_X, train_y, sample_X, sample_y, new_index)
+                qbc_loop_count += 1
+            else
+                if convergence_jump !== nothing
+                    ratios = [losses[n+1]/losses[n] for n in 1:(size(losses)[1]-1)]
+                    threshold = [ratios .< Convergence_jump]  #jump in 5 orders of magnitude
+                    if sum(sum(threshold)) != 0
+                        return hof2
+                    end
+                end
+            end
+
+        catch e
+            println("An error occurred during execution: ", e)
+            break
+        end
+
+        loop_count += 1
+    end
+
+    return hof2
+end
+
 
 #for i in 1:100
   
@@ -146,4 +220,5 @@ end
 #     end
 #close(text_file)
 #end
-#
+
+end #end module
