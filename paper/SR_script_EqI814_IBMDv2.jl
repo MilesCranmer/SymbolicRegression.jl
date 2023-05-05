@@ -150,7 +150,7 @@ function regression_with_qbc(train_X, train_y, sample_X, sample_y, niterations, 
             end
             if convergence_jump !== nothing
                 ratios = [losses[n+1]/losses[n] for n in 1:(size(losses)[1]-1)]
-                threshold = [ratios .< convergence_jump]  #jump in 5 orders of magnitude
+                threshold = [ratios .< convergence_jump]  
                     if sum(sum(threshold)) != 0
                         return hof2
                     end
