@@ -5,10 +5,70 @@ using Random
 using Distributions
 
 
-function symmetry_loss(tree::SymbolicRegression.Node, dataset::SymbolicRegression.Dataset{T},options,var1=1,var2=2,var3=3,var4=4,n=100) where {T}
+function select_constraint(typeofconstraint::AbstractString,lambda = 100; vars)
+   if typeofconstraint == "symmetry"
+      function symmetry_loss(tree::SymbolicRegression.Node, dataset::SymbolicRegression.Dataset{T},options,vars=vars,n=lambda) where {T}
+         _,d= size(dataset.X)
+         symmetrydata = copy(dataset.X)
+         number_of_symmetries = size(vars)[1]
+         for i in 1:number_of_symmetries
+            if size(vars[i][1]v) == 2
+            symmetrydata[vars[i][1],:],symmetrydata[vars[i][2],:]=symmetrydata[vars[i][2],:],symmetrydata[vars[i][1],:]
+            end
+            if size(vars[i])[1] == 3
+            symmetrydata[vars[i][1],:],symmetrydata[vars[i][2],:],symmetrydata[vars[i][3],:]=symmetrydata[vars[i][3],:],symmetrydata[vars[i][1],:],symmetrydata[vars[i][2],:]
+            end
+         end
+         prediction1, complete1 = SymbolicRegression.eval_tree_array(tree,dataset.X,options)
+         (!complete1) && return(T(10000000))
+         prediction2, complete2 = SymbolicRegression.eval_tree_array(tree,symmetrydata,options)
+         (!complete2) && return(T(10000000))
+         
+         predictive_loss_L2Dis = sum(abs.(dataset.y .- prediction1))
+         symmetry_loss = sum(n*abs.(prediction1-prediction2))/d
+        
+         return predictive_loss_L2Dis + symmetry_loss
+      end
+      return symmetry_loss
+   
+   elseif typeofconstraint == "divergency1"
+         function divergency(tree::SymbolicRegression.Node , dataset::SymbolicRegression.Dataset{T}, options;var,n=lambda) where {T}
+            _,d = size(dataset.X)
+            divergency_data = copy(dataset.X)
+            for i in collect(1:d)
+               divergency_data[var,i] = 0
+            end
+            prediction, complete = SymbolicRegression.eval_tree_array(tree, dataset.X, options)
+            (!complete) && return T(10000000)
+            prediction_div, _ = SymbolicRegression.eval_tree_array(tree, divergency_data, options)
+           
+            predictive_loss_L2Dis = sum(abs.(dataset.y .- prediction).^2)
+            divergency_loss = n*sum(isfinite.(prediction_div))/d      #if Inf then no addition to divergency_loss
+            return predictive_loss_L2Dis + divergency_loss
+            end
+
+      return divergency
+
+      
+
+   end   
+end
+  
+
+
+
+function symmetry_loss(tree::SymbolicRegression.Node, dataset::SymbolicRegression.Dataset{T},options,vars=[[1,2],[3,4]],n=100) where {T}
    _,d= size(dataset.X)
    symmetrydata = copy(dataset.X)
-   symmetrydata[var1,:],symmetrydata[var2,:],symmetrydata[var3,:],symmetrydata[var4,:]=symmetrydata[var2,:],symmetrydata[var1,:],symmetrydata[var4,:],symmetrydata[var3,:]
+   number_of_symmetries = size(vars)[1]
+   for i in 1:number_of_symmetries
+      if number_of_symmetries ==2
+      symmetrydata[vars[i][1],:],symmetrydata[vars[i][2],:]=symmetrydata[vars[i][2],:],symmetrydata[vars[i][1],:]
+      end
+      if number_of_symmetries ==3
+      symmetrydata[vars[i][1],:],symmetrydata[vars[i][2],:],symmetrydata[vars[i][3],:]=symmetrydata[vars[i][3],:],symmetrydata[vars[i][1],:],symmetrydata[vars[i][2],:]
+      end
+   end
    prediction1, complete1 = SymbolicRegression.eval_tree_array(tree,dataset.X,options)
    (!complete1) && return(T(10000000))
    prediction2, complete2 = SymbolicRegression.eval_tree_array(tree,symmetrydata,options)
@@ -18,10 +78,9 @@ function symmetry_loss(tree::SymbolicRegression.Node, dataset::SymbolicRegressio
    symmetry_loss = sum(n*abs.(prediction1-prediction2))/d
   
    return predictive_loss_L2Dis + symmetry_loss
-
 end
 
-function divergency_symmetry_loss(treetree::SymbolicRegression.Node, dataset::SymbolicRegression.Dataset{T},options,var1=2,var2=3,n=5) where {T}
+function divergency_symmetry_loss(tree::SymbolicRegression.Node, dataset::SymbolicRegression.Dataset{T},options,var1=2,var2=3,n=5) where {T}
    for i in collect(1:d)
       divergency_data[dir,i] = 7
       divergency_data[dir+1,i] = 7

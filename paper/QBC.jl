@@ -25,30 +25,22 @@ struct MyDataset
     num_data::Int 				#rows
 end
 
-function load_data(file_number::Int, delim::AbstractString=" ")
+function load_data(file_number::AbstractString, delim::AbstractString=" ")
     file_name = "$(file_number)"
-    file1 = CSV.File(file_name, header=false, delim=delim)
+    data = CSV.File(file_name; delim=delim, ignorerepeated=true, header=false) |> DataFrame
 
-    num_columns = ncol(file1)
-    num_features = num_columns - 1
+    # Convert the DataFrame to a matrix
+    data_matrix = Matrix{Float32}(data)
 
-    # Initialize an empty array to store feature columns
-    X = Matrix{Float32}(undef, 0, num_features)
+    # Split the features and label
+    X = data_matrix[:, 1:end-1]
+    y = data_matrix[:, end]
+    
+    num_data, num_features = size(X)
+    X = transpose(X)
+    return MyDataset(X, y, num_features, num_data)
 
-    # Loop through columns and concatenate them
-    for i in 1:num_features
-        col = Symbol("Column", i)
-        X = hcat(X1, Float32.(file1[:, col]))
-    end
-
-    # Transpose the feature matrix
-    X = Float32.(transpose(X))
-
-    # Get the last column as the label vector
-    label = file1[:, Symbol("Column", num_columns)]
-    y = Float32.(label)
-
-	return MyDataset(X1, y, num_features, num_data)
+end
 
 end
 
@@ -78,7 +70,7 @@ function samplenewdata(dataset::MyDataset, number_of_sample::Int)
         new_y[counter] = y[idx]
     end
 
-    return new_X, new_y
+    return new_X, new_y, sample_indices
 end
 
 #new_X1,new_y1= samplenewdata(dataset,Number_of_sample)
@@ -87,16 +79,20 @@ end
 #new_X3,new_y3= samplenewdata(X3,y3,Number_of_sample)
 
 function append_one_data_point(new_X::Matrix{Float32}, new_y::Vector{Float32}, index::Vector{Int}, X::Matrix{Float32}, y::Vector{Float32}, sample_pool::Vector{Int})
-    new_idx = sample(sample_pool, 1, replace=false)[1]
+    
+	while true
+	new_idx = sample(sample_pool, 1, replace=false)[1]
 
-    if !(new_idx in index)
+    	if !(new_idx in index)
         new_X = hcat(new_X, X[:, new_idx])
         new_y = vcat(new_y, y[new_idx])
         push!(index, new_idx)
-    end
-
-    return new_X, new_y
+		return new_X, new_y, index
+		end
+	end
+	
 end
+
 
 inv(x)=1/x #anonymous function to be included in unary operators
 
@@ -116,7 +112,6 @@ options3= Options(binary_operators = (+,-,*,/),
 
 				  using SymbolicRegression
 
-function constraint_loss()				  
 
 
 end #end module 
