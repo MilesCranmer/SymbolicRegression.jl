@@ -5,7 +5,6 @@ module QBC
 using CSV
 using HTTP
 using LinearAlgebra
-using SymbolicRegression
 using Random
 using StatsBase
 using InvertedIndices

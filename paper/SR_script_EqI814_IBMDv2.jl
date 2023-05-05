@@ -1,3 +1,5 @@
+module SRwithConstraints
+
 include("QBC.jl")
 include("CommitteeEval.jl")
 using SymbolicRegression
@@ -29,6 +31,69 @@ end
 
 index= QBC.index
 
+function regression_with_constraints(train_X, train_y, niterations, options1, options2, split; max_loops=nothing, target_error=nothing,convergence_jump = nothing )
+
+    # Validate the input for split value
+    if split <= 0 || split >= 1
+        throw(ArgumentError("Split value should be between 0 and 1 (exclusive)."))
+    end
+
+    # Calculate the number of iterations for each part based on the split value
+    niterationconst = Int(round(niterations * split))
+    niterationconst2 = niterations - niterationconst
+
+    # Initialize loop variables
+    loop_count = 0
+    error = Inf
+
+    while true
+        # Break the loop if the maximum number of loops is reached
+        if max_loops !== nothing && loop_count >= max_loops
+            break
+        end
+
+        try
+            hof = SymbolicRegression.equation_search(train_X, train_y, niterations=niterationconst, options=options1)
+			dataset = SymbolicRegression.Dataset(train_X,train_y)
+			SymbolicRegression.LossFunctionsModule.update_baseline_loss!(dataset,options2)
+			for population in hof[1][1]
+				for mem in population.members
+				mem.score, mem.loss = SymbolicRegression.PopMemberModule.score_func(dataset,mem.tree,options2)
+				end
+			end
+		
+
+            hof2 = SymbolicRegression.EquationSearch(train_X, train_y, niterations=niterationconst2, options=options2, saved_state=hof)
+			dominating = calculate_pareto_frontier(train_X,train_y,hof2,options2);
+			losses = [member.loss for member in dominating]
+			if convergence_jump !== nothing
+		
+				ratios = [losses[n+1]/losses[n] for n in 1:(size(losses)[1]-1)]
+				threshold = [ratios .< Convergence_jump]  #jump in 5 orders of magnitude
+				if sum(sum(threshold)) != 0
+					return hof2
+				end
+			end
+			
+            # Calculate the error and break the loop if the target error is reached
+            if target_error !== nothing
+				#error is lower loss in the pareto frontier
+                error = minimum(losses)
+                if error <= target_error
+                    return hof2
+                end
+            end
+
+        catch e
+            println("An error occurred during execution: ", e)
+            break
+        end
+
+        loop_count += 1
+    end
+
+    return hof2
+end
 
 for i in 1:100
   
@@ -38,7 +103,7 @@ text_file = open("EquationI815noise0_01_divconstraintv2.txt","a");
   global j=1
       while j < 500
         global number_data = size(train_y);
-        if j ==1
+        if j == 1
 	   print("about to start EquationI815noise0_01_forrealdivconstraintv2.txt")
 	end
 	hof = EquationSearch(train_X,train_y;niterations=10,options=QBC.options);
@@ -48,7 +113,7 @@ text_file = open("EquationI815noise0_01_divconstraintv2.txt","a");
 	    for mem in population.members
 		mem.score, mem.loss = SymbolicRegression.PopMemberModule.score_func(dataset,mem.tree,QBC.options2)
 	    end
-        end
+    end
 	hof2 = EquationSearch(train_X,train_y;niterations=90,options=QBC.options2,saved_state=hof);
 	global dominating = calculate_pareto_frontier(train_X,train_y,hof2,QBC.options2);
          #write(text_file,"Pareto_Frontier number$(j)","\n")
