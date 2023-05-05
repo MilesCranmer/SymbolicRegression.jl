@@ -42,7 +42,6 @@ function load_data(file_number::AbstractString, delim::AbstractString=" ")
 
 end
 
-end
 
 
 sample_pool= range(1,num_data,step=1)
@@ -110,7 +109,6 @@ options3= Options(binary_operators = (+,-,*,/),
                   npopulations = 100,
                   progress=false,nested_constraints =[cos=>[exp=>0],cos=>[cos=>0],exp=>[exp=>0]])
 
-				  using SymbolicRegression
 
 
 
