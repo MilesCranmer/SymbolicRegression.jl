@@ -7,12 +7,12 @@ using Distributions
 
 function select_constraint(typeofconstraint::AbstractString,lambda = 100; vars)
    if typeofconstraint == "symmetry"
-      function symmetry_loss(tree::SymbolicRegression.Node, dataset::SymbolicRegression.Dataset{T},options,vars=vars,n=lambda) where {T}
+         function symmetry_loss(tree::SymbolicRegression.Node, dataset::SymbolicRegression.Dataset{T},options,vars=vars,n=lambda) where {T}
          _,d= size(dataset.X)
          symmetrydata = copy(dataset.X)
          number_of_symmetries = size(vars)[1]
          for i in 1:number_of_symmetries
-            if size(vars[i][1]v) == 2
+            if size(vars[i][1]) == 2
             symmetrydata[vars[i][1],:],symmetrydata[vars[i][2],:]=symmetrydata[vars[i][2],:],symmetrydata[vars[i][1],:]
             end
             if size(vars[i])[1] == 3
@@ -32,11 +32,11 @@ function select_constraint(typeofconstraint::AbstractString,lambda = 100; vars)
       return symmetry_loss
    
    elseif typeofconstraint == "divergency1"
-         function divergency(tree::SymbolicRegression.Node , dataset::SymbolicRegression.Dataset{T}, options;var,n=lambda) where {T}
+         function divergency(tree::SymbolicRegression.Node , dataset::SymbolicRegression.Dataset{T}, options;vars,n=lambda) where {T}
             _,d = size(dataset.X)
             divergency_data = copy(dataset.X)
             for i in collect(1:d)
-               divergency_data[var,i] = 0
+               divergency_data[vars,i] = 0
             end
             prediction, complete = SymbolicRegression.eval_tree_array(tree, dataset.X, options)
             (!complete) && return T(10000000)
@@ -49,9 +49,28 @@ function select_constraint(typeofconstraint::AbstractString,lambda = 100; vars)
 
       return divergency
 
-      
-
-   end   
+      elseif typeofconstraint == "divergencya-b"
+      function divergency(tree::SymbolicRegression.Node , dataset::SymbolicRegression.Dataset{T}, options;vars,n=lambda) where {T}
+      _,d = size(dataset.X)
+      divergency_data = copy(dataset.X)
+      number_of_div = size(vars)[1]
+      primes = [7,11,13,17,19,23,29,31,37,41,43,47,53,59,61]
+      for i in 1:number_of_div
+         for j in collect(1:d)
+            divergency_data[vars[i][1],j] = primes[i]
+            divergency_data[vars[i][2],j] = primes[i]
+         end
+      end
+      prediction, complete = SymbolicRegression.eval_tree_array(tree, dataset.X, options)
+      (!complete) && return T(10000000)
+      prediction_div, _ = SymbolicRegression.eval_tree_array(tree, divergency_data, options)
+     
+      predictive_loss_L2Dis = sum(abs.(dataset.y .- prediction).^2)
+      divergency_loss = n*sum(isfinite.(prediction_div))/d      #if Inf then no addition to divergency_loss
+      return predictive_loss_L2Dis + divergency_loss
+      end
+      return divergency
+   end
 end
   
 
