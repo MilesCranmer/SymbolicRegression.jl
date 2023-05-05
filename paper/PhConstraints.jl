@@ -6,7 +6,7 @@ using Distributions
 
 export select_constraint, symmetry_loss, divergency
 
-function select_constraint(typeofconstraint::AbstractString,lambda = 100; vars)
+function select_constraint(typeofconstraint::AbstractString;lambda = 100, vars)
    if typeofconstraint == "symmetry"
          function symmetry_loss(tree::SymbolicRegression.Node, dataset::SymbolicRegression.Dataset{T},options,vars=vars,n=lambda) where {T}
          _,d= size(dataset.X)

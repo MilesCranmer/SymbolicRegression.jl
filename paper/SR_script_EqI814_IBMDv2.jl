@@ -144,18 +144,18 @@ function regression_with_qbc(train_X, train_y, sample_X, sample_y, niterations, 
 
             # Perform QBC iteration
             if max_qbc_iterations !== nothing && qbc_loop_count < max_qbc_iterations
-                new_point, new_index = Committee.CommiteeEvaluation(sample_X, dominating, QBC.options2; disagreement_measure=disagreement_measure)
+                new_point, new_index = Committee.CommiteeEvaluation(sample_X, dominating, options2; disagreement_measure=disagreement_measure)
                 train_X, train_y, sample_X, sample_y = Committee.AppendnewData(train_X, train_y, sample_X, sample_y, new_index)
                 qbc_loop_count += 1
-            else
-                if convergence_jump !== nothing
-                    ratios = [losses[n+1]/losses[n] for n in 1:(size(losses)[1]-1)]
-                    threshold = [ratios .< Convergence_jump]  #jump in 5 orders of magnitude
+            end
+            if convergence_jump !== nothing
+                ratios = [losses[n+1]/losses[n] for n in 1:(size(losses)[1]-1)]
+                threshold = [ratios .< convergence_jump]  #jump in 5 orders of magnitude
                     if sum(sum(threshold)) != 0
                         return hof2
                     end
-                end
             end
+            
 
         catch e
             println("An error occurred during execution: ", e)
