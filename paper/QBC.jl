@@ -43,14 +43,6 @@ function load_data(file_number::AbstractString, delim::AbstractString=" ")
 end
 
 
-
-sample_pool= range(1,num_data,step=1)
-index = sample(sample_pool,Number_of_sample,replace=false)
-
-#just a sample of data
-
-using Random
-
 function samplenewdata(dataset::MyDataset, number_of_sample::Int)
     num_data = dataset.num_data
     X = dataset.X
@@ -72,11 +64,6 @@ function samplenewdata(dataset::MyDataset, number_of_sample::Int)
     return new_X, new_y, sample_indices
 end
 
-#new_X1,new_y1= samplenewdata(dataset,Number_of_sample)
-#new_X1noise,new_y1noise = samplenewdata(X1,y1noisy,Number_of_sample)
-#new_X2,new_y2= samplenewdata(X2,y2,Number_of_sample)
-#new_X3,new_y3= samplenewdata(X3,y3,Number_of_sample)
-
 function append_one_data_point(new_X::Matrix{Float32}, new_y::Vector{Float32}, index::Vector{Int}, X::Matrix{Float32}, y::Vector{Float32}, sample_pool::Vector{Int})
     
 	while true
@@ -91,25 +78,5 @@ function append_one_data_point(new_X::Matrix{Float32}, new_y::Vector{Float32}, i
 	end
 	
 end
-
-
-inv(x)=1/x #anonymous function to be included in unary operators
-
-options=Options(binary_operators =(+,-,*,/),
-        unary_operators = (inv,square,cube,exp,sqrt,cos),
-                  npopulations = 100,custom_loss_function=ConstrainsData.divergency,progress=true,nested_constraints=[cos=>[exp=>0],cos=>[cos=>0],exp=>[exp=>0]],stateReturn = true);
-
-options2= Options(binary_operators = (+,-,*,/),
-		  unary_operators = (inv,square,cube,exp,sqrt,cos),
-		  npopulations = 100,
-		  progress=true,nested_constraints =[cos=>[exp=>0],cos=>[cos=>0],exp=>[exp=>0]],stateReturn=true)
-
-options3= Options(binary_operators = (+,-,*,/),
-                  unary_operators = (inv,square,cube,exp,sqrt,cos),
-                  npopulations = 100,
-                  progress=false,nested_constraints =[cos=>[exp=>0],cos=>[cos=>0],exp=>[exp=>0]])
-
-
-
 
 end #end module 
