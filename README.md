@@ -20,7 +20,7 @@ Clone this repository and navigate to the 'paper' directory:
 ```
 git clone https://github.com/Jgmedina95/SRwPhysConsWL.git
 
-cd /SRwPhysConsWL/paper/
+cd SRwPhysConsWL/paper/
 ```
 
 
