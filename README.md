@@ -127,6 +127,7 @@ The function returns the Hall of Fame (hof) object after it converges or the max
 The custom_loss, can be defined with the function ```select_constraint```. The select_constraint function allows users to select a specific type of constraint to be applied in the symbolic regression process. The function currently supports three constraint types: "symmetry", "divergency1", and "divergencya-b".
 ```
 function select_constraint(typeofconstraint::AbstractString; lambda=100, vars)
+
 ```
 Parameters
 
@@ -140,6 +141,7 @@ Parameters
 #### Example
 ```
 Symm_loss = select_constraint("symmetry", lambda=100, vars=[[1,2],[3,4]])
+
 ```
 Will define the function Symm_loss, with a hyperparameter value = 100. If lambda =0 it will be as the RMSE loss.  The vars arguments state that features 1-2 and 3-4 are considered to have symmetry between them (e.g. swapping them in the equation should yield an equivalent equation)
 
