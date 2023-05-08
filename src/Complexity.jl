@@ -25,7 +25,7 @@ end
 
 @inline function leaf_complexity(node::Node, cmap::ComplexityMapping{CT})::CT where {CT}
     if node.degree == 0
-        if tree.constant
+        if node.constant
             return cmap.constant_complexity
         else
             return cmap.variable_complexity

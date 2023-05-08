@@ -16,19 +16,19 @@ tree = cos(exp(exp(exp(exp(Node("x1"))))))
 degree_of_exp = 1
 index_of_exp = findfirst(isequal(exp), options.operators.unaops)
 @test 4 == SymbolicRegression.CheckConstraintsModule.count_max_nestedness(
-    tree, degree_of_exp, index_of_exp, options
+    tree, degree_of_exp, index_of_exp
 )
 
 tree = cos(exp(Node("x1")) + exp(exp(exp(exp(Node("x1"))))))
 @test 4 == SymbolicRegression.CheckConstraintsModule.count_max_nestedness(
-    tree, degree_of_exp, index_of_exp, options
+    tree, degree_of_exp, index_of_exp
 )
 
 degree_of_plus = 2
 index_of_plus = findfirst(isequal(+), options.operators.binops)
 tree = cos(exp(Node("x1")) + exp(exp(Node("x1") + exp(exp(exp(Node("x1")))))))
 @test 2 == SymbolicRegression.CheckConstraintsModule.count_max_nestedness(
-    tree, degree_of_plus, index_of_plus, options
+    tree, degree_of_plus, index_of_plus
 )
 
 # Test checking for illegal nests:
