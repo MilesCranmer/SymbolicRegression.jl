@@ -9,7 +9,7 @@ This repository provides a modified version of the [SymbolicRegression.jl](https
 
 
 
-To install the modified version, open a julia terminal and with the package manager enter:
+To install the modified version, open a Julia terminal and with the package manager enter:
 
 ```
 (@v1.8) pkg> add('https://github.com/Jgmedina95/SRwPhysConsWL.git)
