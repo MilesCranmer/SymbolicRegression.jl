@@ -596,6 +596,18 @@ function Options(;
         npopulations = nworkers()
     end
 
+    if define_helper_functions
+        # We call here so that mapped operators, like ^
+        # are correctly overloaded, rather than overloading
+        # operators like "safe_pow", etc.
+        OperatorEnum(;
+            binary_operators=binary_operators,
+            unary_operators=unary_operators,
+            enable_autodiff=false,  # Not needed; we just want the constructors
+            define_helper_functions=true,
+        )
+    end
+
     binary_operators = map(binopmap, binary_operators)
     unary_operators = map(unaopmap, unary_operators)
 
