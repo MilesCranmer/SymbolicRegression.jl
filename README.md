@@ -1,8 +1,9 @@
 
 
-## Search options
+# Symbolic Regression with physical constraints
 
-This repository provides a modified version of the SymbolicRegression.jl package to incorporate physical constraints in the search process. The modified SymbolicRegression package must be installed to use the modified loss functions. Visit the original repository for more information: https://github.com/MilesCranmer/SymbolicRegression.jl.
+This repository provides a modified version of the SymbolicRegression.jl package to incorporate physical constraints in the search process. The modified SymbolicRegression package must be installed to use the modified loss functions. Visit the original repository for more information: https://github.com/MilesCranmer/SymbolicRegression.jl. Changes are based on the topics discussed at: https://github.com/MilesCranmer/SymbolicRegression.jl/issues/92#issue-1208837650 and 
+https://github.com/MilesCranmer/SymbolicRegression.jl/issues/162#issuecomment-1340173784
 # Instalation
 
 To install the modified version, open a julia terminal and with the package manager enter:
@@ -132,6 +133,7 @@ Symm_loss = ConstrainsData.select_constraint("symmetry", lambda=100, vars=[[1,2]
 ```
 Will define the function Symm_loss, with a hyperparameter value = 100. If lambda =0 it will be as the RMSE loss.  The vars arguments state that features 1-2 and 3-4 are considered to have symmetry between them (e.g. swapping them in the equation should yield an equivalent equation)
 
+For even more information on the original package this changes are built upon see:
 
 See https://astroautomata.com/SymbolicRegression.jl/stable/api/#Options
 
