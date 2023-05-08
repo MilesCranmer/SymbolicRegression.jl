@@ -16,14 +16,14 @@ if these are defined.
 """
 function compute_complexity(tree::Node, options::Options{CT})::Int where {CT}
     if options.complexity_mapping.use
-        raw_complexity = sum(t -> leaf_complexity(t, options.complexity_mapping), tree)::CT
+        raw_complexity = sum(t -> node_complexity(t, options.complexity_mapping), tree)::CT
         return round(Int, raw_complexity)
     else
         return count_nodes(tree)
     end
 end
 
-@inline function leaf_complexity(node::Node, cmap::ComplexityMapping{CT})::CT where {CT}
+@inline function node_complexity(node::Node, cmap::ComplexityMapping{CT})::CT where {CT}
     if node.degree == 0
         if node.constant
             return cmap.constant_complexity
