@@ -37,7 +37,7 @@ include("PhConstraints.jl")
 include("CommitteeEval.jl")
 include("SR_with_constraints.jl")
 
-using .QBC: load_data
+using .QBC: load_data, samplenewdata
 using .ConstraintsModule: select_constraint 
 using .SRwithConstraints: regression_with_constraints, regression_with_qbc
 
@@ -76,9 +76,27 @@ options_without_constraints = SymbolicRegression.Options(
 
 5.- Perform two-phase optimization with the modified package using the provided framework:
 
-Unless lambda is small, in my experience the constraint doesnt allow for easy convergence. Therefore, I recommend to do a two step optimization. First with the constraint and then freely (only guided by MRSE). For this i've set a simple framework using the functions  ``` regression_with_constraints```
-or ``` regression_with_qbc ```
+Unless lambda is small, in my experience, the constraint doesnt allow for easy convergence. Therefore, I recommend to do a two step optimization. First with the constraint and then freely (only guided by MRSE). For this i've set a simple framework using the functions  `regression_with_constraints`
+or `regression_with_qbc`
 
+`regression_with_constraints` will operate on the specified data for as many loops as specified in `max_loops`, or until convergence is achieved.
+
+On the other hand, `regression_with_qbc` works similarly to `regression_with_constraints`, but with an additional feature. If the algorithm does not converge during a run, a new point is added to the dataset from the sample pool using the Query by Committee (QBC) active learning strategy. This can potentially help in achieving better convergence and model performance or helps to determine what new point will bring more information. 
+
+I will sample 15 datapoints randomly as the original dataset has 1,000,000 points.
+```
+train_X, train_y, index = samplenewdata(data,15)
+```
+Then we can run the process with 100 iterations. The `split=0.1` indicates that 10 iterations will be with our custom `sym_loss` and the rest with the default loss. It will run until the error is 1e-5 or 5 iterations are completed. 
+
+```
+hof = regression_with_constraints(train_X,train_Y,100,options_with_constraints,options_without_constraints,0.1,max_loops=5,target_error = 1e-6,convergence_jump = 1e-4)
+```
+Of course, we are only using 15 out of 10e6 points so we can model a 'real' experiment where we decide what point to experiment next. This continues until `max_qbc_iterations` are reached or until convergence is found.
+
+```
+hof = regression_with_qbc(train_X,train_y,data.X,data.y,100,options_with_constraints,options_without_constraints,0.1;target_error = 1e-6, convergence_jump=1e-4, max_qbc_iterations = 5)
+```
 
 ## Functions Description
 ### Regression_with_constraints
