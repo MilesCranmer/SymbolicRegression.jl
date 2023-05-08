@@ -27,19 +27,26 @@ This example demonstrates how to use the modified package for Equation I.13.4 ($
 
 1.- Include necessary dependencies:
 ```
-julia> include("QBC.jl")
-julia> include("PhConstraints.jl")
-julia> include("CommitteeEval.jl")
+include("QBC.jl")
+include("PhConstraints.jl")
+include("CommitteeEval.jl")
+include("SR_with_constraints.jl")
+
+using .QBC: load_data
+using .ConstraintsModule: select_constraint 
+using .SRwithConstraints: regression_with_constraints, regression_with_qbc
+
+using SymbolicRegression
 ```
 2.- Load the dataset
 ```
-julia> data = QBC.load_data("I.13.4")
+julia> data = load_data("I.13.4")
 ```
 ```data.X``` contains the features and ```data.y``` contains the labels.
 
 3.- Set up physical constraints:
 ```
-Symm_loss = ConstrainsData.select_constraint("symmetry", lambda=20, vars=[[2,3,4]])
+Symm_loss = select_constraint("symmetry", lambda=20, vars=[[2,3,4]])
 ```
 
 4.-Configure the symbolic regression package:
@@ -129,7 +136,7 @@ Parameters
 
 #### Example
 ```
-Symm_loss = ConstrainsData.select_constraint("symmetry", lambda=100, vars=[[1,2],[3,4]])
+Symm_loss = select_constraint("symmetry", lambda=100, vars=[[1,2],[3,4]])
 ```
 Will define the function Symm_loss, with a hyperparameter value = 100. If lambda =0 it will be as the RMSE loss.  The vars arguments state that features 1-2 and 3-4 are considered to have symmetry between them (e.g. swapping them in the equation should yield an equivalent equation)
 
