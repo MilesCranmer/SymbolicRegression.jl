@@ -43,10 +43,8 @@ function _loss(
     if LT <: SupervisedLoss
         return mean(loss, x, y)
     else
-        return quote
-            l(i) = loss(x[i], y[i])
-            return mean(l, eachindex(x))
-        end
+        l(i) = loss(x[i], y[i])
+        return mean(l, eachindex(x))
     end
 end
 
@@ -56,10 +54,8 @@ function _weighted_loss(
     if LT <: SupervisedLoss
         return sum(loss, x, y, w; normalize=true)
     else
-        return quote
-            l(i) = loss(x[i], y[i], w[i])
-            return sum(l, eachindex(x)) / sum(w)
-        end
+        l(i) = loss(x[i], y[i], w[i])
+        return sum(l, eachindex(x)) / sum(w)
     end
 end
 
