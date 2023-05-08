@@ -86,7 +86,7 @@ train_X, train_y, index = samplenewdata(data,15)
 Then we can run the process with 100 iterations. The `split=0.1` indicates that 10 iterations will be with our custom `sym_loss` and the rest with the default loss. It will run until the error is 1e-5 or 5 iterations are completed. 
 
 ```
-hof = regression_with_constraints(train_X,train_Y,100,options_with_constraints,options_without_constraints,0.1,max_loops=5,target_error = 1e-6,convergence_jump = 1e-4)
+hof = regression_with_constraints(train_X,train_y,100,options_with_constraints,options_without_constraints,0.1,max_loops=5,target_error = 1e-6,convergence_jump = 1e-4)
 ```
 Of course, we are only using 15 out of 10e6 points so we can model a 'real' experiment where we decide what point to experiment next. This continues until `max_qbc_iterations` are reached or until convergence is found.
 
