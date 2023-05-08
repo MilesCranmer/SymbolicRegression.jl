@@ -3,7 +3,6 @@
 module QBC
 
 using CSV
-using HTTP
 using LinearAlgebra
 using Random
 using StatsBase
