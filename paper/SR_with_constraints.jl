@@ -68,7 +68,7 @@ function regression_with_constraints(train_X, train_y, niterations, options1, op
 			if convergence_jump !== nothing
 		
 				ratios = [losses[n+1]/losses[n] for n in 1:(size(losses)[1]-1)]
-				threshold = [ratios .< Convergence_jump]  #jump in 5 orders of magnitude
+				threshold = [ratios .< convergence_jump]  #jump in 5 orders of magnitude
 				if sum(sum(threshold)) != 0
 					return hof2
 				end
