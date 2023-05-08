@@ -76,12 +76,6 @@ options_without_constraints = SymbolicRegression.Options(
 
 5.- Perform two-phase optimization with the modified package using the provided framework:
 
-Unless lambda is small, in my experience, the constraint doesnt allow for easy convergence. Therefore, I recommend to do a two step optimization. First with the constraint and then freely (only guided by MRSE). For this i've set a simple framework using the functions  `regression_with_constraints`
-or `regression_with_qbc`
-
-`regression_with_constraints` will operate on the specified data for as many loops as specified in `max_loops`, or until convergence is achieved.
-
-On the other hand, `regression_with_qbc` works similarly to `regression_with_constraints`, but with an additional feature. If the algorithm does not converge during a run, a new point is added to the dataset from the sample pool using the Query by Committee (QBC) active learning strategy. This can potentially help in achieving better convergence and model performance or helps to determine what new point will bring more information. 
 
 I will sample 15 datapoints randomly as the original dataset has 1,000,000 points.
 ```
@@ -99,6 +93,15 @@ hof = regression_with_qbc(train_X,train_y,data.X,data.y,100,options_with_constra
 ```
 
 ## Functions Description
+
+Unless lambda is small, in my experience, the constraint doesnt allow for easy convergence. Therefore, I recommend to do a two step optimization. First with the constraint and then freely (only guided by MRSE). For this i've set a simple framework using the functions  `regression_with_constraints`
+or `regression_with_qbc`
+
+`regression_with_constraints` will operate on the specified data for as many loops as specified in `max_loops`, or until convergence is achieved.
+
+On the other hand, `regression_with_qbc` works similarly to `regression_with_constraints`, but with an additional feature. If the algorithm does not converge during a run, a new point is added to the dataset from the sample pool using the Query by Committee (QBC) active learning strategy. This can potentially help in achieving better convergence and model performance or helps to determine what new point will bring more information. 
+
+
 ### Regression_with_constraints
 
 The ```regression_with_constraints``` function is a Julia implementation for performing symbolic regression with a two-phase optimization process. The function helps to guide the search for an appropriate symbolic expression that models the data by iteratively running the symbolic regression with two sets of options and a split value that determines the proportion of iterations for each phase.
