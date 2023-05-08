@@ -2,55 +2,69 @@
 
 ## Search options
 
-# Clone and Package Instalation
-To use this code, the modified SymbolicRegression has to be installed in order to used the modified loss functions. 
-Open a Julia terminal and install the package as:
+This repository provides a modified version of the SymbolicRegression.jl package to incorporate physical constraints in the search process. The modified SymbolicRegression package must be installed to use the modified loss functions. Visit the original repository for more information: https://github.com/MilesCranmer/SymbolicRegression.jl.
+# Instalation
+
+To install the modified version, open a julia terminal and with the package manager enter:
 
 ```
 (@v1.8) pkg> add('https://github.com/Jgmedina95/SRwPhysConsWL.git)
 
 ```
-This is essentialy the same program as Miles' SymbolicRegression.jl https://github.com/MilesCranmer/SymbolicRegression.jl. I strongly recommend going through the repo. 
+Clone this repository and navigate to the 'paper' directory:
 
-Clone the repo
-'''
+```
 git clone https://github.com/Jgmedina95/SRwPhysConsWL.git
 
 cd /SRwPhysConsWL/paper/
+```
 
-'''
 
+# Example Usage
 
-# Example
+This example demonstrates how to use the modified package for Equation I.13.4 ($1/2 m *(u^2 + v^2 + w^2)$) from the Feynman dataset.
 
-Include dependencies to maka easier Extract the features and labels from the dataset. In this example we use Equation I.13.4. $1/2 m *(u^2 + v^2 + w^2)$ from the Feynman dataset. This equation is nice as it has four features and theres symmetry between three of them. Which means you could permute u, v and w and the function would not change.
-
+1.- Include necessary dependencies:
 ```
 julia> include("QBC.jl")
 julia> include("PhConstraints.jl")
 julia> include("CommitteeEval.jl")
-
+```
+2.- Load the dataset
+```
 julia> data = QBC.load_data("I.13.4")
 ```
-This will have X features and y labels in data.X and data.y
-In this example we will only use 15 to start and then add one point at a time with Query By Committee.
+```data.X``` contains the features and ```data.y``` contains the labels.
 
-#Setting up physical constraints:
+3.- Set up physical constraints:
+```
+Symm_loss = ConstrainsData.select_constraint("symmetry", lambda=20, vars=[[2,3,4]])
+```
 
-To set symmetry loss the "select_constraint" function is used. The hyperparameter lambda can be changed (lambda = 0 will results in the MRSE loss function). The vars parameter is to select which variables should have symmetry. (e.g. [[1,2],[3,4]] indicates theres symmetry with features 1-2 and 3-4). 
+4.-Configure the symbolic regression package:
+
 ```
-Symm_loss = ConstrainsData.select_constraint("symmetry",lambda=20,vars=[[2,3,4]])
-```
-With the loss function ready, now we can use the symbolic regression package normally, setting options
-```
-options = SymbolicRegression.Options(
+options_with_constraints = SymbolicRegression.Options(
            binary_operators=[+, *, /, -],
            unary_operators = [inv,square],
            npopulations=100,
-           custom_loss_function = sym_loss)
+           custom_loss_function = sym_loss,
+           stateReturn = true
+           )
+```
+```
+options_without_constraints = SymbolicRegression.Options(
+           binary_operators=[+, *, /, -],
+           unary_operators = [inv,square],
+           npopulations=100,
+           stateReturn = false
+           )
 ```
 
-Unless lambda is small, in my experience the constraint doesnt allow for easy convergence. Therefore, I recommend to do a two step optimization. First with the constraint and then freely (only guided by MRSE). For this ive set a simple framework using the function  ``` regression_with_constraints```
+5.- Perform two-phase optimization with the modified package using the provided framework:
+
+Unless lambda is small, in my experience the constraint doesnt allow for easy convergence. Therefore, I recommend to do a two step optimization. First with the constraint and then freely (only guided by MRSE). For this i've set a simple framework using the functions  ``` regression_with_constraints```
+or ``` regression_with_qbc ```
 
 
 #Functions Description
@@ -59,17 +73,65 @@ Unless lambda is small, in my experience the constraint doesnt allow for easy co
 The ```regression_with_constraints``` function is a Julia implementation for performing symbolic regression with a two-phase optimization process. The function helps to guide the search for an appropriate symbolic expression that models the data by iteratively running the symbolic regression with two sets of options and a split value that determines the proportion of iterations for each phase.
 
 Function signature
-```function regression_with_constraints(train_X, train_y, niterations, options_constraints, options_without_constraints, split; max_loops=nothing, target_error=nothing, convergence_jump = nothing)
+```function regression_with_constraints(train_X, train_y, niterations, options_with_constraints, options_without_constraints, split; max_loops=nothing, target_error=nothing, convergence_jump = nothing)
 ```
 
 Arguments
 
-* *train_X*: The input data matrix, where each row represents a sample and each column represents a feature.
+* train_X: The input data matrix, where each row represents a sample and each column represents a feature.
 * train_y: The target values (output) for each sample in the input data matrix.
 * niterations: The total number of iterations for the optimization process.
 * options_with_constraints: A set of options for the first phase of the optimization process.
 * options_without_constraints: A set of options for the second phase of the optimization process.
 * split: A value between 0 and 1 (exclusive) representing the proportion of iterations allocated to the first phase of the optimization process.
+
+The regression_with_qbc function is a Julia implementation for performing symbolic regression with a two-phase optimization process and Query by Committee (QBC) active learning. The function iteratively runs the symbolic regression with two sets of options and a split value that determines the proportion of iterations for each phase, and selects new data points to be added to the training set based on the committee's disagreement measure.
+
+Function signature
+```function regression_with_qbc(train_X, train_y, sample_X, sample_y, niterations, options_with_constraints, options_without_constraints, split; max_loops=nothing, target_error=nothing, convergence_jump = nothing, max_qbc_iterations=nothing, disagreement_measure = "IBMD")
+```
+Arguments
+
+* train_X: The input data matrix for training, where each row represents a sample and each column represents a feature.
+* train_y: The target values (output) for each sample in the input data matrix for training.
+* sample_X: The input data matrix for the sample points considered by the QBC.
+* sample_y: The target values (output) for each sample in the input data matrix for the sample points.
+* niterations: The total number of iterations for the optimization process.
+* options_with_constraints: A set of options for the first phase of the optimization process.
+* options_without_constraints: A set of options for the second phase of the optimization process.
+* split: A value between 0 and 1 (exclusive) representing the proportion of iterations allocated to the first phase of the optimization process.
+
+Optional arguments
+
+* max_loops: Maximum number of loops for the iterative process (default: no limit).
+* target_error: Target error value to stop the iterative process when reached (default: no target error specified).
+* convergence_jump: The jump in the error ratio that, when reached, indicates the search process has converged (default: no convergence jump specified).
+* max_qbc_iterations: Maximum number of QBC iterations (default: no limit).
+* disagreement_measure: The disagreement measure used in QBC (default: "IBMD").
+
+Returns
+
+The function returns the Hall of Fame (hof) object after it converges or the max number of iterations are done. 
+
+The custom_loss, can be defined with the function ```select_constraint```. The select_constraint function allows users to select a specific type of constraint to be applied in the symbolic regression process. The function currently supports three constraint types: "symmetry", "divergency1", and "divergencya-b".
+```
+function select_constraint(typeofconstraint::AbstractString; lambda=100, vars)
+```
+Parameters
+
+* typeofconstraint: A string representing the type of constraint to be applied. It can be one of the following:
+  - "symmetry"
+  - "divergency1"
+  - "divergencya-b"
+* lambda: A regularization hyperparameter to control the balance between the predictive loss and constraint loss. Default is 100.
+* vars: A list of lists containing variables or pairs/groups of variables that should be considered in the constraint application.
+
+#### Example
+```
+Symm_loss = ConstrainsData.select_constraint("symmetry", lambda=100, vars=[[1,2],[3,4]])
+```
+Will define the function Symm_loss, with a hyperparameter value = 100. If lambda =0 it will be as the RMSE loss.  The vars arguments state that features 1-2 and 3-4 are considered to have symmetry between them (e.g. swapping them in the equation should yield an equivalent equation)
+
 
 See https://astroautomata.com/SymbolicRegression.jl/stable/api/#Options
 
