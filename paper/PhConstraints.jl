@@ -1,5 +1,5 @@
 #functions
-module ConstrainsData
+module ConstraintsModule
 using SymbolicRegression 
 using Random
 using Distributions
