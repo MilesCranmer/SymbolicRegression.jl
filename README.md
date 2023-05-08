@@ -14,14 +14,11 @@ To install the modified version and the dependencies, open a Julia terminal and 
 ```
 (@v1.8) pkg> add 'https://github.com/Jgmedina95/SRwPhysConsWL.git'
 (@v1.8) pkg> add Statistics,StatsBase,Combinatorics,Random,InvertedIndices,Noise,Distributions,DataFrames,LinearAlgebra,CSV
-
-
 ```
 Clone this repository and navigate to the `paper` directory:
 
 ```
 shell> git clone https://github.com/Jgmedina95/SRwPhysConsWL.git
-
 shell> cd SRwPhysConsWL/paper/
 ```
 
