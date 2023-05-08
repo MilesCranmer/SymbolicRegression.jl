@@ -85,7 +85,9 @@ The ```regression_with_constraints``` function is a Julia implementation for per
 
 Function signature
 ```
+
 function regression_with_constraints(train_X, train_y, niterations, options_with_constraints, options_without_constraints, split; max_loops=nothing, target_error=nothing, convergence_jump = nothing)
+
 ```
 
 Arguments
@@ -102,6 +104,7 @@ The regression_with_qbc function is a Julia implementation for performing symbol
 Function signature
 ```
 function regression_with_qbc(train_X, train_y, sample_X, sample_y, niterations, options_with_constraints, options_without_constraints, split; max_loops=nothing, target_error=nothing, convergence_jump = nothing, max_qbc_iterations=nothing, disagreement_measure = "IBMD")
+
 ```
 Arguments
 
