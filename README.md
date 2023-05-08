@@ -4,8 +4,8 @@
 
 Symbolic Regression is a multi-objective optimization machine learning technique used to fit tabular data to symbolic equations, trying to find the most fit equation while mainting low complexity. In this repository Evolutionary Symbolic Regression is performed. 
 
-This repository provides a modified version of the SymbolicRegression.jl package to incorporate physical constraints in the search process. The modified SymbolicRegression package must be installed to use the modified loss functions. Visit the original repository for more information: https://github.com/MilesCranmer/SymbolicRegression.jl. Changes are based on the topics discussed at: https://github.com/MilesCranmer/SymbolicRegression.jl/issues/92#issue-1208837650 and 
-https://github.com/MilesCranmer/SymbolicRegression.jl/issues/162#issuecomment-1340173784
+This repository provides a modified version of the [SymbolicRegression.jl](https://github.com/MilesCranmer/SymbolicRegression.jl) package to incorporate physical constraints in the search process, as well as implementing a Query by Committee (QBC) approach to improve the model's performance. The modified SymbolicRegression package must be installed to use the modified loss functions. Visit the original repository for more information: [SymbolicRegression.jl](https://github.com/MilesCranmer/SymbolicRegression.jl). Changes are based on the topics discussed at: [Issue#92](https://github.com/MilesCranmer/SymbolicRegression.jl/issues/92#issue-1208837650) and 
+[Issue#162](https://github.com/MilesCranmer/SymbolicRegression.jl/issues/162#issuecomment-1340173784)
 
 
 
@@ -15,19 +15,21 @@ To install the modified version, open a julia terminal and with the package mana
 (@v1.8) pkg> add('https://github.com/Jgmedina95/SRwPhysConsWL.git)
 
 ```
-Clone this repository and navigate to the 'paper' directory:
+Clone this repository and navigate to the `paper` directory:
 
 ```
-git clone https://github.com/Jgmedina95/SRwPhysConsWL.git
+shell> git clone https://github.com/Jgmedina95/SRwPhysConsWL.git
 
-cd SRwPhysConsWL/paper/
+shell> cd SRwPhysConsWL/paper/
 ```
 
 
 ## Quick Start
 
-This example demonstrates how to use the modified package for Equation I.13.4 ($1/2 m *(u^2 + v^2 + w^2)$) from the Feynman dataset.
+This example demonstrates how to use the modified package for Equation I.13.4 from the [Feynman dataset](https://space.mit.edu/home/tegmark/aifeynman.html).
 
+$$ \frac{1}{2} m *(u^2 + v^2 + w^2) $$
+ 
 1.- Include necessary dependencies:
 ```
 include("QBC.jl")
@@ -41,15 +43,15 @@ using .SRwithConstraints: regression_with_constraints, regression_with_qbc
 
 using SymbolicRegression
 ```
-2.- Load the dataset. Im using equation I.13.4 because it has a nice symmetry between features u, v and w. 
+2.- Load the dataset. Equation I.13.4 is used because it has a nice symmetry between features `u`, `v` and `w`. 
 ```
-julia> data = load_data("I.13.4")
+data = load_data("I.13.4")
 ```
 ```data.X``` contains the features and ```data.y``` contains the labels.
 
 3.- Set up physical constraints:
 ```
-Symm_loss = select_constraint("symmetry", lambda=20, vars=[[2,3,4]])
+sym_loss = select_constraint("symmetry", lambda=20, vars=[[2,3,4]])
 ```
 
 4.-Configure the symbolic regression package:
@@ -99,7 +101,8 @@ Arguments
 * options_without_constraints: A set of options for the second phase of the optimization process.
 * split: A value between 0 and 1 (exclusive) representing the proportion of iterations allocated to the first phase of the optimization process.
 
-The regression_with_qbc function is a Julia implementation for performing symbolic regression with a two-phase optimization process and Query by Committee (QBC) active learning. The function iteratively runs the symbolic regression with two sets of options and a split value that determines the proportion of iterations for each phase, and selects new data points to be added to the training set based on the committee's disagreement measure.
+### Regression_with_qbc
+The `regression_with_qbc` function is a Julia implementation for performing symbolic regression with a two-phase optimization process and QBC active learning. The function iteratively runs the symbolic regression with two sets of options and a split value that determines the proportion of iterations for each phase, and selects new data points to be added to the training set based on the committee's disagreement measure.
 
 Function signature
 ```
@@ -129,7 +132,9 @@ Returns
 
 The function returns the Hall of Fame (hof) object after it converges or the max number of iterations are done. 
 
-The custom_loss, can be defined with the function ```select_constraint```. The select_constraint function allows users to select a specific type of constraint to be applied in the symbolic regression process. The function currently supports three constraint types: "symmetry", "divergency1", and "divergencya-b".
+### Select Constraint
+
+The `custom_loss`, can be defined with the function ```select_constraint```. The select_constraint function allows users to select a specific type of constraint to be applied in the symbolic regression process. The function currently supports three constraint types: "symmetry", "divergency1", and "divergencya-b".
 ```
 function select_constraint(typeofconstraint::AbstractString; lambda=100, vars)
 ```
@@ -149,7 +154,4 @@ Symm_loss = select_constraint("symmetry", lambda=100, vars=[[1,2],[3,4]])
 ```
 Will define the function Symm_loss, with a hyperparameter value = 100. If lambda =0 it will be as the RMSE loss.  The vars arguments state that features 1-2 and 3-4 are considered to have symmetry between them (e.g. swapping them in the equation should yield an equivalent equation)
 
-For even more information on the original package this changes are built upon see:
-
-See https://astroautomata.com/SymbolicRegression.jl/stable/api/#Options
-
+For even more information on the original package this changes are built upon see [documentation](https://astroautomata.com/SymbolicRegression.jl/stable/api/#Options)
