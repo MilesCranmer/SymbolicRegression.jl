@@ -37,11 +37,11 @@ else
     @eval import LossFunctions: mean, sum
 end
 
-@generated function _loss(
+function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
 ) where {T<:DATA_TYPE,LT<:GENERAL_LOSS_TYPE}
-    if loss <: SupervisedLoss
-        return :(mean(loss, x, y))
+    if LT <: SupervisedLoss
+        return mean(loss, x, y)
     else
         return quote
             l(i) = loss(x[i], y[i])
@@ -50,11 +50,11 @@ end
     end
 end
 
-@generated function _weighted_loss(
+function _weighted_loss(
     x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::LT
 ) where {T<:DATA_TYPE,LT<:GENERAL_LOSS_TYPE}
-    if loss <: SupervisedLoss
-        return :(sum(loss, x, y, w; normalize=true))
+    if LT <: SupervisedLoss
+        return sum(loss, x, y, w; normalize=true)
     else
         return quote
             l(i) = loss(x[i], y[i], w[i])
