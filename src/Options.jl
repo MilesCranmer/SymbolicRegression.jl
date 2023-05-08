@@ -650,7 +650,12 @@ function Options(;
         end
     end
 
-    options = Options{eltype(complexity_mapping)}(
+    options = Options{
+        eltype(complexity_mapping),
+        typeof(optimizer_options),
+        typeof(elementwise_loss),
+        typeof(loss_function),
+    }(
         operators,
         bin_constraints,
         una_constraints,
