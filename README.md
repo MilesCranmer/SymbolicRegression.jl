@@ -84,7 +84,8 @@ or ``` regression_with_qbc ```
 The ```regression_with_constraints``` function is a Julia implementation for performing symbolic regression with a two-phase optimization process. The function helps to guide the search for an appropriate symbolic expression that models the data by iteratively running the symbolic regression with two sets of options and a split value that determines the proportion of iterations for each phase.
 
 Function signature
-```function regression_with_constraints(train_X, train_y, niterations, options_with_constraints, options_without_constraints, split; max_loops=nothing, target_error=nothing, convergence_jump = nothing)
+```
+function regression_with_constraints(train_X, train_y, niterations, options_with_constraints, options_without_constraints, split; max_loops=nothing, target_error=nothing, convergence_jump = nothing)
 ```
 
 Arguments
@@ -99,7 +100,8 @@ Arguments
 The regression_with_qbc function is a Julia implementation for performing symbolic regression with a two-phase optimization process and Query by Committee (QBC) active learning. The function iteratively runs the symbolic regression with two sets of options and a split value that determines the proportion of iterations for each phase, and selects new data points to be added to the training set based on the committee's disagreement measure.
 
 Function signature
-```function regression_with_qbc(train_X, train_y, sample_X, sample_y, niterations, options_with_constraints, options_without_constraints, split; max_loops=nothing, target_error=nothing, convergence_jump = nothing, max_qbc_iterations=nothing, disagreement_measure = "IBMD")
+```
+function regression_with_qbc(train_X, train_y, sample_X, sample_y, niterations, options_with_constraints, options_without_constraints, split; max_loops=nothing, target_error=nothing, convergence_jump = nothing, max_qbc_iterations=nothing, disagreement_measure = "IBMD")
 ```
 Arguments
 
@@ -127,7 +129,6 @@ The function returns the Hall of Fame (hof) object after it converges or the max
 The custom_loss, can be defined with the function ```select_constraint```. The select_constraint function allows users to select a specific type of constraint to be applied in the symbolic regression process. The function currently supports three constraint types: "symmetry", "divergency1", and "divergencya-b".
 ```
 function select_constraint(typeofconstraint::AbstractString; lambda=100, vars)
-
 ```
 Parameters
 
