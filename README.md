@@ -41,7 +41,7 @@ using .SRwithConstraints: regression_with_constraints, regression_with_qbc
 
 using SymbolicRegression
 ```
-2.- Load the dataset
+2.- Load the dataset. Im using equation I.13.4 because it has a nice symmetry between features u, v and w. 
 ```
 julia> data = load_data("I.13.4")
 ```
