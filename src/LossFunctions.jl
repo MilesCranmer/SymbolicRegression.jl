@@ -2,36 +2,65 @@ module LossFunctionsModule
 
 import Random: randperm
 using StatsBase: StatsBase
-import LossFunctions: value, AggMode, SupervisedLoss
 import DynamicExpressions: Node
+using LossFunctions: LossFunctions
+import LossFunctions: SupervisedLoss
 import ..InterfaceDynamicExpressionsModule: eval_tree_array
 import ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 
-function _loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, loss::SupervisedLoss
-) where {T<:DATA_TYPE}
-    return value(loss, y, x, AggMode.Mean())
+const OLD_LOSS_FUNCTIONS = hasproperty(LossFunctions, :value)
+const GENERAL_LOSS_TYPE = OLD_LOSS_FUNCTIONS ? Function : Union{Function,SupervisedLoss}
+
+if OLD_LOSS_FUNCTIONS
+    @eval begin
+        import LossFunctions: value, AggMode
+        #! format: off
+        function _loss(
+            x::AbstractArray{T},
+            y::AbstractArray{T},
+            loss::SupervisedLoss
+        ) where {T<:DATA_TYPE}
+            return value(loss, y, x, AggMode.Mean())
+        end
+        function _weighted_loss(
+            x::AbstractArray{T},
+            y::AbstractArray{T},
+            w::AbstractArray{T},
+            loss::SupervisedLoss,
+        ) where {T<:DATA_TYPE}
+            return value(loss, y, x, AggMode.WeightedMean(w))
+        end
+        #! format: on
+    end
+else
+    @eval import LossFunctions: mean, sum
 end
 
-function _loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, loss::Function
-) where {T<:DATA_TYPE}
-    l(i) = loss(x[i], y[i])
-    return sum(l, eachindex(x)) / length(y)
+@generated function _loss(
+    x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
+) where {T<:DATA_TYPE,LT<:GENERAL_LOSS_TYPE}
+    if loss <: SupervisedLoss
+        return :(mean(loss, x, y))
+    else
+        return quote
+            l(i) = loss(x[i], y[i])
+            return mean(l, eachindex(x))
+        end
+    end
 end
 
-function _weighted_loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::SupervisedLoss
-) where {T<:DATA_TYPE}
-    return value(loss, y, x, AggMode.WeightedMean(w))
-end
-
-function _weighted_loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::Function
-) where {T<:DATA_TYPE}
-    l(i) = loss(x[i], y[i], w[i])
-    return sum(l, eachindex(x)) / sum(w)
+@generated function _weighted_loss(
+    x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::LT
+) where {T<:DATA_TYPE,LT<:GENERAL_LOSS_TYPE}
+    if loss <: SupervisedLoss
+        return :(sum(loss, x, y, w; normalize=true))
+    else
+        return quote
+            l(i) = loss(x[i], y[i], w[i])
+            return sum(l, eachindex(x)) / sum(w)
+        end
+    end
 end
 
 # Evaluate the loss of a particular expression on the input dataset.
