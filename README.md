@@ -2,9 +2,12 @@
 
 # Symbolic Regression with physical constraints
 
+Symbolic Regression is a multi-objective optimization machine learning technique used to fit tabular data to symbolic equations, trying to find the most fit equation while mainting low complexity. In this repository Evolutionary Symbolic Regression is performed. 
+
 This repository provides a modified version of the SymbolicRegression.jl package to incorporate physical constraints in the search process. The modified SymbolicRegression package must be installed to use the modified loss functions. Visit the original repository for more information: https://github.com/MilesCranmer/SymbolicRegression.jl. Changes are based on the topics discussed at: https://github.com/MilesCranmer/SymbolicRegression.jl/issues/92#issue-1208837650 and 
 https://github.com/MilesCranmer/SymbolicRegression.jl/issues/162#issuecomment-1340173784
-# Instalation
+
+
 
 To install the modified version, open a julia terminal and with the package manager enter:
 
@@ -21,7 +24,7 @@ cd /SRwPhysConsWL/paper/
 ```
 
 
-# Example Usage
+## Quick Start
 
 This example demonstrates how to use the modified package for Equation I.13.4 ($1/2 m *(u^2 + v^2 + w^2)$) from the Feynman dataset.
 
@@ -75,7 +78,7 @@ Unless lambda is small, in my experience the constraint doesnt allow for easy co
 or ``` regression_with_qbc ```
 
 
-#Functions Description
+## Functions Description
 ### Regression_with_constraints
 
 The ```regression_with_constraints``` function is a Julia implementation for performing symbolic regression with a two-phase optimization process. The function helps to guide the search for an appropriate symbolic expression that models the data by iteratively running the symbolic regression with two sets of options and a split value that determines the proportion of iterations for each phase.
