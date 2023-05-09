@@ -70,19 +70,20 @@ function create_utils_benchmark()
 
     options = Options(; unary_operators=[sin, cos], binary_operators=[+, -, *, /])
 
-    return suite["best_of_sample"] = @benchmarkable(
-        best_of_sample(pop, rss, options),
+    suite["best_of_sample"] = @benchmarkable(
+        best_of_sample(pop, rss, $options),
         setup = (
             Random.seed!(0);
             nfeatures = 1;
-            X = randn(32, nfeatures);
-            y = randn(32);
+            dataset = Dataset(randn(nfeatures, 32), randn(32));
             pop = Population(
-                X, y; npop=100, nlength=20, options, nfeatures, loss_type=Float64
+                dataset; npop=100, nlength=20, options=$options, nfeatures
             );
-            rss = RunningSearchStatistics(; options)
+            rss = RunningSearchStatistics(; options=$options)
         )
     )
+
+    return suite
 end
 
 function create_benchmark()
