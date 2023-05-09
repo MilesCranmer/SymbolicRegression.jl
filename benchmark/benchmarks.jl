@@ -2,6 +2,7 @@ using BenchmarkTools
 using SymbolicRegression, BenchmarkTools, Random
 using SymbolicRegression.AdaptiveParsimonyModule: RunningSearchStatistics
 using SymbolicRegression.PopulationModule: best_of_sample
+using SymbolicRegression.ConstantOptimizationModule: optimize_constants
 
 function create_search_benchmark()
     suite = BenchmarkGroup()
@@ -73,11 +74,29 @@ function create_utils_benchmark()
     suite["best_of_sample"] = @benchmarkable(
         best_of_sample(pop, rss, $options),
         setup = (
-            Random.seed!(0);
             nfeatures = 1;
             dataset = Dataset(randn(nfeatures, 32), randn(32));
             pop = Population(dataset; npop=100, nlength=20, options=$options, nfeatures);
             rss = RunningSearchStatistics(; options=$options)
+        )
+    )
+
+    ntrees = 100
+    suite["optimize_constants_x$(ntrees)"] = @benchmarkable(
+        foreach(members) do member
+            optimize_constants(dataset, member, $options)
+        end,
+        setup = (
+            nfeatures = 1;
+            T = Float64;
+            dataset = Dataset(randn(nfeatures, 512), randn(512));
+            ntrees = $ntrees;
+            trees = [
+                gen_random_tree_fixed_size(20, $options, nfeatures, T) for i in 1:ntrees
+            ];
+            members = [
+                PopMember(dataset, tree, $options; deterministic=false) for tree in trees
+            ]
         )
     )
 
