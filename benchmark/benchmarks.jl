@@ -1,5 +1,7 @@
 using BenchmarkTools
 using SymbolicRegression, BenchmarkTools, Random
+using SymbolicRegression.AdaptiveParsimonyModule: RunningSearchStatistics
+using SymbolicRegression.PopulationModule: best_of_sample
 
 function create_search_benchmark()
     suite = BenchmarkGroup()
@@ -63,9 +65,30 @@ function create_search_benchmark()
     return suite
 end
 
+function create_utils_benchmark()
+    suite = BenchmarkGroup()
+
+    options = Options(; unary_operators=[sin, cos], binary_operators=[+, -, *, /])
+
+    return suite["best_of_sample"] = @benchmarkable(
+        best_of_sample(pop, rss, options),
+        setup = (
+            Random.seed!(0);
+            nfeatures = 1;
+            X = randn(32, nfeatures);
+            y = randn(32);
+            pop = Population(
+                X, y; npop=100, nlength=20, options, nfeatures, loss_type=Float64
+            );
+            rss = RunningSearchStatistics(; options)
+        )
+    )
+end
+
 function create_benchmark()
     suite = BenchmarkGroup()
     suite["search"] = create_search_benchmark()
+    suite["utils"] = create_utils_benchmark()
     return suite
 end
 
