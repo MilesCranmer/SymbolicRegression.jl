@@ -24,7 +24,7 @@ for reverse in [false, true]
             score = 1 - score
         end
         test_loss = 1.0f0  # (arbitrary for this test)
-        push!(members, PopMember(tree, score, test_loss))
+        push!(members, PopMember(tree, score, test_loss, options))
     end
 
     pop = Population(members)
