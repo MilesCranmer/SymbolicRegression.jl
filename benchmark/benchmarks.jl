@@ -76,9 +76,7 @@ function create_utils_benchmark()
             Random.seed!(0);
             nfeatures = 1;
             dataset = Dataset(randn(nfeatures, 32), randn(32));
-            pop = Population(
-                dataset; npop=100, nlength=20, options=$options, nfeatures
-            );
+            pop = Population(dataset; npop=100, nlength=20, options=$options, nfeatures);
             rss = RunningSearchStatistics(; options=$options)
         )
     )

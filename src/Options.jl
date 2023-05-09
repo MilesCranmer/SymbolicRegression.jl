@@ -652,12 +652,13 @@ function Options(;
     end
 
     ## Create tournament weights:6
-    tournament_selection_weights = let n=tournament_selection_n, p=tournament_selection_p
-        k = collect(0:n - 1)
-        prob_each = p * ((1 - p) .^ k)
+    tournament_selection_weights =
+        let n = tournament_selection_n, p = tournament_selection_p
+            k = collect(0:(n - 1))
+            prob_each = p * ((1 - p) .^ k)
 
-        StatsBase.Weights(prob_each, sum(prob_each))
-    end
+            StatsBase.Weights(prob_each, sum(prob_each))
+        end
 
     options = Options{
         eltype(complexity_mapping),
