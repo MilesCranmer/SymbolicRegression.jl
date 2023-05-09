@@ -81,11 +81,12 @@ function create_utils_benchmark()
         )
     )
 
-    ntrees = 100
-    suite["optimize_constants_x$(ntrees)"] = @benchmarkable(
+    ntrees = 10
+    suite["optimize_constants_x10"] = @benchmarkable(
         foreach(members) do member
             optimize_constants(dataset, member, $options)
         end,
+        seconds = 20,
         setup = (
             nfeatures = 1;
             T = Float64;
@@ -99,6 +100,8 @@ function create_utils_benchmark()
             ]
         )
     )
+
+    # TODO: Benchmark constraint checking
 
     return suite
 end
