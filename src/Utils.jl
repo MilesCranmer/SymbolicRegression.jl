@@ -60,18 +60,18 @@ bottomk_fast(x, k) = _bottomk_dispatch(x, vals[k])
 
 function _bottomk_dispatch(x::AbstractVector{T}, ::Val{k}) where {T,k}
     @assert k >= 2
-    indmin = MVector{k}(ntuple(_ -> 0, k))
+    indmin = MVector{k}(ntuple(_ -> 1, k))
     minval = MVector{k}(ntuple(_ -> typemax(T), k))
     _bottomk!(x, minval, indmin)
     return [minval...], [indmin...]
 end
 function _bottomk!(x, minval, indmin)
-    @inbounds @fastmath for i in eachindex(x)
+    @inbounds for i in eachindex(x)
         new_min = x[i] < minval[end]
         if new_min
             minval[end] = x[i]
             indmin[end] = i
-            for ki in length(minval):-1:2
+            for ki in lastindex(minval):-1:(firstindex(minval) + 1)
                 need_swap = minval[ki] < minval[ki - 1]
                 if need_swap
                     minval[ki], minval[ki - 1] = minval[ki - 1], minval[ki]
@@ -85,9 +85,9 @@ end
 
 # Thanks Chris Elrod
 # https://discourse.julialang.org/t/why-is-minimum-so-much-faster-than-argmin/66814/9
-function findmin_fast(x)
-    indmin = 0
-    minval = typemax(eltype(x))
+function findmin_fast(x::AbstractVector{T}) where {T}
+    indmin = 1
+    minval = typemax(T)
     @turbo for i in eachindex(x)
         newmin = x[i] < minval
         minval = newmin ? x[i] : minval
@@ -95,6 +95,9 @@ function findmin_fast(x)
     end
     return minval, indmin
 end
-argmin_fast(x) = findmin_fast(x)[2]
+
+function argmin_fast(x::AbstractVector{T}) where {T}
+    return findmin_fast(x)[2]
+end
 
 end
