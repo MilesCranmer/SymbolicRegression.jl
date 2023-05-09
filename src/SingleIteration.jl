@@ -4,7 +4,7 @@ import DynamicExpressions: string_tree, simplify_tree, combine_operators
 import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 import ..UtilsModule: debug
-import ..PopMemberModule: copy_pop_member, generate_reference
+import ..PopMemberModule: copy_pop_member, generate_reference, assign_tree!
 import ..PopulationModule: Population, finalize_scores, best_sub_pop
 import ..HallOfFameModule: HallOfFame
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
@@ -45,7 +45,7 @@ function s_r_cycle(
         )
         num_evals += tmp_num_evals
         for member in pop.members
-            size = compute_complexity(member.tree, options)
+            size = compute_complexity(member, options)
             score = member.score
             if 0 < size <= options.maxsize && (
                 !best_examples_seen.exists[size] ||
@@ -71,8 +71,10 @@ function optimize_and_simplify_population(
     do_optimization = rand(pop.n) .< options.optimizer_probability
     for j in 1:(pop.n)
         if options.should_simplify
-            pop.members[j].tree = simplify_tree(pop.members[j].tree, options.operators)
-            pop.members[j].tree = combine_operators(pop.members[j].tree, options.operators)
+            tree = pop.members[j].tree
+            tree = simplify_tree(tree, options.operators)
+            tree = combine_operators(tree, options.operators)
+            assign_tree!(pop.members[j], tree, options)
         end
         if options.should_optimize_constants && do_optimization[j]
             pop.members[j], array_num_evals[j] = optimize_constants(

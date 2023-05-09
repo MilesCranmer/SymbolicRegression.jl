@@ -557,7 +557,7 @@ function _EquationSearch(
         hallOfFame::Vector{HallOfFame{T,L}}
         for (hof, dataset) in zip(hallOfFame, datasets)
             for member in hof.members[hof.exists]
-                score, result_loss = score_func(dataset, member.tree, options)
+                score, result_loss = score_func(dataset, member, options)
                 member.score = score
                 member.loss = result_loss
             end
@@ -579,7 +579,7 @@ function _EquationSearch(
                 saved_pop::Population{T,L}
                 ## Update losses:
                 for member in saved_pop.members
-                    score, result_loss = score_func(datasets[j], member.tree, options)
+                    score, result_loss = score_func(datasets[j], member, options)
                     member.score = score
                     member.loss = result_loss
                 end
@@ -654,7 +654,7 @@ function _EquationSearch(
                 if options.batching
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
                         score, result_loss = score_func(
-                            dataset, tmp_best_seen.members[i_member].tree, options
+                            dataset, tmp_best_seen.members[i_member], options
                         )
                         tmp_best_seen.members[i_member].score = score
                         tmp_best_seen.members[i_member].loss = result_loss
@@ -762,7 +762,7 @@ function _EquationSearch(
                 Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists]))
             )
                 part_of_cur_pop = i_member <= length(cur_pop.members)
-                size = compute_complexity(member.tree, options)
+                size = compute_complexity(member, options)
 
                 if part_of_cur_pop
                     update_frequencies!(all_running_search_statistics[j]; size=size)
@@ -796,7 +796,7 @@ function _EquationSearch(
                         for member in dominating
                             println(
                                 io,
-                                "$(compute_complexity(member.tree, options)),$(member.loss),\"" *
+                                "$(compute_complexity(member, options)),$(member.loss),\"" *
                                 "$(string_tree(member.tree, options.operators, varMap=dataset.varMap))\"",
                             )
                         end
@@ -861,7 +861,7 @@ function _EquationSearch(
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
                         if tmp_best_seen.exists[i_member]
                             score, result_loss = score_func(
-                                dataset, tmp_best_seen.members[i_member].tree, options
+                                dataset, tmp_best_seen.members[i_member], options
                             )
                             tmp_best_seen.members[i_member].score = score
                             tmp_best_seen.members[i_member].loss = result_loss

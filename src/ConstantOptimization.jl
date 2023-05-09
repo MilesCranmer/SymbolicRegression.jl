@@ -58,7 +58,7 @@ function optimize_constants(
 
     if Optim.converged(result)
         set_constants(member.tree, result.minimizer)
-        member.score, member.loss = score_func(dataset, member.tree, options)
+        member.score, member.loss = score_func(dataset, member, options)
         num_evals += 1
         member.birth = get_birth_order(; deterministic=options.deterministic)
     else

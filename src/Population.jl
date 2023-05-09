@@ -101,7 +101,7 @@ function best_of_sample(
 
         scores = Vector{L}(undef, tournament_selection_n)
         for (i, member) in enumerate(sample.members)
-            size = compute_complexity(member.tree, options)
+            size = compute_complexity(member, options)
             frequency = if (0 < size <= options.maxsize)
                 running_search_statistics.normalized_frequencies[size]
             else
@@ -145,7 +145,7 @@ function finalize_scores(
     num_evals = 0.0
     if need_recalculate
         for member in 1:(pop.n)
-            score, loss = score_func(dataset, pop.members[member].tree, options)
+            score, loss = score_func(dataset, pop.members[member], options)
             pop.members[member].score = score
             pop.members[member].loss = loss
         end
@@ -167,7 +167,7 @@ function record_population(pop::Population, options::Options)::RecordType
                 "tree" => string_tree(member.tree, options.operators),
                 "loss" => member.loss,
                 "score" => member.score,
-                "complexity" => compute_complexity(member.tree, options),
+                "complexity" => compute_complexity(member, options),
                 "birth" => member.birth,
                 "ref" => member.ref,
                 "parent" => member.parent,

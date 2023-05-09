@@ -1,7 +1,8 @@
 module PopMemberModule
 
-import DynamicExpressions: Node, copy_node
+import DynamicExpressions: Node, copy_node, count_nodes
 import ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
+import ..ComplexityModule: compute_complexity
 import ..UtilsModule: get_birth_order
 import ..LossFunctionsModule: score_func
 
@@ -11,10 +12,25 @@ mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE}
     score::L  # Inludes complexity penalty, normalization
     loss::L  # Raw loss
     birth::Int
+    complexity::Int
 
     # For recording history:
     ref::Int
     parent::Int
+end
+function Base.setproperty!(member::PopMember, field::Symbol, value)
+    field == :complexity && throw(
+        error("Don't set `.complexity` directly. Use `recompute_complexity!` instead.")
+    )
+    field == :tree &&
+        throw(error("Don't set `.tree` directly. Use `assign_tree!` instead."))
+    return setfield!(member, field, value)
+end
+function Base.getproperty(member::PopMember, field::Symbol)
+    field == :complexity && throw(
+        error("Don't access `.complexity` directly. Use `compute_complexity` instead.")
+    )
+    return getfield(member, field)
 end
 
 generate_reference() = abs(rand(Int))
@@ -33,13 +49,27 @@ and loss.
 - `loss::L`: The raw loss to assign.
 """
 function PopMember(
-    t::Node{T}, score::L, loss::L; ref::Int=-1, parent::Int=-1, deterministic=false
+    t::Node{T},
+    score::L,
+    loss::L,
+    options::Options,
+    complexity::Union{Int,Nothing}=nothing;
+    ref::Int=-1,
+    parent::Int=-1,
+    deterministic=false,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if ref == -1
         ref = generate_reference()
     end
+    complexity = complexity === nothing ? -1 : complexity
     return PopMember{T,L}(
-        t, score, loss, get_birth_order(; deterministic=deterministic), ref, parent
+        t,
+        score,
+        loss,
+        get_birth_order(; deterministic=deterministic),
+        complexity,
+        ref,
+        parent,
     )
 end
 
@@ -59,13 +89,24 @@ Automatically compute the score for this tree.
 function PopMember(
     dataset::Dataset{T,L},
     t::Node{T},
-    options::Options;
+    options::Options,
+    complexity::Union{Int,Nothing}=nothing;
     ref::Int=-1,
     parent::Int=-1,
     deterministic=nothing,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    score, loss = score_func(dataset, t, options)
-    return PopMember(t, score, loss; ref=ref, parent=parent, deterministic=deterministic)
+    set_complexity = complexity === nothing ? compute_complexity(t, options) : complexity
+    score, loss = score_func(dataset, t, options, set_complexity)
+    return PopMember(
+        t,
+        score,
+        loss,
+        options,
+        set_complexity;
+        ref=ref,
+        parent=parent,
+        deterministic=deterministic,
+    )
 end
 
 function copy_pop_member(
@@ -75,9 +116,10 @@ function copy_pop_member(
     score = copy(p.score)
     loss = copy(p.loss)
     birth = copy(p.birth)
+    complexity = copy(getfield(p, :complexity))
     ref = copy(p.ref)
     parent = copy(p.parent)
-    return PopMember{T,L}(tree, score, loss, birth, ref, parent)
+    return PopMember{T,L}(tree, score, loss, complexity, birth, ref, parent)
 end
 
 function copy_pop_member_reset_birth(
@@ -86,6 +128,25 @@ function copy_pop_member_reset_birth(
     new_member = copy_pop_member(p)
     new_member.birth = get_birth_order(; deterministic=deterministic)
     return new_member
+end
+
+# Can read off complexity directly from pop members
+function compute_complexity(member::PopMember, options::Options)::Int
+    complexity = getfield(member, :complexity)
+    complexity == -1 && return recompute_complexity!(member, options)
+    # TODO: Turn this into a warning, and then return normal compute_complexity instead.
+    return complexity
+end
+function recompute_complexity!(member::PopMember, options::Options)::Int
+    complexity = compute_complexity(member.tree, options)
+    setfield!(member, :complexity, complexity)
+    return complexity
+end
+function assign_tree!(member::PopMember, tree::Node, options::Options)
+    setfield!(member, :tree, tree)
+    setfield!(member, :complexity, -1)
+    # ^Delete pre-existing complexity, to force recalculation
+    return nothing
 end
 
 end
