@@ -103,6 +103,31 @@ function create_utils_benchmark()
     )
 
     ntrees = 10
+    suite["compute_complexity_x10"] = let s = BenchmarkGroup()
+        for T in (Float64, Int, nothing)
+            options = Options(;
+                unary_operators=[sin, cos],
+                binary_operators=[+, -, *, /],
+                complexity_of_constants=T === nothing ? T : T(1),
+            )
+            s[T] = @benchmarkable(
+                foreach(trees) do tree
+                    compute_complexity(tree, $options)
+                end,
+                setup = (
+                    T = Float64;
+                    nfeatures = 3;
+                    trees = [
+                        gen_random_tree_fixed_size(20, $options, nfeatures, T) for
+                        i in 1:($ntrees)
+                    ]
+                )
+            )
+        end
+        s
+    end
+
+    ntrees = 10
     options = Options(;
         unary_operators=[sin, cos],
         binary_operators=[+, -, *, /],
