@@ -209,10 +209,11 @@ function get_load_string(; head_node_occupation::Float64, parallelism=:serial)
 end
 
 function update_progress_bar!(
-    progress_bar::WrappedProgressBar;
+    progress_bar::WrappedProgressBar,
     hall_of_fame::HallOfFame{T,L},
     dataset::Dataset{T,L},
     options::Options,
+    equation_speed::Vector{Float32},
     head_node_occupation::Float64,
     parallelism=:serial,
 ) where {T,L}
@@ -220,7 +221,16 @@ function update_progress_bar!(
         hall_of_fame, dataset, options; width=progress_bar.bar.width
     )
     # TODO - include command about "q" here.
-    load_string = get_load_string(; head_node_occupation, parallelism)
+    load_string = if length(equation_speed) > 0
+        average_speed = sum(equation_speed) / length(equation_speed)
+        @sprintf(
+            "Expressions evaluated per second: %-5.2e. ",
+            round(average_speed, sigdigits=3)
+        )
+    else
+        @sprintf("Expressions evaluated per second: [.....]. ")
+    end
+    load_string *= get_load_string(; head_node_occupation, parallelism)
     load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
     equation_strings = load_string * equation_strings
     set_multiline_postfix!(progress_bar, equation_strings)
@@ -244,7 +254,7 @@ function print_search_state(
     average_speed = sum(equation_speed) / length(equation_speed)
 
     @printf("\n")
-    @printf("Cycles per second: %.3e\n", round(average_speed, sigdigits=3))
+    @printf("Expressions evaluated per second: %.3e\n", round(average_speed, sigdigits=3))
     load_string = get_load_string(; head_node_occupation, parallelism)
     print(load_string)
     cycles_elapsed = total_cycles * nout - sum(cycles_remaining)
