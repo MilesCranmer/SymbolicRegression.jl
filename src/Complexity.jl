@@ -25,9 +25,13 @@ end
 
 function _compute_complexity(tree::Node, options::Options{CT})::CT where {CT}
     cmap = options.complexity_mapping
+    constant_complexity = cmap.constant_complexity
+    variable_complexity = cmap.variable_complexity
+    unaop_complexities = cmap.unaop_complexities
+    binop_complexities = cmap.binop_complexities
     return tree_mapreduce(
-        t -> t.constant ? cmap.constant_complexity : cmap.variable_complexity,
-        t -> t.degree == 1 ? cmap.unaop_complexities[t.op] : cmap.binop_complexities[t.op],
+        t -> t.constant ? constant_complexity : variable_complexity,
+        t -> t.degree == 1 ? unaop_complexities[t.op] : binop_complexities[t.op],
         +,
         tree,
         CT,
