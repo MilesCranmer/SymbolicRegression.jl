@@ -3,6 +3,7 @@ using SymbolicRegression, BenchmarkTools, Random
 using SymbolicRegression.AdaptiveParsimonyModule: RunningSearchStatistics
 using SymbolicRegression.PopulationModule: best_of_sample
 using SymbolicRegression.ConstantOptimizationModule: optimize_constants
+using SymbolicRegression.CheckConstraintsModule: check_constraints
 
 function create_search_benchmark()
     suite = BenchmarkGroup()
@@ -101,7 +102,31 @@ function create_utils_benchmark()
         )
     )
 
-    # TODO: Benchmark constraint checking
+    ntrees = 10
+    options = Options(;
+        unary_operators=[sin, cos],
+        binary_operators=[+, -, *, /],
+        maxsize=30,
+        maxdepth=20,
+        nested_constraints=[
+            (+) => [(/) => 1, (+) => 2],
+            sin => [sin => 0, cos => 2],
+            cos => [sin => 0, cos => 0, (+) => 1, (-) => 1],
+        ],
+        constraints=[(+) => (-1, 10), (/) => (10, 10), sin => 12, cos => 5],
+    )
+    suite["check_constraints_x10"] = @benchmarkable(
+        foreach(trees) do tree
+            check_constraints(tree, $options, $options.maxsize)
+        end,
+        setup = (
+            T = Float64;
+            nfeatures = 3;
+            trees = [
+                gen_random_tree_fixed_size(20, $options, nfeatures, T) for i in 1:($ntrees)
+            ]
+        )
+    )
 
     return suite
 end
