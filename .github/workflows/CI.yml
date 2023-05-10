@@ -29,13 +29,13 @@ jobs:
         julia-version:
           - '1.6'
           - '1.8'
-          - '1.9.0-rc2'
+          - '1'
         os:
           - ubuntu-latest
           - macOS-latest
         include:
           - os: windows-latest
-            julia-version: '1.8'
+            julia-version: '1'
 
     steps:
       - uses: actions/checkout@v3
