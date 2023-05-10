@@ -59,7 +59,9 @@ const vals = ntuple(Val, max_ops)
 bottomk_fast(x, k) = _bottomk_dispatch(x, vals[k])
 
 function _bottomk_dispatch(x::AbstractVector{T}, ::Val{k}) where {T,k}
-    @assert k >= 2
+    if k == 1
+        return (p -> [p]).(findmin_fast(x))
+    end
     indmin = MVector{k}(ntuple(_ -> 1, k))
     minval = MVector{k}(ntuple(_ -> typemax(T), k))
     _bottomk!(x, minval, indmin)
