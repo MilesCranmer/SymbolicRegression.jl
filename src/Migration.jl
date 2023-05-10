@@ -1,6 +1,7 @@
 module MigrationModule
 
 using StatsBase: StatsBase
+using Distributions: Poisson
 import ..CoreModule: Options, DATA_TYPE, LOSS_TYPE
 import ..PopulationModule: Population
 import ..PopMemberModule: PopMember, copy_pop_member_reset_birth
@@ -19,7 +20,9 @@ function migrate!(
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     base_pop = migration.second
     npop = length(base_pop.members)
-    num_replace = round(Int, npop * frac)
+    mean_number_replaced = npop * frac
+    distribution = Poisson(mean_number_replaced)
+    num_replace = rand(distribution)::Int
 
     migrant_candidates = migration.first
 
