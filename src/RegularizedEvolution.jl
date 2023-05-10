@@ -29,6 +29,7 @@ function reg_evol_cycle(
     end
 
     num_evals = 0.0
+    n_evol_cycles = ceil(Int, pop.n / options.tournament_selection_n)
 
     if options.fast_cycle
 
@@ -40,7 +41,6 @@ function reg_evol_cycle(
         @assert options.crossover_probability == 0.0
 
         shuffle!(pop.members)
-        n_evol_cycles = round(Int, pop.n / options.tournament_selection_n)
         babies = Array{PopMember}(undef, n_evol_cycles)
         accepted = Array{Bool}(undef, n_evol_cycles)
         array_num_evals = Array{Float64}(undef, n_evol_cycles)
@@ -79,7 +79,7 @@ function reg_evol_cycle(
             end
         end
     else
-        for i in 1:round(Int, pop.n / options.tournament_selection_n)
+        for i in 1:n_evol_cycles
             if rand() > options.crossover_probability
                 allstar = best_of_sample(pop, running_search_statistics, options)
                 mutation_recorder = RecordType()
