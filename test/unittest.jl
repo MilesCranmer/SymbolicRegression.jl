@@ -91,3 +91,7 @@ end
 @safetestset "Test RunningSearchStatistics" begin
     include("test_search_statistics.jl")
 end
+
+@safetestset "Test utils" begin
+    include("test_utils.jl")
+end
