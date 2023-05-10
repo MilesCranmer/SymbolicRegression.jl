@@ -6,6 +6,7 @@ version = "0.18.0"
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DynamicExpressions = "a40a106e-89c9-4ca8-8020-a735e8728b6b"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 LineSearches = "d3d80556-e9d4-5f37-9878-2ab0fcc64255"
@@ -25,6 +26,7 @@ SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
+Distributions = "0.14 - 0.25"
 DynamicExpressions = "0.8"
 JSON3 = "1"
 LineSearches = "7"
