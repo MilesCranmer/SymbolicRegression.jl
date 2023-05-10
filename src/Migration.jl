@@ -26,6 +26,10 @@ function migrate!(
 
     migrant_candidates = migration.first
 
+    # Ensure `replace=true` is a valid setting:
+    num_replace = min(num_replace, length(migrant_candidates))
+    num_replace = min(num_replace, npop)
+
     locations = StatsBase.sample(1:npop, num_replace; replace=true)
     migrants = StatsBase.sample(migrant_candidates, num_replace; replace=true)
 
