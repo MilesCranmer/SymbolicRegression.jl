@@ -31,13 +31,11 @@ function get_birth_order(; deterministic=false)::Int
     end
 end
 
-function check_numeric(n)
-    return tryparse(Float64, n) !== nothing
-end
-
 function is_anonymous_function(op)
     op_string = string(nameof(op))
-    return length(op_string) > 1 && op_string[1] == '#' && check_numeric(op_string[2:2])
+    return length(op_string) > 1 &&
+           op_string[1] == '#' &&
+           op_string[2] in ('1', '2', '3', '4', '5', '6', '7', '8', '9')
 end
 
 function recursive_merge(x::AbstractVector...)
