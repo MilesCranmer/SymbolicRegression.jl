@@ -3,7 +3,6 @@ module UtilsModule
 
 import Printf: @printf
 import StaticArrays: MVector
-import LoopVectorization: @turbo
 
 function debug(verbosity, string...)
     if verbosity > 0
@@ -85,25 +84,15 @@ end
 
 # Thanks Chris Elrod
 # https://discourse.julialang.org/t/why-is-minimum-so-much-faster-than-argmin/66814/9
-@generated function findmin_fast(x::AbstractVector{T}) where {T}
-    loop = :(
-        for i in eachindex(x)
-            newmin = x[i] < minval
-            minval = newmin ? x[i] : minval
-            indmin = newmin ? i : indmin
-        end
-    )
-    if T <: Union{Float32,Float64}
-        loop = :(@turbo $(loop))
-    else
-        loop = :(@inbounds @simd $(loop))
+function findmin_fast(x::AbstractVector{T}) where {T}
+    indmin = 1
+    minval = typemax(T)
+    @inbounds @simd for i in eachindex(x)
+        newmin = x[i] < minval
+        minval = newmin ? x[i] : minval
+        indmin = newmin ? i : indmin
     end
-    return quote
-        indmin = 1
-        minval = typemax(T)
-        $(loop)
-        return minval, indmin
-    end
+    return minval, indmin
 end
 
 function argmin_fast(x::AbstractVector{T}) where {T}
