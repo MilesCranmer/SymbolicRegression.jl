@@ -41,8 +41,7 @@ function count_max_nestedness(tree, degree, op)
         tree,
     )
     # Remove count of self:
-    is_self = tree.degree == degree && tree.op == op
-    return nestedness - (is_self ? 1 : 0)
+    return nestedness - 1
 end
 
 """Check if there are any illegal combinations of operators"""
