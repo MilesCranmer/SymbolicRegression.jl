@@ -6,7 +6,7 @@ import SymbolicRegression.MutateModule: next_generation
 import DynamicExpressions: get_constants
 using Test
 
-mutation_weights = MutationWeights(; optimize=Inf)
+mutation_weights = (; optimize=1e30)  # We also test whether a named tuple works.
 options = Options(;
     binary_operators=(+, -, *),
     unary_operators=(sin,),
