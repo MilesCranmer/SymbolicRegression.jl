@@ -99,4 +99,13 @@ function argmin_fast(x::AbstractVector{T}) where {T}
     return findmin_fast(x)[2]
 end
 
+function poisson_sample(λ::T) where {T}
+    k, p, L = 0, one(T), exp(-λ)
+    while p > L
+        k += 1
+        p *= rand(T)
+    end
+    return k - 1
+end
+
 end

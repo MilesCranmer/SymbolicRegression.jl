@@ -1,10 +1,10 @@
 module MigrationModule
 
 using StatsBase: StatsBase
-using Distributions: Poisson
 import ..CoreModule: Options, DATA_TYPE, LOSS_TYPE
 import ..PopulationModule: Population
 import ..PopMemberModule: PopMember, copy_pop_member_reset_birth
+import ..UtilsModule: poisson_sample
 
 """
     migrate!(migration::Pair{Population{T,L},Population{T,L}}, options::Options; frac::AbstractFloat)
@@ -21,8 +21,7 @@ function migrate!(
     base_pop = migration.second
     npop = length(base_pop.members)
     mean_number_replaced = npop * frac
-    distribution = Poisson(mean_number_replaced)
-    num_replace = rand(distribution)::Int
+    num_replace = poisson_sample(mean_number_replaced)
 
     migrant_candidates = migration.first
 
