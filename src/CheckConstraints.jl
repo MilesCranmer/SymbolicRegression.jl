@@ -33,7 +33,7 @@ function flag_una_operator_complexity(tree::Node, op, cons, options::Options)::B
     end
 end
 
-function count_max_nestedness(tree, degree, op)
+function count_max_nestedness(tree, degree, op, is_self=false)
     nestedness = tree_mapreduce(
         t -> 0,  # Leafs
         t -> (t.degree == degree && t.op == op) ? 1 : 0,  # Branches
@@ -41,7 +41,7 @@ function count_max_nestedness(tree, degree, op)
         tree,
     )
     # Remove count of self:
-    return nestedness - 1
+    return nestedness - (is_self ? 1 : 0)
 end
 
 """Check if there are any illegal combinations of operators"""
@@ -52,7 +52,9 @@ function flag_illegal_nests(tree::Node, options::Options)::Bool
         for (nested_degree, nested_op_idx, max_nestedness) in op_constraint
             any(tree) do subtree
                 if subtree.degree == degree && subtree.op == op_idx
-                    nestedness = count_max_nestedness(subtree, nested_degree, nested_op_idx)
+                    nestedness = count_max_nestedness(
+                        subtree, nested_degree, nested_op_idx, true
+                    )
                     return nestedness > max_nestedness
                 end
                 return false
