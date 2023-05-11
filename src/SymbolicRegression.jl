@@ -929,9 +929,11 @@ function _EquationSearch(
         ################################################################
         ## Printing code
         elapsed = time() - last_print_time
-        #Update if time has passed, and some new equations generated.
-        if elapsed > print_every_n_seconds && sum(sum, num_evals) - num_evals_last > 0.0
-            if (options.verbosity > 0) || (options.progress && nout > 1)
+        # Update if time has passed
+        if elapsed > print_every_n_seconds
+            if ((options.verbosity > 0) || (options.progress && nout > 1)) &&
+                length(equation_speed) > 0
+
                 # Dominating pareto curve - must be better than all simpler equations
                 head_node_occupation = estimate_work_fraction(resource_monitor)
                 print_search_state(
