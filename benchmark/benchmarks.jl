@@ -1,5 +1,9 @@
 using BenchmarkTools
 using SymbolicRegression, BenchmarkTools, Random
+using SymbolicRegression.AdaptiveParsimonyModule: RunningSearchStatistics
+using SymbolicRegression.PopulationModule: best_of_sample
+using SymbolicRegression.ConstantOptimizationModule: optimize_constants
+using SymbolicRegression.CheckConstraintsModule: check_constraints
 
 function create_search_benchmark()
     suite = BenchmarkGroup()
@@ -63,9 +67,99 @@ function create_search_benchmark()
     return suite
 end
 
+function create_utils_benchmark()
+    suite = BenchmarkGroup()
+
+    options = Options(; unary_operators=[sin, cos], binary_operators=[+, -, *, /])
+
+    suite["best_of_sample"] = @benchmarkable(
+        best_of_sample(pop, rss, $options),
+        setup = (
+            nfeatures = 1;
+            dataset = Dataset(randn(nfeatures, 32), randn(32));
+            pop = Population(dataset; npop=100, nlength=20, options=$options, nfeatures);
+            rss = RunningSearchStatistics(; options=$options)
+        )
+    )
+
+    ntrees = 10
+    suite["optimize_constants_x10"] = @benchmarkable(
+        foreach(members) do member
+            optimize_constants(dataset, member, $options)
+        end,
+        seconds = 20,
+        setup = (
+            nfeatures = 1;
+            T = Float64;
+            dataset = Dataset(randn(nfeatures, 512), randn(512));
+            ntrees = $ntrees;
+            trees = [
+                gen_random_tree_fixed_size(20, $options, nfeatures, T) for i in 1:ntrees
+            ];
+            members = [
+                PopMember(dataset, tree, $options; deterministic=false) for tree in trees
+            ]
+        )
+    )
+
+    ntrees = 10
+    suite["compute_complexity_x10"] = let s = BenchmarkGroup()
+        for T in (Float64, Int, nothing)
+            options = Options(;
+                unary_operators=[sin, cos],
+                binary_operators=[+, -, *, /],
+                complexity_of_constants=T === nothing ? T : T(1),
+            )
+            s[T] = @benchmarkable(
+                foreach(trees) do tree
+                    compute_complexity(tree, $options)
+                end,
+                setup = (
+                    T = Float64;
+                    nfeatures = 3;
+                    trees = [
+                        gen_random_tree_fixed_size(20, $options, nfeatures, T) for
+                        i in 1:($ntrees)
+                    ]
+                )
+            )
+        end
+        s
+    end
+
+    ntrees = 10
+    options = Options(;
+        unary_operators=[sin, cos],
+        binary_operators=[+, -, *, /],
+        maxsize=30,
+        maxdepth=20,
+        nested_constraints=[
+            (+) => [(/) => 1, (+) => 2],
+            sin => [sin => 0, cos => 2],
+            cos => [sin => 0, cos => 0, (+) => 1, (-) => 1],
+        ],
+        constraints=[(+) => (-1, 10), (/) => (10, 10), sin => 12, cos => 5],
+    )
+    suite["check_constraints_x10"] = @benchmarkable(
+        foreach(trees) do tree
+            check_constraints(tree, $options, $options.maxsize)
+        end,
+        setup = (
+            T = Float64;
+            nfeatures = 3;
+            trees = [
+                gen_random_tree_fixed_size(20, $options, nfeatures, T) for i in 1:($ntrees)
+            ]
+        )
+    )
+
+    return suite
+end
+
 function create_benchmark()
     suite = BenchmarkGroup()
     suite["search"] = create_search_benchmark()
+    suite["utils"] = create_utils_benchmark()
     return suite
 end
 

@@ -72,7 +72,7 @@ end
     include("test_hash.jl")
 end
 
-@safetestset "Test topology-preserving copy" begin
+@safetestset "Test shared node-preserving copy" begin
     include("test_preserve_multiple_parents.jl")
 end
 
@@ -90,4 +90,8 @@ end
 
 @safetestset "Test RunningSearchStatistics" begin
     include("test_search_statistics.jl")
+end
+
+@safetestset "Test utils" begin
+    include("test_utils.jl")
 end
