@@ -53,9 +53,7 @@ function flag_illegal_nests(tree::Node, options::Options)::Bool
         for (nested_degree, nested_op_idx, max_nestedness) in op_constraint
             any(tree) do subtree
                 if subtree.degree == degree && subtree.op == op_idx
-                    nestedness = count_max_nestedness(
-                        subtree, nested_degree, nested_op_idx
-                    )
+                    nestedness = count_max_nestedness(subtree, nested_degree, nested_op_idx)
                     return nestedness > max_nestedness
                 end
                 return false
