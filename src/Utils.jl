@@ -85,15 +85,25 @@ end
 
 # Thanks Chris Elrod
 # https://discourse.julialang.org/t/why-is-minimum-so-much-faster-than-argmin/66814/9
-function findmin_fast(x::AbstractVector{T}) where {T}
-    indmin = 1
-    minval = typemax(T)
-    @turbo for i in eachindex(x)
-        newmin = x[i] < minval
-        minval = newmin ? x[i] : minval
-        indmin = newmin ? i : indmin
+@generated function findmin_fast(x::AbstractVector{T}) where {T}
+    loop = :(
+        for i in eachindex(x)
+            newmin = x[i] < minval
+            minval = newmin ? x[i] : minval
+            indmin = newmin ? i : indmin
+        end
+    )
+    if T <: Union{Float32,Float64}
+        loop = :(@turbo $(loop))
+    else
+        loop = :(@inbounds @simd $(loop))
     end
-    return minval, indmin
+    return quote
+        indmin = 1
+        minval = typemax(T)
+        $(loop)
+        return minval, indmin
+    end
 end
 
 function argmin_fast(x::AbstractVector{T}) where {T}
