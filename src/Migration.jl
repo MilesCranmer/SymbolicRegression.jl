@@ -4,6 +4,7 @@ using StatsBase: StatsBase
 import ..CoreModule: Options, DATA_TYPE, LOSS_TYPE
 import ..PopulationModule: Population
 import ..PopMemberModule: PopMember, copy_pop_member_reset_birth
+import ..UtilsModule: poisson_sample
 
 """
     migrate!(migration::Pair{Population{T,L},Population{T,L}}, options::Options; frac::AbstractFloat)
@@ -19,9 +20,14 @@ function migrate!(
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     base_pop = migration.second
     npop = length(base_pop.members)
-    num_replace = round(Int, npop * frac)
+    mean_number_replaced = npop * frac
+    num_replace = poisson_sample(mean_number_replaced)
 
     migrant_candidates = migration.first
+
+    # Ensure `replace=true` is a valid setting:
+    num_replace = min(num_replace, length(migrant_candidates))
+    num_replace = min(num_replace, npop)
 
     locations = StatsBase.sample(1:npop, num_replace; replace=true)
     migrants = StatsBase.sample(migrant_candidates, num_replace; replace=true)

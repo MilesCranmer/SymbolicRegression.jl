@@ -16,7 +16,7 @@ jobs:
             - uses: actions/checkout@v2
             - uses: julia-actions/setup-julia@v1
               with:
-                version: "1.8"
+                version: "1"
             - uses: julia-actions/cache@v1
             - name: Extract Package Name from Project.toml
               id: extract-package-name

@@ -2,7 +2,7 @@ using Coverage
 # process '*.cov' files
 coverage = process_folder() # defaults to src/; alternatively, supply the folder name as argument
 
-LCOV.writefile("coverage-lcov.info", coverage)
+LCOV.writefile("lcov.info", coverage)
 
 # process '*.info' files
 coverage = merge_coverage_counts(

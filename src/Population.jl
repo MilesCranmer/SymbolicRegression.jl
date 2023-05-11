@@ -9,6 +9,7 @@ import ..LossFunctionsModule: score_func, update_baseline_loss!
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..MutationFunctionsModule: gen_random_tree
 import ..PopMemberModule: PopMember, copy_pop_member
+import ..UtilsModule: bottomk_fast, argmin_fast
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
 mutable struct Population{T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -86,56 +87,53 @@ end
 function best_of_sample(
     pop::Population{T,L},
     running_search_statistics::RunningSearchStatistics,
-    options::Options{CT},
-)::PopMember{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE,CT}
+    options::Options,
+)::PopMember{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     sample = sample_pop(pop, options)
-
+    return _best_of_sample(sample.members, running_search_statistics, options)
+end
+function _best_of_sample(
+    members::Vector{PopMember{T,L}},
+    running_search_statistics::RunningSearchStatistics,
+    options::Options,
+) where {T,L}
     p = options.tournament_selection_p
-    tournament_selection_n = options.tournament_selection_n
-
+    n = length(members)  # == tournament_selection_n
+    scores = Vector{L}(undef, n)
     if options.use_frequency_in_tournament
         # Score based on frequency of that size occuring.
         # In the end, all sizes should be just as common in the population.
         adaptive_parsimony_scaling = L(options.adaptive_parsimony_scaling)
         # e.g., for 100% occupied at one size, exp(-20*1) = 2.061153622438558e-9; which seems like a good punishment for dominating the population.
 
-        scores = Vector{L}(undef, tournament_selection_n)
-        for (i, member) in enumerate(sample.members)
+        for i in 1:n
+            member = members[i]
             size = compute_complexity(member, options)
             frequency = if (0 < size <= options.maxsize)
-                running_search_statistics.normalized_frequencies[size]
+                L(running_search_statistics.normalized_frequencies[size])
             else
                 L(0)
             end
             scores[i] = member.score * exp(adaptive_parsimony_scaling * frequency)
         end
     else
-        scores = [member.score for member in sample.members]
+        map!(member -> member.score, scores, members)
     end
 
-    if p == 1.0
-        chosen_idx = argmin(scores)
+    chosen_idx = if p == 1.0
+        argmin_fast(scores)
     else
         # First, decide what place we take (usually 1st place wins):
-        tournament_winner = sample_tournament(Val(p), Val(tournament_selection_n))
+        tournament_winner = StatsBase.sample(options.tournament_selection_weights)
         # Then, find the member that won that place, given
         # their fitness:
-        chosen_idx = partialsortperm(scores, tournament_winner)
+        if tournament_winner == 1
+            argmin_fast(scores)
+        else
+            bottomk_fast(scores, tournament_winner)[2][end]
+        end
     end
-    return sample.members[chosen_idx]
-end
-
-# This will compile the tournament probabilities, so it's a bit faster:
-@generated function sample_tournament(
-    ::Val{p}, ::Val{tournament_selection_n}
-)::Int where {p,tournament_selection_n}
-    k = collect(0:(tournament_selection_n - 1))
-    prob_each = p * ((1 - p) .^ k)
-    indexes = collect(1:(tournament_selection_n))
-    weights = StatsBase.Weights(prob_each, sum(prob_each))
-    return quote
-        StatsBase.sample($indexes, $weights)
-    end
+    return members[chosen_idx]
 end
 
 function finalize_scores(
