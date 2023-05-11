@@ -244,10 +244,11 @@ function next_generation(
         mutation_accepted = false
         return (
             PopMember(
-                copy_node(prev),
+                copy_node(member.tree),
                 beforeScore,
                 beforeLoss,
-                options;
+                options,
+                compute_complexity(member, options);
                 parent=parent_ref,
                 deterministic=options.deterministic,
             ),
@@ -261,6 +262,7 @@ function next_generation(
         delta = afterScore - beforeScore
         probChange *= exp(-delta / (temperature * options.alpha))
     end
+    newSize = -1
     if options.use_frequency
         oldSize = compute_complexity(member, options)
         newSize = compute_complexity(tree, options)
@@ -307,7 +309,8 @@ function next_generation(
                 tree,
                 afterScore,
                 afterLoss,
-                options;
+                options,
+                newSize;
                 parent=parent_ref,
                 deterministic=options.deterministic,
             ),
@@ -334,10 +337,14 @@ function crossover_generation(
     num_tries = 1
     max_tries = 10
     num_evals = 0.0
+    afterSize1 = -1
+    afterSize2 = -1
     while true
+        afterSize1 = compute_complexity(child_tree1, options)
+        afterSize2 = compute_complexity(child_tree2, options)
         # Both trees satisfy constraints
-        if check_constraints(child_tree1, options, curmaxsize) &&
-            check_constraints(child_tree2, options, curmaxsize)
+        if check_constraints(child_tree1, options, curmaxsize, afterSize1) &&
+            check_constraints(child_tree2, options, curmaxsize, afterSize2)
             break
         end
         if num_tries > max_tries
@@ -348,12 +355,16 @@ function crossover_generation(
         num_tries += 1
     end
     if options.batching
-        afterScore1, afterLoss1 = score_func_batch(dataset, child_tree1, options)
-        afterScore2, afterLoss2 = score_func_batch(dataset, child_tree2, options)
+        afterScore1, afterLoss1 = score_func_batch(
+            dataset, child_tree1, options, afterSize1
+        )
+        afterScore2, afterLoss2 = score_func_batch(
+            dataset, child_tree2, options, afterSize2
+        )
         num_evals += 2 * (options.batch_size / dataset.n)
     else
-        afterScore1, afterLoss1 = score_func(dataset, child_tree1, options)
-        afterScore2, afterLoss2 = score_func(dataset, child_tree2, options)
+        afterScore1, afterLoss1 = score_func(dataset, child_tree1, options, afterSize1)
+        afterScore2, afterLoss2 = score_func(dataset, child_tree2, options, afterSize2)
         num_evals += options.batch_size / dataset.n
     end
 
@@ -361,7 +372,8 @@ function crossover_generation(
         child_tree1,
         afterScore1,
         afterLoss1,
-        options;
+        options,
+        afterSize1;
         parent=member1.ref,
         deterministic=options.deterministic,
     )
@@ -369,7 +381,8 @@ function crossover_generation(
         child_tree2,
         afterScore2,
         afterLoss2,
-        options;
+        options,
+        afterSize2;
         parent=member2.ref,
         deterministic=options.deterministic,
     )

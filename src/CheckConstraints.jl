@@ -53,9 +53,7 @@ function flag_illegal_nests(tree::Node, options::Options)::Bool
         for (nested_degree, nested_op_idx, max_nestedness) in op_constraint
             any(tree) do subtree
                 if subtree.degree == degree && subtree.op == op_idx
-                    nestedness = count_max_nestedness(
-                        subtree, nested_degree, nested_op_idx
-                    )
+                    nestedness = count_max_nestedness(subtree, nested_degree, nested_op_idx)
                     return nestedness > max_nestedness
                 end
                 return false
@@ -66,8 +64,11 @@ function flag_illegal_nests(tree::Node, options::Options)::Bool
 end
 
 """Check if user-passed constraints are violated or not"""
-function check_constraints(tree::Node, options::Options, maxsize::Int)::Bool
-    past_complexity_limit(tree, options, maxsize) && return false
+function check_constraints(
+    tree::Node, options::Options, maxsize::Int, cursize::Union{Int,Nothing}=nothing
+)::Bool
+    ((cursize === nothing) ? compute_complexity(tree, options) : cursize) > maxsize &&
+        return false
     count_depth(tree) > options.maxdepth && return false
     for i in 1:(options.nbin)
         cons = options.bin_constraints[i]
