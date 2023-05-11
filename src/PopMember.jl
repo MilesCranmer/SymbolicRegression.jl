@@ -22,8 +22,7 @@ function Base.setproperty!(member::PopMember, field::Symbol, value)
     field == :complexity && throw(
         error("Don't set `.complexity` directly. Use `recompute_complexity!` instead.")
     )
-    field == :tree &&
-        throw(error("Don't set `.tree` directly. Use `assign_tree!` instead."))
+    field == :tree && setfield!(member, :complexity, -1)
     return setfield!(member, field, value)
 end
 function Base.getproperty(member::PopMember, field::Symbol)
@@ -142,12 +141,6 @@ function recompute_complexity!(member::PopMember, options::Options)::Int
     complexity = compute_complexity(member.tree, options)
     setfield!(member, :complexity, complexity)
     return complexity
-end
-function assign_tree!(member::PopMember, tree::Node, options::Options)
-    setfield!(member, :tree, tree)
-    setfield!(member, :complexity, -1)
-    # ^Delete pre-existing complexity, to force recalculation
-    return nothing
 end
 
 end

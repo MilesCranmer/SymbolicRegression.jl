@@ -4,7 +4,7 @@ import DynamicExpressions: string_tree, simplify_tree, combine_operators
 import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 import ..UtilsModule: debug
-import ..PopMemberModule: copy_pop_member, generate_reference, assign_tree!
+import ..PopMemberModule: copy_pop_member, generate_reference
 import ..PopulationModule: Population, finalize_scores, best_sub_pop
 import ..HallOfFameModule: HallOfFame
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
@@ -74,7 +74,7 @@ function optimize_and_simplify_population(
             tree = pop.members[j].tree
             tree = simplify_tree(tree, options.operators)
             tree = combine_operators(tree, options.operators)
-            assign_tree!(pop.members[j], tree, options)
+            pop.members[j].tree = tree
         end
         if options.should_optimize_constants && do_optimization[j]
             pop.members[j], array_num_evals[j] = optimize_constants(
