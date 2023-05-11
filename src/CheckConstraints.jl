@@ -64,8 +64,11 @@ function flag_illegal_nests(tree::Node, options::Options)::Bool
 end
 
 """Check if user-passed constraints are violated or not"""
-function check_constraints(tree::Node, options::Options, maxsize::Int)::Bool
-    past_complexity_limit(tree, options, maxsize) && return false
+function check_constraints(
+    tree::Node, options::Options, maxsize::Int, cursize::Union{Int,Nothing}=nothing
+)::Bool
+    ((cursize === nothing) ? compute_complexity(tree, options) : cursize) > maxsize &&
+        return false
     count_depth(tree) > options.maxdepth && return false
     for i in 1:(options.nbin)
         cons = options.bin_constraints[i]

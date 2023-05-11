@@ -344,7 +344,7 @@ function Options(;
     annealing=false,
     batching=false,
     batch_size=50,
-    mutation_weights::Union{MutationWeights,AbstractVector}=MutationWeights(),
+    mutation_weights::Union{MutationWeights,AbstractVector,NamedTuple}=MutationWeights(),
     crossover_probability=0.066f0,
     warmup_maxsize_by=0.0f0,
     use_frequency=true,
@@ -660,6 +660,13 @@ function Options(;
             StatsBase.Weights(prob_each, sum(prob_each))
         end
 
+    # Create mutation weights:
+    set_mutation_weights = if typeof(mutation_weights) <: NamedTuple
+        MutationWeights(; mutation_weights...)
+    else
+        mutation_weights
+    end
+
     options = Options{
         eltype(complexity_mapping),
         typeof(optimizer_options),
@@ -690,7 +697,7 @@ function Options(;
         annealing,
         batching,
         batch_size,
-        mutation_weights,
+        set_mutation_weights,
         crossover_probability,
         warmup_maxsize_by,
         use_frequency,

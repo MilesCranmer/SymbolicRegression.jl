@@ -48,7 +48,8 @@ function HallOfFame(
             PopMember(
                 Node(; val=convert(T, 1)),
                 L(0),
-                L(Inf);
+                L(Inf),
+                options;
                 parent=-1,
                 deterministic=options.deterministic,
             ) for i in 1:actualMaxsize
@@ -118,7 +119,7 @@ function string_dominating_pareto_curve(
 
     dominating = calculate_pareto_frontier(hallOfFame)
     for member in dominating
-        complexity = compute_complexity(member.tree, options)
+        complexity = compute_complexity(member, options)
         if member.loss < 0.0
             throw(
                 DomainError(

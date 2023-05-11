@@ -16,7 +16,7 @@ function get_best(; hof::HallOfFame{T,L}, options) where {T,L}
     df = DataFrame(;
         tree=[m.tree for m in dominating],
         loss=[m.loss for m in dominating],
-        complexity=[compute_complexity(m.tree, options) for m in dominating],
+        complexity=[compute_complexity(m, options) for m in dominating],
     )
 
     df[!, :score] = vcat(

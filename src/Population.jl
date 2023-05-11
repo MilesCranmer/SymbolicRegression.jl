@@ -108,7 +108,7 @@ function _best_of_sample(
 
         for i in 1:n
             member = members[i]
-            size = compute_complexity(member.tree, options)
+            size = compute_complexity(member, options)
             frequency = if (0 < size <= options.maxsize)
                 L(running_search_statistics.normalized_frequencies[size])
             else
@@ -143,7 +143,7 @@ function finalize_scores(
     num_evals = 0.0
     if need_recalculate
         for member in 1:(pop.n)
-            score, loss = score_func(dataset, pop.members[member].tree, options)
+            score, loss = score_func(dataset, pop.members[member], options)
             pop.members[member].score = score
             pop.members[member].loss = loss
         end
@@ -165,7 +165,7 @@ function record_population(pop::Population, options::Options)::RecordType
                 "tree" => string_tree(member.tree, options.operators),
                 "loss" => member.loss,
                 "score" => member.score,
-                "complexity" => compute_complexity(member.tree, options),
+                "complexity" => compute_complexity(member, options),
                 "birth" => member.birth,
                 "ref" => member.ref,
                 "parent" => member.parent,

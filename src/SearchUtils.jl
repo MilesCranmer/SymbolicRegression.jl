@@ -114,9 +114,9 @@ function check_for_loss_threshold(
     # Check if all nout are below stopping condition.
     for hof in hallOfFame
         stop_conditions = [
-            exists && options.early_stop_condition(
-                member.loss, compute_complexity(member.tree, options)
-            ) for (exists, member) in zip(hof.exists, hof.members)
+            exists &&
+            options.early_stop_condition(member.loss, compute_complexity(member, options))
+            for (exists, member) in zip(hof.exists, hof.members)
         ]
         if any(stop_conditions)
             # This means some expressions hit the stop condition.
