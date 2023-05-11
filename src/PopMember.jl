@@ -120,7 +120,7 @@ function copy_pop_member(
     complexity = copy(getfield(p, :complexity))
     ref = copy(p.ref)
     parent = copy(p.parent)
-    return PopMember{T,L}(tree, score, loss, complexity, birth, ref, parent)
+    return PopMember{T,L}(tree, score, loss, birth, complexity, ref, parent)
 end
 
 function copy_pop_member_reset_birth(
