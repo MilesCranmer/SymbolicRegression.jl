@@ -2,6 +2,7 @@ module OptionsModule
 
 using Optim: Optim
 using Dates: Dates
+using StatsBase: StatsBase
 import DynamicExpressions: OperatorEnum, Node, string_tree
 import Distributed: nworkers
 import LossFunctions: L2DistLoss
@@ -343,7 +344,7 @@ function Options(;
     annealing=false,
     batching=false,
     batch_size=50,
-    mutation_weights::Union{MutationWeights,AbstractVector}=MutationWeights(),
+    mutation_weights::Union{MutationWeights,AbstractVector,NamedTuple}=MutationWeights(),
     crossover_probability=0.066f0,
     warmup_maxsize_by=0.0f0,
     use_frequency=true,
@@ -596,6 +597,18 @@ function Options(;
         npopulations = nworkers()
     end
 
+    if define_helper_functions
+        # We call here so that mapped operators, like ^
+        # are correctly overloaded, rather than overloading
+        # operators like "safe_pow", etc.
+        OperatorEnum(;
+            binary_operators=binary_operators,
+            unary_operators=unary_operators,
+            enable_autodiff=false,  # Not needed; we just want the constructors
+            define_helper_functions=true,
+        )
+    end
+
     binary_operators = map(binopmap, binary_operators)
     unary_operators = map(unaopmap, unary_operators)
 
@@ -638,13 +651,36 @@ function Options(;
         end
     end
 
-    options = Options{eltype(complexity_mapping)}(
+    ## Create tournament weights:6
+    tournament_selection_weights =
+        let n = tournament_selection_n, p = tournament_selection_p
+            k = collect(0:(n - 1))
+            prob_each = p * ((1 - p) .^ k)
+
+            StatsBase.Weights(prob_each, sum(prob_each))
+        end
+
+    # Create mutation weights:
+    set_mutation_weights = if typeof(mutation_weights) <: NamedTuple
+        MutationWeights(; mutation_weights...)
+    else
+        mutation_weights
+    end
+
+    options = Options{
+        eltype(complexity_mapping),
+        typeof(optimizer_options),
+        typeof(elementwise_loss),
+        typeof(loss_function),
+        typeof(tournament_selection_weights),
+    }(
         operators,
         bin_constraints,
         una_constraints,
         complexity_mapping,
         tournament_selection_n,
         tournament_selection_p,
+        tournament_selection_weights,
         parsimony,
         alpha,
         maxsize,
@@ -661,7 +697,7 @@ function Options(;
         annealing,
         batching,
         batch_size,
-        mutation_weights,
+        set_mutation_weights,
         crossover_probability,
         warmup_maxsize_by,
         use_frequency,

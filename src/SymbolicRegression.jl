@@ -557,7 +557,7 @@ function _EquationSearch(
         hallOfFame::Vector{HallOfFame{T,L}}
         for (hof, dataset) in zip(hallOfFame, datasets)
             for member in hof.members[hof.exists]
-                score, result_loss = score_func(dataset, member.tree, options)
+                score, result_loss = score_func(dataset, member, options)
                 member.score = score
                 member.loss = result_loss
             end
@@ -579,7 +579,7 @@ function _EquationSearch(
                 saved_pop::Population{T,L}
                 ## Update losses:
                 for member in saved_pop.members
-                    score, result_loss = score_func(datasets[j], member.tree, options)
+                    score, result_loss = score_func(datasets[j], member, options)
                     member.score = score
                     member.loss = result_loss
                 end
@@ -654,7 +654,7 @@ function _EquationSearch(
                 if options.batching
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
                         score, result_loss = score_func(
-                            dataset, tmp_best_seen.members[i_member].tree, options
+                            dataset, tmp_best_seen.members[i_member], options
                         )
                         tmp_best_seen.members[i_member].score = score
                         tmp_best_seen.members[i_member].loss = result_loss
@@ -680,7 +680,9 @@ function _EquationSearch(
     end
 
     last_print_time = time()
-    num_equations = 0.0
+    last_speed_recording_time = time()
+    num_evals_last = sum(sum, num_evals)
+    num_evals_since_last = sum(sum, num_evals) - num_evals_last
     print_every_n_seconds = 5
     equation_speed = Float32[]
 
@@ -762,7 +764,7 @@ function _EquationSearch(
                 Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists]))
             )
                 part_of_cur_pop = i_member <= length(cur_pop.members)
-                size = compute_complexity(member.tree, options)
+                size = compute_complexity(member, options)
 
                 if part_of_cur_pop
                     update_frequencies!(all_running_search_statistics[j]; size=size)
@@ -796,7 +798,7 @@ function _EquationSearch(
                         for member in dominating
                             println(
                                 io,
-                                "$(compute_complexity(member.tree, options)),$(member.loss),\"" *
+                                "$(compute_complexity(member, options)),$(member.loss),\"" *
                                 "$(string_tree(member.tree, options.operators, varMap=dataset.varMap))\"",
                             )
                         end
@@ -861,7 +863,7 @@ function _EquationSearch(
                     for i_member in 1:(options.maxsize + MAX_DEGREE)
                         if tmp_best_seen.exists[i_member]
                             score, result_loss = score_func(
-                                dataset, tmp_best_seen.members[i_member].tree, options
+                                dataset, tmp_best_seen.members[i_member], options
                             )
                             tmp_best_seen.members[i_member].score = score
                             tmp_best_seen.members[i_member].loss = result_loss
@@ -890,17 +892,16 @@ function _EquationSearch(
                         )
                 end
             end
-            num_equations += options.ncycles_per_iteration * options.npop / 10.0
-
             stop_work_monitor!(resource_monitor)
             move_window!(all_running_search_statistics[j])
             if options.progress && nout == 1
                 head_node_occupation = estimate_work_fraction(resource_monitor)
                 update_progress_bar!(
-                    progress_bar;
-                    hall_of_fame=only(hallOfFame),
-                    dataset=only(datasets),
+                    progress_bar,
+                    only(hallOfFame),
+                    only(datasets),
                     options,
+                    equation_speed,
                     head_node_occupation,
                     parallelism,
                 )
@@ -909,18 +910,31 @@ function _EquationSearch(
         sleep(1e-6)
 
         ################################################################
-        ## Printing code
-        elapsed = time() - last_print_time
-        #Update if time has passed, and some new equations generated.
-        if elapsed > print_every_n_seconds && num_equations > 0.0
-            # Dominating pareto curve - must be better than all simpler equations
-            current_speed = num_equations / elapsed
-            average_over_m_measurements = 10 #for print_every...=5, this gives 50 second running average
+        ## Search statistics
+        elapsed_since_speed_recording = time() - last_speed_recording_time
+        if elapsed_since_speed_recording > 1.0
+            num_evals_since_last, num_evals_last = let s = sum(sum, num_evals)
+                s - num_evals_last, s
+            end
+            current_speed = num_evals_since_last / elapsed_since_speed_recording
             push!(equation_speed, current_speed)
+            average_over_m_measurements = 20 # 20 second running average
             if length(equation_speed) > average_over_m_measurements
                 deleteat!(equation_speed, 1)
             end
-            if (options.verbosity > 0) || (options.progress && nout > 1)
+            last_speed_recording_time = time()
+        end
+        ################################################################
+
+        ################################################################
+        ## Printing code
+        elapsed = time() - last_print_time
+        # Update if time has passed
+        if elapsed > print_every_n_seconds
+            if ((options.verbosity > 0) || (options.progress && nout > 1)) &&
+                length(equation_speed) > 0
+
+                # Dominating pareto curve - must be better than all simpler equations
                 head_node_occupation = estimate_work_fraction(resource_monitor)
                 print_search_state(
                     hallOfFame,
@@ -935,7 +949,6 @@ function _EquationSearch(
                 )
             end
             last_print_time = time()
-            num_equations = 0.0
         end
         ################################################################
 

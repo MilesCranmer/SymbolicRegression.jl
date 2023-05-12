@@ -124,7 +124,7 @@ We can also print out the full pareto frontier like so:
 println("Complexity\tMSE\tEquation")
 
 for member in dominating
-    complexity = compute_complexity(member.tree, options)
+    complexity = compute_complexity(member, options)
     loss = member.loss
     string = string_tree(member.tree, options)
 

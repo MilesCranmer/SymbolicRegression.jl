@@ -15,7 +15,7 @@ tree = Node(1, Node(; val=1.0), Node(; feature=2) * 3.2)
 @test !(hash(tree) in [hash(p.tree) for p in population1.members])
 
 SymbolicRegression.MigrationModule.migrate!(
-    [PopMember(tree, 0.0, Inf)] => population1, options; frac=0.5
+    [PopMember(tree, 0.0, Inf, options)] => population1, options; frac=0.5
 )
 
 # Now we see that the tree is in the population:

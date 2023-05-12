@@ -22,7 +22,7 @@ eqn = node_to_symbolic(dominating[end].tree, options)
 println("Complexity\tMSE\tEquation")
 
 for member in dominating
-    complexity = compute_complexity(member.tree, options)
+    complexity = compute_complexity(member, options)
     loss = member.loss
     string = string_tree(member.tree, options)
 
