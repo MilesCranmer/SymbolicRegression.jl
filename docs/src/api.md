@@ -1,9 +1,9 @@
 # API
 
-## EquationSearch
+## equation_search
 
 ```@docs
-EquationSearch(X::AbstractMatrix{T}, y::AbstractMatrix{T};
+equation_search(X::AbstractMatrix{T}, y::AbstractMatrix{T};
         niterations::Int=10,
         weights::Union{AbstractVector{T}, Nothing}=nothing,
         varMap::Union{Array{String, 1}, Nothing}=nothing,

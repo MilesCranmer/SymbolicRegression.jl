@@ -51,7 +51,7 @@ function create_search_benchmark()
         # TODO: Add determinism for other parallelisms
         function f()
             for (options, X, y) in zip(all_options[parallelism], all_X, all_y)
-                EquationSearch(X, y; options, parallelism, niterations)
+                equation_search(X, y; options, parallelism, niterations)
             end
         end
         f() # Warmup

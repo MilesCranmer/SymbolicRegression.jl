@@ -6,3 +6,4 @@ using Base: @deprecate
 @deprecate calculate_pareto_frontier(dataset, hallOfFame, options) calculate_pareto_frontier(
     hallOfFame
 )
+@deprecate EquationSearch equation_search

@@ -31,7 +31,7 @@ y = X[1, :] .+ X[2, :]
 # The best tree should be 0.5 * (x1 + x2), since the custom loss function
 # multiplies the tree by 2.0.
 
-hall_of_fame = EquationSearch(
+hall_of_fame = equation_search(
     X, y; niterations=100, options=options, parallelism=:multiprocessing, numprocs=1
 )
 dominating = calculate_pareto_frontier(hall_of_fame)

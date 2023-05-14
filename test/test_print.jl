@@ -17,7 +17,7 @@ true_s = "((sin(cos(sin(cos(x1) * x3) * 3.0) * -0.5) + 2.0) * 5.0)"
 
 @test s == true_s
 
-EquationSearch(
+equation_search(
     randn(Float32, 3, 10),
     randn(Float32, 10);
     options=options,
