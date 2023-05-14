@@ -11,7 +11,7 @@ mutable struct SRRegressor{OPT<:Options}
     options::OPT
     niterations::Int
     warm_start::Bool
-    hall_of_fame::Union{Nothing,Vector{HallOfFame{T,L} where {T,L}}}
+    hall_of_fame::Union{Nothing,Vector{H} where H<:HallOfFame}
     state::Union{Nothing,StateType}
 end
 function SRRegressor(args...; kwargs...)
@@ -34,6 +34,7 @@ function SRRegressor(args...; kwargs...)
     )
 end
 
+# TODO: Also allow passing a `Dataset` object.
 function fit!(
     m::SRRegressor,
     X::AbstractMatrix,
