@@ -262,36 +262,108 @@ end
 #   - extra_sympy_mappings
 #   - extra_torch_mappings
 #   - extra_jax_mappings
+const OPTION_MAPPING = Dict([
+    :binary_operators => "Binary operators",
+    :unary_operators => "Unary operators",
+    :constraints => "Size constraints for each operator",
+    :batching => "Use mini-batches",
+    :batch_size => "Batch size",
+    :elementwise_loss => "Elementwise loss function",
+    :loss_function => "Full loss function (if any)",
+    :npopulations => "Number of populations",
+    :npop => "Size of each population",
+    :ncycles_per_iteration => "Cycles per iteration",
+    :tournament_selection_n => "Expressions per tournament",
+    :tournament_selection_p => "p(tournament winner=best expression)",
+    :topn => "Migration candidates per population",
+    :complexity_of_operators => "Complexity of each operator",
+    :complexity_of_constants => "Complexity of constants",
+    :complexity_of_variables => "Complexity of variables",
+    :alpha => "Annealing acceptance probability",
+    :maxsize => "Max size of equations",
+    :maxdepth => "Max depth of equations",
+    :parsimony => "Parsimony factor",
+    :use_frequency => "Use adaptive parsimony",
+    :use_frequency_in_tournament => "Use adaptive parsimony in tournament",
+    :adaptive_parsimony_scaling => "Adaptive parsimony scaling factor",
+    :fast_cycle => "Thread over subsamples",
+    :turbo => "Use LoopVectorization.@turbo",
+    :migration => "Migrate equations",
+    :hof_migration => "Migrate hall of fame equations",
+    :fraction_replaced => "p(replaced) during migration",
+    :fraction_replaced_hof => "p(replaced) during hof migration",
+    :should_simplify => "Simplify equations",
+    :should_optimize_constants => "Optimize constants",
+    :optimizer_nrestarts => "Number of restarts for constant optimization",
+    :optimizer_algorithm => "Constant optimization algorithm",
+    :optimizer_options => "Options for constant optimization",
+    :output_file => "File to store equations",
+    :perturbation_factor => "Constant mutation perturbation factor",
+    :probability_negate_constant => "Probability of negating constant in mutation",
+    :mutation_weights => "Mutation probabilities",
+    :crossover_probability => "Crossover probability",
+    :annealing => "Use simulated annealing",
+    :warmup_maxsize_by => "Increase max size until fraction:",
+    :verbosity => "Print debugging statements",
+    :save_to_file => "Save equations to file during search",
+    :bin_constraints => "Size constraints for binary operators",
+    :una_constraints => "Size constraints for unary operators",
+    :seed => "Random seed",
+    :progress => "Use progress bar output",
+    :early_stop_condition => "Early stopping condition",
+    :timeout_in_seconds => "Timeout in seconds",
+    :max_evals => "Maximum number of expression evaluations",
+    :skip_mutation_failures => "Skip over failed mutations",
+    :enable_autodiff => "Enable automatic differentiation functionality",
+    :nested_constraints => "Nested operator constraints",
+    :deterministic => "Use deterministic birth time counter",
+])
 function __print(io::IO, opt::String)
-    print(io, opt, ":")
+    return print(io, opt, ":")
 end
 function __print(io::IO, opt::Symbol, options::Options)
-    s = let option_mapping = Dict([
-            :unary_operators => "Unary operators",
-            :binary_operators => "Binary operators",
-            :maxsize => "Max size",
-            :maxdepth => "Max depth",
-            :niterations => "Search iterations",
-            :ncycles_per_iteration => "Cycles per iteration",
-            :npopulations => "Populations",
-            :npop => "Size of each population",
-            :elementwise_loss => "Elementwise loss",
-            :loss_function => "Full loss function (if any)",
-        ])
-        option_mapping[opt]
-    end
-
+    s = OPTION_MAPPING[opt]
     l = if opt in (:unary_operators, :binary_operators)
         field = opt == :unary_operators ? :unaops : :binops
         out = join((s, ": [", join(getfield(options.operators, field), ", "), "]"), "")
         print(io, out)
+        length(out)
+    elseif startswith(string(opt), "complexity")
+        local out
+        if opt == :complexity_of_operators
+            # options.complexity_mapping.binop_complexities (2-tuple) and options.complexity_mapping.unop_complexities (scalar)
+            op_list = [
+                string(options.operators.binops[i]) * "=>" * string(c) for
+                (i, c) in enumerate(options.complexity_mapping.binop_complexities)
+            ]
+            op_list = vcat(
+                op_list,
+                [
+                    string(options.operators.unaops[i]) * "=>" * string(c) for
+                    (i, c) in enumerate(options.complexity_mapping.unaop_complexities)
+                ],
+            )
+            out = s * ": [" * join(op_list, ", ") * "]"
+        elseif opt == :complexity_of_constants
+            out = join(
+                (s, ": [", string(options.complexity_mapping.constant_complexity), "]"),
+                "",
+            )
+        elseif opt == :complexity_of_variables
+            out = join(
+                (s, ": [", string(options.complexity_mapping.variable_complexity), "]"),
+                "",
+            )
+        end
+        print(io, out)
+
         length(out)
     else
         out = join((s, ": ", getfield(options, opt)), "")
         print(io, out)
         length(out)
     end
-    printstyled(" "^max(50 - l, 0), "# ", opt, color=:light_black)
+    return printstyled(" "^max(50 - l, 2), "# ", opt; color=:light_black)
 end
 function _print(io::IO, ind::Int, order::Symbol, args...)
     if ind > 0
@@ -302,7 +374,7 @@ function _print(io::IO, ind::Int, order::Symbol, args...)
         print(io, order == :mid ? "├" : "└", "─"^2 * " ")
     end
     __print(io, args...)
-    println(io)
+    return println(io)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", options::Options)
@@ -329,6 +401,37 @@ function Base.show(io::IO, ::MIME"text/plain", options::Options)
                     _print(io, ind, :mid, opt, options)
                 end
                 _print(io, ind, :last, :loss_function, options)
+            end
+            _print(io, ind, :mid, "Selection")
+            let ind = ind + 4
+                for opt in (:tournament_selection_n,)
+                    _print(io, ind, :mid, opt, options)
+                end
+                _print(io, ind, :last, :tournament_selection_p, options)
+            end
+            _print(io, ind, :mid, "Migration")
+            let ind = ind + 4
+                for opt in
+                    (:migration, :hof_migration, :fraction_replaced, :fraction_replaced_hof)
+                    _print(io, ind, :mid, opt, options)
+                end
+                _print(io, ind, :last, :topn, options)
+            end
+            _print(io, ind, :mid, "Complexities")
+            let ind = ind + 4
+                for opt in (
+                    :parsimony,
+                    :complexity_of_operators,
+                    :complexity_of_constants,
+                    :complexity_of_variables,
+                    :warmup_maxsize_by,
+                    :use_frequency,
+                    :use_frequency_in_tournament,
+                    :adaptive_parsimony_scaling,
+                )
+                    _print(io, ind, :mid, opt, options)
+                end
+                _print(io, ind, :last, :should_simplify, options)
             end
         end
     end
