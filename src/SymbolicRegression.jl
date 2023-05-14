@@ -8,12 +8,15 @@ export Population,
     Dataset,
     MutationWeights,
     Node,
+    SRRegressor,
     LOSS_TYPE,
     DATA_TYPE,
 
     #Functions:
     equation_search,
     EquationSearch,  # deprecated
+    fit,
+    fit!,
     s_r_cycle,
     calculate_pareto_frontier,
     count_nodes,
@@ -999,6 +1002,9 @@ function _equation_search(
         end
     end
 end
+
+include("SRRegressor.jl")
+import .SRRegressorModule: SRRegressor, fit, fit!
 
 macro ignore(args...) end
 # Hack to get static analysis to work from within tests:
