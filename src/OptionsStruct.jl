@@ -167,37 +167,172 @@ struct Options{
     define_helper_functions::Bool
 end
 
-function Base.print(io::IO, options::Options)
-    return print(
-        io,
-        """Options(
-    # Operators:
-        binops=$(options.operators.binops), unaops=$(options.operators.unaops),
-    # Loss:
-        loss=$(options.elementwise_loss),
-    # Complexity Management:
-        maxsize=$(options.maxsize), maxdepth=$(options.maxdepth), bin_constraints=$(options.bin_constraints), una_constraints=$(options.una_constraints), use_frequency=$(options.use_frequency), use_frequency_in_tournament=$(options.use_frequency_in_tournament), parsimony=$(options.parsimony), warmup_maxsize_by=$(options.warmup_maxsize_by), 
-    # Search Size:
-        npopulations=$(options.npopulations), ncycles_per_iteration=$(options.ncycles_per_iteration), npop=$(options.npop), 
-    # Migration:
-        migration=$(options.migration), hof_migration=$(options.hof_migration), fraction_replaced=$(options.fraction_replaced), fraction_replaced_hof=$(options.fraction_replaced_hof),
-    # Tournaments:
-        prob_pick_first=$(options.prob_pick_first), tournament_selection_n=$(options.tournament_selection_n), topn=$(options.topn), 
-    # Constant tuning:
-        perturbation_factor=$(options.perturbation_factor), probability_negate_constant=$(options.probability_negate_constant), should_optimize_constants=$(options.should_optimize_constants), optimizer_algorithm=$(options.optimizer_algorithm), optimizer_probability=$(options.optimizer_probability), optimizer_nrestarts=$(options.optimizer_nrestarts), optimizer_iterations=$(options.optimizer_options.iterations),
-    # Mutations:
-        mutation_weights=$(options.mutation_weights), crossover_probability=$(options.crossover_probability), skip_mutation_failures=$(options.skip_mutation_failures)
-    # Annealing:
-        annealing=$(options.annealing), alpha=$(options.alpha), 
-    # Speed Tweaks:
-        batching=$(options.batching), batch_size=$(options.batch_size), fast_cycle=$(options.fast_cycle), 
-    # Logistics:
-        output_file=$(options.output_file), verbosity=$(options.verbosity), seed=$(options.seed), progress=$(options.progress),
-    # Early Exit:
-        early_stop_condition=$(options.early_stop_condition), timeout_in_seconds=$(options.timeout_in_seconds),
-)""",
-    )
+# - The Algorithm:
+#   - Creating the Search Space:
+#     - binary_operators
+#     - unary_operators
+#     - maxsize
+#     - maxdepth
+#   - Setting the Search Size:
+#     - niterations
+#     - populations
+#     - population_size
+#     - ncyclesperiteration
+#   - The Objective:
+#     - loss
+#     - full_objective
+#     - model_selection
+#   - Working with Complexities:
+#     - parsimony
+#     - constraints
+#     - nested_constraints
+#     - complexity_of_operators
+#     - complexity_of_constants
+#     - complexity_of_variables
+#     - warmup_maxsize_by
+#     - use_frequency
+#     - use_frequency_in_tournament
+#     - adaptive_parsimony_scaling
+#     - should_simplify
+#   - Mutations:
+#     - weight_add_node
+#     - weight_insert_node
+#     - weight_delete_node
+#     - weight_do_nothing
+#     - weight_mutate_constant
+#     - weight_mutate_operator
+#     - weight_randomize
+#     - weight_simplify
+#     - weight_optimize
+#     - crossover_probability
+#     - annealing
+#     - alpha
+#     - perturbation_factor
+#     - skip_mutation_failures
+#   - Tournament Selection:
+#     - tournament_selection_n
+#     - tournament_selection_p
+#   - Constant Optimization:
+#     - optimizer_algorithm
+#     - optimizer_nrestarts
+#     - optimize_probability
+#     - optimizer_iterations
+#     - should_optimize_constants
+#   - Migration between Populations:
+#     - fraction_replaced
+#     - fraction_replaced_hof
+#     - migration
+#     - hof_migration
+#     - topn
+# - Data Preprocessing:
+#   - denoise
+#   - select_k_features
+# - Stopping Criteria:
+#   - max_evals
+#   - timeout_in_seconds
+#   - early_stop_condition
+# - Performance and Parallelization:
+#   - procs
+#   - multithreading
+#   - cluster_manager
+#   - batching
+#   - batch_size
+#   - precision
+#   - fast_cycle
+#   - turbo
+#   - enable_autodiff
+#   - random_state
+#   - deterministic
+#   - warm_start
+# - Monitoring:
+#   - verbosity
+#   - update_verbosity
+#   - progress
+# - Environment:
+#   - temp_equation_file
+#   - tempdir
+#   - delete_tempfiles
+#   - julia_project
+#   - update
+#   - julia_kwargs
+# - Exporting the Results:
+#   - equation_file
+#   - output_jax_format
+#   - output_torch_format
+#   - extra_sympy_mappings
+#   - extra_torch_mappings
+#   - extra_jax_mappings
+function __print(io::IO, opt::String)
+    print(io, opt, ":")
 end
-Base.show(io::IO, options::Options) = Base.print(io, options)
+function __print(io::IO, opt::Symbol, options::Options)
+    s = let option_mapping = Dict([
+            :unary_operators => "Unary operators",
+            :binary_operators => "Binary operators",
+            :maxsize => "Max size",
+            :maxdepth => "Max depth",
+            :niterations => "Search iterations",
+            :ncycles_per_iteration => "Cycles per iteration",
+            :npopulations => "Populations",
+            :npop => "Size of each population",
+            :elementwise_loss => "Elementwise loss",
+            :loss_function => "Full loss function (if any)",
+        ])
+        option_mapping[opt]
+    end
+
+    l = if opt in (:unary_operators, :binary_operators)
+        field = opt == :unary_operators ? :unaops : :binops
+        out = join((s, ": [", join(getfield(options.operators, field), ", "), "]"), "")
+        print(io, out)
+        length(out)
+    else
+        out = join((s, ": ", getfield(options, opt)), "")
+        print(io, out)
+        length(out)
+    end
+    printstyled(" "^max(50 - l, 0), "# ", opt, color=:light_black)
+end
+function _print(io::IO, ind::Int, order::Symbol, args...)
+    if ind > 0
+        while ind > 4
+            print(io, "│" * " "^3)
+            ind -= 4
+        end
+        print(io, order == :mid ? "├" : "└", "─"^2 * " ")
+    end
+    __print(io, args...)
+    println(io)
+end
+
+function Base.show(io::IO, ::MIME"text/plain", options::Options)
+    let ind = 0
+        _print(io, ind, :first, "Options")
+        let ind = ind + 4
+            _print(io, ind, :mid, "Search Space")
+            let ind = ind + 4
+                for opt in (:unary_operators, :binary_operators, :maxsize)
+                    _print(io, ind, :mid, opt, options)
+                end
+                _print(io, ind, :last, :maxdepth, options)
+            end
+            _print(io, ind, :mid, "Search Size")
+            let ind = ind + 4
+                for opt in (:ncycles_per_iteration, :npopulations)
+                    _print(io, ind, :mid, opt, options)
+                end
+                _print(io, ind, :last, :npop, options)
+            end
+            _print(io, ind, :mid, "The Objective")
+            let ind = ind + 4
+                for opt in (:elementwise_loss,)
+                    _print(io, ind, :mid, opt, options)
+                end
+                _print(io, ind, :last, :loss_function, options)
+            end
+        end
+    end
+    return nothing
+end
 
 end
