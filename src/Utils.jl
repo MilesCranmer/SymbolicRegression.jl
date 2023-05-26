@@ -108,4 +108,7 @@ function poisson_sample(λ::T) where {T}
     return k - 1
 end
 
+@inline get_base_type(::Type{Complex{BT}}) where {BT} = BT
+@inline get_base_type(::Type{BT}) where {BT} = BT
+
 end
