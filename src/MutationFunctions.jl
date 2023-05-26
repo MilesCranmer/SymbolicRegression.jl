@@ -3,6 +3,7 @@ module MutationFunctionsModule
 import DynamicExpressions:
     Node, copy_node, set_node!, count_nodes, has_constants, has_operators
 import ..CoreModule: Options, DATA_TYPE
+import ..UtilsModule: _rand, _randn
 
 # Return a random node from the tree
 function random_node(tree::Node{T})::Node{T} where {T}
@@ -62,7 +63,7 @@ function mutate_constant(
 
     bottom = 1//10
     maxChange = options.perturbation_factor * temperature + 1 + bottom
-    factor = T(maxChange^rand(T))
+    factor = T(maxChange^_rand(T))
     makeConstBigger = rand() > 0.5
 
     if makeConstBigger
@@ -150,7 +151,7 @@ end
 
 function make_random_leaf(nfeatures::Int, ::Type{T})::Node{T} where {T<:DATA_TYPE}
     if rand() > 0.5
-        return Node(; val=randn(T))
+        return Node(; val=_randn(T))
     else
         return Node(T; feature=rand(1:nfeatures))
     end

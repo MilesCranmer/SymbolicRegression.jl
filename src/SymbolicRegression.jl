@@ -67,6 +67,7 @@ using Pkg: Pkg
 import TOML: parsefile
 import Random: seed!, shuffle!
 using Reexport
+import Measurements: Measurement
 import DynamicExpressions:
     Node,
     copy_node,
@@ -174,7 +175,8 @@ import .CoreModule:
     erf,
     erfc,
     atanh_clip
-import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge
+import .UtilsModule:
+    debug, debug_inline, is_anonymous_function, recursive_merge, get_base_type
 import .ComplexityModule: compute_complexity
 import .CheckConstraintsModule: check_constraints
 import .AdaptiveParsimonyModule:

@@ -3,6 +3,9 @@ module UtilsModule
 
 import Printf: @printf
 import StaticArrays: MVector
+import Measurements: Measurement, ±
+# TODO: Use extensions instead.
+import Random: AbstractRNG
 
 function debug(verbosity, string...)
     if verbosity > 0
@@ -108,7 +111,16 @@ function poisson_sample(λ::T) where {T}
     return k - 1
 end
 
+"""Random number generator for creating new constants."""
+@inline _randn(::Type{BigFloat}, args...) = BigFloat.(randn(Float64, args...))
+@inline _randn(::Type{Measurement{T}}, args...) where {T} = randn(T, args...) .± zero(T)
+@inline _randn(::Type{T}, args...) where {T} = randn(T, args...)
+@inline _rand(::Type{BigFloat}, args...) = BigFloat.(rand(Float64, args...))
+@inline _rand(::Type{Measurement{T}}, args...) where {T} = rand(T, args...) .± zero(T)
+@inline _rand(::Type{T}, args...) where {T} = rand(T, args...)
+
 @inline get_base_type(::Type{Complex{BT}}) where {BT} = BT
+@inline get_base_type(::Type{Measurement{BT}}) where {BT} = BT
 @inline get_base_type(::Type{BT}) where {BT} = BT
 
 end
