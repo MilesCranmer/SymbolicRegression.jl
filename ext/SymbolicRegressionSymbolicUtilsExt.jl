@@ -2,11 +2,11 @@ module SymbolicRegressionSymbolicUtilsExt
 
 import Base: convert
 if isdefined(Base, :get_extension)
-    using SymbolicUtils
+    using SymbolicUtils: Symbolic
     import SymbolicRegression: node_to_symbolic, symbolic_to_node
     import SymbolicRegression: Node, Options
 else
-    using ..SymbolicUtils
+    using ..SymbolicUtils: Symbolic
     import ..SymbolicRegression: node_to_symbolic, symbolic_to_node
     import ..SymbolicRegression: Node, Options
 end
@@ -25,20 +25,16 @@ end
 
 Convert a SymbolicUtils.jl expression to SymbolicRegression.jl's `Node` type.
 """
-function symbolic_to_node(
-    eqn::T, options::Options; kws...
-) where {T<:SymbolicUtils.Symbolic}
+function symbolic_to_node(eqn::Symbolic, options::Options; kws...)
     return symbolic_to_node(eqn, options.operators; kws...)
 end
 
-function convert(s::typeof(SymbolicUtils.Symbolic), tree::Node, options::Options; kws...)
-    return convert(s, tree, options.operators; kws...)
+function convert(::Type{Symbolic}, tree::Node, options::Options; kws...)
+    return convert(Symbolic, tree, options.operators; kws...)
 end
 
-function convert(
-    n::typeof(Node), x::Union{Number,SymbolicUtils.Symbolic}, options::Options; kws...
-)
-    return convert(n, x, options.operators; kws...)
+function convert(::Type{Node}, x::Union{Number,Symbolic}, options::Options; kws...)
+    return convert(Node, x, options.operators; kws...)
 end
 
 end
