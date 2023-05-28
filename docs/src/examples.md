@@ -86,6 +86,8 @@ For now, let's consider the expressions for output 1.
 We can see the SymbolicUtils version with:
 
 ```julia
+using SymbolicUtils
+
 eqn = node_to_symbolic(bests[1], options)
 ```
 

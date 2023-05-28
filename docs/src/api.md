@@ -56,6 +56,8 @@ node_to_symbolic(tree::Node, options::Options;
                      index_functions::Bool=false)
 ```
 
+Note that use of this function requires `SymbolicUtils.jl` to be installed and loaded.
+
 ## Pareto frontier
 
 ```@docs
