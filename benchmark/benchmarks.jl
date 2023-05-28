@@ -8,7 +8,7 @@ using SymbolicRegression.CheckConstraintsModule: check_constraints
 function create_search_benchmark()
     suite = BenchmarkGroup()
 
-    n = 1000
+    n = 100
     T = Float32
 
     extra_kws = NamedTuple()
@@ -31,7 +31,6 @@ function create_search_benchmark()
         extra_kws...,
     )
     seeds = 1:3
-    niterations = 30
     # We create an equation that cannot be found exactly, so the search
     # is more realistic.
     eqn(x) = Float32(cos(2.13 * x[1]) + 0.5 * x[2] * abs(x[3])^0.9 - 0.3 * abs(x[4])^1.5)
@@ -47,7 +46,8 @@ function create_search_benchmark()
         (X, seed) in zip(all_X, seeds)
     ]
 
-    for parallelism in (:serial, :multithreading)
+    for parallelism in (:serial, :multithreading), niterations in (1, 30)
+        niterations == 1 && parallelism == :serial && continue
         # TODO: Add determinism for other parallelisms
         function f()
             for (options, X, y) in zip(all_options[parallelism], all_X, all_y)
@@ -60,7 +60,8 @@ function create_search_benchmark()
         else
             10
         end
-        suite[parallelism] = @benchmarkable(
+        !haskey(suite, parallelism) && (suite[parallelism] = BenchmarkGroup())
+        suite[parallelism][niterations] = @benchmarkable(
             ($f)(), evals = 1, samples = samples, seconds = 2_000
         )
     end
