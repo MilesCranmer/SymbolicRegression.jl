@@ -37,7 +37,7 @@ will be normalized to sum to 1.0 after initialization.
   Note that this is different from `optimizer_probability`, which is
   performed at the end of an iteration for all individuals.
 """
-@generated function MutationWeights(;
+function MutationWeights(;
     mutate_constant=0.048,
     mutate_operator=0.47,
     add_node=0.79,
@@ -48,21 +48,37 @@ will be normalized to sum to 1.0 after initialization.
     do_nothing=0.21,
     optimize=0.0,
 )
-    return :(MutationWeights($(mutations...)))
+    return MutationWeights(
+        mutate_constant,
+        mutate_operator,
+        add_node,
+        insert_node,
+        delete_node,
+        simplify,
+        randomize,
+        do_nothing,
+        optimize,
+    )
 end
 
 """Convert MutationWeights to a vector."""
-@generated function Base.convert(
-    ::Type{Vector}, weightings::MutationWeights
-)::Vector{Float64}
-    fields = [:(weightings.$(mut)) for mut in mutations]
-    return :([$(fields...)])
+function Base.convert(::Type{Vector}, w::MutationWeights)::Vector{Float64}
+    return [
+        w.mutate_constant,
+        w.mutate_operator,
+        w.add_node,
+        w.insert_node,
+        w.delete_node,
+        w.simplify,
+        w.randomize,
+        w.do_nothing,
+        w.optimize,
+    ]
 end
 
 """Copy MutationWeights."""
-@generated function Base.copy(weightings::MutationWeights)
-    fields = [:(weightings.$(mut)) for mut in mutations]
-    return :(MutationWeights($(fields...)))
+function Base.copy(weightings::MutationWeights)
+    return MutationWeights(convert(Vector, weightings)...)
 end
 
 """Sample a mutation, given the weightings."""

@@ -63,6 +63,7 @@ export Population,
 using Distributed
 using JSON3: JSON3
 import Printf: @printf, @sprintf
+import Requires: @init, @require
 using Pkg: Pkg
 import TOML: parsefile
 import Random: seed!, shuffle!
@@ -998,6 +999,12 @@ function _EquationSearch(
         end
     end
 end
+
+#! format: off
+if !isdefined(Base, :get_extension)
+    @init @require SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b" include("../ext/SymbolicRegressionSymbolicUtilsExt.jl")
+end
+#! format: on
 
 macro ignore(args...) end
 # Hack to get static analysis to work from within tests:

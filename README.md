@@ -117,6 +117,8 @@ We can convert the best equation
 to [SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl)
 with the following function:
 ```julia
+using SymbolicUtils
+
 eqn = node_to_symbolic(dominating[end].tree, options)
 println(simplify(eqn*5 + 3))
 ```
