@@ -7,7 +7,7 @@ import Printf: @printf, @sprintf
 using Distributed
 import StatsBase: mean
 
-import ..CoreModule: Dataset, Options
+import ..CoreModule: Dataset, Options, FEATURE_DIM
 import ..ComplexityModule: compute_complexity
 import ..PopulationModule: Population, copy_population
 import ..HallOfFameModule:
@@ -313,5 +313,33 @@ function load_saved_population(
 end
 
 load_saved_population(::Nothing; kws...) = nothing
+
+function make_datasets(X, y, weights, varMap, loss_type)
+    nout = size(y, FEATURE_DIM)
+    first_dataset = Dataset(
+        X,
+        y[1, :];
+        weights=(weights === nothing ? weights : weights[1, :]),
+        varMap=varMap,
+        loss_type=loss_type,
+    )
+    datasets = Vector{typeof(first_dataset)}()
+    push!(datasets, first_dataset)
+    if nout > 1
+        for j in 2:nout
+            push!(
+                datasets,
+                Dataset(
+                    X,
+                    y[j, :];
+                    weights=(weights === nothing ? weights : weights[j, :]),
+                    varMap=varMap,
+                    loss_type=loss_type,
+                )::typeof(first_dataset),
+            )
+        end
+    end
+    return datasets
+end
 
 end

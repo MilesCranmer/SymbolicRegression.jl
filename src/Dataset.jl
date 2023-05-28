@@ -56,7 +56,7 @@ end
 
 Construct a dataset to pass between internal functions.
 """
-function Dataset(
+@inline function Dataset(
     X::AbstractMatrix{T},
     y::Union{AbstractVector{T},Nothing}=nothing;
     weights::Union{AbstractVector{T},Nothing}=nothing,

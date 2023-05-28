@@ -215,7 +215,8 @@ import .SearchUtilsModule:
     init_dummy_pops,
     StateType,
     load_saved_hall_of_fame,
-    load_saved_population
+    load_saved_population,
+    make_datasets
 
 include("Configure.jl")
 include("Deprecates.jl")
@@ -311,7 +312,6 @@ function EquationSearch(
             "Choose one of :multithreaded, :multiprocessing, or :serial.",
         )
     end
-    nout = size(y, FEATURE_DIM)
     if weights !== nothing
         weights = reshape(weights, size(y))
     end
@@ -319,15 +319,7 @@ function EquationSearch(
         get_base_type(::Type{Complex{BT}}) where {BT} = BT
         loss_type = get_base_type(T)
     end
-    datasets = [
-        Dataset(
-            X,
-            y[j, :];
-            weights=(weights === nothing ? weights : weights[j, :]),
-            varMap=varMap,
-            loss_type=loss_type,
-        ) for j in 1:nout
-    ]
+    datasets = make_datasets(X, y, weights, varMap, loss_type)
 
     return EquationSearch(
         datasets;
