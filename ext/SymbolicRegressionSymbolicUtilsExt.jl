@@ -21,7 +21,7 @@ function node_to_symbolic(tree::Node, options::Options; kws...)
 end
 
 """
-    node_to_symbolic(eqn::T, options::Options; kws...) where {T}
+    symbolic_to_node(eqn::Symbolic, options::Options; kws...)
 
 Convert a SymbolicUtils.jl expression to SymbolicRegression.jl's `Node` type.
 """
