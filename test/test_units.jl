@@ -4,26 +4,47 @@ using SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraint
 import Unitful: @u_str, Units, uparse
 using Test
 
-options = Options()
 X = randn(3, 100)
 y = @. cos(X[3, :] * 2.1 - 0.2) + 0.5
 
+custom_op(x, y) = x + y
+
+options = Options(; binary_operators=[+, -, *, /, custom_op], unary_operators=[cos])
+@extend_operators options
+
+(x1, x2, x3) = (i -> Node(Float64; feature=i)).(1:3)
+
 @test get_units([u"m", "1", "kg"]) == (u"m", u"1", u"kg")
-
 dataset = Dataset(X, y; variable_units=[u"m", u"1", u"kg"])
-options = Options(; unary_operators=[cos, sin])
-(x1, x2, x3) = (i -> Node(; feature=i)).(1:3)
-
 @test dataset.variable_units == (u"m", u"1", u"kg")
 
 violates(tree) = violates_dimensional_constraints(tree, dataset, options)
 
-# 3.2 * u"m" - u"1"
+good_expressions = [
+    Node(; val=3.2),
+    3.2 * x1 / x1,
+    3.2 * x1 - x2 * x1,
+    3.2 * x1 - x2,
+    cos(3.2 * x1),
+    cos(0.9 * x1 - 0.5 * x2),
+    x1 - 0.5 * (x3 * (cos(0.9 * x1 - 0.5 * x2) - 1.2)),
+    custom_op(x1, x1),
+    custom_op(x1, 2.1 * x3),
+    custom_op(x1, 2.1 * x3) + x1,
+    custom_op(x1, 2.1 * x3) + 0.9 * x1,
+]
+bad_expressions = [
+    x1 - x3,
+    cos(x1),
+    cos(x1 - 0.5 * x2),
+    x1 - (x3 * (cos(0.9 * x1 - 0.5 * x2) - 1.2)),
+    custom_op(x1, x3),
+    custom_op(x1, 2.1 * x3) + x3,
+]
 
-@test !violates(Node(; val=3.2))
-@test !violates(3.2 * x1 / x1)
-@test violates(3.2 * x1 - x2)
-@test !violates(3.2 * x1 - x2 * x1)
-@test !violates(cos(3.2 * x1))
-
-# tree = 3.2 * x1 + cos(x2) #cos(x1 * 2.3 - 0.5) * 1.9 + 0.2 * x2
+for expr in good_expressions
+    @eval @test !violates($expr)
+end
+for expr in bad_expressions
+    @eval @test violates($expr)
+end

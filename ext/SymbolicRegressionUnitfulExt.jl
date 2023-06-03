@@ -30,20 +30,18 @@ Base.@kwdef struct WildcardDimensionWrapper{T}
     wildcard::Bool = false
     violates::Bool = false
 end
-for op in (:*, :/)
-    b_op = :(Base.$(op))
-    @eval function $(b_op)(
+for op in (:(Base.:*), :(Base.:/))
+    @eval function $(op)(
         l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
     ) where {T}
         l.violates && return l
         return WildcardDimensionWrapper{T}(;
-            val=$(b_op)(l.val, r.val), wildcard=l.wildcard || r.wildcard
+            val=$(op)(l.val, r.val), wildcard=l.wildcard || r.wildcard
         )
     end
 end
-for op in (:+, :-)
-    b_op = :(Base.$(op))
-    @eval function $(b_op)(
+for op in (:(Base.:+), :(Base.:-))
+    @eval function $(op)(
         l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
     ) where {T}
         (l.violates || r.violates) && return l
@@ -51,19 +49,19 @@ for op in (:+, :-)
         dim_r = dimension(r.val)
         if dim_l == dim_r
             return WildcardDimensionWrapper{T}(;
-                val=$(b_op)(l.val, r.val), wildcard=l.wildcard && r.wildcard
+                val=$(op)(l.val, r.val), wildcard=l.wildcard && r.wildcard
             )
         elseif l.wildcard && r.wildcard
             return WildcardDimensionWrapper{T}(;
-                val=$(b_op)(ustrip(l.val), ustrip(r.val)), wildcard=l.wildcard && r.wildcard
+                val=$(op)(ustrip(l.val), ustrip(r.val)), wildcard=l.wildcard && r.wildcard
             )
-        elseif l.wildcard && !r.wildcard
+        elseif l.wildcard
             return WildcardDimensionWrapper{T}(;
-                val=$(b_op)(ustrip(l.val) * unit(r.val), r.val), wildcard=false
+                val=$(op)(ustrip(l.val) * unit(r.val), r.val), wildcard=false
             )
-        elseif !l.wildcard && r.wildcard
+        elseif r.wildcard
             return WildcardDimensionWrapper{T}(;
-                val=$(b_op)(l.val, ustrip(r.val) * unit(l.val)), wildcard=false
+                val=$(op)(l.val, ustrip(r.val) * unit(l.val)), wildcard=false
             )
         else
             return WildcardDimensionWrapper{T}(; violates=true)
@@ -88,7 +86,9 @@ end
     if t.constant
         return WildcardDimensionWrapper{T}(; val=t.val::T, wildcard=true)
     else
-        return WildcardDimensionWrapper{T}(; val=x[t.feature], wildcard=false)
+        return WildcardDimensionWrapper{T}(;
+            val=x[t.feature] * variable_units[t.feature], wildcard=false
+        )
     end
 end
 function deg1_eval(op::F, l::WildcardDimensionWrapper{T}) where {F,T}
