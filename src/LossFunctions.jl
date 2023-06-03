@@ -69,16 +69,20 @@ function _eval_loss(
         return L(Inf)
     end
 
-    if dataset.weighted
-        return _weighted_loss(
+    loss_val = if dataset.weighted
+        _weighted_loss(
             prediction,
             dataset.y::AY,
             dataset.weights::AbstractVector{T},
             options.elementwise_loss,
         )
     else
-        return _loss(prediction, dataset.y::AY, options.elementwise_loss)
+        _loss(prediction, dataset.y::AY, options.elementwise_loss)
     end
+    if CheckConstraintsModule.violates_dimensional_constraints(tree, dataset, options)
+        loss_val += L(options.dimensional_constraint_penalty)
+    end
+    return loss_val
 end
 
 # This evaluates function F:
@@ -92,12 +96,13 @@ end
 function eval_loss(
     tree::Node{T}, dataset::Dataset{T,L}, options::Options
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    if options.loss_function === nothing
+    loss_val = if options.loss_function === nothing
         return _eval_loss(tree, dataset, options)
     else
         f = options.loss_function::Function
         return evaluator(f, tree, dataset, options)
     end
+    return loss_val
 end
 
 # Just so we can pass either PopMember or Node here:
@@ -127,9 +132,6 @@ function loss_to_score(
     size = complexity === nothing ? compute_complexity(member, options) : complexity
     parsimony_term = size * options.parsimony
     loss_val += L(parsimony_term)
-    if CheckConstraintsModule.violates_dimensional_constraints(tree, dataset, options)
-        loss_val += L(options.dimensional_constraint_penalty)
-    end
 
     return loss_val
 end
