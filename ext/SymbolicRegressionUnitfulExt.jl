@@ -24,12 +24,13 @@ macro catch_method_error(ex)
     end
 end
 
-const QuantityOrFloat{T} = Union{Quantity{T},T}
 Base.@kwdef struct WildcardDimensionWrapper{T}
-    val::QuantityOrFloat{T} = one(T)
+    val::Quantity{T} = one(Quantity{T})
     wildcard::Bool = false
     violates::Bool = false
 end
+same_dimensions(x::Quantity, y::Quantity) = dimension(x) == dimension(y)
+has_no_dims(x::Quantity) = dimension(x) == NoDims
 for op in (:(Base.:*), :(Base.:/))
     @eval function $(op)(
         l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
@@ -45,9 +46,7 @@ for op in (:(Base.:+), :(Base.:-))
         l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
     ) where {T}
         (l.violates || r.violates) && return l
-        dim_l = dimension(l.val)
-        dim_r = dimension(r.val)
-        if dim_l == dim_r
+        if same_dimensions(l.val, r.val)
             return WildcardDimensionWrapper{T}(;
                 val=$(op)(l.val, r.val), wildcard=l.wildcard && r.wildcard
             )
@@ -70,9 +69,7 @@ for op in (:(Base.:+), :(Base.:-))
 end
 function Base.:^(l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}) where {T}
     (l.violates || r.violates) && return l
-    dim_l = dimension(l.val)
-    dim_r = dimension(r.val)
-    if dim_r == NoDims
+    if has_no_dims(r.val)
         return WildcardDimensionWrapper{T}(; val=l.val^r.val, wildcard=l.wildcard)
     elseif r.wildcard
         return WildcardDimensionWrapper{T}(; val=l.val^ustrip(r.val), wildcard=l.wildcard)
@@ -93,22 +90,24 @@ end
 end
 function deg1_eval(op::F, l::WildcardDimensionWrapper{T}) where {F,T}
     l.violates && return l
-    @catch_method_error return op(l)
+    @catch_method_error return op(l)::WildcardDimensionWrapper{T}
     l.wildcard &&
-        return WildcardDimensionWrapper{T}(; val=op(ustrip(l.val)), wildcard=false)
+        return WildcardDimensionWrapper{T}(; val=op(ustrip(l.val))::T, wildcard=false)
     return WildcardDimensionWrapper{T}(; violates=true)
 end
 function deg2_eval(
     op::F, l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
 ) where {F,T}
     (l.violates || r.violates) && return l
-    @catch_method_error return op(l, r)
-    l.wildcard && @catch_method_error return op(ustrip(l.val), r)
-    r.wildcard && @catch_method_error return op(l, ustrip(r.val))
+    @catch_method_error return op(l, r)::WildcardDimensionWrapper{T}
+    l.wildcard &&
+        @catch_method_error return op(ustrip(l.val), r)::WildcardDimensionWrapper{T}
+    r.wildcard &&
+        @catch_method_error return op(l, ustrip(r.val))::WildcardDimensionWrapper{T}
     l.wildcard &&
         r.wildcard &&
         return WildcardDimensionWrapper{T}(;
-            val=op(ustrip(l.val), ustrip(r.val)), wildcard=false
+            val=op(ustrip(l.val), ustrip(r.val))::T, wildcard=false
         )
     return WildcardDimensionWrapper{T}(; violates=true)
 end
@@ -124,10 +123,10 @@ function violates_dimensional_constraints(
     dimensional_result = tree_mapreduce(
         t -> leaf_eval(x, variable_units, t),
         identity,
-        (args...) -> degn_eval(operators, args...),
+        (t, args...) -> degn_eval(operators, t, args...),
         tree,
         WildcardDimensionWrapper{T},
-    )
+    )::WildcardDimensionWrapper{T}
     # TODO: Should also check against output type.
     return dimensional_result.violates
 end
