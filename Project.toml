@@ -24,9 +24,11 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [weakdeps]
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [extensions]
 SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
+SymbolicRegressionUnitfulExt = "Unitful"
 
 [compat]
 DynamicExpressions = "0.9"
@@ -50,7 +52,8 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Test", "SafeTestsets", "ForwardDiff", "LinearAlgebra", "SymbolicUtils", "Zygote"]
+test = ["Test", "SafeTestsets", "ForwardDiff", "LinearAlgebra", "SymbolicUtils", "Unitful", "Zygote"]

@@ -140,4 +140,6 @@ function poisson_sample(λ::T) where {T}
     return k - 1
 end
 
+get_units(x) = x
+
 end

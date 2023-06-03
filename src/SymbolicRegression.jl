@@ -176,7 +176,7 @@ import .CoreModule:
     erf,
     erfc,
     atanh_clip
-import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge
+import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge, get_units
 import .ComplexityModule: compute_complexity
 import .CheckConstraintsModule: check_constraints
 import .AdaptiveParsimonyModule:
@@ -1007,6 +1007,7 @@ end
 #! format: off
 if !isdefined(Base, :get_extension)
     @init @require SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b" include("../ext/SymbolicRegressionSymbolicUtilsExt.jl")
+    @init @require Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d" include("../ext/SymbolicRegressionUnitfulExt.jl")
 end
 #! format: on
 
