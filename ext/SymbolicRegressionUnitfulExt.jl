@@ -1,12 +1,14 @@
 module SymbolicRegressionUnitfulExt
 
 if isdefined(Base, :get_extension)
-    import Unitful: Units, uparse, @u_str, dimension, ustrip, Quantity, DimensionError
+    import Unitful: Units, uparse, dimension, ustrip, Quantity, DimensionError
+    import Unitful: @u_str, @dimension
     using SymbolicRegression: Node, Options, tree_mapreduce
     import SymbolicRegression.CoreModule.DatasetModule: get_units
     import SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
 else
-    import ..Unitful: Units, uparse, @u_str, dimension, ustrip, Quantity, DimensionError
+    import ..Unitful: Units, uparse, dimension, ustrip, Quantity, DimensionError
+    import ..Unitful: @u_str, @dimension
     using ..SymbolicRegression: Node, Options, tree_mapreduce
     import ..SymbolicRegression.CoreModule.DatasetModule: get_units
     import ..SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
@@ -22,6 +24,10 @@ macro catch_method_error(ex)
     end
 end
 
+# Make a new dimension for "wildcards":
+# @dimension 𝐖 "𝐖" _Wildcard
+# @unit W "W" Wildcard
+
 struct DimensionalOutput
     val::Number  # Should hold any quantity
     wildcard::Bool
@@ -34,14 +40,33 @@ unit_eltype(::Type{Quantity{T}}) where {T} = T
 unit_eltype(::Type{T}) where {T} = T
 
 """See if the function does not affect dimension full input"""
-function dimension_equivariant_deg1(op::F, ::Type{T}) where {F,T}
-    example_input = one(T) * u"m/s"
-    return dimension(op(example_input)) == dimension(example_input)
+function wildcard_propagate(op::F, ::Type{T}, l_wild::Bool) where {F,T}
+    !l_wild && return false
+    # Anything that allows units should preserve the wildcard
+    @catch_method_error begin
+        op(T(1) * u"m")
+        return true
+    end
+    return false
 end
-function dimension_equivariant_deg2(op::F, ::Type{T}) where {F,T}
-    example_input = one(T) * u"m/s"
-    example_input2 = example_input * 2
-    return dimension(op(example_input, example_input2)) == dimension(example_input)
+function wildcard_propagate(op::F, ::Type{T}, l_wild::Bool, r_wild::Bool) where {F,T}
+    !l_wild && !r_wild && return false
+    # Examples where the units are controlled by a constant (=wildcard):
+    # (c*x + d*y) = also wildcard.
+    # c*x + y = not wildcard.
+    # c * x = wildcard
+    # c / x = wildcard
+    # x / c = wildcard
+    # x * c = wildcard
+    # x + c = not wildcard
+    # x - c = not wildcard
+    # c^x = not wildcard
+
+    if l_wild && r_wild
+        # Method should allow units on either side:
+        # TODO: Finish
+    end
+    return false
 end
 
 function leaf_eval(x::AbstractArray{T}, variable_units, t::Node{T}) where {T}
@@ -55,13 +80,12 @@ function deg1_eval(op::F, l::DimensionalOutput) where {F}
     l.violates && return l
 
     @catch_method_error return DimensionalOutput(
-        op(l.val), l.wildcard && dimension_equivariant_deg1(op, unit_eltype(l.val)), false
+        op(l.val), wildcard_propagate(op, unit_eltype(l.val), l.wildcard), false
     )
     if l.wildcard
         return DimensionalOutput(op(ustrip(l.val)), false, false)
-    else
-        return DimensionalOutput(l.val, false, true)
     end
+    return DimensionalOutput(l.val, false, true)
 end
 function deg2_eval(op::F, l::DimensionalOutput, r::DimensionalOutput) where {F}
     l.violates && return l
@@ -69,29 +93,17 @@ function deg2_eval(op::F, l::DimensionalOutput, r::DimensionalOutput) where {F}
 
     @catch_method_error return DimensionalOutput(
         op(l.val, r.val),
-        l.wildcard && dimension_equivariant_deg2(op, unit_eltype(l.val)),
+        wildcard_propagate(op, unit_eltype(l.val), l.wildcard, r.wildcard),
         false,
     )
-    l.wildcard && @catch_method_error return DimensionalOutput(
-        op(ustrip(l.val), r.val),
-        r.wildcard && dimension_equivariant_deg2(op, unit_eltype(l.val)),
-        false,
-    )
-    r.wildcard && @catch_method_error return DimensionalOutput(
-        op(l.val, ustrip(r.val)),
-        l.wildcard && dimension_equivariant_deg2(op, unit_eltype(l.val)),
-        false,
-    )
-    l.wildcard &&
-        r.wildcard &&
-        @catch_method_error return DimensionalOutput(
-            op(ustrip(l.val), ustrip(r.val)), false, false
-        )
-    return DimensionalOutput(op(ustrip(l.val), ustrip(r.val)), false, true)
+
+    return DimensionalOutput(l.val, false, true)
 end
 
-@inline degn_eval(operators, t, l) = deg1_eval(operators.unaops[t.op], l)
-@inline degn_eval(operators, t, l, r) = deg2_eval(operators.binops[t.op], l, r)
+@inline degn_eval(operators, t, l) = (@show t; @show deg1_eval(operators.unaops[t.op], l))
+@inline function degn_eval(operators, t, l, r)
+    return (@show t; @show deg2_eval(operators.binops[t.op], l, r))
+end
 
 function violates_dimensional_constraints(
     tree::Node, variable_units, x::AbstractVector, options::Options
