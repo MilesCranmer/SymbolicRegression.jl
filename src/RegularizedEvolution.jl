@@ -109,7 +109,7 @@ function reg_evol_cycle(
                         if !haskey(record["mutations"], "$(member.ref)")
                             record["mutations"]["$(member.ref)"] = RecordType(
                                 "events" => Vector{RecordType}(),
-                                "tree" => string_tree(member.tree, options.operators),
+                                "tree" => string_tree(member.tree, options),
                                 "score" => member.score,
                                 "loss" => member.loss,
                                 "parent" => member.parent,
