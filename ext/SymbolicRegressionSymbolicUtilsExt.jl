@@ -8,7 +8,7 @@ if isdefined(Base, :get_extension)
 else
     using ..SymbolicUtils: Symbolic
     import ..SymbolicRegression: node_to_symbolic, symbolic_to_node
-    import ..SymbolicRegression: Node, Options
+    import ..SymbolicRegression: Node, Options, deprecate_varmap
 end
 
 """
