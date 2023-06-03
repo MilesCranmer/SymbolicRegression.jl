@@ -10,6 +10,9 @@ import DynamicExpressions:
     differentiable_eval_tree_array
 using DynamicExpressions: DynamicExpressions
 import ..CoreModule: Options
+#! format: off
+import ..deprecate_varmap
+#! format: on
 
 """
     eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
@@ -123,11 +126,14 @@ Convert an equation to a string.
 
 - `tree::Node`: The equation to convert to a string.
 - `options::Options`: The options holding the definition of operators.
-- `varMap::Union{Array{String, 1}, Nothing}=nothing`: what variables
+- `variable_names::Union{Array{String, 1}, Nothing}=nothing`: what variables
     to print for each feature.
 """
-function string_tree(tree::Node, options::Options; kws...)
-    return string_tree(tree, options.operators; kws...)
+@inline function string_tree(
+    tree::Node, options::Options; variable_names=nothing, varMap=nothing, kws...
+)
+    variable_names = deprecate_varmap(variable_names, varMap, :string_tree)
+    return string_tree(tree, options.operators; varMap=variable_names, kws...)
 end
 
 """
@@ -139,7 +145,7 @@ Print an equation
 
 - `tree::Node`: The equation to convert to a string.
 - `options::Options`: The options holding the definition of operators.
-- `varMap::Union{Array{String, 1}, Nothing}=nothing`: what variables
+- `variable_names::Union{Array{String, 1}, Nothing}=nothing`: what variables
     to print for each feature.
 """
 function print_tree(tree::Node, options::Options; kws...)
