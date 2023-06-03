@@ -7,6 +7,11 @@ import ..PopMemberModule: PopMember, copy_pop_member
 import ..LossFunctionsModule: eval_loss
 using Printf: @sprintf
 
+#! format: off
+# Need to overload deprecated version:
+import ..calculate_pareto_frontier
+#! format: on
+
 """
 HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE}
 

@@ -10,6 +10,9 @@ import DynamicExpressions:
     differentiable_eval_tree_array
 using DynamicExpressions: DynamicExpressions
 import ..CoreModule: Options
+#! format: off
+import ..deprecate_varmap
+#! format: on
 
 """
     eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
@@ -129,11 +132,7 @@ Convert an equation to a string.
 @inline function string_tree(
     tree::Node, options::Options; variable_names=nothing, varMap=nothing, kws...
 )
-    if varMap !== nothing
-        Base.depwarn("`varMap` is deprecated; use `variable_names` instead", :string_tree)
-        @assert variable_names === nothing "Cannot pass both `varMap` and `variable_names`"
-        variable_names = varMap
-    end
+    variable_names = deprecate_varmap(variable_names, varMap, :string_tree)
     return string_tree(tree, options.operators; varMap=variable_names, kws...)
 end
 

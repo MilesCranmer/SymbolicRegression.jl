@@ -1,6 +1,9 @@
 module DatasetModule
 
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
+#! format: off
+import ...deprecate_varmap
+#! format: on
 
 """
     Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -69,11 +72,7 @@ function Dataset(
     Base.require_one_based_indexing(X)
     y !== nothing && Base.require_one_based_indexing(y)
     # Deprecation warning:
-    if varMap !== nothing
-        Base.depwarn("`varMap` is deprecated; use `variable_names` instead", :Dataset)
-        @assert variable_names === nothing "Cannot pass both `varMap` and `variable_names`"
-        variable_names = varMap
-    end
+    variable_names = deprecate_varmap(variable_names, varMap, :Dataset)
 
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)

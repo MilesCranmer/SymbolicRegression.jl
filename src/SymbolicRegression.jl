@@ -121,6 +121,7 @@ const PACKAGE_VERSION = let
     VersionNumber(project["version"])
 end
 
+include("Deprecates.jl")
 include("Core.jl")
 include("InterfaceDynamicExpressions.jl")
 include("Recorder.jl")
@@ -218,7 +219,6 @@ import .SearchUtilsModule:
     load_saved_population
 
 include("Configure.jl")
-include("Deprecates.jl")
 
 """
     EquationSearch(X, y[; kws...])
@@ -321,6 +321,7 @@ function EquationSearch(
         @assert variable_names === nothing "Cannot pass both `varMap` and `variable_names`"
         variable_names = varMap
     end
+    variable_names = deprecate_varmap(variable_names, varMap, :EquationSearch)
 
     nout = size(y, FEATURE_DIM)
     if weights !== nothing

@@ -4,7 +4,7 @@ import Base: convert
 if isdefined(Base, :get_extension)
     using SymbolicUtils: Symbolic
     import SymbolicRegression: node_to_symbolic, symbolic_to_node
-    import SymbolicRegression: Node, Options
+    import SymbolicRegression: Node, Options, deprecate_varmap
 else
     using ..SymbolicUtils: Symbolic
     import ..SymbolicRegression: node_to_symbolic, symbolic_to_node
@@ -19,14 +19,8 @@ Convert an expression to SymbolicUtils.jl form.
 function node_to_symbolic(
     tree::Node, options::Options; variable_names=nothing, varMap=nothing, kws...
 )
-    if varMap !== nothing
-        Base.depwarn(
-            "`varMap` is deprecated; use `variable_names` instead", :node_to_symbolic
-        )
-        @assert variable_names === nothing "Cannot pass both `varMap` and `variable_names`"
-        variable_names = varMap
-    end
-    return node_to_symbolic(tree, options.operators; kws...)
+    variable_names = deprecate_varmap(variable_names, varMap, :node_to_symbolic)
+    return node_to_symbolic(tree, options.operators; varMap=variable_names, kws...)
 end
 
 """
@@ -35,15 +29,9 @@ end
 Convert a SymbolicUtils.jl expression to SymbolicRegression.jl's `Node` type.
 """
 function symbolic_to_node(
-    eqn::Symbolic, options::Options; variables_names=nothing, varMap=nothing, kws...
+    eqn::Symbolic, options::Options; variable_names=nothing, varMap=nothing, kws...
 )
-    if varMap !== nothing
-        Base.depwarn(
-            "`varMap` is deprecated; use `variable_names` instead", :node_to_symbolic
-        )
-        @assert variable_names === nothing "Cannot pass both `varMap` and `variable_names`"
-        variable_names = varMap
-    end
+    variable_names = deprecate_varmap(variable_names, varMap, :symbolic_to_node)
     return symbolic_to_node(eqn, options.operators; varMap=variable_names, kws...)
 end
 
