@@ -82,9 +82,7 @@ function deg1_eval(op::F, l::DimensionalOutput) where {F}
     @catch_method_error return DimensionalOutput(
         op(l.val), wildcard_propagate(op, unit_eltype(l.val), l.wildcard), false
     )
-    if l.wildcard
-        return DimensionalOutput(op(ustrip(l.val)), false, false)
-    end
+    l.wildcard && return DimensionalOutput(op(ustrip(l.val)), false, false)
     return DimensionalOutput(l.val, false, true)
 end
 function deg2_eval(op::F, l::DimensionalOutput, r::DimensionalOutput) where {F}
@@ -96,13 +94,28 @@ function deg2_eval(op::F, l::DimensionalOutput, r::DimensionalOutput) where {F}
         wildcard_propagate(op, unit_eltype(l.val), l.wildcard, r.wildcard),
         false,
     )
+    # TODO: Instead of ustrip(), it should be a mapping
+    #       to the required units.
+    l.wildcard && @catch_method_error return DimensionalOutput(
+        op(ustrip(l.val), r.val),
+        wildcard_propagate(op, unit_eltype(l.val), false, r.wildcard),
+        false,
+    )
+    r.wildcard && @catch_method_error return DimensionalOutput(
+        op(l.val, ustrip(r.val)),
+        wildcard_propagate(op, unit_eltype(l.val), l.wildcard, false),
+        false,
+    )
+    l.wildcard &&
+        r.wildcard &&
+        return DimensionalOutput(op(ustrip(l.val), ustrip(r.val)), false, false)
 
     return DimensionalOutput(l.val, false, true)
 end
 
-@inline degn_eval(operators, t, l) = (@show t; @show deg1_eval(operators.unaops[t.op], l))
+@inline degn_eval(operators, t, l) = deg1_eval(operators.unaops[t.op], l)
 @inline function degn_eval(operators, t, l, r)
-    return (@show t; @show deg2_eval(operators.binops[t.op], l, r))
+    return deg2_eval(operators.binops[t.op], l, r)
 end
 
 function violates_dimensional_constraints(
