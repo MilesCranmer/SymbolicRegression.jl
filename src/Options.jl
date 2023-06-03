@@ -237,6 +237,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     this is set equal to the maxsize.
 - `parsimony`: A multiplicative factor for how much complexity is
     punished.
+- `dimensional_constraint_penalty`: An additive factor if the dimensional
+    constraint is violated.
 - `use_frequency`: Whether to use a parsimony that adapts to the
     relative proportion of equations at each complexity; this will
     ensure that there are a balanced number of equations considered
@@ -329,6 +331,7 @@ function Options(;
     complexity_of_constants::Union{Nothing,Real}=nothing,
     complexity_of_variables::Union{Nothing,Real}=nothing,
     parsimony=0.0032f0,
+    dimensional_constraint_penalty=1000.0f0,
     alpha=0.100000f0,
     maxsize=20,
     maxdepth=nothing,
@@ -682,6 +685,7 @@ function Options(;
         tournament_selection_p,
         tournament_selection_weights,
         parsimony,
+        dimensional_constraint_penalty,
         alpha,
         maxsize,
         maxdepth,

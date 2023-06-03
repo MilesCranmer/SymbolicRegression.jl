@@ -86,7 +86,8 @@ import DynamicExpressions:
     node_to_symbolic,
     symbolic_to_node,
     combine_operators,
-    simplify_tree
+    simplify_tree,
+    tree_mapreduce
 @reexport import LossFunctions:
     MarginLoss,
     DistanceLoss,
@@ -176,7 +177,7 @@ import .CoreModule:
     erf,
     erfc,
     atanh_clip
-import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge, get_units
+import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge
 import .ComplexityModule: compute_complexity
 import .CheckConstraintsModule: check_constraints
 import .AdaptiveParsimonyModule:
@@ -240,10 +241,12 @@ which is useful for debugging and profiling.
     More iterations will improve the results.
 - `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
     weight the loss for each `y` by this value (same shape as `y`).
-- `variable_names::Union{Vector{String}, Nothing}=nothing`: The names
-    of each feature in `X`, which will be used during printing of equations.
 - `options::Options=Options()`: The options for the search, such as
     which operators to use, evolution hyperparameters, etc.
+- `variable_names::Union{Vector{String}, Nothing}=nothing`: The names
+    of each feature in `X`, which will be used during printing of equations.
+- `variable_units::Union{Vector, Nothing}=nothing`: The units of each feature
+    in `X`, to be used for dimensional constraints.
 - `parallelism=:multithreading`: What parallelism mode to use.
     The options are `:multithreading`, `:multiprocessing`, and `:serial`.
     By default, multithreading will be used. Multithreading uses less memory,
@@ -294,8 +297,9 @@ function EquationSearch(
     y::AbstractMatrix{T};
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
-    variable_names::Union{Vector{String},Nothing}=nothing,
     options::Options=Options(),
+    variable_names::Union{AbstractVector{String},Nothing}=nothing,
+    variable_units::Union{AbstractVector,Nothing}=nothing,
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
@@ -329,6 +333,7 @@ function EquationSearch(
             y[j, :];
             weights=(weights === nothing ? weights : weights[j, :]),
             variable_names=variable_names,
+            variable_units=variable_units,
             loss_type=loss_type,
         ) for j in 1:nout
     ]

@@ -130,6 +130,7 @@ struct Options{
     tournament_selection_p::Float32
     tournament_selection_weights::W
     parsimony::Float32
+    dimensional_constraint_penalty::Float32
     alpha::Float32
     maxsize::Int
     maxdepth::Int

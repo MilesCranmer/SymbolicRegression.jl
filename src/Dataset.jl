@@ -5,6 +5,13 @@ import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 import ...deprecate_varmap
 #! format: on
 
+get_units(::Nothing) = nothing
+function get_units(x::Any)
+    return error(
+        "`get_units` got input of type $(typeof(x)). Please load the `Unitful` package to use `get_units(::Union{Nothing,AbstractArray{<:AbstractString}})`.",
+    )
+end
+
 """
     Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
 
@@ -28,6 +35,7 @@ import ...deprecate_varmap
     `update_baseline_loss!`.
 - `variable_names::Array{String,1}`: The names of the features,
     with shape `(nfeatures,)`.
+- `variable_units`: The units of the features, with shape `(nfeatures,)`.
 """
 mutable struct Dataset{
     T<:DATA_TYPE,
@@ -36,6 +44,7 @@ mutable struct Dataset{
     AY<:Union{AbstractVector{T},Nothing},
     AW<:Union{AbstractVector{T},Nothing},
     NT<:NamedTuple,
+    AU<:Union{Tuple,Nothing},
 }
     X::AX
     y::AY
@@ -48,6 +57,7 @@ mutable struct Dataset{
     use_baseline::Bool
     baseline_loss::L
     variable_names::Array{String,1}
+    variable_units::AU
 end
 
 """
@@ -64,6 +74,7 @@ function Dataset(
     y::Union{AbstractVector{T},Nothing}=nothing;
     weights::Union{AbstractVector{T},Nothing}=nothing,
     variable_names::Union{Array{String,1},Nothing}=nothing,
+    variable_units::Union{AbstractVector,Nothing}=nothing,
     extra::NamedTuple=NamedTuple(),
     loss_type::Type=Nothing,
     # Deprecated:
@@ -92,8 +103,17 @@ function Dataset(
     loss_type = (loss_type == Nothing) ? T : loss_type
     use_baseline = true
     baseline = one(loss_type)
+    _variable_units = get_units(variable_units)
 
-    return Dataset{T,loss_type,typeof(X),typeof(y),typeof(weights),typeof(extra)}(
+    return Dataset{
+        T,
+        loss_type,
+        typeof(X),
+        typeof(y),
+        typeof(weights),
+        typeof(extra),
+        typeof(_variable_units),
+    }(
         X,
         y,
         n,
@@ -105,6 +125,7 @@ function Dataset(
         use_baseline,
         baseline,
         variable_names,
+        _variable_units,
     )
 end
 
