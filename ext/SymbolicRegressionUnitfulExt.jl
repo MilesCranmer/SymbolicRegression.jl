@@ -2,13 +2,13 @@ module SymbolicRegressionUnitfulExt
 
 if isdefined(Base, :get_extension)
     import Unitful: Units, uparse, dimension, ustrip, Quantity, DimensionError
-    import Unitful: @u_str, @dimension
+    import Unitful: @u_str, @dimension, NoDims, unit
     using SymbolicRegression: Node, Options, tree_mapreduce
     import SymbolicRegression.CoreModule.DatasetModule: get_units
     import SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
 else
     import ..Unitful: Units, uparse, dimension, ustrip, Quantity, DimensionError
-    import ..Unitful: @u_str, @dimension
+    import ..Unitful: @u_str, @dimension, NoDims, unit
     using ..SymbolicRegression: Node, Options, tree_mapreduce
     import ..SymbolicRegression.CoreModule.DatasetModule: get_units
     import ..SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
@@ -24,103 +24,100 @@ macro catch_method_error(ex)
     end
 end
 
-# Make a new dimension for "wildcards":
-# @dimension 𝐖 "𝐖" _Wildcard
-# @unit W "W" Wildcard
-
-struct DimensionalOutput
-    val::Number  # Should hold any quantity
-    wildcard::Bool
-    violates::Bool
+const QuantityOrFloat{T} = Union{Quantity{T},T}
+Base.@kwdef struct WildcardDimensionWrapper{T}
+    val::QuantityOrFloat{T} = one(T)
+    wildcard::Bool = false
+    violates::Bool = false
 end
-
-_hasmethod(op::F, ::T) where {F,T} = hasmethod(op, Tuple{T})
-_hasmethod(op::F, ::T1, ::T2) where {F,T1,T2} = hasmethod(op, Tuple{T1,T2})
-unit_eltype(::Type{Quantity{T}}) where {T} = T
-unit_eltype(::Type{T}) where {T} = T
-
-"""See if the function does not affect dimension full input"""
-function wildcard_propagate(op::F, ::Type{T}, l_wild::Bool) where {F,T}
-    !l_wild && return false
-    # Anything that allows units should preserve the wildcard
-    @catch_method_error begin
-        op(T(1) * u"m")
-        return true
+for op in (:*, :/)
+    b_op = :(Base.$(op))
+    @eval function $(b_op)(
+        l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
+    ) where {T}
+        l.violates && return l
+        return WildcardDimensionWrapper{T}(;
+            val=$(b_op)(l.val, r.val), wildcard=l.wildcard || r.wildcard
+        )
     end
-    return false
 end
-function wildcard_propagate(op::F, ::Type{T}, l_wild::Bool, r_wild::Bool) where {F,T}
-    !l_wild && !r_wild && return false
-    # Examples where the units are controlled by a constant (=wildcard):
-    # (c*x + d*y) = also wildcard.
-    # c*x + y = not wildcard.
-    # c * x = wildcard
-    # c / x = wildcard
-    # x / c = wildcard
-    # x * c = wildcard
-    # x + c = not wildcard
-    # x - c = not wildcard
-    # c^x = not wildcard
-
-    if l_wild && r_wild
-        # Method should allow units on either side:
-        # TODO: Finish
+for op in (:+, :-)
+    b_op = :(Base.$(op))
+    @eval function $(b_op)(
+        l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
+    ) where {T}
+        (l.violates || r.violates) && return l
+        dim_l = dimension(l.val)
+        dim_r = dimension(r.val)
+        if dim_l == dim_r
+            return WildcardDimensionWrapper{T}(;
+                val=$(b_op)(l.val, r.val), wildcard=l.wildcard && r.wildcard
+            )
+        elseif l.wildcard && r.wildcard
+            return WildcardDimensionWrapper{T}(;
+                val=$(b_op)(ustrip(l.val), ustrip(r.val)), wildcard=l.wildcard && r.wildcard
+            )
+        elseif l.wildcard && !r.wildcard
+            return WildcardDimensionWrapper{T}(;
+                val=$(b_op)(ustrip(l.val) * unit(r.val), r.val), wildcard=false
+            )
+        elseif !l.wildcard && r.wildcard
+            return WildcardDimensionWrapper{T}(;
+                val=$(b_op)(l.val, ustrip(r.val) * unit(l.val)), wildcard=false
+            )
+        else
+            return WildcardDimensionWrapper{T}(; violates=true)
+        end
     end
-    return false
 end
-
-function leaf_eval(x::AbstractArray{T}, variable_units, t::Node{T}) where {T}
-    if t.constant
-        return DimensionalOutput(t.val::T * u"1", true, false)
+function Base.:^(l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}) where {T}
+    (l.violates || r.violates) && return l
+    dim_l = dimension(l.val)
+    dim_r = dimension(r.val)
+    if dim_r == NoDims
+        return WildcardDimensionWrapper{T}(; val=l.val^r.val, wildcard=l.wildcard)
+    elseif r.wildcard
+        return WildcardDimensionWrapper{T}(; val=l.val^ustrip(r.val), wildcard=l.wildcard)
     else
-        return DimensionalOutput(x[t.feature] * variable_units[t.feature], false, false)
+        return WildcardDimensionWrapper{T}(; violates=true)
     end
 end
-function deg1_eval(op::F, l::DimensionalOutput) where {F}
-    l.violates && return l
 
-    @catch_method_error return DimensionalOutput(
-        op(l.val), wildcard_propagate(op, unit_eltype(l.val), l.wildcard), false
-    )
-    l.wildcard && return DimensionalOutput(op(ustrip(l.val)), false, false)
-    return DimensionalOutput(l.val, false, true)
+# Make a new dimension for "wildcards":
+@inline function leaf_eval(x::AbstractVector{T}, variable_units, t::Node{T}) where {T}
+    if t.constant
+        return WildcardDimensionWrapper{T}(; val=t.val::T, wildcard=true)
+    else
+        return WildcardDimensionWrapper{T}(; val=x[t.feature], wildcard=false)
+    end
 end
-function deg2_eval(op::F, l::DimensionalOutput, r::DimensionalOutput) where {F}
+function deg1_eval(op::F, l::WildcardDimensionWrapper{T}) where {F,T}
     l.violates && return l
-    r.violates && return r
-
-    @catch_method_error return DimensionalOutput(
-        op(l.val, r.val),
-        wildcard_propagate(op, unit_eltype(l.val), l.wildcard, r.wildcard),
-        false,
-    )
-    # TODO: Instead of ustrip(), it should be a mapping
-    #       to the required units.
-    l.wildcard && @catch_method_error return DimensionalOutput(
-        op(ustrip(l.val), r.val),
-        wildcard_propagate(op, unit_eltype(l.val), false, r.wildcard),
-        false,
-    )
-    r.wildcard && @catch_method_error return DimensionalOutput(
-        op(l.val, ustrip(r.val)),
-        wildcard_propagate(op, unit_eltype(l.val), l.wildcard, false),
-        false,
-    )
+    @catch_method_error return op(l)
+    l.wildcard &&
+        return WildcardDimensionWrapper{T}(; val=op(ustrip(l.val)), wildcard=false)
+    return WildcardDimensionWrapper{T}(; violates=true)
+end
+function deg2_eval(
+    op::F, l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
+) where {F,T}
+    (l.violates || r.violates) && return l
+    @catch_method_error return op(l, r)
+    l.wildcard && @catch_method_error return op(ustrip(l.val), r)
+    r.wildcard && @catch_method_error return op(l, ustrip(r.val))
     l.wildcard &&
         r.wildcard &&
-        return DimensionalOutput(op(ustrip(l.val), ustrip(r.val)), false, false)
-
-    return DimensionalOutput(l.val, false, true)
+        return WildcardDimensionWrapper{T}(;
+            val=op(ustrip(l.val), ustrip(r.val)), wildcard=false
+        )
+    return WildcardDimensionWrapper{T}(; violates=true)
 end
-
 @inline degn_eval(operators, t, l) = deg1_eval(operators.unaops[t.op], l)
-@inline function degn_eval(operators, t, l, r)
-    return deg2_eval(operators.binops[t.op], l, r)
-end
+@inline degn_eval(operators, t, l, r) = deg2_eval(operators.binops[t.op], l, r)
 
 function violates_dimensional_constraints(
-    tree::Node, variable_units, x::AbstractVector, options::Options
-)
+    tree::Node{T}, variable_units, x::AbstractVector{T}, options::Options
+) where {T}
     operators = options.operators
     # We propagate (quantity, has_constant). If `has_constant`,
     # we are free to change the type.
@@ -129,7 +126,7 @@ function violates_dimensional_constraints(
         identity,
         (args...) -> degn_eval(operators, args...),
         tree,
-        DimensionalOutput,
+        WildcardDimensionWrapper{T},
     )
     # TODO: Should also check against output type.
     return dimensional_result.violates
