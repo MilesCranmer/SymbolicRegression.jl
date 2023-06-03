@@ -16,7 +16,16 @@ end
 
 Convert an expression to SymbolicUtils.jl form. 
 """
-function node_to_symbolic(tree::Node, options::Options; kws...)
+function node_to_symbolic(
+    tree::Node, options::Options; variable_names=nothing, varMap=nothing, kws...
+)
+    if varMap !== nothing
+        Base.depwarn(
+            "`varMap` is deprecated; use `variable_names` instead", :node_to_symbolic
+        )
+        @assert variable_names === nothing "Cannot pass both `varMap` and `variable_names`"
+        variable_names = varMap
+    end
     return node_to_symbolic(tree, options.operators; kws...)
 end
 
@@ -25,8 +34,17 @@ end
 
 Convert a SymbolicUtils.jl expression to SymbolicRegression.jl's `Node` type.
 """
-function symbolic_to_node(eqn::Symbolic, options::Options; kws...)
-    return symbolic_to_node(eqn, options.operators; kws...)
+function symbolic_to_node(
+    eqn::Symbolic, options::Options; variables_names=nothing, varMap=nothing, kws...
+)
+    if varMap !== nothing
+        Base.depwarn(
+            "`varMap` is deprecated; use `variable_names` instead", :node_to_symbolic
+        )
+        @assert variable_names === nothing "Cannot pass both `varMap` and `variable_names`"
+        variable_names = varMap
+    end
+    return symbolic_to_node(eqn, options.operators; varMap=variable_names, kws...)
 end
 
 function convert(::Type{Symbolic}, tree::Node, options::Options; kws...)
