@@ -28,6 +28,26 @@ function display_warning(e, op)
     Warned.x = true
     return nothing
 end
+
+# https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/12
+# Faster way to catch method errors:
+function _safe_call end
+@inline function safe_call(f::F, x::T, default_return::T=one(T)) where {F,T}
+    hasmethod(_safe_call, Tuple{F,T}) && return _safe_call(f, x)::Tuple{T,Bool}
+    output = try
+        (f(x), true)
+    catch e
+        !isa(e, MethodError) && rethrow(e)
+        (default_return, false)
+    end
+    if output[2]
+        @eval _safe_call(f::$F, x::$T) = (f(x), true)
+    else
+        @eval _safe_call(::$F, ::$T) = ($default_return, false)
+    end
+    return output
+end
+
 macro catch_method_error(op, ex)
     quote
         try
