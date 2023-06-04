@@ -24,6 +24,13 @@ macro catch_method_error(ex)
     end
 end
 
+"""
+    WildcardDimensionWrapper{T}
+
+A wrapper for `Quantity{T}` that allows for a wildcard feature, indicating
+there is a free constant whose dimensions are not yet determined.
+Also stores a flag indicating whether an expression is dimensionally consistent.
+"""
 Base.@kwdef struct WildcardDimensionWrapper{T}
     val::Quantity{T} = one(Quantity{T})
     wildcard::Bool = false
@@ -32,6 +39,9 @@ end
 Base.isfinite(x::WildcardDimensionWrapper) = isfinite(x.val)
 same_dimensions(x::Quantity, y::Quantity) = dimension(x) == dimension(y)
 has_no_dims(x::Quantity) = dimension(x) == NoDims
+
+# Overload *, /, +, -, ^ for WildcardDimensionWrapper, as
+# we want wildcards to propagate through these operations.
 for op in (:(Base.:*), :(Base.:/))
     @eval function $(op)(
         l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
@@ -80,8 +90,8 @@ function Base.:^(l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T})
     end
 end
 
-# Make a new dimension for "wildcards":
-@inline function leaf_eval(x::AbstractVector{T}, variable_units, t::Node{T}) where {T}
+# Define dimensionally-aware evaluation routine:
+@inline function deg0_eval(x::AbstractVector{T}, variable_units, t::Node{T}) where {T}
     if t.constant
         return WildcardDimensionWrapper{T}(; val=t.val::T, wildcard=true)
     else
@@ -117,6 +127,7 @@ function deg2_eval(
         )
     return WildcardDimensionWrapper{T}(; violates=true)
 end
+
 @inline degn_eval(operators, t, l) = deg1_eval(operators.unaops[t.op], l)
 @inline degn_eval(operators, t, l, r) = deg2_eval(operators.binops[t.op], l, r)
 
@@ -130,7 +141,7 @@ function violates_dimensional_constraints(
     # We propagate (quantity, has_constant). If `has_constant`,
     # we are free to change the type.
     dimensional_result = tree_mapreduce(
-        t -> leaf_eval(x, variable_units, t),
+        t -> deg0_eval(x, variable_units, t),
         identity,
         (t, args...) -> degn_eval(operators, t, args...),
         tree,
