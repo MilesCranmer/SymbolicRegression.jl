@@ -104,7 +104,8 @@ function deg1_eval(op::F, l::WildcardDimensionWrapper{T}) where {F,T}
     l.violates && return l
     !isfinite(l) && return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 
-    @catch_method_error return op(l)::WildcardDimensionWrapper{T}
+    hasmethod(op, Tuple{WildcardDimensionWrapper{T}}) &&
+        @catch_method_error return op(l)::WildcardDimensionWrapper{T}
     l.wildcard && return WildcardDimensionWrapper{T}(op(ustrip(l.val))::T, false, false)
     return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 end
@@ -115,10 +116,13 @@ function deg2_eval(
     (!isfinite(l) || !isfinite(r)) &&
         return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 
-    @catch_method_error return op(l, r)::WildcardDimensionWrapper{T}
+    hasmethod(op, Tuple{WildcardDimensionWrapper{T},WildcardDimensionWrapper{T}}) &&
+        @catch_method_error return op(l, r)::WildcardDimensionWrapper{T}
     l.wildcard &&
+        hasmethod(op, Tuple{T,WildcardDimensionWrapper{T}}) &&
         @catch_method_error return op(ustrip(l.val), r)::WildcardDimensionWrapper{T}
     r.wildcard &&
+        hasmethod(op, Tuple{WildcardDimensionWrapper{T},T}) &&
         @catch_method_error return op(l, ustrip(r.val))::WildcardDimensionWrapper{T}
     l.wildcard &&
         r.wildcard &&
