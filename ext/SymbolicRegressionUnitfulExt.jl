@@ -55,17 +55,16 @@ function safe_call(f::F, x::T, default=one(T)) where {F,T}
     return output
 end
 
-macro catch_method_error(op, ex)
+macro return_if_good(T, op, inputs...)
+    result = gensym()
     quote
         try
-            $(esc(ex))
+            $(result) = safe_call(splat($(esc(op))), $(esc(inputs)), one($(esc(T))))
+            $(result)[2] && return $(result)[1]
+            false
         catch e
-            !isa(e, Union{MethodError,DimensionError}) && rethrow(e)
-            !Warned.x && lock(WarnedLock) do
-                display_warning(e, $(esc(op)))
-                return nothing
-            end
-            return false
+            !isa(e, DimensionError) && rethrow(e)
+            false
         end
     end
 end
@@ -81,6 +80,9 @@ struct WildcardDimensionWrapper{T}
     val::Quantity{T}
     wildcard::Bool
     violates::Bool
+end
+function Base.one(::Type{WildcardDimensionWrapper{T}}) where {T}
+    return WildcardDimensionWrapper{T}(one(Quantity{T}), false, false)
 end
 Base.isfinite(x::WildcardDimensionWrapper) = isfinite(x.val)
 same_dimensions(x::Quantity, y::Quantity) = dimension(x) == dimension(y)
@@ -146,31 +148,28 @@ end
         )
     end
 end
-function deg1_eval(op::F, l::WildcardDimensionWrapper{T}) where {F,T}
+function deg1_eval(op::F, l::W) where {F,T,W<:WildcardDimensionWrapper{T}}
     l.violates && return l
     !isfinite(l) && return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 
-    hasmethod(op, Tuple{WildcardDimensionWrapper{T}}) &&
-        @catch_method_error op return op(l)::WildcardDimensionWrapper{T}
+    static_hasmethod(op, Tuple{WildcardDimensionWrapper{T}}) && @return_if_good(W, op, l)
     l.wildcard && return WildcardDimensionWrapper{T}(op(ustrip(l.val))::T, false, false)
     return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 end
-function deg2_eval(
-    op::F, l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
-) where {F,T}
+function deg2_eval(op::F, l::W, r::W) where {F,T,W<:WildcardDimensionWrapper{T}}
     l.violates && return l
     r.violates && return r
     (!isfinite(l) || !isfinite(r)) &&
         return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 
-    hasmethod(op, Tuple{WildcardDimensionWrapper{T},WildcardDimensionWrapper{T}}) &&
-        @catch_method_error op return op(l, r)::WildcardDimensionWrapper{T}
+    static_hasmethod(op, Tuple{WildcardDimensionWrapper{T},WildcardDimensionWrapper{T}}) &&
+        @return_if_good(W, op, l, r)
     l.wildcard &&
-        hasmethod(op, Tuple{T,WildcardDimensionWrapper{T}}) &&
-        @catch_method_error op return op(ustrip(l.val), r)::WildcardDimensionWrapper{T}
+        static_hasmethod(op, Tuple{T,WildcardDimensionWrapper{T}}) &&
+        @return_if_good(W, op, ustrip(l.val), r)
     r.wildcard &&
-        hasmethod(op, Tuple{WildcardDimensionWrapper{T},T}) &&
-        @catch_method_error op return op(l, ustrip(r.val))::WildcardDimensionWrapper{T}
+        static_hasmethod(op, Tuple{WildcardDimensionWrapper{T},T}) &&
+        @return_if_good(W, op, l, ustrip(r.val))
     l.wildcard &&
         r.wildcard &&
         return WildcardDimensionWrapper{T}(
