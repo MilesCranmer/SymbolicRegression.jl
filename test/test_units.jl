@@ -40,6 +40,7 @@ bad_expressions = [
     x1 - (x3 * (cos(0.9 * x1 - 0.5 * x2) - 1.2)),
     custom_op(x1, x3),
     custom_op(x1, 2.1 * x3) + x3,
+    cos(0.8606301 / x1) / cos(cos(x1) + 3.2263336),
 ]
 
 for expr in good_expressions

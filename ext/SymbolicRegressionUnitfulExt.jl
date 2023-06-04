@@ -112,7 +112,8 @@ end
 function deg2_eval(
     op::F, l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
 ) where {F,T}
-    (l.violates || r.violates) && return l
+    l.violates && return l
+    r.violates && return r
     (!isfinite(l) || !isfinite(r)) &&
         return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 
