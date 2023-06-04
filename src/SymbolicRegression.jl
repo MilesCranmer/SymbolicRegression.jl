@@ -63,6 +63,7 @@ export Population,
 using Distributed
 using JSON3: JSON3
 import Printf: @printf, @sprintf
+import Requires: @init, @require
 using Pkg: Pkg
 import TOML: parsefile
 import Random: seed!, shuffle!
@@ -120,6 +121,7 @@ const PACKAGE_VERSION = let
     VersionNumber(project["version"])
 end
 
+include("Deprecates.jl")
 include("Core.jl")
 include("InterfaceDynamicExpressions.jl")
 include("Recorder.jl")
@@ -217,7 +219,6 @@ import .SearchUtilsModule:
     load_saved_population
 
 include("Configure.jl")
-include("Deprecates.jl")
 
 """
     EquationSearch(X, y[; kws...])
@@ -239,7 +240,7 @@ which is useful for debugging and profiling.
     More iterations will improve the results.
 - `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
     weight the loss for each `y` by this value (same shape as `y`).
-- `varMap::Union{Vector{String}, Nothing}=nothing`: The names
+- `variable_names::Union{Vector{String}, Nothing}=nothing`: The names
     of each feature in `X`, which will be used during printing of equations.
 - `options::Options=Options()`: The options for the search, such as
     which operators to use, evolution hyperparameters, etc.
@@ -293,7 +294,7 @@ function EquationSearch(
     y::AbstractMatrix{T};
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
-    varMap::Union{Vector{String},Nothing}=nothing,
+    variable_names::Union{Vector{String},Nothing}=nothing,
     options::Options=Options(),
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
@@ -301,8 +302,10 @@ function EquationSearch(
     addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
     saved_state::Union{StateType{T,L},Nothing}=nothing,
-    multithreaded=nothing,
     loss_type::Type=Nothing,
+    # Deprecated:
+    multithreaded=nothing,
+    varMap=nothing,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if multithreaded !== nothing
         error(
@@ -310,6 +313,8 @@ function EquationSearch(
             "Choose one of :multithreaded, :multiprocessing, or :serial.",
         )
     end
+    variable_names = deprecate_varmap(variable_names, varMap, :EquationSearch)
+
     nout = size(y, FEATURE_DIM)
     if weights !== nothing
         weights = reshape(weights, size(y))
@@ -323,7 +328,7 @@ function EquationSearch(
             X,
             y[j, :];
             weights=(weights === nothing ? weights : weights[j, :]),
-            varMap=varMap,
+            variable_names=variable_names,
             loss_type=loss_type,
         ) for j in 1:nout
     ]
@@ -437,13 +442,13 @@ function _EquationSearch(
         function Base.print(io::IO, tree::Node)
             return print(
                 io,
-                string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap)),
+                string_tree(tree, $(options); variable_names=$(datasets[1].variable_names)),
             )
         end
         function Base.show(io::IO, tree::Node)
             return print(
                 io,
-                string_tree(tree, $(options.operators); varMap=$(datasets[1].varMap)),
+                string_tree(tree, $(options); variable_names=$(datasets[1].variable_names)),
             )
         end
     end
@@ -799,7 +804,7 @@ function _EquationSearch(
                             println(
                                 io,
                                 "$(compute_complexity(member, options)),$(member.loss),\"" *
-                                "$(string_tree(member.tree, options.operators, varMap=dataset.varMap))\"",
+                                "$(string_tree(member.tree, options, variable_names=dataset.variable_names))\"",
                             )
                         end
                     end
@@ -998,6 +1003,12 @@ function _EquationSearch(
         end
     end
 end
+
+#! format: off
+if !isdefined(Base, :get_extension)
+    @init @require SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b" include("../ext/SymbolicRegressionSymbolicUtilsExt.jl")
+end
+#! format: on
 
 macro ignore(args...) end
 # Hack to get static analysis to work from within tests:

@@ -2,7 +2,6 @@
 module UtilsModule
 
 import Printf: @printf
-import StaticArrays: MVector
 
 function debug(verbosity, string...)
     if verbosity > 0
@@ -49,6 +48,39 @@ function recursive_merge(x...)
     return x[end]
 end
 
+"""
+Tiny equivalent to StaticArrays.MVector
+
+This is so we don't have to load StaticArrays, which takes a long time.
+"""
+mutable struct MutableTuple{S,T} <: AbstractVector{T}
+    data::NTuple{S,T}
+end
+@inline Base.eltype(::MutableTuple{S,T}) where {S,T} = T
+Base.@propagate_inbounds function Base.getindex(v::MutableTuple, i::Int)
+    T = eltype(v)
+    # Trick from MArray.jl
+    return GC.@preserve v unsafe_load(
+        Base.unsafe_convert(Ptr{T}, pointer_from_objref(v)), i
+    )
+end
+Base.@propagate_inbounds function Base.setindex!(v::MutableTuple, x, i::Int)
+    T = eltype(v)
+    GC.@preserve v unsafe_store!(Base.unsafe_convert(Ptr{T}, pointer_from_objref(v)), x, i)
+    return x
+end
+@inline Base.eachindex(::MutableTuple{S}) where {S} = Base.OneTo(S)
+@inline Base.lastindex(::MutableTuple{S}) where {S} = S
+@inline Base.firstindex(v::MutableTuple) = 1
+Base.dataids(v::MutableTuple) = (UInt(pointer(v)),)
+@inline function Base.convert(::Type{<:Vector}, v::MutableTuple{S,T}) where {S,T}
+    x = Vector{T}(undef, S)
+    @inbounds for i in eachindex(v)
+        x[i] = v[i]
+    end
+    return x
+end
+
 const max_ops = 8192
 const vals = ntuple(Val, max_ops)
 
@@ -59,10 +91,10 @@ function _bottomk_dispatch(x::AbstractVector{T}, ::Val{k}) where {T,k}
     if k == 1
         return (p -> [p]).(findmin_fast(x))
     end
-    indmin = MVector{k}(ntuple(_ -> 1, k))
-    minval = MVector{k}(ntuple(_ -> typemax(T), k))
+    indmin = MutableTuple{k,Int}(ntuple(_ -> 1, Val(k)))
+    minval = MutableTuple{k,T}(ntuple(_ -> typemax(T), Val(k)))
     _bottomk!(x, minval, indmin)
-    return [minval...], [indmin...]
+    return convert(Vector{T}, minval), convert(Vector{Int}, indmin)
 end
 function _bottomk!(x, minval, indmin)
     @inbounds for i in eachindex(x)

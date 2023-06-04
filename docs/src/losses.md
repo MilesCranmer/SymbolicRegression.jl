@@ -4,7 +4,7 @@ These losses, and their documentation, are included
 from the [LossFunctions.jl](https://github.com/JuliaML/LossFunctions.jl)
 package.
 
-Pass the function as, e.g., `loss=L1DistLoss()`.
+Pass the function as, e.g., `elementwise_loss=L1DistLoss()`.
 
 You can also declare your own loss as a function that takes
 two (unweighted) or three (weighted) scalar arguments. For example,

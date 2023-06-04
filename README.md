@@ -1,13 +1,12 @@
 <div align="center">
 
-<img src="https://user-images.githubusercontent.com/7593028/196054732-5c399e82-23a8-4200-945a-67605f7501ab.png" height="50%" width="50%"></img>
-
 SymbolicRegression.jl searches for symbolic expressions which optimize a particular objective.
 
+https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0
 
-| Latest release | Documentation | Forums |
-| :---: | :---: | :---: |
-| [![version](https://juliahub.com/docs/SymbolicRegression/version.svg)](https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS) | [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://astroautomata.com/SymbolicRegression.jl/dev/) | [![Discussions](https://img.shields.io/badge/discussions-github-informational)](https://github.com/MilesCranmer/PySR/discussions) |
+| Latest release | Documentation | Forums | Paper |
+| :---: | :---: | :---: | :---: |
+| [![version](https://juliahub.com/docs/SymbolicRegression/version.svg)](https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS) | [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://astroautomata.com/SymbolicRegression.jl/dev/) | [![Discussions](https://img.shields.io/badge/discussions-github-informational)](https://github.com/MilesCranmer/PySR/discussions) | [![Paper](https://img.shields.io/badge/arXiv-2305.01582-b31b1b)](https://arxiv.org/abs/2305.01582) |
 
 | Build status | Coverage |
 | :---: | :---: |
@@ -16,6 +15,9 @@ SymbolicRegression.jl searches for symbolic expressions which optimize a particu
 
 Check out [PySR](https://github.com/MilesCranmer/PySR) for
 a Python frontend.
+    
+
+<img src="https://user-images.githubusercontent.com/7593028/196054732-5c399e82-23a8-4200-945a-67605f7501ab.png" height="50%" width="50%"></img>
 
 </div>
 
@@ -115,6 +117,8 @@ We can convert the best equation
 to [SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl)
 with the following function:
 ```julia
+using SymbolicUtils
+
 eqn = node_to_symbolic(dominating[end].tree, options)
 println(simplify(eqn*5 + 3))
 ```

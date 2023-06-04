@@ -5,14 +5,14 @@ import DynamicExpressions:
     eval_tree_array,
     eval_diff_tree_array,
     eval_grad_tree_array,
-    symbolic_to_node,
-    node_to_symbolic,
     print_tree,
     string_tree,
     differentiable_eval_tree_array
-using SymbolicUtils: SymbolicUtils
 using DynamicExpressions: DynamicExpressions
 import ..CoreModule: Options
+#! format: off
+import ..deprecate_varmap
+#! format: on
 
 """
     eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
@@ -126,11 +126,14 @@ Convert an equation to a string.
 
 - `tree::Node`: The equation to convert to a string.
 - `options::Options`: The options holding the definition of operators.
-- `varMap::Union{Array{String, 1}, Nothing}=nothing`: what variables
+- `variable_names::Union{Array{String, 1}, Nothing}=nothing`: what variables
     to print for each feature.
 """
-function string_tree(tree::Node, options::Options; kws...)
-    return string_tree(tree, options.operators; kws...)
+@inline function string_tree(
+    tree::Node, options::Options; variable_names=nothing, varMap=nothing, kws...
+)
+    variable_names = deprecate_varmap(variable_names, varMap, :string_tree)
+    return string_tree(tree, options.operators; varMap=variable_names, kws...)
 end
 
 """
@@ -142,7 +145,7 @@ Print an equation
 
 - `tree::Node`: The equation to convert to a string.
 - `options::Options`: The options holding the definition of operators.
-- `varMap::Union{Array{String, 1}, Nothing}=nothing`: what variables
+- `variable_names::Union{Array{String, 1}, Nothing}=nothing`: what variables
     to print for each feature.
 """
 function print_tree(tree::Node, options::Options; kws...)
@@ -159,38 +162,6 @@ Convert an equation to a different base type `T`.
 """
 function Base.convert(::Type{Node{T}}, tree::Node, options::Options) where {T}
     return convert(Node{T}, tree, options.operators)
-end
-
-function Base.convert(
-    s::typeof(SymbolicUtils.Symbolic), tree::Node, options::Options; kws...
-)
-    return convert(s, tree, options.operators; kws...)
-end
-
-function Base.convert(
-    n::typeof(Node), x::Union{Number,SymbolicUtils.Symbolic}, options::Options; kws...
-)
-    return convert(n, x, options.operators; kws...)
-end
-
-"""
-    node_to_symbolic(tree::Node, options::Options; kws...)
-
-Convert an expression to SymbolicUtils.jl form. 
-"""
-function node_to_symbolic(tree::Node, options::Options; kws...)
-    return node_to_symbolic(tree, options.operators; kws...)
-end
-
-"""
-    node_to_symbolic(eqn::T, options::Options; kws...) where {T}
-
-Convert a SymbolicUtils.jl expression to SymbolicRegression.jl's `Node` type.
-"""
-function symbolic_to_node(
-    eqn::T, options::Options; kws...
-) where {T<:SymbolicUtils.Symbolic}
-    return symbolic_to_node(eqn, options.operators; kws...)
 end
 
 """

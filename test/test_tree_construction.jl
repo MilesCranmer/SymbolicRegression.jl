@@ -41,7 +41,7 @@ for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma,
 
         true_result = f_true(x1)
 
-        result = eval(Meta.parse(string_tree(const_tree, make_options().operators)))
+        result = eval(Meta.parse(string_tree(const_tree, make_options())))
 
         # Test Basics
         @test n == 9

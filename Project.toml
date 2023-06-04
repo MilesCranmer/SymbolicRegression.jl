@@ -1,7 +1,7 @@
 name = "SymbolicRegression"
 uuid = "8254be44-1295-4e6a-a16d-46603ac705cb"
 authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
-version = "0.18.0"
+version = "0.19.0"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -17,14 +17,19 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 ProgressBars = "49802e3a-d2f1-5c88-81d8-b72133a6f568"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
-StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
+[weakdeps]
+SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
+
+[extensions]
+SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
+
 [compat]
-DynamicExpressions = "0.8"
+DynamicExpressions = "0.9"
 JSON3 = "1"
 LineSearches = "7"
 LossFunctions = "0.6, 0.7, 0.8, 0.10"
@@ -33,8 +38,8 @@ Pkg = "1"
 PrecompileTools = "1"
 ProgressBars = "1.4"
 Reexport = "1"
+Requires = "1"
 SpecialFunctions = "0.10.1, 1, 2"
-StaticArrays = "1"
 StatsBase = "0.33, 0.34"
 SymbolicUtils = "0.19, ^1.0.5"
 julia = "1.6"
@@ -43,8 +48,9 @@ julia = "1.6"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
+SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Test", "SafeTestsets", "ForwardDiff", "LinearAlgebra", "Zygote"]
+test = ["Test", "SafeTestsets", "ForwardDiff", "LinearAlgebra", "SymbolicUtils", "Zygote"]

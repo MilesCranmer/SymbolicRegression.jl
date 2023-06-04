@@ -21,7 +21,7 @@ EquationSearch(
     randn(Float32, 3, 10),
     randn(Float32, 10);
     options=options,
-    varMap=["v1", "v2", "v3"],
+    variable_names=["v1", "v2", "v3"],
     niterations=0,
     parallelism=:multithreading,
 )
