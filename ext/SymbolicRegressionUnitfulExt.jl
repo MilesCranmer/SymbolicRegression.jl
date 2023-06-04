@@ -31,10 +31,10 @@ A wrapper for `Quantity{T}` that allows for a wildcard feature, indicating
 there is a free constant whose dimensions are not yet determined.
 Also stores a flag indicating whether an expression is dimensionally consistent.
 """
-Base.@kwdef struct WildcardDimensionWrapper{T}
-    val::Quantity{T} = one(Quantity{T})
-    wildcard::Bool = false
-    violates::Bool = false
+struct WildcardDimensionWrapper{T}
+    val::Quantity{T}
+    wildcard::Bool
+    violates::Bool
 end
 Base.isfinite(x::WildcardDimensionWrapper) = isfinite(x.val)
 same_dimensions(x::Quantity, y::Quantity) = dimension(x) == dimension(y)
@@ -47,8 +47,8 @@ for op in (:(Base.:*), :(Base.:/))
         l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
     ) where {T}
         l.violates && return l
-        return WildcardDimensionWrapper{T}(;
-            val=$(op)(l.val, r.val), wildcard=l.wildcard || r.wildcard
+        return WildcardDimensionWrapper{T}(
+            $(op)(l.val, r.val), l.wildcard || r.wildcard, false
         )
     end
 end
@@ -58,23 +58,23 @@ for op in (:(Base.:+), :(Base.:-))
     ) where {T}
         (l.violates || r.violates) && return l
         if same_dimensions(l.val, r.val)
-            return WildcardDimensionWrapper{T}(;
-                val=$(op)(l.val, r.val), wildcard=l.wildcard && r.wildcard
+            return WildcardDimensionWrapper{T}(
+                $(op)(l.val, r.val), l.wildcard && r.wildcard, false
             )
         elseif l.wildcard && r.wildcard
-            return WildcardDimensionWrapper{T}(;
-                val=$(op)(ustrip(l.val), ustrip(r.val)), wildcard=l.wildcard && r.wildcard
+            return WildcardDimensionWrapper{T}(
+                $(op)(ustrip(l.val), ustrip(r.val)), l.wildcard && r.wildcard, false
             )
         elseif l.wildcard
-            return WildcardDimensionWrapper{T}(;
-                val=$(op)(ustrip(l.val) * unit(r.val), r.val), wildcard=false
+            return WildcardDimensionWrapper{T}(
+                $(op)(ustrip(l.val) * unit(r.val), r.val), false, false
             )
         elseif r.wildcard
-            return WildcardDimensionWrapper{T}(;
-                val=$(op)(l.val, ustrip(r.val) * unit(l.val)), wildcard=false
+            return WildcardDimensionWrapper{T}(
+                $(op)(l.val, ustrip(r.val) * unit(l.val)), false, false
             )
         else
-            return WildcardDimensionWrapper{T}(; violates=true)
+            return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
         end
     end
 end
@@ -82,38 +82,38 @@ function Base.:^(l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T})
     (l.violates || r.violates) && return l
     # TODO: Does this need to check for other violations? (See `safe_pow`)
     if has_no_dims(r.val)
-        return WildcardDimensionWrapper{T}(; val=l.val^r.val, wildcard=l.wildcard)
+        return WildcardDimensionWrapper{T}(l.val^r.val, l.wildcard, false)
     elseif r.wildcard
-        return WildcardDimensionWrapper{T}(; val=l.val^ustrip(r.val), wildcard=l.wildcard)
+        return WildcardDimensionWrapper{T}(l.val^ustrip(r.val), l.wildcard, false)
     else
-        return WildcardDimensionWrapper{T}(; violates=true)
+        return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
     end
 end
 
 # Define dimensionally-aware evaluation routine:
 @inline function deg0_eval(x::AbstractVector{T}, variable_units, t::Node{T}) where {T}
     if t.constant
-        return WildcardDimensionWrapper{T}(; val=t.val::T, wildcard=true)
+        return WildcardDimensionWrapper{T}(t.val::T, true, false)
     else
-        return WildcardDimensionWrapper{T}(;
-            val=x[t.feature] * variable_units[t.feature], wildcard=false
+        return WildcardDimensionWrapper{T}(
+            x[t.feature] * variable_units[t.feature], false, false
         )
     end
 end
 function deg1_eval(op::F, l::WildcardDimensionWrapper{T}) where {F,T}
     l.violates && return l
-    !isfinite(l) && return WildcardDimensionWrapper{T}(; violates=true)
+    !isfinite(l) && return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 
     @catch_method_error return op(l)::WildcardDimensionWrapper{T}
-    l.wildcard &&
-        return WildcardDimensionWrapper{T}(; val=op(ustrip(l.val))::T, wildcard=false)
-    return WildcardDimensionWrapper{T}(; violates=true)
+    l.wildcard && return WildcardDimensionWrapper{T}(op(ustrip(l.val))::T, false, false)
+    return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 end
 function deg2_eval(
     op::F, l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
 ) where {F,T}
     (l.violates || r.violates) && return l
-    (!isfinite(l) || !isfinite(r)) && return WildcardDimensionWrapper{T}(; violates=true)
+    (!isfinite(l) || !isfinite(r)) &&
+        return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 
     @catch_method_error return op(l, r)::WildcardDimensionWrapper{T}
     l.wildcard &&
@@ -122,10 +122,10 @@ function deg2_eval(
         @catch_method_error return op(l, ustrip(r.val))::WildcardDimensionWrapper{T}
     l.wildcard &&
         r.wildcard &&
-        return WildcardDimensionWrapper{T}(;
-            val=op(ustrip(l.val), ustrip(r.val))::T, wildcard=false
+        return WildcardDimensionWrapper{T}(
+            op(ustrip(l.val), ustrip(r.val))::T, false, false
         )
-    return WildcardDimensionWrapper{T}(; violates=true)
+    return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 end
 
 @inline degn_eval(operators, t, l) = deg1_eval(operators.unaops[t.op], l)
