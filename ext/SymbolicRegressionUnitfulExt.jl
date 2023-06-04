@@ -6,14 +6,16 @@ if isdefined(Base, :get_extension)
     using SymbolicRegression: Node, Options, tree_mapreduce
     import SymbolicRegression.CoreModule.DatasetModule: get_units
     import SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
-    using Tricks: static_hasmethod
+    import Tricks: static_hasmethod
+    import Compat: splat
 else
     import ..Unitful: Units, uparse, dimension, ustrip, Quantity, DimensionError
     import ..Unitful: @u_str, @dimension, NoDims, unit
     using ..SymbolicRegression: Node, Options, tree_mapreduce
     import ..SymbolicRegression.CoreModule.DatasetModule: get_units
     import ..SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
-    using ..Tricks: static_hasmethod
+    import ..Tricks: static_hasmethod
+    import ..Compat: splat
 end
 
 const Warned = Ref(false)
