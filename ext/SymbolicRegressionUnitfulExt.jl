@@ -6,12 +6,14 @@ if isdefined(Base, :get_extension)
     using SymbolicRegression: Node, Options, tree_mapreduce
     import SymbolicRegression.CoreModule.DatasetModule: get_units
     import SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
+    using Tricks: static_hasmethod
 else
     import ..Unitful: Units, uparse, dimension, ustrip, Quantity, DimensionError
     import ..Unitful: @u_str, @dimension, NoDims, unit
     using ..SymbolicRegression: Node, Options, tree_mapreduce
     import ..SymbolicRegression.CoreModule.DatasetModule: get_units
     import ..SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
+    using ..Tricks: static_hasmethod
 end
 
 const Warned = Ref(false)
@@ -29,21 +31,24 @@ function display_warning(e, op)
     return nothing
 end
 
-# https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/12
+# https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
 # Faster way to catch method errors:
-function _safe_call end
-@inline function safe_call(f::F, x::T, default_return::T=one(T)) where {F,T}
-    hasmethod(_safe_call, Tuple{F,T}) && return _safe_call(f, x)::Tuple{T,Bool}
+struct FuncWrapper{F}
+    f::F
+end
+function safe_call(f::F, x::T, default=one(T)) where {F,T}
+    wrapper = FuncWrapper{F}(f)
+    static_hasmethod(wrapper, Tuple{T}) && return wrapper(x)
     output = try
         (f(x), true)
     catch e
         !isa(e, MethodError) && rethrow(e)
-        (default_return, false)
+        (default, false)
     end
     if output[2]
-        @eval _safe_call(f::$F, x::$T) = (f(x), true)
+        @eval (w::FuncWrapper{$F})(x::$T) = (w.f(x), true)
     else
-        @eval _safe_call(::$F, ::$T) = ($default_return, false)
+        @eval (::FuncWrapper{$F})(::$T) = ($default, false)
     end
     return output
 end
