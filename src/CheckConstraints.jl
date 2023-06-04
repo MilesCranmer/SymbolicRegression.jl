@@ -90,7 +90,9 @@ check_constraints(tree::Node, options::Options)::Bool =
 violates_dimensional_constraints(_, ::Nothing, _, _) = false
 function violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
     X = dataset.X
-    return violates_dimensional_constraints(tree, dataset.variable_units, X[:, 1], options)
+    return violates_dimensional_constraints(
+        tree, dataset.variable_units, (@view X[:, 1]), options
+    )
 end
 
 end

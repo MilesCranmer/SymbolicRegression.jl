@@ -121,7 +121,10 @@ end
 @inline degn_eval(operators, t, l, r) = deg2_eval(operators.binops[t.op], l, r)
 
 function violates_dimensional_constraints(
-    tree::Node{T}, variable_units, x::AbstractVector{T}, options::Options
+    tree::Node{T},
+    variable_units::Union{AbstractVector,Tuple{Any,Vararg{Any}}},
+    x::AbstractVector{T},
+    options::Options,
 ) where {T}
     operators = options.operators
     # We propagate (quantity, has_constant). If `has_constant`,
