@@ -14,12 +14,28 @@ else
     import ..SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
 end
 
-macro catch_method_error(ex)
+const Warned = Ref(false)
+const WarnedLock = Threads.SpinLock()
+
+function display_warning(e, op)
+    Warned.x && return nothing
+    @warn "Encountered $(e) when calling $(op).\n" *
+        "It is likely you have defined a custom operator with too generic a type signature.\n" *
+        "I will try to use `try-catch` for dimensional analysis, but this will be significantly slower."
+    Warned.x = true
+    return nothing
+end
+macro catch_method_error(op, ex)
     quote
         try
             $(esc(ex))
         catch e
             !isa(e, Union{MethodError,DimensionError}) && rethrow(e)
+            !Warned.x && lock(WarnedLock) do
+                display_warning(e, $(esc(op)))
+                return nothing
+            end
+            return false
         end
     end
 end
@@ -105,7 +121,7 @@ function deg1_eval(op::F, l::WildcardDimensionWrapper{T}) where {F,T}
     !isfinite(l) && return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 
     hasmethod(op, Tuple{WildcardDimensionWrapper{T}}) &&
-        @catch_method_error return op(l)::WildcardDimensionWrapper{T}
+        @catch_method_error op return op(l)::WildcardDimensionWrapper{T}
     l.wildcard && return WildcardDimensionWrapper{T}(op(ustrip(l.val))::T, false, false)
     return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 end
@@ -118,13 +134,13 @@ function deg2_eval(
         return WildcardDimensionWrapper{T}(one(Quantity{T}), false, true)
 
     hasmethod(op, Tuple{WildcardDimensionWrapper{T},WildcardDimensionWrapper{T}}) &&
-        @catch_method_error return op(l, r)::WildcardDimensionWrapper{T}
+        @catch_method_error op return op(l, r)::WildcardDimensionWrapper{T}
     l.wildcard &&
         hasmethod(op, Tuple{T,WildcardDimensionWrapper{T}}) &&
-        @catch_method_error return op(ustrip(l.val), r)::WildcardDimensionWrapper{T}
+        @catch_method_error op return op(ustrip(l.val), r)::WildcardDimensionWrapper{T}
     r.wildcard &&
         hasmethod(op, Tuple{WildcardDimensionWrapper{T},T}) &&
-        @catch_method_error return op(l, ustrip(r.val))::WildcardDimensionWrapper{T}
+        @catch_method_error op return op(l, ustrip(r.val))::WildcardDimensionWrapper{T}
     l.wildcard &&
         r.wildcard &&
         return WildcardDimensionWrapper{T}(
