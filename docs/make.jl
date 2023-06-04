@@ -1,4 +1,5 @@
 using Documenter
+using SymbolicUtils
 using SymbolicRegression
 using SymbolicRegression: Dataset, update_baseline_loss!
 

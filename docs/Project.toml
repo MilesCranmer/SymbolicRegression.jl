@@ -1,3 +1,4 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 Gumbo = "708ec375-b3d6-5a57-a7ce-8257bf98657a"
+SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"

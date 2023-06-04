@@ -1,6 +1,9 @@
 module DatasetModule
 
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
+#! format: off
+import ...deprecate_varmap
+#! format: on
 
 """
     Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -23,7 +26,7 @@ import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 - `baseline_loss`: The loss of a constant function which predicts the average
     value of `y`. This is loss-dependent and should be updated with
     `update_baseline_loss!`.
-- `varMap::Array{String,1}`: The names of the features,
+- `variable_names::Array{String,1}`: The names of the features,
     with shape `(nfeatures,)`.
 """
 mutable struct Dataset{
@@ -44,13 +47,13 @@ mutable struct Dataset{
     avg_y::Union{T,Nothing}
     use_baseline::Bool
     baseline_loss::L
-    varMap::Array{String,1}
+    variable_names::Array{String,1}
 end
 
 """
     Dataset(X::AbstractMatrix{T}, y::Union{AbstractVector{T},Nothing}=nothing;
             weights::Union{AbstractVector{T}, Nothing}=nothing,
-            varMap::Union{Array{String, 1}, Nothing}=nothing,
+            variable_names::Union{Array{String, 1}, Nothing}=nothing,
             extra::NamedTuple=NamedTuple(),
             loss_type::Type=Nothing)
 
@@ -60,18 +63,22 @@ Construct a dataset to pass between internal functions.
     X::AbstractMatrix{T},
     y::Union{AbstractVector{T},Nothing}=nothing;
     weights::Union{AbstractVector{T},Nothing}=nothing,
-    varMap::Union{Array{String,1},Nothing}=nothing,
+    variable_names::Union{Array{String,1},Nothing}=nothing,
     extra::NamedTuple=NamedTuple(),
     loss_type::Type=Nothing,
+    # Deprecated:
+    varMap=nothing,
 ) where {T<:DATA_TYPE}
     Base.require_one_based_indexing(X)
     y !== nothing && Base.require_one_based_indexing(y)
+    # Deprecation warning:
+    variable_names = deprecate_varmap(variable_names, varMap, :Dataset)
 
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
     weighted = weights !== nothing
-    if varMap === nothing
-        varMap = ["x$(i)" for i in 1:nfeatures]
+    if variable_names === nothing
+        variable_names = ["x$(i)" for i in 1:nfeatures]
     end
     avg_y = if y === nothing
         nothing
@@ -87,7 +94,17 @@ Construct a dataset to pass between internal functions.
     baseline = one(loss_type)
 
     return Dataset{T,loss_type,typeof(X),typeof(y),typeof(weights),typeof(extra)}(
-        X, y, n, nfeatures, weighted, weights, extra, avg_y, use_baseline, baseline, varMap
+        X,
+        y,
+        n,
+        nfeatures,
+        weighted,
+        weights,
+        extra,
+        avg_y,
+        use_baseline,
+        baseline,
+        variable_names,
     )
 end
 
