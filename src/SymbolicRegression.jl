@@ -313,14 +313,6 @@ function EquationSearch(
             "Choose one of :multithreaded, :multiprocessing, or :serial.",
         )
     end
-    # Deprecation warning:
-    if varMap !== nothing
-        Base.depwarn(
-            "`varMap` is deprecated; use `variable_names` instead", :EquationSearch
-        )
-        @assert variable_names === nothing "Cannot pass both `varMap` and `variable_names`"
-        variable_names = varMap
-    end
     variable_names = deprecate_varmap(variable_names, varMap, :EquationSearch)
 
     nout = size(y, FEATURE_DIM)
