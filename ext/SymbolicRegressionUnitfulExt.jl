@@ -29,6 +29,7 @@ Base.@kwdef struct WildcardDimensionWrapper{T}
     wildcard::Bool = false
     violates::Bool = false
 end
+Base.isfinite(x::WildcardDimensionWrapper) = isfinite(x.val)
 same_dimensions(x::Quantity, y::Quantity) = dimension(x) == dimension(y)
 has_no_dims(x::Quantity) = dimension(x) == NoDims
 for op in (:(Base.:*), :(Base.:/))
@@ -69,6 +70,7 @@ for op in (:(Base.:+), :(Base.:-))
 end
 function Base.:^(l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}) where {T}
     (l.violates || r.violates) && return l
+    # TODO: Does this need to check for other violations? (See `safe_pow`)
     if has_no_dims(r.val)
         return WildcardDimensionWrapper{T}(; val=l.val^r.val, wildcard=l.wildcard)
     elseif r.wildcard
@@ -90,6 +92,8 @@ end
 end
 function deg1_eval(op::F, l::WildcardDimensionWrapper{T}) where {F,T}
     l.violates && return l
+    !isfinite(l) && return WildcardDimensionWrapper{T}(; violates=true)
+
     @catch_method_error return op(l)::WildcardDimensionWrapper{T}
     l.wildcard &&
         return WildcardDimensionWrapper{T}(; val=op(ustrip(l.val))::T, wildcard=false)
@@ -99,6 +103,8 @@ function deg2_eval(
     op::F, l::WildcardDimensionWrapper{T}, r::WildcardDimensionWrapper{T}
 ) where {F,T}
     (l.violates || r.violates) && return l
+    (!isfinite(l) || !isfinite(r)) && return WildcardDimensionWrapper{T}(; violates=true)
+
     @catch_method_error return op(l, r)::WildcardDimensionWrapper{T}
     l.wildcard &&
         @catch_method_error return op(ustrip(l.val), r)::WildcardDimensionWrapper{T}

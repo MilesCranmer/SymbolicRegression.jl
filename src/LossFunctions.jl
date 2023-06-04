@@ -8,7 +8,7 @@ import LossFunctions: SupervisedLoss
 import ..InterfaceDynamicExpressionsModule: eval_tree_array
 import ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
-using ..CheckConstraintsModule: CheckConstraintsModule
+using ..CheckConstraintsModule: violates_dimensional_constraints
 
 const OLD_LOSS_FUNCTIONS = hasproperty(LossFunctions, :value)
 const GENERAL_LOSS_TYPE = OLD_LOSS_FUNCTIONS ? Function : Union{Function,SupervisedLoss}
@@ -79,9 +79,6 @@ function _eval_loss(
     else
         _loss(prediction, dataset.y::AY, options.elementwise_loss)
     end
-    if CheckConstraintsModule.violates_dimensional_constraints(tree, dataset, options)
-        loss_val += L(options.dimensional_constraint_penalty)
-    end
     return loss_val
 end
 
@@ -94,14 +91,21 @@ end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function eval_loss(
-    tree::Node{T}, dataset::Dataset{T,L}, options::Options
+    tree::Node{T}, dataset::Dataset{T,L}, options::Options, regularization::Bool=true
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
     loss_val = if options.loss_function === nothing
-        return _eval_loss(tree, dataset, options)
+        _eval_loss(tree, dataset, options)
     else
         f = options.loss_function::Function
-        return evaluator(f, tree, dataset, options)
+        evaluator(f, tree, dataset, options)
     end
+
+    if regularization
+        if violates_dimensional_constraints(tree, dataset, options)
+            loss_val += L(options.dimensional_constraint_penalty)
+        end
+    end
+
     return loss_val
 end
 

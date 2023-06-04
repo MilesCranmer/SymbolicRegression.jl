@@ -87,18 +87,10 @@ end
 check_constraints(tree::Node, options::Options)::Bool =
     check_constraints(tree, options, options.maxsize)
 
-@inline function violates_dimensional_constraints(
-    ::Node, ::Nothing, ::AbstractVector, ::Options
-)
-    return false
-end
-@inline function violates_dimensional_constraints(
-    tree::Node, dataset::Dataset, options::Options
-)
+violates_dimensional_constraints(_, ::Nothing, _, _) = false
+function violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
     X = dataset.X
-    return violates_dimensional_constraints(
-        tree, dataset.variable_units, (@view X[:, 1]), options
-    )
+    return violates_dimensional_constraints(tree, dataset.variable_units, X[:, 1], options)
 end
 
 end
