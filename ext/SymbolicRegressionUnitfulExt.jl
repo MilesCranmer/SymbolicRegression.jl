@@ -21,7 +21,10 @@ function display_warning(e, op)
     Warned.x && return nothing
     @warn "Encountered $(e) when calling $(op).\n" *
         "It is likely you have defined a custom operator with too generic a type signature.\n" *
-        "I will try to use `try-catch` for dimensional analysis, but this will be significantly slower."
+        "I will try to use `try-catch` for dimensional analysis, but this will be significantly slower.\n" *
+        "To avoid this warning, please define your operator on specific types, such as `AbstractFloat`.\n" *
+        "If you want units to be propagated through your operator, you can look at how `Base.:+` is " *
+        "defined on `WildcardDimensionWrapper` in SymbolicRegressionUnitfulExt.jl."
     Warned.x = true
     return nothing
 end
