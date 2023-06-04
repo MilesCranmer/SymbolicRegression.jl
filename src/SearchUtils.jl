@@ -314,13 +314,13 @@ end
 
 load_saved_population(::Nothing; kws...) = nothing
 
-function make_datasets(X, y, weights, varMap, loss_type)
+function make_datasets(X, y, weights, variable_names, loss_type)
     nout = size(y, FEATURE_DIM)
     first_dataset = Dataset(
         X,
         y[1, :];
         weights=(weights === nothing ? weights : weights[1, :]),
-        varMap=varMap,
+        variable_names=variable_names,
         loss_type=loss_type,
     )
     datasets = Vector{typeof(first_dataset)}()
@@ -333,7 +333,7 @@ function make_datasets(X, y, weights, varMap, loss_type)
                     X,
                     y[j, :];
                     weights=(weights === nothing ? weights : weights[j, :]),
-                    varMap=varMap,
+                    variable_names=variable_names,
                     loss_type=loss_type,
                 )::typeof(first_dataset),
             )

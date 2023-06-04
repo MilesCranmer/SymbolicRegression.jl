@@ -316,7 +316,6 @@ function EquationSearch(
     end
     variable_names = deprecate_varmap(variable_names, varMap, :EquationSearch)
 
-    nout = size(y, FEATURE_DIM)
     if weights !== nothing
         weights = reshape(weights, size(y))
     end
