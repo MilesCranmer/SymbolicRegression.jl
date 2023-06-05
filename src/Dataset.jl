@@ -44,7 +44,7 @@ mutable struct Dataset{
     AY<:Union{AbstractVector{T},Nothing},
     AW<:Union{AbstractVector{T},Nothing},
     NT<:NamedTuple,
-    AU<:Union{Tuple,Nothing},
+    AU<:Union{AbstractVector,Nothing},
 }
     X::AX
     y::AY

@@ -1,7 +1,8 @@
 using SymbolicRegression
 using SymbolicRegression.CoreModule.DatasetModule: get_units
 using SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
-import Unitful: @u_str, Units, uparse, FreeUnits, NoDims
+import Unitful: @u_str, Units
+import DynamicQuantities: Dimensions
 using Test
 
 X = randn(3, 100)
@@ -14,10 +15,10 @@ options = Options(; binary_operators=[+, -, *, /, custom_op], unary_operators=[c
 
 (x1, x2, x3) = (i -> Node(Float64; feature=i)).(1:3)
 
-dimensionless = FreeUnits{(),NoDims,nothing}()
-@test get_units([u"m", "1", "kg"]) == (u"m", dimensionless, u"kg")
+@test get_units([u"m", "1", "kg"]) ==
+    [Dimensions(; length=1), Dimensions(), Dimensions(; mass=1)]
 dataset = Dataset(X, y; variable_units=[u"m", u"1", u"kg"])
-@test dataset.variable_units == (u"m", dimensionless, u"kg")
+@test dataset.variable_units == [Dimensions(; length=1), Dimensions(), Dimensions(; mass=1)]
 
 violates(tree) = violates_dimensional_constraints(tree, dataset, options)
 

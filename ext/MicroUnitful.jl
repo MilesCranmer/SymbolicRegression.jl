@@ -15,6 +15,7 @@ struct Quantity{T}
     dimensions::Dimensions
     valid::Bool
 
+    # TODO: Shouldn't the data be copied here?
     Quantity(x) = new{typeof(x)}(x, Dimensions(), true)
     Quantity(x, dimensions::Dimensions) = new{typeof(x)}(x, dimensions, true)
     Quantity(x, data::COMPAT_D_TYPE) = new{typeof(x)}(x, Dimensions(data), true)
