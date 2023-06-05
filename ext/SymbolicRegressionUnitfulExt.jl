@@ -54,6 +54,7 @@ macro return_if_good(T, op, inputs)
     end
 end
 
+const VALID_QUANTITIES{T} = Quantity{T,<:Any,<:FreeUnits}
 """
     WildcardDimensionWrapper{T}
 
@@ -62,12 +63,9 @@ there is a free constant whose dimensions are not yet determined.
 Also stores a flag indicating whether an expression is dimensionally consistent.
 """
 struct WildcardDimensionWrapper{T}
-    val::Quantity{T}
+    val::VALID_QUANTITIES{T}
     wildcard::Bool
     violates::Bool
-end
-function Base.one(::Type{W}) where {T,W<:WildcardDimensionWrapper{T}}
-    return W(one(Quantity{T}), false, false)
 end
 Base.isfinite(x::WildcardDimensionWrapper) = isfinite(x.val)
 same_dimensions(x::Quantity, y::Quantity) = dimension(x) == dimension(y)
@@ -78,6 +76,9 @@ const DIMENSIONLESS = FreeUnits{(),NoDims,nothing}
     return Quantity{T,dimension(u),typeof(u)}(x)
 end
 @inline q_one(::Type{T}) where {T} = create_quantity(one(T), DIMENSIONLESS())
+@inline function Base.one(::Type{W}) where {T,W<:WildcardDimensionWrapper{T}}
+    return W(q_one(T), false, false)
+end
 
 # Overload *, /, +, -, ^ for WildcardDimensionWrapper, as
 # we want wildcards to propagate through these operations.
@@ -119,7 +120,7 @@ end
 @inline function deg0_eval(
     x::AbstractVector{T}, variable_units, t::Node{T}, ::Type{W}
 ) where {T,W<:WildcardDimensionWrapper{T}}
-    t.constant && return W(t.val::T, true, false)
+    t.constant && return W(create_quantity(t.val::T, DIMENSIONLESS()), true, false)
     return W(create_quantity(x[t.feature], variable_units[t.feature]), false, false)
 end
 function deg1_eval(op::F, l::W)::W where {F,T,W<:WildcardDimensionWrapper{T}}
@@ -142,7 +143,13 @@ function deg2_eval(op::F, l::W, r::W)::W where {F,T,W<:WildcardDimensionWrapper{
         r.wildcard &&
         @return_if_good(W, op, (l, ustrip(r.val)))
     # TODO: Should this also check for methods that take quantities as input?
-    l.wildcard && r.wildcard && return W(op(ustrip(l.val), ustrip(r.val))::T, false, false)
+    l.wildcard &&
+        r.wildcard &&
+        return W(
+            create_quantity(op(ustrip(l.val), ustrip(r.val))::T, DIMENSIONLESS()),
+            false,
+            false,
+        )
     return W(q_one(T), false, true)
 end
 
