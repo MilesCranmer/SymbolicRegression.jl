@@ -18,21 +18,6 @@ else
     import ..Compat: splat
 end
 
-const Warned = Ref(false)
-const WarnedLock = Threads.SpinLock()
-
-function display_warning(e, op)
-    Warned.x && return nothing
-    @warn "Encountered $(e) when calling $(op).\n" *
-        "It is likely you have defined a custom operator with too generic a type signature.\n" *
-        "I will try to use `try-catch` for dimensional analysis, but this will be significantly slower.\n" *
-        "To avoid this warning, please define your operator on specific types, such as `AbstractFloat`.\n" *
-        "If you want units to be propagated through your operator, you can look at how `Base.:+` is " *
-        "defined on `WildcardDimensionWrapper` in SymbolicRegressionUnitfulExt.jl."
-    Warned.x = true
-    return nothing
-end
-
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
 # Faster way to catch method errors:
 struct FuncWrapper{F}
@@ -55,7 +40,7 @@ function safe_call(f::F, x::T, default=one(T)) where {F,T}
     return output
 end
 
-macro return_if_good(T, op, inputs...)
+macro return_if_good(T, op, inputs)
     result = gensym()
     quote
         try
@@ -87,6 +72,12 @@ end
 Base.isfinite(x::WildcardDimensionWrapper) = isfinite(x.val)
 same_dimensions(x::Quantity, y::Quantity) = dimension(x) == dimension(y)
 has_no_dims(x::Quantity) = dimension(x) == NoDims
+const DIMENSIONLESS = FreeUnits{(),NoDims,nothing}
+@inline function create_quantity(x::T, u::FreeUnits) where {T}
+    # Only required because Unitful.jl tries to create regular floats otherwise...
+    return Quantity{T,dimension(u),typeof(u)}(x)
+end
+@inline q_one(::Type{T}) where {T} = create_quantity(one(T), DIMENSIONLESS())
 
 # Overload *, /, +, -, ^ for WildcardDimensionWrapper, as
 # we want wildcards to propagate through these operations.
@@ -108,7 +99,7 @@ for op in (:(Base.:+), :(Base.:-))
         elseif r.wildcard
             return W($(op)(l.val, ustrip(r.val) * unit(l.val)), false, false)
         else
-            return W(one(Quantity{T}), false, true)
+            return W(q_one(T), false, true)
         end
     end
 end
@@ -120,7 +111,7 @@ function Base.:^(l::W, r::W)::W where {T,W<:WildcardDimensionWrapper{T}}
     elseif r.wildcard
         return W(l.val^ustrip(r.val), l.wildcard, false)
     else
-        return W(one(Quantity{T}), false, true)
+        return W(q_one(T), false, true)
     end
 end
 
@@ -129,30 +120,30 @@ end
     x::AbstractVector{T}, variable_units, t::Node{T}, ::Type{W}
 ) where {T,W<:WildcardDimensionWrapper{T}}
     t.constant && return W(t.val::T, true, false)
-    return W(Quantity(x[t.feature], variable_units[t.feature]), false, false)
+    return W(create_quantity(x[t.feature], variable_units[t.feature]), false, false)
 end
 function deg1_eval(op::F, l::W)::W where {F,T,W<:WildcardDimensionWrapper{T}}
     l.violates && return l
-    !isfinite(l) && return W(one(Quantity{T}), false, true)
+    !isfinite(l) && return W(q_one(T), false, true)
 
-    static_hasmethod(op, Tuple{W}) && @return_if_good(W, op, l)
+    static_hasmethod(op, Tuple{W}) && @return_if_good(W, op, (l,))
     l.wildcard && return W(op(ustrip(l.val))::T, false, false)
-    return W(one(Quantity{T}), false, true)
+    return W(q_one(T), false, true)
 end
 function deg2_eval(op::F, l::W, r::W)::W where {F,T,W<:WildcardDimensionWrapper{T}}
     l.violates && return l
     r.violates && return r
-    (!isfinite(l) || !isfinite(r)) && return W(one(Quantity{T}), false, true)
-
-    static_hasmethod(op, Tuple{W,W}) && @return_if_good(W, op, l, r)
-    l.wildcard &&
-        static_hasmethod(op, Tuple{T,W}) &&
-        @return_if_good(W, op, ustrip(l.val), r)
-    r.wildcard &&
-        static_hasmethod(op, Tuple{W,T}) &&
-        @return_if_good(W, op, l, ustrip(r.val))
+    (!isfinite(l) || !isfinite(r)) && return W(q_one(T), false, true)
+    static_hasmethod(op, Tuple{W,W}) && @return_if_good(W, op, (l, r))
+    static_hasmethod(op, Tuple{T,W}) &&
+        l.wildcard &&
+        @return_if_good(W, op, (ustrip(l.val), r))
+    static_hasmethod(op, Tuple{W,T}) &&
+        r.wildcard &&
+        @return_if_good(W, op, (l, ustrip(r.val)))
+    # TODO: Should this also check for methods that take quantities as input?
     l.wildcard && r.wildcard && return W(op(ustrip(l.val), ustrip(r.val))::T, false, false)
-    return W(one(Quantity{T}), false, true)
+    return W(q_one(T), false, true)
 end
 
 @inline degn_eval(operators, t, l) = deg1_eval(operators.unaops[t.op], l)
@@ -176,16 +167,16 @@ function violates_dimensional_constraints(
     return dimensional_result.violates
 end
 
-function get_units(x::AbstractArray)
-    return Tuple(
-        map(x) do xi
-            if isa(xi, AbstractString)
-                return uparse(xi)::FreeUnits
-            else
-                return xi::FreeUnits
-            end
-        end,
-    )
+function parse_to_free_unit(xi::AbstractString)
+    xi_parsed = uparse(xi)
+    isa(xi_parsed, FreeUnits) && return xi_parsed
+    return DIMENSIONLESS()
+end
+parse_to_free_unit(xi::FreeUnits) = xi
+parse_to_free_unit(::Number) = DIMENSIONLESS()
+
+function get_units(x::AbstractVector)
+    return Tuple(map(parse_to_free_unit, x))
 end
 
 end
