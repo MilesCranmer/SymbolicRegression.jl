@@ -88,6 +88,12 @@ check_constraints(tree::Node, options::Options)::Bool =
     check_constraints(tree, options, options.maxsize)
 
 violates_dimensional_constraints(_, ::Nothing, _, _) = false
+"""
+    violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
+
+Checks whether an expression violates dimensional constraints. This function will be
+overloaded by SymbolicRegressionUnitfulExt, upon importing Unitful.
+"""
 function violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
     X = dataset.X
     return violates_dimensional_constraints(
