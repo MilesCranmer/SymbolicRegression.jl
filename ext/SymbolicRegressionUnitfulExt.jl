@@ -19,7 +19,8 @@ else
 end
 
 d_eltype(d::Dimensions{R}) where {R} = R
-const DEFAULT_DIM_TYPE = d_eltype(Dimensions())
+const DEFAULT_DIM = Dimensions()
+const DEFAULT_DIM_TYPE = d_eltype(DEFAULT_DIM)
 q_one(::Type{T}, ::Type{R}) where {T,R} = one(Quantity{T,R})
 
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
@@ -206,6 +207,7 @@ parse_to_free_unit(::Number) = UnitfulDimensionless()
 
 unitful_to_dynamic(x::Unitful.Quantity) = dimension(convert(Quantity, x))
 unitful_to_dynamic(x::FreeUnits) = unitful_to_dynamic(1.0 * x)
+unitful_to_dynamic(::Number) = DEFAULT_DIM
 
 function get_units(x::AbstractVector)
     return Dimensions{DEFAULT_DIM_TYPE}[
