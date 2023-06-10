@@ -96,9 +96,7 @@ for op in (:(Base.:+), :(Base.:-))
         elseif l.wildcard && r.wildcard
             return W(Quantity($(op)(ustrip(l.val), ustrip(r.val)), R), true, false)
         elseif l.wildcard
-            return W(
-                $(op)(Quantity(ustrip(l.val), dimension(r.val), R), r.val), false, false
-            )
+            return W($(op)(Quantity(ustrip(l.val), dimension(r.val)), r.val), false, false)
         elseif r.wildcard
             return W($(op)(l.val, Quantity(ustrip(r.val), dimension(l.val))), false, false)
         else
