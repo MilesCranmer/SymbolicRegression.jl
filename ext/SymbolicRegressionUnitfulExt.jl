@@ -1,7 +1,7 @@
 module SymbolicRegressionUnitfulExt
 
 if isdefined(Base, :get_extension)
-    import DynamicQuantities: Dimensions, Quantity, valid, dimension, ustrip
+    import DynamicQuantities: Dimensions, Quantity, dimension, ustrip
     using Unitful: Unitful, uparse, FreeUnits, NoDims
     import SymbolicRegression: Node, Options, tree_mapreduce
     import SymbolicRegression.CoreModule.DatasetModule: get_units
@@ -9,7 +9,7 @@ if isdefined(Base, :get_extension)
     import Tricks: static_hasmethod
     import Compat: splat
 else
-    import ..DynamicQuantities: Dimensions, Quantity, valid, dimension, ustrip
+    import ..DynamicQuantities: Dimensions, Quantity, dimension, ustrip
     using ..Unitful: Unitful, uparse, FreeUnits, NoDims
     import ..SymbolicRegression: Node, Options, tree_mapreduce
     import ..SymbolicRegression.CoreModule.DatasetModule: get_units
@@ -18,7 +18,9 @@ else
     import ..Compat: splat
 end
 
-q_one(T) = Quantity(one(T))
+d_eltype(d::Dimensions{R}) where {R} = R
+const DEFAULT_DIM_TYPE = d_eltype(Dimensions())
+q_one(T) = Quantity(one(T), DEFAULT_DIM_TYPE)
 
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
 # Faster way to catch method errors:
@@ -56,42 +58,62 @@ macro return_if_good(T, op, inputs)
 end
 
 """
-    WildcardDimensionWrapper{T}
+    WildcardQuantity{T}
 
-A wrapper for `Quantity{T}` that allows for a wildcard feature, indicating
+A wrapper for `Quantity{T,R}` that allows for a wildcard feature, indicating
 there is a free constant whose dimensions are not yet determined.
 Also stores a flag indicating whether an expression is dimensionally consistent.
 """
-struct WildcardDimensionWrapper{T}
-    val::Quantity{T}
+struct WildcardQuantity{T,R}
+    val::Quantity{T,R}
     wildcard::Bool
     violates::Bool
+
+    global function unsafe_wildcard_quantity(
+        ::Type{_T}, ::Type{_R}, val, w, vio
+    ) where {_T,_R}
+        return new{_T,_R}(val, w, vio)
+    end
 end
-valid(x::WildcardDimensionWrapper) = (!x.violates) && valid(x.val)
-Base.one(::Type{W}) where {T,W<:WildcardDimensionWrapper{T}} = W(q_one(T), false, false)
-Base.isfinite(x::WildcardDimensionWrapper) = isfinite(x.val)
+
+function (::Type{W})(
+    v::Quantity{T2,R2}, wildcard::Bool, violates::Bool
+) where {T,R,W<:WildcardQuantity{T,R},T2,R2}
+    @assert T2 == T "Found unmatched types $(typeof(v)) != $(W) because $(T2) != $(T)"
+    @assert R == R2 "Found unmatched types $(typeof(v)) != $(W) because $(R2) != $(R)"
+    return unsafe_wildcard_quantity(T, R, v, wildcard, violates)
+end
+valid(x::WildcardQuantity) = !x.violates
+Base.one(::Type{W}) where {T,R,W<:WildcardQuantity{T,R}} = W(q_one(T), false, false)
+Base.isfinite(x::WildcardQuantity) = isfinite(x.val)
 same_dimensions(x::Quantity, y::Quantity) = dimension(x) == dimension(y)
 has_no_dims(x::Quantity) = iszero(dimension(x))
 
-# Overload *, /, +, -, ^ for WildcardDimensionWrapper, as
+# Overload *, /, +, -, ^ for WildcardQuantity, as
 # we want wildcards to propagate through these operations.
 for op in (:(Base.:*), :(Base.:/))
-    @eval function $(op)(l::W, r::W) where {T,W<:WildcardDimensionWrapper{T}}
+    @eval function $(op)(l::W, r::W) where {T,R,W<:WildcardQuantity{T,R}}
         l.violates && return l
         r.violates && return r
         return W($(op)(l.val, r.val), l.wildcard || r.wildcard, false)
     end
 end
 for op in (:(Base.:+), :(Base.:-))
-    @eval function $(op)(l::W, r::W)::W where {T,W<:WildcardDimensionWrapper{T}}
+    @eval function $(op)(l::W, r::W)::W where {T,R,W<:WildcardQuantity{T,R}}
         l.violates && return l
         r.violates && return r
         if same_dimensions(l.val, r.val)
             return W($(op)(l.val, r.val), l.wildcard && r.wildcard, false)
         elseif l.wildcard && r.wildcard
-            return W(Quantity($(op)(ustrip(l.val), ustrip(r.val))), true, false)
+            return W(
+                Quantity($(op)(ustrip(l.val), ustrip(r.val)), DEFAULT_DIM_TYPE), true, false
+            )
         elseif l.wildcard
-            return W($(op)(Quantity(ustrip(l.val), dimension(r.val)), r.val), false, false)
+            return W(
+                $(op)(Quantity(ustrip(l.val), dimension(r.val), DEFAULT_DIM_TYPE), r.val),
+                false,
+                false,
+            )
         elseif r.wildcard
             return W($(op)(l.val, Quantity(ustrip(r.val), dimension(l.val))), false, false)
         else
@@ -99,7 +121,7 @@ for op in (:(Base.:+), :(Base.:-))
         end
     end
 end
-function Base.:^(l::W, r::W)::W where {T,W<:WildcardDimensionWrapper{T}}
+function Base.:^(l::W, r::W)::W where {T,R,W<:WildcardQuantity{T,R}}
     l.violates && return l
     r.violates && return r
     # TODO: Does this need to check for other violations? (See `safe_pow`)
@@ -112,26 +134,36 @@ function Base.:^(l::W, r::W)::W where {T,W<:WildcardDimensionWrapper{T}}
     end
 end
 
-Base.sqrt(l::WildcardDimensionWrapper) = l.violates ? l : W(sqrt(l.val), l.wildcard, false)
-Base.cbrt(l::WildcardDimensionWrapper) = l.violates ? l : W(cbrt(l.val), l.wildcard, false)
-Base.abs(l::WildcardDimensionWrapper) = l.violates ? l : W(abs(l.val), l.wildcard, false)
+function Base.sqrt(l::W) where {W<:WildcardQuantity}
+    return l.violates ? l : W(sqrt(l.val), l.wildcard, false)
+end
+function Base.cbrt(l::W) where {W<:WildcardQuantity}
+    return l.violates ? l : W(cbrt(l.val), l.wildcard, false)
+end
+function Base.abs(l::W) where {W<:WildcardQuantity}
+    return l.violates ? l : W(abs(l.val), l.wildcard, false)
+end
 
 # Define dimensionally-aware evaluation routine:
 @inline function deg0_eval(
     x::AbstractVector{T}, variable_units, t::Node{T}, ::Type{W}
-) where {T,W<:WildcardDimensionWrapper{T}}
-    t.constant && return W(Quantity(t.val::T), true, false)
-    return W(Quantity(x[t.feature], variable_units[t.feature]), false, false)
+) where {T,R,W<:WildcardQuantity{T,R}}
+    t.constant && return W(Quantity(t.val::T, DEFAULT_DIM_TYPE), true, false)
+    return W(
+        Quantity((@inbounds x[t.feature]), (@inbounds variable_units[t.feature])),
+        false,
+        false,
+    )
 end
-@inline function deg1_eval(op::F, l::W) where {F,T,W<:WildcardDimensionWrapper{T}}
+@inline function deg1_eval(op::F, l::W) where {F,T,R,W<:WildcardQuantity{T,R}}
     l.violates && return l
     !isfinite(l) && return W(q_one(T), false, true)
 
     static_hasmethod(op, Tuple{W}) && @return_if_good(W, op, (l,))
-    l.wildcard && return W(Quantity(op(ustrip(l.val))::T), false, false)
+    l.wildcard && return W(Quantity(op(ustrip(l.val))::T, DEFAULT_DIM_TYPE), false, false)
     return W(q_one(T), false, true)
 end
-@inline function deg2_eval(op::F, l::W, r::W) where {F,T,W<:WildcardDimensionWrapper{T}}
+@inline function deg2_eval(op::F, l::W, r::W) where {F,T,R,W<:WildcardQuantity{T,R}}
     l.violates && return l
     r.violates && return r
     (!isfinite(l) || !isfinite(r)) && return W(q_one(T), false, true)
@@ -145,14 +177,16 @@ end
     # TODO: Should this also check for methods that take quantities as input?
     l.wildcard &&
         r.wildcard &&
-        return W(Quantity(op(ustrip(l.val), ustrip(r.val))::T), false, false)
+        return W(
+            Quantity(op(ustrip(l.val), ustrip(r.val))::T, DEFAULT_DIM_TYPE), false, false
+        )
     return W(q_one(T), false, true)
 end
 
 function violates_dimensional_constraints_dispatch(
     tree::Node{T}, variable_units::AbstractVector, x::AbstractVector{T}, operators
 ) where {T}
-    W = WildcardDimensionWrapper{T}
+    W = WildcardQuantity{T,DEFAULT_DIM_TYPE}
     if tree.degree == 0
         return deg0_eval(x, variable_units, tree, W)::W
     elseif tree.degree == 1
@@ -191,7 +225,9 @@ unitful_to_dynamic(x::Unitful.Quantity) = dimension(convert(Quantity, x))
 unitful_to_dynamic(x::FreeUnits) = unitful_to_dynamic(1.0 * x)
 
 function get_units(x::AbstractVector)
-    return Dimensions[unitful_to_dynamic(parse_to_free_unit(xi)) for xi in x]
+    return Dimensions{DEFAULT_DIM_TYPE}[
+        unitful_to_dynamic(parse_to_free_unit(xi)) for xi in x
+    ]
 end
 
 end
