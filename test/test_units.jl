@@ -105,7 +105,7 @@ end
     # due to the dimensionality constraint:
     hof = EquationSearch(X, y; options, units=(X=["kg", u"m"], y="m^2"))
 
-    # Solutions should be like cos([cons] * X[1]) + [cons]*X[1]
+    # Solution should be x2 * x2
     dominating = calculate_pareto_frontier(hof)
     best = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
 
