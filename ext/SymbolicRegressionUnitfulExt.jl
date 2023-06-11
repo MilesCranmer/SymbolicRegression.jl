@@ -22,14 +22,18 @@ q_one(::Type{T}, ::Type{R}) where {T,R} = one(Quantity{T,R})
 
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
 # Faster way to catch method errors:
-const SafeFunctions = Dict{Type,Bool}()
+@enum IsGood::Int8 begin
+    Good
+    Bad
+    Undefined
+end
+const SafeFunctions = Dict{Type,IsGood}()
 const SafeFunctionsLock = Threads.SpinLock()
 
 function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
-    if haskey(SafeFunctions, Tuple{F,T})
-        SafeFunctions[Tuple{F,T}] && return (f(x...)::D, true)
-        return (default, false)
-    end
+    status = get(SafeFunctions, Tuple{F,T}, Undefined)
+    status == Good && return (f(x...)::D, true)
+    status == Bad && return (default, false)
     return lock(SafeFunctionsLock) do
         output = try
             (f(x...)::D, true)
@@ -38,9 +42,9 @@ function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
             (default, false)
         end
         if output[2]
-            SafeFunctions[Tuple{F,T}] = true
+            SafeFunctions[Tuple{F,T}] = Good
         else
-            SafeFunctions[Tuple{F,T}] = false
+            SafeFunctions[Tuple{F,T}] = Bad
         end
         return output
     end
