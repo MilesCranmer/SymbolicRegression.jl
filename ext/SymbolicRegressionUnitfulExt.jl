@@ -78,8 +78,9 @@ end
 
 valid(x::WildcardQuantity) = !x.violates
 Base.one(::Type{W}) where {T,R,W<:WildcardQuantity{T,R}} = W(q_one(T, R), false, false)
-Base.isfinite(x::WildcardQuantity) = isfinite(x.val)
-same_dimensions(x::Quantity, y::Quantity) = dimension(x) == dimension(y)
+Base.isfinite(w::WildcardQuantity) = isfinite(w.val)
+dimension(w::WildcardQuantity) = dimension(w.val)
+same_dimensions(x::WildcardQuantity, y::WildcardQuantity) = dimension(x) == dimension(y)
 has_no_dims(x::Quantity) = iszero(dimension(x))
 
 # Overload *, /, +, -, ^ for WildcardQuantity, as
@@ -95,7 +96,7 @@ for op in (:(Base.:+), :(Base.:-))
     @eval function $(op)(l::W, r::W)::W where {T,R,W<:WildcardQuantity{T,R}}
         l.violates && return l
         r.violates && return r
-        if same_dimensions(l.val, r.val)
+        if same_dimensions(l, r)
             return W($(op)(l.val, r.val), l.wildcard && r.wildcard, false)
         elseif l.wildcard && r.wildcard
             return W(Quantity($(op)(ustrip(l.val), ustrip(r.val)), R), true, false)
