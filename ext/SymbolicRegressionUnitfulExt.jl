@@ -2,7 +2,6 @@ module SymbolicRegressionUnitfulExt
 
 import DynamicQuantities: Dimensions, Quantity, dimension, ustrip, DimensionError
 import Tricks: static_hasmethod
-import Compat: splat
 
 if isdefined(Base, :get_extension)
     using Unitful: Unitful, uparse, FreeUnits, NoDims
@@ -16,40 +15,42 @@ else
     import ..SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
 end
 
-d_eltype(d::Dimensions{R}) where {R} = R
+d_eltype(::Dimensions{R}) where {R} = R
 const DEFAULT_DIM = Dimensions()
 const DEFAULT_DIM_TYPE = d_eltype(DEFAULT_DIM)
 q_one(::Type{T}, ::Type{R}) where {T,R} = one(Quantity{T,R})
 
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
 # Faster way to catch method errors:
-struct FuncWrapper{F}
-    f::F
-end
-@inline function safe_call(f::F, x::T, default::D=one(T)) where {F,T,D}
-    wrapper = FuncWrapper{F}(f)
-    static_hasmethod(wrapper, Tuple{T}) && return wrapper(x)::Tuple{D,Bool}
-    output = try
-        (f(x), true)
-    catch e
-        !isa(e, MethodError) && rethrow(e)
-        (default, false)
+const SafeFunctions = Dict{Type,Bool}()
+const SafeFunctionsLock = Threads.SpinLock()
+
+function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
+    if haskey(SafeFunctions, Tuple{F,T})
+        SafeFunctions[Tuple{F,T}] && return (f(x...)::D, true)
+        return (default, false)
     end
-    if output[2]
-        @eval (w::FuncWrapper{$F})(x::$T) = (w.f(x), true)
-    else
-        @eval (::FuncWrapper{$F})(::$T) = ($default, false)
+    return lock(SafeFunctionsLock) do
+        output = try
+            (f(x...)::D, true)
+        catch e
+            !isa(e, MethodError) && rethrow(e)
+            (default, false)
+        end
+        if output[2]
+            SafeFunctions[Tuple{F,T}] = true
+        else
+            SafeFunctions[Tuple{F,T}] = false
+        end
+        return output
     end
-    return output::Tuple{D,Bool}
 end
 macro return_if_good(T, op, inputs)
     result = gensym()
     successful = gensym()
     quote
         try
-            $(result), $(successful) = safe_call(
-                splat($(esc(op))), $(esc(inputs)), one($(esc(T)))
-            )
+            $(result), $(successful) = safe_call($(esc(op)), $(esc(inputs)), one($(esc(T))))
             $(successful) && valid($(result)) && return $(result)
         catch e
             !isa(e, DimensionError) && rethrow(e)
