@@ -109,6 +109,37 @@ function eval_loss(
     return loss_val
 end
 
+function eval_loss_batched(
+    tree::Node{T}, dataset::Dataset{T,L}, options::Options, regularization::Bool=true
+)::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    if options.loss_function !== nothing
+        error("Batched losses for custom objectives are not yet implemented.")
+    end
+    batch_idx = StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)
+    batch_X = view(dataset.X, :, batch_idx)
+    (prediction, completion) = eval_tree_array(tree, batch_X, options)
+    if !completion
+        return L(Inf)
+    end
+
+    batch_y = view(dataset.y::AbstractVector{T}, batch_idx)
+    loss_val = if !dataset.weighted
+        L(_loss(prediction, batch_y, options.elementwise_loss))
+    else
+        w = dataset.weights::AbstractVector{T}
+        batch_w = view(w, batch_idx)
+        L(_weighted_loss(prediction, batch_y, batch_w, options.elementwise_loss))
+    end
+
+    if regularization
+        if violates_dimensional_constraints(tree, dataset, options)
+            loss_val += L(options.dimensional_constraint_penalty)
+        end
+    end
+
+    return loss_val
+end
+
 # Just so we can pass either PopMember or Node here:
 get_tree(t::Node) = t
 get_tree(m) = m.tree
@@ -160,26 +191,7 @@ end
 function score_func_batch(
     dataset::Dataset{T,L}, member, options::Options, complexity::Union{Int,Nothing}=nothing
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    if options.loss_function !== nothing
-        error("Batched losses for custom objectives are not yet implemented.")
-    end
-    batch_idx = StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)
-    batch_X = view(dataset.X, :, batch_idx)
-    (prediction, completion) = eval_tree_array(get_tree(member), batch_X, options)
-    if !completion
-        return L(0), L(Inf)
-    end
-
-    batch_y = view(dataset.y::AbstractVector{T}, batch_idx)
-    if !dataset.weighted
-        result_loss = L(_loss(prediction, batch_y, options.elementwise_loss))
-    else
-        w = dataset.weights::AbstractVector{T}
-        batch_w = view(w, batch_idx)
-        result_loss = L(
-            _weighted_loss(prediction, batch_y, batch_w, options.elementwise_loss)
-        )
-    end
+    result_loss = eval_loss_batched(get_tree(member), dataset, options)
     score = loss_to_score(
         result_loss,
         dataset.use_baseline,
