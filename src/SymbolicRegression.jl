@@ -245,8 +245,11 @@ which is useful for debugging and profiling.
     which operators to use, evolution hyperparameters, etc.
 - `variable_names::Union{Vector{String}, Nothing}=nothing`: The names
     of each feature in `X`, which will be used during printing of equations.
-- `variable_units::Union{Vector, Nothing}=nothing`: The units of each feature
-    in `X`, to be used for dimensional constraints.
+- `units::Union{NamedTuple, Nothing}=nothing`: The units of the dataset,
+    to be used for dimensional constraints. For example,
+    `units=(X=["kg", "m"], y="m^2")` would set the first feature to have
+    units of kilograms, the second to have meters, and the output to have
+    units of meters squared. Only expressions matching this would be valid.
 - `parallelism=:multithreading`: What parallelism mode to use.
     The options are `:multithreading`, `:multiprocessing`, and `:serial`.
     By default, multithreading will be used. Multithreading uses less memory,
@@ -299,7 +302,7 @@ function EquationSearch(
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
     options::Options=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
-    variable_units::Union{AbstractVector,Nothing}=nothing,
+    units::Union{NamedTuple,Nothing}=nothing,
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
@@ -333,7 +336,7 @@ function EquationSearch(
             y[j, :];
             weights=(weights === nothing ? weights : weights[j, :]),
             variable_names=variable_names,
-            variable_units=variable_units,
+            units=units,
             loss_type=loss_type,
         ) for j in 1:nout
     ]

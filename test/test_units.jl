@@ -100,11 +100,10 @@ end
     X = randn(Float32, 2, 100)
     X[2, :] .= X[1, :]
     y = X[1, :] .^ 2
-    dataset = Dataset(X, y; units=(X=["kg", "m"], y="m^2"))
 
     # The search should find that y=X[2]^2 is the best,
     # due to the dimensionality constraint:
-    hof = EquationSearch(dataset; options)
+    hof = EquationSearch(X, y; options, units=(X=["kg", u"m"], y="m^2"))
 
     # Solutions should be like cos([cons] * X[1]) + [cons]*X[1]
     dominating = calculate_pareto_frontier(hof)
