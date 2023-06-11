@@ -134,13 +134,11 @@ end
 
 # Define dimensionally-aware evaluation routine:
 @inline function deg0_eval(
-    x::AbstractVector{T}, variable_units::Vector{Dimensions{R}}, t::Node{T}
+    x::AbstractVector{T}, x_units::Vector{Quantity{T,R}}, t::Node{T}
 ) where {T,R}
     t.constant && return WildcardQuantity{T,R}(Quantity(t.val::T, R), true, false)
     return WildcardQuantity{T,R}(
-        Quantity((@inbounds x[t.feature]), (@inbounds variable_units[t.feature])),
-        false,
-        false,
+        (@inbounds x[t.feature]) * (@inbounds x_units[t.feature]), false, false
     )
 end
 @inline function deg1_eval(op::F, l::W) where {F,T,R,W<:WildcardQuantity{T,R}}
@@ -170,53 +168,53 @@ end
 end
 
 function violates_dimensional_constraints_dispatch(
-    tree::Node{T}, variable_units::Vector{Dimensions{R}}, x::AbstractVector{T}, operators
+    tree::Node{T}, x_units::Vector{Quantity{T,R}}, x::AbstractVector{T}, operators
 ) where {T,R}
     if tree.degree == 0
-        return deg0_eval(x, variable_units, tree)::WildcardQuantity{T,R}
+        return deg0_eval(x, x_units, tree)::WildcardQuantity{T,R}
     elseif tree.degree == 1
-        l = violates_dimensional_constraints_dispatch(tree.l, variable_units, x, operators)
+        l = violates_dimensional_constraints_dispatch(tree.l, x_units, x, operators)
         return deg1_eval((@inbounds operators.unaops[tree.op]), l)::WildcardQuantity{T,R}
     else
-        l = violates_dimensional_constraints_dispatch(tree.l, variable_units, x, operators)
-        r = violates_dimensional_constraints_dispatch(tree.r, variable_units, x, operators)
+        l = violates_dimensional_constraints_dispatch(tree.l, x_units, x, operators)
+        r = violates_dimensional_constraints_dispatch(tree.r, x_units, x, operators)
         return deg2_eval((@inbounds operators.binops[tree.op]), l, r)::WildcardQuantity{T,R}
     end
 end
 
 function violates_dimensional_constraints(
-    tree::Node{T},
-    variable_units::Vector{Dimensions{R}},
-    x::AbstractVector{T},
-    options::Options,
-) where {T,R}
+    tree::Node{T}, units::NamedTuple, x::AbstractVector{T}, options::Options
+) where {T}
     # TODO: Should also check against output type.
-    return violates_dimensional_constraints_dispatch(
-        tree, variable_units, x, options.operators
-    ).violates
+    dimensional_output = violates_dimensional_constraints_dispatch(
+        tree, units.X, x, options.operators
+    )
+    return dimensional_output.violates || (
+        !dimensional_output.wildcard && dimension(dimensional_output) != dimension(units.y)
+    )
     # ^ Eventually do this with map_treereduce. However, right now it seems
     # like we are passing around too many arguments, which slows things down.
 end
 
-function UnitfulDimensionless()
-    return Unitful.FreeUnits{(),NoDims,nothing}()
-end
-function parse_to_free_unit(xi::AbstractString)
-    xi_parsed = uparse(xi)
-    isa(xi_parsed, FreeUnits) && return xi_parsed
-    return UnitfulDimensionless()
-end
-parse_to_free_unit(xi::FreeUnits) = xi
-parse_to_free_unit(::Number) = UnitfulDimensionless()
+#! format: off
+UnitfulDimensionless() = Unitful.FreeUnits{(),NoDims,nothing}()
 
-unitful_to_dynamic(x::Unitful.Quantity) = dimension(convert(Quantity, x))
-unitful_to_dynamic(x::FreeUnits) = unitful_to_dynamic(1.0 * x)
-unitful_to_dynamic(::Number) = DEFAULT_DIM
+parse_unitful(::Type{T}, xi::FreeUnits) where {T} = one(T) * xi
+parse_unitful(::Type{T}, xi::AbstractString) where {T} =
+    let xi_parsed = uparse(xi)
+        parse_unitful(T, isa(xi_parsed, FreeUnits) ? xi_parsed : UnitfulDimensionless())
+    end
+parse_unitful(::Type{T}, x::Number) where {T} = convert(T, x)
 
-function get_units(x::AbstractVector)
-    return Dimensions{DEFAULT_DIM_TYPE}[
-        unitful_to_dynamic(parse_to_free_unit(xi)) for xi in x
-    ]
-end
+unitful_to_dynamic(::Type{T}, x::Unitful.Quantity) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, convert(Unitful.Quantity{T}, x))
+unitful_to_dynamic(::Type{T}, x::Number) where {T} = q_one(T, DEFAULT_DIM_TYPE) * convert(T, x)
+
+get_units(::Type{T}, x::AbstractString) where {T} = unitful_to_dynamic(T, parse_unitful(T, x))
+get_units(::Type{T}, x::FreeUnits) where {T} = unitful_to_dynamic(T, parse_unitful(T, x))
+get_units(::Type{T}, x::Number) where {T} = unitful_to_dynamic(T, parse_unitful(T, x))
+
+get_units(::Type{T}, x::AbstractVector) where {T} = Quantity{T,DEFAULT_DIM_TYPE}[get_units(T, xi) for xi in x]
+get_units(::Type{T}, x::NamedTuple) where {T} = NamedTuple((k => get_units(T, x[k]) for k in keys(x)))
+#! format: on
 
 end

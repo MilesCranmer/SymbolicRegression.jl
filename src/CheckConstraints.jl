@@ -96,9 +96,7 @@ overloaded by SymbolicRegressionUnitfulExt, upon importing Unitful.
 """
 function violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
     X = dataset.X
-    return violates_dimensional_constraints(
-        tree, dataset.variable_units, (@view X[:, 1]), options
-    )
+    return violates_dimensional_constraints(tree, dataset.units, (@view X[:, 1]), options)
 end
 
 end
