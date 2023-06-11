@@ -1,21 +1,19 @@
 module SymbolicRegressionUnitfulExt
 
+import DynamicQuantities: Dimensions, Quantity, dimension, ustrip, DimensionError
+import Tricks: static_hasmethod
+import Compat: splat
+
 if isdefined(Base, :get_extension)
-    import DynamicQuantities: Dimensions, Quantity, dimension, ustrip, DimensionError
     using Unitful: Unitful, uparse, FreeUnits, NoDims
     import SymbolicRegression: Node, Options, tree_mapreduce
     import SymbolicRegression.CoreModule.DatasetModule: get_units
     import SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
-    import Tricks: static_hasmethod
-    import Compat: splat
 else
-    import ..DynamicQuantities: Dimensions, Quantity, dimension, ustrip, DimensionError
     using ..Unitful: Unitful, uparse, FreeUnits, NoDims
     import ..SymbolicRegression: Node, Options, tree_mapreduce
     import ..SymbolicRegression.CoreModule.DatasetModule: get_units
     import ..SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
-    import ..Tricks: static_hasmethod
-    import ..Compat: splat
 end
 
 d_eltype(d::Dimensions{R}) where {R} = R
