@@ -1015,7 +1015,7 @@ end
 #! format: off
 if !isdefined(Base, :get_extension)
     @init @require SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b" include("../ext/SymbolicRegressionSymbolicUtilsExt.jl")
-    @init @require Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d" include("../ext/SymbolicRegressionUnitfulExt.jl")
+    @init @require DynamicQuantities = "06fc5a27-2a28-4c7c-a15d-362465fb6821" include("../ext/SymbolicRegressionDynamicQuantitiesExt.jl")
 end
 #! format: on
 

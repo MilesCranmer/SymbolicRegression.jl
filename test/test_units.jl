@@ -1,8 +1,7 @@
 using SymbolicRegression
 using SymbolicRegression.CoreModule.DatasetModule: get_units
 using SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
-import Unitful: @u_str, Units
-import DynamicQuantities: Quantity
+import DynamicQuantities: Quantity, @u_str
 using Test
 
 custom_op(x, y) = x + y

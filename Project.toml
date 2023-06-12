@@ -7,7 +7,6 @@ version = "0.19.0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 DynamicExpressions = "a40a106e-89c9-4ca8-8020-a735e8728b6b"
-DynamicQuantities = "06fc5a27-2a28-4c7c-a15d-362465fb6821"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 LineSearches = "d3d80556-e9d4-5f37-9878-2ab0fcc64255"
 LossFunctions = "30fc2ffe-d236-52d8-8643-a9d8f7c094a7"
@@ -25,12 +24,12 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 Tricks = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
 
 [weakdeps]
+DynamicQuantities = "06fc5a27-2a28-4c7c-a15d-362465fb6821"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
-Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [extensions]
 SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
-SymbolicRegressionUnitfulExt = "Unitful"
+SymbolicRegressionUnitfulExt = "DynamicQuantities"
 
 [compat]
 DynamicExpressions = "0.9"
@@ -51,6 +50,7 @@ Tricks = "0.1"
 julia = "1.6"
 
 [extras]
+DynamicQuantities = "06fc5a27-2a28-4c7c-a15d-362465fb6821"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
@@ -60,4 +60,4 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Test", "SafeTestsets", "ForwardDiff", "LinearAlgebra", "SymbolicUtils", "Unitful", "Zygote"]
+test = ["Test", "SafeTestsets", "ForwardDiff", "LinearAlgebra", "SymbolicUtils", "DynamicQuantities", "Zygote"]

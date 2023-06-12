@@ -1,15 +1,16 @@
 module SymbolicRegressionUnitfulExt
 
-import DynamicQuantities: Dimensions, Quantity, dimension, ustrip, DimensionError
 import Tricks: static_hasmethod
 
 if isdefined(Base, :get_extension)
-    using Unitful: Unitful, uparse, FreeUnits, NoDims
+    import DynamicQuantities: Dimensions, Quantity, DimensionError
+    import DynamicQuantities: dimension, ustrip, uparse
     import SymbolicRegression: Node, Options, tree_mapreduce
     import SymbolicRegression.CoreModule.DatasetModule: get_units
     import SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
 else
-    using ..Unitful: Unitful, uparse, FreeUnits, NoDims
+    import ..DynamicQuantities: Dimensions, Quantity, DimensionError
+    import ..DynamicQuantities: dimension, ustrip, uparse
     import ..SymbolicRegression: Node, Options, tree_mapreduce
     import ..SymbolicRegression.CoreModule.DatasetModule: get_units
     import ..SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
@@ -197,21 +198,10 @@ function violates_dimensional_constraints(
 end
 
 #! format: off
-UnitfulDimensionless() = Unitful.FreeUnits{(),NoDims,nothing}()
-
-parse_unitful(::Type{T}, xi::FreeUnits) where {T} = one(T) * xi
-parse_unitful(::Type{T}, xi::AbstractString) where {T} =
-    let xi_parsed = uparse(xi)
-        parse_unitful(T, isa(xi_parsed, FreeUnits) ? xi_parsed : UnitfulDimensionless())
-    end
-parse_unitful(::Type{T}, x::Number) where {T} = convert(T, x)
-
-unitful_to_dynamic(::Type{T}, x::Unitful.Quantity) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, convert(Unitful.Quantity{T}, x))
-unitful_to_dynamic(::Type{T}, x::Number) where {T} = q_one(T, DEFAULT_DIM_TYPE) * convert(T, x)
-
-get_units(::Type{T}, x::AbstractString) where {T} = unitful_to_dynamic(T, parse_unitful(T, x))
-get_units(::Type{T}, x::FreeUnits) where {T} = unitful_to_dynamic(T, parse_unitful(T, x))
-get_units(::Type{T}, x::Number) where {T} = unitful_to_dynamic(T, parse_unitful(T, x))
+get_units(::Type{T}, x::AbstractString) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, uparse(x))
+get_units(::Type{T}, x::Quantity) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, x)
+get_units(::Type{T}, x::Dimensions) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, 1.0 * x)
+get_units(::Type{T}, x::Number) where {T} = Quantity(convert(T, x), DEFAULT_DIM)
 
 get_units(::Type{T}, x::AbstractVector) where {T} = Quantity{T,DEFAULT_DIM_TYPE}[get_units(T, xi) for xi in x]
 get_units(::Type{T}, x::NamedTuple) where {T} = NamedTuple((k => get_units(T, x[k]) for k in keys(x)))
