@@ -28,8 +28,8 @@ DynamicQuantities = "06fc5a27-2a28-4c7c-a15d-362465fb6821"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 
 [extensions]
+SymbolicRegressionDynamicQuantitiesExt = "DynamicQuantities"
 SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
-SymbolicRegressionUnitfulExt = "DynamicQuantities"
 
 [compat]
 DynamicExpressions = "0.9"

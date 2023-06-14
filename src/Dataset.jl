@@ -8,7 +8,7 @@ import ...deprecate_varmap
 get_units(_, ::Nothing) = nothing
 function get_units(_, x::Any)
     return error(
-        "`get_units` got input of type $(typeof(x)). Please load the `Unitful` package to use `get_units(::Union{Nothing,AbstractArray{<:AbstractString}})`.",
+        "`get_units` got input of type $(typeof(x)). Please load the `DynamicQuantities` package to use `get_units(::Union{Nothing,AbstractArray{<:AbstractString}})`.",
     )
 end
 

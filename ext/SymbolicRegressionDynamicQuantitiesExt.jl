@@ -1,4 +1,4 @@
-module SymbolicRegressionUnitfulExt
+module SymbolicRegressionDynamicQuantitiesExt
 
 import Tricks: static_hasmethod
 
