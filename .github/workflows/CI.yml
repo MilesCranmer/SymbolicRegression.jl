@@ -56,6 +56,17 @@ jobs:
       - name: "Coveralls"
         uses: coverallsapp/github-action@master
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: lcov.info
           parallel: true
+          flag-name: julia-${{ matrix.julia-version }}-${{ matrix.os }}-${{ github.event_name }}
+
+  coveralls:
+    name: Indicate completion to coveralls
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Finish
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
