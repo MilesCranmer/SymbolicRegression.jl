@@ -1,25 +1,12 @@
-module SymbolicRegressionDynamicQuantitiesExt
+module DimensionalAnalysis
 
+import DynamicExpressions: Node
+import DynamicQuantities: Dimensions, Quantity, DimensionError
+import DynamicQuantities: dimension, ustrip, uparse
 import Tricks: static_hasmethod
 
-if isdefined(Base, :get_extension)
-    import DynamicQuantities: Dimensions, Quantity, DimensionError
-    import DynamicQuantities: dimension, ustrip, uparse
-    import SymbolicRegression: Node, Options, tree_mapreduce
-    import SymbolicRegression.CoreModule.DatasetModule: get_units, warn_on_non_si_units
-    import SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
-else
-    import ..DynamicQuantities: Dimensions, Quantity, DimensionError
-    import ..DynamicQuantities: dimension, ustrip, uparse
-    import ..SymbolicRegression: Node, Options, tree_mapreduce
-    import ..SymbolicRegression.CoreModule.DatasetModule: get_units, warn_on_non_si_units
-    import ..SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
-end
-
-d_eltype(::Dimensions{R}) where {R} = R
-const DEFAULT_DIM = Dimensions()
-const DEFAULT_DIM_TYPE = d_eltype(DEFAULT_DIM)
-q_one(::Type{T}, ::Type{R}) where {T,R} = one(Quantity{T,R})
+import ..CoreModule: Options
+import ..CheckConstraintsModule: violates_dimensional_constraints
 
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
 # Faster way to catch method errors:
@@ -78,7 +65,9 @@ struct WildcardQuantity{T,R}
 end
 
 valid(x::WildcardQuantity) = !x.violates
-Base.one(::Type{W}) where {T,R,W<:WildcardQuantity{T,R}} = W(q_one(T, R), false, false)
+function Base.one(::Type{W}) where {T,R,W<:WildcardQuantity{T,R}}
+    return W(one(Quantity{T,R}), false, false)
+end
 Base.isfinite(w::WildcardQuantity) = isfinite(w.val)
 dimension(w::WildcardQuantity) = dimension(w.val)
 same_dimensions(x::WildcardQuantity, y::WildcardQuantity) = dimension(x) == dimension(y)
@@ -106,7 +95,7 @@ for op in (:(Base.:+), :(Base.:-))
         elseif r.wildcard
             return W($(op)(l.val, Quantity(ustrip(r.val), dimension(l.val))), false, false)
         else
-            return W(q_one(T, R), false, true)
+            return W(one(Quantity{T,R}), false, true)
         end
     end
 end
@@ -119,7 +108,7 @@ function Base.:^(l::W, r::W)::W where {T,R,W<:WildcardQuantity{T,R}}
     elseif r.wildcard
         return W(l.val^ustrip(r.val), l.wildcard, false)
     else
-        return W(q_one(T, R), false, true)
+        return W(one(Quantity{T,R}), false, true)
     end
 end
 
@@ -144,16 +133,16 @@ end
 end
 @inline function deg1_eval(op::F, l::W) where {F,T,R,W<:WildcardQuantity{T,R}}
     l.violates && return l
-    !isfinite(l) && return W(q_one(T, R), false, true)
+    !isfinite(l) && return W(one(Quantity{T,R}), false, true)
 
     static_hasmethod(op, Tuple{W}) && @return_if_good(W, op, (l,))
     l.wildcard && return W(Quantity(op(ustrip(l.val))::T, R), false, false)
-    return W(q_one(T, R), false, true)
+    return W(one(Quantity{T,R}), false, true)
 end
 @inline function deg2_eval(op::F, l::W, r::W) where {F,T,R,W<:WildcardQuantity{T,R}}
     l.violates && return l
     r.violates && return r
-    (!isfinite(l) || !isfinite(r)) && return W(q_one(T, R), false, true)
+    (!isfinite(l) || !isfinite(r)) && return W(one(Quantity{T,R}), false, true)
     static_hasmethod(op, Tuple{W,W}) && @return_if_good(W, op, (l, r))
     static_hasmethod(op, Tuple{T,W}) &&
         l.wildcard &&
@@ -165,7 +154,7 @@ end
     l.wildcard &&
         r.wildcard &&
         return W(Quantity(op(ustrip(l.val), ustrip(r.val))::T, R), false, false)
-    return W(q_one(T, R), false, true)
+    return W(one(Quantity{T,R}), false, true)
 end
 
 function violates_dimensional_constraints_dispatch(
@@ -195,37 +184,6 @@ function violates_dimensional_constraints(
     )
     # ^ Eventually do this with map_treereduce. However, right now it seems
     # like we are passing around too many arguments, which slows things down.
-end
-
-#! format: off
-get_units(::Type{T}, x::AbstractString) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, uparse(x))
-get_units(::Type{T}, x::Quantity) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, x)
-get_units(::Type{T}, x::Dimensions) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, 1.0 * x)
-get_units(::Type{T}, x::Number) where {T} = Quantity(convert(T, x), DEFAULT_DIM)
-
-get_units(::Type{T}, x::AbstractVector) where {T} = Quantity{T,DEFAULT_DIM_TYPE}[get_units(T, xi) for xi in x]
-get_units(::Type{T}, x::NamedTuple) where {T} = NamedTuple((k => get_units(T, x[k]) for k in keys(x)))
-#! format: on
-
-function warn_on_non_si_units(vq::NamedTuple)
-    container = Quantity[]
-    for k in keys(vq)
-        v = vq[k]
-        if isa(v, Quantity)
-            push!(container, v)
-        elseif isa(v, AbstractVector)
-            append!(container, v)
-        else
-            error("Unknown type: $(typeof(v))")
-        end
-    end
-    return warn_on_non_si_units(container)
-end
-function warn_on_non_si_units(vq::AbstractVector{<:Quantity})
-    if any(!isone ∘ ustrip, vq)
-        @warn "Some of your units are not in their base SI representation. While dimensional analysis will work normally, note that the scale of specific units is not taken into account when evaluating the equation. If you would like to obtain an equation that takes into account the scale of your units (e.g., `meters/kilometers == 1/1000`), please precompute this by converting your data to the base SI units before input."
-    end
-    return nothing
 end
 
 end

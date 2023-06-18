@@ -1,17 +1,11 @@
 module DatasetModule
 
+import DynamicQuantities: Dimensions, Quantity, uparse, ustrip
+
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 #! format: off
 import ...deprecate_varmap
 #! format: on
-
-get_units(_, ::Nothing) = nothing
-function get_units(_, x::Any)
-    return error(
-        "`get_units` got input of type $(typeof(x)). Please load the `DynamicQuantities` package to use `get_units(::Union{Nothing,AbstractArray{<:AbstractString}})`.",
-    )
-end
-warn_on_non_si_units(::Nothing) = nothing
 
 """
     Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -127,6 +121,43 @@ function Dataset(
         variable_names,
         _units,
     )
+end
+
+d_eltype(::Dimensions{R}) where {R} = R
+const DEFAULT_DIM = Dimensions()
+const DEFAULT_DIM_TYPE = d_eltype(DEFAULT_DIM)
+
+#! format: off
+get_units(_, ::Nothing) = nothing
+get_units(::Type{T}, x::AbstractString) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, uparse(x))
+get_units(::Type{T}, x::Quantity) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, x)
+get_units(::Type{T}, x::Dimensions) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, 1.0 * x)
+get_units(::Type{T}, x::Number) where {T} = Quantity(convert(T, x), DEFAULT_DIM)
+
+get_units(::Type{T}, x::AbstractVector) where {T} = Quantity{T,DEFAULT_DIM_TYPE}[get_units(T, xi) for xi in x]
+get_units(::Type{T}, x::NamedTuple) where {T} = NamedTuple((k => get_units(T, x[k]) for k in keys(x)))
+#! format: on
+
+warn_on_non_si_units(::Nothing) = nothing
+function warn_on_non_si_units(vq::NamedTuple)
+    container = Quantity[]
+    for k in keys(vq)
+        v = vq[k]
+        if isa(v, Quantity)
+            push!(container, v)
+        elseif isa(v, AbstractVector)
+            append!(container, v)
+        else
+            error("Unknown type: $(typeof(v))")
+        end
+    end
+    return warn_on_non_si_units(container)
+end
+function warn_on_non_si_units(vq::AbstractVector{<:Quantity})
+    if any(!isone ∘ ustrip, vq)
+        @warn "Some of your units are not in their base SI representation. While dimensional analysis will work normally, note that the scale of specific units is not taken into account when evaluating the equation. If you would like to obtain an equation that takes into account the scale of your units (e.g., `meters/kilometers == 1/1000`), please precompute this by converting your data to the base SI units before input."
+    end
+    return nothing
 end
 
 end
