@@ -6,13 +6,13 @@ if isdefined(Base, :get_extension)
     import DynamicQuantities: Dimensions, Quantity, DimensionError
     import DynamicQuantities: dimension, ustrip, uparse
     import SymbolicRegression: Node, Options, tree_mapreduce
-    import SymbolicRegression.CoreModule.DatasetModule: get_units
+    import SymbolicRegression.CoreModule.DatasetModule: get_units, warn_on_non_si_units
     import SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
 else
     import ..DynamicQuantities: Dimensions, Quantity, DimensionError
     import ..DynamicQuantities: dimension, ustrip, uparse
     import ..SymbolicRegression: Node, Options, tree_mapreduce
-    import ..SymbolicRegression.CoreModule.DatasetModule: get_units
+    import ..SymbolicRegression.CoreModule.DatasetModule: get_units, warn_on_non_si_units
     import ..SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
 end
 
@@ -206,5 +206,26 @@ get_units(::Type{T}, x::Number) where {T} = Quantity(convert(T, x), DEFAULT_DIM)
 get_units(::Type{T}, x::AbstractVector) where {T} = Quantity{T,DEFAULT_DIM_TYPE}[get_units(T, xi) for xi in x]
 get_units(::Type{T}, x::NamedTuple) where {T} = NamedTuple((k => get_units(T, x[k]) for k in keys(x)))
 #! format: on
+
+function warn_on_non_si_units(vq::NamedTuple)
+    container = Quantity[]
+    for k in keys(vq)
+        v = vq[k]
+        if isa(v, Quantity)
+            push!(container, v)
+        elseif isa(v, AbstractVector)
+            append!(container, v)
+        else
+            error("Unknown type: $(typeof(v))")
+        end
+    end
+    return warn_on_non_si_units(container)
+end
+function warn_on_non_si_units(vq::AbstractVector{<:Quantity})
+    if any(!isone ∘ ustrip, vq)
+        @warn "Some of your units are not in their base SI representation. While dimensional analysis will work normally, note that the scale of specific units is not taken into account when evaluating the equation. If you would like to obtain an equation that takes into account the scale of your units (e.g., `meters/kilometers == 1/1000`), please precompute this by converting your data to the base SI units before input."
+    end
+    return nothing
+end
 
 end

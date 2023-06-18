@@ -11,6 +11,7 @@ function get_units(_, x::Any)
         "`get_units` got input of type $(typeof(x)). Please load the `DynamicQuantities` package to use `get_units(::Union{Nothing,AbstractArray{<:AbstractString}})`.",
     )
 end
+warn_on_non_si_units(::Nothing) = nothing
 
 """
     Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -67,7 +68,9 @@ end
             weights::Union{AbstractVector{T}, Nothing}=nothing,
             variable_names::Union{Array{String, 1}, Nothing}=nothing,
             extra::NamedTuple=NamedTuple(),
-            loss_type::Type=Nothing)
+            loss_type::Type=Nothing,
+            units::Union{NamedTuple, Nothing}=nothing,
+    )
 
 Construct a dataset to pass between internal functions.
 """
@@ -106,6 +109,7 @@ function Dataset(
     use_baseline = true
     baseline = one(loss_type)
     _units = get_units(T, units)
+    warn_on_non_si_units(_units)
 
     return Dataset{
         T,loss_type,typeof(X),typeof(y),typeof(weights),typeof(extra),typeof(_units)

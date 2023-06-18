@@ -113,3 +113,12 @@ end
     @test best.l == x2
     @test best.r == x2
 end
+
+@testset "Should warn on non-SI base units" begin
+    X = randn(1, 100)
+    y = @. cos(X[1, :] * 2.1 - 0.2) + 0.5
+    @test_warn(
+        "Some of your units are not in their base SI representation.",
+        Dataset(X, y; units=(X=[u"m", u"1"], y=u"km"))
+    )
+end
