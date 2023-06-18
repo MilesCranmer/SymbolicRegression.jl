@@ -226,7 +226,7 @@ import .SearchUtilsModule:
     load_saved_hall_of_fame,
     load_saved_population
 
-include("Deprecates.jl")
+include("deprecates.jl")
 include("Configure.jl")
 
 """
