@@ -5,7 +5,12 @@ import DynamicQuantities: Dimensions, Quantity, DimensionError
 import DynamicQuantities: dimension, ustrip, uparse
 import Tricks: static_hasmethod
 
-import ..CoreModule: Options, Dataset
+import ..CoreModule: Options, Dataset, safe_pow, safe_sqrt
+
+function safe_sqrt(x::Quantity{T,R})::Quantity{T,R} where {T<:AbstractFloat,R}
+    ustrip(x) < 0 && return sqrt(abs(x)) * Quantity(T(NaN), R)
+    return sqrt(x)
+end
 
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
 # Faster way to catch method errors:
@@ -101,18 +106,18 @@ end
 function Base.:^(l::W, r::W)::W where {T,R,W<:WildcardQuantity{T,R}}
     l.violates && return l
     r.violates && return r
-    # TODO: Does this need to check for other violations? (See `safe_pow`)
-    if has_no_dims(r.val)
-        return W(l.val^r.val, l.wildcard, false)
-    elseif r.wildcard
-        return W(l.val^ustrip(r.val), l.wildcard, false)
+    if (has_no_dims(l.val) || l.wildcard) && (has_no_dims(r.val) || r.wildcard)
+        # Require both base and power to be dimensionless:
+        x = ustrip(l.val)
+        y = ustrip(r.val)
+        return W(safe_pow(x, y) * one(Quantity{T,R}), false, false)
     else
         return W(one(Quantity{T,R}), false, true)
     end
 end
 
 function Base.sqrt(l::W) where {W<:WildcardQuantity}
-    return l.violates ? l : W(sqrt(l.val), l.wildcard, false)
+    return l.violates ? l : W(safe_sqrt(l.val), l.wildcard, false)
 end
 function Base.cbrt(l::W) where {W<:WildcardQuantity}
     return l.violates ? l : W(cbrt(l.val), l.wildcard, false)

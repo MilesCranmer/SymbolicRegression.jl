@@ -3,6 +3,7 @@ using SymbolicRegression.CoreModule.DatasetModule: get_units
 using SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
 import DynamicQuantities: Quantity, @u_str
 using Test
+using Random: MersenneTwister
 
 custom_op(x, y) = x + y
 
@@ -112,6 +113,40 @@ end
     @test best.degree == 2
     @test best.l == x2
     @test best.r == x2
+
+    X = rand(MersenneTwister(0), Float32, 1, 256) .* 100
+    y = X[1, :] .^ 0.5f0
+    options2 = Options(; binary_operators=[*, +, ^], seed=0, deterministic=true)
+    hof = EquationSearch(
+        X,
+        y;
+        options=options2,
+        units=(X=["kg", u"m"], y="m^2"),
+        parallelism=:serial,
+        niterations=30,
+    )
+
+    dominating = calculate_pareto_frontier(hof)
+    best = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
+    # Should have at least some operators equal to ^:
+    @test any(best) do t
+        t.degree == 2 && options2.operators.binops[t.op] == safe_pow
+    end
+
+    X = randn(2, 100)
+    y = @. cbrt(X[1, :]) .+ sqrt(abs(X[2, :]))
+    options3 = Options(; binary_operators=[+, *], unary_operators=[sqrt, cbrt, abs])
+    hof = EquationSearch(X, y; options=options3, units=(X=["kg^3", "kg^2"], y="kg"))
+
+    dominating = calculate_pareto_frontier(hof)
+    best = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
+    @test compute_complexity(best, options3) == 6
+    @test any(best) do t
+        t.degree == 1 && options3.operators.unaops[t.op] == cbrt
+    end
+    @test any(best) do t
+        t.degree == 1 && options3.operators.unaops[t.op] == safe_sqrt
+    end
 end
 
 @testset "Should warn on non-SI base units" begin
