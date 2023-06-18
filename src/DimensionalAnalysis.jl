@@ -1,12 +1,11 @@
-module DimensionalAnalysis
+module DimensionalAnalysisModule
 
 import DynamicExpressions: Node
 import DynamicQuantities: Dimensions, Quantity, DimensionError
 import DynamicQuantities: dimension, ustrip, uparse
 import Tricks: static_hasmethod
 
-import ..CoreModule: Options
-import ..CheckConstraintsModule: violates_dimensional_constraints
+import ..CoreModule: Options, Dataset
 
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
 # Faster way to catch method errors:
@@ -172,6 +171,18 @@ function violates_dimensional_constraints_dispatch(
     end
 end
 
+"""
+    violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
+
+Checks whether an expression violates dimensional constraints.
+"""
+function violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
+    X = dataset.X
+    return violates_dimensional_constraints(tree, dataset.units, (@view X[:, 1]), options)
+end
+function violates_dimensional_constraints(_, ::Nothing, _, _)
+    return false
+end
 function violates_dimensional_constraints(
     tree::Node{T}, units::NamedTuple, x::AbstractVector{T}, options::Options
 ) where {T}

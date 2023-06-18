@@ -4,6 +4,7 @@ import DynamicExpressions: Node, count_depth, tree_mapreduce
 import ..UtilsModule: vals
 import ..CoreModule: Options, Dataset
 import ..ComplexityModule: compute_complexity, past_complexity_limit
+import ..DimensionalAnalysisModule: violates_dimensional_constraints
 
 # Check if any binary operator are overly complex
 function flag_bin_operator_complexity(tree::Node, op, cons, options::Options)::Bool
@@ -86,17 +87,5 @@ end
 
 check_constraints(tree::Node, options::Options)::Bool =
     check_constraints(tree, options, options.maxsize)
-
-violates_dimensional_constraints(_, ::Nothing, _, _) = false
-"""
-    violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
-
-Checks whether an expression violates dimensional constraints. This function will be
-overloaded by SymbolicRegressionDynamicQuantitiesExt, upon importing DynamicQuantities.
-"""
-function violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
-    X = dataset.X
-    return violates_dimensional_constraints(tree, dataset.units, (@view X[:, 1]), options)
-end
 
 end
