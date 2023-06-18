@@ -43,7 +43,7 @@ X = 2randn(5, 1000)
 y = @. 2*cos(X[4, :]) + X[1, :]^2 - 2
 
 options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos])
-hof = EquationSearch(X, y; options=options, niterations=30)
+hof = equation_search(X, y; options=options, niterations=30)
 ```
 
 Let's look at the most accurate expression:
@@ -62,7 +62,7 @@ X = 2randn(5, 1000)
 y = @. 1/X[1, :]
 
 options = Options(; binary_operators=[+, *], unary_operators=[inv])
-hof = EquationSearch(X, y; options=options)
+hof = equation_search(X, y; options=options)
 println(get_best(; hof, options)[1])
 ```
 
@@ -75,7 +75,7 @@ each requiring a different feature.
 X = 2rand(5, 1000) .+ 0.1
 y = @. 1/X[1:3, :]
 options = Options(; binary_operators=[+, *], unary_operators=[inv])
-hofs = EquationSearch(X, y; options=options)
+hofs = equation_search(X, y; options=options)
 bests = [get_best(; hof=hofs[i], options)[1] for i=1:3]
 println(bests)
 ```
@@ -126,7 +126,7 @@ X = 2randn(Float32, 5, 1000)
 y = @. 2*cos(X[4, :]) + X[1, :]^2 - 2
 
 options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos])
-hof = EquationSearch(X, y; options=options, niterations=30)
+hof = equation_search(X, y; options=options, niterations=30)
 ```
 
 we can see that the output types are `Float32`:
@@ -146,7 +146,7 @@ X = 15 .* rand(ComplexF64, 5, 1000) .- 7.5
 y = @. 2*cos_re((2+1im) * X[4, :]) + 0.1 * X[1, :]^2 - 2
 
 options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos_re], maxsize=30)
-hof = EquationSearch(X, y; options=options, niterations=100)
+hof = equation_search(X, y; options=options, niterations=100)
 ```
 
 ## 6. Additional features

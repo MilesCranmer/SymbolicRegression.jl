@@ -35,7 +35,7 @@ Pkg.add("SymbolicRegression")
 ```
 
 The heart of this package is the
-`EquationSearch` function, which takes
+`equation_search` function, which takes
 a 2D array (shape [features, rows]) and attempts
 to model a 1D array (shape [rows])
 using analytic functional forms.
@@ -53,7 +53,7 @@ options = SymbolicRegression.Options(
     npopulations=20
 )
 
-hall_of_fame = EquationSearch(
+hall_of_fame = equation_search(
     X, y, niterations=40, options=options,
     parallelism=:multithreading
 )
@@ -148,7 +148,7 @@ flowchart TB
     d([Dataset])
     op --> ES
     d --> ES
-    subgraph ES[EquationSearch]
+    subgraph ES[equation_search]
         direction TB
         IP[sr_spawner]
         IP --> p1
