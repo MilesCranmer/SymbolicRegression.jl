@@ -7,7 +7,9 @@ using Random: MersenneTwister
 
 custom_op(x, y) = x + y
 
-options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos])
+options = Options(;
+    binary_operators=[-, *, /, custom_op, ^], unary_operators=[cos, cbrt, sqrt, abs]
+)
 @extend_operators options
 
 (x1, x2, x3) = (i -> Node(Float64; feature=i)).(1:3)
@@ -39,29 +41,40 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
         x2,
         1.0 * x1,
         1.0 * x3,
+        (1.0 * x1)^(Node(; val=3.2)),
+        1.0 * (cbrt(x3 * x3 * x3) - x3),
+        1.0 * (sqrt(x3 * x3) - x3),
+        1.0 * (sqrt(abs(x3) * abs(x3)) - x3),
     ]
     bad_expressions = [
         x1,
         x3,
         x1 - x3,
-        cos(x1),
-        cos(x1 - 0.5 * x2),
-        x1 - (x3 * (cos(0.9 * x1 - 0.5 * x2) - 1.2)),
-        custom_op(x1, x3),
-        custom_op(custom_op(x1, 2.1 * x3), x3),
-        cos(0.8606301 / x1) / cos(custom_op(cos(x1), 3.2263336)),
+        1.0 * cos(x1),
+        1.0 * cos(x1 - 0.5 * x2),
+        1.0 * (x1 - (x3 * (cos(0.9 * x1 - 0.5 * x2) - 1.2))),
+        1.0 * custom_op(x1, x3),
+        1.0 * custom_op(custom_op(x1, 2.1 * x3), x3),
+        1.0 * cos(0.8606301 / x1) / cos(custom_op(cos(x1), 3.2263336)),
+        1.0 * (x1^(Node(; val=3.2))),
+        1.0 * ((1.0 * x1)^x1),
+        1.0 * (cbrt(x3 * x3) - x3),
+        1.0 * (sqrt(abs(x3)) - x3),
     ]
 
     for expr in good_expressions
-        @eval @test !$violates($expr)
+        @test !violates(expr) || @show expr
     end
     for expr in bad_expressions
-        @eval @test $violates($expr)
+        @test violates(expr) || @show expr
     end
 end
 
+options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos])
+@extend_operators options
+
 @testset "Search with dimensional constraints" begin
-    X = randn(Float32, 1, 100)
+    X = rand(1, 128) .* 10
     y = @. cos(X[1, :]) + X[1, :]
     dataset = Dataset(X, y; units=(X=["kg"], y="1"))
 
@@ -97,7 +110,7 @@ end
 end
 
 @testset "Search with dimensional constraints on output" begin
-    X = randn(Float32, 2, 100)
+    X = randn(2, 128)
     X[2, :] .= X[1, :]
     y = X[1, :] .^ 2
 
@@ -114,38 +127,19 @@ end
     @test best.l == x2
     @test best.r == x2
 
-    X = rand(MersenneTwister(0), Float32, 1, 256) .* 100
-    y = X[1, :] .^ 0.5f0
-    options2 = Options(; binary_operators=[*, +, ^], seed=0, deterministic=true)
-    hof = EquationSearch(
-        X,
-        y;
-        options=options2,
-        units=(X=["kg", u"m"], y="m^2"),
-        parallelism=:serial,
-        niterations=30,
-    )
-
-    dominating = calculate_pareto_frontier(hof)
-    best = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
-    # Should have at least some operators equal to ^:
-    @test any(best) do t
-        t.degree == 2 && options2.operators.binops[t.op] == safe_pow
-    end
-
-    X = randn(2, 100)
+    X = randn(2, 128)
     y = @. cbrt(X[1, :]) .+ sqrt(abs(X[2, :]))
-    options3 = Options(; binary_operators=[+, *], unary_operators=[sqrt, cbrt, abs])
-    hof = EquationSearch(X, y; options=options3, units=(X=["kg^3", "kg^2"], y="kg"))
+    options2 = Options(; binary_operators=[+, *], unary_operators=[sqrt, cbrt, abs])
+    hof = EquationSearch(X, y; options=options2, units=(X=["kg^3", "kg^2"], y="kg"))
 
     dominating = calculate_pareto_frontier(hof)
     best = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
-    @test compute_complexity(best, options3) == 6
+    @test compute_complexity(best, options2) == 6
     @test any(best) do t
-        t.degree == 1 && options3.operators.unaops[t.op] == cbrt
+        t.degree == 1 && options2.operators.unaops[t.op] == cbrt
     end
     @test any(best) do t
-        t.degree == 1 && options3.operators.unaops[t.op] == safe_sqrt
+        t.degree == 1 && options2.operators.unaops[t.op] == safe_sqrt
     end
 end
 
