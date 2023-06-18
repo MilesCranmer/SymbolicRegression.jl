@@ -63,7 +63,7 @@ function do_precompilation(; mode=:precompile)
                 )
                 redirect_stderr(devnull) do
                     redirect_stdout(devnull) do
-                        hall_of_fame = EquationSearch(
+                        hall_of_fame = equation_search(
                             X,
                             y;
                             niterations=3,

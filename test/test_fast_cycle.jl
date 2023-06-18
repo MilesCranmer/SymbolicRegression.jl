@@ -16,7 +16,7 @@ options = SymbolicRegression.Options(;
 X = randn(MersenneTwister(0), Float32, 5, 100)
 y = 2 * cos.(X[4, :]) .- X[2, :]
 variable_names = ["t1", "t2", "t3", "t4", "t5"]
-state, hall_of_fame = EquationSearch(
+state, hall_of_fame = equation_search(
     X, y; variable_names=variable_names, niterations=2, options=options
 )
 dominating = calculate_pareto_frontier(hall_of_fame)
@@ -30,7 +30,7 @@ best = dominating[end]
 # We do 0 iterations to make sure the state is used.
 println("Passed.")
 println("Testing whether state saving works.")
-new_state, new_hall_of_fame = EquationSearch(
+new_state, new_hall_of_fame = equation_search(
     X,
     y;
     variable_names=variable_names,
@@ -58,7 +58,7 @@ options = SymbolicRegression.Options(;
     return_state=true,
     elementwise_loss=new_loss,
 )
-state, hall_of_fame = EquationSearch(
+state, hall_of_fame = equation_search(
     X,
     y;
     variable_names=variable_names,
