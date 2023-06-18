@@ -12,7 +12,7 @@ export Population,
     DATA_TYPE,
 
     #Functions:
-    EquationSearch,
+    equation_search,
     s_r_cycle,
     calculate_pareto_frontier,
     count_nodes,
@@ -121,7 +121,15 @@ const PACKAGE_VERSION = let
     VersionNumber(project["version"])
 end
 
-include("Deprecates.jl")
+function deprecate_varmap(variable_names, varMap, func_name)
+    if varMap !== nothing
+        Base.depwarn("`varMap` is deprecated; use `variable_names` instead", func_name)
+        @assert variable_names === nothing "Cannot pass both `varMap` and `variable_names`"
+        variable_names = varMap
+    end
+    return variable_names
+end
+
 include("Core.jl")
 include("InterfaceDynamicExpressions.jl")
 include("Recorder.jl")
@@ -218,10 +226,11 @@ import .SearchUtilsModule:
     load_saved_hall_of_fame,
     load_saved_population
 
+include("deprecates.jl")
 include("Configure.jl")
 
 """
-    EquationSearch(X, y[; kws...])
+    equation_search(X, y[; kws...])
 
 Perform a distributed equation search for functions `f_i` which
 describe the mapping `f_i(X[:, j]) ≈ y[i, j]`. Options are
@@ -254,7 +263,7 @@ which is useful for debugging and profiling.
     to the `procs` argument and they will be used.
     You may also pass a string instead of a symbol, like `"multithreading"`.
 - `numprocs::Union{Int, Nothing}=nothing`:  The number of processes to use,
-    if you want `EquationSearch` to set this up automatically. By default
+    if you want `equation_search` to set this up automatically. By default
     this will be `4`, but can be any number (you should pick a number <=
     the number of cores available).
 - `procs::Union{Vector{Int}, Nothing}=nothing`: If you have set up
@@ -272,9 +281,9 @@ which is useful for debugging and profiling.
     search, to see if there will be any problems during the equation search
     related to the host environment.
 - `saved_state::Union{StateType, Nothing}=nothing`: If you have already
-    run `EquationSearch` and want to resume it, pass the state here.
+    run `equation_search` and want to resume it, pass the state here.
     To get this to work, you need to have return_state=true in the options,
-    which will cause `EquationSearch` to return the state. Note that
+    which will cause `equation_search` to return the state. Note that
     you cannot change the operators or dataset, but most other options
     should be changeable.
 - `loss_type::Type=Nothing`: If you would like to use a different type
@@ -289,7 +298,7 @@ which is useful for debugging and profiling.
     is given in `.score`. The array of `PopMember` objects
     is enumerated by size from `1` to `options.maxsize`.
 """
-function EquationSearch(
+function equation_search(
     X::AbstractMatrix{T},
     y::AbstractMatrix{T};
     niterations::Int=10,
@@ -313,7 +322,7 @@ function EquationSearch(
             "Choose one of :multithreaded, :multiprocessing, or :serial.",
         )
     end
-    variable_names = deprecate_varmap(variable_names, varMap, :EquationSearch)
+    variable_names = deprecate_varmap(variable_names, varMap, :equation_search)
 
     nout = size(y, FEATURE_DIM)
     if weights !== nothing
@@ -333,7 +342,7 @@ function EquationSearch(
         ) for j in 1:nout
     ]
 
-    return EquationSearch(
+    return equation_search(
         datasets;
         niterations=niterations,
         options=options,
@@ -346,26 +355,26 @@ function EquationSearch(
     )
 end
 
-function EquationSearch(
+function equation_search(
     X::AbstractMatrix{T1}, y::AbstractMatrix{T2}; kw...
 ) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
     U = promote_type(T1, T2)
-    return EquationSearch(
+    return equation_search(
         convert(AbstractMatrix{U}, X), convert(AbstractMatrix{U}, y); kw...
     )
 end
 
-function EquationSearch(
+function equation_search(
     X::AbstractMatrix{T1}, y::AbstractVector{T2}; kw...
 ) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
-    return EquationSearch(X, reshape(y, (1, size(y, 1))); kw...)
+    return equation_search(X, reshape(y, (1, size(y, 1))); kw...)
 end
 
-function EquationSearch(dataset::Dataset; kws...)
-    return EquationSearch([dataset]; kws...)
+function equation_search(dataset::Dataset; kws...)
+    return equation_search([dataset]; kws...)
 end
 
-function EquationSearch(
+function equation_search(
     datasets::Vector{D};
     niterations::Int=10,
     options::Options=Options(),
@@ -400,7 +409,7 @@ function EquationSearch(
             "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
         )
 
-    return _EquationSearch(
+    return _equation_search(
         concurrency,
         datasets;
         niterations=niterations,
@@ -413,7 +422,7 @@ function EquationSearch(
     )
 end
 
-function _EquationSearch(
+function _equation_search(
     parallelism::Symbol,
     datasets::Vector{D};
     niterations::Int,

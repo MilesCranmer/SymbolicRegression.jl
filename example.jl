@@ -7,7 +7,7 @@ options = SymbolicRegression.Options(;
     binary_operators=[+, *, /, -], unary_operators=[cos, exp], npopulations=20
 )
 
-hall_of_fame = EquationSearch(
+hall_of_fame = equation_search(
     X, y; niterations=40, options=options, parallelism=:multithreading
 )
 
