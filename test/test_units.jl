@@ -148,7 +148,7 @@ end
     y = @. cos(X[1, :] * 2.1 - 0.2) + 0.5
     VERSION >= v"1.8.0" && @test_warn(
         "Some of your units are not in their base SI representation.",
-        Dataset(X, y; units=(X=[u"m", u"1"], y=u"km"))
+        Dataset(X, y; units=(X=[u"m"], y=u"km"))
     )
 end
 
