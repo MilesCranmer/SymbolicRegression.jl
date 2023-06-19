@@ -1,5 +1,6 @@
 module InterfaceDynamicExpressionsModule
 
+import Printf: @sprintf
 import DynamicExpressions:
     Node,
     eval_tree_array,
@@ -144,18 +145,32 @@ Convert an equation to a string.
         return string_tree(tree, options.operators; variable_names=variable_names, kws...)
 
     x_units = units.X
+    vprecision = vals[options.print_precision]
     return string_tree(
         tree,
         options.operators;
         f_variable=(feature, vname) -> string_variable_units(feature, vname, x_units),
+        f_constant=(val, bracketed) -> string_constant(val, bracketed, vprecision),
         variable_names=variable_names,
         kws...,
     )
 end
+const vals = ntuple(Val, 8192)
 function string_variable_units(feature, variable_names, variable_units)
     base = string_variable(feature, variable_names)
     return base * "[" * string(dimension(variable_units[feature])) * "]"
 end
+@generated function sprint_precision(x, ::Val{precision}) where {precision}
+    fmt_string = "%.$(precision)g"
+    return :(@sprintf($fmt_string, x))
+end
+function string_constant(val, bracketed, ::Val{precision}) where {precision}
+    does_not_need_brackets = typeof(val) <: Real
+    if does_not_need_brackets
+        return sprint_precision(val, Val(precision)) * "[*]"
+    else
+        return "(" * string(val) * "[*])"
+    end
 end
 
 """

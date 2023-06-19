@@ -163,6 +163,7 @@ struct Options{
     fraction_replaced_hof::Float32
     topn::Int
     verbosity::Int
+    print_precision::Int
     save_to_file::Bool
     probability_negate_constant::Float32
     nuna::Int
