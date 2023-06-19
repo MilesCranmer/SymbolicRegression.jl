@@ -140,4 +140,47 @@ function poisson_sample(λ::T) where {T}
     return k - 1
 end
 
+# https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
+# Faster way to catch method errors:
+@enum IsGood::Int8 begin
+    Good
+    Bad
+    Undefined
+end
+const SafeFunctions = Dict{Type,IsGood}()
+const SafeFunctionsLock = Threads.SpinLock()
+
+function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
+    status = get(SafeFunctions, Tuple{F,T}, Undefined)
+    status == Good && return (f(x...)::D, true)
+    status == Bad && return (default, false)
+    return lock(SafeFunctionsLock) do
+        output = try
+            (f(x...)::D, true)
+        catch e
+            !isa(e, MethodError) && rethrow(e)
+            (default, false)
+        end
+        if output[2]
+            SafeFunctions[Tuple{F,T}] = Good
+        else
+            SafeFunctions[Tuple{F,T}] = Bad
+        end
+        return output
+    end
+end
+macro return_if_good(T, op, inputs)
+    result = gensym()
+    successful = gensym()
+    quote
+        try
+            $(result), $(successful) = safe_call($(esc(op)), $(esc(inputs)), one($(esc(T))))
+            $(successful) && valid($(result)) && return $(result)
+        catch e
+            !isa(e, DimensionError) && rethrow(e)
+        end
+        false
+    end
+end
+
 end
