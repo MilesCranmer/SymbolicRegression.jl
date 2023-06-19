@@ -4,11 +4,11 @@ import Base: convert
 if isdefined(Base, :get_extension)
     using SymbolicUtils: Symbolic
     import SymbolicRegression: node_to_symbolic, symbolic_to_node
-    import SymbolicRegression: Node, Options, deprecate_varmap
+    import SymbolicRegression: Node, Options
 else
     using ..SymbolicUtils: Symbolic
     import ..SymbolicRegression: node_to_symbolic, symbolic_to_node
-    import ..SymbolicRegression: Node, Options, deprecate_varmap
+    import ..SymbolicRegression: Node, Options
 end
 
 """
@@ -16,11 +16,8 @@ end
 
 Convert an expression to SymbolicUtils.jl form. 
 """
-function node_to_symbolic(
-    tree::Node, options::Options; variable_names=nothing, varMap=nothing, kws...
-)
-    variable_names = deprecate_varmap(variable_names, varMap, :node_to_symbolic)
-    return node_to_symbolic(tree, options.operators; varMap=variable_names, kws...)
+function node_to_symbolic(tree::Node, options::Options; kws...)
+    return node_to_symbolic(tree, options.operators; kws...)
 end
 
 """
@@ -28,11 +25,8 @@ end
 
 Convert a SymbolicUtils.jl expression to SymbolicRegression.jl's `Node` type.
 """
-function symbolic_to_node(
-    eqn::Symbolic, options::Options; variable_names=nothing, varMap=nothing, kws...
-)
-    variable_names = deprecate_varmap(variable_names, varMap, :symbolic_to_node)
-    return symbolic_to_node(eqn, options.operators; varMap=variable_names, kws...)
+function symbolic_to_node(eqn::Symbolic, options::Options; kws...)
+    return symbolic_to_node(eqn, options.operators; kws...)
 end
 
 function convert(::Type{Symbolic}, tree::Node, options::Options; kws...)

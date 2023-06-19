@@ -129,11 +129,8 @@ Convert an equation to a string.
 - `variable_names::Union{Array{String, 1}, Nothing}=nothing`: what variables
     to print for each feature.
 """
-@inline function string_tree(
-    tree::Node, options::Options; variable_names=nothing, varMap=nothing, kws...
-)
-    variable_names = deprecate_varmap(variable_names, varMap, :string_tree)
-    return string_tree(tree, options.operators; varMap=variable_names, kws...)
+@inline function string_tree(tree::Node, options::Options; kws...)
+    return string_tree(tree, options.operators; kws...)
 end
 
 """

@@ -87,7 +87,7 @@ Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
 Dataset(X::AbstractMatrix{T},
         y::AbstractVector{T};
         weights::Union{AbstractVector{T}, Nothing}=nothing,
-        varMap::Union{Array{String, 1}, Nothing}=nothing,
+        variable_names::Union{Array{String, 1}, Nothing}=nothing,
         loss_type::Type=Nothing,
        ) where {T<:DATA_TYPE}
 update_baseline_loss!(dataset::Dataset{T,L}, options::Options) where {T<:DATA_TYPE,L<:LOSS_TYPE}

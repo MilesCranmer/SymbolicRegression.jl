@@ -6,7 +6,7 @@
 equation_search(X::AbstractMatrix{T}, y::AbstractMatrix{T};
         niterations::Int=10,
         weights::Union{AbstractVector{T}, Nothing}=nothing,
-        varMap::Union{Array{String, 1}, Nothing}=nothing,
+        variable_names::Union{Array{String, 1}, Nothing}=nothing,
         options::Options=Options(),
         numprocs::Union{Int, Nothing}=nothing,
         procs::Union{Array{Int, 1}, Nothing}=nothing,
@@ -52,7 +52,7 @@ eval_grad_tree_array(tree::Node, X::AbstractMatrix, options::Options; kws...)
 
 ```@docs
 node_to_symbolic(tree::Node, options::Options; 
-                     varMap::Union{Array{String, 1}, Nothing}=nothing,
+                     variable_names::Union{Array{String, 1}, Nothing}=nothing,
                      index_functions::Bool=false)
 ```
 
