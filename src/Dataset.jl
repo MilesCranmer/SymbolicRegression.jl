@@ -103,6 +103,7 @@ function Dataset(
     use_baseline = true
     baseline = one(loss_type)
     _units = get_units(T, units)
+    error_on_mismatched_size(nfeatures, _units)
     warn_on_non_si_units(_units)
 
     return Dataset{
@@ -137,6 +138,15 @@ get_units(::Type{T}, x::Number) where {T} = Quantity(convert(T, x), DEFAULT_DIM)
 get_units(::Type{T}, x::AbstractVector) where {T} = Quantity{T,DEFAULT_DIM_TYPE}[get_units(T, xi) for xi in x]
 get_units(::Type{T}, x::NamedTuple) where {T} = NamedTuple((k => get_units(T, x[k]) for k in keys(x)))
 #! format: on
+
+error_on_mismatched_size(nfeatures, ::Nothing) = nothing
+function error_on_mismatched_size(nfeatures, units::NamedTuple)
+    return haskey(units, :X) &&
+           nfeatures != length(units.X) &&
+           error(
+               "Number of features ($(nfeatures)) does not match number of units ($(length(units.X)))",
+           )
+end
 
 warn_on_non_si_units(::Nothing) = nothing
 function warn_on_non_si_units(vq::NamedTuple)

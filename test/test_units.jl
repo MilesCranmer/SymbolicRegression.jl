@@ -151,3 +151,10 @@ end
         Dataset(X, y; units=(X=[u"m", u"1"], y=u"km"))
     )
 end
+
+@testset "Should error on mismatched units" begin
+    X = randn(11, 50)
+    y = randn(50)
+    VERSION >= v"1.8.0" &&
+        @test_throws("Number of features", Dataset(X, y; units=(X=["m", "1"], y="kg")))
+end
