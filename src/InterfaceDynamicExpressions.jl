@@ -8,7 +8,9 @@ import DynamicExpressions:
     print_tree,
     string_tree,
     differentiable_eval_tree_array
+import DynamicExpressions.EquationModule: string_variable
 using DynamicExpressions: DynamicExpressions
+import DynamicQuantities: dimension
 import ..CoreModule: Options
 #! format: off
 import ..deprecate_varmap
@@ -129,8 +131,31 @@ Convert an equation to a string.
 - `variable_names::Union{Array{String, 1}, Nothing}=nothing`: what variables
     to print for each feature.
 """
-@inline function string_tree(tree::Node, options::Options; kws...)
-    return string_tree(tree, options.operators; kws...)
+@inline function string_tree(
+    tree::Node,
+    options::Options;
+    units=nothing,
+    variable_names=nothing,
+    varMap=nothing,
+    kws...,
+)
+    variable_names = deprecate_varmap(variable_names, varMap, :string_tree)
+    units === nothing &&
+        return string_tree(tree, options.operators; variable_names=variable_names, kws...)
+
+    x_units = units.X
+    return string_tree(
+        tree,
+        options.operators;
+        f_variable=(feature, vname) -> string_variable_units(feature, vname, x_units),
+        variable_names=variable_names,
+        kws...,
+    )
+end
+function string_variable_units(feature, variable_names, variable_units)
+    base = string_variable(feature, variable_names)
+    return base * "[" * string(dimension(variable_units[feature])) * "]"
+end
 end
 
 """
