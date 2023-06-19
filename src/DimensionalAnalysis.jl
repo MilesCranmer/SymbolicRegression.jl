@@ -5,7 +5,8 @@ import DynamicQuantities: Dimensions, Quantity, DimensionError
 import DynamicQuantities: dimension, ustrip, uparse
 import Tricks: static_hasmethod
 
-import ..CoreModule: Options, Dataset, safe_pow, safe_sqrt
+import ..CoreModule: Options, Dataset
+import ..CoreModule.OperatorsModule: safe_pow, safe_sqrt
 import ..UtilsModule: @return_if_good
 
 function safe_sqrt(x::Quantity{T,R})::Quantity{T,R} where {T<:AbstractFloat,R}
