@@ -7,7 +7,21 @@ import Tricks: static_hasmethod
 
 import ..CoreModule: Options, Dataset
 import ..CoreModule.OperatorsModule: safe_pow, safe_sqrt
-import ..UtilsModule: @maybe_return_call
+import ..UtilsModule: safe_call
+
+macro maybe_return_call(T, op, inputs)
+    result = gensym()
+    successful = gensym()
+    quote
+        try
+            $(result), $(successful) = safe_call($(esc(op)), $(esc(inputs)), one($(esc(T))))
+            $(successful) && valid($(result)) && return $(result)
+        catch e
+            !isa(e, DimensionError) && rethrow(e)
+        end
+        false
+    end
+end
 
 function safe_sqrt(x::Quantity{T,R})::Quantity{T,R} where {T<:AbstractFloat,R}
     ustrip(x) < 0 && return sqrt(abs(x)) * Quantity(T(NaN), R)

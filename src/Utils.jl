@@ -169,18 +169,5 @@ function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
         return output
     end
 end
-macro maybe_return_call(T, op, inputs)
-    result = gensym()
-    successful = gensym()
-    quote
-        try
-            $(result), $(successful) = safe_call($(esc(op)), $(esc(inputs)), one($(esc(T))))
-            $(successful) && valid($(result)) && return $(result)
-        catch e
-            !isa(e, DimensionError) && rethrow(e)
-        end
-        false
-    end
-end
 
 end
