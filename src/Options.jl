@@ -358,7 +358,7 @@ function Options(;
     fraction_replaced=0.00036f0,
     fraction_replaced_hof=0.035f0,
     verbosity=convert(Int, 1e9),
-    print_precision::Int=5,
+    print_precision::UInt=5,
     save_to_file=true,
     probability_negate_constant=0.01f0,
     seed=nothing,

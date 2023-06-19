@@ -1,6 +1,7 @@
 module InterfaceDynamicExpressionsModule
 
 import Printf: @sprintf
+using DynamicExpressions: DynamicExpressions
 import DynamicExpressions:
     Node,
     eval_tree_array,
@@ -9,8 +10,7 @@ import DynamicExpressions:
     print_tree,
     string_tree,
     differentiable_eval_tree_array
-import DynamicExpressions.EquationModule: string_variable
-using DynamicExpressions: DynamicExpressions
+import DynamicExpressions.EquationModule: string_variable, get_op_name
 import DynamicQuantities: dimension
 import ..CoreModule: Options
 #! format: off
@@ -165,11 +165,12 @@ end
     return :(@sprintf($fmt_string, x))
 end
 function string_constant(val, bracketed, ::Val{precision}) where {precision}
+    unit_placeholder = "[⋅]"
     does_not_need_brackets = typeof(val) <: Real
     if does_not_need_brackets
-        return sprint_precision(val, Val(precision)) * "[*]"
+        return sprint_precision(val, Val(precision)) * unit_placeholder
     else
-        return "(" * string(val) * "[*])"
+        return "(" * string(val) * ")" * unit_placeholder
     end
 end
 
