@@ -48,6 +48,11 @@ function recursive_merge(x...)
     return x[end]
 end
 
+const subscripts = ('₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉')
+function subscriptify(number::Int)
+    return join([subscripts[i + 1] for i in reverse(digits(number))])
+end
+
 """
     split_string(s::String, n::Integer)
 

@@ -131,10 +131,10 @@ function deprecate_varmap(variable_names, varMap, func_name)
     return variable_names
 end
 
+include("Utils.jl")
 include("Core.jl")
 include("InterfaceDynamicExpressions.jl")
 include("Recorder.jl")
-include("Utils.jl")
 include("Complexity.jl")
 include("DimensionalAnalysis.jl")
 include("CheckConstraints.jl")

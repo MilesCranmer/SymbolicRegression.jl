@@ -2,6 +2,7 @@ module DatasetModule
 
 import DynamicQuantities: Dimensions, Quantity, uparse, ustrip
 
+import ..UtilsModule: subscriptify
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 #! format: off
 import ...deprecate_varmap
@@ -30,6 +31,8 @@ import ...deprecate_varmap
     `update_baseline_loss!`.
 - `variable_names::Array{String,1}`: The names of the features,
     with shape `(nfeatures,)`.
+- `pretty_variable_names::Array{String,1}`: A version of `variable_names`
+    but for printing to the terminal (e.g., with unicode versions).
 - `units`: Unit information. When used, this is a NamedTuple with fields
     corresponding to `:X` (vector of DynamicQuantities.Dimensions) and `:y`
     (single DynamicQuantities.Dimensions).
@@ -54,6 +57,7 @@ mutable struct Dataset{
     use_baseline::Bool
     baseline_loss::L
     variable_names::Array{String,1}
+    pretty_variable_names::Array{String,1}
     units::U
 end
 
@@ -87,8 +91,10 @@ function Dataset(
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
     weighted = weights !== nothing
-    if variable_names === nothing
-        variable_names = ["x$(i)" for i in 1:nfeatures]
+    (variable_names, pretty_variable_names) = if variable_names === nothing
+        ["x$(i)" for i in 1:nfeatures], ["x$(subscriptify(i))" for i in 1:nfeatures]
+    else
+        (variable_names, variable_names)
     end
     avg_y = if y === nothing
         nothing
@@ -120,6 +126,7 @@ function Dataset(
         use_baseline,
         baseline,
         variable_names,
+        pretty_variable_names,
         _units,
     )
 end

@@ -136,7 +136,11 @@ function string_dominating_pareto_curve(
         delta_l_mse = log(abs(curMSE / lastMSE) + ZERO_POINT)
         score = convert(Float32, -delta_l_mse / delta_c)
         eqn_string = string_tree(
-            member.tree, options; variable_names=dataset.variable_names, units=dataset.units
+            member.tree,
+            options;
+            pretty_variable_names=dataset.pretty_variable_names,
+            units=dataset.units,
+            raw=false,
         )
         base_string_length = length(@sprintf("%-10d  %-8.3e  %8.3e  ", 1, 1.0, 1.0))
 
