@@ -1,6 +1,7 @@
 module HallOfFameModule
 
 import DynamicExpressions: Node, string_tree
+import ..UtilsModule: split_string
 import ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 import ..PopMemberModule: PopMember, copy_pop_member
@@ -158,22 +159,6 @@ function string_dominating_pareto_curve(
     end
     output *= "-"^(twidth - 1)
     return output
-end
-
-"""
-    split_string(s::String, n::Integer)
-
-```jldoctest
-split_string("abcdefgh", 3)
-
-# output
-
-["abc", "def", "gh"]
-```
-"""
-function split_string(s::String, n::Integer)
-    length(s) <= n && return [s]
-    return [s[i:min(i + n - 1, end)] for i in 1:n:length(s)]
 end
 
 end

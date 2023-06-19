@@ -54,7 +54,7 @@ jobs:
             julia --color=yes --project=. coverage.jl
         shell: bash
       - name: "Coveralls"
-        uses: coverallsapp/github-action@master
+        uses: coverallsapp/github-action@v2
         with:
           path-to-lcov: lcov.info
           parallel: true
@@ -68,5 +68,4 @@ jobs:
       - name: Finish
         uses: coverallsapp/github-action@v2
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           parallel-finished: true

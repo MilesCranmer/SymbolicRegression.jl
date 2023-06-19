@@ -49,6 +49,24 @@ function recursive_merge(x...)
 end
 
 """
+    split_string(s::String, n::Integer)
+
+```jldoctest
+split_string("abcdefgh", 3)
+
+# output
+
+["abc", "def", "gh"]
+```
+"""
+function split_string(s::String, n::Integer)
+    length(s) <= n && return [s]
+    # Due to unicode characters, need to split only at valid indices:
+    I = eachindex(s) |> collect
+    return [s[I[i]:I[min(i + n - 1, end)]] for i in 1:n:length(s)]
+end
+
+"""
 Tiny equivalent to StaticArrays.MVector
 
 This is so we don't have to load StaticArrays, which takes a long time.
