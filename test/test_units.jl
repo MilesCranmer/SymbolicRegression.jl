@@ -158,3 +158,36 @@ end
     VERSION >= v"1.8.0" &&
         @test_throws("Number of features", Dataset(X, y; units=(X=["m", "1"], y="kg")))
 end
+
+@testset "Should print units" begin
+    X = randn(5, 64)
+    y = randn(64)
+    dataset = Dataset(X, y; units=(X=["m^3", "km/s", "kg", "1", "1"], y="kg"))
+    x1, x2, x3, x4, x5 = [Node(Float64; feature=i) for i in 1:5]
+    options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos, sin])
+    tree = 1.0 * (x1 + x2 * x3 * 5.32) - cos(1.5 * (x1 - 0.5))
+
+    @test string_tree(tree, options) ==
+        "((1.0 * (x1 + ((x2 * x3) * 5.32))) - cos(1.5 * (x1 - 0.5)))"
+    @test string_tree(tree, options; raw=false) ==
+        "((1[⋅] * (x₁ + ((x₂ * x₃) * 5.32[⋅]))) - cos(1.5[⋅] * (x₁ - 0.5[⋅])))"
+    @test string_tree(
+        tree, options; raw=false, pretty_variable_names=dataset.pretty_variable_names
+    ) == "((1[⋅] * (x₁ + ((x₂ * x₃) * 5.32[⋅]))) - cos(1.5[⋅] * (x₁ - 0.5[⋅])))"
+    @test string_tree(
+        tree,
+        options;
+        raw=false,
+        pretty_variable_names=dataset.pretty_variable_names,
+        units=dataset.units,
+    ) ==
+        "((1[⋅] * (x₁[m³] + ((x₂[m s⁻¹] * x₃[kg]) * 5.32[⋅]))) - cos(1.5[⋅] * (x₁[m³] - 0.5[⋅])))"
+
+    @test string_tree(
+        x5 * 3.2,
+        options;
+        raw=false,
+        pretty_variable_names=dataset.pretty_variable_names,
+        units=dataset.units,
+    ) == "(x₅ * 3.2[⋅])"
+end

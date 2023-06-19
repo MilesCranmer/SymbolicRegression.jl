@@ -174,8 +174,12 @@ function string_variable(feature, variable_names, variable_units=nothing)
     else
         variable_names[feature]
     end
-    variable_units !== nothing &&
-        return base * "[" * string(dimension(variable_units[feature])) * "]"
+    if variable_units !== nothing
+        dim = dimension(variable_units[feature])
+        if !iszero(dim)
+            base *= "[" * string(dim) * "]"
+        end
+    end
     return base
 end
 function string_constant(val, bracketed, ::Val{precision}) where {precision}
