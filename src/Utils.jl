@@ -169,7 +169,7 @@ function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
         return output
     end
 end
-macro return_if_good(T, op, inputs)
+macro maybe_return_call(T, op, inputs)
     result = gensym()
     successful = gensym()
     quote

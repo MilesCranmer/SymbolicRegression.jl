@@ -7,7 +7,7 @@ import Tricks: static_hasmethod
 
 import ..CoreModule: Options, Dataset
 import ..CoreModule.OperatorsModule: safe_pow, safe_sqrt
-import ..UtilsModule: @return_if_good
+import ..UtilsModule: @maybe_return_call
 
 function safe_sqrt(x::Quantity{T,R})::Quantity{T,R} where {T<:AbstractFloat,R}
     ustrip(x) < 0 && return sqrt(abs(x)) * Quantity(T(NaN), R)
@@ -98,7 +98,7 @@ end
     l.violates && return l
     !isfinite(l) && return W(one(Quantity{T,R}), false, true)
 
-    static_hasmethod(op, Tuple{W}) && @return_if_good(W, op, (l,))
+    static_hasmethod(op, Tuple{W}) && @maybe_return_call(W, op, (l,))
     l.wildcard && return W(Quantity(op(ustrip(l.val))::T, R), false, false)
     return W(one(Quantity{T,R}), false, true)
 end
@@ -106,13 +106,13 @@ end
     l.violates && return l
     r.violates && return r
     (!isfinite(l) || !isfinite(r)) && return W(one(Quantity{T,R}), false, true)
-    static_hasmethod(op, Tuple{W,W}) && @return_if_good(W, op, (l, r))
+    static_hasmethod(op, Tuple{W,W}) && @maybe_return_call(W, op, (l, r))
     static_hasmethod(op, Tuple{T,W}) &&
         l.wildcard &&
-        @return_if_good(W, op, (ustrip(l.val), r))
+        @maybe_return_call(W, op, (ustrip(l.val), r))
     static_hasmethod(op, Tuple{W,T}) &&
         r.wildcard &&
-        @return_if_good(W, op, (l, ustrip(r.val)))
+        @maybe_return_call(W, op, (l, ustrip(r.val)))
     # TODO: Should this also check for methods that take quantities as input?
     l.wildcard &&
         r.wildcard &&
