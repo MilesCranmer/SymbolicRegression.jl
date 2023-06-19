@@ -1,5 +1,6 @@
 using Test
 using SymbolicRegression
+using SymbolicRegression.UtilsModule: split_string
 
 include("test_params.jl")
 
@@ -44,4 +45,13 @@ for binop in [safe_pow, ^]
     )
     minitree = Node(5, Node("x1"), Node("x2"))
     @test string_tree(minitree, opts) == "(x1 ^ x2)"
+end
+
+@testset "Test splitting of strings" begin
+    split_string("abcdefgh", 3) == ["abc", "def", "gh"]
+    split_string("abcdefgh", 100) == ["abcdefgh"]
+    split_string("⋅", 1) == ["⋅"]
+    split_string("⋅⋅", 1) == ["⋅", "⋅"]
+    split_string("⋅⋅⋅⋅", 2) == ["⋅⋅", "⋅⋅"]
+    split_string("ραβγ", 2) == ["ρα", "βγ"]
 end
