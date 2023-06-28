@@ -32,7 +32,7 @@ SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 
 [compat]
 DynamicExpressions = "0.10"
-DynamicQuantities = "0.4"
+DynamicQuantities = "0.5"
 JSON3 = "1"
 LineSearches = "7"
 LossFunctions = "0.6, 0.7, 0.8, 0.10"
