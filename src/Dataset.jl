@@ -131,9 +131,8 @@ function Dataset(
     )
 end
 
-d_eltype(::Dimensions{R}) where {R} = R
 const DEFAULT_DIM = Dimensions()
-const DEFAULT_DIM_TYPE = d_eltype(DEFAULT_DIM)
+const DEFAULT_DIM_TYPE = typeof(DEFAULT_DIM)
 
 #! format: off
 get_units(_, ::Nothing) = nothing
