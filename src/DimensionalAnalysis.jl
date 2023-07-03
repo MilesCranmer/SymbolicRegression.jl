@@ -43,10 +43,12 @@ struct WildcardQuantity{Q<:AbstractQuantity}
 end
 
 ustrip(w::WildcardQuantity) = ustrip(w.val)
+dimension(w::WildcardQuantity) = dimension(w.val)
 valid(x::WildcardQuantity) = !x.violates
+
 Base.one(::Type{W}) where {Q,W<:WildcardQuantity{Q}} = return W(one(Q), false, false)
 Base.isfinite(w::WildcardQuantity) = isfinite(w.val)
-dimension(w::WildcardQuantity) = dimension(w.val)
+
 same_dimensions(x::WildcardQuantity, y::WildcardQuantity) = dimension(x) == dimension(y)
 has_no_dims(x::Quantity) = iszero(dimension(x))
 
