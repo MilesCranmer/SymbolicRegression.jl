@@ -161,7 +161,9 @@ function string_dominating_pareto_curve(
     return output
 end
 
-function format_hall_of_fame(hof::HallOfFame{T,L}, options, baseline_loss::L) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+function format_hall_of_fame(
+    hof::HallOfFame{T,L}, options, baseline_loss::L
+) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     ZERO_POINT = L(1e-10)
 
     dominating = calculate_pareto_frontier(hof)
@@ -174,7 +176,7 @@ function format_hall_of_fame(hof::HallOfFame{T,L}, options, baseline_loss::L) wh
     complexities = [compute_complexity(member, options) for member in dominating]
     scores = Array{L}(undef, length(dominating))
 
-    for i=1:length(dominating)
+    for i in 1:length(dominating)
         complexity = complexities[i]
         cur_loss = losses[i]
         delta_c = complexity - last_complexity
@@ -186,7 +188,9 @@ function format_hall_of_fame(hof::HallOfFame{T,L}, options, baseline_loss::L) wh
     end
     return (; trees=trees, scores=scores, losses=losses, complexities=complexities)
 end
-function format_hall_of_fame(hof::AH, options, baseline_loss) where {T,L,H<:HallOfFame{T,L},AH<:AbstractVector{H}}
+function format_hall_of_fame(
+    hof::AH, options, baseline_loss
+) where {T,L,H<:HallOfFame{T,L},AH<:AbstractVector{H}}
     outs = [format_hall_of_fame(h, options, baseline_loss) for h in hof]
     return (;
         trees=[out.trees for out in outs],
