@@ -186,34 +186,24 @@ end
 function Base.print(io::IO, options::Options)
     return print(
         io,
-        """Options(
-    # Operators:
-        binops=$(options.operators.binops), unaops=$(options.operators.unaops),
-    # Loss:
-        loss=$(options.elementwise_loss),
-    # Complexity Management:
-        maxsize=$(options.maxsize), maxdepth=$(options.maxdepth), bin_constraints=$(options.bin_constraints), una_constraints=$(options.una_constraints), use_frequency=$(options.use_frequency), use_frequency_in_tournament=$(options.use_frequency_in_tournament), parsimony=$(options.parsimony), warmup_maxsize_by=$(options.warmup_maxsize_by), 
-    # Search Size:
-        npopulations=$(options.npopulations), ncycles_per_iteration=$(options.ncycles_per_iteration), npop=$(options.npop), 
-    # Migration:
-        migration=$(options.migration), hof_migration=$(options.hof_migration), fraction_replaced=$(options.fraction_replaced), fraction_replaced_hof=$(options.fraction_replaced_hof),
-    # Tournaments:
-        prob_pick_first=$(options.prob_pick_first), tournament_selection_n=$(options.tournament_selection_n), topn=$(options.topn), 
-    # Constant tuning:
-        perturbation_factor=$(options.perturbation_factor), probability_negate_constant=$(options.probability_negate_constant), should_optimize_constants=$(options.should_optimize_constants), optimizer_algorithm=$(options.optimizer_algorithm), optimizer_probability=$(options.optimizer_probability), optimizer_nrestarts=$(options.optimizer_nrestarts), optimizer_iterations=$(options.optimizer_options.iterations),
-    # Mutations:
-        mutation_weights=$(options.mutation_weights), crossover_probability=$(options.crossover_probability), skip_mutation_failures=$(options.skip_mutation_failures)
-    # Annealing:
-        annealing=$(options.annealing), alpha=$(options.alpha), 
-    # Speed Tweaks:
-        batching=$(options.batching), batch_size=$(options.batch_size), fast_cycle=$(options.fast_cycle), 
-    # Logistics:
-        output_file=$(options.output_file), verbosity=$(options.verbosity), seed=$(options.seed), progress=$(options.progress),
-    # Early Exit:
-        early_stop_condition=$(options.early_stop_condition), timeout_in_seconds=$(options.timeout_in_seconds),
-)""",
+        "Options(" *
+        "binops=$(options.operators.binops), " *
+        "unaops=$(options.operators.unaops), "
+        # Fill in remaining fields automatically:
+        *
+        join(
+            [
+                if fieldname in (:optimizer_options, :mutation_weights)
+                    "$(fieldname)=..."
+                else
+                    "$(fieldname)=$(getfield(options, fieldname))"
+                end for
+                fieldname in fieldnames(Options) if fieldname ∉ [:operators, :nuna, :nbin]
+            ],
+            ", ",
+        ),
     )
 end
-Base.show(io::IO, options::Options) = Base.print(io, options)
+Base.show(io::IO, ::MIME"text/plain", options::Options) = Base.print(io, options)
 
 end
