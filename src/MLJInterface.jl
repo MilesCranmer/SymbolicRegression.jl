@@ -78,10 +78,32 @@ end
 # Cleaning already taken care of by `Options` and `equation_search`
 MLJModelInterface.clean!(::SRRegressor) = ""
 
+function full_report(m::SRRegressor, fitresult)
+    _, hof = fitresult
+    # TODO: Adjust baseline loss
+    formatted = format_hall_of_fame(hof, m.sr_options, 1.0)
+    equation_strings = get_equation_strings(formatted.trees, m.sr_options)
+    best_idx = dispatch_selection(
+        m.selection_method,
+        formatted.trees,
+        formatted.losses,
+        formatted.scores,
+        formatted.complexities,
+    )
+    return (;
+        best_idx=best_idx,
+        equations=formatted.trees,
+        equation_strings=equation_strings,
+        losses=formatted.losses,
+        complexities=formatted.complexities,
+        scores=formatted.scores,
+    )
+end
+
 # TODO: How to pass `variable_names` and `units`?
 # TODO: Enable `verbosity` being passed to `equation_search`
 function MLJModelInterface.fit(m::SRRegressor, verbosity, X, y, w=nothing)
-    state = equation_search(
+    fitresult = equation_search(
         X,
         y;
         niterations=m.niterations,
@@ -96,32 +118,17 @@ function MLJModelInterface.fit(m::SRRegressor, verbosity, X, y, w=nothing)
         saved_state=nothing,
         loss_type=m.loss_type,
     )
-    _, hof = state
-    # TODO: Adjust baseline loss
-    report = format_hall_of_fame(hof, m.sr_options, 1.0)
-    report_with_str = (;
-        equation_strings=get_equation_strings(report.trees, m.sr_options),
-        losses=report.losses,
-        scores=report.scores,
-        complexities=report.complexities,
-    )
-    return (state, nothing, report_with_str)
+    return (fitresult, nothing, full_report(m, fitresult))
 end
 function MLJModelInterface.fitted_params(m::SRRegressor, fitresult)
-    _, hof = fitresult
-    # TODO: Adjust baseline loss
-    formatted = format_hall_of_fame(hof, m.sr_options, 1.0)
-    best_idx = dispatch_selection(
-        m.selection_method,
-        formatted.trees,
-        formatted.losses,
-        formatted.scores,
-        formatted.complexities,
-    )
+    # _, hof = fitresult
+    # # TODO: Adjust baseline loss
+    # formatted = format_hall_of_fame(hof, m.sr_options, 1.0)
+    report = full_report(m, fitresult)
     return (;
-        equations=formatted.trees,
-        equation_strings=get_equation_strings(formatted.trees, m.sr_options),
-        best_idx=best_idx,
+        best_idx=report.best_idx,
+        equations=report.equations,
+        equation_strings=report.equation_strings,
     )
 end
 function MLJModelInterface.predict(m::SRRegressor, fitresult, Xnew)
