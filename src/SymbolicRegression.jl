@@ -8,6 +8,7 @@ export Population,
     Dataset,
     MutationWeights,
     Node,
+    SRRegressor,
     LOSS_TYPE,
     DATA_TYPE,
 
@@ -149,6 +150,7 @@ include("SingleIteration.jl")
 include("ProgressBars.jl")
 include("Migration.jl")
 include("SearchUtils.jl")
+include("MLJInterface.jl")
 
 import .CoreModule:
     MAX_DEGREE,
@@ -225,6 +227,7 @@ import .SearchUtilsModule:
     StateType,
     load_saved_hall_of_fame,
     load_saved_population
+import .MLJInterfaceModule: SRRegressor
 
 include("deprecates.jl")
 include("Configure.jl")
