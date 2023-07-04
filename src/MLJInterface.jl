@@ -177,26 +177,36 @@ function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     return reduce(hcat, outs)
 end
 
-#! format: off
-MMI.package_name(::Type{<:AbstractSRRegressor}) = "SymbolicRegression"
-MMI.package_uuid(::Type{<:AbstractSRRegressor}) = "8254be44-1295-4e6a-a16d-46603ac705cb"
-MMI.package_url(::Type{<:AbstractSRRegressor}) = "https://github.com/MilesCranmer/SymbolicRegression.jl"
-MMI.package_license(::Type{<:AbstractSRRegressor}) = "Apache-2.0"
-MMI.is_pure_julia(::Type{<:AbstractSRRegressor}) = true
-MMI.is_wrapper(::Type{<:AbstractSRRegressor}) = false
+const ALL_MODELS = (SRRegressor, MultitargetSRRegressor)
 
-MMI.input_scitype(::Type{<:AbstractSRRegressor}) = Union{MMI.Table(MMI.Continuous), AbstractMatrix{<:MMI.Continuous}}
-MMI.supports_weights(::Type{<:AbstractSRRegressor}) = true
-MMI.reports_feature_importances(::Type{<:AbstractSRRegressor}) = false
+MMI.metadata_pkg.(
+    ALL_MODELS;
+    name="SymbolicRegression",
+    uuid="8254be44-1295-4e6a-a16d-46603ac705cb",
+    url="https://github.com/MilesCranmer/SymbolicRegression.jl",
+    julia=true,
+    license="Apache-2.0",
+    is_wrapper=false,
+)
 
-MMI.target_scitype(::Type{SRRegressor}) = AbstractVector{<:MMI.Continuous}
-MMI.load_path(::Type{SRRegressor}) = "SymbolicRegression.MLJInterfaceModule.SRRegressor"
-MMI.human_name(::Type{SRRegressor}) = "Symbolic Regression via Evolutionary Search"
-
-MMI.target_scitype(::Type{MultitargetSRRegressor}) = Union{MMI.Table(MMI.Continuous), AbstractMatrix{<:MMI.Continuous}}
-MMI.load_path(::Type{MultitargetSRRegressor}) = "SymbolicRegression.MLJInterfaceModule.MultitargetSRRegressor"
-MMI.human_name(::Type{MultitargetSRRegressor}) = "Multi-Target Symbolic Regression via Evolutionary Search"
-#! format: on
+MMI.metadata_model(
+    SRRegressor;
+    input_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    target_scitype=AbstractVector{<:MMI.Continuous},
+    supports_weights=true,
+    reports_feature_importances=false,
+    load_path="SymbolicRegression.MLJInterfaceModule.SRRegressor",
+    descr="Symbolic Regression via Evolutionary Search",
+)
+MMI.metadata_model(
+    MultitargetSRRegressor;
+    input_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    target_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    supports_weights=true,
+    reports_feature_importances=false,
+    load_path="SymbolicRegression.MLJInterfaceModule.MultitargetSRRegressor",
+    descr="Multi-Target Symbolic Regression via Evolutionary Search",
+)
 
 function get_equation_strings_for(::SRRegressor, trees, options, variable_names)
     return (t -> string_tree(t, options; variable_names=variable_names)).(trees)
