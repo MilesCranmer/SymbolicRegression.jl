@@ -102,15 +102,16 @@ function MMI.update(
 end
 function _update(m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w)
     options = get(old_fitresult, :options, get_options(m))
-    X_t = transpose(MMI.matrix(X))
-    # TODO: Is this needed? Would MLJ ever pass in a matrix for y?
+    mX = MMI.matrix(X)
+    variable_names = getcolnames(mX)
+    X_t = transpose(mX)
     y_t = format_input_for(m, y)
     search_state = equation_search(
         X_t,
         y_t;
         niterations=m.niterations,
         weights=w,
-        variable_names=nothing,
+        variable_names=variable_names,
         options=options,
         parallelism=m.parallelism,
         numprocs=m.numprocs,
@@ -124,6 +125,9 @@ function _update(m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X,
     fitresult = (; state=search_state, options=options)
     return (fitresult, nothing, full_report(m, fitresult))
 end
+getcolnames(X) = getcolnames(MMI.schema(X), X)
+getcolnames(::Nothing, X) = map(i -> "x$(i)", axes(X, 2))
+getcolnames(sch, X) = string.(sch.names)
 format_input_for(::SRRegressor, y) = transpose(MMI.matrix(transpose(y)))
 format_input_for(::MultiSRRegressor, y) = transpose(MMI.matrix(y))
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
