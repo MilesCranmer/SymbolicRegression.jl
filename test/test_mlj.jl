@@ -58,8 +58,9 @@ end
         test_outs = predict(mach, X)
         @test isempty(setdiff((:c1, :c2), keys(test_outs)))
         @test_throws AssertionError predict(mach, (a1=randn(32), b2=randn(32)))
-        VERSION >= v"1.8" &&
-            @test_throws "Variable names do not match fitted" predict(mach, (b1=randn(32), a2=randn(32)))
+        VERSION >= v"1.8" && @test_throws "Variable names do not match fitted" predict(
+            mach, (b1=randn(32), a2=randn(32))
+        )
     end
 end
 

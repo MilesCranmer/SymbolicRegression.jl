@@ -191,7 +191,7 @@ function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     out_matrix = reduce(hcat, outs)
     !fitresult.y_is_table && return out_matrix
     prototype = MMI.istable(Xnew) ? Xnew : nothing
-    return MMI.table(out_matrix, names=fitresult.y_variable_names, prototype=prototype)
+    return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
 end
 
 function get_equation_strings_for(::SRRegressor, trees, options, variable_names)
@@ -258,10 +258,12 @@ MMI.metadata_model(
     human_name="Multi-Target Symbolic Regression via Evolutionary Search",
 )
 
-function tag_with_docstring(model_name::Symbol, description::String)
+function tag_with_docstring(model_name::Symbol, description::String, bottom_matter::String)
     docstring = """$(MMI.doc_header(eval(model_name)))
 
-    # Arguments
+    $(description)
+
+    # Hyper-parameters
     """
 
     # TODO: These ones are copied (or written) manually:
@@ -306,21 +308,173 @@ function tag_with_docstring(model_name::Symbol, description::String)
         of 1.5x the minimum loss. To fix the index at `5`, you could just write `Returns(5)`.
     """
 
+    bottom = """
+    # Operations
+
+    - `predict(mach, Xnew)`: Return predictions of the target given features `Xnew`, which
+      should have same scitype as `X` above. The expression used for prediction is defined
+      by the `selection_method` function, which can be seen by viewing `report(mach).best_idx`.
+
+    $(bottom_matter)
+    """
+
     # Remove common indentation:
     docstring = replace(docstring, r"^    " => "")
     extra_arguments = replace(append_arguments, r"^    " => "")
+    bottom = replace(bottom, r"^    " => "")
 
     # Add parameter descriptions:
     docstring = docstring * OPTION_DESCRIPTIONS
     docstring = docstring * extra_arguments
+    docstring = docstring * bottom
     return quote
         @doc $docstring $model_name
     end
 end
 
-#! format: off
-eval(tag_with_docstring(:SRRegressor, "Symbolic Regression via Evolutionary Search"))
-eval(tag_with_docstring(:MultitargetSRRegressor, "Multi-Target Symbolic Regression via Evolutionary Search"))
-#! format: on
+#https://arxiv.org/abs/2305.01582
+eval(
+    tag_with_docstring(
+        :SRRegressor,
+        replace(
+            """
+    Single-target Symbolic Regression regressor (`SRRegressor`) searches
+    for symbolic expressions that predict a single target variable from
+    a set of input variables. All data is assumed to be `Continuous`.
+    The search is performed using an evolutionary algorithm.
+    This algorithm is described in the arxiv paper
+    https://arxiv.org/abs/2305.01582.
+
+    # Training data
+    In MLJ or MLJBase, bind an instance `model` to data with
+
+        mach = machine(model, X, y)
+
+    OR
+
+        mach = machine(model, X, y, w)
+
+    Here:
+
+    - `X` is any table of input features (eg, a `DataFrame`) whose columns are of scitype
+      `Continuous`; check column scitypes with `schema(X)`. Variable names in discovered
+      expressions will be taken from the column names of `X`, if available.
+
+    - `y` is the target, which can be any `AbstractVector` whose element scitype is
+        `Continuous`; check the scitype with `scitype(y)`.
+
+    - `w` is the observation weights which can either be `nothing` (default) or an 
+      `AbstractVector` whoose element scitype is `Count` or `Continuous`.
+
+    Train the machine using `fit!(mach)`, inspect the discovered expressions with
+    `report(mach)`, and predict on new data with `predict(mach, Xnew)`.
+    Note that unlike other regressors, symbolic regression stores a list of
+    trained models. The model chosen from this list is defined by the function
+    `selection_method` keyword argument, which by default balances accuracy
+    and complexity.
+
+    """,
+            r"^    " => "",
+        ),
+        replace(
+            """
+    # Fitted parameters
+    - `equations::Vector{Node}`: The expressions discovered by the search, represented
+      in a dominating pareto frontier (i.e., the best expressions found for
+      each complexity).
+    - `equation_strings::Vector{String}`: The expressions discovered by the search,
+      represented as strings for easy inspection.
+    - `best_idx::Int`: The index of the best expression in the pareto frontier,
+       as determined by the `selection_method` function.
+
+    # Examples
+    ```
+    using MLJ
+    SRRegressor = @load SRRegressor pkg=SymbolicRegression
+    X, y = @load_boston
+    model = SRRegressor(binary_operators=[+, -, *], unary_operators=[exp], niterations=100)
+    mach = machine(model, X, y)
+    fit!(mach)
+    y_hat = predict(mach, X)
+    ```
+    See also [`MultitargetSRRegressor`](@ref).
+    """,
+            r"^    " => "",
+        ),
+    ),
+)
+eval(
+    tag_with_docstring(
+        :MultitargetSRRegressor,
+        replace(
+            """
+    Multi-target Symbolic Regression regressor (`MultitargetSRRegressor`)
+    conducts several searches for expressions that predict each target variable
+    from a set of input variables. All data is assumed to be `Continuous`.
+    The search is performed using an evolutionary algorithm.
+    This algorithm is described in the arxiv paper
+    https://arxiv.org/abs/2305.01582.
+
+    # Training data
+    In MLJ or MLJBase, bind an instance `model` to data with
+
+        mach = machine(model, X, y)
+
+    OR
+
+        mach = machine(model, X, y, w)
+
+    Here:
+
+    - `X` is any table of input features (eg, a `DataFrame`) whose columns are of scitype
+    `Continuous`; check column scitypes with `schema(X)`. Variable names in discovered
+    expressions will be taken from the column names of `X`, if available.
+
+    - `y` is the target, which can be any table of target variables whose element
+      scitype is `Continuous`; check the scitype with `schema(y)`.
+
+    - `w` is the observation weights which can either be `nothing` (default) or an 
+      `AbstractVector` whoose element scitype is `Count` or `Continuous`. The same
+      weights are used for all targets.
+
+    Train the machine using `fit!(mach)`, inspect the discovered expressions with
+    `report(mach)`, and predict on new data with `predict(mach, Xnew)`.
+    Note that unlike other regressors, symbolic regression stores a list of lists of
+    trained models. The models chosen from each of these lists is defined by the function
+    `selection_method` keyword argument, which by default balances accuracy
+    and complexity.
+
+    """,
+            r"^    " => "",
+        ),
+        replace(
+            """
+    # Fitted parameters
+    - `equations::Vector{Vector{Node}}`: The expressions discovered by the search, represented
+      in a dominating pareto frontier (i.e., the best expressions found for
+      each complexity). The outer vector is indexed by target variable, and the inner
+      vector is ordered by increasing complexity.
+    - `equation_strings::Vector{Vector{String}}`: The expressions discovered by the search,
+      represented as strings for easy inspection.
+    - `best_idx::Vector{Int}`: The index of the best expression in each pareto frontier,
+        as determined by the `selection_method` function.
+
+    # Examples
+    ```
+    using MLJ
+    MultitargetSRRegressor = @load MultitargetSRRegressor pkg=SymbolicRegression
+    X = (a=rand(100), b=rand(100), c=rand(100))
+    Y = (y1=(@. cos(X.c) * 2.1 - 0.9), y2=(@. X.a * X.b + X.c))
+    model = MultitargetSRRegressor(binary_operators=[+, -, *], unary_operators=[exp], niterations=100)
+    mach = machine(model, X, Y)
+    fit!(mach)
+    y_hat = predict(mach, X)
+    ```
+    See also [`SRRegressor`](@ref).
+    """,
+            r"^    " => "",
+        ),
+    ),
+)
 
 end
