@@ -98,7 +98,6 @@ MMI.clean!(::AbstractSRRegressor) = ""
 
 function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
     options = get_options(m)
-    variable_names = hasmethod(keys, typeof((X,))) ? [string.(keys(X))...] : nothing
     X_t = transpose(MMI.matrix(X))
     # TODO: Is this needed? Would MLJ ever pass in a matrix for y?
     y_t = ndims(y) == 1 ? transpose(MMI.matrix(transpose(y))) : transpose(MMI.matrix(y))
@@ -107,7 +106,7 @@ function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
         y_t;
         niterations=m.niterations,
         weights=w,
-        variable_names=variable_names,
+        variable_names=nothing,
         options=options,
         parallelism=m.parallelism,
         numprocs=m.numprocs,
