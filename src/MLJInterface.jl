@@ -74,7 +74,9 @@ function full_report(m::AbstractSRRegressor, fitresult)
     _, hof = fitresult.state
     # TODO: Adjust baseline loss
     formatted = format_hall_of_fame(hof, fitresult.options, 1.0)
-    equation_strings = get_equation_strings_for(m, formatted.trees, fitresult.options)
+    equation_strings = get_equation_strings_for(
+        m, formatted.trees, fitresult.options, fitresult.variable_names
+    )
     best_idx = dispatch_selection_for(
         m, formatted.trees, formatted.losses, formatted.scores, formatted.complexities
     )
@@ -102,9 +104,7 @@ function MMI.update(
 end
 function _update(m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w)
     options = get(old_fitresult, :options, get_options(m))
-    mX = MMI.matrix(X)
-    variable_names = getcolnames(X)
-    X_t = permutedims(mX)
+    X_t, variable_names = get_matrix_and_colnames(X)
     y_t = format_input_for(m, y)
     search_state = equation_search(
         X_t,
@@ -122,28 +122,31 @@ function _update(m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X,
         return_state=true,
         loss_type=m.loss_type,
     )
-    fitresult = (; state=search_state, options=options)
+    fitresult = (; state=search_state, options=options, variable_names=variable_names)
     return (fitresult, nothing, full_report(m, fitresult))
 end
-
-function getcolnames(X)
-    try
-        return getcolnames(MMI.schema(X), X)
-    catch e
-        isa(e, ArgumentError) || rethrow(e)
-    end
-    try
-        return getcolnames(MMI.schema(MMI.table(X)), X)
-    catch e
-        isa(e, MethodError) || isa(e, ArgumentError) || rethrow(e)
-    end
-    return getcolnames(nothing, X)
+function get_matrix_and_colnames(X)
+    sch = MMI.istable(X) ? MMI.schema(X) : nothing
+    Xm_t = MMI.matrix(X; transpose=true)
+    colnames =
+        sch === nothing ? [map(i -> "x$(i)", axes(Xm_t, 1))...] : [string.(sch.names)...]
+    return Xm_t, colnames
 end
-getcolnames(::Nothing, X) = [map(i -> "x$(i)", axes(X, 2))...]
-getcolnames(sch, _) = [string.(sch.names)...]
 
-format_input_for(::SRRegressor, y) = (@assert ndims(y) == 1; y)
-format_input_for(::MultitargetSRRegressor, y) = MMI.matrix(y, transpose=true)
+function format_input_for(::SRRegressor, y)
+    @assert(
+        ndims(y) == 1, "For multi-output regression, please use `MultitargetSRRegressor`."
+    )
+    return y
+end
+function format_input_for(::MultitargetSRRegressor, y)
+    @assert(
+        ndims(y) == 2 && size(y, 2) > 1,
+        "For single-output regression, please use `SRRegressor`."
+    )
+    return MMI.matrix(y; transpose=true)
+end
+
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     report = full_report(m, fitresult)
     return (;
@@ -195,11 +198,13 @@ MMI.load_path(::Type{MultitargetSRRegressor}) = "SymbolicRegression.MLJInterface
 MMI.human_name(::Type{MultitargetSRRegressor}) = "Multi-Target Symbolic Regression via Evolutionary Search"
 #! format: on
 
-function get_equation_strings_for(::SRRegressor, trees, options)
-    return (t -> string_tree(t, options)).(trees)
+function get_equation_strings_for(::SRRegressor, trees, options, variable_names)
+    return (t -> string_tree(t, options; variable_names=variable_names)).(trees)
 end
-function get_equation_strings_for(::MultitargetSRRegressor, trees, options)
-    return [(t -> string_tree(t, options)).(ts) for ts in trees]
+function get_equation_strings_for(::MultitargetSRRegressor, trees, options, variable_names)
+    return [
+        (t -> string_tree(t, options; variable_names=variable_names)).(ts) for ts in trees
+    ]
 end
 
 function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<:LOSS_TYPE}
