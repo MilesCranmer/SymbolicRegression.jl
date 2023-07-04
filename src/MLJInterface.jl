@@ -144,7 +144,21 @@ function MMI.predict(m::AbstractSRRegressor, fitresult, Xnew)
     end
 end
 
-# TODO: Add `metadata_model`
+MMI.package_name(::Type{<:AbstractSRRegressor}) = "SymbolicRegression"
+MMI.package_uuid(::Type{<:AbstractSRRegressor}) = "8254be44-1295-4e6a-a16d-46603ac705cb"
+function MMI.package_url(::Type{<:AbstractSRRegressor})
+    return "https://github.com/MilesCranmer/SymbolicRegression.jl"
+end
+MMI.package_license(::Type{<:AbstractSRRegressor}) = "Apache-2.0"
+MMI.is_pure_julia(::Type{<:AbstractSRRegressor}) = true
+MMI.is_wrapper(::Type{<:AbstractSRRegressor}) = false
+
+MMI.input_scitype(::Type{SRRegressor}) = MMI.Table(MMI.Continuous)
+MMI.target_scitype(::Type{SRRegressor}) = AbstractVecOrMat{MMI.Continuous}
+MMI.supports_weights(::Type{SRRegressor}) = true
+MMI.human_name(::Type{SRRegressor}) = "Symbolic Regression via Evolutionary Search"
+MMI.load_path(::Type{SRRegressor}) = "SymbolicRegression.MLJInterfaceModule.SRRegressor"
+MMI.reports_feature_importances(::Type{SRRegressor}) = false
 
 function get_equation_strings(trees, options)
     if isa(first(trees), Vector)
