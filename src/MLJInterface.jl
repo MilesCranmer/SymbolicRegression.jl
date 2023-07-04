@@ -9,74 +9,8 @@ import ..HallOfFameModule: HallOfFame, calculate_pareto_frontier, format_hall_of
 import ..equation_search
 #! format: on
 
-mutable struct SRRegressor <: MLJModelInterface.Deterministic
-    sr_options::Options
-    niterations::Int
-    parallelism::Symbol
-    numprocs::Union{Int,Nothing}
-    procs::Union{Vector{Int},Nothing}
-    addprocs_function::Union{Function,Nothing}
-    runtests::Bool
-    loss_type::Type
-    selection_method::Function
+    selection_method::Function=choose_best
 end
-# TODO: Ideally we could forward all parameters from `Options`?
-
-function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<:LOSS_TYPE}
-    # Same as in PySR:
-    # https://github.com/MilesCranmer/PySR/blob/e74b8ad46b163c799908b3aa4d851cf8457c79ef/pysr/sr.py#L2318-L2332
-    # threshold = 1.5 * minimum_loss
-    # Then, we get max score of those below the threshold.
-    threshold = 1.5 * minimum(losses)
-    return argmax([
-        (losses[i] <= threshold) ? scores[i] : typemin(L) for i in eachindex(losses)
-    ])
-end
-
-function dispatch_selection(
-    selection_method::F, trees::VN, losses, scores, complexities
-) where {F,T,N<:Node{T},VN<:Vector{N}}
-    return selection_method(;
-        trees=trees, losses=losses, scores=scores, complexities=complexities
-    )::Integer
-end
-function dispatch_selection(
-    selection_method::F, trees::MN, losses, scores, complexities
-) where {F,T,N<:Node{T},VN<:Vector{N},MN<:Vector{VN}}
-    return [
-        dispatch_selection(
-            selection_method, trees[i], losses[i], scores[i], complexities[i]
-        ) for i in eachindex(trees)
-    ]
-end
-
-# TODO: Should somehow automatically document kws available.
-function SRRegressor(;
-    niterations::Int=10,
-    parallelism::Symbol=:multithreading,
-    numprocs::Union{Int,Nothing}=nothing,
-    procs::Union{Vector{Int},Nothing}=nothing,
-    addprocs_function::Union{Function,Nothing}=nothing,
-    runtests::Bool=true,
-    loss_type::Type=Nothing,
-    selection_method=choose_best,
-    kws...,
-)
-    @assert !haskey(kws, :return_state)
-    return SRRegressor(
-        Options(; return_state=true, kws...),
-        niterations,
-        parallelism,
-        numprocs,
-        procs,
-        addprocs_function,
-        runtests,
-        loss_type,
-        selection_method,
-    )
-end
-# Cleaning already taken care of by `Options` and `equation_search`
-MLJModelInterface.clean!(::SRRegressor) = ""
 
 function full_report(m::SRRegressor, fitresult)
     _, hof = fitresult
@@ -158,6 +92,34 @@ function get_equation_strings(trees, options)
     else
         return (t -> string_tree(t, options)).(trees)
     end
+end
+
+function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<:LOSS_TYPE}
+    # Same as in PySR:
+    # https://github.com/MilesCranmer/PySR/blob/e74b8ad46b163c799908b3aa4d851cf8457c79ef/pysr/sr.py#L2318-L2332
+    # threshold = 1.5 * minimum_loss
+    # Then, we get max score of those below the threshold.
+    threshold = 1.5 * minimum(losses)
+    return argmax([
+        (losses[i] <= threshold) ? scores[i] : typemin(L) for i in eachindex(losses)
+    ])
+end
+
+function dispatch_selection(
+    selection_method::F, trees::VN, losses, scores, complexities
+) where {F,T,N<:Node{T},VN<:Vector{N}}
+    return selection_method(;
+        trees=trees, losses=losses, scores=scores, complexities=complexities
+    )::Integer
+end
+function dispatch_selection(
+    selection_method::F, trees::MN, losses, scores, complexities
+) where {F,T,N<:Node{T},VN<:Vector{N},MN<:Vector{VN}}
+    return [
+        dispatch_selection(
+            selection_method, trees[i], losses[i], scores[i], complexities[i]
+        ) for i in eachindex(trees)
+    ]
 end
 
 end
