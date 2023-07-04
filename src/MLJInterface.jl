@@ -104,7 +104,7 @@ function _update(m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X,
     options = get(old_fitresult, :options, get_options(m))
     mX = MMI.matrix(X)
     variable_names = getcolnames(X)
-    X_t = copy(transpose(mX))
+    X_t = permutedims(mX)
     y_t = format_input_for(m, y)
     search_state = equation_search(
         X_t,
