@@ -475,7 +475,7 @@ eval(
     # View the equations used:
     r = report(mach)
     for (output_index, (eq, i)) in enumerate(zip(r.equation_strings, r.best_idx))
-        println("Equation used for $(output_index): $(eq[i])")
+        println("Equation used for", output_index, ": ", eq[i])
     end
     ```
     See also [`SRRegressor`](@ref).
