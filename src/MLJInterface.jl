@@ -247,7 +247,7 @@ function tag_with_docstring(model_name::Symbol, description::String)
     # Arguments
     """
 
-    # TODO: These ones are copied manually:
+    # TODO: These ones are copied (or written) manually:
     append_arguments = """- `niterations::Int=10`: The number of iterations to perform the search.
         More iterations will improve the results.
     - `parallelism=:multithreading`: What parallelism mode to use.
@@ -281,6 +281,12 @@ function tag_with_docstring(model_name::Symbol, description::String)
         for the loss than for the data you passed, specify the type here.
         Note that if you pass complex data `::Complex{L}`, then the loss
         type will automatically be set to `L`.
+    - `selection_method::Function`: Function to selection expression from
+        the Pareto frontier for use in `predict`. See `SymbolicRegression.MLJInterfaceModule.choose_best`
+        for an example. This function should return a single integer specifying
+        the index of the expression to use. By default, `choose_best` maximizes
+        the score (a pound-for-pound rating) of expressions reaching the threshold
+        of 1.5x the minimum loss. To fix the index at `5`, you could just write `Returns(5)`.
     """
 
     # Remove common indentation:
