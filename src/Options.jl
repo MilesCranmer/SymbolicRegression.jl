@@ -364,7 +364,7 @@ function Options end
     una_constraints=nothing,
     progress::Bool=true,
     terminal_width::Union{Nothing,Integer}=nothing,
-    optimizer_algorithm::String="BFGS",
+    optimizer_algorithm::AbstractString="BFGS",
     optimizer_nrestarts::Integer=2,
     optimizer_probability::Real=0.14,
     optimizer_iterations::Union{Nothing,Integer}=nothing,

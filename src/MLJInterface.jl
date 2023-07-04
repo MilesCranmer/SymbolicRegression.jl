@@ -166,12 +166,9 @@ MMI.package_license(::Type{<:AbstractSRRegressor}) = "Apache-2.0"
 MMI.is_pure_julia(::Type{<:AbstractSRRegressor}) = true
 MMI.is_wrapper(::Type{<:AbstractSRRegressor}) = false
 
-MMI.input_scitype(::Type{SRRegressor}) = MMI.Table(Union{MMI.Continuous,MMI.Count})
+MMI.input_scitype(::Type{SRRegressor}) = MMI.Table(MMI.Continuous)
 function MMI.target_scitype(::Type{SRRegressor})
-    return Union{
-        MMI.Table(Union{MMI.Continuous,MMI.Count}),
-        AbstractVector{<:Union{MMI.Continuous,MMI.Count}},
-    }
+    return Union{MMI.Table(MMI.Continuous),AbstractVector{<:MMI.Continuous}}
 end
 MMI.supports_weights(::Type{SRRegressor}) = true
 MMI.human_name(::Type{SRRegressor}) = "Symbolic Regression via Evolutionary Search"
