@@ -151,6 +151,12 @@ function format_input_for(::MultitargetSRRegressor, y)
     )
     return get_matrix_and_colnames(y)
 end
+function validate_variable_names(variable_names, fitresult)
+    @assert(
+        variable_names == fitresult.variable_names,
+        "Variable names do not match fitted regressor."
+    )
+end
 
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     report = full_report(m, fitresult)
@@ -162,7 +168,8 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
 end
 function MMI.predict(m::SRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t = MMI.matrix(Xnew; transpose=true)
+    Xnew_t, variable_names = get_matrix_and_colnames(Xnew)
+    validate_variable_names(variable_names, fitresult)
     eq = params.equations[params.best_idx]
     out, flag = eval_tree_array(eq, Xnew_t, fitresult.options)
     !flag && error("Detected a NaN in evaluating expression.")
@@ -171,10 +178,7 @@ end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
     Xnew_t, variable_names = get_matrix_and_colnames(Xnew)
-    @assert(
-        variable_names == fitresult.variable_names,
-        "Variable names do not match fitted regressor."
-    )
+    validate_variable_names(variable_names, fitresult)
     equations = params.equations
     best_idx = params.best_idx
     outs = [
