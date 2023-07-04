@@ -162,7 +162,7 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
 end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t = transpose(MMI.matrix(Xnew))
+    Xnew_t = MMI.matrix(Xnew, transpose=true)
     equations = params.equations
     best_idx = params.best_idx
     outs = [
