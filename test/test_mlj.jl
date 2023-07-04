@@ -41,3 +41,12 @@ end
         )
     end
 end
+
+@testset "Good predictions" begin
+    X = randn(100, 3)
+    Y = X
+    model = MultitargetSRRegressor(; niterations=10)
+    mach = machine(model, X, Y)
+    fit!(mach)
+    @test sum(abs2, predict(mach, X) .- Y) < 1e-6
+end
