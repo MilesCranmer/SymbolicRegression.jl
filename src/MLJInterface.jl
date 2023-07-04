@@ -123,6 +123,7 @@ function MMI.update(
         options=options,
         variable_names=variable_names,
         y_variable_names=y_variable_names,
+        y_is_table=MMI.istable(y),
     )
     return (fitresult, nothing, full_report(m, fitresult))
 end
@@ -187,7 +188,10 @@ function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
             out
         end for (i, eq) in zip(best_idx, equations)
     ]
-    return reduce(hcat, outs)
+    out_matrix = reduce(hcat, outs)
+    !fitresult.y_is_table && return out_matrix
+    prototype = MMI.istable(Xnew) ? Xnew : nothing
+    return MMI.table(out_matrix, names=fitresult.y_variable_names, prototype=prototype)
 end
 
 function get_equation_strings_for(::SRRegressor, trees, options, variable_names)
