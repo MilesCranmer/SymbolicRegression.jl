@@ -229,7 +229,7 @@ MMI.metadata_model(
     supports_weights=true,
     reports_feature_importances=false,
     load_path="SymbolicRegression.MLJInterfaceModule.SRRegressor",
-    descr="Symbolic Regression via Evolutionary Search",
+    human_name="Symbolic Regression via Evolutionary Search",
 )
 MMI.metadata_model(
     MultitargetSRRegressor;
@@ -238,7 +238,7 @@ MMI.metadata_model(
     supports_weights=true,
     reports_feature_importances=false,
     load_path="SymbolicRegression.MLJInterfaceModule.MultitargetSRRegressor",
-    descr="Multi-Target Symbolic Regression via Evolutionary Search",
+    human_name="Multi-Target Symbolic Regression via Evolutionary Search",
 )
 
 function tag_with_docstring(model_name::Symbol, description::String)
