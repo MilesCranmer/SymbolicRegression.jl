@@ -142,7 +142,7 @@ end
 getcolnames(::Nothing, X) = [map(i -> "x$(i)", axes(X, 2))...]
 getcolnames(sch, _) = [string.(sch.names)...]
 
-format_input_for(::SRRegressor, y) = y
+format_input_for(::SRRegressor, y) = (@assert ndims(y) == 1; y)
 format_input_for(::MultitargetSRRegressor, y) = MMI.matrix(y, transpose=true)
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     report = full_report(m, fitresult)
