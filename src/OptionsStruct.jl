@@ -201,7 +201,8 @@ function Base.print(io::IO, options::Options)
                 fieldname in fieldnames(Options) if fieldname ∉ [:operators, :nuna, :nbin]
             ],
             ", ",
-        ),
+        )
+        * ")",
     )
 end
 Base.show(io::IO, ::MIME"text/plain", options::Options) = Base.print(io, options)
