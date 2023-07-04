@@ -98,12 +98,16 @@ MMI.clean!(::AbstractSRRegressor) = ""
 
 function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
     options = get_options(m)
+    variable_names = hasmethod(keys, typeof((X,))) ? [string.(keys(X))...] : nothing
+    X_t = transpose(MMI.matrix(X))
+    # TODO: Is this needed? Would MLJ ever pass in a matrix for y?
+    y_t = ndims(y) == 1 ? transpose(MMI.matrix(transpose(y))) : transpose(MMI.matrix(y))
     search_state = equation_search(
-        X,
-        y;
+        X_t,
+        y_t;
         niterations=m.niterations,
         weights=w,
-        variable_names=nothing,
+        variable_names=variable_names,
         options=options,
         parallelism=m.parallelism,
         numprocs=m.numprocs,
@@ -127,18 +131,19 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
 end
 function MMI.predict(m::AbstractSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
+    Xnew_t = transpose(MMI.matrix(Xnew))
     equations = params.equations
     best_idx = params.best_idx
     if isa(best_idx, Vector)
         outs = [
-            let out, flag = eval_tree_array(eq[i], Xnew, fitresult.options)
+            let out, flag = eval_tree_array(eq[i], Xnew_t, fitresult.options)
                 !flag && error("Detected a NaN in evaluating expression.")
                 out
             end for (i, eq) in zip(best_idx, equations)
         ]
         return reduce(hcat, outs)
     else
-        out, flag = eval_tree_array(equations[best_idx], Xnew, fitresult.options)
+        out, flag = eval_tree_array(equations[best_idx], Xnew_t, fitresult.options)
         !flag && error("Detected a NaN in evaluating expression.")
         return out
     end
