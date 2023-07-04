@@ -1,6 +1,6 @@
 import SymbolicRegression: SRRegressor, MultitargetSRRegressor
 import MLJTestInterface as MTI
-import MLJBase: machine, fit!, report
+import MLJBase: machine, fit!, report, predict
 using Test
 
 macro quiet(ex)
