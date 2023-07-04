@@ -48,6 +48,20 @@ end
             eq -> occursin("a", eq), [rep.equation_strings[i][rep.best_idx[i]] for i in 1:3]
         )
     end
+
+    @testset "Named outputs" begin
+        X = (b1=randn(32), b2=randn(32))
+        Y = (c1=X.b1 .* X.b2, c2=X.b1 .+ X.b2)
+        model = MultitargetSRRegressor(; niterations=10)
+        mach = machine(model, X, Y)
+        fit!(mach)
+        test_outs = predict(mach, X)
+        @test isempty(setdiff((:c1, :c2), keys(test_outs)))
+        @test_throws AssertionError predict(mach, (a1=randn(32), b2=randn(32)))
+        VERSION >= v"1.8" && @test_throws "Variable names do not match fitted" predict(
+            mach, (b1=randn(32), a2=randn(32))
+        )
+    end
 end
 
 @testset "Good predictions" begin
