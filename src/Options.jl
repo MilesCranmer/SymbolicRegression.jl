@@ -24,7 +24,7 @@ import ..OperatorsModule:
     safe_acosh,
     atanh_clip
 import ..OptionsStructModule: Options, ComplexityMapping, MutationWeights, mutations
-import ..UtilsModule: max_ops, @save_kwargs, VecOrTuple
+import ..UtilsModule: max_ops, @save_kwargs
 
 """
          build_constraints(una_constraints, bin_constraints,
@@ -319,8 +319,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 """
 function Options end
 @save_kwargs DEFAULT_OPTIONS function Options(;
-    binary_operators::VecOrTuple=[+, -, /, *],
-    unary_operators::VecOrTuple=[],
+    binary_operators=[+, -, /, *],
+    unary_operators=[],
     constraints=nothing,
     elementwise_loss::Union{Function,Nothing}=nothing,
     loss_function::Union{Function,Nothing}=nothing,
