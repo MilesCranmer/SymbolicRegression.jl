@@ -95,14 +95,11 @@ end
 MMI.clean!(::AbstractSRRegressor) = ""
 
 function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
-    return _update(m, verbosity, (; state=nothing), nothing, X, y, w)
+    return MMI.update(m, verbosity, (; state=nothing), nothing, X, y, w)
 end
 function MMI.update(
     m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
 )
-    return _update(m, verbosity, old_fitresult, old_cache, X, y, w)
-end
-function _update(m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w)
     options = get(old_fitresult, :options, get_options(m))
     X_t, variable_names = get_matrix_and_colnames(X)
     y_t = format_input_for(m, y)
@@ -128,8 +125,11 @@ end
 function get_matrix_and_colnames(X)
     sch = MMI.istable(X) ? MMI.schema(X) : nothing
     Xm_t = MMI.matrix(X; transpose=true)
-    colnames =
-        sch === nothing ? [map(i -> "x$(i)", axes(Xm_t, 1))...] : [string.(sch.names)...]
+    colnames = if sch === nothing
+        [map(i -> "x$(i)", axes(Xm_t, 1))...]
+    else
+        [string.(sch.names)...]
+    end
     return Xm_t, colnames
 end
 
@@ -157,7 +157,7 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
 end
 function MMI.predict(m::SRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t = MMI.matrix(Xnew, transpose=true)
+    Xnew_t = MMI.matrix(Xnew; transpose=true)
     eq = params.equations[params.best_idx]
     out, flag = eval_tree_array(eq, Xnew_t, fitresult.options)
     !flag && error("Detected a NaN in evaluating expression.")
@@ -165,7 +165,7 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
 end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t = MMI.matrix(Xnew, transpose=true)
+    Xnew_t = MMI.matrix(Xnew; transpose=true)
     equations = params.equations
     best_idx = params.best_idx
     outs = [
@@ -185,7 +185,7 @@ MMI.package_license(::Type{<:AbstractSRRegressor}) = "Apache-2.0"
 MMI.is_pure_julia(::Type{<:AbstractSRRegressor}) = true
 MMI.is_wrapper(::Type{<:AbstractSRRegressor}) = false
 
-MMI.input_scitype(::Type{<:AbstractSRRegressor}) = MMI.Table(MMI.Continuous)
+MMI.input_scitype(::Type{<:AbstractSRRegressor}) = Union{MMI.Table(MMI.Continuous), AbstractMatrix{<:MMI.Continuous}}
 MMI.supports_weights(::Type{<:AbstractSRRegressor}) = true
 MMI.reports_feature_importances(::Type{<:AbstractSRRegressor}) = false
 
@@ -193,7 +193,7 @@ MMI.target_scitype(::Type{SRRegressor}) = AbstractVector{<:MMI.Continuous}
 MMI.load_path(::Type{SRRegressor}) = "SymbolicRegression.MLJInterfaceModule.SRRegressor"
 MMI.human_name(::Type{SRRegressor}) = "Symbolic Regression via Evolutionary Search"
 
-MMI.target_scitype(::Type{MultitargetSRRegressor}) = MMI.Table(MMI.Continuous)
+MMI.target_scitype(::Type{MultitargetSRRegressor}) = Union{MMI.Table(MMI.Continuous), AbstractMatrix{<:MMI.Continuous}}
 MMI.load_path(::Type{MultitargetSRRegressor}) = "SymbolicRegression.MLJInterfaceModule.MultitargetSRRegressor"
 MMI.human_name(::Type{MultitargetSRRegressor}) = "Multi-Target Symbolic Regression via Evolutionary Search"
 #! format: on
