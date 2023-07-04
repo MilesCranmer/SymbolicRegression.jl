@@ -370,7 +370,7 @@ function Options(;
     recorder=nothing,
     recorder_file="pysr_recorder.json",
     early_stop_condition::Union{Function,Real,Nothing}=nothing,
-    return_state::Bool=false,
+    return_state::Union{Bool,Nothing}=nothing,
     timeout_in_seconds=nothing,
     max_evals=nothing,
     skip_mutation_failures::Bool=true,

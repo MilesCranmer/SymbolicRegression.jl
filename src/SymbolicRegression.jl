@@ -285,10 +285,12 @@ which is useful for debugging and profiling.
     related to the host environment.
 - `saved_state::Union{StateType, Nothing}=nothing`: If you have already
     run `equation_search` and want to resume it, pass the state here.
-    To get this to work, you need to have return_state=true in the options,
+    To get this to work, you need to have set return_state=true,
     which will cause `equation_search` to return the state. Note that
     you cannot change the operators or dataset, but most other options
     should be changeable.
+- `return_state::Union{Bool, Nothing}=nothing`: Whether to return the
+    state of the search for warm starts. By default this is false.
 - `loss_type::Type=Nothing`: If you would like to use a different type
     for the loss than for the data you passed, specify the type here.
     Note that if you pass complex data `::Complex{L}`, then the loss
@@ -314,6 +316,7 @@ function equation_search(
     addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
     saved_state::Union{StateType{T,L},Nothing}=nothing,
+    return_state::Union{Bool,Nothing}=nothing,
     loss_type::Type=Nothing,
     # Deprecated:
     multithreaded=nothing,
@@ -355,6 +358,7 @@ function equation_search(
         addprocs_function=addprocs_function,
         runtests=runtests,
         saved_state=saved_state,
+        return_state=return_state,
     )
 end
 
@@ -387,6 +391,7 @@ function equation_search(
     addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
     saved_state::Union{StateType{T,L},Nothing}=nothing,
+    return_state::Union{Bool,Nothing}=nothing,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
     concurrency = if parallelism in (:multithreading, "multithreading")
         :multithreading
@@ -422,6 +427,7 @@ function equation_search(
         addprocs_function=addprocs_function,
         runtests=runtests,
         saved_state=saved_state,
+        return_state=return_state,
     )
 end
 
@@ -435,6 +441,7 @@ function _equation_search(
     addprocs_function::Union{Function,Nothing},
     runtests::Bool,
     saved_state::Union{StateType{T,L},Nothing},
+    return_state::Union{Bool,Nothing},
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
     if options.deterministic
         if parallelism != :serial
@@ -445,6 +452,12 @@ function _equation_search(
         if Threads.nthreads() == 1
             @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
         end
+    end
+    should_return_state = if options.return_state === nothing
+        return_state === nothing ? false : return_state
+    else
+        @assert(return_state === nothing, "You cannot set `return_state` in both the `Options` and in the passed arguments.")
+        options.return_state
     end
 
     stdin_reader = watch_stream(stdin)
