@@ -396,6 +396,9 @@ eval(
     mach = machine(model, X, y)
     fit!(mach)
     y_hat = predict(mach, X)
+    # View the equation used:
+    r = report(mach)
+    println("Equation used:", r.equation_strings[r.best_idx])
     ```
     See also [`MultitargetSRRegressor`](@ref).
     """,
@@ -469,6 +472,11 @@ eval(
     mach = machine(model, X, Y)
     fit!(mach)
     y_hat = predict(mach, X)
+    # View the equations used:
+    r = report(mach)
+    for (output_index, (eq, i)) in enumerate(zip(r.equation_strings, r.best_idx))
+        println("Equation used for $(output_index): $(eq[i])")
+    end
     ```
     See also [`SRRegressor`](@ref).
     """,
