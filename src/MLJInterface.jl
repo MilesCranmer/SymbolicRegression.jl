@@ -135,7 +135,7 @@ function MMI.predict(m::AbstractSRRegressor, fitresult, Xnew)
     best_idx = params.best_idx
     if isa(best_idx, Vector)
         outs = [
-            let out, flag = eval_tree_array(eq[i], Xnew_t, fitresult.options)
+            let (out, flag) = eval_tree_array(eq[i], Xnew_t, fitresult.options)
                 !flag && error("Detected a NaN in evaluating expression.")
                 out
             end for (i, eq) in zip(best_idx, equations)
@@ -158,7 +158,7 @@ MMI.is_pure_julia(::Type{<:AbstractSRRegressor}) = true
 MMI.is_wrapper(::Type{<:AbstractSRRegressor}) = false
 
 MMI.input_scitype(::Type{SRRegressor}) = MMI.Table(MMI.Continuous)
-MMI.target_scitype(::Type{SRRegressor}) = AbstractVecOrMat{MMI.Continuous}
+MMI.target_scitype(::Type{SRRegressor}) = AbstractVecOrMat{<:MMI.Continuous}
 MMI.supports_weights(::Type{SRRegressor}) = true
 MMI.human_name(::Type{SRRegressor}) = "Symbolic Regression via Evolutionary Search"
 MMI.load_path(::Type{SRRegressor}) = "SymbolicRegression.MLJInterfaceModule.SRRegressor"
