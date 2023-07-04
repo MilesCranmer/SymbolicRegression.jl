@@ -1,4 +1,4 @@
-import SymbolicRegression: SRRegressor, MultiSRRegressor
+import SymbolicRegression: SRRegressor, MultitargetSRRegressor
 import MLJTestInterface as MTI
 using Test
 
@@ -12,7 +12,7 @@ using Test
     Y = @. cos(X^2) * 3.2 - 0.5
     (X, Y) = MTI.table.((X, Y))
     failures, summary = MTI.test(
-        [MultiSRRegressor], X, Y; mod=@__MODULE__, verbosity=0, throw=true
+        [MultitargetSRRegressor], X, Y; mod=@__MODULE__, verbosity=0, throw=true
     )
     @test isempty(failures)
 end

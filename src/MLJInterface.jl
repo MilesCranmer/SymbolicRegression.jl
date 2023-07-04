@@ -67,7 +67,7 @@ end
 function get_options(::AbstractSRRegressor) end
 
 eval(modelexpr(:SRRegressor))
-eval(modelexpr(:MultiSRRegressor))
+eval(modelexpr(:MultitargetSRRegressor))
 
 # Cleaning already taken care of by `Options` and `equation_search`
 function full_report(m::AbstractSRRegressor, fitresult)
@@ -129,7 +129,7 @@ getcolnames(X) = getcolnames(MMI.schema(X), X)
 getcolnames(::Nothing, X) = [map(i -> "x$(i)", axes(X, 2))...]
 getcolnames(sch, X) = [string.(sch.names)...]
 format_input_for(::SRRegressor, y) = y
-format_input_for(::MultiSRRegressor, y) = transpose(MMI.matrix(y))
+format_input_for(::MultitargetSRRegressor, y) = transpose(MMI.matrix(y))
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     report = full_report(m, fitresult)
     return (;
@@ -146,7 +146,7 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
     !flag && error("Detected a NaN in evaluating expression.")
     return out
 end
-function MMI.predict(m::MultiSRRegressor, fitresult, Xnew)
+function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
     Xnew_t = transpose(MMI.matrix(Xnew))
     equations = params.equations
@@ -176,15 +176,15 @@ MMI.target_scitype(::Type{SRRegressor}) = AbstractVector{<:MMI.Continuous}
 MMI.load_path(::Type{SRRegressor}) = "SymbolicRegression.MLJInterfaceModule.SRRegressor"
 MMI.human_name(::Type{SRRegressor}) = "Symbolic Regression via Evolutionary Search"
 
-MMI.target_scitype(::Type{MultiSRRegressor}) = MMI.Table(MMI.Continuous)
-MMI.load_path(::Type{MultiSRRegressor}) = "SymbolicRegression.MLJInterfaceModule.MultiSRRegressor"
-MMI.human_name(::Type{MultiSRRegressor}) = "Multi-Target Symbolic Regression via Evolutionary Search"
+MMI.target_scitype(::Type{MultitargetSRRegressor}) = MMI.Table(MMI.Continuous)
+MMI.load_path(::Type{MultitargetSRRegressor}) = "SymbolicRegression.MLJInterfaceModule.MultitargetSRRegressor"
+MMI.human_name(::Type{MultitargetSRRegressor}) = "Multi-Target Symbolic Regression via Evolutionary Search"
 #! format: on
 
 function get_equation_strings_for(::SRRegressor, trees, options)
     return (t -> string_tree(t, options)).(trees)
 end
-function get_equation_strings_for(::MultiSRRegressor, trees, options)
+function get_equation_strings_for(::MultitargetSRRegressor, trees, options)
     return [(t -> string_tree(t, options)).(ts) for ts in trees]
 end
 
@@ -204,7 +204,7 @@ function dispatch_selection_for(m::SRRegressor, trees, losses, scores, complexit
         trees=trees, losses=losses, scores=scores, complexities=complexities
     )::Integer
 end
-function dispatch_selection_for(m::MultiSRRegressor, trees, losses, scores, complexities)
+function dispatch_selection_for(m::MultitargetSRRegressor, trees, losses, scores, complexities)
     return [
         m.selection_method(;
             trees=trees[i], losses=losses[i], scores=scores[i], complexities=complexities[i]
