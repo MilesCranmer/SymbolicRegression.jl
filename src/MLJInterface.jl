@@ -1,7 +1,7 @@
 module MLJInterfaceModule
 
-using MLJModelInterface: MLJModelInterface
 using Optim: Optim
+import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
 import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
 import ..CoreModule.OptionsModule: DEFAULT_OPTIONS
@@ -11,7 +11,7 @@ import ..HallOfFameModule: HallOfFame, calculate_pareto_frontier, format_hall_of
 import ..equation_search
 #! format: on
 
-abstract type AbstractSRRegressor <: MLJModelInterface.Deterministic end
+abstract type AbstractSRRegressor <: MMI.Deterministic end
 
 const sr_regressor_template =
     :(Base.@kwdef mutable struct SRRegressor <: AbstractSRRegressor
@@ -94,9 +94,9 @@ end
 
 # TODO: Pass `variable_names` and `units`
 # TODO: Enable `verbosity` being passed to `equation_search`
-MLJModelInterface.clean!(::AbstractSRRegressor) = ""
+MMI.clean!(::AbstractSRRegressor) = ""
 
-function MLJModelInterface.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
+function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
     options = get_options(m)
     search_state = equation_search(
         X,
@@ -117,7 +117,7 @@ function MLJModelInterface.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothin
     fitresult = (; state=search_state, options=options)
     return (fitresult, nothing, full_report(m, fitresult))
 end
-function MLJModelInterface.fitted_params(m::AbstractSRRegressor, fitresult)
+function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     report = full_report(m, fitresult)
     return (;
         best_idx=report.best_idx,
@@ -125,8 +125,8 @@ function MLJModelInterface.fitted_params(m::AbstractSRRegressor, fitresult)
         equation_strings=report.equation_strings,
     )
 end
-function MLJModelInterface.predict(m::AbstractSRRegressor, fitresult, Xnew)
-    params = MLJModelInterface.fitted_params(m, fitresult)
+function MMI.predict(m::AbstractSRRegressor, fitresult, Xnew)
+    params = MMI.fitted_params(m, fitresult)
     equations = params.equations
     best_idx = params.best_idx
     if isa(best_idx, Vector)
