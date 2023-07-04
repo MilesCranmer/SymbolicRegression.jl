@@ -341,7 +341,7 @@ function Options end
     should_simplify::Union{Nothing,Bool}=nothing,
     should_optimize_constants::Bool=true,
     output_file::Union{Nothing,AbstractString}=nothing,
-    npopulations::Integer=15,
+    npopulations::Union{Nothing,Integer}=15,
     perturbation_factor::Real=0.076,
     annealing::Bool=false,
     batching::Bool=false,
