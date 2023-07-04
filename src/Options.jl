@@ -5,7 +5,7 @@ using Dates: Dates
 using StatsBase: StatsBase
 import DynamicExpressions: OperatorEnum, Node, string_tree
 import Distributed: nworkers
-import LossFunctions: L2DistLoss
+import LossFunctions: L2DistLoss, SupervisedLoss
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
@@ -322,7 +322,7 @@ function Options end
     binary_operators=[+, -, /, *],
     unary_operators=[],
     constraints=nothing,
-    elementwise_loss::Union{Function,Nothing}=nothing,
+    elementwise_loss::Union{Function,SupervisedLoss,Nothing}=nothing,
     loss_function::Union{Function,Nothing}=nothing,
     tournament_selection_n::Integer=12, #1 sampled from every tournament_selection_n per mutation
     tournament_selection_p::Real=0.86,
