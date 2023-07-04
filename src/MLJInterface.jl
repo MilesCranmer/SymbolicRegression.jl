@@ -97,7 +97,15 @@ end
 MMI.clean!(::AbstractSRRegressor) = ""
 
 function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
-    options = get_options(m)
+    return _update(m, verbosity, (; state=nothing), nothing, X, y, w)
+end
+function MMI.update(
+    m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
+)
+    return _update(m, verbosity, old_fitresult, old_cache, X, y, w)
+end
+function _update(m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w)
+    options = get(old_fitresult, :options, get_options(m))
     X_t = transpose(MMI.matrix(X))
     # TODO: Is this needed? Would MLJ ever pass in a matrix for y?
     y_t = ndims(y) == 1 ? transpose(MMI.matrix(transpose(y))) : transpose(MMI.matrix(y))
@@ -113,7 +121,7 @@ function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
         procs=m.procs,
         addprocs_function=m.addprocs_function,
         runtests=m.runtests,
-        saved_state=nothing,
+        saved_state=old_fitresult.state,
         return_state=true,
         loss_type=m.loss_type,
     )
