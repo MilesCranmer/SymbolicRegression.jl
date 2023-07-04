@@ -454,7 +454,10 @@ function _equation_search(
     should_return_state = if options.return_state === nothing
         return_state === nothing ? false : return_state
     else
-        @assert(return_state === nothing, "You cannot set `return_state` in both the `Options` and in the passed arguments.")
+        @assert(
+            return_state === nothing,
+            "You cannot set `return_state` in both the `Options` and in the passed arguments."
+        )
         options.return_state
     end
 

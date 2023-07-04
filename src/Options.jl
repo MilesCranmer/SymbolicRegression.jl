@@ -387,12 +387,11 @@ function Options(;
         !haskey(deprecated_options_mapping, k) && error("Unknown keyword argument: $k")
         new_key = deprecated_options_mapping[k]
         if startswith(string(new_key), "deprecated_")
-            Base.depwarn(
-                "The keyword argument `$(k)` is deprecated.", :Options
-            )
+            Base.depwarn("The keyword argument `$(k)` is deprecated.", :Options)
         else
             Base.depwarn(
-                "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.", :Options
+                "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.",
+                :Options,
             )
         end
         # Now, set the new key to the old value:

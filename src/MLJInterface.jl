@@ -11,15 +11,16 @@ import ..equation_search
 
 # TODO: Think about automatically putting all Option parameters into this struct.
 MLJModelInterface.@mlj_model mutable struct SRRegressor <: MLJModelInterface.Deterministic
-    sr_options::Options=Options()
-    niterations::Int=10::(_ >= 0)
-    parallelism::Symbol=:multithreading::(_ in (:multithreading, :multiprocessing, :serial))
-    numprocs::Union{Int,Nothing}=nothing::(_ === nothing || _ >= 0)
-    procs::Union{Vector{Int},Nothing}=nothing
-    addprocs_function::Union{Function,Nothing}=nothing
-    runtests::Bool=true
-    loss_type::Type=Nothing
-    selection_method::Function=choose_best
+    sr_options::Options = Options()
+    niterations::Int = 10::(_ >= 0)
+    parallelism::Symbol =
+        :multithreading::(_ in (:multithreading, :multiprocessing, :serial))
+    numprocs::Union{Int,Nothing} = nothing::(_ === nothing || _ >= 0)
+    procs::Union{Vector{Int},Nothing} = nothing
+    addprocs_function::Union{Function,Nothing} = nothing
+    runtests::Bool = true
+    loss_type::Type = Nothing
+    selection_method::Function = choose_best
 end
 
 function full_report(m::SRRegressor, fitresult)
