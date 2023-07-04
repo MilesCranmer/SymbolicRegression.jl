@@ -204,7 +204,9 @@ function dispatch_selection_for(m::SRRegressor, trees, losses, scores, complexit
         trees=trees, losses=losses, scores=scores, complexities=complexities
     )::Integer
 end
-function dispatch_selection_for(m::MultitargetSRRegressor, trees, losses, scores, complexities)
+function dispatch_selection_for(
+    m::MultitargetSRRegressor, trees, losses, scores, complexities
+)
     return [
         m.selection_method(;
             trees=trees[i], losses=losses[i], scores=scores[i], complexities=complexities[i]
