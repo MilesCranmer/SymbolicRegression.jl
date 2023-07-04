@@ -3,6 +3,14 @@ import MLJTestInterface as MTI
 import MLJBase: machine, fit!, report
 using Test
 
+macro quiet(ex)
+    quote
+        redirect_stderr(devnull) do
+            $ex
+        end
+    end |> esc
+end
+
 @testset "Generic interface tests" begin
     failures, summary = MTI.test(
         [SRRegressor], MTI.make_regression()...; mod=@__MODULE__, verbosity=0, throw=true
@@ -49,4 +57,16 @@ end
     mach = machine(model, X, Y)
     fit!(mach)
     @test sum(abs2, predict(mach, X) .- Y) < 1e-6
+end
+
+@testset "Helpful errors" begin
+    model = MultitargetSRRegressor()
+    mach = machine(model, randn(32, 3), randn(32), scitype_check_level=0)
+    @test_throws AssertionError @quiet(fit!(mach))
+    VERSION >= v"1.8" && @test_throws "For single-output regression, please" @quiet(fit!(mach))
+
+    model = SRRegressor()
+    mach = machine(model, randn(32, 3), randn(32, 2), scitype_check_level=0)
+    @test_throws AssertionError @quiet(fit!(mach))
+    VERSION >= v"1.8" && @test_throws "For multi-output regression, please" @quiet(fit!(mach))
 end
