@@ -145,15 +145,7 @@ const deprecated_options_mapping = NamedTuple([
     :loss => :elementwise_loss,
 ])
 
-"""
-    Options(;kws...)
-
-Construct options for `equation_search` and other functions.
-The current arguments have been tuned using the median values from
-https://github.com/MilesCranmer/PySR/discussions/115.
-
-# Arguments
-- `binary_operators`: Vector of binary operators (functions) to use.
+const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators (functions) to use.
     Each operator should be defined for two input scalars,
     and one output scalar. All operators
     need to be defined over the entire real line (excluding infinity - these
@@ -316,6 +308,17 @@ https://github.com/MilesCranmer/PySR/discussions/115.
     in serial mode.
 - `define_helper_functions`: Whether to define helper functions
     for constructing and evaluating trees.
+"""
+
+"""
+    Options(;kws...)
+
+Construct options for `equation_search` and other functions.
+The current arguments have been tuned using the median values from
+https://github.com/MilesCranmer/PySR/discussions/115.
+
+# Arguments
+$(OPTION_DESCRIPTIONS)
 """
 function Options end
 @save_kwargs DEFAULT_OPTIONS function Options(;

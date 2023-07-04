@@ -5,7 +5,7 @@ import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
 import LossFunctions: SupervisedLoss
 import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
-import ..CoreModule.OptionsModule: DEFAULT_OPTIONS
+import ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 import ..ComplexityModule: compute_complexity
 import ..HallOfFameModule: HallOfFame, calculate_pareto_frontier, format_hall_of_fame
 #! format: off
@@ -90,10 +90,9 @@ function full_report(m::AbstractSRRegressor, fitresult)
     )
 end
 
-# TODO: Pass `variable_names` and `units`
-# TODO: Enable `verbosity` being passed to `equation_search`
 MMI.clean!(::AbstractSRRegressor) = ""
 
+# TODO: Enable `verbosity` being passed to `equation_search`
 function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
     return MMI.update(m, verbosity, (; state=nothing), nothing, X, y, w)
 end
@@ -178,35 +177,6 @@ function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     return reduce(hcat, outs)
 end
 
-MMI.metadata_pkg(
-    AbstractSRRegressor;
-    name="SymbolicRegression",
-    uuid="8254be44-1295-4e6a-a16d-46603ac705cb",
-    url="https://github.com/MilesCranmer/SymbolicRegression.jl",
-    julia=true,
-    license="Apache-2.0",
-    is_wrapper=false,
-)
-
-MMI.metadata_model(
-    SRRegressor;
-    input_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
-    target_scitype=AbstractVector{<:MMI.Continuous},
-    supports_weights=true,
-    reports_feature_importances=false,
-    load_path="SymbolicRegression.MLJInterfaceModule.SRRegressor",
-    descr="Symbolic Regression via Evolutionary Search",
-)
-MMI.metadata_model(
-    MultitargetSRRegressor;
-    input_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
-    target_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
-    supports_weights=true,
-    reports_feature_importances=false,
-    load_path="SymbolicRegression.MLJInterfaceModule.MultitargetSRRegressor",
-    descr="Multi-Target Symbolic Regression via Evolutionary Search",
-)
-
 function get_equation_strings_for(::SRRegressor, trees, options, variable_names)
     return (t -> string_tree(t, options; variable_names=variable_names)).(trees)
 end
@@ -241,5 +211,93 @@ function dispatch_selection_for(
         )::Integer for i in eachindex(trees)
     ]
 end
+
+MMI.metadata_pkg(
+    AbstractSRRegressor;
+    name="SymbolicRegression",
+    uuid="8254be44-1295-4e6a-a16d-46603ac705cb",
+    url="https://github.com/MilesCranmer/SymbolicRegression.jl",
+    julia=true,
+    license="Apache-2.0",
+    is_wrapper=false,
+)
+
+MMI.metadata_model(
+    SRRegressor;
+    input_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    target_scitype=AbstractVector{<:MMI.Continuous},
+    supports_weights=true,
+    reports_feature_importances=false,
+    load_path="SymbolicRegression.MLJInterfaceModule.SRRegressor",
+    descr="Symbolic Regression via Evolutionary Search",
+)
+MMI.metadata_model(
+    MultitargetSRRegressor;
+    input_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    target_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    supports_weights=true,
+    reports_feature_importances=false,
+    load_path="SymbolicRegression.MLJInterfaceModule.MultitargetSRRegressor",
+    descr="Multi-Target Symbolic Regression via Evolutionary Search",
+)
+
+function tag_with_docstring(model_name::Symbol, description::String)
+    docstring = """$(MMI.doc_header(eval(model_name)))
+
+    # Arguments
+    """
+
+    # TODO: These ones are copied manually:
+    append_arguments = """- `niterations::Int=10`: The number of iterations to perform the search.
+        More iterations will improve the results.
+    - `parallelism=:multithreading`: What parallelism mode to use.
+        The options are `:multithreading`, `:multiprocessing`, and `:serial`.
+        By default, multithreading will be used. Multithreading uses less memory,
+        but multiprocessing can handle multi-node compute. If using `:multithreading`
+        mode, the number of threads available to julia are used. If using
+        `:multiprocessing`, `numprocs` processes will be created dynamically if
+        `procs` is unset. If you have already allocated processes, pass them
+        to the `procs` argument and they will be used.
+        You may also pass a string instead of a symbol, like `"multithreading"`.
+    - `numprocs::Union{Int, Nothing}=nothing`:  The number of processes to use,
+        if you want `equation_search` to set this up automatically. By default
+        this will be `4`, but can be any number (you should pick a number <=
+        the number of cores available).
+    - `procs::Union{Vector{Int}, Nothing}=nothing`: If you have set up
+        a distributed run manually with `procs = addprocs()` and `@everywhere`,
+        pass the `procs` to this keyword argument.
+    - `addprocs_function::Union{Function, Nothing}=nothing`: If using multiprocessing
+        (`parallelism=:multithreading`), and are not passing `procs` manually,
+        then they will be allocated dynamically using `addprocs`. However,
+        you may also pass a custom function to use instead of `addprocs`.
+        This function should take a single positional argument,
+        which is the number of processes to use, as well as the `lazy` keyword argument.
+        For example, if set up on a slurm cluster, you could pass
+        `addprocs_function = addprocs_slurm`, which will set up slurm processes.
+    - `runtests::Bool=true`: Whether to run (quick) tests before starting the
+        search, to see if there will be any problems during the equation search
+        related to the host environment.
+    - `loss_type::Type=Nothing`: If you would like to use a different type
+        for the loss than for the data you passed, specify the type here.
+        Note that if you pass complex data `::Complex{L}`, then the loss
+        type will automatically be set to `L`.
+    """
+
+    # Remove common indentation:
+    docstring = replace(docstring, r"^    " => "")
+    extra_arguments = replace(append_arguments, r"^    " => "")
+
+    # Add parameter descriptions:
+    docstring = docstring * OPTION_DESCRIPTIONS
+    docstring = docstring * extra_arguments
+    return quote
+        @doc $docstring $model_name
+    end
+end
+
+#! format: off
+eval(tag_with_docstring(:SRRegressor, "Symbolic Regression via Evolutionary Search"))
+eval(tag_with_docstring(:MultitargetSRRegressor, "Multi-Target Symbolic Regression via Evolutionary Search"))
+#! format: on
 
 end
