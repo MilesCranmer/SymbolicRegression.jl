@@ -100,7 +100,7 @@ function MMI.update(
     m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
 )
     options = get(old_fitresult, :options, get_options(m))
-    X_t, variable_names, schema = get_matrix_and_colnames(X)
+    X_t, variable_names, schema = get_matrix_and_schema(X)
     y_t, y_variable_names, y_schema = format_input_for(m, y)
     search_state = equation_search(
         X_t,
@@ -128,7 +128,7 @@ function MMI.update(
     )
     return (fitresult, nothing, full_report(m, fitresult))
 end
-function get_matrix_and_colnames(X)
+function get_matrix_and_schema(X)
     sch = MMI.istable(X) ? MMI.schema(X) : nothing
     Xm_t = MMI.matrix(X; transpose=true)
     colnames = if sch === nothing
@@ -151,7 +151,7 @@ function format_input_for(::MultitargetSRRegressor, y)
         MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1),
         "For single-output regression, please use `SRRegressor`."
     )
-    return get_matrix_and_colnames(y)
+    return get_matrix_and_schema(y)
 end
 
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
@@ -172,7 +172,7 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
 end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t, variable_names = get_matrix_and_colnames(Xnew)
+    Xnew_t, variable_names, schema = get_matrix_and_schema(Xnew)
     @assert(
         variable_names == fitresult.variable_names,
         "Variable names do not match fitted regressor."
