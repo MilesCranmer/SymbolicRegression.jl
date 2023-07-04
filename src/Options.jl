@@ -139,7 +139,7 @@ const deprecated_options_mapping = NamedTuple([
     :optimize_probability => :optimizer_probability,
     :probPickFirst => :tournament_selection_p,
     :earlyStopCondition => :early_stop_condition,
-    :returnState => :deprecated_return_state,
+    :stateReturn => :deprecated_return_state,
     :return_state => :deprecated_return_state,
     :ns => :tournament_selection_n,
     :loss => :elementwise_loss,
@@ -414,7 +414,7 @@ function Options end
         k == :probPickFirst && (tournament_selection_p = kws[k]; true) && continue
         k == :earlyStopCondition && (early_stop_condition = kws[k]; true) && continue
         k == :return_state && (deprecated_return_state = kws[k]; true) && continue
-        k == :returnState && (deprecated_return_state = kws[k]; true) && continue
+        k == :stateReturn && (deprecated_return_state = kws[k]; true) && continue
         k == :ns && (tournament_selection_n = kws[k]; true) && continue
         k == :loss && (elementwise_loss = kws[k]; true) && continue
         if k == :mutationWeights
