@@ -14,8 +14,12 @@ import ..equation_search
 
 abstract type AbstractSRRegressor <: MMI.Deterministic end
 
-const sr_regressor_template =
-    :(Base.@kwdef mutable struct SRRegressor <: AbstractSRRegressor
+# TODO: To reduce code re-use, we could forward these defaults from
+#       `equation_search`, similar to what we do for `Options`.
+
+"""Generate an `SRRegressor` struct containing all the fields in `Options`."""
+function modelexpr(model_name::Symbol)
+    struct_def = :(Base.@kwdef mutable struct $(model_name) <: AbstractSRRegressor
         niterations::Int = 10
         parallelism::Symbol = :multithreading
         numprocs::Union{Int,Nothing} = nothing
@@ -25,12 +29,6 @@ const sr_regressor_template =
         loss_type::Type = Nothing
         selection_method::Function = choose_best
     end)
-# TODO: To reduce code re-use, we could forward these defaults from
-#       `equation_search`, similar to what we do for `Options`.
-
-"""Generate an `SRRegressor` struct containing all the fields in `Options`."""
-function modelexpr()
-    struct_def = deepcopy(sr_regressor_template)
     fields = last(last(struct_def.args).args).args
 
     # Add everything from `Options` constructor directly to struct:
@@ -48,7 +46,7 @@ function modelexpr()
 
     return quote
         $struct_def
-        function get_options(m::SRRegressor)
+        function get_options(m::$(model_name))
             return $constructor
         end
     end
@@ -68,20 +66,17 @@ end
 """Get an equivalent `Options()` object for a particular regressor."""
 function get_options(::AbstractSRRegressor) end
 
-eval(modelexpr())
+eval(modelexpr(:SRRegressor))
+eval(modelexpr(:MultiSRRegressor))
 
 # Cleaning already taken care of by `Options` and `equation_search`
 function full_report(m::AbstractSRRegressor, fitresult)
     _, hof = fitresult.state
     # TODO: Adjust baseline loss
     formatted = format_hall_of_fame(hof, fitresult.options, 1.0)
-    equation_strings = get_equation_strings(formatted.trees, fitresult.options)
-    best_idx = dispatch_selection(
-        m.selection_method,
-        formatted.trees,
-        formatted.losses,
-        formatted.scores,
-        formatted.complexities,
+    equation_strings = get_equation_strings_for(m, formatted.trees, fitresult.options)
+    best_idx = dispatch_selection_for(
+        m, formatted.trees, formatted.losses, formatted.scores, formatted.complexities
     )
     return (;
         best_idx=best_idx,
@@ -109,7 +104,7 @@ function _update(m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X,
     options = get(old_fitresult, :options, get_options(m))
     X_t = transpose(MMI.matrix(X))
     # TODO: Is this needed? Would MLJ ever pass in a matrix for y?
-    y_t = ndims(y) == 1 ? transpose(MMI.matrix(transpose(y))) : transpose(MMI.matrix(y))
+    y_t = format_input_for(m, y)
     search_state = equation_search(
         X_t,
         y_t;
@@ -129,6 +124,8 @@ function _update(m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X,
     fitresult = (; state=search_state, options=options)
     return (fitresult, nothing, full_report(m, fitresult))
 end
+format_input_for(::SRRegressor, y) = transpose(MMI.matrix(transpose(y)))
+format_input_for(::MultiSRRegressor, y) = transpose(MMI.matrix(y))
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     report = full_report(m, fitresult)
     return (;
@@ -137,50 +134,54 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
         equation_strings=report.equation_strings,
     )
 end
-function MMI.predict(m::AbstractSRRegressor, fitresult, Xnew)
+function MMI.predict(m::SRRegressor, fitresult, Xnew)
+    params = MMI.fitted_params(m, fitresult)
+    Xnew_t = transpose(MMI.matrix(Xnew))
+    eq = params.equations[params.best_idx]
+    out, flag = eval_tree_array(eq, Xnew_t, fitresult.options)
+    !flag && error("Detected a NaN in evaluating expression.")
+    return out
+end
+function MMI.predict(m::MultiSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
     Xnew_t = transpose(MMI.matrix(Xnew))
     equations = params.equations
     best_idx = params.best_idx
-    if isa(best_idx, Vector)
-        outs = [
-            let (out, flag) = eval_tree_array(eq[i], Xnew_t, fitresult.options)
-                !flag && error("Detected a NaN in evaluating expression.")
-                out
-            end for (i, eq) in zip(best_idx, equations)
-        ]
-        return reduce(hcat, outs)
-    else
-        out, flag = eval_tree_array(equations[best_idx], Xnew_t, fitresult.options)
-        !flag && error("Detected a NaN in evaluating expression.")
-        return out
-    end
+    outs = [
+        let (out, flag) = eval_tree_array(eq[i], Xnew_t, fitresult.options)
+            !flag && error("Detected a NaN in evaluating expression.")
+            out
+        end for (i, eq) in zip(best_idx, equations)
+    ]
+    return reduce(hcat, outs)
 end
 
+#! format: off
 MMI.package_name(::Type{<:AbstractSRRegressor}) = "SymbolicRegression"
 MMI.package_uuid(::Type{<:AbstractSRRegressor}) = "8254be44-1295-4e6a-a16d-46603ac705cb"
-function MMI.package_url(::Type{<:AbstractSRRegressor})
-    return "https://github.com/MilesCranmer/SymbolicRegression.jl"
-end
+MMI.package_url(::Type{<:AbstractSRRegressor}) = "https://github.com/MilesCranmer/SymbolicRegression.jl"
 MMI.package_license(::Type{<:AbstractSRRegressor}) = "Apache-2.0"
 MMI.is_pure_julia(::Type{<:AbstractSRRegressor}) = true
 MMI.is_wrapper(::Type{<:AbstractSRRegressor}) = false
 
-MMI.input_scitype(::Type{SRRegressor}) = MMI.Table(MMI.Continuous)
-function MMI.target_scitype(::Type{SRRegressor})
-    return Union{MMI.Table(MMI.Continuous),AbstractVector{<:MMI.Continuous}}
-end
-MMI.supports_weights(::Type{SRRegressor}) = true
-MMI.human_name(::Type{SRRegressor}) = "Symbolic Regression via Evolutionary Search"
-MMI.load_path(::Type{SRRegressor}) = "SymbolicRegression.MLJInterfaceModule.SRRegressor"
-MMI.reports_feature_importances(::Type{SRRegressor}) = false
+MMI.input_scitype(::Type{<:AbstractSRRegressor}) = MMI.Table(MMI.Continuous)
+MMI.supports_weights(::Type{<:AbstractSRRegressor}) = true
+MMI.reports_feature_importances(::Type{<:AbstractSRRegressor}) = false
 
-function get_equation_strings(trees, options)
-    if isa(first(trees), Vector)
-        return [(t -> string_tree(t, options)).(ts) for ts in trees]
-    else
-        return (t -> string_tree(t, options)).(trees)
-    end
+MMI.target_scitype(::Type{SRRegressor}) = AbstractVector{<:MMI.Continuous}
+MMI.load_path(::Type{SRRegressor}) = "SymbolicRegression.MLJInterfaceModule.SRRegressor"
+MMI.human_name(::Type{SRRegressor}) = "Symbolic Regression via Evolutionary Search"
+
+MMI.target_scitype(::Type{MultiSRRegressor}) = MMI.Table(MMI.Continuous)
+MMI.load_path(::Type{MultiSRRegressor}) = "SymbolicRegression.MLJInterfaceModule.MultiSRRegressor"
+MMI.human_name(::Type{MultiSRRegressor}) = "Multi-Target Symbolic Regression via Evolutionary Search"
+#! format: on
+
+function get_equation_strings_for(::SRRegressor, trees, options)
+    return (t -> string_tree(t, options)).(trees)
+end
+function get_equation_strings_for(::MultiSRRegressor, trees, options)
+    return [(t -> string_tree(t, options)).(ts) for ts in trees]
 end
 
 function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<:LOSS_TYPE}
@@ -194,20 +195,16 @@ function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<
     ])
 end
 
-function dispatch_selection(
-    selection_method::F, trees::VN, losses, scores, complexities
-) where {F,T,N<:Node{T},VN<:Vector{N}}
-    return selection_method(;
+function dispatch_selection_for(m::SRRegressor, trees, losses, scores, complexities)
+    return m.selection_method(;
         trees=trees, losses=losses, scores=scores, complexities=complexities
     )::Integer
 end
-function dispatch_selection(
-    selection_method::F, trees::MN, losses, scores, complexities
-) where {F,T,N<:Node{T},VN<:Vector{N},MN<:Vector{VN}}
+function dispatch_selection_for(m::MultiSRRegressor, trees, losses, scores, complexities)
     return [
-        dispatch_selection(
-            selection_method, trees[i], losses[i], scores[i], complexities[i]
-        ) for i in eachindex(trees)
+        m.selection_method(;
+            trees=trees[i], losses=losses[i], scores=scores[i], complexities=complexities[i]
+        )::Integer for i in eachindex(trees)
     ]
 end
 

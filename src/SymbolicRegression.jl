@@ -9,6 +9,7 @@ export Population,
     MutationWeights,
     Node,
     SRRegressor,
+    MultiSRRegressor,
     LOSS_TYPE,
     DATA_TYPE,
 
@@ -1031,7 +1032,7 @@ function _equation_search(
 end
 
 include("MLJInterface.jl")
-import .MLJInterfaceModule: SRRegressor
+import .MLJInterfaceModule: SRRegressor, MultiSRRegressor
 
 #! format: off
 if !isdefined(Base, :get_extension)
