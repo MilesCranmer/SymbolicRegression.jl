@@ -174,7 +174,7 @@ struct Options{
     recorder_file::String
     prob_pick_first::Float32
     early_stop_condition::Union{Function,Nothing}
-    return_state::Bool
+    return_state::Union{Bool,Nothing}
     timeout_in_seconds::Union{Float64,Nothing}
     max_evals::Union{Int,Nothing}
     skip_mutation_failures::Bool

@@ -150,7 +150,6 @@ include("SingleIteration.jl")
 include("ProgressBars.jl")
 include("Migration.jl")
 include("SearchUtils.jl")
-include("MLJInterface.jl")
 
 import .CoreModule:
     MAX_DEGREE,
@@ -227,7 +226,6 @@ import .SearchUtilsModule:
     StateType,
     load_saved_hall_of_fame,
     load_saved_population
-import .MLJInterfaceModule: SRRegressor
 
 include("deprecates.jl")
 include("Configure.jl")
@@ -1016,7 +1014,7 @@ function _equation_search(
         end
     end
 
-    if options.return_state
+    if should_return_state
         state = (returnPops, (nout == 1 ? only(hallOfFame) : hallOfFame))
         state::StateType{T,L}
         return state
@@ -1028,6 +1026,9 @@ function _equation_search(
         end
     end
 end
+
+include("MLJInterface.jl")
+import .MLJInterfaceModule: SRRegressor
 
 #! format: off
 if !isdefined(Base, :get_extension)
