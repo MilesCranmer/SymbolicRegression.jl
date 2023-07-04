@@ -178,10 +178,8 @@ function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     return reduce(hcat, outs)
 end
 
-const ALL_MODELS = (SRRegressor, MultitargetSRRegressor)
-
-MMI.metadata_pkg.(
-    ALL_MODELS;
+MMI.metadata_pkg(
+    AbstractSRRegressor;
     name="SymbolicRegression",
     uuid="8254be44-1295-4e6a-a16d-46603ac705cb",
     url="https://github.com/MilesCranmer/SymbolicRegression.jl",
