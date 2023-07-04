@@ -139,7 +139,8 @@ const deprecated_options_mapping = NamedTuple([
     :optimize_probability => :optimizer_probability,
     :probPickFirst => :tournament_selection_p,
     :earlyStopCondition => :early_stop_condition,
-    :stateReturn => :return_state,
+    :returnState => :deprecated_return_state,
+    :return_state => :deprecated_return_state,
     :ns => :tournament_selection_n,
     :loss => :elementwise_loss,
 ])
@@ -370,7 +371,6 @@ function Options(;
     recorder=nothing,
     recorder_file="pysr_recorder.json",
     early_stop_condition::Union{Function,Real,Nothing}=nothing,
-    return_state::Union{Bool,Nothing}=nothing,
     timeout_in_seconds=nothing,
     max_evals=nothing,
     skip_mutation_failures::Bool=true,
@@ -379,15 +379,22 @@ function Options(;
     deterministic=false,
     # Not search options; just construction options:
     define_helper_functions=true,
+    deprecated_return_state=nothing,
     # Deprecated args:
     kws...,
 )
     for k in keys(kws)
         !haskey(deprecated_options_mapping, k) && error("Unknown keyword argument: $k")
         new_key = deprecated_options_mapping[k]
-        Base.depwarn(
-            "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.", :Options
-        )
+        if startswith(string(new_key), "deprecated_")
+            Base.depwarn(
+                "The keyword argument `$(k)` is deprecated.", :Options
+            )
+        else
+            Base.depwarn(
+                "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.", :Options
+            )
+        end
         # Now, set the new key to the old value:
         #! format: off
         k == :hofMigration && (hof_migration = kws[k]; true) && continue
@@ -406,7 +413,8 @@ function Options(;
         k == :optimize_probability && (optimizer_probability = kws[k]; true) && continue
         k == :probPickFirst && (tournament_selection_p = kws[k]; true) && continue
         k == :earlyStopCondition && (early_stop_condition = kws[k]; true) && continue
-        k == :stateReturn && (return_state = kws[k]; true) && continue
+        k == :return_state && (deprecated_return_state = kws[k]; true) && continue
+        k == :returnState && (deprecated_return_state = kws[k]; true) && continue
         k == :ns && (tournament_selection_n = kws[k]; true) && continue
         k == :loss && (elementwise_loss = kws[k]; true) && continue
         if k == :mutationWeights
@@ -726,7 +734,7 @@ function Options(;
         recorder_file,
         tournament_selection_p,
         early_stop_condition,
-        return_state,
+        deprecated_return_state,
         timeout_in_seconds,
         max_evals,
         skip_mutation_failures,

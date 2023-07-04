@@ -56,7 +56,6 @@ default_params = (
     recorder_file="pysr_recorder.json",
     tournament_selection_p=1.0,
     early_stop_condition=nothing,
-    return_state=false,
     timeout_in_seconds=nothing,
     skip_mutation_failures=false,
 )
