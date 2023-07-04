@@ -185,4 +185,6 @@ function _save_kwargs(log_variable::Symbol, fdef::Expr)
     end
 end
 
+const VecOrTuple{T} = Union{AbstractVector{T},Tuple{T}}
+
 end

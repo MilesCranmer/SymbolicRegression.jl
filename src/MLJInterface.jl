@@ -3,6 +3,7 @@ module MLJInterfaceModule
 using Optim: Optim
 import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
+import ..UtilsModule: VecOrTuple
 import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
 import ..CoreModule.OptionsModule: DEFAULT_OPTIONS
 import ..ComplexityModule: compute_complexity
