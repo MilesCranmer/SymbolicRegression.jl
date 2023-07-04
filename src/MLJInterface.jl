@@ -104,7 +104,7 @@ function _update(m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X,
     options = get(old_fitresult, :options, get_options(m))
     mX = MMI.matrix(X)
     variable_names = getcolnames(MMI.table(X))
-    X_t = transpose(mX)
+    X_t = copy(transpose(mX))
     y_t = format_input_for(m, y)
     search_state = equation_search(
         X_t,
@@ -129,7 +129,7 @@ getcolnames(X) = getcolnames(MMI.schema(X), X)
 getcolnames(::Nothing, X) = [map(i -> "x$(i)", axes(X, 2))...]
 getcolnames(sch, X) = [string.(sch.names)...]
 format_input_for(::SRRegressor, y) = y
-format_input_for(::MultitargetSRRegressor, y) = transpose(MMI.matrix(y))
+format_input_for(::MultitargetSRRegressor, y) = copy(transpose(MMI.matrix(y)))
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     report = full_report(m, fitresult)
     return (;
