@@ -135,14 +135,14 @@ end
 
 function format_input_for(::SRRegressor, y)
     @assert(
-        length(size(y)) == 1,
+        !(MMI.istable(y) || length(size(y)) != 1),
         "For multi-output regression, please use `MultitargetSRRegressor`."
     )
     return y
 end
 function format_input_for(::MultitargetSRRegressor, y)
     @assert(
-        length(size(y)) == 2 && size(y, 2) > 1,
+        MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1),
         "For single-output regression, please use `SRRegressor`."
     )
     return MMI.matrix(y; transpose=true)
