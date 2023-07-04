@@ -24,7 +24,7 @@ import ..OperatorsModule:
     safe_acosh,
     atanh_clip
 import ..OptionsStructModule: Options, ComplexityMapping, MutationWeights, mutations
-import ..UtilsModule: max_ops
+import ..UtilsModule: max_ops, @save_kwargs
 
 """
          build_constraints(una_constraints, bin_constraints,
@@ -317,7 +317,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `define_helper_functions`: Whether to define helper functions
     for constructing and evaluating trees.
 """
-function Options(;
+function Options end
+@save_kwargs DEFAULT_OPTIONS function Options(;
     binary_operators=[+, -, /, *],
     unary_operators=[],
     constraints=nothing,
