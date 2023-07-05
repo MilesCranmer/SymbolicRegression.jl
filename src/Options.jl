@@ -5,7 +5,7 @@ using Dates: Dates
 using StatsBase: StatsBase
 import DynamicExpressions: OperatorEnum, Node, string_tree
 import Distributed: nworkers
-import LossFunctions: L2DistLoss
+import LossFunctions: L2DistLoss, SupervisedLoss
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
@@ -24,7 +24,7 @@ import ..OperatorsModule:
     safe_acosh,
     atanh_clip
 import ..OptionsStructModule: Options, ComplexityMapping, MutationWeights, mutations
-import ..UtilsModule: max_ops
+import ..UtilsModule: max_ops, @save_kwargs
 
 """
          build_constraints(una_constraints, bin_constraints,
@@ -139,20 +139,13 @@ const deprecated_options_mapping = NamedTuple([
     :optimize_probability => :optimizer_probability,
     :probPickFirst => :tournament_selection_p,
     :earlyStopCondition => :early_stop_condition,
-    :stateReturn => :return_state,
+    :stateReturn => :deprecated_return_state,
+    :return_state => :deprecated_return_state,
     :ns => :tournament_selection_n,
     :loss => :elementwise_loss,
 ])
 
-"""
-    Options(;kws...)
-
-Construct options for `equation_search` and other functions.
-The current arguments have been tuned using the median values from
-https://github.com/MilesCranmer/PySR/discussions/115.
-
-# Arguments
-- `binary_operators`: Vector of binary operators (functions) to use.
+const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators (functions) to use.
     Each operator should be defined for two input scalars,
     and one output scalar. All operators
     need to be defined over the entire real line (excluding infinity - these
@@ -316,78 +309,95 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 - `define_helper_functions`: Whether to define helper functions
     for constructing and evaluating trees.
 """
-function Options(;
+
+"""
+    Options(;kws...)
+
+Construct options for `equation_search` and other functions.
+The current arguments have been tuned using the median values from
+https://github.com/MilesCranmer/PySR/discussions/115.
+
+# Arguments
+$(OPTION_DESCRIPTIONS)
+"""
+function Options end
+@save_kwargs DEFAULT_OPTIONS function Options(;
     binary_operators=[+, -, /, *],
     unary_operators=[],
     constraints=nothing,
-    elementwise_loss=nothing,
-    loss_function=nothing,
-    tournament_selection_n=12, #1 sampled from every tournament_selection_n per mutation
-    tournament_selection_p=0.86f0,
-    topn=12, #samples to return per population
+    elementwise_loss::Union{Function,SupervisedLoss,Nothing}=nothing,
+    loss_function::Union{Function,Nothing}=nothing,
+    tournament_selection_n::Integer=12, #1 sampled from every tournament_selection_n per mutation
+    tournament_selection_p::Real=0.86,
+    topn::Integer=12, #samples to return per population
     complexity_of_operators=nothing,
     complexity_of_constants::Union{Nothing,Real}=nothing,
     complexity_of_variables::Union{Nothing,Real}=nothing,
-    parsimony=0.0032f0,
-    alpha=0.100000f0,
-    maxsize=20,
-    maxdepth=nothing,
-    fast_cycle=false,
-    turbo=false,
-    migration=true,
-    hof_migration=true,
-    should_simplify=nothing,
-    should_optimize_constants=true,
-    output_file=nothing,
-    npopulations=15,
-    perturbation_factor=0.076f0,
-    annealing=false,
-    batching=false,
-    batch_size=50,
+    parsimony::Real=0.0032,
+    alpha::Real=0.100000,
+    maxsize::Integer=20,
+    maxdepth::Union{Nothing,Integer}=nothing,
+    fast_cycle::Bool=false,
+    turbo::Bool=false,
+    migration::Bool=true,
+    hof_migration::Bool=true,
+    should_simplify::Union{Nothing,Bool}=nothing,
+    should_optimize_constants::Bool=true,
+    output_file::Union{Nothing,AbstractString}=nothing,
+    npopulations::Union{Nothing,Integer}=15,
+    perturbation_factor::Real=0.076,
+    annealing::Bool=false,
+    batching::Bool=false,
+    batch_size::Integer=50,
     mutation_weights::Union{MutationWeights,AbstractVector,NamedTuple}=MutationWeights(),
-    crossover_probability=0.066f0,
-    warmup_maxsize_by=0.0f0,
-    use_frequency=true,
-    use_frequency_in_tournament=true,
-    adaptive_parsimony_scaling=20.0,
-    npop=33,
-    ncycles_per_iteration=550,
-    fraction_replaced=0.00036f0,
-    fraction_replaced_hof=0.035f0,
-    verbosity=convert(Int, 1e9),
-    save_to_file=true,
-    probability_negate_constant=0.01f0,
+    crossover_probability::Real=0.066,
+    warmup_maxsize_by::Real=0.0,
+    use_frequency::Bool=true,
+    use_frequency_in_tournament::Bool=true,
+    adaptive_parsimony_scaling::Real=20.0,
+    npop::Integer=33,
+    ncycles_per_iteration::Integer=550,
+    fraction_replaced::Real=0.00036,
+    fraction_replaced_hof::Real=0.035,
+    verbosity::Real=convert(Int, 1e9),
+    save_to_file::Bool=true,
+    probability_negate_constant::Real=0.01,
     seed=nothing,
     bin_constraints=nothing,
     una_constraints=nothing,
-    progress=true,
-    terminal_width=nothing,
-    optimizer_algorithm="BFGS",
-    optimizer_nrestarts=2,
-    optimizer_probability=0.14f0,
-    optimizer_iterations=nothing,
+    progress::Bool=true,
+    terminal_width::Union{Nothing,Integer}=nothing,
+    optimizer_algorithm::AbstractString="BFGS",
+    optimizer_nrestarts::Integer=2,
+    optimizer_probability::Real=0.14,
+    optimizer_iterations::Union{Nothing,Integer}=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
-    recorder=nothing,
-    recorder_file="pysr_recorder.json",
+    recorder::Union{Nothing,Bool}=nothing,
+    recorder_file::AbstractString="pysr_recorder.json",
     early_stop_condition::Union{Function,Real,Nothing}=nothing,
-    return_state::Bool=false,
-    timeout_in_seconds=nothing,
-    max_evals=nothing,
+    timeout_in_seconds::Union{Nothing,Real}=nothing,
+    max_evals::Union{Nothing,Integer}=nothing,
     skip_mutation_failures::Bool=true,
     enable_autodiff::Bool=false,
     nested_constraints=nothing,
-    deterministic=false,
+    deterministic::Bool=false,
     # Not search options; just construction options:
-    define_helper_functions=true,
+    define_helper_functions::Bool=true,
+    deprecated_return_state=nothing,
     # Deprecated args:
     kws...,
 )
     for k in keys(kws)
         !haskey(deprecated_options_mapping, k) && error("Unknown keyword argument: $k")
         new_key = deprecated_options_mapping[k]
-        Base.depwarn(
-            "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.", :Options
-        )
+        if startswith(string(new_key), "deprecated_")
+            Base.depwarn("The keyword argument `$(k)` is deprecated.", :Options)
+        else
+            Base.depwarn(
+                "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.",
+                :Options,
+            )
+        end
         # Now, set the new key to the old value:
         #! format: off
         k == :hofMigration && (hof_migration = kws[k]; true) && continue
@@ -406,7 +416,8 @@ function Options(;
         k == :optimize_probability && (optimizer_probability = kws[k]; true) && continue
         k == :probPickFirst && (tournament_selection_p = kws[k]; true) && continue
         k == :earlyStopCondition && (early_stop_condition = kws[k]; true) && continue
-        k == :stateReturn && (return_state = kws[k]; true) && continue
+        k == :return_state && (deprecated_return_state = kws[k]; true) && continue
+        k == :stateReturn && (deprecated_return_state = kws[k]; true) && continue
         k == :ns && (tournament_selection_n = kws[k]; true) && continue
         k == :loss && (elementwise_loss = kws[k]; true) && continue
         if k == :mutationWeights
@@ -726,7 +737,7 @@ function Options(;
         recorder_file,
         tournament_selection_p,
         early_stop_condition,
-        return_state,
+        deprecated_return_state,
         timeout_in_seconds,
         max_evals,
         skip_mutation_failures,

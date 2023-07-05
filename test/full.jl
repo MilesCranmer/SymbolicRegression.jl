@@ -32,6 +32,10 @@ end
     include("test_early_stop.jl")
 end
 
+@safetestset "Test MLJ integration" begin
+    include("test_mlj.jl")
+end
+
 @testset "Testing whether we can move operators to workers." begin
     include("test_custom_operators_multiprocessing.jl")
 end
