@@ -7,7 +7,7 @@ import LossFunctions: SupervisedLoss
 import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
 import ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 import ..ComplexityModule: compute_complexity
-import ..HallOfFameModule: HallOfFame, calculate_pareto_frontier, format_hall_of_fame
+import ..HallOfFameModule: HallOfFame, format_hall_of_fame
 #! format: off
 import ..equation_search
 #! format: on
@@ -342,10 +342,11 @@ eval(
     for symbolic expressions that predict a single target variable from
     a set of input variables. All data is assumed to be `Continuous`.
     The search is performed using an evolutionary algorithm.
-    This algorithm is described in the arxiv paper
+    This algorithm is described in the paper
     https://arxiv.org/abs/2305.01582.
 
     # Training data
+
     In MLJ or MLJBase, bind an instance `model` to data with
 
         mach = machine(model, X, y)
@@ -379,16 +380,43 @@ eval(
         replace(
             """
     # Fitted parameters
-    - `equations::Vector{Node}`: The expressions discovered by the search, represented
-      in a dominating pareto frontier (i.e., the best expressions found for
+
+    The fields of `fitted_params(mach)` are:
+
+    - `best_idx::Int`: The index of the best expression in the Pareto frontier,
+       as determined by the `selection_method` function.
+    - `equations::Vector{Node{T}}`: The expressions discovered by the search, represented
+      in a dominating Pareto frontier (i.e., the best expressions found for
+      each complexity). `T` is equal to the element type
+      of the passed data.
+    - `equation_strings::Vector{String}`: The expressions discovered by the search,
+      represented as strings for easy inspection.
+
+    # Report
+
+    The fields of `report(mach)` are:
+
+    - `best_idx::Int`: The index of the best expression in the Pareto frontier,
+       as determined by the `selection_method` function.
+    - `equations::Vector{Node{T}}`: The expressions discovered by the search, represented
+      in a dominating Pareto frontier (i.e., the best expressions found for
       each complexity).
     - `equation_strings::Vector{String}`: The expressions discovered by the search,
       represented as strings for easy inspection.
-    - `best_idx::Int`: The index of the best expression in the pareto frontier,
-       as determined by the `selection_method` function.
+    - `complexities::Vector{Int}`: The complexity of each expression in the Pareto frontier.
+    - `losses::Vector{L}`: The loss of each expression in the Pareto frontier, according
+      to the loss function specified in the model. The type `L` is the loss type, which
+      is usually the same as the element type of data passed (i.e., `T`), but can differ
+      if complex data types are passed.
+    - `scores::Vector{L}`: A metric which considers both the complexity and loss of an expression,
+      equal to the change in the log-loss divided by the change in complexity, relative to
+      the previous expression along the Pareto frontier. A larger score aims to indicate
+      an expression is more likely to be the true expression generating the data, but
+      this is very problem-dependent and generally several other factors should be considered.
 
     # Examples
-    ```
+
+    ```julia
     using MLJ
     SRRegressor = @load SRRegressor pkg=SymbolicRegression
     X, y = @load_boston
@@ -400,6 +428,7 @@ eval(
     r = report(mach)
     println("Equation used:", r.equation_strings[r.best_idx])
     ```
+
     See also [`MultitargetSRRegressor`](@ref).
     """,
             r"^    " => "",
@@ -415,7 +444,7 @@ eval(
     conducts several searches for expressions that predict each target variable
     from a set of input variables. All data is assumed to be `Continuous`.
     The search is performed using an evolutionary algorithm.
-    This algorithm is described in the arxiv paper
+    This algorithm is described in the paper
     https://arxiv.org/abs/2305.01582.
 
     # Training data
@@ -453,17 +482,46 @@ eval(
         replace(
             """
     # Fitted parameters
-    - `equations::Vector{Vector{Node}}`: The expressions discovered by the search, represented
-      in a dominating pareto frontier (i.e., the best expressions found for
+
+    The fields of `fitted_params(mach)` are:
+
+    - `best_idx::Vector{Int}`: The index of the best expression in each Pareto frontier,
+      as determined by the `selection_method` function.
+    - `equations::Vector{Vector{Node{T}}}`: The expressions discovered by the search, represented
+      in a dominating Pareto frontier (i.e., the best expressions found for
+      each complexity). The outer vector is indexed by target variable, and the inner
+      vector is ordered by increasing complexity. `T` is equal to the element type
+      of the passed data.
+    - `equation_strings::Vector{Vector{String}}`: The expressions discovered by the search,
+      represented as strings for easy inspection.
+
+    # Report
+
+    The fields of `report(mach)` are:
+
+    - `best_idx::Vector{Int}`: The index of the best expression in each Pareto frontier,
+       as determined by the `selection_method` function.
+    - `equations::Vector{Vector{Node{T}}}`: The expressions discovered by the search, represented
+      in a dominating Pareto frontier (i.e., the best expressions found for
       each complexity). The outer vector is indexed by target variable, and the inner
       vector is ordered by increasing complexity.
     - `equation_strings::Vector{Vector{String}}`: The expressions discovered by the search,
       represented as strings for easy inspection.
-    - `best_idx::Vector{Int}`: The index of the best expression in each pareto frontier,
-        as determined by the `selection_method` function.
+    - `complexities::Vector{Vector{Int}}`: The complexity of each expression in each Pareto frontier.
+    - `losses::Vector{Vector{L}}`: The loss of each expression in each Pareto frontier, according
+      to the loss function specified in the model. The type `L` is the loss type, which
+      is usually the same as the element type of data passed (i.e., `T`), but can differ
+      if complex data types are passed.
+    - `scores::Vector{Vector{L}}`: A metric which considers both the complexity and loss of an expression,
+      equal to the change in the log-loss divided by the change in complexity, relative to
+      the previous expression along the Pareto frontier. A larger score aims to indicate
+      an expression is more likely to be the true expression generating the data, but
+      this is very problem-dependent and generally several other factors should be considered.
+
 
     # Examples
-    ```
+
+    ```julia
     using MLJ
     MultitargetSRRegressor = @load MultitargetSRRegressor pkg=SymbolicRegression
     X = (a=rand(100), b=rand(100), c=rand(100))
@@ -478,6 +536,7 @@ eval(
         println("Equation used for", output_index, ": ", eq[i])
     end
     ```
+
     See also [`SRRegressor`](@ref).
     """,
             r"^    " => "",
