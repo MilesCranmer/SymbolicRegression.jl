@@ -19,7 +19,7 @@ a Python frontend.
 
 </div>
 
-# Quickstart
+## Quickstart
 
 Install in Julia with:
 ```julia
@@ -27,10 +27,10 @@ using Pkg
 Pkg.add("SymbolicRegression")
 ```
 
-## MLJ Interface
+### MLJ Interface
 
-The recommended interface for using SymbolicRegression.jl
-is the machine learning framework [MLJ](https://github.com/alan-turing-institute/MLJ.jl).
+The easiest way to use SymbolicRegression.jl
+is via the [MLJ](https://github.com/alan-turing-institute/MLJ.jl) interface.
 Let's see an example:
 
 ```julia
@@ -88,9 +88,9 @@ predict(mach, data)
 For fitting multiple outputs, one can use `MultitargetSRRegressor`.
 For a full list of options available to each regressor, see the [API page](https://astroautomata.com/SymbolicRegression.jl/dev/api/).
 
-## Low-Level Interface
+### Low-Level Interface
 
-The heart of this SymbolicRegression.jl is the
+The heart of SymbolicRegression.jl is the
 `equation_search` function.
 This takes a 2D array and attempts
 to model a 1D array using analytic functional forms.
@@ -198,7 +198,7 @@ for member in dominating
 end
 ```
 
-# Code structure
+## Code structure
 
 SymbolicRegression.jl is organized roughly as follows.
 Rounded rectangles indicate objects, and rectangles indicate functions.
