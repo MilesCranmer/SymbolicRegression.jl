@@ -15,7 +15,7 @@ https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-98
 
 Check out [PySR](https://github.com/MilesCranmer/PySR) for
 a Python frontend.
-[Cite this software](https://github.com/MilesCranmer/PySR/blob/master/CITATION.md)
+[Cite this software](https://arxiv.org/abs/2305.01582)
 
 </div>
 
