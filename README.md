@@ -29,13 +29,13 @@ Pkg.add("SymbolicRegression")
 
 ## MLJ Interface
 
-The recommended interface for users
-is the [MLJ](https://github.com/alan-turing-institute/MLJ.jl)
-interface. Let's see an example of searching
-for an expression on a dataset:
+The recommended interface for using SymbolicRegression.jl
+is the machine learning framework [MLJ](https://github.com/alan-turing-institute/MLJ.jl).
+Let's see an example:
 
 ```julia
-using MLJ, SymbolicRegression
+import SymbolicRegression: SRRegressor
+import MLJ: machine, fit!, predict, report
 
 data = (x=randn(100), y=randn(100))
 y = @. 2 * cos(data.x * 12) + data.y ^ 2 - 2
@@ -98,12 +98,12 @@ to model a 1D array using analytic functional forms.
 this assumes column-major input of shape [features, rows].
 
 ```julia
-using SymbolicRegression
+import SymbolicRegression: Options, equation_search
 
 X = randn(2, 100)
 y = 2 * cos.(X[2, :]) + X[1, :] .^ 2 .- 2
 
-options = SymbolicRegression.Options(
+options = Options(
     binary_operators=[+, *, /, -],
     unary_operators=[cos, exp],
     npopulations=20
@@ -117,6 +117,8 @@ hall_of_fame = equation_search(
 You can view the resultant equations in the dominating Pareto front (best expression
 seen at each complexity) with:
 ```julia
+import SymbolicRegression: calculate_pareto_frontier
+
 dominating = calculate_pareto_frontier(hall_of_fame)
 ```
 This is a vector of `PopMember` type - which contains the expression along with the score.
@@ -128,6 +130,8 @@ Each of these equations is a `Node{T}` type for some constant type `T` (like `Fl
 
 You can evaluate a given tree with:
 ```julia
+import SymbolicRegression: eval_tree_array
+
 tree = trees[end]
 output, did_succeed = eval_tree_array(tree, X, options)
 ```
@@ -141,7 +145,7 @@ encountered any NaNs or Infs during calculation (such as, e.g., `sqrt(-1)`).
 You can also manipulate and construct trees directly. For example:
 
 ```julia
-using SymbolicRegression
+import SymbolicRegression: Options, Node, eval_tree_array
 
 options = Options(;
     binary_operators=[+, -, *, ^, /], unary_operators=[cos, exp, sin]
@@ -173,7 +177,7 @@ We can convert the best equation
 to [SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl)
 with the following function:
 ```julia
-using SymbolicUtils
+import SymbolicRegression: node_to_symbolic
 
 eqn = node_to_symbolic(dominating[end].tree, options)
 println(simplify(eqn*5 + 3))
@@ -181,6 +185,8 @@ println(simplify(eqn*5 + 3))
 
 We can also print out the full pareto frontier like so:
 ```julia
+import SymbolicRegression: compute_complexity, string_tree
+
 println("Complexity\tMSE\tEquation")
 
 for member in dominating
