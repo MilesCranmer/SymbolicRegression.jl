@@ -20,8 +20,9 @@ end
     X = randn(100, 3)
     Y = @. cos(X^2) * 3.2 - 0.5
     (X, Y) = MTI.table.((X, Y))
+    w = ones(100)
     failures, summary = MTI.test(
-        [MultitargetSRRegressor], X, Y; mod=@__MODULE__, verbosity=0, throw=true
+        [MultitargetSRRegressor], X, Y, w; mod=@__MODULE__, verbosity=0, throw=true
     )
     @test isempty(failures)
 end
@@ -52,8 +53,9 @@ end
     @testset "Named outputs" begin
         X = (b1=randn(32), b2=randn(32))
         Y = (c1=X.b1 .* X.b2, c2=X.b1 .+ X.b2)
+        w = ones(32)
         model = MultitargetSRRegressor(; niterations=10)
-        mach = machine(model, X, Y)
+        mach = machine(model, X, Y, w)
         fit!(mach)
         test_outs = predict(mach, X)
         @test isempty(setdiff((:c1, :c2), keys(test_outs)))

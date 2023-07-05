@@ -102,11 +102,17 @@ function MMI.update(
     options = get(old_fitresult, :options, get_options(m))
     X_t, variable_names = get_matrix_and_colnames(X)
     y_t, y_variable_names = format_input_for(m, y)
+    w_t = if w !== nothing && isa(m, MultitargetSRRegressor)
+        @assert(isa(w, AbstractVector) && ndims(w) == 1, "Unexpected input for `w`.")
+        repeat(w', size(y_t, 1))
+    else
+        w
+    end
     search_state = equation_search(
         X_t,
         y_t;
         niterations=m.niterations,
-        weights=w,
+        weights=w_t,
         variable_names=variable_names,
         options=options,
         parallelism=m.parallelism,
@@ -518,7 +524,6 @@ eval(
       an expression is more likely to be the true expression generating the data, but
       this is very problem-dependent and generally several other factors should be considered.
 
-
     # Examples
 
     ```julia
@@ -533,7 +538,7 @@ eval(
     # View the equations used:
     r = report(mach)
     for (output_index, (eq, i)) in enumerate(zip(r.equation_strings, r.best_idx))
-        println("Equation used for", output_index, ": ", eq[i])
+        println("Equation used for ", output_index, ": ", eq[i])
     end
     ```
 
