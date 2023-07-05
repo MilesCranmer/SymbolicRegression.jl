@@ -15,16 +15,9 @@ https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-98
 
 Check out [PySR](https://github.com/MilesCranmer/PySR) for
 a Python frontend.
-    
-
-<img src="https://user-images.githubusercontent.com/7593028/196054732-5c399e82-23a8-4200-945a-67605f7501ab.png" height="50%" width="50%"></img>
+[Cite this software](https://github.com/MilesCranmer/PySR/blob/master/CITATION.md)
 
 </div>
-
-<img src="https://astroautomata.com/data/sr_demo_image1.png" alt="demo1" width="700">
-<img src="https://astroautomata.com/data/sr_demo_image2.png" alt="demo2" width="700">
-
-[Cite this software](https://github.com/MilesCranmer/PySR/blob/master/CITATION.md)
 
 # Quickstart
 
@@ -34,18 +27,81 @@ using Pkg
 Pkg.add("SymbolicRegression")
 ```
 
-The heart of this package is the
-`equation_search` function, which takes
-a 2D array (shape [features, rows]) and attempts
-to model a 1D array (shape [rows])
-using analytic functional forms.
+## MLJ Interface
 
-Run with:
+The recommended interface for users
+is the [MLJ](https://github.com/alan-turing-institute/MLJ.jl)
+interface. Let's see an example of searching
+for an expression on a dataset:
+
+```julia
+using MLJ, SymbolicRegression
+
+data = (x=randn(100), y=randn(100))
+y = @. 2 * cos(data.x * 12) + data.y ^ 2 - 2
+# This also works: data = randn(100, 2)
+
+model = SRRegressor(
+    niterations=100,
+    binary_operators=[+, *, /, -],
+    unary_operators=[exp, cos],
+    parallelism=:multithreading,
+)
+```
+
+Now, let's create and train a machine on our data:
+
+```julia
+mach = machine(model, data, y)
+
+fit!(mach)
+```
+
+You will notice that expressions are printed
+using the column names of our table. If
+a simple array is passed instead,
+`x1, ..., xn` will be used for variable names.
+
+Let's look at the expressions discovered:
+
+```julia
+report(mach)
+```
+
+Finally, we can make predictions with the expressions
+on new data:
+
+```julia
+predict(mach, data)
+```
+
+This will make predictions using the expression
+selected using the function passed to `selection_method`.
+By default this selection is made a mix of accuracy and complexity.
+For example, we can make predictions using expression 2 with:
+
+```julia
+mach.model.selection_method = Returns(2)
+predict(mach, data)
+```
+
+For fitting multiple outputs, one can use `MultitargetSRRegressor`.
+For a full list of options available to each regressor, see the [API page](https://astroautomata.com/SymbolicRegression.jl/dev/api/).
+
+## Low-Level Interface
+
+The heart of this SymbolicRegression.jl is the
+`equation_search` function.
+This takes a 2D array and attempts
+to model a 1D array using analytic functional forms.
+**Node:** unlike the MLJ interface,
+this assumes column-major input of shape [features, rows].
+
 ```julia
 using SymbolicRegression
 
-X = randn(Float32, 5, 100)
-y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
+X = randn(2, 100)
+y = 2 * cos.(X[2, :]) + X[1, :] .^ 2 .- 2
 
 options = SymbolicRegression.Options(
     binary_operators=[+, *, /, -],
