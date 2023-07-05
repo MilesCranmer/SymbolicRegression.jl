@@ -103,17 +103,11 @@ Let's plot the prediction against the truth:
 ```julia
 using Plots
 
-scatter(y[1, :], bests[1](X), xlabel="Truth", ylabel="Prediction")
+scatter(y[1, :], bests[1](X, options), xlabel="Truth", ylabel="Prediction")
 ```
 
-Here, we have used the convenience function `(::Node{T})(X)` to evaluate
-the expression. However, this will only work because calling `Options()`
-will automatically set up calls to `eval_tree_array`. In practice, you should
-use the `eval_tree_array` function directly, which is the form of:
-
-```julia
-eval_tree_array(bests[1], X, options)
-```
+Here, we have used the convenience function `(::Node{T})(::AbstractMatrix, ::Options)` to evaluate
+the expression.
 
 ## 5. Other types
 
