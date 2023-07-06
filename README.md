@@ -37,9 +37,8 @@ Let's see an example:
 import SymbolicRegression: SRRegressor
 import MLJ: machine, fit!, predict, report
 
-data = (x=randn(100), y=randn(100))
-y = @. 2 * cos(data.x * 12) + data.y ^ 2 - 2
-# This also works: data = randn(100, 2)
+data = (x=randn(100), y=randn(100), alpha=rand([0.1, 0.2], 100))
+y = @. 2 * cos(data.x * 12) + data.y ^ 2 - 2 * data.alpha
 
 model = SRRegressor(
     niterations=100,
