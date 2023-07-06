@@ -30,7 +30,7 @@ Pkg.add("SymbolicRegression")
 ### MLJ Interface
 
 The easiest way to use SymbolicRegression.jl
-is with [MLJ](https://github.com/alan-turing-institute/MLJ.jl) interface.
+is with [MLJ](https://github.com/alan-turing-institute/MLJ.jl).
 Let's see an example:
 
 ```julia
