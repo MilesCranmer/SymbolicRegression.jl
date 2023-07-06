@@ -30,7 +30,7 @@ Pkg.add("SymbolicRegression")
 ### MLJ Interface
 
 The easiest way to use SymbolicRegression.jl
-is via the [MLJ](https://github.com/alan-turing-institute/MLJ.jl) interface.
+is with [MLJ](https://github.com/alan-turing-institute/MLJ.jl) interface.
 Let's see an example:
 
 ```julia
@@ -94,7 +94,7 @@ The heart of SymbolicRegression.jl is the
 `equation_search` function.
 This takes a 2D array and attempts
 to model a 1D array using analytic functional forms.
-**Node:** unlike the MLJ interface,
+**Note:** unlike the MLJ interface,
 this assumes column-major input of shape [features, rows].
 
 ```julia
