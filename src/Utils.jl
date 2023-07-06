@@ -2,6 +2,7 @@
 module UtilsModule
 
 import Printf: @printf
+import MacroTools: splitdef, combinedef
 
 function debug(verbosity, string...)
     if verbosity > 0
@@ -161,6 +162,32 @@ function poisson_sample(λ::T) where {T}
         p *= rand(T)
     end
     return k - 1
+end
+
+"""
+    @save_kwargs variable function ... end
+
+Save the kwargs and their default values to a variable as a constant.
+This is to be used to create these same kwargs in other locations.
+"""
+macro save_kwargs(log_variable, fdef)
+    return esc(_save_kwargs(log_variable, fdef))
+end
+function _save_kwargs(log_variable::Symbol, fdef::Expr)
+    def = splitdef(fdef)
+    # Get kwargs:
+    kwargs = copy(def[:kwargs])
+    filter!(kwargs) do k
+        # Filter ...:
+        k.head == :... && return false
+        # Filter other deprecated kwargs:
+        startswith(string(first(k.args)), "deprecated") && return false
+        return true
+    end
+    return quote
+        $fdef
+        const $log_variable = $kwargs
+    end
 end
 
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14

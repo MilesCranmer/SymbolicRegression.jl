@@ -1,5 +1,12 @@
 # API
 
+## MLJ interface
+
+```@docs
+SRRegressor
+MultitargetSRRegressor
+```
+
 ## equation_search
 
 ```@docs
