@@ -37,28 +37,35 @@ Let's see an example:
 import SymbolicRegression: SRRegressor
 import MLJ: machine, fit!, predict, report
 
-data = (x=randn(100), y=randn(100), alpha=rand([0.1, 0.2], 100))
-y = @. 2 * cos(data.x * 12) + data.y ^ 2 - 2 * data.alpha
+# Create dataset with three features and one target:
+X = (;
+        a = rand(500) * 20,
+        b = rand(500) * 3,
+    gamma = randn(500)
+)
+y = [2 * cos(X.a[i]) - X.b[i] ^ 2 + 0.9 * X.gamma[i] for i=1:500]
+
+# Add some noise:
+y = y + randn(500) * 1e-3
 
 model = SRRegressor(
-    niterations=100,
-    binary_operators=[+, *, /, -],
-    unary_operators=[exp, cos],
-    parallelism=:multithreading,
+    niterations=50,
+    binary_operators=[+, -, *],
+    unary_operators=[cos],
 )
 ```
 
 Now, let's create and train a machine on our data:
 
 ```julia
-mach = machine(model, data, y)
+mach = machine(model, X, y)
 
 fit!(mach)
 ```
 
 You will notice that expressions are printed
 using the column names of our table. If
-a simple array is passed instead,
+a simple array is passed instead (e.g., `X=randn(100, 2)`),
 `x1, ..., xn` will be used for variable names.
 
 Let's look at the expressions discovered:
@@ -71,7 +78,7 @@ Finally, we can make predictions with the expressions
 on new data:
 
 ```julia
-predict(mach, data)
+predict(mach, X)
 ```
 
 This will make predictions using the expression
@@ -81,7 +88,7 @@ For example, we can make predictions using expression 2 with:
 
 ```julia
 mach.model.selection_method = Returns(2)
-predict(mach, data)
+predict(mach, X)
 ```
 
 For fitting multiple outputs, one can use `MultitargetSRRegressor`.
