@@ -19,6 +19,30 @@ a Python frontend.
 
 </div>
 
+**Contents**:
+
+- [Contributors](#contributors-)
+- [Quickstart](#quickstart)
+    - [MLJ Interface](#mlj-interface)
+    - [Low-Level Interface](#low-level-interface)
+- [→ Documentation](https://astroautomata.com/SymbolicRegression.jl)
+
+### Contributors ✨
+
+</div>
+
+We are eager to welcome new contributors!
+If you have an idea for a new feature, don't hesitate to share it on the [issues](https://github.com/MilesCranmer/SymbolicRegression.jl/issues) page or [forums](https://github.com/MilesCranmer/PySR/discussions).
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
 ## Quickstart
 
 Install in Julia with:
