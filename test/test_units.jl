@@ -8,7 +8,7 @@ using Random: MersenneTwister
 custom_op(x, y) = x + y
 
 options = Options(;
-    binary_operators=[-, *, /, custom_op, ^], unary_operators=[cos, cbrt, sqrt, abs]
+    binary_operators=[-, *, /, custom_op, ^], unary_operators=[cos, cbrt, sqrt, abs, inv]
 )
 @extend_operators options
 
@@ -45,6 +45,9 @@ options = Options(;
         1.0 * (cbrt(x3 * x3 * x3) - x3),
         1.0 * (sqrt(x3 * x3) - x3),
         1.0 * (sqrt(abs(x3) * abs(x3)) - x3),
+        inv(x2),
+        1.0 * inv(x1),
+        x3 * inv(x3),
     ]
     bad_expressions = [
         x1,
@@ -60,6 +63,9 @@ options = Options(;
         1.0 * ((1.0 * x1)^x1),
         1.0 * (cbrt(x3 * x3) - x3),
         1.0 * (sqrt(abs(x3)) - x3),
+        inv(x3),
+        inv(x1),
+        x1 * inv(x3),
     ]
 
     for expr in good_expressions
