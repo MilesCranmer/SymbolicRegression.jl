@@ -5,6 +5,7 @@ import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
 import DynamicQuantities as DQ
 import LossFunctions: SupervisedLoss
+import Compat: allequal
 import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
 import ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 import ..ComplexityModule: compute_complexity
