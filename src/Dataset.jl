@@ -196,7 +196,6 @@ Convert both X and y to their SI base units, in-place (if units are provided).
 """
 function convert_to_si_units!(X, y, si_units)
     if si_units !== nothing
-        @assert length(si_units.X) == length(eachrow(X))
         for (ux, x) in zip(si_units.X, eachrow(X))
             x .*= ustrip(ux)
         end
