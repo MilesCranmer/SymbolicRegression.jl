@@ -1,6 +1,7 @@
 module DatasetModule
 
-import DynamicQuantities: Dimensions, Quantity, uparse, ustrip
+import DynamicQuantities:
+    Dimensions, Quantity, uparse, ustrip, DEFAULT_DIM_BASE_TYPE
 
 import ..UtilsModule: subscriptify
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
@@ -108,12 +109,18 @@ function Dataset(
     loss_type = (loss_type == Nothing) ? T : loss_type
     use_baseline = true
     baseline = one(loss_type)
-    _units = get_units(T, units)
-    error_on_mismatched_size(nfeatures, _units)
-    warn_on_non_si_units(_units)
+    si_units = get_units(T, Dimensions, units, uparse)
+    error_on_mismatched_size(nfeatures, si_units)
+    convert_to_si_units!(X, y, si_units)
 
     return Dataset{
-        T,loss_type,typeof(X),typeof(y),typeof(weights),typeof(extra),typeof(_units)
+        T,
+        loss_type,
+        typeof(X),
+        typeof(y),
+        typeof(weights),
+        typeof(extra),
+        typeof(si_units),
     }(
         X,
         y,
@@ -127,51 +134,73 @@ function Dataset(
         baseline,
         variable_names,
         pretty_variable_names,
-        _units,
+        si_units,
     )
 end
+function Dataset(
+    X::AbstractMatrix,
+    y::Union{<:AbstractVector,Nothing}=nothing;
+    weights::Union{<:AbstractVector,Nothing}=nothing,
+    kws...
+)
+    T = promote_type(eltype(X), (y === nothing) ? eltype(X) : eltype(y), (weights === nothing) ? eltype(X) : eltype(weights))
+    X = Base.Fix1(convert, T).(X)
+    if y !== nothing
+        y = Base.Fix1(convert, T).(y)
+    end
+    if weights !== nothing
+        weights = Base.Fix1(convert, T).(weights)
+    end
+    return Dataset(X, y; weights=weights, kws...)
+end
 
-const DEFAULT_DIM = Dimensions()
-const DEFAULT_DIM_TYPE = typeof(DEFAULT_DIM)
+# Base
+function get_units(_, _, ::Nothing, ::Function)
+    return nothing
+end
+function get_units(::Type{T}, ::Type{D}, x::AbstractString, f::Function) where {T,D}
+    return convert(Quantity{T,D}, f(x))
+end
+function get_units(::Type{T}, ::Type{D}, x::Quantity, ::Function) where {T,D}
+    return convert(Quantity{T,D}, x)
+end
+function get_units(::Type{T}, ::Type{D}, x::Dimensions, ::Function) where {T,D}
+    return convert(Quantity{T,D}, 1.0 * x)
+end
+function get_units(::Type{T}, ::Type{D}, x::Number, ::Function) where {T,D}
+    return Quantity(convert(T, x), D)
+end
 
-#! format: off
-get_units(_, ::Nothing) = nothing
-get_units(::Type{T}, x::AbstractString) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, uparse(x))
-get_units(::Type{T}, x::Quantity) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, x)
-get_units(::Type{T}, x::Dimensions) where {T} = convert(Quantity{T,DEFAULT_DIM_TYPE}, 1.0 * x)
-get_units(::Type{T}, x::Number) where {T} = Quantity(convert(T, x), DEFAULT_DIM)
-
-get_units(::Type{T}, x::AbstractVector) where {T} = Quantity{T,DEFAULT_DIM_TYPE}[get_units(T, xi) for xi in x]
-get_units(::Type{T}, x::NamedTuple) where {T} = NamedTuple((k => get_units(T, x[k]) for k in keys(x)))
-#! format: on
+# Derived
+function get_units(::Type{T}, ::Type{D}, x::AbstractVector, f::Function) where {T,D}
+    return Quantity{T,D{DEFAULT_DIM_BASE_TYPE}}[get_units(T, D, xi, f) for xi in x]
+end
+function get_units(::Type{T}, ::Type{D}, x::NamedTuple, f::Function) where {T,D}
+    return NamedTuple((k => get_units(T, D, x[k], f) for k in keys(x)))
+end
 
 error_on_mismatched_size(nfeatures, ::Nothing) = nothing
 function error_on_mismatched_size(nfeatures, units::NamedTuple)
-    return haskey(units, :X) &&
-           nfeatures != length(units.X) &&
-           error(
-               "Number of features ($(nfeatures)) does not match number of units ($(length(units.X)))",
-           )
+    haskey(units, :X) &&
+        nfeatures != length(units.X) &&
+        error(
+            "Number of features ($(nfeatures)) does not match number of units ($(length(units.X)))",
+        )
+    return nothing
 end
 
-warn_on_non_si_units(::Nothing) = nothing
-function warn_on_non_si_units(vq::NamedTuple)
-    container = Quantity[]
-    for k in keys(vq)
-        v = vq[k]
-        if isa(v, Quantity)
-            push!(container, v)
-        elseif isa(v, AbstractVector)
-            append!(container, v)
-        else
-            error("Unknown type: $(typeof(v))")
+"""
+    convert_to_si_units!(X, y, si_units)
+
+Convert both X and y to their SI base units, in-place (if units are provided).
+"""
+function convert_to_si_units!(X, y, si_units)
+    if si_units !== nothing
+        @assert length(si_units.X) == length(eachrow(X))
+        for (ux, x) in zip(si_units.X, eachrow(X))
+            x .*= ustrip(ux)
         end
-    end
-    return warn_on_non_si_units(container)
-end
-function warn_on_non_si_units(vq::AbstractVector{<:Quantity})
-    if any(!isone ∘ ustrip, vq)
-        @warn "Some of your units are not in their base SI representation. While dimensional analysis will work normally, note that the scale of specific units is not taken into account when evaluating the equation. If you would like to obtain an equation that takes into account the scale of your units (e.g., `meters/kilometers == 1/1000`), please precompute this by converting your data to the base SI units before input."
+        y .*= ustrip(si_units.y)
     end
     return nothing
 end
