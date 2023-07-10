@@ -55,40 +55,35 @@ an array of trees tagged with score, loss, and birthdate---these
 values are given in the `PopMember`.
 
 ```@docs
-Population(pop::Array{PopMember{T,L}, 1}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-Population(dataset::Dataset{T,L};
-           npop::Int, nlength::Int=3,
-           options::Options,
-           nfeatures::Int) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-Population(X::AbstractMatrix{T}, y::AbstractVector{T};
-           npop::Int, nlength::Int=3,
-           options::Options,
-           nfeatures::Int,
-           loss_type::Type=Nothing) where {T<:DATA_TYPE}
+Population
 ```
 
 ## Population members
 
 ```@docs
-PopMember(t::Node{T}, score::L, loss::L) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-PopMember(dataset::Dataset{T,L}, t::Node{T}, options::Options) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+PopMember
 ```
 
 ## Hall of Fame
 
 ```@docs
+HallOfFame
 HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 ```
 
 ## Dataset
 
 ```@docs
-Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
-Dataset(X::AbstractMatrix{T},
-        y::AbstractVector{T};
-        weights::Union{AbstractVector{T}, Nothing}=nothing,
-        varMap::Union{Array{String, 1}, Nothing}=nothing,
-        loss_type::Type=Nothing,
-       ) where {T<:DATA_TYPE}
-update_baseline_loss!(dataset::Dataset{T,L}, options::Options) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+Dataset
+Dataset(
+    X::AbstractMatrix{T},
+    y::Union{AbstractVector{T},Nothing}=nothing;
+    weights::Union{AbstractVector{T},Nothing}=nothing,
+    variable_names::Union{Array{String,1},Nothing}=nothing,
+    extra::NamedTuple=NamedTuple(),
+    loss_type::Type=Nothing,
+    # Deprecated:
+    varMap=nothing,
+) where {T<:DATA_TYPE}
+update_baseline_loss!
 ```

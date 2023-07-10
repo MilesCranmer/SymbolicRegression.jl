@@ -105,7 +105,9 @@ using Gumbo
 html_type(::HTMLElement{S}) where {S} = S
 
 function apply_to_a_href!(f!, element::HTMLElement)
-    if html_type(element) == :a && haskey(element.attributes, "href") && element.attributes["href"] == "@ref"
+    if html_type(element) == :a &&
+        haskey(element.attributes, "href") &&
+        element.attributes["href"] == "@ref"
         f!(element)
     else
         for child in element.children
