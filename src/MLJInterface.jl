@@ -4,6 +4,7 @@ using Optim: Optim
 import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
 import DynamicQuantities as DQ
+import DynamicQuantities: AbstractDimensions, DEFAULT_DIM_TYPE
 import LossFunctions: SupervisedLoss
 import Compat: allequal
 import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
@@ -23,7 +24,7 @@ abstract type AbstractSRRegressor <: MMI.Deterministic end
 
 """Generate an `SRRegressor` struct containing all the fields in `Options`."""
 function modelexpr(model_name::Symbol)
-    struct_def = :(Base.@kwdef mutable struct $(model_name) <: AbstractSRRegressor
+    struct_def = :(Base.@kwdef mutable struct $(model_name){F,D<:AbstractDimensions} <: AbstractSRRegressor
         niterations::Int = 10
         parallelism::Symbol = :multithreading
         numprocs::Union{Int,Nothing} = nothing
@@ -31,7 +32,8 @@ function modelexpr(model_name::Symbol)
         addprocs_function::Union{Function,Nothing} = nothing
         runtests::Bool = true
         loss_type::Type = Nothing
-        selection_method::Function = choose_best
+        selection_method::F = choose_best
+        dimensions_type::Type{D} = DEFAULT_DIM_TYPE
     end)
     fields = last(last(struct_def.args).args).args
 
@@ -104,8 +106,8 @@ function MMI.update(
     m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
 )
     options = get(old_fitresult, :options, get_options(m))
-    X_t, variable_names, x_units = get_matrix_and_info(X)
-    y_t, y_variable_names, y_units = format_input_for(m, y)
+    X_t, variable_names, x_units = get_matrix_and_info(X, m.dimensions_type)
+    y_t, y_variable_names, y_units = format_input_for(m, y, m.dimensions_type)
     w_t = if w !== nothing && isa(m, MultitargetSRRegressor)
         @assert(isa(w, AbstractVector) && ndims(w) == 1, "Unexpected input for `w`.")
         repeat(w', size(y_t, 1))
@@ -141,7 +143,7 @@ function MMI.update(
     return (fitresult, nothing, full_report(m, fitresult))
 end
 
-function get_matrix_and_info(X)
+function get_matrix_and_info(X, ::Type{D}) where {D}
     sch = MMI.istable(X) ? MMI.schema(X) : nothing
     Xm_t = MMI.matrix(X; transpose=true)
     colnames = if sch === nothing
@@ -149,7 +151,7 @@ function get_matrix_and_info(X)
     else
         [string.(sch.names)...]
     end
-    Xm_t_strip, units = unwrap_units_single(Xm_t)
+    Xm_t_strip, units = unwrap_units_single(Xm_t, D)
     return Xm_t_strip, colnames, units
 end
 function format_units(x_units, y_units)
@@ -160,22 +162,22 @@ function format_units(x_units, y_units)
     end
 end
 
-function format_input_for(::SRRegressor, y)
+function format_input_for(::SRRegressor, y, ::Type{D}) where {D}
     @assert(
         !(MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1)),
         "For multi-output regression, please use `MultitargetSRRegressor`."
     )
     y_t = vec(y)
     colnames = nothing
-    y_t_strip, units = unwrap_units_single(y_t)
+    y_t_strip, units = unwrap_units_single(y_t, D)
     return y_t_strip, colnames, units
 end
-function format_input_for(::MultitargetSRRegressor, y)
+function format_input_for(::MultitargetSRRegressor, y, ::Type{D}) where {D}
     @assert(
         MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1),
         "For single-output regression, please use `SRRegressor`."
     )
-    return get_matrix_and_info(y)
+    return get_matrix_and_info(y, D)
 end
 function validate_variable_names(variable_names, fitresult)
     @assert(
@@ -199,20 +201,20 @@ function validate_units(x_units, fitresult)
     return nothing
 end
 
-dimension_fallback(q::Union{<:DQ.Quantity}) = DQ.dimension(q)::DQ.DEFAULT_DIM_TYPE
-dimension_fallback(_) = DQ.DEFAULT_DIM_TYPE()
+dimension_fallback(q::Union{<:DQ.Quantity}, ::Type{D}) where {D} = DQ.dimension(q)::D
+dimension_fallback(_, ::Type{D}) where {D} = D()
 
-function unwrap_units_single(A::AbstractMatrix)
+function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
     # TODO: This assumes all units in a column are equal.
     for (i, row) in enumerate(eachrow(A))
-        allequal(dimension_fallback.(row)) || error("Inconsistent units in feature $i of matrix.")
+        allequal(Base.Fix2(dimension_fallback, D).(row)) || error("Inconsistent units in feature $i of matrix.")
     end
-    dims = map(dimension_fallback ∘ first, eachrow(A))
+    dims = map(Base.Fix2(dimension_fallback, D) ∘ first, eachrow(A))
     return stack([DQ.ustrip.(row) for row in eachrow(A)]; dims=1), dims
 end
-function unwrap_units_single(v::AbstractVector)
-    allequal(dimension_fallback.(v)) || error("Inconsistent units in vector.")
-    dims = dimension_fallback(first(v))
+function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
+    allequal(Base.Fix2(dimension_fallback, D).(v)) || error("Inconsistent units in vector.")
+    dims = dimension_fallback(first(v), D)
     v = DQ.ustrip(v)
     return v, dims
 end
