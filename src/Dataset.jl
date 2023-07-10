@@ -165,7 +165,7 @@ function get_units(::Type{T}, ::Type{D}, x::Quantity, ::Function) where {T,D}
     return convert(Quantity{T,D}, x)
 end
 function get_units(::Type{T}, ::Type{D}, x::Dimensions, ::Function) where {T,D}
-    return convert(Quantity{T,D}, 1.0 * x)
+    return Quantity(one(T), x)
 end
 function get_units(::Type{T}, ::Type{D}, x::Number, ::Function) where {T,D}
     return Quantity(convert(T, x), D)

@@ -425,23 +425,33 @@ function equation_search(
             "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
         )
 
+    should_return_state = if options.return_state === nothing
+        return_state === nothing ? false : return_state
+    else
+        @assert(
+            return_state === nothing,
+            "You cannot set `return_state` in both the `Options` and in the passed arguments."
+        )
+        options.return_state
+    end
+
     return _equation_search(
-        concurrency,
-        datasets;
-        niterations=niterations,
-        options=options,
-        numprocs=numprocs,
-        procs=procs,
-        addprocs_function=addprocs_function,
-        runtests=runtests,
-        saved_state=saved_state,
-        return_state=return_state,
+        Val(concurrency),
+        datasets,
+        niterations,
+        options,
+        numprocs,
+        procs,
+        addprocs_function,
+        runtests,
+        saved_state,
+        Val(should_return_state),
     )
 end
 
 function _equation_search(
-    parallelism::Symbol,
-    datasets::Vector{D};
+    ::Val{parallelism},
+    datasets::Vector{D},
     niterations::Int,
     options::Options,
     numprocs::Union{Int,Nothing},
@@ -449,8 +459,8 @@ function _equation_search(
     addprocs_function::Union{Function,Nothing},
     runtests::Bool,
     saved_state::Union{StateType{T,L},Nothing},
-    return_state::Union{Bool,Nothing},
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
+    ::Val{should_return_state},
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},parallelism,should_return_state}
     if options.deterministic
         if parallelism != :serial
             error("Determinism is only guaranteed for serial mode.")
@@ -460,15 +470,6 @@ function _equation_search(
         if Threads.nthreads() == 1
             @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
         end
-    end
-    should_return_state = if options.return_state === nothing
-        return_state === nothing ? false : return_state
-    else
-        @assert(
-            return_state === nothing,
-            "You cannot set `return_state` in both the `Options` and in the passed arguments."
-        )
-        options.return_state
     end
 
     stdin_reader = watch_stream(stdin)
