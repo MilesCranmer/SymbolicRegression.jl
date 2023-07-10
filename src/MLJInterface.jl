@@ -9,6 +9,7 @@ import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
 import ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 import ..ComplexityModule: compute_complexity
 import ..HallOfFameModule: HallOfFame, format_hall_of_fame
+import ..UtilsModule: subscriptify
 #! format: off
 import ..equation_search
 import ..StateType
@@ -98,22 +99,22 @@ MMI.clean!(::AbstractSRRegressor) = ""
 function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
     return MMI.update(m, verbosity, (; state=nothing), nothing, X, y, w)
 end
-Base.@constprop :aggressive function MMI.update(
+function MMI.update(
     m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
 )
     options = get(old_fitresult, :options, get_options(m))
-    X_t, variable_names = get_matrix_and_colnames(X)
-    y_t, y_variable_names = format_input_for(m, y)
+    X_t, variable_names, x_units = get_matrix_and_info(X)
+    y_t, y_variable_names, y_units = format_input_for(m, y)
     w_t = if w !== nothing && isa(m, MultitargetSRRegressor)
         @assert(isa(w, AbstractVector) && ndims(w) == 1, "Unexpected input for `w`.")
         repeat(w', size(y_t, 1))
     else
         w
     end
-    X_t_strip, y_t_strip, units = unwrap_units(X_t, y_t)
+    units = format_units(x_units, y_units)
     search_state::StateType = equation_search(
-        X_t_strip,
-        y_t_strip;
+        X_t,
+        y_t;
         niterations=m.niterations,
         weights=w_t,
         variable_names=variable_names,
@@ -134,20 +135,28 @@ Base.@constprop :aggressive function MMI.update(
         variable_names=variable_names,
         y_variable_names=y_variable_names,
         y_is_table=MMI.istable(y),
+        units=units,
     )
     return (fitresult, nothing, full_report(m, fitresult))
 end
-#! format: on
 
-function get_matrix_and_colnames(X)
+function get_matrix_and_info(X)
     sch = MMI.istable(X) ? MMI.schema(X) : nothing
     Xm_t = MMI.matrix(X; transpose=true)
     colnames = if sch === nothing
-        [map(i -> "x$(i)", axes(Xm_t, 1))...]
+        [map(i -> "x$(subscriptify(i))", axes(Xm_t, 1))...]
     else
         [string.(sch.names)...]
     end
-    return Xm_t, colnames
+    Xm_t_strip, units = unwrap_units_single(Xm_t)
+    return Xm_t_strip, colnames, units
+end
+function format_units(x_units, y_units)
+    if all(iszero, x_units) && iszero(y_units)
+        return nothing
+    else
+        return (X=x_units, y=y_units)
+    end
 end
 
 function format_input_for(::SRRegressor, y)
@@ -155,53 +164,56 @@ function format_input_for(::SRRegressor, y)
         !(MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1)),
         "For multi-output regression, please use `MultitargetSRRegressor`."
     )
-    return vec(y), nothing
+    y_t = vec(y)
+    colnames = nothing
+    y_t_strip, units = unwrap_units_single(y_t)
+    return y_t_strip, colnames, units
 end
 function format_input_for(::MultitargetSRRegressor, y)
     @assert(
         MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1),
         "For single-output regression, please use `SRRegressor`."
     )
-    return get_matrix_and_colnames(y)
+    return get_matrix_and_info(y)
 end
 function validate_variable_names(variable_names, fitresult)
     @assert(
         variable_names == fitresult.variable_names,
         "Variable names do not match fitted regressor."
     )
+    return nothing
+end
+function validate_units(x_units, fitresult)
+    if fitresult.units === nothing
+        @assert(
+            all(iszero, x_units),
+            "Units of input $(x_units) do not match fitted regressor with units $(fitresults.units.X)."
+        )
+    else
+        @assert(
+            all(x_units .== fitresult.units.X),
+            "Units of input $(x_units) do not match fitted regressor with units $(fitresults.units.X)."
+        )
+    end
+    return nothing
 end
 
-dimension_fallback(q::Union{<:DQ.Quantity}) = DQ.dimension(q)
+dimension_fallback(q::Union{<:DQ.Quantity}) = DQ.dimension(q)::DQ.DEFAULT_DIM_TYPE
 dimension_fallback(_) = DQ.DEFAULT_DIM_TYPE()
 
 function unwrap_units_single(A::AbstractMatrix)
-    dims = [
-        let d = dimension_fallback.(row)
-            allequal(d) || error("Inconsistent units in row $i of matrix.")
-            first(d)
-        end
-        for (i, row) in enumerate(eachrow(A))
-    ]
-    A = stack([DQ.ustrip.(row) for row in eachrow(A)]; dims=1)
-    return A, dims
+    # TODO: This assumes all units in a column are equal.
+    for (i, row) in enumerate(eachrow(A))
+        allequal(dimension_fallback.(row)) || error("Inconsistent units in feature $i of matrix.")
+    end
+    dims = map(dimension_fallback ∘ first, eachrow(A))
+    return stack([DQ.ustrip.(row) for row in eachrow(A)]; dims=1), dims
 end
 function unwrap_units_single(v::AbstractVector)
-    dims =
-        let d = dimension_fallback.(v)
-            allequal(d) || error("Inconsistent units in row $i of matrix.")
-            first(d)
-        end
+    allequal(dimension_fallback.(v)) || error("Inconsistent units in vector.")
+    dims = dimension_fallback(first(v))
     v = DQ.ustrip(v)
     return v, dims
-end
-Base.@constprop :aggressive function unwrap_units(X_t, y_t)
-    X_t, x_units = unwrap_units_single(X_t)
-    y_t, y_units = unwrap_units_single(y_t)
-    if all(iszero, x_units) && iszero(y_units)
-        return X_t, y_t, nothing
-    else
-        return X_t, y_t, (X=x_units, y=y_units)
-    end
 end
 
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
@@ -214,8 +226,9 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
 end
 function MMI.predict(m::SRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t, variable_names = get_matrix_and_colnames(Xnew)
+    Xnew_t, variable_names, x_units = get_matrix_and_info(Xnew)
     validate_variable_names(variable_names, fitresult)
+    validate_units(x_units, fitresult)
     eq = params.equations[params.best_idx]
     out, flag = eval_tree_array(eq, Xnew_t, fitresult.options)
     !flag && error("Detected a NaN in evaluating expression.")
@@ -223,8 +236,9 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
 end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t, variable_names = get_matrix_and_colnames(Xnew)
+    Xnew_t, variable_names, units = get_matrix_and_info(Xnew)
     validate_variable_names(variable_names, fitresult)
+    validate_units(units, fitresult)
     equations = params.equations
     best_idx = params.best_idx
     outs = [

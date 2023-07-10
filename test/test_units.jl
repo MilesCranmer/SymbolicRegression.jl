@@ -4,6 +4,7 @@ using SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraint
 import DynamicQuantities: Quantity, @u_str
 using Test
 using Random: MersenneTwister
+import MLJBase as MLJ
 
 custom_op(x, y) = x + y
 
