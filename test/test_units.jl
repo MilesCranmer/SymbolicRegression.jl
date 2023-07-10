@@ -1,7 +1,7 @@
 using SymbolicRegression
 using SymbolicRegression.CoreModule.DatasetModule: get_units
 using SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
-import DynamicQuantities: Quantity, @u_str
+import DynamicQuantities: Quantity, Dimensions, @u_str, uparse, ustrip
 using Test
 using Random: MersenneTwister
 import MLJBase as MLJ
@@ -19,7 +19,7 @@ options = Options(;
     X = randn(3, 100)
     y = @. cos(X[3, :] * 2.1 - 0.2) + 0.5
 
-    @test get_units(Float64, [u"m", "1", "kg"]) ==
+    @test get_units(Float64, Dimensions, [u"m", "1", "kg"], uparse) ==
         [Quantity(1.0; length=1), Quantity(1.0), Quantity(1.0; mass=1)]
     dataset = Dataset(X, y; units=(X=[u"m", u"1", u"kg"], y=u"1"))
     @test dataset.units.X == [Quantity(1.0; length=1), Quantity(1.0), Quantity(1.0; mass=1)]
@@ -148,15 +148,33 @@ end
     @test any(best) do t
         t.degree == 1 && options2.operators.unaops[t.op] == safe_sqrt
     end
+
+    @testset "With MLJ" begin
+        model = SRRegressor(binary_operators=[+, *], unary_operators=[sqrt, cbrt, abs])
+        X = (;
+            x1=randn(128) .* u"kg^3",
+            x2=randn(128) .* u"kg^2",
+        )
+        y = (@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* u"kg"
+        mach = MLJ.machine(model, X, y)
+        MLJ.fit!(mach)
+        report = MLJ.report(mach)
+        best_idx = findfirst(report.losses .< 1e-7)
+        @test report.complexities[best_idx] == 6
+        @test any(report.equations[best_idx]) do t
+            t.degree == 1 && t.op == 2  # cbrt
+        end
+        @test any(report.equations[best_idx]) do t
+            t.degree == 1 && t.op == 1  # safe_sqrt
+        end
+    end
 end
 
-@testset "Should warn on non-SI base units" begin
+@testset "Should map on non-SI base units" begin
     X = randn(1, 100)
     y = @. cos(X[1, :] * 2.1 - 0.2) + 0.5
-    VERSION >= v"1.8.0" && @test_warn(
-        "Some of your units are not in their base SI representation.",
-        Dataset(X, y; units=(X=[u"m"], y=u"km"))
-    )
+    dataset = Dataset(X, y; units=(X=[u"m"], y=u"km"))
+    dataset.y .== y .* 1000
 end
 
 @testset "Should error on mismatched units" begin
@@ -177,10 +195,10 @@ end
     @test string_tree(tree, options) ==
         "((1.0 * (x1 + ((x2 * x3) * 5.32))) - cos(1.5 * (x1 - 0.5)))"
     @test string_tree(tree, options; raw=false) ==
-        "((1[⋅] * (x₁ + ((x₂ * x₃) * 5.32[⋅]))) - cos(1.5[⋅] * (x₁ - 0.5[⋅])))"
+        "((1 * (x₁ + ((x₂ * x₃) * 5.32))) - cos(1.5 * (x₁ - 0.5)))"
     @test string_tree(
         tree, options; raw=false, pretty_variable_names=dataset.pretty_variable_names
-    ) == "((1[⋅] * (x₁ + ((x₂ * x₃) * 5.32[⋅]))) - cos(1.5[⋅] * (x₁ - 0.5[⋅])))"
+    ) == "((1 * (x₁ + ((x₂ * x₃) * 5.32))) - cos(1.5 * (x₁ - 0.5)))"
     @test string_tree(
         tree,
         options;
