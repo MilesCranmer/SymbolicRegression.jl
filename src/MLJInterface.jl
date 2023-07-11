@@ -24,14 +24,14 @@ abstract type AbstractSRRegressor <: MMI.Deterministic end
 
 """Generate an `SRRegressor` struct containing all the fields in `Options`."""
 function modelexpr(model_name::Symbol)
-    struct_def = :(Base.@kwdef mutable struct $(model_name){F,D<:AbstractDimensions} <: AbstractSRRegressor
+    struct_def = :(Base.@kwdef mutable struct $(model_name){F,D<:AbstractDimensions,L} <: AbstractSRRegressor
         niterations::Int = 10
         parallelism::Symbol = :multithreading
         numprocs::Union{Int,Nothing} = nothing
         procs::Union{Vector{Int},Nothing} = nothing
         addprocs_function::Union{Function,Nothing} = nothing
         runtests::Bool = true
-        loss_type::Type = Nothing
+        loss_type::L = Nothing
         selection_method::F = choose_best
         dimensions_type::Type{D} = DEFAULT_DIM_TYPE
     end)
@@ -100,22 +100,33 @@ MMI.clean!(::AbstractSRRegressor) = ""
 
 # TODO: Enable `verbosity` being passed to `equation_search`
 function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
-    return MMI.update(m, verbosity, (; state=nothing), nothing, X, y, w)
+    return MMI.update(m, verbosity, nothing, nothing, X, y, w)
 end
 function MMI.update(
     m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
 )
-    options = get(old_fitresult, :options, get_options(m))
-    X_t, variable_names, x_units = get_matrix_and_info(X, m.dimensions_type)
-    y_t, y_variable_names, y_units = format_input_for(m, y, m.dimensions_type)
-    w_t = if w !== nothing && isa(m, MultitargetSRRegressor)
+    options = old_fitresult === nothing ? get_options(m) : old_fitresult.options
+    return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
+end
+function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
+    # To speed up iterative fits, we cache the types:
+    types = if old_fitresult === nothing
+        (;
+            X_t=Any, y_t=Any, w_t=Any, state=Any, units=Any, x_units=Any, y_units=Any,
+        )
+    else
+        old_fitresult.types
+    end
+    X_t::types.X_t, variable_names, x_units::types.x_units = get_matrix_and_info(X, m.dimensions_type)
+    y_t::types.y_t, y_variable_names, y_units::types.y_units = format_input_for(m, y, m.dimensions_type)
+    w_t::types.w_t = if w !== nothing && isa(m, MultitargetSRRegressor)
         @assert(isa(w, AbstractVector) && ndims(w) == 1, "Unexpected input for `w`.")
         repeat(w', size(y_t, 1))
     else
         w
     end
-    units = format_units(x_units, y_units)
-    search_state::StateType = equation_search(
+    units::types.units = format_units(x_units, y_units)
+    search_state::types.state = equation_search(
         X_t,
         y_t;
         niterations=m.niterations,
@@ -127,7 +138,7 @@ function MMI.update(
         procs=m.procs,
         addprocs_function=m.addprocs_function,
         runtests=m.runtests,
-        saved_state=old_fitresult.state,
+        saved_state=(old_fitresult === nothing ? nothing : old_fitresult.state),
         return_state=true,
         loss_type=m.loss_type,
         units=units,
@@ -139,7 +150,16 @@ function MMI.update(
         y_variable_names=y_variable_names,
         y_is_table=MMI.istable(y),
         units=units,
-    )
+        types=(
+            X_t=typeof(X_t),
+            y_t=typeof(y_t),
+            w_t=typeof(w_t),
+            state=typeof(search_state),
+            x_units=typeof(x_units),
+            y_units=typeof(y_units),
+            units=typeof(units),
+        )
+    )::(old_fitresult === nothing ? Any : typeof(old_fitresult))
     return (fitresult, nothing, full_report(m, fitresult))
 end
 
