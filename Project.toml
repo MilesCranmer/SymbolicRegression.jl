@@ -30,7 +30,7 @@ Tricks = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
 [compat]
 Compat = "3.42, 4"
 DynamicExpressions = "0.10"
-DynamicQuantities = "0.6"
+DynamicQuantities = "^0.6.2"
 JSON3 = "1"
 LineSearches = "7"
 LossFunctions = "0.6, 0.7, 0.8, 0.10"
