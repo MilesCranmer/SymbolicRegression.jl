@@ -35,6 +35,7 @@ function modelexpr(model_name::Symbol)
         selection_method::F = choose_best
         dimensions_type::Type{D} = DEFAULT_DIM_TYPE
     end)
+    # TODO: store `procs` from initial run if parallelism is `:multiprocessing`
     fields = last(last(struct_def.args).args).args
 
     # Add everything from `Options` constructor directly to struct:
@@ -249,7 +250,7 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
 end
 function MMI.predict(m::SRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t, variable_names, x_units = get_matrix_and_info(Xnew)
+    Xnew_t, variable_names, x_units = get_matrix_and_info(Xnew, m.dimensions_type)
     validate_variable_names(variable_names, fitresult)
     validate_units(x_units, fitresult)
     eq = params.equations[params.best_idx]
@@ -259,7 +260,7 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
 end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t, variable_names, units = get_matrix_and_info(Xnew)
+    Xnew_t, variable_names, units = get_matrix_and_info(Xnew, m.dimensions_type)
     validate_variable_names(variable_names, fitresult)
     validate_units(units, fitresult)
     equations = params.equations

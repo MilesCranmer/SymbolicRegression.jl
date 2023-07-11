@@ -3,7 +3,6 @@ using SymbolicRegression.CoreModule.DatasetModule: get_units
 using SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
 import DynamicQuantities: Quantity, Dimensions, @u_str, uparse, ustrip
 using Test
-using Random: MersenneTwister
 import MLJBase as MLJ
 
 custom_op(x, y) = x + y
