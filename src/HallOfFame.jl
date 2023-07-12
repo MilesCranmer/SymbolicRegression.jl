@@ -9,7 +9,7 @@ import ..LossFunctionsModule: eval_loss
 using Printf: @sprintf
 
 """
-HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE}
+    HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE}
 
 List of the best members seen all time in `.members`, with `.members[c]` being
 the best member seen at complexity c. Including only the members which actually

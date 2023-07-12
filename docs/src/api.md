@@ -25,7 +25,7 @@ equation_search(X::AbstractMatrix{T}, y::AbstractMatrix{T};
 ## Options
 
 ```@docs
-Options(;)
+Options
 MutationWeights(;)
 ```
 

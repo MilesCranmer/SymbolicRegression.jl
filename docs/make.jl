@@ -14,11 +14,40 @@ readme = open(dirname(@__FILE__) * "/../README.md") do io
     read(io, String)
 end
 
-# We replace every instance of <img src="IMAGE" ...> with ![](IMAGE).
-readme = replace(readme, r"<img src=\"([^\"]+)\"[^>]+>.*" => s"![](\1)")
+# First, we remove all markdown comments:
+readme = replace(readme, r"<!--.*?-->" => s"")
 
 # Then, we remove any line with "<div" on it:
 readme = replace(readme, r"<[/]?div.*" => s"")
+
+# We delete the https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0,
+# and replace it with a video:
+readme = replace(
+    readme,
+    r"https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0" =>
+        (
+            """
+            ```@raw html
+            <div align="center">
+            <video width="800" height="600" controls>
+            <source src="https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0" type="video/mp4">
+            </video>
+            </div>
+            ```
+            """
+        ),
+)
+
+# We prepend the `<table>` with a ```@raw html
+# and append the `</table>` with a ```:
+readme = replace(
+    readme,
+    r"<table>" => s"```@raw html\n<table>",
+)
+readme = replace(
+    readme,
+    r"</table>" => s"</table>\n```",
+)
 
 # Then, we surround ```mermaid\n...\n``` snippets
 # with ```@raw html\n<div class="mermaid">\n...\n</div>```:
@@ -76,7 +105,9 @@ using Gumbo
 html_type(::HTMLElement{S}) where {S} = S
 
 function apply_to_a_href!(f!, element::HTMLElement)
-    if html_type(element) == :a && haskey(element.attributes, "href") && element.attributes["href"] == "@ref"
+    if html_type(element) == :a &&
+        haskey(element.attributes, "href") &&
+        element.attributes["href"] == "@ref"
         f!(element)
     else
         for child in element.children

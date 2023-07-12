@@ -69,7 +69,6 @@ end
             units::Union{NamedTuple, Nothing}=nothing,
             extra::NamedTuple=NamedTuple(),
             loss_type::Type=Nothing,
-            units::Union{NamedTuple, Nothing}=nothing,
     )
 
 Construct a dataset to pass between internal functions.
