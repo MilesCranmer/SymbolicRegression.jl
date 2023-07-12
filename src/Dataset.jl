@@ -224,5 +224,4 @@ function error_on_mismatched_size(nfeatures, X_units::AbstractVector)
     return nothing
 end
 
-
 end

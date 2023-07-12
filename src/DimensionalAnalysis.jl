@@ -165,13 +165,19 @@ Checks whether an expression violates dimensional constraints.
 """
 function violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
     X = dataset.X
-    return violates_dimensional_constraints(tree, dataset.X_units, dataset.y_units, (@view X[:, 1]), options)
+    return violates_dimensional_constraints(
+        tree, dataset.X_units, dataset.y_units, (@view X[:, 1]), options
+    )
 end
 function violates_dimensional_constraints(_, ::Nothing, ::Nothing, _, _)
     return false
 end
 function violates_dimensional_constraints(
-    tree::Node{T}, X_units::AbstractVector{<:Quantity}, y_units::Union{Quantity,Nothing}, x::AbstractVector{T}, options::Options
+    tree::Node{T},
+    X_units::AbstractVector{<:Quantity},
+    y_units::Union{Quantity,Nothing},
+    x::AbstractVector{T},
+    options::Options,
 ) where {T}
     # TODO: Should also check against output type.
     dimensional_output = violates_dimensional_constraints_dispatch(
@@ -182,7 +188,8 @@ function violates_dimensional_constraints(
     violates = dimensional_output.violates
     if y_units !== nothing
         violates |= (
-            !dimensional_output.wildcard && dimension(dimensional_output) != dimension(y_units)
+            !dimensional_output.wildcard &&
+            dimension(dimensional_output) != dimension(y_units)
         )
     end
     return violates

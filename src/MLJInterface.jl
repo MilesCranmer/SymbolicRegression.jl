@@ -145,7 +145,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         return_state=true,
         loss_type=m.loss_type,
         X_units=X_units,
-        y_units=y_units
+        y_units=y_units,
     )
     fitresult = (;
         state=search_state,
@@ -212,7 +212,11 @@ function validate_units(X_units, old_X_units)
 end
 
 # TODO: Test whether this conversion poses any issues in data normalization...
-dimension_fallback(q::Union{<:DQ.Quantity{T,<:AbstractDimensions}}, ::Type{D}) where {T,D} = DQ.dimension(convert(DQ.Quantity{T,D}, q))::D
+function dimension_fallback(
+    q::Union{<:DQ.Quantity{T,<:AbstractDimensions}}, ::Type{D}
+) where {T,D}
+    return DQ.dimension(convert(DQ.Quantity{T,D}, q))::D
+end
 dimension_fallback(q::Union{<:DQ.Quantity{T,D}}, ::Type{D}) where {T,D} = DQ.dimension(q)::D
 dimension_fallback(_, ::Type{D}) where {D} = D()
 

@@ -357,7 +357,7 @@ function equation_search(
             weights=(weights === nothing ? weights : weights[j, :]),
             variable_names=variable_names,
             X_units=X_units,
-            y_units=isa(y_units, AbstractVector) ?  y_units[j] : y_units,
+            y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
             loss_type=loss_type,
         ) for j in 1:nout
     ]
