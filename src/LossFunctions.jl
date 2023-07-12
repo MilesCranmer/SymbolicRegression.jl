@@ -8,7 +8,7 @@ import LossFunctions: SupervisedLoss
 import ..InterfaceDynamicExpressionsModule: eval_tree_array
 import ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
-using ..CheckConstraintsModule: violates_dimensional_constraints
+import ..DimensionalAnalysisModule: violates_dimensional_constraints
 
 const OLD_LOSS_FUNCTIONS = hasproperty(LossFunctions, :value)
 const GENERAL_LOSS_TYPE = OLD_LOSS_FUNCTIONS ? Function : Union{Function,SupervisedLoss}

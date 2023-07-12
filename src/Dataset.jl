@@ -1,12 +1,23 @@
 module DatasetModule
 
-import DynamicQuantities: Dimensions, Quantity, uparse, ustrip, DEFAULT_DIM_BASE_TYPE
+import DynamicQuantities:
+    AbstractDimensions,
+    AbstractQuantity,
+    Dimensions,
+    SymbolicDimensions,
+    Quantity,
+    uparse,
+    sym_uparse,
+    ustrip,
+    DEFAULT_DIM_BASE_TYPE
 
 import ..UtilsModule: subscriptify
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 #! format: off
 import ...deprecate_varmap
 #! format: on
+
+const QuantityLike = Union{AbstractDimensions,AbstractQuantity,AbstractString,Real}
 
 """
     Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -33,9 +44,14 @@ import ...deprecate_varmap
     with shape `(nfeatures,)`.
 - `pretty_variable_names::Array{String,1}`: A version of `variable_names`
     but for printing to the terminal (e.g., with unicode versions).
-- `units`: Unit information. When used, this is a NamedTuple with fields
-    corresponding to `:X` (vector of DynamicQuantities.Dimensions) and `:y`
-    (single DynamicQuantities.Dimensions).
+- `X_units`: Unit information of `X`. When used, this is a vector
+    of `DynamicQuantities.Quantity{<:Any,<:Dimensions}` with shape `(nfeatures,)`.
+- `y_units`: Unit information of `y`. When used, this is a single
+    `DynamicQuantities.Quantity{<:Any,<:Dimensions}`.
+- `X_sym_units`: Unit information of `X`. When used, this is a vector
+    of `DynamicQuantities.Quantity{<:Any,<:SymbolicDimensions}` with shape `(nfeatures,)`.
+- `y_sym_units`: Unit information of `y`. When used, this is a single
+    `DynamicQuantities.Quantity{<:Any,<:SymbolicDimensions}`.
 """
 mutable struct Dataset{
     T<:DATA_TYPE,
@@ -44,7 +60,10 @@ mutable struct Dataset{
     AY<:Union{AbstractVector{T},Nothing},
     AW<:Union{AbstractVector{T},Nothing},
     NT<:NamedTuple,
-    U<:Union{NamedTuple,Nothing},
+    XU<:Union{AbstractVector{<:Quantity},Nothing},
+    YU<:Union{Quantity,Nothing},
+    XUS<:Union{AbstractVector{<:Quantity},Nothing},
+    YUS<:Union{Quantity,Nothing},
 }
     X::AX
     y::AY
@@ -58,14 +77,18 @@ mutable struct Dataset{
     baseline_loss::L
     variable_names::Array{String,1}
     pretty_variable_names::Array{String,1}
-    units::U
+    X_units::XU
+    y_units::YU
+    X_sym_units::XUS
+    y_sym_units::YUS
 end
 
 """
     Dataset(X::AbstractMatrix{T}, y::Union{AbstractVector{T},Nothing}=nothing;
             weights::Union{AbstractVector{T}, Nothing}=nothing,
             variable_names::Union{Array{String, 1}, Nothing}=nothing,
-            units::Union{NamedTuple, Nothing}=nothing,
+            X_units::Union{AbstractVector{<:QuantityLike}, Nothing}=nothing,
+            y_units::Union{QuantityLike, Nothing}=nothing,
             extra::NamedTuple=NamedTuple(),
             loss_type::Type=Nothing,
     )
@@ -77,9 +100,10 @@ function Dataset(
     y::Union{AbstractVector{T},Nothing}=nothing;
     weights::Union{AbstractVector{T},Nothing}=nothing,
     variable_names::Union{Array{String,1},Nothing}=nothing,
-    units::Union{NamedTuple,Nothing}=nothing,
     extra::NamedTuple=NamedTuple(),
     loss_type::Type=Nothing,
+    X_units::Union{AbstractVector{<:QuantityLike},Nothing}=nothing,
+    y_units::Union{QuantityLike,Nothing}=nothing,
     # Deprecated:
     varMap=nothing,
 ) where {T<:DATA_TYPE}
@@ -108,12 +132,24 @@ function Dataset(
     loss_type = (loss_type == Nothing) ? T : loss_type
     use_baseline = true
     baseline = one(loss_type)
-    si_units = get_units(T, Dimensions, units, uparse)
-    error_on_mismatched_size(nfeatures, si_units)
-    convert_to_si_units!(X, y, si_units)
+    X_si_units = get_units(T, Dimensions, X_units, uparse)
+    y_si_units = get_units(T, Dimensions, y_units, uparse)
+    X_sym_units = get_units(T, SymbolicDimensions, X_units, sym_uparse)
+    y_sym_units = get_units(T, SymbolicDimensions, y_units, sym_uparse)
+
+    error_on_mismatched_size(nfeatures, X_si_units)
 
     return Dataset{
-        T,loss_type,typeof(X),typeof(y),typeof(weights),typeof(extra),typeof(si_units)
+        T,
+        loss_type,
+        typeof(X),
+        typeof(y),
+        typeof(weights),
+        typeof(extra),
+        typeof(X_si_units),
+        typeof(y_si_units),
+        typeof(X_sym_units),
+        typeof(y_sym_units),
     }(
         X,
         y,
@@ -127,7 +163,10 @@ function Dataset(
         baseline,
         variable_names,
         pretty_variable_names,
-        si_units,
+        X_si_units,
+        y_si_units,
+        X_sym_units,
+        y_sym_units,
     )
 end
 function Dataset(
@@ -161,10 +200,10 @@ end
 function get_units(::Type{T}, ::Type{D}, x::Quantity, ::Function) where {T,D}
     return convert(Quantity{T,D}, x)
 end
-function get_units(::Type{T}, ::Type{D}, x::Dimensions, ::Function) where {T,D}
-    return Quantity(one(T), x)
+function get_units(::Type{T}, ::Type{D}, x::AbstractDimensions, ::Function) where {T,D}
+    return convert(Quantity{T,D}, Quantity(one(T), x))
 end
-function get_units(::Type{T}, ::Type{D}, x::Number, ::Function) where {T,D}
+function get_units(::Type{T}, ::Type{D}, x::Real, ::Function) where {T,D}
     return Quantity(convert(T, x), D)
 end
 
@@ -172,33 +211,18 @@ end
 function get_units(::Type{T}, ::Type{D}, x::AbstractVector, f::Function) where {T,D}
     return Quantity{T,D{DEFAULT_DIM_BASE_TYPE}}[get_units(T, D, xi, f) for xi in x]
 end
-function get_units(::Type{T}, ::Type{D}, x::NamedTuple, f::Function) where {T,D}
-    return NamedTuple((k => get_units(T, D, x[k], f) for k in keys(x)))
-end
 
-error_on_mismatched_size(nfeatures, ::Nothing) = nothing
-function error_on_mismatched_size(nfeatures, units::NamedTuple)
-    haskey(units, :X) &&
-        nfeatures != length(units.X) &&
-        error(
-            "Number of features ($(nfeatures)) does not match number of units ($(length(units.X)))",
-        )
+function error_on_mismatched_size(_, ::Nothing)
     return nothing
 end
-
-"""
-    convert_to_si_units!(X, y, si_units)
-
-Convert both X and y to their SI base units, in-place (if units are provided).
-"""
-function convert_to_si_units!(X, y, si_units)
-    if si_units !== nothing
-        for (ux, x) in zip(si_units.X, eachrow(X))
-            x .*= ustrip(ux)
-        end
-        y .*= ustrip(si_units.y)
+function error_on_mismatched_size(nfeatures, X_units::AbstractVector)
+    if nfeatures != length(X_units)
+        error(
+            "Number of features ($(nfeatures)) does not match number of units ($(length(X_units)))",
+        )
     end
     return nothing
 end
+
 
 end

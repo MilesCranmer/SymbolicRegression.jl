@@ -4,7 +4,7 @@ using Optim: Optim
 import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
 import DynamicQuantities as DQ
-import DynamicQuantities: AbstractDimensions, DEFAULT_DIM_TYPE
+import DynamicQuantities: AbstractDimensions, DEFAULT_DIM_BASE_TYPE
 import LossFunctions: SupervisedLoss
 import Compat: allequal, stack
 import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
@@ -34,7 +34,7 @@ function modelexpr(model_name::Symbol)
         runtests::Bool = true
         loss_type::L = Nothing
         selection_method::F = choose_best
-        dimensions_type::Type{D} = DEFAULT_DIM_TYPE
+        dimensions_type::Type{D} = DQ.SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
     end)
     # TODO: store `procs` from initial run if parallelism is `:multiprocessing`
     fields = last(last(struct_def.args).args).args
@@ -113,11 +113,11 @@ end
 function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
     # To speed up iterative fits, we cache the types:
     types = if old_fitresult === nothing
-        (; X_t=Any, y_t=Any, w_t=Any, state=Any, units=Any, x_units=Any, y_units=Any)
+        (; X_t=Any, y_t=Any, w_t=Any, state=Any, X_units=Any, y_units=Any)
     else
         old_fitresult.types
     end
-    X_t::types.X_t, variable_names, x_units::types.x_units = get_matrix_and_info(
+    X_t::types.X_t, variable_names, X_units::types.X_units = get_matrix_and_info(
         X, m.dimensions_type
     )
     y_t::types.y_t, y_variable_names, y_units::types.y_units = format_input_for(
@@ -129,7 +129,6 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
     else
         w
     end
-    units::types.units = format_units(x_units, y_units)
     search_state::types.state = equation_search(
         X_t,
         y_t;
@@ -145,7 +144,8 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         saved_state=(old_fitresult === nothing ? nothing : old_fitresult.state),
         return_state=true,
         loss_type=m.loss_type,
-        units=units,
+        X_units=X_units,
+        y_units=y_units
     )
     fitresult = (;
         state=search_state,
@@ -153,15 +153,15 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         variable_names=variable_names,
         y_variable_names=y_variable_names,
         y_is_table=MMI.istable(y),
-        units=units,
+        X_units=X_units,
+        y_units=y_units,
         types=(
             X_t=typeof(X_t),
             y_t=typeof(y_t),
             w_t=typeof(w_t),
             state=typeof(search_state),
-            x_units=typeof(x_units),
+            X_units=typeof(X_units),
             y_units=typeof(y_units),
-            units=typeof(units),
         ),
     )::(old_fitresult === nothing ? Any : typeof(old_fitresult))
     return (fitresult, nothing, full_report(m, fitresult))
@@ -175,15 +175,8 @@ function get_matrix_and_info(X, ::Type{D}) where {D}
     else
         [string.(sch.names)...]
     end
-    Xm_t_strip, units = unwrap_units_single(Xm_t, D)
-    return Xm_t_strip, colnames, units
-end
-function format_units(x_units, y_units)
-    if all(iszero, x_units) && iszero(y_units)
-        return nothing
-    else
-        return (X=x_units, y=y_units)
-    end
+    Xm_t_strip, X_units = unwrap_units_single(Xm_t, D)
+    return Xm_t_strip, colnames, X_units
 end
 
 function format_input_for(::SRRegressor, y, ::Type{D}) where {D}
@@ -193,8 +186,8 @@ function format_input_for(::SRRegressor, y, ::Type{D}) where {D}
     )
     y_t = vec(y)
     colnames = nothing
-    y_t_strip, units = unwrap_units_single(y_t, D)
-    return y_t_strip, colnames, units
+    y_t_strip, y_units = unwrap_units_single(y_t, D)
+    return y_t_strip, colnames, y_units
 end
 function format_input_for(::MultitargetSRRegressor, y, ::Type{D}) where {D}
     @assert(
@@ -210,22 +203,10 @@ function validate_variable_names(variable_names, fitresult)
     )
     return nothing
 end
-function validate_units(x_units, fitresult)
-    if fitresult.units === nothing
-        @assert(
-            all(iszero, x_units),
-            "Units of input $(x_units) do not match fitted regressor with units $(fitresults.units.X)."
-        )
-    else
-        @assert(
-            all(x_units .== fitresult.units.X),
-            "Units of input $(x_units) do not match fitted regressor with units $(fitresults.units.X)."
-        )
-    end
-    return nothing
-end
 
-dimension_fallback(q::Union{<:DQ.Quantity}, ::Type{D}) where {D} = DQ.dimension(q)::D
+# TODO: Test whether this conversion poses any issues in data normalization...
+dimension_fallback(q::Union{<:DQ.Quantity{T,<:AbstractDimensions}}, ::Type{D}) where {T,D} = DQ.dimension(convert(DQ.Quantity{T,D}, q))::D
+dimension_fallback(q::Union{<:DQ.Quantity{T,D}}, ::Type{D}) where {T,D} = DQ.dimension(q)::D
 dimension_fallback(_, ::Type{D}) where {D} = D()
 
 function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
@@ -254,7 +235,7 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
 end
 function MMI.predict(m::SRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t, variable_names, x_units = get_matrix_and_info(Xnew, m.dimensions_type)
+    Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     validate_variable_names(variable_names, fitresult)
     validate_units(x_units, fitresult)
     eq = params.equations[params.best_idx]
@@ -264,7 +245,7 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
 end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t, variable_names, units = get_matrix_and_info(Xnew, m.dimensions_type)
+    Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     validate_variable_names(variable_names, fitresult)
     validate_units(units, fitresult)
     equations = params.equations

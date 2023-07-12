@@ -164,6 +164,7 @@ import .CoreModule:
     Dataset,
     Options,
     MutationWeights,
+    QuantityLike,
     plus,
     sub,
     mult,
@@ -257,11 +258,6 @@ which is useful for debugging and profiling.
     which operators to use, evolution hyperparameters, etc.
 - `variable_names::Union{Vector{String}, Nothing}=nothing`: The names
     of each feature in `X`, which will be used during printing of equations.
-- `units::Union{NamedTuple, Nothing}=nothing`: The units of the dataset,
-    to be used for dimensional constraints. For example,
-    `units=(X=["kg", "m"], y="m^2")` would set the first feature to have
-    units of kilograms, the second to have meters, and the output to have
-    units of meters squared. Only expressions matching this would be valid.
 - `parallelism=:multithreading`: What parallelism mode to use.
     The options are `:multithreading`, `:multiprocessing`, and `:serial`.
     By default, multithreading will be used. Multithreading uses less memory,
@@ -301,6 +297,14 @@ which is useful for debugging and profiling.
     for the loss than for the data you passed, specify the type here.
     Note that if you pass complex data `::Complex{L}`, then the loss
     type will automatically be set to `L`.
+- `X_units::Union{AbstractVector{<:QuantityLike},Nothing}=nothing`: The units of the dataset,
+    to be used for dimensional constraints. For example, if `X_units=["kg", "m"]`,
+    then the first feature will have units of kilograms, and the second will
+    have units of meters.
+- `y_units::Union{QuantityLike,AbstractVector{<:QuantityLike},Nothing}=nothing`:
+    The units of the output, to be used for dimensional constraints. If
+    `y` is a matrix, then this can be a vector of units, in which case
+    each element corresponds to each output feature.
 
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
@@ -316,7 +320,6 @@ function equation_search(
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
     options::Options=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
-    units::Union{NamedTuple,Nothing}=nothing,
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
@@ -325,6 +328,8 @@ function equation_search(
     saved_state::Union{StateType{T,L},Nothing}=nothing,
     return_state::Union{Bool,Nothing}=nothing,
     loss_type::Type=Nothing,
+    X_units::Union{AbstractVector{<:QuantityLike},Nothing}=nothing,
+    y_units::Union{QuantityLike,AbstractVector{<:QuantityLike},Nothing}=nothing,
     # Deprecated:
     multithreaded=nothing,
     varMap=nothing,
@@ -351,7 +356,8 @@ function equation_search(
             y[j, :];
             weights=(weights === nothing ? weights : weights[j, :]),
             variable_names=variable_names,
-            units=units,
+            X_units=X_units,
+            y_units=isa(y_units, AbstractVector) ?  y_units[j] : y_units,
             loss_type=loss_type,
         ) for j in 1:nout
     ]

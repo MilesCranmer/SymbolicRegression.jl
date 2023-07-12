@@ -1,7 +1,9 @@
 using SymbolicRegression
+using SymbolicRegression: Node
 using SymbolicRegression.CoreModule.DatasetModule: get_units
-using SymbolicRegression.CheckConstraintsModule: violates_dimensional_constraints
-import DynamicQuantities: Quantity, Dimensions, @u_str, uparse, ustrip
+using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
+import DynamicQuantities:
+    Quantity, SymbolicDimensions, Dimensions, @u_str, @us_str, uparse, sym_uparse, ustrip
 using Test
 import MLJBase as MLJ
 
@@ -20,9 +22,20 @@ options = Options(;
 
     @test get_units(Float64, Dimensions, [u"m", "1", "kg"], uparse) ==
         [Quantity(1.0; length=1), Quantity(1.0), Quantity(1.0; mass=1)]
-    dataset = Dataset(X, y; units=(X=[u"m", u"1", u"kg"], y=u"1"))
-    @test dataset.units.X == [Quantity(1.0; length=1), Quantity(1.0), Quantity(1.0; mass=1)]
-    @test dataset.units.y == Quantity(1.0)
+    @test get_units(Float64, SymbolicDimensions, [us"m", "1", "kg"], sym_uparse) == [
+        Quantity(1.0, SymbolicDimensions; m=1),
+        Quantity(1.0, SymbolicDimensions),
+        Quantity(1.0, SymbolicDimensions; kg=1),
+    ]
+    dataset = Dataset(X, y; X_units=[u"m", u"1", u"kg"], y_units=u"1")
+    @test dataset.X_units == [Quantity(1.0; length=1), Quantity(1.0), Quantity(1.0; mass=1)]
+    @test dataset.X_sym_units == [
+        Quantity(1.0, SymbolicDimensions; m=1),
+        Quantity(1.0, SymbolicDimensions),
+        Quantity(1.0, SymbolicDimensions; kg=1),
+    ]
+    @test dataset.y_sym_units == Quantity(1.0, SymbolicDimensions)
+    @test dataset.y_units == Quantity(1.0)
 
     violates(tree) = violates_dimensional_constraints(tree, dataset, options)
 
@@ -82,7 +95,7 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
 @testset "Search with dimensional constraints" begin
     X = rand(1, 128) .* 10
     y = @. cos(X[1, :]) + X[1, :]
-    dataset = Dataset(X, y; units=(X=["kg"], y="1"))
+    dataset = Dataset(X, y; X_units=["kg"], y_units="1")
 
     hof = EquationSearch(dataset; options)
 
@@ -122,7 +135,7 @@ end
 
     # The search should find that y=X[2]^2 is the best,
     # due to the dimensionality constraint:
-    hof = EquationSearch(X, y; options, units=(X=["kg", u"m"], y="m^2"))
+    hof = EquationSearch(X, y; options, X_units=["kg", "m"], y_units="m^2")
 
     # Solution should be x2 * x2
     dominating = calculate_pareto_frontier(hof)
@@ -136,7 +149,7 @@ end
     X = randn(2, 128)
     y = @. cbrt(X[1, :]) .+ sqrt(abs(X[2, :]))
     options2 = Options(; binary_operators=[+, *], unary_operators=[sqrt, cbrt, abs])
-    hof = EquationSearch(X, y; options=options2, units=(X=["kg^3", "kg^2"], y="kg"))
+    hof = EquationSearch(X, y; options=options2, X_units=["kg^3", "kg^2"], y_units="kg")
 
     dominating = calculate_pareto_frontier(hof)
     best = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
@@ -149,7 +162,11 @@ end
     end
 
     @testset "With MLJ" begin
-        model = SRRegressor(; binary_operators=[+, *], unary_operators=[sqrt, cbrt, abs])
+        model = SRRegressor(;
+            binary_operators=[+, *],
+            unary_operators=[sqrt, cbrt, abs],
+            early_stop_condition=(loss, complexity) -> (loss < 1e-7 && complexity <= 6),
+        )
         X = (; x1=randn(128) .* u"kg^3", x2=randn(128) .* u"kg^2")
         y = (@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* u"kg"
         mach = MLJ.machine(model, X, y)
@@ -163,27 +180,34 @@ end
         @test any(report.equations[best_idx]) do t
             t.degree == 1 && t.op == 1  # safe_sqrt
         end
-    end
-end
 
-@testset "Should map on non-SI base units" begin
-    X = randn(1, 100)
-    y = @. cos(X[1, :] * 2.1 - 0.2) + 0.5
-    dataset = Dataset(X, y; units=(X=[u"m"], y=u"km"))
-    dataset.y .== y .* 1000
+        # Multiple outputs:
+        model = MultitargetSRRegressor(;
+            binary_operators=[+, *],
+            unary_operators=[sqrt, cbrt, abs],
+            early_stop_condition=(loss, complexity) -> (loss < 1e-7 && complexity <= 8),
+        )
+        X = (; x1=randn(128), x2=randn(128))
+        y = (; a=(@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* u"kg", b=X.x1)
+        mach = MLJ.machine(model, X, y)
+        MLJ.fit!(mach)
+        report = MLJ.report(mach)
+        @test minimum(report.losses[1]) < 1e-7
+        @test minimum(report.losses[2]) < 1e-7
+    end
 end
 
 @testset "Should error on mismatched units" begin
     X = randn(11, 50)
     y = randn(50)
     VERSION >= v"1.8.0" &&
-        @test_throws("Number of features", Dataset(X, y; units=(X=["m", "1"], y="kg")))
+        @test_throws("Number of features", Dataset(X, y; X_units=["m", "1"], y_units="kg"))
 end
 
 @testset "Should print units" begin
     X = randn(5, 64)
     y = randn(64)
-    dataset = Dataset(X, y; units=(X=["m^3", "km/s", "kg", "1", "1"], y="kg"))
+    dataset = Dataset(X, y; X_units=["m^3", "km/s", "kg", "1", "1"], y_units="kg")
     x1, x2, x3, x4, x5 = [Node(Float64; feature=i) for i in 1:5]
     options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos, sin])
     tree = 1.0 * (x1 + x2 * x3 * 5.32) - cos(1.5 * (x1 - 0.5))
@@ -200,15 +224,17 @@ end
         options;
         raw=false,
         pretty_variable_names=dataset.pretty_variable_names,
-        units=dataset.units,
+        X_sym_units=dataset.X_sym_units,
+        y_sym_units=dataset.y_sym_units,
     ) ==
-        "((1[⋅] * (x₁[m³] + ((x₂[m s⁻¹] * x₃[kg]) * 5.32[⋅]))) - cos(1.5[⋅] * (x₁[m³] - 0.5[⋅])))"
+        "((1[⋅] * (x₁[m³] + ((x₂[s⁻¹ km] * x₃[kg]) * 5.32[⋅]))) - cos(1.5[⋅] * (x₁[m³] - 0.5[⋅])))"
 
     @test string_tree(
         x5 * 3.2,
         options;
         raw=false,
         pretty_variable_names=dataset.pretty_variable_names,
-        units=dataset.units,
+        X_sym_units=dataset.X_sym_units,
+        y_sym_units=dataset.y_sym_units,
     ) == "(x₅ * 3.2[⋅])"
 end

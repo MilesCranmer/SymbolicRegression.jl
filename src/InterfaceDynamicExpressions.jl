@@ -10,7 +10,7 @@ import DynamicExpressions:
     print_tree,
     string_tree,
     differentiable_eval_tree_array
-import DynamicQuantities: dimension
+import DynamicQuantities: dimension, ustrip
 import ..CoreModule: Options
 import ..UtilsModule: subscriptify
 #! format: off
@@ -136,17 +136,19 @@ Convert an equation to a string.
     tree::Node,
     options::Options;
     raw::Bool=true,
-    units=nothing,
+    X_sym_units=nothing,
+    y_sym_units=nothing,
     variable_names=nothing,
     pretty_variable_names=nothing,
     varMap=nothing,
     kws...,
 )
     variable_names = deprecate_varmap(variable_names, varMap, :string_tree)
+
     raw && return string_tree(tree, options.operators; variable_names)
 
     vprecision = vals[options.print_precision]
-    if units === nothing
+    if X_sym_units === nothing
         return string_tree(
             tree,
             options.operators;
@@ -156,11 +158,10 @@ Convert an equation to a string.
             kws...,
         )
     else
-        x_units = units.X
         return string_tree(
             tree,
             options.operators;
-            f_variable=(feature, vname) -> string_variable(feature, vname, x_units),
+            f_variable=(feature, vname) -> string_variable(feature, vname, X_sym_units),
             f_constant=(val, bracketed) ->
                 string_constant(val, bracketed, vprecision, "[⋅]"),
             variable_names=pretty_variable_names,
@@ -176,9 +177,14 @@ function string_variable(feature, variable_names, variable_units=nothing)
         variable_names[feature]
     end
     if variable_units !== nothing
-        dim = dimension(variable_units[feature])
-        if !iszero(dim)
-            base *= "[" * string(dim) * "]"
+        u = variable_units[feature]
+        if isone(ustrip(u))
+            dim = dimension(u)
+            if !iszero(dim)
+                base *= "[" * string(dim) * "]"
+            end
+        else
+            base *= "[" * string(u) * "]"
         end
     end
     return base

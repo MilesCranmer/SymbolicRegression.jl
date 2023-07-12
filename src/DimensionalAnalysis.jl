@@ -1,7 +1,7 @@
 module DimensionalAnalysisModule
 
 import DynamicExpressions: Node
-import DynamicQuantities: Dimensions, Quantity, DimensionError
+import DynamicQuantities: Quantity, DimensionError
 import DynamicQuantities: AbstractQuantity
 import DynamicQuantities: dimension, ustrip, uparse
 import Tricks: static_hasmethod
@@ -165,23 +165,27 @@ Checks whether an expression violates dimensional constraints.
 """
 function violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
     X = dataset.X
-    return violates_dimensional_constraints(tree, dataset.units, (@view X[:, 1]), options)
+    return violates_dimensional_constraints(tree, dataset.X_units, dataset.y_units, (@view X[:, 1]), options)
 end
-function violates_dimensional_constraints(_, ::Nothing, _, _)
+function violates_dimensional_constraints(_, ::Nothing, ::Nothing, _, _)
     return false
 end
 function violates_dimensional_constraints(
-    tree::Node{T}, units::NamedTuple, x::AbstractVector{T}, options::Options
+    tree::Node{T}, X_units::AbstractVector{<:Quantity}, y_units::Union{Quantity,Nothing}, x::AbstractVector{T}, options::Options
 ) where {T}
     # TODO: Should also check against output type.
     dimensional_output = violates_dimensional_constraints_dispatch(
-        tree, units.X, x, options.operators
-    )
-    return dimensional_output.violates || (
-        !dimensional_output.wildcard && dimension(dimensional_output) != dimension(units.y)
+        tree, X_units, x, options.operators
     )
     # ^ Eventually do this with map_treereduce. However, right now it seems
     # like we are passing around too many arguments, which slows things down.
+    violates = dimensional_output.violates
+    if y_units !== nothing
+        violates |= (
+            !dimensional_output.wildcard && dimension(dimensional_output) != dimension(y_units)
+        )
+    end
+    return violates
 end
 
 end

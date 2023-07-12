@@ -139,7 +139,8 @@ function string_dominating_pareto_curve(
             member.tree,
             options;
             pretty_variable_names=dataset.pretty_variable_names,
-            units=dataset.units,
+            X_sym_units=dataset.X_sym_units,
+            y_sym_units=dataset.y_sym_units,
             raw=false,
         )
         base_string_length = length(@sprintf("%-10d  %-8.3e  %8.3e  ", 1, 1.0, 1.0))

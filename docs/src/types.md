@@ -75,15 +75,13 @@ HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_T
 
 ```@docs
 Dataset
-Dataset(
-    X::AbstractMatrix{T},
-    y::Union{AbstractVector{T},Nothing}=nothing;
-    weights::Union{AbstractVector{T},Nothing}=nothing,
-    variable_names::Union{Array{String,1},Nothing}=nothing,
-    units::Union{NamedTuple,Nothing}=nothing,
-    extra::NamedTuple=NamedTuple(),
-    loss_type::Type=Nothing,
-    varMap=nothing,
-) where {T<:DATA_TYPE}
+Dataset(X::AbstractMatrix{T}, y::Union{AbstractVector{T},Nothing}=nothing;
+        weights::Union{AbstractVector{T}, Nothing}=nothing,
+        variable_names::Union{Array{String, 1}, Nothing}=nothing,
+        X_units::Union{AbstractVector{<:QuantityLike}, Nothing}=nothing,
+        y_units::Union{QuantityLike, Nothing}=nothing,
+        extra::NamedTuple=NamedTuple(),
+        loss_type::Type=Nothing,
+)
 update_baseline_loss!
 ```

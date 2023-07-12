@@ -4,7 +4,6 @@ import DynamicExpressions: Node, count_depth, tree_mapreduce
 import ..UtilsModule: vals
 import ..CoreModule: Options, Dataset
 import ..ComplexityModule: compute_complexity, past_complexity_limit
-import ..DimensionalAnalysisModule: violates_dimensional_constraints
 
 # Check if any binary operator are overly complex
 function flag_bin_operator_complexity(tree::Node, op, cons, options::Options)::Bool
