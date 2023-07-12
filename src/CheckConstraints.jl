@@ -2,7 +2,7 @@ module CheckConstraintsModule
 
 import DynamicExpressions: Node, count_depth, tree_mapreduce
 import ..UtilsModule: vals
-import ..CoreModule: Options, Dataset
+import ..CoreModule: Options
 import ..ComplexityModule: compute_complexity, past_complexity_limit
 
 # Check if any binary operator are overly complex
