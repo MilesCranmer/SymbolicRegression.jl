@@ -36,6 +36,7 @@ end
         fit!(mach)
         rep = report(mach)
         @test occursin("a", rep.equation_strings[rep.best_idx])
+        @test all(predict(mach, X) .≈ y)
     end
 
     @testset "Multiple outputs" begin
