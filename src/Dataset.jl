@@ -66,6 +66,7 @@ end
     Dataset(X::AbstractMatrix{T}, y::Union{AbstractVector{T},Nothing}=nothing;
             weights::Union{AbstractVector{T}, Nothing}=nothing,
             variable_names::Union{Array{String, 1}, Nothing}=nothing,
+            units::Union{NamedTuple, Nothing}=nothing,
             extra::NamedTuple=NamedTuple(),
             loss_type::Type=Nothing,
             units::Union{NamedTuple, Nothing}=nothing,
