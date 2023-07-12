@@ -101,12 +101,12 @@ function Dataset(
     weights::Union{AbstractVector{T},Nothing}=nothing,
     variable_names::Union{Array{String,1},Nothing}=nothing,
     extra::NamedTuple=NamedTuple(),
-    loss_type::Type=Nothing,
+    loss_type::Type{Linit}=Nothing,
     X_units::Union{AbstractVector{<:QuantityLike},Nothing}=nothing,
     y_units::Union{QuantityLike,Nothing}=nothing,
     # Deprecated:
     varMap=nothing,
-) where {T<:DATA_TYPE}
+) where {T<:DATA_TYPE,Linit}
     Base.require_one_based_indexing(X)
     y !== nothing && Base.require_one_based_indexing(y)
     # Deprecation warning:
@@ -129,19 +129,21 @@ function Dataset(
             sum(y) / n
         end
     end
-    loss_type = (loss_type == Nothing) ? T : loss_type
+    out_loss_type = (Linit === Nothing) ? T : Linit
     use_baseline = true
-    baseline = one(loss_type)
-    X_si_units = get_units(T, Dimensions, X_units, uparse)
-    y_si_units = get_units(T, Dimensions, y_units, uparse)
-    X_sym_units = get_units(T, SymbolicDimensions, X_units, sym_uparse)
-    y_sym_units = get_units(T, SymbolicDimensions, y_units, sym_uparse)
+    baseline = one(out_loss_type)
+    D = Dimensions{DEFAULT_DIM_BASE_TYPE}
+    SD = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
+    X_si_units = get_units(T, D, X_units, uparse)
+    y_si_units = get_units(T, D, y_units, uparse)
+    X_sym_units = get_units(T, SD, X_units, sym_uparse)
+    y_sym_units = get_units(T, SD, y_units, sym_uparse)
 
     error_on_mismatched_size(nfeatures, X_si_units)
 
     return Dataset{
         T,
-        loss_type,
+        out_loss_type,
         typeof(X),
         typeof(y),
         typeof(weights),
@@ -204,12 +206,12 @@ function get_units(::Type{T}, ::Type{D}, x::AbstractDimensions, ::Function) wher
     return convert(Quantity{T,D}, Quantity(one(T), x))
 end
 function get_units(::Type{T}, ::Type{D}, x::Real, ::Function) where {T,D}
-    return Quantity(convert(T, x), D)
+    return Quantity(convert(T, x), D)::Quantity{T,D}
 end
 
 # Derived
 function get_units(::Type{T}, ::Type{D}, x::AbstractVector, f::Function) where {T,D}
-    return Quantity{T,D{DEFAULT_DIM_BASE_TYPE}}[get_units(T, D, xi, f) for xi in x]
+    return Quantity{T,D}[get_units(T, D, xi, f) for xi in x]
 end
 
 function error_on_mismatched_size(_, ::Nothing)

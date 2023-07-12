@@ -11,7 +11,7 @@ macro quiet(ex)
     end |> esc
 end
 
-const stop_kws = (; early_stop_condition=stop_criteria(loss, complexity) -> loss < 1e-7)
+const stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
 
 @testset "Generic interface tests" begin
     failures, summary = MTI.test(

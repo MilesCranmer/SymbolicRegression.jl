@@ -314,4 +314,34 @@ end
 
 load_saved_population(::Nothing; kws...) = nothing
 
+function construct_datasets(X, y, weights, variable_names, X_units, y_units, loss_type)
+    nout = size(y, 1)
+    first_dataset = Dataset(
+        X,
+        y[1, :];
+        weights=(weights === nothing ? weights : weights[1, :]),
+        variable_names=variable_names,
+        X_units=X_units,
+        y_units=isa(y_units, AbstractVector) ? y_units[1] : y_units,
+        loss_type=loss_type,
+    )
+    datasets = typeof(first_dataset)[first_dataset]
+
+    nout > 1 && for j in 2:nout
+        push!(
+            datasets,
+            Dataset(
+                X,
+                y[j, :];
+                weights=(weights === nothing ? weights : weights[j, :]),
+                variable_names=variable_names,
+                X_units=X_units,
+                y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
+                loss_type=loss_type,
+            )::typeof(first_dataset),
+        )
+    end
+    return datasets
+end
+
 end

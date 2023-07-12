@@ -229,7 +229,8 @@ import .SearchUtilsModule:
     init_dummy_pops,
     StateType,
     load_saved_hall_of_fame,
-    load_saved_population
+    load_saved_population,
+    construct_datasets
 
 include("deprecates.jl")
 include("Configure.jl")
@@ -327,13 +328,13 @@ function equation_search(
     runtests::Bool=true,
     saved_state::Union{StateType{T,L},Nothing}=nothing,
     return_state::Union{Bool,Nothing}=nothing,
-    loss_type::Type=Nothing,
+    loss_type::Type{Linit}=Nothing,
     X_units::Union{AbstractVector{<:QuantityLike},Nothing}=nothing,
     y_units::Union{QuantityLike,AbstractVector{<:QuantityLike},Nothing}=nothing,
     # Deprecated:
     multithreaded=nothing,
     varMap=nothing,
-) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,Linit}
     if multithreaded !== nothing
         error(
             "`multithreaded` is deprecated. Use the `parallelism` argument instead. " *
@@ -342,7 +343,6 @@ function equation_search(
     end
     variable_names = deprecate_varmap(variable_names, varMap, :equation_search)
 
-    nout = size(y, FEATURE_DIM)
     if weights !== nothing
         weights = reshape(weights, size(y))
     end
@@ -350,17 +350,8 @@ function equation_search(
         get_base_type(::Type{Complex{BT}}) where {BT} = BT
         loss_type = get_base_type(T)
     end
-    datasets = [
-        Dataset(
-            X,
-            y[j, :];
-            weights=(weights === nothing ? weights : weights[j, :]),
-            variable_names=variable_names,
-            X_units=X_units,
-            y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
-            loss_type=loss_type,
-        ) for j in 1:nout
-    ]
+
+    datasets = construct_datasets(X, y, weights, variable_names, X_units, y_units, loss_type)
 
     return equation_search(
         datasets;
@@ -407,12 +398,12 @@ function equation_search(
     saved_state::Union{StateType{T,L},Nothing}=nothing,
     return_state::Union{Bool,Nothing}=nothing,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
-    concurrency = if parallelism in (:multithreading, "multithreading")
-        :multithreading
+    v_concurrency, concurrency = if parallelism in (:multithreading, "multithreading")
+        (Val(:multithreading), :multithreading)
     elseif parallelism in (:multiprocessing, "multiprocessing")
-        :multiprocessing
+        (Val(:multiprocessing), :multiprocessing)
     elseif parallelism in (:serial, "serial")
-        :serial
+        (Val(:serial), :serial)
     else
         error(
             "Invalid parallelism mode: $parallelism. " *
@@ -442,7 +433,7 @@ function equation_search(
     end
 
     return _equation_search(
-        Val(concurrency),
+        v_concurrency,
         datasets,
         niterations,
         options,
