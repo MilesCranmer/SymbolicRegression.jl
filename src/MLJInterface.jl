@@ -203,6 +203,13 @@ function validate_variable_names(variable_names, fitresult)
     )
     return nothing
 end
+function validate_units(X_units, old_X_units)
+    @assert(
+        all(X_units .== old_X_units),
+        "Units of new data do not match units of fitted regressor."
+    )
+    return nothing
+end
 
 # TODO: Test whether this conversion poses any issues in data normalization...
 dimension_fallback(q::Union{<:DQ.Quantity{T,<:AbstractDimensions}}, ::Type{D}) where {T,D} = DQ.dimension(convert(DQ.Quantity{T,D}, q))::D
@@ -237,7 +244,7 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     validate_variable_names(variable_names, fitresult)
-    validate_units(x_units, fitresult)
+    validate_units(X_units, fitresult.X_units)
     eq = params.equations[params.best_idx]
     out, flag = eval_tree_array(eq, Xnew_t, fitresult.options)
     !flag && error("Detected a NaN in evaluating expression.")
@@ -247,7 +254,7 @@ function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     validate_variable_names(variable_names, fitresult)
-    validate_units(units, fitresult)
+    validate_units(X_units, fitresult.X_units)
     equations = params.equations
     best_idx = params.best_idx
     outs = [
