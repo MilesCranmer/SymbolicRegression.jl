@@ -389,6 +389,8 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
         the index of the expression to use. By default, `choose_best` maximizes
         the score (a pound-for-pound rating) of expressions reaching the threshold
         of 1.5x the minimum loss. To fix the index at `5`, you could just write `Returns(5)`.
+    - `dimensions_type::AbstractDimensions`: The type of dimensions to use when storing
+        the units of the data. By default this is `DynamicQuantities.DEFAULT_DIM_TYPE`.
     """
 
     bottom = """
