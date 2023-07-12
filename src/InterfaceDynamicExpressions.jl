@@ -161,7 +161,8 @@ Convert an equation to a string.
             tree,
             options.operators;
             f_variable=(feature, vname) -> string_variable(feature, vname, x_units),
-            f_constant=(val, bracketed) -> string_constant(val, bracketed, vprecision, "[⋅]"),
+            f_constant=(val, bracketed) ->
+                string_constant(val, bracketed, vprecision, "[⋅]"),
             variable_names=pretty_variable_names,
             kws...,
         )
@@ -182,7 +183,9 @@ function string_variable(feature, variable_names, variable_units=nothing)
     end
     return base
 end
-function string_constant(val, bracketed, ::Val{precision}, unit_placeholder) where {precision}
+function string_constant(
+    val, bracketed, ::Val{precision}, unit_placeholder
+) where {precision}
     does_not_need_brackets = typeof(val) <: Real
     if does_not_need_brackets
         return sprint_precision(val, Val(precision)) * unit_placeholder

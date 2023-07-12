@@ -1,7 +1,6 @@
 module DatasetModule
 
-import DynamicQuantities:
-    Dimensions, Quantity, uparse, ustrip, DEFAULT_DIM_BASE_TYPE
+import DynamicQuantities: Dimensions, Quantity, uparse, ustrip, DEFAULT_DIM_BASE_TYPE
 
 import ..UtilsModule: subscriptify
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
@@ -114,13 +113,7 @@ function Dataset(
     convert_to_si_units!(X, y, si_units)
 
     return Dataset{
-        T,
-        loss_type,
-        typeof(X),
-        typeof(y),
-        typeof(weights),
-        typeof(extra),
-        typeof(si_units),
+        T,loss_type,typeof(X),typeof(y),typeof(weights),typeof(extra),typeof(si_units)
     }(
         X,
         y,
@@ -141,9 +134,13 @@ function Dataset(
     X::AbstractMatrix,
     y::Union{<:AbstractVector,Nothing}=nothing;
     weights::Union{<:AbstractVector,Nothing}=nothing,
-    kws...
+    kws...,
 )
-    T = promote_type(eltype(X), (y === nothing) ? eltype(X) : eltype(y), (weights === nothing) ? eltype(X) : eltype(weights))
+    T = promote_type(
+        eltype(X),
+        (y === nothing) ? eltype(X) : eltype(y),
+        (weights === nothing) ? eltype(X) : eltype(weights),
+    )
     X = Base.Fix1(convert, T).(X)
     if y !== nothing
         y = Base.Fix1(convert, T).(y)

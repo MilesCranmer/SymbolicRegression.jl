@@ -24,7 +24,8 @@ abstract type AbstractSRRegressor <: MMI.Deterministic end
 
 """Generate an `SRRegressor` struct containing all the fields in `Options`."""
 function modelexpr(model_name::Symbol)
-    struct_def = :(Base.@kwdef mutable struct $(model_name){F,D<:AbstractDimensions,L} <: AbstractSRRegressor
+    struct_def = :(Base.@kwdef mutable struct $(model_name){F,D<:AbstractDimensions,L} <:
+                                 AbstractSRRegressor
         niterations::Int = 10
         parallelism::Symbol = :multithreading
         numprocs::Union{Int,Nothing} = nothing
@@ -112,14 +113,16 @@ end
 function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
     # To speed up iterative fits, we cache the types:
     types = if old_fitresult === nothing
-        (;
-            X_t=Any, y_t=Any, w_t=Any, state=Any, units=Any, x_units=Any, y_units=Any,
-        )
+        (; X_t=Any, y_t=Any, w_t=Any, state=Any, units=Any, x_units=Any, y_units=Any)
     else
         old_fitresult.types
     end
-    X_t::types.X_t, variable_names, x_units::types.x_units = get_matrix_and_info(X, m.dimensions_type)
-    y_t::types.y_t, y_variable_names, y_units::types.y_units = format_input_for(m, y, m.dimensions_type)
+    X_t::types.X_t, variable_names, x_units::types.x_units = get_matrix_and_info(
+        X, m.dimensions_type
+    )
+    y_t::types.y_t, y_variable_names, y_units::types.y_units = format_input_for(
+        m, y, m.dimensions_type
+    )
     w_t::types.w_t = if w !== nothing && isa(m, MultitargetSRRegressor)
         @assert(isa(w, AbstractVector) && ndims(w) == 1, "Unexpected input for `w`.")
         repeat(w', size(y_t, 1))
@@ -159,7 +162,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
             x_units=typeof(x_units),
             y_units=typeof(y_units),
             units=typeof(units),
-        )
+        ),
     )::(old_fitresult === nothing ? Any : typeof(old_fitresult))
     return (fitresult, nothing, full_report(m, fitresult))
 end
@@ -228,7 +231,8 @@ dimension_fallback(_, ::Type{D}) where {D} = D()
 function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
     # TODO: This assumes all units in a column are equal.
     for (i, row) in enumerate(eachrow(A))
-        allequal(Base.Fix2(dimension_fallback, D).(row)) || error("Inconsistent units in feature $i of matrix.")
+        allequal(Base.Fix2(dimension_fallback, D).(row)) ||
+            error("Inconsistent units in feature $i of matrix.")
     end
     dims = map(Base.Fix2(dimension_fallback, D) ∘ first, eachrow(A))
     return stack([DQ.ustrip.(row) for row in eachrow(A)]; dims=1), dims

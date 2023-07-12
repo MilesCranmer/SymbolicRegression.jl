@@ -149,11 +149,8 @@ end
     end
 
     @testset "With MLJ" begin
-        model = SRRegressor(binary_operators=[+, *], unary_operators=[sqrt, cbrt, abs])
-        X = (;
-            x1=randn(128) .* u"kg^3",
-            x2=randn(128) .* u"kg^2",
-        )
+        model = SRRegressor(; binary_operators=[+, *], unary_operators=[sqrt, cbrt, abs])
+        X = (; x1=randn(128) .* u"kg^3", x2=randn(128) .* u"kg^2")
         y = (@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* u"kg"
         mach = MLJ.machine(model, X, y)
         MLJ.fit!(mach)
