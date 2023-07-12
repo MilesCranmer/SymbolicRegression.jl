@@ -3,7 +3,15 @@ using SymbolicRegression: Node
 using SymbolicRegression.CoreModule.DatasetModule: get_units
 using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
 import DynamicQuantities:
-    Quantity, SymbolicDimensions, Dimensions, @u_str, @us_str, uparse, sym_uparse, ustrip
+    DEFAULT_DIM_BASE_TYPE,
+    Quantity,
+    SymbolicDimensions,
+    Dimensions,
+    @u_str,
+    @us_str,
+    uparse,
+    sym_uparse,
+    ustrip
 using Test
 import MLJBase as MLJ
 
@@ -20,9 +28,12 @@ options = Options(;
     X = randn(3, 100)
     y = @. cos(X[3, :] * 2.1 - 0.2) + 0.5
 
-    @test get_units(Float64, Dimensions, [u"m", "1", "kg"], uparse) ==
+    D = Dimensions{DEFAULT_DIM_BASE_TYPE}
+    SD = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
+
+    @test get_units(Float64, D, [u"m", "1", "kg"], uparse) ==
         [Quantity(1.0; length=1), Quantity(1.0), Quantity(1.0; mass=1)]
-    @test get_units(Float64, SymbolicDimensions, [us"m", "1", "kg"], sym_uparse) == [
+    @test get_units(Float64, SD, [us"m", "1", "kg"], sym_uparse) == [
         Quantity(1.0, SymbolicDimensions; m=1),
         Quantity(1.0, SymbolicDimensions),
         Quantity(1.0, SymbolicDimensions; kg=1),

@@ -351,7 +351,9 @@ function equation_search(
         loss_type = get_base_type(T)
     end
 
-    datasets = construct_datasets(X, y, weights, variable_names, X_units, y_units, loss_type)
+    datasets = construct_datasets(
+        X, y, weights, variable_names, X_units, y_units, loss_type
+    )
 
     return equation_search(
         datasets;
