@@ -6,7 +6,7 @@ import DynamicExpressions: eval_tree_array, string_tree, Node
 import DynamicQuantities as DQ
 import DynamicQuantities: AbstractDimensions, DEFAULT_DIM_TYPE
 import LossFunctions: SupervisedLoss
-import Compat: allequal
+import Compat: allequal, stack
 import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
 import ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 import ..ComplexityModule: compute_complexity

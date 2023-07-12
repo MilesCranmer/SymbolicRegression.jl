@@ -28,7 +28,7 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 Tricks = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
 
 [compat]
-Compat = "3.42, 4"
+Compat = "^4.2"
 DynamicExpressions = "0.10"
 DynamicQuantities = "^0.6.2"
 JSON3 = "1"
