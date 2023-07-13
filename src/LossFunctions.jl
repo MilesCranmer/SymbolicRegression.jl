@@ -62,7 +62,7 @@ end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function _eval_loss(
-    tree::Node{T}, dataset::Dataset{T,L,AX,AY}, options::Options
+    tree::Node{T}, dataset::Dataset{T,L,AX,AY}, options::Options, regularization::Bool
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE,AX<:AbstractArray{T},AY<:AbstractArray{T}}
     (prediction, completion) = eval_tree_array(tree, dataset.X, options)
     if !completion
@@ -79,6 +79,17 @@ function _eval_loss(
     else
         _loss(prediction, dataset.y::AY, options.elementwise_loss)
     end
+
+    if regularization
+        if violates_dimensional_constraints(tree, dataset, options)
+            if options.loss_function === nothing
+                loss_val += L(1000)
+            else
+                loss_val += L(options.dimensional_constraint_penalty::Float32)
+            end
+        end
+    end
+
     return loss_val
 end
 
@@ -94,20 +105,10 @@ function eval_loss(
     tree::Node{T}, dataset::Dataset{T,L}, options::Options, regularization::Bool=true
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
     loss_val = if options.loss_function === nothing
-        _eval_loss(tree, dataset, options)
+        _eval_loss(tree, dataset, options, regularization)
     else
         f = options.loss_function::Function
         evaluator(f, tree, dataset, options)
-    end
-
-    if regularization
-        if violates_dimensional_constraints(tree, dataset, options)
-            if options.loss_function === nothing
-                loss_val += L(1000)
-            else
-                loss_val += L(options.dimensional_constraint_penalty::Float32)
-            end
-        end
     end
 
     return loss_val
