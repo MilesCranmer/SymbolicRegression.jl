@@ -434,6 +434,7 @@ function equation_search(
         options.return_state
     end
 
+    # TODO: Should we pass a tuple of datasets instead?
     return _equation_search(
         v_concurrency,
         datasets,
@@ -470,7 +471,7 @@ function _equation_search(
             @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
         end
     end
-    if X_units !== nothing || y_units !== nothing
+    if any(d -> d.X_units !== nothing || d.y_units !== nothing, datasets)
         if options.dimensional_constraint_penalty === nothing
             @warn "You are using dimensional constraints, but `dimensional_constraint_penalty` was not set. The default penalty of `1000.0` will be used."
         end
