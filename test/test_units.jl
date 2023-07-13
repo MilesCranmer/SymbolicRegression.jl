@@ -254,6 +254,17 @@ end
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
     ) == "(x₅ * 3.2[⋅])"
+
+    # Should print numeric factor in unit if given:
+    dataset2 = Dataset(X, y; X_units=[1.5, 1.9, 2.0, 3.0, 5.0u"m"], y_units="kg")
+    @test string_tree(
+        x5 * 3.2,
+        options;
+        raw=false,
+        pretty_variable_names=dataset2.pretty_variable_names,
+        X_sym_units=dataset2.X_sym_units,
+        y_sym_units=dataset2.y_sym_units,
+    ) == "(x₅[5.0 m] * 3.2[⋅])"
 end
 
 @test "Miscellaneous" begin
