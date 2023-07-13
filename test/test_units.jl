@@ -38,6 +38,12 @@ options = Options(;
         Quantity(1.0, SymbolicDimensions),
         Quantity(1.0, SymbolicDimensions; kg=1),
     ]
+    # Various input types:
+    @test get_units(Float64, SD, [us"m", 1.5, SD()], sym_uparse) == [
+        Quantity(1.0, SymbolicDimensions; m=1),
+        Quantity(1.5, SymbolicDimensions),
+        Quantity(1.0, SymbolicDimensions),
+    ]
     dataset = Dataset(X, y; X_units=[u"m", u"1", u"kg"], y_units=u"1")
     @test dataset.X_units == [Quantity(1.0; length=1), Quantity(1.0), Quantity(1.0; mass=1)]
     @test dataset.X_sym_units == [

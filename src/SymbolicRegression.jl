@@ -329,8 +329,8 @@ function equation_search(
     saved_state::Union{StateType{T,L},Nothing}=nothing,
     return_state::Union{Bool,Nothing}=nothing,
     loss_type::Type{Linit}=Nothing,
-    X_units::Union{AbstractVector{<:QuantityLike},Nothing}=nothing,
-    y_units::Union{QuantityLike,AbstractVector{<:QuantityLike},Nothing}=nothing,
+    X_units::Union{AbstractVector,Nothing}=nothing,
+    y_units=nothing,
     # Deprecated:
     multithreaded=nothing,
     varMap=nothing,

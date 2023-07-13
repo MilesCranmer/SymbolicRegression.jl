@@ -102,8 +102,8 @@ function Dataset(
     variable_names::Union{Array{String,1},Nothing}=nothing,
     extra::NamedTuple=NamedTuple(),
     loss_type::Type{Linit}=Nothing,
-    X_units::Union{AbstractVector{<:QuantityLike},Nothing}=nothing,
-    y_units::Union{QuantityLike,Nothing}=nothing,
+    X_units::Union{AbstractVector,Nothing}=nothing,
+    y_units=nothing,
     # Deprecated:
     varMap=nothing,
 ) where {T<:DATA_TYPE,Linit}

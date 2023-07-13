@@ -99,3 +99,7 @@ end
 @safetestset "Test units" begin
     include("test_units.jl")
 end
+
+@safetestset "Dataset" begin
+    include("test_dataset.jl")
+end
