@@ -80,13 +80,11 @@ function _eval_loss(
         _loss(prediction, dataset.y::AY, options.elementwise_loss)
     end
 
-    if regularization
-        if violates_dimensional_constraints(tree, dataset, options)
-            if options.loss_function === nothing
-                loss_val += L(1000)
-            else
-                loss_val += L(options.dimensional_constraint_penalty::Float32)
-            end
+    if regularization && violates_dimensional_constraints(tree, dataset, options)
+        if options.dimensional_constraint_penalty === nothing
+            loss_val += L(1000)
+        else
+            loss_val += L(options.dimensional_constraint_penalty::Float32)
         end
     end
 
@@ -136,13 +134,11 @@ function eval_loss_batched(
         L(_weighted_loss(prediction, batch_y, batch_w, options.elementwise_loss))
     end
 
-    if regularization
-        if violates_dimensional_constraints(tree, dataset, options)
-            if options.loss_function === nothing
-                loss_val += L(1000)
-            else
-                loss_val += L(options.dimensional_constraint_penalty::Float32)
-            end
+    if regularization && violates_dimensional_constraints(tree, dataset, options)
+        if options.dimensional_constraint_penalty === nothing
+            loss_val += L(1000)
+        else
+            loss_val += L(options.dimensional_constraint_penalty::Float32)
         end
     end
 
