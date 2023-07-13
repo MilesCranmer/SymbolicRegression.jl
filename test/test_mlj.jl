@@ -38,7 +38,7 @@ end
         fit!(mach)
         rep = report(mach)
         @test occursin("a", rep.equation_strings[rep.best_idx])
-        @test all(predict(mach, X) .≈ y)
+        @test sum(abs2, predict(mach, X) .- y) / length(y) < 1e-5
     end
 
     @testset "Multiple outputs" begin

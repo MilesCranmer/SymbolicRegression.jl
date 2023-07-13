@@ -1,5 +1,4 @@
 using SymbolicRegression
-using SymbolicRegression: Node
 using SymbolicRegression.CoreModule.DatasetModule: get_units
 using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
 import DynamicQuantities:
