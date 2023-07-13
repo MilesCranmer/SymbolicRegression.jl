@@ -145,7 +145,9 @@ Convert an equation to a string.
 )
     variable_names = deprecate_varmap(variable_names, varMap, :string_tree)
 
-    raw && return string_tree(tree, options.operators; variable_names)
+    raw && return string_tree(
+        tree, options.operators; f_variable=string_variable_raw, variable_names
+    )
 
     vprecision = vals[options.print_precision]
     if X_sym_units === nothing
@@ -170,8 +172,15 @@ Convert an equation to a string.
     end
 end
 const vals = ntuple(Val, 8192)
+function string_variable_raw(feature, variable_names)
+    if variable_names === nothing || feature > length(variable_names)
+        return "x" * string(feature)
+    else
+        return variable_names[feature]
+    end
+end
 function string_variable(feature, variable_names, variable_units=nothing)
-    base = if variable_names === nothing
+    base = if variable_names === nothing || feature > length(variable_names)
         "x" * subscriptify(feature)
     else
         variable_names[feature]
