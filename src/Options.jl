@@ -281,6 +281,8 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     at which the maxsize should be reached.
 - `verbosity`: Whether to print debugging statements or
     not.
+- `print_precision`: How many digits to print when printing
+    equations. By default, this is 5.
 - `save_to_file`: Whether to save equations to a file during the search.
 - `bin_constraints`: See `constraints`. This is the same, but specified for binary
     operators only (for example, if you have an operator that is both a binary
