@@ -1,6 +1,7 @@
 using SymbolicRegression
 using SymbolicRegression.CoreModule.DatasetModule: get_units
-using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
+using SymbolicRegression.DimensionalAnalysisModule:
+    violates_dimensional_constraints, @maybe_return_call, WildcardQuantity
 import DynamicQuantities:
     DEFAULT_DIM_BASE_TYPE,
     Quantity,
@@ -247,4 +248,23 @@ end
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
     ) == "(x₅ * 3.2[⋅])"
+end
+
+@test "Miscellaneous" begin
+    function test_return_call(op::Function, w...)
+        @maybe_return_call(typeof(first(w)), op, w)
+        return nothing
+    end
+
+    x = WildcardQuantity{typeof(u"m")}(u"m/s", true, false)
+
+    # Valid input returns as expected
+    @test ustrip(test_return_call(+, x, x)) == 2.0
+
+    # Regular errors are thrown
+    thrower(_...) = error("")
+    @test_throws ErrorException test_return_call(thrower, 1.0, 1.0)
+
+    # But method errors are safely caught
+    @test test_return_call(+, 1.0, "1.0") === nothing
 end
