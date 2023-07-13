@@ -102,7 +102,11 @@ function eval_loss(
 
     if regularization
         if violates_dimensional_constraints(tree, dataset, options)
-            loss_val += L(options.dimensional_constraint_penalty)
+            if options.loss_function === nothing
+                loss_val += L(1000)
+            else
+                loss_val += L(options.dimensional_constraint_penalty::Float32)
+            end
         end
     end
 
@@ -133,7 +137,11 @@ function eval_loss_batched(
 
     if regularization
         if violates_dimensional_constraints(tree, dataset, options)
-            loss_val += L(options.dimensional_constraint_penalty)
+            if options.loss_function === nothing
+                loss_val += L(1000)
+            else
+                loss_val += L(options.dimensional_constraint_penalty::Float32)
+            end
         end
     end
 

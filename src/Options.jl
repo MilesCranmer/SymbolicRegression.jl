@@ -336,7 +336,7 @@ function Options end
     complexity_of_constants::Union{Nothing,Real}=nothing,
     complexity_of_variables::Union{Nothing,Real}=nothing,
     parsimony::Real=0.0032,
-    dimensional_constraint_penalty::Real=1000.0,
+    dimensional_constraint_penalty::Union{Nothing,Real}=nothing,
     alpha::Real=0.100000,
     maxsize::Integer=20,
     maxdepth::Union{Nothing,Integer}=nothing,

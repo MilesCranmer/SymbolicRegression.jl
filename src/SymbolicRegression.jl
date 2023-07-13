@@ -470,6 +470,11 @@ function _equation_search(
             @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
         end
     end
+    if X_units !== nothing || y_units !== nothing
+        if options.dimensional_constraint_penalty === nothing
+            @warn "You are using dimensional constraints, but `dimensional_constraint_penalty` was not set. The default penalty of `1000.0` will be used."
+        end
+    end
 
     stdin_reader = watch_stream(stdin)
 
