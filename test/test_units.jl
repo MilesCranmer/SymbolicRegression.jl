@@ -267,7 +267,7 @@ end
     ) == "(x₅[5.0 m] * 3.2[⋅])"
 end
 
-@test "Miscellaneous" begin
+@testset "Miscellaneous" begin
     function test_return_call(op::Function, w...)
         @maybe_return_call(typeof(first(w)), op, w)
         return nothing

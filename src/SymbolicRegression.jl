@@ -389,7 +389,13 @@ function equation_search(dataset::Dataset; kws...)
 end
 
 function equation_search(
-    datasets::Vector{D};
+    datasets::Vector{D}; kws...
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
+    return equation_search(Tuple(datasets); kws...)
+end
+
+function equation_search(
+    datasets::NTuple{nout,D};
     niterations::Int=10,
     options::Options=Options(),
     parallelism=:multithreading,
@@ -399,7 +405,7 @@ function equation_search(
     runtests::Bool=true,
     saved_state::Union{StateType{T,L},Nothing}=nothing,
     return_state::Union{Bool,Nothing}=nothing,
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
+) where {nout,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
     v_concurrency, concurrency = if parallelism in (:multithreading, "multithreading")
         (Val(:multithreading), :multithreading)
     elseif parallelism in (:multiprocessing, "multiprocessing")
@@ -451,7 +457,7 @@ end
 
 function _equation_search(
     ::Val{parallelism},
-    datasets::Vector{D},
+    datasets::NTuple{nout,D},
     niterations::Int,
     options::Options,
     numprocs::Union{Int,Nothing},
@@ -460,7 +466,7 @@ function _equation_search(
     runtests::Bool,
     saved_state::Union{StateType{T,L},Nothing},
     ::Val{should_return_state},
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},parallelism,should_return_state}
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},parallelism,should_return_state,nout}
     if options.deterministic
         if parallelism != :serial
             error("Determinism is only guaranteed for serial mode.")
@@ -496,7 +502,6 @@ function _equation_search(
     end
 
     example_dataset = datasets[1]
-    nout = size(datasets, 1)
 
     if runtests
         test_option_configuration(T, options)
@@ -521,32 +526,34 @@ function _equation_search(
         Task
     end
 
-    allPops = [allPopsType[] for j in 1:nout]
-    init_pops = [allPopsType[] for j in 1:nout]
+    allPops = ntuple(_ -> allPopsType[], Val(nout))
+    init_pops = ntuple(_ -> allPopsType[], Val(nout))
     # Set up a channel to send finished populations back to head node
     if parallelism in (:multiprocessing, :multithreading)
         if parallelism == :multiprocessing
-            channels = [
-                [RemoteChannel(1) for i in 1:(options.npopulations)] for j in 1:nout
-            ]
+            channels = ntuple(
+                _ -> [RemoteChannel(1) for i in 1:(options.npopulations)], Val(nout)
+            )
         else
-            channels = [[Channel(1) for i in 1:(options.npopulations)] for j in 1:nout]
+            channels = ntuple(
+                _ -> [Channel(1) for i in 1:(options.npopulations)], Val(nout)
+            )
         end
-        tasks = [Task[] for j in 1:nout]
+        tasks = ntuple(_ -> Task[], Val(nout))
     end
 
     # This is a recorder for populations, but is not actually used for processing, just
     # for the final return.
-    returnPops = init_dummy_pops(nout, options.npopulations, datasets, options)
+    returnPops = init_dummy_pops(options.npopulations, datasets, options)
     # These initial populations are discarded:
-    bestSubPops = init_dummy_pops(nout, options.npopulations, datasets, options)
+    bestSubPops = init_dummy_pops(options.npopulations, datasets, options)
 
     actualMaxsize = options.maxsize + MAX_DEGREE
 
     # TODO: Should really be one per population too.
-    all_running_search_statistics = [
-        RunningSearchStatistics(; options=options) for i in 1:nout
-    ]
+    all_running_search_statistics = ntuple(
+        _ -> RunningSearchStatistics(; options=options), Val(nout)
+    )
 
     curmaxsizes = [3 for j in 1:nout]
     record = RecordType("options" => "$(options)")
@@ -1035,8 +1042,7 @@ function _equation_search(
 
     if should_return_state
         state = (returnPops, (nout == 1 ? only(hallOfFame) : hallOfFame))
-        state::StateType{T,L}
-        return state
+        return state::StateType{T,L}
     else
         if nout == 1
             return only(hallOfFame)
