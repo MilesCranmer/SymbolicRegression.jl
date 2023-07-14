@@ -4,7 +4,7 @@ using Optim: Optim
 import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
 import DynamicQuantities as DQ
-import DynamicQuantities: AbstractDimensions, DEFAULT_DIM_BASE_TYPE
+import DynamicQuantities: AbstractDimensions, DEFAULT_DIM_BASE_TYPE, ustrip, dimension
 import LossFunctions: SupervisedLoss
 import Compat: allequal, stack
 import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
@@ -113,7 +113,16 @@ end
 function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
     # To speed up iterative fits, we cache the types:
     types = if old_fitresult === nothing
-        (; X_t=Any, y_t=Any, w_t=Any, state=Any, X_units=Any, y_units=Any)
+        (;
+            X_t=Any,
+            y_t=Any,
+            w_t=Any,
+            state=Any,
+            X_units=Any,
+            y_units=Any,
+            X_units_clean=Any,
+            y_units_clean=Any,
+        )
     else
         old_fitresult.types
     end
@@ -123,6 +132,8 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
     y_t::types.y_t, y_variable_names, y_units::types.y_units = format_input_for(
         m, y, m.dimensions_type
     )
+    X_units_clean::types.X_units_clean = clean_units(X_units)
+    y_units_clean::types.y_units_clean = clean_units(y_units)
     w_t::types.w_t = if w !== nothing && isa(m, MultitargetSRRegressor)
         @assert(isa(w, AbstractVector) && ndims(w) == 1, "Unexpected input for `w`.")
         repeat(w', size(y_t, 1))
@@ -144,8 +155,8 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         saved_state=(old_fitresult === nothing ? nothing : old_fitresult.state),
         return_state=true,
         loss_type=m.loss_type,
-        X_units=X_units,
-        y_units=y_units,
+        X_units=X_units_clean,
+        y_units=y_units_clean,
     )
     fitresult = (;
         state=search_state,
@@ -153,8 +164,8 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         variable_names=variable_names,
         y_variable_names=y_variable_names,
         y_is_table=MMI.istable(y),
-        X_units=X_units,
-        y_units=y_units,
+        X_units=X_units_clean,
+        y_units=y_units_clean,
         types=(
             X_t=typeof(X_t),
             y_t=typeof(y_t),
@@ -162,9 +173,22 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
             state=typeof(search_state),
             X_units=typeof(X_units),
             y_units=typeof(y_units),
+            X_units_clean=typeof(X_units_clean),
+            y_units_clean=typeof(y_units_clean),
         ),
     )::(old_fitresult === nothing ? Any : typeof(old_fitresult))
     return (fitresult, nothing, full_report(m, fitresult))
+end
+
+function clean_units(units)
+    !isa(units, AbstractDimensions) && error("Unexpected units.")
+    iszero(units) && return nothing
+    return units
+end
+function clean_units(units::Vector)
+    !all(Base.Fix2(isa, AbstractDimensions), units) && error("Unexpected units.")
+    all(iszero, units) && return nothing
+    return units
 end
 
 function get_matrix_and_info(X, ::Type{D}) where {D}
@@ -245,10 +269,12 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     )
 end
 function MMI.predict(m::SRRegressor, fitresult, Xnew)
+    types = fitresult.types
     params = MMI.fitted_params(m, fitresult)
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
+    X_units_clean = clean_units(X_units)
     validate_variable_names(variable_names, fitresult)
-    validate_units(X_units, fitresult.X_units)
+    validate_units(X_units_clean, fitresult.X_units)
     eq = params.equations[params.best_idx]
     out, flag = eval_tree_array(eq, Xnew_t, fitresult.options)
     !flag && error("Detected a NaN in evaluating expression.")
@@ -257,8 +283,9 @@ end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
+    X_units_clean = clean_units(X_units)
     validate_variable_names(variable_names, fitresult)
-    validate_units(X_units, fitresult.X_units)
+    validate_units(X_units_clean, fitresult.X_units)
     equations = params.equations
     best_idx = params.best_idx
     outs = [

@@ -395,7 +395,7 @@ function equation_search(
 end
 
 function equation_search(
-    datasets::NTuple{nout,D};
+    datasets::Tuple;
     niterations::Int=10,
     options::Options=Options(),
     parallelism=:multithreading,
@@ -403,9 +403,9 @@ function equation_search(
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
-    saved_state::Union{StateType{T,L},Nothing}=nothing,
+    saved_state::Union{StateType,Nothing}=nothing,
     return_state::Union{Bool,Nothing}=nothing,
-) where {nout,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
+)
     v_concurrency, concurrency = if parallelism in (:multithreading, "multithreading")
         (Val(:multithreading), :multithreading)
     elseif parallelism in (:multiprocessing, "multiprocessing")
@@ -440,9 +440,18 @@ function equation_search(
         options.return_state
     end
 
+    T = eltype(first(datasets).X)
+    L = typeof(first(datasets).baseline_loss)
+    for d in datasets
+        d::Dataset{T,L}
+    end
+
     # TODO: Should we pass a tuple of datasets instead?
     return _equation_search(
         v_concurrency,
+        Val(length(datasets)),
+        T,
+        L,
         datasets,
         niterations,
         options,
@@ -457,7 +466,10 @@ end
 
 function _equation_search(
     ::Val{parallelism},
-    datasets::NTuple{nout,D},
+    ::Val{nout},
+    ::Type{T},
+    ::Type{L},
+    datasets::Tuple,
     niterations::Int,
     options::Options,
     numprocs::Union{Int,Nothing},
@@ -466,7 +478,7 @@ function _equation_search(
     runtests::Bool,
     saved_state::Union{StateType{T,L},Nothing},
     ::Val{should_return_state},
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},parallelism,should_return_state,nout}
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,parallelism,should_return_state,nout}
     if options.deterministic
         if parallelism != :serial
             error("Determinism is only guaranteed for serial mode.")

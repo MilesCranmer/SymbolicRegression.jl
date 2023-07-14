@@ -281,8 +281,8 @@ function print_search_state(
 end
 
 const StateType{T,L} = Tuple{
-    Union{Vector{Vector{Population{T,L}}},Matrix{Population{T,L}}},
-    Union{HallOfFame{T,L},Vector{HallOfFame{T,L}}},
+    Tuple{Vector{Population{T,L}},Vararg{Vector{Population{T,L}}}},
+    Union{HallOfFame{T,L},Tuple{HallOfFame{T,L},Vararg{HallOfFame{T,L}}}},
 }
 
 function load_saved_hall_of_fame(
@@ -296,6 +296,11 @@ function load_saved_hall_of_fame(
 end
 load_saved_hall_of_fame(::Nothing)::Nothing = nothing
 
+function get_population(
+    pops::Tuple{Vector{Population{T,L}},Vararg{Vector{Population{T,L}}}}; out::Int, pop::Int
+)::Population{T,L} where {T,L}
+    return pops[out][pop]
+end
 function get_population(
     pops::Vector{Vector{Population{T,L}}}; out::Int, pop::Int
 )::Population{T,L} where {T,L}
