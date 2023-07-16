@@ -146,8 +146,9 @@ function string_dominating_pareto_curve(
         )
         y_prefix = dataset.y_variable_name
         unit_str = format_dimensions(dataset.y_sym_units)
-        if !isempty(unit_str)
-            y_prefix *= " " * unit_str
+        y_prefix *= unit_str
+        if dataset.y_sym_units === nothing && dataset.X_sym_units !== nothing
+            y_prefix *= "[⋅]"
         end
         eqn_string = y_prefix * " = " * eqn_string
         base_string_length = length(@sprintf("%-10d  %-8.3e  %8.3e  ", 1, 1.0, 1.0))
