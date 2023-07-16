@@ -321,6 +321,7 @@ function equation_search(
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
     options::Options=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
+    y_variable_names::Union{String,AbstractVector{String},Nothing}=nothing,
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
@@ -352,7 +353,7 @@ function equation_search(
     end
 
     datasets = construct_datasets(
-        X, y, weights, variable_names, X_units, y_units, loss_type
+        X, y, weights, variable_names, y_variable_names, X_units, y_units, loss_type
     )
 
     return equation_search(

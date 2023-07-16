@@ -44,6 +44,7 @@ const QuantityLike = Union{AbstractDimensions,AbstractQuantity,AbstractString,Re
     with shape `(nfeatures,)`.
 - `pretty_variable_names::Array{String,1}`: A version of `variable_names`
     but for printing to the terminal (e.g., with unicode versions).
+- `y_variable_name::String`: The name of the output variable.
 - `X_units`: Unit information of `X`. When used, this is a vector
     of `DynamicQuantities.Quantity{<:Any,<:Dimensions}` with shape `(nfeatures,)`.
 - `y_units`: Unit information of `y`. When used, this is a single
@@ -77,6 +78,7 @@ mutable struct Dataset{
     baseline_loss::L
     variable_names::Array{String,1}
     pretty_variable_names::Array{String,1}
+    y_variable_name::String
     X_units::XU
     y_units::YU
     X_sym_units::XUS
@@ -87,6 +89,7 @@ end
     Dataset(X::AbstractMatrix{T}, y::Union{AbstractVector{T},Nothing}=nothing;
             weights::Union{AbstractVector{T}, Nothing}=nothing,
             variable_names::Union{Array{String, 1}, Nothing}=nothing,
+            y_variable_name::Union{String,Nothing}=nothing,
             X_units::Union{AbstractVector{<:QuantityLike}, Nothing}=nothing,
             y_units::Union{QuantityLike, Nothing}=nothing,
             extra::NamedTuple=NamedTuple(),
@@ -100,6 +103,7 @@ function Dataset(
     y::Union{AbstractVector{T},Nothing}=nothing;
     weights::Union{AbstractVector{T},Nothing}=nothing,
     variable_names::Union{Array{String,1},Nothing}=nothing,
+    y_variable_name::Union{String,Nothing}=nothing,
     extra::NamedTuple=NamedTuple(),
     loss_type::Type{Linit}=Nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
@@ -119,6 +123,11 @@ function Dataset(
         ["x$(i)" for i in 1:nfeatures], ["x$(subscriptify(i))" for i in 1:nfeatures]
     else
         (variable_names, variable_names)
+    end
+    y_variable_name = if y_variable_name === nothing
+        "y" ∉ variable_names ? "y" : "target"
+    else
+        y_variable_name
     end
     avg_y = if y === nothing
         nothing
@@ -165,6 +174,7 @@ function Dataset(
         baseline,
         variable_names,
         pretty_variable_names,
+        y_variable_name,
         X_si_units,
         y_si_units,
         X_sym_units,
@@ -224,6 +234,10 @@ function error_on_mismatched_size(nfeatures, X_units::AbstractVector)
         )
     end
     return nothing
+end
+
+function has_units(dataset::Dataset)
+    return dataset.X_units !== nothing || dataset.y_units !== nothing
 end
 
 end

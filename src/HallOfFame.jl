@@ -6,6 +6,7 @@ import ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 import ..PopMemberModule: PopMember, copy_pop_member
 import ..LossFunctionsModule: eval_loss
+import ..InterfaceDynamicExpressionsModule: format_dimensions
 using Printf: @sprintf
 
 """
@@ -143,6 +144,12 @@ function string_dominating_pareto_curve(
             y_sym_units=dataset.y_sym_units,
             raw=false,
         )
+        y_prefix = dataset.y_variable_name
+        unit_str = format_dimensions(dataset.y_sym_units)
+        if !isempty(unit_str)
+            y_prefix *= " " * unit_str
+        end
+        eqn_string = y_prefix * " = " * eqn_string
         base_string_length = length(@sprintf("%-10d  %-8.3e  %8.3e  ", 1, 1.0, 1.0))
 
         dots = "..."

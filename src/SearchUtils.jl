@@ -7,6 +7,7 @@ import Printf: @printf, @sprintf
 using Distributed
 import StatsBase: mean
 
+import ..UtilsModule: subscriptify
 import ..CoreModule: Dataset, Options
 import ..ComplexityModule: compute_complexity
 import ..PopulationModule: Population, copy_population
@@ -241,7 +242,7 @@ end
 
 function print_search_state(
     hall_of_fames::Vector{H},
-    datasets::Vector{D};
+    datasets;
     options::Options,
     equation_speed::Vector{Float32},
     total_cycles::Int,
@@ -249,7 +250,7 @@ function print_search_state(
     head_node_occupation::Float64,
     parallelism=:serial,
     width::Union{Integer,Nothing}=nothing,
-) where {T,L,D<:Dataset{T,L},H<:HallOfFame{T,L}}
+) where {T,L,H<:HallOfFame{T,L}}
     twidth = (width === nothing) ? 100 : max(100, width::Integer)
     nout = length(datasets)
     average_speed = sum(equation_speed) / length(equation_speed)
@@ -320,7 +321,9 @@ end
 
 load_saved_population(::Nothing; kws...) = nothing
 
-function construct_datasets(X, y, weights, variable_names, X_units, y_units, loss_type)
+function construct_datasets(
+    X, y, weights, variable_names, y_variable_names, X_units, y_units, loss_type
+)
     nout = size(y, 1)
     return ntuple(
         j -> Dataset(
@@ -328,6 +331,21 @@ function construct_datasets(X, y, weights, variable_names, X_units, y_units, los
             y[j, :];
             weights=(weights === nothing ? weights : weights[j, :]),
             variable_names=variable_names,
+            y_variable_name=if y_variable_names === nothing
+                if nout > 1
+                    "y$(subscriptify(j))"
+                else
+                    if variable_names === nothing || "y" ∉ variable_names
+                        "y"
+                    else
+                        "target"
+                    end
+                end
+            elseif isa(y_variable_names, AbstractVector)
+                y_variable_names[j]
+            else
+                y_variable_names
+            end,
             X_units=X_units,
             y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
             loss_type=loss_type,

@@ -150,12 +150,13 @@ Convert an equation to a string.
     )
 
     vprecision = vals[options.print_precision]
-    if X_sym_units === nothing
+    if X_sym_units !== nothing || y_sym_units !== nothing
         return string_tree(
             tree,
             options.operators;
-            f_variable=string_variable,
-            f_constant=(val, bracketed) -> string_constant(val, bracketed, vprecision, ""),
+            f_variable=(feature, vname) -> string_variable(feature, vname, X_sym_units),
+            f_constant=(val, bracketed) ->
+                string_constant(val, bracketed, vprecision, "[⋅]"),
             variable_names=pretty_variable_names,
             kws...,
         )
@@ -163,9 +164,8 @@ Convert an equation to a string.
         return string_tree(
             tree,
             options.operators;
-            f_variable=(feature, vname) -> string_variable(feature, vname, X_sym_units),
-            f_constant=(val, bracketed) ->
-                string_constant(val, bracketed, vprecision, "[⋅]"),
+            f_variable=string_variable,
+            f_constant=(val, bracketed) -> string_constant(val, bracketed, vprecision, ""),
             variable_names=pretty_variable_names,
             kws...,
         )
@@ -186,15 +186,7 @@ function string_variable(feature, variable_names, variable_units=nothing)
         variable_names[feature]
     end
     if variable_units !== nothing
-        u = variable_units[feature]
-        if isone(ustrip(u))
-            dim = dimension(u)
-            if !iszero(dim)
-                base *= "[" * string(dim) * "]"
-            end
-        else
-            base *= "[" * string(u) * "]"
-        end
+        base *= format_dimensions(variable_units[feature])
     end
     return base
 end
@@ -206,6 +198,21 @@ function string_constant(
         return sprint_precision(val, Val(precision)) * unit_placeholder
     else
         return "(" * string(val) * ")" * unit_placeholder
+    end
+end
+function format_dimensions(::Nothing)
+    return ""
+end
+function format_dimensions(u)
+    if isone(ustrip(u))
+        dim = dimension(u)
+        if iszero(dim)
+            return ""
+        else
+            return "[" * string(dim) * "]"
+        end
+    else
+        return "[" * string(u) * "]"
     end
 end
 @generated function sprint_precision(x, ::Val{precision}) where {precision}
