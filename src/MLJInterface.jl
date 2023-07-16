@@ -14,7 +14,6 @@ import ..HallOfFameModule: HallOfFame, format_hall_of_fame
 import ..UtilsModule: subscriptify
 #! format: off
 import ..equation_search
-import ..StateType
 #! format: on
 
 abstract type AbstractSRRegressor <: MMI.Deterministic end

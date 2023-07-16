@@ -281,9 +281,7 @@ function print_search_state(
     return print("Press 'q' and then <enter> to stop execution early.\n")
 end
 
-function load_saved_hall_of_fame(
-    saved_state::StateType{T,L}
-)::Vector{HallOfFame{T,L}} where {T,L}
+function load_saved_hall_of_fame(saved_state)::Vector{HallOfFame{T,L}} where {T,L}
     hall_of_fame = saved_state[2]
     if !isa(hall_of_fame, Vector{HallOfFame{T,L}})
         hall_of_fame = [hall_of_fame]
@@ -307,13 +305,10 @@ function get_population(
 )::Population{T,L} where {T,L}
     return pops[out, pop]
 end
-function load_saved_population(
-    saved_state::StateType{T,L}; out::Int, pop::Int
-)::Population{T,L} where {T,L}
+function load_saved_population(saved_state; out::Int, pop::Int)::Population{T,L} where {T,L}
     saved_pop = get_population(saved_state[1]; out=out, pop=pop)
     return copy_population(saved_pop)
 end
-
 load_saved_population(::Nothing; kws...) = nothing
 
 function construct_datasets(
