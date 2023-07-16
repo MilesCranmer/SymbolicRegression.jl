@@ -108,9 +108,7 @@ function check_for_user_quit(reader::StdinReader)::Bool
     return false
 end
 
-function check_for_loss_threshold(
-    hallOfFame::AbstractVector{H}, options::Options
-)::Bool where {T,L,H<:HallOfFame{T,L}}
+function check_for_loss_threshold(hallOfFame, options::Options)::Bool
     options.early_stop_condition === nothing && return false
 
     # Check if all nout are below stopping condition.
@@ -281,31 +279,31 @@ function print_search_state(
     return print("Press 'q' and then <enter> to stop execution early.\n")
 end
 
-function load_saved_hall_of_fame(saved_state)::Vector{HallOfFame{T,L}} where {T,L}
+function load_saved_hall_of_fame(saved_state)
     hall_of_fame = saved_state[2]
-    if !isa(hall_of_fame, Vector{HallOfFame{T,L}})
-        hall_of_fame = [hall_of_fame]
+    hall_of_fame = if isa(hall_of_fame, HallOfFame)
+        [hall_of_fame]
+    else
+        hall_of_fame
     end
-    return [copy_hall_of_fame(hof) for hof in hall_of_fame]
+    return ntuple(i -> copy_hall_of_fame(hall_of_fame[i]), length(hall_of_fame))
 end
 load_saved_hall_of_fame(::Nothing)::Nothing = nothing
 
 function get_population(
-    pops::Tuple{Vector{Population{T,L}},Vararg{Vector{Population{T,L}}}}; out::Int, pop::Int
-)::Population{T,L} where {T,L}
+    pops::Tuple{VP,Vararg{VP}}; out::Int, pop::Int
+) where {T,L,P<:Population{T,L},VP<:Vector{P}}
     return pops[out][pop]
 end
 function get_population(
-    pops::Vector{Vector{Population{T,L}}}; out::Int, pop::Int
-)::Population{T,L} where {T,L}
+    pops::Vector{VP}; out::Int, pop::Int
+) where {T,L,P<:Population{T,L},VP<:Vector{P}}
     return pops[out][pop]
 end
-function get_population(
-    pops::Matrix{Population{T,L}}; out::Int, pop::Int
-)::Population{T,L} where {T,L}
+function get_population(pops::Matrix{P}; out::Int, pop::Int) where {T,L,P<:Population{T,L}}
     return pops[out, pop]
 end
-function load_saved_population(saved_state; out::Int, pop::Int)::Population{T,L} where {T,L}
+function load_saved_population(saved_state; out::Int, pop::Int)
     saved_pop = get_population(saved_state[1]; out=out, pop=pop)
     return copy_population(saved_pop)
 end

@@ -617,11 +617,10 @@ function _equation_search(
 
     hallOfFame = load_saved_hall_of_fame(saved_state)
     if hallOfFame === nothing
-        hallOfFame = [HallOfFame(options, T, L) for j in 1:nout]
+        hallOfFame = ntuple(_ -> HallOfFame(options, T, L), nout)
     else
         # Recompute losses for the hall of fame, in
         # case the dataset changed:
-        hallOfFame::Vector{HallOfFame{T,L}}
         for (hof, dataset) in zip(hallOfFame, datasets)
             for member in hof.members[hof.exists]
                 score, result_loss = score_func(dataset, member, options)
@@ -631,7 +630,7 @@ function _equation_search(
         end
     end
     @assert length(hallOfFame) == nout
-    hallOfFame::Vector{HallOfFame{T,L}}
+    foreach(hof -> hof::HallOfFame{T,L}, hallOfFame)
 
     for j in 1:nout
         for i in 1:(options.npopulations)
