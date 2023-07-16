@@ -143,10 +143,27 @@ function Dataset(
     baseline = one(out_loss_type)
     D = Dimensions{DEFAULT_DIM_BASE_TYPE}
     SD = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
-    X_si_units = get_units(T, D, X_units, uparse)
     y_si_units = get_units(T, D, y_units, uparse)
-    X_sym_units = get_units(T, SD, X_units, sym_uparse)
     y_sym_units = get_units(T, SD, y_units, sym_uparse)
+
+    # TODO: Refactor
+    # This basically just ensures that if the `y` units are set,
+    # then the `X` units are set as well.
+    X_si_units = let (_X = get_units(T, D, X_units, uparse))
+        if _X === nothing && y_si_units !== nothing
+            get_units(T, D, [one(T) for _ in 1:nfeatures], uparse)
+        else
+            _X
+        end
+    end
+    X_sym_units = let _X = get_units(T, SD, X_units, sym_uparse)
+        if _X === nothing && y_sym_units !== nothing
+            # Make units for X:
+            get_units(T, SD, [one(T) for _ in 1:nfeatures], sym_uparse)
+        else
+            _X
+        end
+    end
 
     error_on_mismatched_size(nfeatures, X_si_units)
 

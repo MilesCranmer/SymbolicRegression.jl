@@ -227,7 +227,6 @@ import .SearchUtilsModule:
     update_progress_bar!,
     print_search_state,
     init_dummy_pops,
-    StateType,
     load_saved_hall_of_fame,
     load_saved_population,
     construct_datasets
@@ -286,11 +285,12 @@ which is useful for debugging and profiling.
 - `runtests::Bool=true`: Whether to run (quick) tests before starting the
     search, to see if there will be any problems during the equation search
     related to the host environment.
-- `saved_state::Union{StateType, Nothing}=nothing`: If you have already
+- `saved_state=nothing`: If you have already
     run `equation_search` and want to resume it, pass the state here.
     To get this to work, you need to have set return_state=true,
-    which will cause `equation_search` to return the state. Note that
-    you cannot change the operators or dataset, but most other options
+    which will cause `equation_search` to return the state. The second
+    element of the state is the regular return value with the hall of fame.
+    Note that you cannot change the operators or dataset, but most other options
     should be changeable.
 - `return_state::Union{Bool, Nothing}=nothing`: Whether to return the
     state of the search for warm starts. By default this is false.
@@ -327,7 +327,7 @@ function equation_search(
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
-    saved_state::Union{StateType{T,L},Nothing}=nothing,
+    saved_state=nothing,
     return_state::Union{Bool,Nothing}=nothing,
     loss_type::Type{Linit}=Nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
@@ -335,7 +335,7 @@ function equation_search(
     # Deprecated:
     multithreaded=nothing,
     varMap=nothing,
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,Linit}
+) where {T<:DATA_TYPE,Linit}
     if multithreaded !== nothing
         error(
             "`multithreaded` is deprecated. Use the `parallelism` argument instead. " *
@@ -404,7 +404,7 @@ function equation_search(
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
     runtests::Bool=true,
-    saved_state::Union{StateType,Nothing}=nothing,
+    saved_state=nothing,
     return_state::Union{Bool,Nothing}=nothing,
 )
     v_concurrency, concurrency = if parallelism in (:multithreading, "multithreading")
@@ -477,7 +477,7 @@ function _equation_search(
     procs::Union{Vector{Int},Nothing},
     addprocs_function::Union{Function,Nothing},
     runtests::Bool,
-    saved_state::Union{StateType{T,L},Nothing},
+    saved_state,
     ::Val{should_return_state},
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,parallelism,should_return_state,nout}
     if options.deterministic
@@ -1054,14 +1054,9 @@ function _equation_search(
     end
 
     if should_return_state
-        state = (returnPops, (nout == 1 ? only(hallOfFame) : hallOfFame))
-        return state::StateType{T,L}
+        return (returnPops, (nout == 1 ? only(hallOfFame) : hallOfFame))
     else
-        if nout == 1
-            return only(hallOfFame)
-        else
-            return hallOfFame
-        end
+        return (nout == 1 ? only(hallOfFame) : hallOfFame)
     end
 end
 

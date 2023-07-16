@@ -281,11 +281,6 @@ function print_search_state(
     return print("Press 'q' and then <enter> to stop execution early.\n")
 end
 
-const StateType{T,L} = Tuple{
-    Tuple{Vector{Population{T,L}},Vararg{Vector{Population{T,L}}}},
-    Union{HallOfFame{T,L},Tuple{HallOfFame{T,L},Vararg{HallOfFame{T,L}}}},
-}
-
 function load_saved_hall_of_fame(
     saved_state::StateType{T,L}
 )::Vector{HallOfFame{T,L}} where {T,L}

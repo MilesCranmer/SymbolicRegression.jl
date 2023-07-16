@@ -169,16 +169,16 @@ function violates_dimensional_constraints(tree::Node, dataset::Dataset, options:
         tree, dataset.X_units, dataset.y_units, (@view X[:, 1]), options
     )
 end
-function violates_dimensional_constraints(_, ::Nothing, ::Nothing, _, _)
-    return false
-end
 function violates_dimensional_constraints(
     tree::Node{T},
-    X_units::AbstractVector{<:Quantity},
+    X_units::Union{AbstractVector{<:Quantity},Nothing},
     y_units::Union{Quantity,Nothing},
     x::AbstractVector{T},
     options::Options,
 ) where {T}
+    if X_units === nothing && y_units === nothing
+        return false
+    end
     # TODO: Should also check against output type.
     dimensional_output = violates_dimensional_constraints_dispatch(
         tree, X_units, x, options.operators
