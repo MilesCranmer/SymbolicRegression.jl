@@ -332,10 +332,11 @@ function equation_search(
     loss_type::Type{Linit}=Nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
+    v_nout::Val{nout}=Val(nothing),
     # Deprecated:
     multithreaded=nothing,
     varMap=nothing,
-) where {T<:DATA_TYPE,Linit}
+) where {T<:DATA_TYPE,Linit,nout}
     if multithreaded !== nothing
         error(
             "`multithreaded` is deprecated. Use the `parallelism` argument instead. " *
@@ -353,7 +354,15 @@ function equation_search(
     end
 
     datasets = construct_datasets(
-        X, y, weights, variable_names, y_variable_names, X_units, y_units, loss_type
+        X,
+        y,
+        weights,
+        variable_names,
+        y_variable_names,
+        X_units,
+        y_units,
+        loss_type,
+        Val(nout),
     )
 
     return equation_search(
@@ -367,6 +376,7 @@ function equation_search(
         runtests=runtests,
         saved_state=saved_state,
         return_state=return_state,
+        v_nout=Val(nout),
     )
 end
 
@@ -382,11 +392,11 @@ end
 function equation_search(
     X::AbstractMatrix{T1}, y::AbstractVector{T2}; kw...
 ) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
-    return equation_search(X, reshape(y, (1, size(y, 1))); kw...)
+    return equation_search(X, reshape(y, (1, size(y, 1))); kw..., v_nout=Val(1))
 end
 
 function equation_search(dataset::Dataset; kws...)
-    return equation_search([dataset]; kws...)
+    return equation_search([dataset]; kws..., v_nout=Val(1))
 end
 
 function equation_search(
@@ -406,7 +416,8 @@ function equation_search(
     runtests::Bool=true,
     saved_state=nothing,
     return_state::Union{Bool,Nothing}=nothing,
-)
+    v_nout::Val{nout}=Val(nothing),
+) where {nout}
     v_concurrency, concurrency = if parallelism in (:multithreading, "multithreading")
         (Val(:multithreading), :multithreading)
     elseif parallelism in (:multiprocessing, "multiprocessing")
@@ -441,6 +452,7 @@ function equation_search(
         options.return_state
     end
 
+    _v_nout = nout === nothing ? Val(length(datasets)) : Val(nout)
     T = eltype(first(datasets).X)
     L = typeof(first(datasets).baseline_loss)
     for d in datasets
@@ -450,7 +462,7 @@ function equation_search(
     # TODO: Should we pass a tuple of datasets instead?
     return _equation_search(
         v_concurrency,
-        Val(length(datasets)),
+        _v_nout,
         T,
         L,
         datasets,
@@ -541,18 +553,13 @@ function _equation_search(
 
     allPops = ntuple(_ -> allPopsType[], Val(nout))
     init_pops = ntuple(_ -> allPopsType[], Val(nout))
+    tasks = ntuple(_ -> Task[], Val(nout))
     # Set up a channel to send finished populations back to head node
-    if parallelism in (:multiprocessing, :multithreading)
-        if parallelism == :multiprocessing
-            channels = ntuple(
-                _ -> [RemoteChannel(1) for i in 1:(options.npopulations)], Val(nout)
-            )
-        else
-            channels = ntuple(
-                _ -> [Channel(1) for i in 1:(options.npopulations)], Val(nout)
-            )
-        end
-        tasks = ntuple(_ -> Task[], Val(nout))
+    channels = if parallelism == :multiprocessing
+        ntuple(_ -> [RemoteChannel(1) for i in 1:(options.npopulations)], Val(nout))
+    else
+        ntuple(_ -> [Channel(1) for i in 1:(options.npopulations)], Val(nout))
+        # (Unused for :serial)
     end
 
     # This is a recorder for populations, but is not actually used for processing, just
@@ -568,16 +575,17 @@ function _equation_search(
         _ -> RunningSearchStatistics(; options=options), Val(nout)
     )
 
-    curmaxsizes = [3 for j in 1:nout]
     record = RecordType("options" => "$(options)")
 
-    if options.warmup_maxsize_by == 0.0f0
-        curmaxsizes = [options.maxsize for j in 1:nout]
+    curmaxsizes = if iszero(options.warmup_maxsize_by)
+        fill(options.maxsize, nout)
+    else
+        fill(convert(typeof(options.maxsize), 3), nout)
     end
 
     # Records the number of evaluations:
     # Real numbers indicate use of batching.
-    num_evals = [[0.0 for i in 1:(options.npopulations)] for j in 1:nout]
+    num_evals = ntuple(_ -> [0.0 for i in 1:(options.npopulations)], Val(nout))
 
     we_created_procs = false
     ##########################################################################
@@ -616,8 +624,8 @@ function _equation_search(
     worker_assignment = Dict{Tuple{Int,Int},Int}()
 
     hallOfFame = load_saved_hall_of_fame(saved_state)
-    if hallOfFame === nothing
-        hallOfFame = ntuple(_ -> HallOfFame(options, T, L), nout)
+    hallOfFame = if hallOfFame === nothing
+        ntuple(_ -> HallOfFame(options, T, L), Val(nout))
     else
         # Recompute losses for the hall of fame, in
         # case the dataset changed:
@@ -628,109 +636,106 @@ function _equation_search(
                 member.loss = result_loss
             end
         end
+        hallOfFame
     end
     @assert length(hallOfFame) == nout
     foreach(hof -> hof::HallOfFame{T,L}, hallOfFame)
 
-    for j in 1:nout
-        for i in 1:(options.npopulations)
-            worker_idx = next_worker(worker_assignment, procs)
-            if parallelism == :multiprocessing
-                worker_assignment[(j, i)] = worker_idx
-            end
-
-            saved_pop = load_saved_population(saved_state; out=j, pop=i)
-
-            if saved_pop !== nothing && length(saved_pop.members) == options.npop
-                saved_pop::Population{T,L}
-                ## Update losses:
-                for member in saved_pop.members
-                    score, result_loss = score_func(datasets[j], member, options)
-                    member.score = score
-                    member.loss = result_loss
-                end
-                copy_pop = copy_population(saved_pop)
-                new_pop = @sr_spawner parallelism worker_idx (
-                    copy_pop, HallOfFame(options, T, L), RecordType(), 0.0
-                )
-            else
-                if saved_pop !== nothing
-                    @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
-                end
-                new_pop = @sr_spawner parallelism worker_idx (
-                    Population(
-                        datasets[j];
-                        npop=options.npop,
-                        nlength=3,
-                        options=options,
-                        nfeatures=datasets[j].nfeatures,
-                    ),
-                    HallOfFame(options, T, L),
-                    RecordType(),
-                    Float64(options.npop),
-                )
-                # This involves npop evaluations, on the full dataset:
-            end
-            push!(init_pops[j], new_pop)
+    for j in 1:nout, i in 1:(options.npopulations)
+        worker_idx = next_worker(worker_assignment, procs)
+        if parallelism == :multiprocessing
+            worker_assignment[(j, i)] = worker_idx
         end
+
+        saved_pop = load_saved_population(saved_state; out=j, pop=i)
+
+        if saved_pop !== nothing && length(saved_pop.members) == options.npop
+            saved_pop::Population{T,L}
+            ## Update losses:
+            for member in saved_pop.members
+                score, result_loss = score_func(datasets[j], member, options)
+                member.score = score
+                member.loss = result_loss
+            end
+            copy_pop = copy_population(saved_pop)
+            new_pop = @sr_spawner parallelism worker_idx (
+                copy_pop, HallOfFame(options, T, L), RecordType(), 0.0
+            )
+        else
+            if saved_pop !== nothing
+                @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
+            end
+            new_pop = @sr_spawner parallelism worker_idx (
+                Population(
+                    datasets[j];
+                    npop=options.npop,
+                    nlength=3,
+                    options=options,
+                    nfeatures=datasets[j].nfeatures,
+                ),
+                HallOfFame(options, T, L),
+                RecordType(),
+                Float64(options.npop),
+            )
+            # This involves npop evaluations, on the full dataset:
+        end
+        push!(init_pops[j], new_pop)
     end
     # 2. Start the cycle on every process:
-    for j in 1:nout
+    for j in 1:nout, i in 1:(options.npopulations)
         dataset = datasets[j]
         running_search_statistics = all_running_search_statistics[j]
         curmaxsize = curmaxsizes[j]
-        for i in 1:(options.npopulations)
-            @recorder record["out$(j)_pop$(i)"] = RecordType()
-            worker_idx = next_worker(worker_assignment, procs)
-            if parallelism == :multiprocessing
-                worker_assignment[(j, i)] = worker_idx
-            end
-
-            # TODO - why is this needed??
-            # Multi-threaded doesn't like to fetch within a new task:
-            c_rss = deepcopy(running_search_statistics)
-            updated_pop = @sr_spawner parallelism worker_idx let
-                in_pop = if parallelism in (:multiprocessing, :multithreading)
-                    fetch(init_pops[j][i])[1]
-                else
-                    init_pops[j][i][1]
-                end
-
-                cur_record = RecordType()
-                @recorder cur_record["out$(j)_pop$(i)"] = RecordType(
-                    "iteration0" => record_population(in_pop, options)
-                )
-                tmp_num_evals = 0.0
-                normalize_frequencies!(c_rss)
-                tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
-                    dataset,
-                    in_pop,
-                    options.ncycles_per_iteration,
-                    curmaxsize,
-                    c_rss;
-                    verbosity=options.verbosity,
-                    options=options,
-                    record=cur_record,
-                )
-                tmp_num_evals += evals_from_cycle
-                tmp_pop, evals_from_optimize = optimize_and_simplify_population(
-                    dataset, tmp_pop, options, curmaxsize, cur_record
-                )
-                tmp_num_evals += evals_from_optimize
-                if options.batching
-                    for i_member in 1:(options.maxsize + MAX_DEGREE)
-                        score, result_loss = score_func(
-                            dataset, tmp_best_seen.members[i_member], options
-                        )
-                        tmp_best_seen.members[i_member].score = score
-                        tmp_best_seen.members[i_member].loss = result_loss
-                        tmp_num_evals += 1
-                    end
-                end
-                (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
-            end
-            push!(allPops[j], updated_pop)
+        @recorder record["out$(j)_pop$(i)"] = RecordType()
+        worker_idx = next_worker(worker_assignment, procs)
+        if parallelism == :multiprocessing
+            worker_assignment[(j, i)] = worker_idx
         end
+
+        # TODO - why is this needed??
+        # Multi-threaded doesn't like to fetch within a new task:
+        c_rss = deepcopy(running_search_statistics)
+        updated_pop = @sr_spawner parallelism worker_idx let
+            in_pop = if parallelism in (:multiprocessing, :multithreading)
+                fetch(init_pops[j][i])[1]
+            else
+                init_pops[j][i][1]
+            end
+
+            cur_record = RecordType()
+            @recorder cur_record["out$(j)_pop$(i)"] = RecordType(
+                "iteration0" => record_population(in_pop, options)
+            )
+            tmp_num_evals = 0.0
+            normalize_frequencies!(c_rss)
+            tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
+                dataset,
+                in_pop,
+                options.ncycles_per_iteration,
+                curmaxsize,
+                c_rss;
+                verbosity=options.verbosity,
+                options=options,
+                record=cur_record,
+            )
+            tmp_num_evals += evals_from_cycle
+            tmp_pop, evals_from_optimize = optimize_and_simplify_population(
+                dataset, tmp_pop, options, curmaxsize, cur_record
+            )
+            tmp_num_evals += evals_from_optimize
+            if options.batching
+                for i_member in 1:(options.maxsize + MAX_DEGREE)
+                    score, result_loss = score_func(
+                        dataset, tmp_best_seen.members[i_member], options
+                    )
+                    tmp_best_seen.members[i_member].score = score
+                    tmp_best_seen.members[i_member].loss = result_loss
+                    tmp_num_evals += 1
+                end
+            end
+            (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
+        end
+        push!(allPops[j], updated_pop)
     end
 
     debug(options.verbosity > 0 || options.progress, "Started!")
@@ -753,12 +758,10 @@ function _equation_search(
     equation_speed = Float32[]
 
     if parallelism in (:multiprocessing, :multithreading)
-        for j in 1:nout
-            for i in 1:(options.npopulations)
-                # Start listening for each population to finish:
-                t = @async put!(channels[j][i], fetch(allPops[j][i]))
-                push!(tasks[j], t)
-            end
+        for j in 1:nout, i in 1:(options.npopulations)
+            # Start listening for each population to finish:
+            t = @async put!(channels[j][i], fetch(allPops[j][i]))
+            push!(tasks[j], t)
         end
     end
 

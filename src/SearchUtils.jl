@@ -282,7 +282,7 @@ end
 function load_saved_hall_of_fame(saved_state)
     hall_of_fame = saved_state[2]
     hall_of_fame = if isa(hall_of_fame, HallOfFame)
-        [hall_of_fame]
+        (hall_of_fame,)
     else
         hall_of_fame
     end
@@ -310,9 +310,17 @@ end
 load_saved_population(::Nothing; kws...) = nothing
 
 function construct_datasets(
-    X, y, weights, variable_names, y_variable_names, X_units, y_units, loss_type
-)
-    nout = size(y, 1)
+    X,
+    y,
+    weights,
+    variable_names,
+    y_variable_names,
+    X_units,
+    y_units,
+    loss_type,
+    ::Val{_nout},
+) where {_nout}
+    nout = _nout === nothing ? size(y, 1) : _nout
     return ntuple(
         j -> Dataset(
             X,
@@ -338,7 +346,7 @@ function construct_datasets(
             y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
             loss_type=loss_type,
         ),
-        nout,
+        Val(nout),
     )
 end
 
