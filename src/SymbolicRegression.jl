@@ -1079,6 +1079,6 @@ macro ignore(args...) end
 @ignore include("../test/runtests.jl")
 
 include("precompile.jl")
-do_precompilation(; mode=:precompile)
+redirect_stdio(() -> do_precompilation(; mode=:precompile); stdout=devnull, stderr=devnull)
 
 end #module SR

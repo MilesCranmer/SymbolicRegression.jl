@@ -80,7 +80,7 @@ eval(modelexpr(:MultitargetSRRegressor))
 function full_report(m::AbstractSRRegressor, fitresult)
     _, hof = fitresult.state
     # TODO: Adjust baseline loss
-    formatted = format_hall_of_fame(hof, fitresult.options, 1.0)
+    formatted = format_hall_of_fame(hof, fitresult.options)
     equation_strings = get_equation_strings_for(
         m, formatted.trees, fitresult.options, fitresult.variable_names
     )

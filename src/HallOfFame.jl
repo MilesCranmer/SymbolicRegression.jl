@@ -174,13 +174,11 @@ function string_dominating_pareto_curve(
     return output
 end
 
-function format_hall_of_fame(
-    hof::HallOfFame{T,L}, options, baseline_loss::L
-) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     ZERO_POINT = L(1e-10)
 
     dominating = calculate_pareto_frontier(hof)
-    cur_loss = baseline_loss
+    cur_loss = typemax(L)
     last_loss = cur_loss
     last_complexity = 0
 
@@ -201,8 +199,8 @@ function format_hall_of_fame(
     end
     return (; trees=trees, scores=scores, losses=losses, complexities=complexities)
 end
-function format_hall_of_fame(hof, options, baseline_loss)
-    outs = [format_hall_of_fame(h, options, baseline_loss) for h in hof]
+function format_hall_of_fame(hof::Union{Tuple,AbstractVector}, options)
+    outs = [format_hall_of_fame(h, options) for h in hof]
     return (;
         trees=[out.trees for out in outs],
         scores=[out.scores for out in outs],
