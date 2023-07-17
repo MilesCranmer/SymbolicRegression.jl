@@ -119,9 +119,12 @@ import DynamicExpressions:
     LogCoshLoss
 
 # https://discourse.julialang.org/t/how-to-find-out-the-version-of-a-package-from-its-module/37755/15
-const PACKAGE_VERSION = let
-    project = parsefile(joinpath(pkgdir(@__MODULE__), "Project.toml"))
-    VersionNumber(project["version"])
+const PACKAGE_VERSION = try
+    let project = parsefile(joinpath(pkgdir(@__MODULE__), "Project.toml"))
+        VersionNumber(project["version"])
+    end
+catch
+    VersionNumber(0, 0, 0)
 end
 
 function deprecate_varmap(variable_names, varMap, func_name)

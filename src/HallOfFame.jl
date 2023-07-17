@@ -201,9 +201,7 @@ function format_hall_of_fame(
     end
     return (; trees=trees, scores=scores, losses=losses, complexities=complexities)
 end
-function format_hall_of_fame(
-    hof::AH, options, baseline_loss
-) where {T,L,H<:HallOfFame{T,L},AH<:AbstractVector{H}}
+function format_hall_of_fame(hof, options, baseline_loss)
     outs = [format_hall_of_fame(h, options, baseline_loss) for h in hof]
     return (;
         trees=[out.trees for out in outs],

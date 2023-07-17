@@ -239,7 +239,7 @@ function update_progress_bar!(
 end
 
 function print_search_state(
-    hall_of_fames::Vector{H},
+    hall_of_fames,
     datasets;
     options::Options,
     equation_speed::Vector{Float32},
@@ -248,7 +248,7 @@ function print_search_state(
     head_node_occupation::Float64,
     parallelism=:serial,
     width::Union{Integer,Nothing}=nothing,
-) where {T,L,H<:HallOfFame{T,L}}
+)
     twidth = (width === nothing) ? 100 : max(100, width::Integer)
     nout = length(datasets)
     average_speed = sum(equation_speed) / length(equation_speed)
