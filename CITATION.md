@@ -1,6 +1,6 @@
 # Citing
 
-To cite PySR or SymbolicRegression.jl, please use the following BibTeX entry:
+To cite SymbolicRegression.jl or PySR, please use the following BibTeX entry:
 
 ```bibtex
 @misc{cranmerInterpretableMachineLearning2023,
