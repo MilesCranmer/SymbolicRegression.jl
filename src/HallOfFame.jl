@@ -174,7 +174,9 @@ function string_dominating_pareto_curve(
     return output
 end
 
-function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+function format_hall_of_fame(
+    hof::HallOfFame{T,L}, options
+) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     ZERO_POINT = L(1e-10)
 
     dominating = calculate_pareto_frontier(hof)
