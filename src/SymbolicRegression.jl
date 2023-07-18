@@ -335,11 +335,11 @@ function equation_search(
     loss_type::Type{Linit}=Nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
-    v_nout::Val{nout}=Val(nothing),
+    v_dim_out::Val{dim_out}=Val(nothing),
     # Deprecated:
     multithreaded=nothing,
     varMap=nothing,
-) where {T<:DATA_TYPE,Linit,nout}
+) where {T<:DATA_TYPE,Linit,dim_out}
     if multithreaded !== nothing
         error(
             "`multithreaded` is deprecated. Use the `parallelism` argument instead. " *
@@ -357,15 +357,7 @@ function equation_search(
     end
 
     datasets = construct_datasets(
-        X,
-        y,
-        weights,
-        variable_names,
-        y_variable_names,
-        X_units,
-        y_units,
-        loss_type,
-        Val(nout),
+        X, y, weights, variable_names, y_variable_names, X_units, y_units, loss_type
     )
 
     return equation_search(
@@ -379,7 +371,7 @@ function equation_search(
         runtests=runtests,
         saved_state=saved_state,
         return_state=return_state,
-        v_nout=Val(nout),
+        v_dim_out=Val(dim_out),
     )
 end
 
@@ -395,7 +387,7 @@ end
 function equation_search(
     X::AbstractMatrix{T1}, y::AbstractVector{T2}; kw...
 ) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
-    return equation_search(X, reshape(y, (1, size(y, 1))); kw..., v_nout=Val(1))
+    return equation_search(X, reshape(y, (1, size(y, 1))); kw..., v_dim_out=Val(1))
 end
 
 function equation_search(dataset::Dataset; kws...)
@@ -403,13 +395,7 @@ function equation_search(dataset::Dataset; kws...)
 end
 
 function equation_search(
-    datasets::Vector{D}; kws...
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
-    return equation_search(Tuple(datasets); kws...)
-end
-
-function equation_search(
-    datasets::Tuple;
+    datasets::Vector{D};
     niterations::Int=10,
     options::Options=Options(),
     parallelism=:multithreading,
@@ -419,8 +405,8 @@ function equation_search(
     runtests::Bool=true,
     saved_state=nothing,
     return_state::Union{Bool,Nothing}=nothing,
-    v_nout::Val{nout}=Val(nothing),
-) where {nout}
+    v_dim_out::Val{dim_out}=Val(nothing),
+) where {dim_out,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
     v_concurrency, concurrency = if parallelism in (:multithreading, "multithreading")
         (Val(:multithreading), :multithreading)
     elseif parallelism in (:multiprocessing, "multiprocessing")
@@ -455,19 +441,16 @@ function equation_search(
         options.return_state
     end
 
-    _v_nout = nout === nothing ? Val(length(datasets)) : Val(nout)
-    T = eltype(first(datasets).X)
-    L = typeof(first(datasets).baseline_loss)
-    for d in datasets
-        d::Dataset{T,L}
+    _v_dim_out = if dim_out === nothing
+        length(datasets) > 1 ? Val(2) : Val(1)
+    else
+        Val(dim_out)
     end
 
     # TODO: Should we pass a tuple of datasets instead?
     return _equation_search(
         v_concurrency,
-        _v_nout,
-        T,
-        L,
+        _v_dim_out,
         datasets,
         niterations,
         options,
@@ -482,10 +465,8 @@ end
 
 function _equation_search(
     ::Val{parallelism},
-    ::Val{nout},
-    ::Type{T},
-    ::Type{L},
-    datasets::Tuple,
+    ::Val{dim_out},
+    datasets::Vector{D},
     niterations::Int,
     options::Options,
     numprocs::Union{Int,Nothing},
@@ -494,7 +475,7 @@ function _equation_search(
     runtests::Bool,
     saved_state,
     ::Val{should_return_state},
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,parallelism,should_return_state,nout}
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},parallelism,should_return_state,dim_out}
     if options.deterministic
         if parallelism != :serial
             error("Determinism is only guaranteed for serial mode.")
@@ -530,6 +511,8 @@ function _equation_search(
     end
 
     example_dataset = datasets[1]
+    nout = size(datasets, 1)
+    @assert (nout == 1 || dim_out == 2)
 
     if runtests
         test_option_configuration(T, options)
@@ -554,14 +537,14 @@ function _equation_search(
         Task
     end
 
-    allPops = ntuple(_ -> allPopsType[], Val(nout))
-    init_pops = ntuple(_ -> allPopsType[], Val(nout))
-    tasks = ntuple(_ -> Task[], Val(nout))
+    allPops = [allPopsType[] for j in 1:nout]
+    init_pops = [allPopsType[] for j in 1:nout]
+    tasks = [Task[] for j in 1:nout]
     # Set up a channel to send finished populations back to head node
     channels = if parallelism == :multiprocessing
-        ntuple(_ -> [RemoteChannel(1) for i in 1:(options.npopulations)], Val(nout))
+        [[RemoteChannel(1) for i in 1:(options.npopulations)] for j in 1:nout]
     else
-        ntuple(_ -> [Channel(1) for i in 1:(options.npopulations)], Val(nout))
+        [[Channel(1) for i in 1:(options.npopulations)] for j in 1:nout]
         # (Unused for :serial)
     end
 
@@ -574,9 +557,9 @@ function _equation_search(
     actualMaxsize = options.maxsize + MAX_DEGREE
 
     # TODO: Should really be one per population too.
-    all_running_search_statistics = ntuple(
-        _ -> RunningSearchStatistics(; options=options), Val(nout)
-    )
+    all_running_search_statistics = [
+        RunningSearchStatistics(; options=options) for j in 1:nout
+    ]
 
     record = RecordType("options" => "$(options)")
 
@@ -588,7 +571,7 @@ function _equation_search(
 
     # Records the number of evaluations:
     # Real numbers indicate use of batching.
-    num_evals = ntuple(_ -> [0.0 for i in 1:(options.npopulations)], Val(nout))
+    num_evals = [[0.0 for i in 1:(options.npopulations)] for j in 1:nout]
 
     we_created_procs = false
     ##########################################################################
@@ -628,7 +611,7 @@ function _equation_search(
 
     hallOfFame = load_saved_hall_of_fame(saved_state)
     hallOfFame = if hallOfFame === nothing
-        ntuple(_ -> HallOfFame(options, T, L), Val(nout))
+        [HallOfFame(options, T, L) for j in 1:nout]
     else
         # Recompute losses for the hall of fame, in
         # case the dataset changed:
@@ -642,7 +625,7 @@ function _equation_search(
         hallOfFame
     end
     @assert length(hallOfFame) == nout
-    foreach(hof -> hof::HallOfFame{T,L}, hallOfFame)
+    hallOfFame::Vector{HallOfFame{T,L}}
 
     for j in 1:nout, i in 1:(options.npopulations)
         worker_idx = next_worker(worker_assignment, procs)
@@ -1059,9 +1042,9 @@ function _equation_search(
     end
 
     if should_return_state
-        return (returnPops, (nout == 1 ? only(hallOfFame) : hallOfFame))
+        return (returnPops, (dim_out == 1 ? only(hallOfFame) : hallOfFame))
     else
-        return (nout == 1 ? only(hallOfFame) : hallOfFame)
+        return (dim_out == 1 ? only(hallOfFame) : hallOfFame)
     end
 end
 

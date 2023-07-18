@@ -46,16 +46,12 @@ macro sr_spawner(parallel, p, expr)
 end
 
 function init_dummy_pops(
-    npops::Int, datasets::NTuple{nout,D}, options::Options
-) where {nout,T,L,D<:Dataset{T,L}}
-    return ntuple(
-        j -> [
-            Population(
-                datasets[j]; npop=1, options=options, nfeatures=datasets[j].nfeatures
-            ) for i in 1:npops
-        ],
-        Val(nout),
-    )
+    npops::Int, datasets::Vector{D}, options::Options
+) where {T,L,D<:Dataset{T,L}}
+    return [
+        [Population(d; npop=1, options=options, nfeatures=d.nfeatures) for i in 1:npops] for
+        d in datasets
+    ]
 end
 
 struct StdinReader{ST}
@@ -282,25 +278,22 @@ end
 function load_saved_hall_of_fame(saved_state)
     hall_of_fame = saved_state[2]
     hall_of_fame = if isa(hall_of_fame, HallOfFame)
-        (hall_of_fame,)
+        [hall_of_fame]
     else
         hall_of_fame
     end
-    return ntuple(i -> copy_hall_of_fame(hall_of_fame[i]), length(hall_of_fame))
+    return [copy_hall_of_fame(hof) for hof in hall_of_fame]
 end
 load_saved_hall_of_fame(::Nothing)::Nothing = nothing
 
 function get_population(
-    pops::Tuple{VP,Vararg{VP}}; out::Int, pop::Int
-) where {T,L,P<:Population{T,L},VP<:Vector{P}}
+    pops::Vector{Vector{Population{T,L}}}; out::Int, pop::Int
+)::Population{T,L} where {T,L}
     return pops[out][pop]
 end
 function get_population(
-    pops::Vector{VP}; out::Int, pop::Int
-) where {T,L,P<:Population{T,L},VP<:Vector{P}}
-    return pops[out][pop]
-end
-function get_population(pops::Matrix{P}; out::Int, pop::Int) where {T,L,P<:Population{T,L}}
+    pops::Matrix{Population{T,L}}; out::Int, pop::Int
+)::Population{T,L} where {T,L}
     return pops[out, pop]
 end
 function load_saved_population(saved_state; out::Int, pop::Int)
@@ -310,19 +303,11 @@ end
 load_saved_population(::Nothing; kws...) = nothing
 
 function construct_datasets(
-    X,
-    y,
-    weights,
-    variable_names,
-    y_variable_names,
-    X_units,
-    y_units,
-    loss_type,
-    ::Val{_nout},
-) where {_nout}
-    nout = _nout === nothing ? size(y, 1) : _nout
-    return ntuple(
-        j -> Dataset(
+    X, y, weights, variable_names, y_variable_names, X_units, y_units, loss_type
+)
+    nout = size(y, 1)
+    return [
+        Dataset(
             X,
             y[j, :];
             weights=(weights === nothing ? weights : weights[j, :]),
@@ -345,9 +330,8 @@ function construct_datasets(
             X_units=X_units,
             y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
             loss_type=loss_type,
-        ),
-        Val(nout),
-    )
+        ) for j in 1:nout
+    ]
 end
 
 end
