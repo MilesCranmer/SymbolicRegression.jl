@@ -93,12 +93,12 @@ Base.@propagate_inbounds function Base.setindex!(v::MutableTuple, x, i::Int)
     GC.@preserve v unsafe_store!(Base.unsafe_convert(Ptr{T}, pointer_from_objref(v)), x, i)
     return x
 end
-Base.size(::MutableTuple{S}) where {S} = S
-_lastindex(::MutableTuple{S}) where {S} = S
-_firstindex(v::MutableTuple) = 1
+@inline Base.lastindex(::MutableTuple{S}) where {S} = S
+@inline Base.firstindex(v::MutableTuple) = 1
+Base.dataids(v::MutableTuple) = (UInt(pointer(v)),)
 function _to_vec(v::MutableTuple{S,T}) where {S,T}
     x = Vector{T}(undef, S)
-    @inbounds for i in Base.OneTo(S)
+    @inbounds for i in 1:S
         x[i] = v[i]
     end
     return x
@@ -125,7 +125,7 @@ function _bottomk!(x, minval, indmin)
         if new_min
             minval[end] = x[i]
             indmin[end] = i
-            for ki in _lastindex(minval):-1:(_firstindex(minval) + 1)
+            for ki in lastindex(minval):-1:(firstindex(minval) + 1)
                 need_swap = minval[ki] < minval[ki - 1]
                 if need_swap
                     minval[ki], minval[ki - 1] = minval[ki - 1], minval[ki]

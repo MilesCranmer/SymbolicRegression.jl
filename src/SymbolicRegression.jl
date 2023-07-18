@@ -391,7 +391,7 @@ function equation_search(
 end
 
 function equation_search(dataset::Dataset; kws...)
-    return equation_search([dataset]; kws..., v_nout=Val(1))
+    return equation_search([dataset]; kws..., v_dim_out=Val(1))
 end
 
 function equation_search(
