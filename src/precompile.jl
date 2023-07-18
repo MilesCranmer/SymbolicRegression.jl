@@ -32,26 +32,20 @@ macro maybe_compile_workload(mode, ex)
 end
 
 """`mode=:precompile` will use `@precompile_*` directives; `mode=:compile` runs."""
-function do_precompilation(; mode=:precompile)
-    # 0 => nothing added (for no precompilation; like Conda PySR)
-    # 1 => add Float32, low-level interface (for use in regular PySR)
-    # 2 => above, plus Float64 (for use from Julia)
-    precompilation_level = parse(Int, get(ENV, "SR_PRECOMPILATION_LEVEL", "2"))
-
-    return precompilation_level >= 1 && @maybe_setup_workload mode begin
-        types = precompilation_level >= 2 ? [Float32] : [Float32, Float64]
-        all_nout = 1
-        for T in types, nout in all_nout
-            N = 2
-            X = randn(T, 5, N)
-            y = nout == 1 ? randn(T, N) : randn(T, nout, N)
+function do_precompilation(::Val{mode}) where {mode}
+    @maybe_setup_workload mode begin
+        for T in [Float32, Float64], nout in [1]
+            start = nout == 1
+            N = 30
+            X = randn(T, 3, N)
+            y = start ? randn(T, N) : randn(T, nout, N)
             @maybe_compile_workload mode begin
                 options = SymbolicRegression.Options(;
                     binary_operators=[+, *, /, -, ^],
                     unary_operators=[sin, cos, exp, log, sqrt, abs],
-                    npopulations=nout == 1 ? 3 : 1,
-                    npop=nout == 1 ? 50 : 12,
-                    ncycles_per_iteration=nout == 1 ? 100 : 1,
+                    npopulations=3,
+                    npop=start ? 50 : 12,
+                    ncycles_per_iteration=start ? 30 : 1,
                     mutation_weights=MutationWeights(;
                         mutate_constant=1.0,
                         mutate_operator=1.0,
@@ -72,13 +66,23 @@ function do_precompilation(; mode=:precompile)
                 state = equation_search(
                     X,
                     y;
-                    niterations=3,
+                    niterations=start ? 3 : 1,
                     options=options,
                     parallelism=:multithreading,
                     return_state=true,
                 )
-                nout == 1 && calculate_pareto_frontier(state[2])
+                hof = equation_search(
+                    X,
+                    y;
+                    niterations=0,
+                    options=options,
+                    parallelism=:multithreading,
+                    saved_state=state,
+                    return_state=false,
+                )
+                nout == 1 && calculate_pareto_frontier(hof)
             end
         end
     end
+    return nothing
 end

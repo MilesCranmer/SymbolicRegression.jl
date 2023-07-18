@@ -1081,7 +1081,7 @@ macro ignore(args...) end
 include("precompile.jl")
 redirect_stdout(devnull) do
     redirect_stderr(devnull) do
-        do_precompilation(; mode=:precompile)
+        do_precompilation(Val(:precompile))
     end
 end
 
