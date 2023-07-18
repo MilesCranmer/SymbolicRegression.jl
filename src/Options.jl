@@ -557,7 +557,7 @@ function Options end
         complexity_of_variables !== nothing ||
         complexity_of_operators !== nothing
     )
-    if use_complexity_mapping
+    complexity_mapping = if use_complexity_mapping
         if complexity_of_operators === nothing
             complexity_of_operators = Dict()
         else
@@ -589,14 +589,14 @@ function Options end
             (complexity_of_constants !== nothing) ? complexity_of_constants : 1
         )
 
-        complexity_mapping = ComplexityMapping(;
+        ComplexityMapping(;
             binop_complexities=binop_complexities,
             unaop_complexities=unaop_complexities,
             variable_complexity=variable_complexity,
             constant_complexity=constant_complexity,
         )
     else
-        complexity_mapping = ComplexityMapping(false)
+        ComplexityMapping(false)
     end
     # Finish defining complexities
 
