@@ -35,7 +35,7 @@ end
 function do_precompilation(; mode=:precompile)
     # 0 => nothing added (for no precompilation; like Conda PySR)
     # 1 => add Float32, low-level interface (for use in regular PySR)
-    # 2 => above, plus Float64 and MLJ interface (for use from Julia)
+    # 2 => above, plus Float64 (for use from Julia)
     precompilation_level = parse(Int, get(ENV, "SR_PRECOMPILATION_LEVEL", "2"))
 
     return precompilation_level >= 1 && @maybe_setup_workload mode begin
@@ -45,30 +45,6 @@ function do_precompilation(; mode=:precompile)
             N = 2
             X = randn(T, 5, N)
             y = nout == 1 ? randn(T, N) : randn(T, nout, N)
-            precompilation_level >= 2 && @maybe_compile_workload mode begin
-                model = if nout == 1
-                    SRRegressor(;
-                        niterations=1,
-                        npop=12,
-                        ncycles_per_iteration=5,
-                        define_helper_functions=false,
-                        save_to_file=false,
-                        precompiling=true,
-                    )
-                else
-                    MultitargetSRRegressor(;
-                        niterations=1,
-                        npop=12,
-                        ncycles_per_iteration=5,
-                        define_helper_functions=false,
-                        save_to_file=false,
-                        precompiling=true,
-                    )
-                end
-                (fitresult, cache, report) = MMI.fit(model, 0, X', y)
-                (fitresult, cache, report) = MMI.update(model, 0, fitresult, cache, X', y)
-                MMI.predict(model, fitresult, X')
-            end
             @maybe_compile_workload mode begin
                 options = SymbolicRegression.Options(;
                     binary_operators=[+, *, /, -, ^],
