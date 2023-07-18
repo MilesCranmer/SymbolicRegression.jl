@@ -19,7 +19,7 @@ abstract type AbstractSRRegressor <: MMI.Deterministic end
 
 """Generate an `SRRegressor` struct containing all the fields in `Options`."""
 function modelexpr(model_name::Symbol)
-    struct_def = :(Base.@kwdef mutable struct $(model_name) <: AbstractSRRegressor
+    struct_def = :(Base.@kwdef mutable struct $(model_name){use_recorder} <: AbstractSRRegressor
         niterations::Int = 10
         parallelism::Symbol = :multithreading
         numprocs::Union{Int,Nothing} = nothing

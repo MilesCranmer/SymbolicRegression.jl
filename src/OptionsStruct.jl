@@ -121,7 +121,7 @@ end
 
 struct Options{
     CT,
-    recorder,
+    use_recorder,
     OPT<:Optim.Options,
     EL<:Union{SupervisedLoss,Function},
     FL<:Union{Nothing,Function},
@@ -175,7 +175,6 @@ struct Options{
     optimizer_probability::Float32
     optimizer_nrestarts::Int
     optimizer_options::OPT
-    v_recorder::Val{recorder}
     recorder_file::String
     prob_pick_first::Float32
     early_stop_condition::Union{Function,Nothing}

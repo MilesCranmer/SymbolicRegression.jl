@@ -2,7 +2,7 @@ module RecorderModule
 
 import ..CoreModule: RecordType, Options
 
-is_recording(::Options{CT,record} where {CT}) where {record} = record
+is_recording(::Options{CT,use_recorder} where {CT}) where {use_recorder} = use_recorder
 
 "Assumes that `options` holds the user options::Options"
 macro recorder(ex)

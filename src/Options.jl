@@ -372,7 +372,7 @@ function Options end
     optimizer_probability::Real=0.14,
     optimizer_iterations::Union{Nothing,Integer}=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
-    recorder::Union{Nothing,Bool}=nothing,
+    val_recorder::Val{use_recorder}=Val(false),
     recorder_file::AbstractString="pysr_recorder.json",
     early_stop_condition::Union{Function,Real,Nothing}=nothing,
     timeout_in_seconds::Union{Nothing,Real}=nothing,
@@ -386,7 +386,7 @@ function Options end
     deprecated_return_state=nothing,
     # Deprecated args:
     kws...,
-)
+) where {use_recorder}
     for k in keys(kws)
         !haskey(deprecated_options_mapping, k) && error("Unknown keyword argument: $k")
         new_key = deprecated_options_mapping[k]
@@ -634,12 +634,6 @@ function Options end
         verbosity = 0
     end
 
-    set_recorder::Bool = if recorder === nothing
-        haskey(ENV, "PYSR_RECORDER") && (ENV["PYSR_RECORDER"] == "1")
-    else
-        recorder
-    end
-
     early_stop_condition = if typeof(early_stop_condition) <: Real
         # Need to make explicit copy here for this to work:
         stopping_point = Float64(early_stop_condition)
@@ -684,7 +678,7 @@ function Options end
 
     options = Options{
         eltype(complexity_mapping),
-        set_recorder,
+        use_recorder,
         typeof(optimizer_options),
         typeof(elementwise_loss),
         typeof(loss_function),
@@ -738,7 +732,6 @@ function Options end
         optimizer_probability,
         optimizer_nrestarts,
         optimizer_options,
-        set_recorder ? Val(true) : Val(false),
         recorder_file,
         tournament_selection_p,
         early_stop_condition,
