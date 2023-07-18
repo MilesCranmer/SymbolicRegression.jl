@@ -690,8 +690,6 @@ function Options end
         eltype(complexity_mapping),
         typeof(operators),
         typeof(optimizer_options),
-        typeof(elementwise_loss),
-        typeof(loss_function),
         typeof(tournament_selection_weights),
     }(
         operators,

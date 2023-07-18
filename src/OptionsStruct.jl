@@ -119,14 +119,7 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{
-    CT,
-    OP<:AbstractOperatorEnum,
-    OPT<:Optim.Options,
-    EL<:Union{SupervisedLoss,Function},
-    FL<:Union{Nothing,Function},
-    W,
-}
+struct Options{CT,OP<:AbstractOperatorEnum,OPT<:Optim.Options,W}
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
@@ -169,8 +162,8 @@ struct Options{
     nuna::Int
     nbin::Int
     seed::Union{Int,Nothing}
-    elementwise_loss::EL
-    loss_function::FL
+    elementwise_loss::Union{SupervisedLoss,Function}
+    loss_function::Union{Nothing,Function}
     progress::Bool
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::String
