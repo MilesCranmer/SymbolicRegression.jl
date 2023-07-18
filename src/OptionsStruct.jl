@@ -120,7 +120,12 @@ function ComplexityMapping(;
 end
 
 struct Options{
-    CT,OPT<:Optim.Options,EL<:Union{SupervisedLoss,Function},FL<:Union{Nothing,Function},W
+    CT,
+    recorder,
+    OPT<:Optim.Options,
+    EL<:Union{SupervisedLoss,Function},
+    FL<:Union{Nothing,Function},
+    W,
 }
     operators::AbstractOperatorEnum
     bin_constraints::Vector{Tuple{Int,Int}}
@@ -170,7 +175,7 @@ struct Options{
     optimizer_probability::Float32
     optimizer_nrestarts::Int
     optimizer_options::OPT
-    recorder::Bool
+    v_recorder::Val{recorder}
     recorder_file::String
     prob_pick_first::Float32
     early_stop_condition::Union{Function,Nothing}

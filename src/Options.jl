@@ -680,6 +680,7 @@ function Options end
 
     options = Options{
         eltype(complexity_mapping),
+        recorder,
         typeof(optimizer_options),
         typeof(elementwise_loss),
         typeof(loss_function),
@@ -733,7 +734,7 @@ function Options end
         optimizer_probability,
         optimizer_nrestarts,
         optimizer_options,
-        recorder,
+        recorder ? Val(true) : Val(false),
         recorder_file,
         tournament_selection_p,
         early_stop_condition,
