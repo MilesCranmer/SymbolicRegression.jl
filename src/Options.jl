@@ -634,14 +634,18 @@ function Options end
         verbosity = 0
     end
 
-    if recorder === nothing
-        recorder = haskey(ENV, "PYSR_RECORDER") && (ENV["PYSR_RECORDER"] == "1")
+    set_recorder::Bool = if recorder === nothing
+        haskey(ENV, "PYSR_RECORDER") && (ENV["PYSR_RECORDER"] == "1")
+    else
+        recorder
     end
 
-    if typeof(early_stop_condition) <: Real
+    early_stop_condition = if typeof(early_stop_condition) <: Real
         # Need to make explicit copy here for this to work:
         stopping_point = Float64(early_stop_condition)
-        early_stop_condition = (loss, complexity) -> loss < stopping_point
+        (loss, complexity) -> loss < stopping_point
+    else
+        early_stop_condition
     end
 
     # Parse optimizer options
@@ -680,7 +684,7 @@ function Options end
 
     options = Options{
         eltype(complexity_mapping),
-        recorder,
+        set_recorder,
         typeof(optimizer_options),
         typeof(elementwise_loss),
         typeof(loss_function),
@@ -734,7 +738,7 @@ function Options end
         optimizer_probability,
         optimizer_nrestarts,
         optimizer_options,
-        recorder ? Val(true) : Val(false),
+        set_recorder ? Val(true) : Val(false),
         recorder_file,
         tournament_selection_p,
         early_stop_condition,
