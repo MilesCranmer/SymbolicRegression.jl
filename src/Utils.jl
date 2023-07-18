@@ -93,13 +93,12 @@ Base.@propagate_inbounds function Base.setindex!(v::MutableTuple, x, i::Int)
     GC.@preserve v unsafe_store!(Base.unsafe_convert(Ptr{T}, pointer_from_objref(v)), x, i)
     return x
 end
-@inline Base.eachindex(::MutableTuple{S}) where {S} = Base.OneTo(S)
-@inline Base.lastindex(::MutableTuple{S}) where {S} = S
-@inline Base.firstindex(v::MutableTuple) = 1
-Base.dataids(v::MutableTuple) = (UInt(pointer(v)),)
-@inline function Base.convert(::Type{<:Vector}, v::MutableTuple{S,T}) where {S,T}
+Base.size(::MutableTuple{S}) where {S} = S
+_lastindex(::MutableTuple{S}) where {S} = S
+_firstindex(v::MutableTuple) = 1
+function _to_vec(v::MutableTuple{S,T}) where {S,T}
     x = Vector{T}(undef, S)
-    @inbounds for i in eachindex(v)
+    @inbounds for i in Base.OneTo(S)
         x[i] = v[i]
     end
     return x
@@ -118,7 +117,7 @@ function _bottomk_dispatch(x::AbstractVector{T}, ::Val{k}) where {T,k}
     indmin = MutableTuple{k,Int}(ntuple(_ -> 1, Val(k)))
     minval = MutableTuple{k,T}(ntuple(_ -> typemax(T), Val(k)))
     _bottomk!(x, minval, indmin)
-    return convert(Vector{T}, minval), convert(Vector{Int}, indmin)
+    return _to_vec(minval), _to_vec(indmin)
 end
 function _bottomk!(x, minval, indmin)
     @inbounds for i in eachindex(x)
@@ -126,7 +125,7 @@ function _bottomk!(x, minval, indmin)
         if new_min
             minval[end] = x[i]
             indmin[end] = i
-            for ki in lastindex(minval):-1:(firstindex(minval) + 1)
+            for ki in _lastindex(minval):-1:(_firstindex(minval) + 1)
                 need_swap = minval[ki] < minval[ki - 1]
                 if need_swap
                     minval[ki], minval[ki - 1] = minval[ki - 1], minval[ki]
