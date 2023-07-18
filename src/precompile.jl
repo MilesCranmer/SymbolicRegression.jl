@@ -40,7 +40,7 @@ function do_precompilation(; mode=:precompile)
 
     return precompilation_level >= 1 && @maybe_setup_workload mode begin
         types = precompilation_level >= 2 ? [Float32] : [Float32, Float64]
-        all_nout = 1:2
+        all_nout = 1
         for T in types, nout in all_nout
             N = 2
             X = randn(T, 5, N)
