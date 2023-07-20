@@ -2,13 +2,11 @@ module DatasetModule
 
 import DynamicQuantities:
     AbstractDimensions,
-    AbstractQuantity,
     Dimensions,
     SymbolicDimensions,
     Quantity,
     uparse,
     sym_uparse,
-    ustrip,
     DEFAULT_DIM_BASE_TYPE
 
 import ..UtilsModule: subscriptify
