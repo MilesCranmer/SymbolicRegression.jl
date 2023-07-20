@@ -78,8 +78,8 @@ Dataset
 Dataset(X::AbstractMatrix{T}, y::Union{AbstractVector{T},Nothing}=nothing;
         weights::Union{AbstractVector{T}, Nothing}=nothing,
         variable_names::Union{Array{String, 1}, Nothing}=nothing,
-        X_units::Union{AbstractVector{<:QuantityLike}, Nothing}=nothing,
-        y_units::Union{QuantityLike, Nothing}=nothing,
+        X_units::Union{AbstractVector, Nothing}=nothing,
+        y_units=nothing,
         extra::NamedTuple=NamedTuple(),
         loss_type::Type=Nothing,
 )

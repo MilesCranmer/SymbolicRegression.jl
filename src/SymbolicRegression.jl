@@ -167,7 +167,6 @@ import .CoreModule:
     Dataset,
     Options,
     MutationWeights,
-    QuantityLike,
     plus,
     sub,
     mult,
@@ -301,11 +300,11 @@ which is useful for debugging and profiling.
     for the loss than for the data you passed, specify the type here.
     Note that if you pass complex data `::Complex{L}`, then the loss
     type will automatically be set to `L`.
-- `X_units::Union{AbstractVector{<:QuantityLike},Nothing}=nothing`: The units of the dataset,
+- `X_units::Union{AbstractVector,Nothing}=nothing`: The units of the dataset,
     to be used for dimensional constraints. For example, if `X_units=["kg", "m"]`,
     then the first feature will have units of kilograms, and the second will
     have units of meters.
-- `y_units::Union{QuantityLike,AbstractVector{<:QuantityLike},Nothing}=nothing`:
+- `y_units=nothing`:
     The units of the output, to be used for dimensional constraints. If
     `y` is a matrix, then this can be a vector of units, in which case
     each element corresponds to each output feature.

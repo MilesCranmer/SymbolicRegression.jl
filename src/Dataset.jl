@@ -17,8 +17,6 @@ import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 import ...deprecate_varmap
 #! format: on
 
-const QuantityLike = Union{AbstractDimensions,AbstractQuantity,AbstractString,Real}
-
 """
     Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
 
@@ -90,8 +88,8 @@ end
             weights::Union{AbstractVector{T}, Nothing}=nothing,
             variable_names::Union{Array{String, 1}, Nothing}=nothing,
             y_variable_name::Union{String,Nothing}=nothing,
-            X_units::Union{AbstractVector{<:QuantityLike}, Nothing}=nothing,
-            y_units::Union{QuantityLike, Nothing}=nothing,
+            X_units::Union{AbstractVector, Nothing}=nothing,
+            y_units=nothing,
             extra::NamedTuple=NamedTuple(),
             loss_type::Type=Nothing,
     )
@@ -220,6 +218,11 @@ function Dataset(
 end
 
 # Base
+function get_units(args...)
+    return error(
+        "Unit information must be passed as one of `AbstractDimensions`, `AbstractQuantity`, `AbstractString`, `Real`.",
+    )
+end
 function get_units(_, _, ::Nothing, ::Function)
     return nothing
 end

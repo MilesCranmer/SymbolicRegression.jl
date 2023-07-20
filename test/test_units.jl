@@ -44,6 +44,10 @@ options = Options(;
         Quantity(1.5, SymbolicDimensions),
         Quantity(1.0, SymbolicDimensions),
     ]
+    # Bad unit types:
+    @test_throws ErrorException get_units(Float64, D, (; X=[1, 2]), uparse)
+
+    # Dataset creation:
     dataset = Dataset(X, y; X_units=[u"m", u"1", u"kg"], y_units=u"1")
     @test dataset.X_units == [Quantity(1.0; length=1), Quantity(1.0), Quantity(1.0; mass=1)]
     @test dataset.X_sym_units == [
