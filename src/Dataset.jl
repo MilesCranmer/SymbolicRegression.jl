@@ -86,10 +86,10 @@ end
             weights::Union{AbstractVector{T}, Nothing}=nothing,
             variable_names::Union{Array{String, 1}, Nothing}=nothing,
             y_variable_name::Union{String,Nothing}=nothing,
-            X_units::Union{AbstractVector, Nothing}=nothing,
-            y_units=nothing,
             extra::NamedTuple=NamedTuple(),
             loss_type::Type=Nothing,
+            X_units::Union{AbstractVector, Nothing}=nothing,
+            y_units=nothing,
     )
 
 Construct a dataset to pass between internal functions.
@@ -116,12 +116,12 @@ function Dataset(
     nfeatures = size(X, FEATURE_DIM)
     weighted = weights !== nothing
     (variable_names, pretty_variable_names) = if variable_names === nothing
-        ["x$(i)" for i in 1:nfeatures], ["x$(subscriptify(i))" for i in 1:nfeatures]
+        (["x$(i)" for i in 1:nfeatures], ["x$(subscriptify(i))" for i in 1:nfeatures])
     else
         (variable_names, variable_names)
     end
     y_variable_name = if y_variable_name === nothing
-        "y" ∉ variable_names ? "y" : "target"
+        ("y" ∉ variable_names) ? "y" : "target"
     else
         y_variable_name
     end
@@ -154,7 +154,6 @@ function Dataset(
     end
     X_sym_units = let _X = get_units(T, SD, X_units, sym_uparse)
         if _X === nothing && y_sym_units !== nothing
-            # Make units for X:
             get_units(T, SD, [one(T) for _ in 1:nfeatures], sym_uparse)
         else
             _X

@@ -305,9 +305,8 @@ which is useful for debugging and profiling.
     to be used for dimensional constraints. For example, if `X_units=["kg", "m"]`,
     then the first feature will have units of kilograms, and the second will
     have units of meters.
-- `y_units=nothing`:
-    The units of the output, to be used for dimensional constraints. If
-    `y` is a matrix, then this can be a vector of units, in which case
+- `y_units=nothing`: The units of the output, to be used for dimensional constraints.
+    If `y` is a matrix, then this can be a vector of units, in which case
     each element corresponds to each output feature.
 
 # Returns
@@ -349,6 +348,7 @@ function equation_search(
     variable_names = deprecate_varmap(variable_names, varMap, :equation_search)
 
     if weights !== nothing
+        @assert length(weights) == length(y)
         weights = reshape(weights, size(y))
     end
     if T <: Complex && loss_type == Nothing
@@ -431,6 +431,7 @@ function equation_search(
             "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
         )
 
+    # TODO: Still not type stable. Should be able to pass `Val{return_state}`.
     should_return_state = if options.return_state === nothing
         return_state === nothing ? false : return_state
     else
@@ -487,7 +488,7 @@ function _equation_search(
         end
     end
     if any(d -> d.X_units !== nothing || d.y_units !== nothing, datasets)
-        if options.dimensional_constraint_penalty === nothing
+        if options.dimensional_constraint_penalty === nothing && saved_state === nothing
             @warn "You are using dimensional constraints, but `dimensional_constraint_penalty` was not set. The default penalty of `1000.0` will be used."
         end
     end

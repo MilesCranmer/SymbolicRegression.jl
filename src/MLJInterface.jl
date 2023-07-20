@@ -3,8 +3,13 @@ module MLJInterfaceModule
 using Optim: Optim
 import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
-import DynamicQuantities as DQ
-import DynamicQuantities: AbstractDimensions, DEFAULT_DIM_BASE_TYPE, ustrip, dimension
+import DynamicQuantities:
+    AbstractDimensions,
+    SymbolicDimensions,
+    Quantity,
+    DEFAULT_DIM_BASE_TYPE,
+    ustrip,
+    dimension
 import LossFunctions: SupervisedLoss
 import Compat: allequal, stack
 import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
@@ -33,7 +38,7 @@ function modelexpr(model_name::Symbol)
         runtests::Bool = true
         loss_type::L = Nothing
         selection_method::F = choose_best
-        dimensions_type::Type{D} = DQ.SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
+        dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
         precompiling::Bool = false
     end)
     # TODO: store `procs` from initial run if parallelism is `:multiprocessing`
@@ -239,11 +244,11 @@ end
 
 # TODO: Test whether this conversion poses any issues in data normalization...
 function dimension_fallback(
-    q::Union{<:DQ.Quantity{T,<:AbstractDimensions}}, ::Type{D}
+    q::Union{<:Quantity{T,<:AbstractDimensions}}, ::Type{D}
 ) where {T,D}
-    return DQ.dimension(convert(DQ.Quantity{T,D}, q))::D
+    return dimension(convert(Quantity{T,D}, q))::D
 end
-dimension_fallback(q::Union{<:DQ.Quantity{T,D}}, ::Type{D}) where {T,D} = DQ.dimension(q)::D
+dimension_fallback(q::Union{<:Quantity{T,D}}, ::Type{D}) where {T,D} = dimension(q)::D
 dimension_fallback(_, ::Type{D}) where {D} = D()
 
 function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
@@ -253,12 +258,12 @@ function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
             error("Inconsistent units in feature $i of matrix.")
     end
     dims = map(Base.Fix2(dimension_fallback, D) ∘ first, eachrow(A))
-    return stack([DQ.ustrip.(row) for row in eachrow(A)]; dims=1), dims
+    return stack([ustrip.(row) for row in eachrow(A)]; dims=1), dims
 end
 function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
     allequal(Base.Fix2(dimension_fallback, D).(v)) || error("Inconsistent units in vector.")
     dims = dimension_fallback(first(v), D)
-    v = DQ.ustrip(v)
+    v = ustrip(v)
     return v, dims
 end
 
@@ -473,10 +478,12 @@ eval(
 
     - `X` is any table of input features (eg, a `DataFrame`) whose columns are of scitype
       `Continuous`; check column scitypes with `schema(X)`. Variable names in discovered
-      expressions will be taken from the column names of `X`, if available.
+      expressions will be taken from the column names of `X`, if available. Units in columns
+      of `X` (use `DynamicQuantities` for units) will trigger dimensional analysis to be used.
 
     - `y` is the target, which can be any `AbstractVector` whose element scitype is
-        `Continuous`; check the scitype with `scitype(y)`.
+        `Continuous`; check the scitype with `scitype(y)`. Units in `y` (use `DynamicQuantities`
+        for units) will trigger dimensional analysis to be used.
 
     - `w` is the observation weights which can either be `nothing` (default) or an 
       `AbstractVector` whoose element scitype is `Count` or `Continuous`.
@@ -543,6 +550,24 @@ eval(
     println("Equation used:", r.equation_strings[r.best_idx])
     ```
 
+    With units and variable names:
+
+    ```julia
+    using MLJ
+    using DynamicQuantities
+    SRegressor = @load SRRegressor pkg=SymbolicRegression
+
+    X = (; x1=rand(32) .* us"km/h", x2=rand(32) .* us"km")
+    y = @. X.x2 / X.x1 + 0.5us"h"
+    model = SRRegressor(binary_operators=[+, -, *, /])
+    mach = machine(model, X, y)
+    fit!(mach)
+    y_hat = predict(mach, X)
+    # View the equation used:
+    r = report(mach)
+    println("Equation used:", r.equation_strings[r.best_idx])
+    ```
+
     See also [`MultitargetSRRegressor`](@ref).
     """,
             r"^    " => "",
@@ -574,10 +599,12 @@ eval(
 
     - `X` is any table of input features (eg, a `DataFrame`) whose columns are of scitype
     `Continuous`; check column scitypes with `schema(X)`. Variable names in discovered
-    expressions will be taken from the column names of `X`, if available.
+    expressions will be taken from the column names of `X`, if available. Units in columns
+    of `X` (use `DynamicQuantities` for units) will trigger dimensional analysis to be used.
 
     - `y` is the target, which can be any table of target variables whose element
-      scitype is `Continuous`; check the scitype with `schema(y)`.
+      scitype is `Continuous`; check the scitype with `schema(y)`. Units in columns of
+      `y` (use `DynamicQuantities` for units) will trigger dimensional analysis to be used.
 
     - `w` is the observation weights which can either be `nothing` (default) or an 
       `AbstractVector` whoose element scitype is `Count` or `Continuous`. The same

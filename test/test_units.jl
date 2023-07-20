@@ -215,6 +215,13 @@ end
         report = MLJ.report(mach)
         @test minimum(report.losses[1]) < 1e-7
         @test minimum(report.losses[2]) < 1e-7
+
+        # Repeat with second run:
+        mach.model.niterations = 0
+        MLJ.fit!(mach)
+        report = MLJ.report(mach)
+        @test minimum(report.losses[1]) < 1e-7
+        @test minimum(report.losses[2]) < 1e-7
     end
 end
 

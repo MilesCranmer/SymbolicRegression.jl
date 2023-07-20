@@ -1,9 +1,8 @@
 module DimensionalAnalysisModule
 
 import DynamicExpressions: Node
-import DynamicQuantities: Quantity, DimensionError
-import DynamicQuantities: AbstractQuantity
-import DynamicQuantities: dimension, ustrip, uparse
+import DynamicQuantities:
+    Quantity, DimensionError, AbstractQuantity, dimension, ustrip, uparse
 import Tricks: static_hasmethod
 
 import ..CoreModule: Options, Dataset

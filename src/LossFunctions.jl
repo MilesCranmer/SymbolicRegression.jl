@@ -225,8 +225,7 @@ function dimensional_regularization(
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if !violates_dimensional_constraints(tree, dataset, options)
         return zero(L)
-    end
-    if options.dimensional_constraint_penalty === nothing
+    elseif options.dimensional_constraint_penalty === nothing
         return L(1000)
     else
         return L(options.dimensional_constraint_penalty::Float32)
