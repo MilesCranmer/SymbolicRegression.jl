@@ -219,4 +219,6 @@ function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
     end
 end
 
+json3_write(args...) = error("Please load the JSON3.jl package.")
+
 end

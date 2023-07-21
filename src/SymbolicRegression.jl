@@ -64,7 +64,6 @@ export Population,
     atanh_clip
 
 using Distributed
-using JSON3: JSON3
 import Printf: @printf, @sprintf
 import Requires: @init, @require
 using Pkg: Pkg
@@ -192,7 +191,8 @@ import .CoreModule:
     erf,
     erfc,
     atanh_clip
-import .UtilsModule: debug, debug_inline, is_anonymous_function, recursive_merge
+import .UtilsModule:
+    debug, debug_inline, is_anonymous_function, recursive_merge, json3_write
 import .ComplexityModule: compute_complexity
 import .CheckConstraintsModule: check_constraints
 import .AdaptiveParsimonyModule:
@@ -1035,11 +1035,7 @@ function _equation_search(
     ### Distributed code^
     ##########################################################################
 
-    @recorder begin
-        open(options.recorder_file, "w") do io
-            JSON3.write(io, record; allow_inf=true)
-        end
-    end
+    @recorder json3_write(record, options.recorder_file)
 
     if should_return_state
         return (returnPops, (dim_out == 1 ? only(hallOfFame) : hallOfFame))
@@ -1054,6 +1050,7 @@ import .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
 #! format: off
 if !isdefined(Base, :get_extension)
     @init @require SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b" include("../ext/SymbolicRegressionSymbolicUtilsExt.jl")
+    @init @require JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1" include("../ext/SymbolicRegressionJSON3Ext.jl")
 end
 #! format: on
 
