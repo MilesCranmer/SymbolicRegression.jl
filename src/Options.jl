@@ -378,7 +378,7 @@ function Options end
     optimizer_probability::Real=0.14,
     optimizer_iterations::Union{Nothing,Integer}=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
-    recorder::Union{Nothing,Bool}=nothing,
+    val_recorder::Val{use_recorder}=Val(false),
     recorder_file::AbstractString="pysr_recorder.json",
     early_stop_condition::Union{Function,Real,Nothing}=nothing,
     timeout_in_seconds::Union{Nothing,Real}=nothing,
@@ -392,7 +392,7 @@ function Options end
     deprecated_return_state=nothing,
     # Deprecated args:
     kws...,
-)
+) where {use_recorder}
     for k in keys(kws)
         !haskey(deprecated_options_mapping, k) && error("Unknown keyword argument: $k")
         new_key = deprecated_options_mapping[k]
@@ -563,7 +563,7 @@ function Options end
         complexity_of_variables !== nothing ||
         complexity_of_operators !== nothing
     )
-    if use_complexity_mapping
+    complexity_mapping = if use_complexity_mapping
         if complexity_of_operators === nothing
             complexity_of_operators = Dict()
         else
@@ -573,8 +573,16 @@ function Options end
 
         # Get consistent type:
         promoted_type = promote_type(
-            (complexity_of_variables !== nothing) ? typeof(complexity_of_variables) : Int,
-            (complexity_of_constants !== nothing) ? typeof(complexity_of_constants) : Int,
+            if (complexity_of_variables !== nothing)
+                typeof(complexity_of_variables)
+            else
+                Int
+            end,
+            if (complexity_of_constants !== nothing)
+                typeof(complexity_of_constants)
+            else
+                Int
+            end,
             (x -> typeof(x)).(values(complexity_of_operators))...,
         )
 
@@ -595,14 +603,14 @@ function Options end
             (complexity_of_constants !== nothing) ? complexity_of_constants : 1
         )
 
-        complexity_mapping = ComplexityMapping(;
+        ComplexityMapping(;
             binop_complexities=binop_complexities,
             unaop_complexities=unaop_complexities,
             variable_complexity=variable_complexity,
             constant_complexity=constant_complexity,
         )
     else
-        complexity_mapping = ComplexityMapping(false)
+        ComplexityMapping(false)
     end
     # Finish defining complexities
 
@@ -640,14 +648,12 @@ function Options end
         verbosity = 0
     end
 
-    if recorder === nothing
-        recorder = haskey(ENV, "PYSR_RECORDER") && (ENV["PYSR_RECORDER"] == "1")
-    end
-
-    if typeof(early_stop_condition) <: Real
+    early_stop_condition = if typeof(early_stop_condition) <: Real
         # Need to make explicit copy here for this to work:
         stopping_point = Float64(early_stop_condition)
-        early_stop_condition = (loss, complexity) -> loss < stopping_point
+        (loss, complexity) -> loss < stopping_point
+    else
+        early_stop_condition
     end
 
     # Parse optimizer options
@@ -689,6 +695,7 @@ function Options end
     options = Options{
         eltype(complexity_mapping),
         typeof(operators),
+        use_recorder,
         typeof(optimizer_options),
         typeof(tournament_selection_weights),
     }(
@@ -742,7 +749,6 @@ function Options end
         optimizer_probability,
         optimizer_nrestarts,
         optimizer_options,
-        recorder,
         recorder_file,
         tournament_selection_p,
         early_stop_condition,

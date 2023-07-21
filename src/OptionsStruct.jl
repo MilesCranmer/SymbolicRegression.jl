@@ -119,7 +119,7 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{CT,OP<:AbstractOperatorEnum,OPT<:Optim.Options,W}
+struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
@@ -170,7 +170,6 @@ struct Options{CT,OP<:AbstractOperatorEnum,OPT<:Optim.Options,W}
     optimizer_probability::Float32
     optimizer_nrestarts::Int
     optimizer_options::OPT
-    recorder::Bool
     recorder_file::String
     prob_pick_first::Float32
     early_stop_condition::Union{Function,Nothing}
