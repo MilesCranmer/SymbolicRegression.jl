@@ -78,10 +78,11 @@ Dataset
 Dataset(X::AbstractMatrix{T}, y::Union{AbstractVector{T},Nothing}=nothing;
         weights::Union{AbstractVector{T}, Nothing}=nothing,
         variable_names::Union{Array{String, 1}, Nothing}=nothing,
-        X_units::Union{AbstractVector, Nothing}=nothing,
-        y_units=nothing,
+        y_variable_name::Union{String,Nothing}=nothing,
         extra::NamedTuple=NamedTuple(),
         loss_type::Type=Nothing,
-)
+        X_units::Union{AbstractVector, Nothing}=nothing,
+        y_units=nothing,
+) where {T<:DATA_TYPE}
 update_baseline_loss!
 ```
