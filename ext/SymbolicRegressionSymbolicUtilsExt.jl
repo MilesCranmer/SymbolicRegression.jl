@@ -38,7 +38,9 @@ end
 function Base.convert(::Type{Node}, x::Union{Number,Symbolic}, options::Options; kws...)
     return convert(Node, x, options.operators; kws...)
 end
-function Base.convert(::Type{Node}, x::Union{Number,Symbolic}, m::AbstractSRRegressor; kws...)
+function Base.convert(
+    ::Type{Node}, x::Union{Number,Symbolic}, m::AbstractSRRegressor; kws...
+)
     return convert(Node, x, get_options(m); kws...)
 end
 
