@@ -10,50 +10,22 @@ import ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 import ..DimensionalAnalysisModule: violates_dimensional_constraints
 
-const OLD_LOSS_FUNCTIONS = hasproperty(LossFunctions, :value)
-const GENERAL_LOSS_TYPE = OLD_LOSS_FUNCTIONS ? Function : Union{Function,SupervisedLoss}
-
-if OLD_LOSS_FUNCTIONS
-    @eval begin
-        import LossFunctions: value, AggMode
-        #! format: off
-        function _loss(
-            x::AbstractArray{T},
-            y::AbstractArray{T},
-            loss::SupervisedLoss
-        ) where {T<:DATA_TYPE}
-            return value(loss, y, x, AggMode.Mean())
-        end
-        function _weighted_loss(
-            x::AbstractArray{T},
-            y::AbstractArray{T},
-            w::AbstractArray{T},
-            loss::SupervisedLoss,
-        ) where {T<:DATA_TYPE}
-            return value(loss, y, x, AggMode.WeightedMean(w))
-        end
-        #! format: on
-    end
-else
-    @eval import LossFunctions: mean, sum
-end
-
 function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
-) where {T<:DATA_TYPE,LT<:GENERAL_LOSS_TYPE}
+) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
     if LT <: SupervisedLoss
-        return mean(loss, x, y)
+        return LossFunctions.mean(loss, x, y)
     else
         l(i) = loss(x[i], y[i])
-        return mean(l, eachindex(x))
+        return LossFunctions.mean(l, eachindex(x))
     end
 end
 
 function _weighted_loss(
     x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::LT
-) where {T<:DATA_TYPE,LT<:GENERAL_LOSS_TYPE}
+) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
     if LT <: SupervisedLoss
-        return sum(loss, x, y, w; normalize=true)
+        return LossFunctions.sum(loss, x, y, w; normalize=true)
     else
         l(i) = loss(x[i], y[i], w[i])
         return sum(l, eachindex(x)) / sum(w)
