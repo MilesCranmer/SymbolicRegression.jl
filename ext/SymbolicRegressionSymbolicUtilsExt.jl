@@ -1,7 +1,6 @@
 module SymbolicRegressionSymbolicUtilsExt
 
-import Base: convert
-using SymbolicUtils: Symbolic
+import SymbolicUtils: Symbolic
 import SymbolicRegression: node_to_symbolic, symbolic_to_node, Node, Options
 import SymbolicRegression.MLJInterfaceModule: AbstractSRRegressor, get_options
 
@@ -29,17 +28,17 @@ function symbolic_to_node(eqn::Symbolic, m::AbstractSRRegressor; kws...)
     return symbolic_to_node(eqn, get_options(m); kws...)
 end
 
-function convert(::Type{Symbolic}, tree::Node, options::Options; kws...)
+function Base.convert(::Type{Symbolic}, tree::Node, options::Options; kws...)
     return convert(Symbolic, tree, options.operators; kws...)
 end
-function convert(::Type{Symbolic}, tree::Node, m::AbstractSRRegressor; kws...)
+function Base.convert(::Type{Symbolic}, tree::Node, m::AbstractSRRegressor; kws...)
     return convert(Symbolic, tree, get_options(m); kws...)
 end
 
-function convert(::Type{Node}, x::Union{Number,Symbolic}, options::Options; kws...)
+function Base.convert(::Type{Node}, x::Union{Number,Symbolic}, options::Options; kws...)
     return convert(Node, x, options.operators; kws...)
 end
-function convert(::Type{Node}, x::Union{Number,Symbolic}, m::AbstractSRRegressor; kws...)
+function Base.convert(::Type{Node}, x::Union{Number,Symbolic}, m::AbstractSRRegressor; kws...)
     return convert(Node, x, get_options(m); kws...)
 end
 
