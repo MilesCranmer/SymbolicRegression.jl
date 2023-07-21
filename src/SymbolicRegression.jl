@@ -65,7 +65,7 @@ export Population,
 
 using Distributed
 import Printf: @printf, @sprintf
-import Requires: @init, @require
+import PackageExtensionCompat: @require_extensions
 using Pkg: Pkg
 import TOML: parsefile
 import Random: seed!, shuffle!
@@ -1047,12 +1047,9 @@ end
 include("MLJInterface.jl")
 import .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
 
-#! format: off
-if !isdefined(Base, :get_extension)
-    @init @require SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b" include("../ext/SymbolicRegressionSymbolicUtilsExt.jl")
-    @init @require JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1" include("../ext/SymbolicRegressionJSON3Ext.jl")
+function __init__()
+    @require_extensions
 end
-#! format: on
 
 macro ignore(args...) end
 # Hack to get static analysis to work from within tests:
