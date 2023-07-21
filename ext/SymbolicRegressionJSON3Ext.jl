@@ -1,4 +1,4 @@
-module SymbolicRegressionSymbolicUtilsExt
+module SymbolicRegressionJSON3Ext
 
 using JSON3: JSON3
 import SymbolicRegression.UtilsModule: json3_write
