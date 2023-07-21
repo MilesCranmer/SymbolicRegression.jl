@@ -49,6 +49,11 @@ function recursive_merge(x...)
     return x[end]
 end
 
+const subscripts = ('₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉')
+function subscriptify(number::Int)
+    return join([subscripts[i + 1] for i in reverse(digits(number))])
+end
+
 """
     split_string(s::String, n::Integer)
 
@@ -88,13 +93,12 @@ Base.@propagate_inbounds function Base.setindex!(v::MutableTuple, x, i::Int)
     GC.@preserve v unsafe_store!(Base.unsafe_convert(Ptr{T}, pointer_from_objref(v)), x, i)
     return x
 end
-@inline Base.eachindex(::MutableTuple{S}) where {S} = Base.OneTo(S)
 @inline Base.lastindex(::MutableTuple{S}) where {S} = S
 @inline Base.firstindex(v::MutableTuple) = 1
 Base.dataids(v::MutableTuple) = (UInt(pointer(v)),)
-@inline function Base.convert(::Type{<:Vector}, v::MutableTuple{S,T}) where {S,T}
+function _to_vec(v::MutableTuple{S,T}) where {S,T}
     x = Vector{T}(undef, S)
-    @inbounds for i in eachindex(v)
+    @inbounds for i in 1:S
         x[i] = v[i]
     end
     return x
@@ -113,7 +117,7 @@ function _bottomk_dispatch(x::AbstractVector{T}, ::Val{k}) where {T,k}
     indmin = MutableTuple{k,Int}(ntuple(_ -> 1, Val(k)))
     minval = MutableTuple{k,T}(ntuple(_ -> typemax(T), Val(k)))
     _bottomk!(x, minval, indmin)
-    return convert(Vector{T}, minval), convert(Vector{Int}, indmin)
+    return _to_vec(minval), _to_vec(indmin)
 end
 function _bottomk!(x, minval, indmin)
     @inbounds for i in eachindex(x)
@@ -182,6 +186,36 @@ function _save_kwargs(log_variable::Symbol, fdef::Expr)
     return quote
         $fdef
         const $log_variable = $kwargs
+    end
+end
+
+# https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
+# Faster way to catch method errors:
+@enum IsGood::Int8 begin
+    Good
+    Bad
+    Undefined
+end
+const SafeFunctions = Dict{Type,IsGood}()
+const SafeFunctionsLock = Threads.SpinLock()
+
+function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
+    status = get(SafeFunctions, Tuple{F,T}, Undefined)
+    status == Good && return (f(x...)::D, true)
+    status == Bad && return (default, false)
+    return lock(SafeFunctionsLock) do
+        output = try
+            (f(x...)::D, true)
+        catch e
+            !isa(e, MethodError) && rethrow(e)
+            (default, false)
+        end
+        if output[2]
+            SafeFunctions[Tuple{F,T}] = Good
+        else
+            SafeFunctions[Tuple{F,T}] = Bad
+        end
+        return output
     end
 end
 

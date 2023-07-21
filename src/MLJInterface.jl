@@ -3,11 +3,20 @@ module MLJInterfaceModule
 using Optim: Optim
 import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
+import DynamicQuantities:
+    AbstractDimensions,
+    SymbolicDimensions,
+    Quantity,
+    DEFAULT_DIM_BASE_TYPE,
+    ustrip,
+    dimension
 import LossFunctions: SupervisedLoss
+import Compat: allequal, stack
 import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
 import ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 import ..ComplexityModule: compute_complexity
 import ..HallOfFameModule: HallOfFame, format_hall_of_fame
+import ..UtilsModule: subscriptify
 #! format: off
 import ..equation_search
 #! format: on
@@ -19,16 +28,19 @@ abstract type AbstractSRRegressor <: MMI.Deterministic end
 
 """Generate an `SRRegressor` struct containing all the fields in `Options`."""
 function modelexpr(model_name::Symbol)
-    struct_def = :(Base.@kwdef mutable struct $(model_name) <: AbstractSRRegressor
+    struct_def = :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L} <:
+                                 AbstractSRRegressor
         niterations::Int = 10
         parallelism::Symbol = :multithreading
         numprocs::Union{Int,Nothing} = nothing
         procs::Union{Vector{Int},Nothing} = nothing
         addprocs_function::Union{Function,Nothing} = nothing
         runtests::Bool = true
-        loss_type::Type = Nothing
+        loss_type::L = Nothing
         selection_method::Function = choose_best
+        dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
     end)
+    # TODO: store `procs` from initial run if parallelism is `:multiprocessing`
     fields = last(last(struct_def.args).args).args
 
     # Add everything from `Options` constructor directly to struct:
@@ -73,7 +85,7 @@ eval(modelexpr(:MultitargetSRRegressor))
 function full_report(m::AbstractSRRegressor, fitresult)
     _, hof = fitresult.state
     # TODO: Adjust baseline loss
-    formatted = format_hall_of_fame(hof, fitresult.options, 1.0)
+    formatted = format_hall_of_fame(hof, fitresult.options)
     equation_strings = get_equation_strings_for(
         m, formatted.trees, fitresult.options, fitresult.variable_names
     )
@@ -94,21 +106,45 @@ MMI.clean!(::AbstractSRRegressor) = ""
 
 # TODO: Enable `verbosity` being passed to `equation_search`
 function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
-    return MMI.update(m, verbosity, (; state=nothing), nothing, X, y, w)
+    return MMI.update(m, verbosity, nothing, nothing, X, y, w)
 end
 function MMI.update(
     m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
 )
-    options = get(old_fitresult, :options, get_options(m))
-    X_t, variable_names = get_matrix_and_colnames(X)
-    y_t, y_variable_names = format_input_for(m, y)
-    w_t = if w !== nothing && isa(m, MultitargetSRRegressor)
+    options = old_fitresult === nothing ? get_options(m) : old_fitresult.options
+    return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
+end
+function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
+    # To speed up iterative fits, we cache the types:
+    types = if old_fitresult === nothing
+        (;
+            X_t=Any,
+            y_t=Any,
+            w_t=Any,
+            state=Any,
+            X_units=Any,
+            y_units=Any,
+            X_units_clean=Any,
+            y_units_clean=Any,
+        )
+    else
+        old_fitresult.types
+    end
+    X_t::types.X_t, variable_names, X_units::types.X_units = get_matrix_and_info(
+        X, m.dimensions_type
+    )
+    y_t::types.y_t, y_variable_names, y_units::types.y_units = format_input_for(
+        m, y, m.dimensions_type
+    )
+    X_units_clean::types.X_units_clean = clean_units(X_units)
+    y_units_clean::types.y_units_clean = clean_units(y_units)
+    w_t::types.w_t = if w !== nothing && isa(m, MultitargetSRRegressor)
         @assert(isa(w, AbstractVector) && ndims(w) == 1, "Unexpected input for `w`.")
         repeat(w', size(y_t, 1))
     else
         w
     end
-    search_state = equation_search(
+    search_state::types.state = equation_search(
         X_t,
         y_t;
         niterations=m.niterations,
@@ -120,9 +156,13 @@ function MMI.update(
         procs=m.procs,
         addprocs_function=m.addprocs_function,
         runtests=m.runtests,
-        saved_state=old_fitresult.state,
+        saved_state=(old_fitresult === nothing ? nothing : old_fitresult.state),
         return_state=true,
         loss_type=m.loss_type,
+        X_units=X_units_clean,
+        y_units=y_units_clean,
+        # Help out with inference:
+        v_dim_out=isa(m, SRRegressor) ? Val(1) : Val(2),
     )
     fitresult = (;
         state=search_state,
@@ -130,39 +170,99 @@ function MMI.update(
         variable_names=variable_names,
         y_variable_names=y_variable_names,
         y_is_table=MMI.istable(y),
-    )
+        X_units=X_units_clean,
+        y_units=y_units_clean,
+        types=(
+            X_t=typeof(X_t),
+            y_t=typeof(y_t),
+            w_t=typeof(w_t),
+            state=typeof(search_state),
+            X_units=typeof(X_units),
+            y_units=typeof(y_units),
+            X_units_clean=typeof(X_units_clean),
+            y_units_clean=typeof(y_units_clean),
+        ),
+    )::(old_fitresult === nothing ? Any : typeof(old_fitresult))
     return (fitresult, nothing, full_report(m, fitresult))
 end
-function get_matrix_and_colnames(X)
+
+function clean_units(units)
+    !isa(units, AbstractDimensions) && error("Unexpected units.")
+    iszero(units) && return nothing
+    return units
+end
+function clean_units(units::Vector)
+    !all(Base.Fix2(isa, AbstractDimensions), units) && error("Unexpected units.")
+    all(iszero, units) && return nothing
+    return units
+end
+
+function get_matrix_and_info(X, ::Type{D}) where {D}
     sch = MMI.istable(X) ? MMI.schema(X) : nothing
     Xm_t = MMI.matrix(X; transpose=true)
     colnames = if sch === nothing
-        [map(i -> "x$(i)", axes(Xm_t, 1))...]
+        [map(i -> "x$(subscriptify(i))", axes(Xm_t, 1))...]
     else
         [string.(sch.names)...]
     end
-    return Xm_t, colnames
+    Xm_t_strip, X_units = unwrap_units_single(Xm_t, D)
+    return Xm_t_strip, colnames, X_units
 end
 
-function format_input_for(::SRRegressor, y)
+function format_input_for(::SRRegressor, y, ::Type{D}) where {D}
     @assert(
         !(MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1)),
         "For multi-output regression, please use `MultitargetSRRegressor`."
     )
-    return vec(y), nothing
+    y_t = vec(y)
+    colnames = nothing
+    y_t_strip, y_units = unwrap_units_single(y_t, D)
+    return y_t_strip, colnames, y_units
 end
-function format_input_for(::MultitargetSRRegressor, y)
+function format_input_for(::MultitargetSRRegressor, y, ::Type{D}) where {D}
     @assert(
         MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1),
         "For single-output regression, please use `SRRegressor`."
     )
-    return get_matrix_and_colnames(y)
+    return get_matrix_and_info(y, D)
 end
 function validate_variable_names(variable_names, fitresult)
     @assert(
         variable_names == fitresult.variable_names,
         "Variable names do not match fitted regressor."
     )
+    return nothing
+end
+function validate_units(X_units, old_X_units)
+    @assert(
+        all(X_units .== old_X_units),
+        "Units of new data do not match units of fitted regressor."
+    )
+    return nothing
+end
+
+# TODO: Test whether this conversion poses any issues in data normalization...
+function dimension_fallback(
+    q::Union{<:Quantity{T,<:AbstractDimensions}}, ::Type{D}
+) where {T,D}
+    return dimension(convert(Quantity{T,D}, q))::D
+end
+dimension_fallback(q::Union{<:Quantity{T,D}}, ::Type{D}) where {T,D} = dimension(q)::D
+dimension_fallback(_, ::Type{D}) where {D} = D()
+
+function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
+    for (i, row) in enumerate(eachrow(A))
+        allequal(Base.Fix2(dimension_fallback, D).(row)) ||
+            error("Inconsistent units in feature $i of matrix.")
+    end
+    dims = map(Base.Fix2(dimension_fallback, D) ∘ first, eachrow(A))
+    return stack([ustrip.(row) for row in eachrow(A)]; dims=1), dims
+end
+function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
+    allequal(Base.Fix2(dimension_fallback, D).(v)) || error("Inconsistent units in vector.")
+    dims = dimension_fallback(first(v), D)
+    v = ustrip(v)
+    return v, dims
 end
 
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
@@ -175,8 +275,10 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
 end
 function MMI.predict(m::SRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t, variable_names = get_matrix_and_colnames(Xnew)
+    Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
+    X_units_clean = clean_units(X_units)
     validate_variable_names(variable_names, fitresult)
+    validate_units(X_units_clean, fitresult.X_units)
     eq = params.equations[params.best_idx]
     out, flag = eval_tree_array(eq, Xnew_t, fitresult.options)
     !flag && error("Detected a NaN in evaluating expression.")
@@ -184,8 +286,10 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
 end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t, variable_names = get_matrix_and_colnames(Xnew)
+    Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
+    X_units_clean = clean_units(X_units)
     validate_variable_names(variable_names, fitresult)
+    validate_units(X_units_clean, fitresult.X_units)
     equations = params.equations
     best_idx = params.best_idx
     outs = [
@@ -312,6 +416,8 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
         the index of the expression to use. By default, `choose_best` maximizes
         the score (a pound-for-pound rating) of expressions reaching the threshold
         of 1.5x the minimum loss. To fix the index at `5`, you could just write `Returns(5)`.
+    - `dimensions_type::AbstractDimensions`: The type of dimensions to use when storing
+        the units of the data. By default this is `DynamicQuantities.DEFAULT_DIM_TYPE`.
     """
 
     bottom = """
@@ -365,10 +471,12 @@ eval(
 
     - `X` is any table of input features (eg, a `DataFrame`) whose columns are of scitype
       `Continuous`; check column scitypes with `schema(X)`. Variable names in discovered
-      expressions will be taken from the column names of `X`, if available.
+      expressions will be taken from the column names of `X`, if available. Units in columns
+      of `X` (use `DynamicQuantities` for units) will trigger dimensional analysis to be used.
 
     - `y` is the target, which can be any `AbstractVector` whose element scitype is
-        `Continuous`; check the scitype with `scitype(y)`.
+        `Continuous`; check the scitype with `scitype(y)`. Units in `y` (use `DynamicQuantities`
+        for units) will trigger dimensional analysis to be used.
 
     - `w` is the observation weights which can either be `nothing` (default) or an 
       `AbstractVector` whoose element scitype is `Count` or `Continuous`.
@@ -435,6 +543,24 @@ eval(
     println("Equation used:", r.equation_strings[r.best_idx])
     ```
 
+    With units and variable names:
+
+    ```julia
+    using MLJ
+    using DynamicQuantities
+    SRegressor = @load SRRegressor pkg=SymbolicRegression
+
+    X = (; x1=rand(32) .* us"km/h", x2=rand(32) .* us"km")
+    y = @. X.x2 / X.x1 + 0.5us"h"
+    model = SRRegressor(binary_operators=[+, -, *, /])
+    mach = machine(model, X, y)
+    fit!(mach)
+    y_hat = predict(mach, X)
+    # View the equation used:
+    r = report(mach)
+    println("Equation used:", r.equation_strings[r.best_idx])
+    ```
+
     See also [`MultitargetSRRegressor`](@ref).
     """,
             r"^    " => "",
@@ -466,10 +592,12 @@ eval(
 
     - `X` is any table of input features (eg, a `DataFrame`) whose columns are of scitype
     `Continuous`; check column scitypes with `schema(X)`. Variable names in discovered
-    expressions will be taken from the column names of `X`, if available.
+    expressions will be taken from the column names of `X`, if available. Units in columns
+    of `X` (use `DynamicQuantities` for units) will trigger dimensional analysis to be used.
 
     - `y` is the target, which can be any table of target variables whose element
-      scitype is `Continuous`; check the scitype with `schema(y)`.
+      scitype is `Continuous`; check the scitype with `schema(y)`. Units in columns of
+      `y` (use `DynamicQuantities` for units) will trigger dimensional analysis to be used.
 
     - `w` is the observation weights which can either be `nothing` (default) or an 
       `AbstractVector` whoose element scitype is `Count` or `Continuous`. The same

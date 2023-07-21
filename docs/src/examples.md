@@ -1,36 +1,8 @@
 # Toy Examples with Code
 
-## Preamble
-
 ```julia
 using SymbolicRegression
-using DataFrames
-```
-
-We'll also code up a simple function to print a single expression:
-
-```julia
-function get_best(; hof::HallOfFame{T,L}, options) where {T,L}
-    dominating = calculate_pareto_frontier(hof)
-
-    df = DataFrame(;
-        tree=[m.tree for m in dominating],
-        loss=[m.loss for m in dominating],
-        complexity=[compute_complexity(m, options) for m in dominating],
-    )
-
-    df[!, :score] = vcat(
-        [L(0.0)],
-        -1 .* log.(df.loss[2:end] ./ df.loss[1:(end - 1)]) ./
-        (df.complexity[2:end] .- df.complexity[1:(end - 1)]),
-    )
-
-    min_loss = min(df.loss...)
-
-    best_idx = argmax(df.score .* (df.loss .<= (2 * min_loss)))
-
-    return df.tree[best_idx], df
-end
+using MLJ
 ```
 
 ## 1. Simple search
@@ -39,18 +11,29 @@ Here's a simple example where we
 find the expression `2 cos(x3) + x0^2 - 2`.
 
 ```julia
-X = 2randn(5, 1000)
-y = @. 2*cos(X[4, :]) + X[1, :]^2 - 2
+X = 2randn(1000, 5)
+y = @. 2*cos(X[:, 4]) + X[:, 1]^2 - 2
 
-options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos])
-hof = equation_search(X, y; options=options, niterations=30)
+model = SRRegressor(
+    binary_operators=[+, -, *, /],
+    unary_operators=[cos],
+    niterations=30
+)
+mach = machine(model, X, y)
+fit!(mach)
 ```
 
-Let's look at the most accurate expression:
+Let's look at the returned table:
 
 ```julia
-best, df = get_best(; hof, options)
-println(best)
+r = report(mach)
+r
+```
+
+We can get the selected best tradeoff expression with:
+
+```julia
+r.equations[r.best_idx]
 ```
 
 ## 2. Custom operator
@@ -58,56 +41,74 @@ println(best)
 Here, we define a custom operator and use it to find an expression:
 
 ```julia
-X = 2randn(5, 1000)
-y = @. 1/X[1, :]
+X = 2randn(1000, 5)
+y = @. 1/X[:, 1]
 
-options = Options(; binary_operators=[+, *], unary_operators=[inv])
-hof = equation_search(X, y; options=options)
-println(get_best(; hof, options)[1])
+my_inv(x) = 1/x
+
+model = SRRegressor(
+    binary_operators=[+, *],
+    unary_operators=[my_inv],
+)
+mach = machine(model, X, y)
+fit!(mach)
+r = report(mach)
+println(r.equations[r.best_idx])
 ```
 
 ## 3. Multiple outputs
 
 Here, we do the same thing, but with multiple expressions at once,
-each requiring a different feature.
+each requiring a different feature. This means that we need to use
+`MultitargetSRRegressor` instead of `SRRegressor`:
 
 ```julia
-X = 2rand(5, 1000) .+ 0.1
-y = @. 1/X[1:3, :]
-options = Options(; binary_operators=[+, *], unary_operators=[inv])
-hofs = equation_search(X, y; options=options)
-bests = [get_best(; hof=hofs[i], options)[1] for i=1:3]
-println(bests)
+X = 2rand(1000, 5) .+ 0.1
+y = @. 1/X[:, 1:3]
+
+my_inv(x) = 1/x
+
+model = MultitargetSRRegressor(; binary_operators=[+, *], unary_operators=[my_inv])
+mach = machine(model, X, y)
+fit!(mach)
+```
+
+The report gives us lists of expressions instead:
+
+```julia
+r = report(mach)
+for i in 1:3
+    println("y[$(i)] = ", r.equations[i][r.best_idx[i]])
+end
 ```
 
 ## 4. Plotting an expression
 
-For now, let's consider the expressions for output 1.
-We can see the SymbolicUtils version with:
+For now, let's consider the expressions for output 1 from the previous example:
+We can get a SymbolicUtils version with:
 
 ```julia
 using SymbolicUtils
 
-eqn = node_to_symbolic(bests[1], options)
+eqn = node_to_symbolic(r.equations[1][r.best_idx[1]], model)
 ```
 
-We can get the LaTeX version with:
+We can get the LaTeX version with `Latexify`:
 
 ```julia
 using Latexify
+
 latexify(string(eqn))
 ```
 
-Let's plot the prediction against the truth:
+We can also plot the prediction against the truth:
 
 ```julia
 using Plots
 
-scatter(y[1, :], bests[1](X, options), xlabel="Truth", ylabel="Prediction")
+ypred = predict(mach, X)
+scatter(y[1, :], ypred[1, :], xlabel="Truth", ylabel="Prediction")
 ```
-
-Here, we have used the convenience function `(::Node{T})(::AbstractMatrix, ::Options)` to evaluate
-the expression.
 
 ## 5. Other types
 
@@ -116,32 +117,113 @@ For example, passing a `Float32` array will result in the search using
 32-bit precision everywhere in the codebase:
 
 ```julia
-X = 2randn(Float32, 5, 1000)
-y = @. 2*cos(X[4, :]) + X[1, :]^2 - 2
+X = 2randn(Float32, 1000, 5)
+y = @. 2*cos(X[:, 4]) + X[:, 1]^2 - 2
 
-options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos])
-hof = equation_search(X, y; options=options, niterations=30)
+model = SRRegressor(binary_operators=[+, -, *, /], unary_operators=[cos], niterations=30)
+mach = machine(model, X, y)
+fit!(mach)
 ```
 
 we can see that the output types are `Float32`:
 
 ```julia
-best, df = get_best(; hof, options)
+r = report(mach)
+best = r.equations[r.best_idx]
 println(typeof(best))
 # Node{Float32}
 ```
 
-We can also use `Complex` numbers:
+We can also use `Complex` numbers (ignore the warning
+from MLJ):
 
 ```julia
 cos_re(x::Complex{T}) where {T} = cos(abs(x)) + 0im
 
-X = 15 .* rand(ComplexF64, 5, 1000) .- 7.5
-y = @. 2*cos_re((2+1im) * X[4, :]) + 0.1 * X[1, :]^2 - 2
+X = 15 .* rand(ComplexF64, 1000, 5) .- 7.5
+y = @. 2*cos_re((2+1im) * X[:, 4]) + 0.1 * X[:, 1]^2 - 2
 
-options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos_re], maxsize=30)
-hof = equation_search(X, y; options=options, niterations=100)
+model = SRRegressor(
+    binary_operators=[+, -, *, /],
+    unary_operators=[cos_re],
+    maxsize=30,
+    niterations=100
+)
+mach = machine(model, X, y)
+fit!(mach)
 ```
+
+## 7. Dimensional constraints
+
+One other feature we can exploit is dimensional analysis.
+Say that we know the physical units of each feature and output,
+and we want to find an expression that is dimensionally consistent.
+
+We can do this as follows, using `DynamicQuantities` to assign units.
+First, let's make some data on Newton's law of gravitation:
+
+```julia
+using DynamicQuantities
+using SymbolicRegression
+
+M = (rand(100) .+ 0.1) .* Constants.M_sun
+m = 100 .* (rand(100) .+ 0.1) .* u"kg"
+r = (rand(100) .+ 0.1) .* Constants.R_earth
+
+G = Constants.G
+
+F = @. (G * M * m / r^2)
+```
+
+(Note that the `u` macro from `DynamicQuantities` will automatically convert to SI units. To avoid this,
+use the `us` macro.)
+
+Now, let's ready the data for MLJ:
+
+```julia
+X = (; M=M, m=m, r=r)
+y = F
+```
+
+Since this data has such a large dynamic range, let's also create a custom loss function
+that looks at the error in log-space:
+
+```julia
+function loss_fnc(prediction, target)
+    # Useful loss for large dynamic range
+    scatter_loss = abs(log((abs(prediction)+1e-20) / (abs(target)+1e-20)))
+    sign_loss = 10 * (sign(prediction) - sign(target))^2
+    return scatter_loss + sign_loss
+end
+```
+
+Now let's define and fit our model:
+
+```julia
+model = SRRegressor(
+    binary_operators=[+, -, *, /],
+    unary_operators=[square],
+    elementwise_loss=loss_fnc,
+    complexity_of_constants=2,
+    maxsize=25,
+    niterations=100,
+    npopulations=50,
+    dimensional_constraint_penalty=10^5,
+)
+mach = machine(model, X, y)
+fit!(mach)
+```
+
+You can observe that all expressions with a loss under
+our penalty are dimensionally consistent! (The `"[⋅]"` indicates free units in a constant,
+which can cancel out other units in the expression.) For example,
+
+```julia
+"y[m s⁻² kg] = (M[kg] * 2.6353e-22[⋅])"
+```
+
+would indicate that the expression is dimensionally consistent, with
+a constant `"2.6353e-22[m s⁻²]"`.
 
 ## 6. Additional features
 

@@ -1,3 +1,3 @@
 using SymbolicRegression
 
-SymbolicRegression.do_precompilation(; mode=:compile)
+SymbolicRegression.do_precompilation(Val(:compile))

@@ -7,6 +7,7 @@ import Printf: @printf, @sprintf
 using Distributed
 import StatsBase: mean
 
+import ..UtilsModule: subscriptify
 import ..CoreModule: Dataset, Options
 import ..ComplexityModule: compute_complexity
 import ..PopulationModule: Population, copy_population
@@ -45,14 +46,11 @@ macro sr_spawner(parallel, p, expr)
 end
 
 function init_dummy_pops(
-    nout::Int, npops::Int, datasets::Vector{D}, options::Options
-)::Vector{Vector{Population{T,L}}} where {T,L,D<:Dataset{T,L}}
+    npops::Int, datasets::Vector{D}, options::Options
+) where {T,L,D<:Dataset{T,L}}
     return [
-        [
-            Population(
-                datasets[j]; npop=1, options=options, nfeatures=datasets[j].nfeatures
-            ) for i in 1:npops
-        ] for j in 1:nout
+        [Population(d; npop=1, options=options, nfeatures=d.nfeatures) for i in 1:npops] for
+        d in datasets
     ]
 end
 
@@ -106,9 +104,7 @@ function check_for_user_quit(reader::StdinReader)::Bool
     return false
 end
 
-function check_for_loss_threshold(
-    hallOfFame::AbstractVector{H}, options::Options
-)::Bool where {T,L,H<:HallOfFame{T,L}}
+function check_for_loss_threshold(hallOfFame, options::Options)::Bool
     options.early_stop_condition === nothing && return false
 
     # Check if all nout are below stopping condition.
@@ -239,8 +235,8 @@ function update_progress_bar!(
 end
 
 function print_search_state(
-    hall_of_fames::Vector{H},
-    datasets::Vector{D};
+    hall_of_fames,
+    datasets;
     options::Options,
     equation_speed::Vector{Float32},
     total_cycles::Int,
@@ -248,7 +244,7 @@ function print_search_state(
     head_node_occupation::Float64,
     parallelism=:serial,
     width::Union{Integer,Nothing}=nothing,
-) where {T,L,D<:Dataset{T,L},H<:HallOfFame{T,L}}
+)
     twidth = (width === nothing) ? 100 : max(100, width::Integer)
     nout = length(datasets)
     average_speed = sum(equation_speed) / length(equation_speed)
@@ -279,17 +275,12 @@ function print_search_state(
     return print("Press 'q' and then <enter> to stop execution early.\n")
 end
 
-const StateType{T,L} = Tuple{
-    Union{Vector{Vector{Population{T,L}}},Matrix{Population{T,L}}},
-    Union{HallOfFame{T,L},Vector{HallOfFame{T,L}}},
-}
-
-function load_saved_hall_of_fame(
-    saved_state::StateType{T,L}
-)::Vector{HallOfFame{T,L}} where {T,L}
+function load_saved_hall_of_fame(saved_state)
     hall_of_fame = saved_state[2]
-    if !isa(hall_of_fame, Vector{HallOfFame{T,L}})
-        hall_of_fame = [hall_of_fame]
+    hall_of_fame = if isa(hall_of_fame, HallOfFame)
+        [hall_of_fame]
+    else
+        hall_of_fame
     end
     return [copy_hall_of_fame(hof) for hof in hall_of_fame]
 end
@@ -305,13 +296,42 @@ function get_population(
 )::Population{T,L} where {T,L}
     return pops[out, pop]
 end
-function load_saved_population(
-    saved_state::StateType{T,L}; out::Int, pop::Int
-)::Population{T,L} where {T,L}
+function load_saved_population(saved_state; out::Int, pop::Int)
     saved_pop = get_population(saved_state[1]; out=out, pop=pop)
     return copy_population(saved_pop)
 end
-
 load_saved_population(::Nothing; kws...) = nothing
+
+function construct_datasets(
+    X, y, weights, variable_names, y_variable_names, X_units, y_units, loss_type
+)
+    nout = size(y, 1)
+    return [
+        Dataset(
+            X,
+            y[j, :];
+            weights=(weights === nothing ? weights : weights[j, :]),
+            variable_names=variable_names,
+            y_variable_name=if y_variable_names === nothing
+                if nout > 1
+                    "y$(subscriptify(j))"
+                else
+                    if variable_names === nothing || "y" ∉ variable_names
+                        "y"
+                    else
+                        "target"
+                    end
+                end
+            elseif isa(y_variable_names, AbstractVector)
+                y_variable_names[j]
+            else
+                y_variable_names
+            end,
+            X_units=X_units,
+            y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
+            loss_type=loss_type,
+        ) for j in 1:nout
+    ]
+end
 
 end

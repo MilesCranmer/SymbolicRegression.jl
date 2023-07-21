@@ -119,10 +119,8 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{
-    CT,OPT<:Optim.Options,EL<:Union{SupervisedLoss,Function},FL<:Union{Nothing,Function},W
-}
-    operators::AbstractOperatorEnum
+struct Options{CT,OP<:AbstractOperatorEnum,OPT<:Optim.Options,W}
+    operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
     complexity_mapping::ComplexityMapping{CT}
@@ -130,6 +128,7 @@ struct Options{
     tournament_selection_p::Float32
     tournament_selection_weights::W
     parsimony::Float32
+    dimensional_constraint_penalty::Union{Float32,Nothing}
     alpha::Float32
     maxsize::Int
     maxdepth::Int
@@ -157,13 +156,14 @@ struct Options{
     fraction_replaced_hof::Float32
     topn::Int
     verbosity::Int
+    print_precision::Int
     save_to_file::Bool
     probability_negate_constant::Float32
     nuna::Int
     nbin::Int
     seed::Union{Int,Nothing}
-    elementwise_loss::EL
-    loss_function::FL
+    elementwise_loss::Union{SupervisedLoss,Function}
+    loss_function::Union{Nothing,Function}
     progress::Bool
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::String

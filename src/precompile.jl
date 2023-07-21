@@ -31,19 +31,20 @@ macro maybe_compile_workload(mode, ex)
 end
 
 """`mode=:precompile` will use `@precompile_*` directives; `mode=:compile` runs."""
-function do_precompilation(; mode=:precompile)
+function do_precompilation(::Val{mode}) where {mode}
     @maybe_setup_workload mode begin
-        types = [Float32]
-        for T in types
+        for T in [Float32, Float64], nout in 1:2
+            start = nout == 1
+            N = 30
+            X = randn(T, 3, N)
+            y = start ? randn(T, N) : randn(T, nout, N)
             @maybe_compile_workload mode begin
-                X = randn(T, 5, 100)
-                y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
                 options = SymbolicRegression.Options(;
-                    binary_operators=[+, *, /, -],
-                    unary_operators=[cos, exp],
+                    binary_operators=[+, *, /, -, ^],
+                    unary_operators=[sin, cos, exp, log, sqrt, abs],
                     npopulations=3,
-                    npop=50,
-                    ncycles_per_iteration=100,
+                    npop=start ? 50 : 12,
+                    ncycles_per_iteration=start ? 30 : 1,
                     mutation_weights=MutationWeights(;
                         mutate_constant=1.0,
                         mutate_operator=1.0,
@@ -61,19 +62,26 @@ function do_precompilation(; mode=:precompile)
                     optimizer_probability=0.05,
                     save_to_file=false,
                 )
-                redirect_stderr(devnull) do
-                    redirect_stdout(devnull) do
-                        hall_of_fame = equation_search(
-                            X,
-                            y;
-                            niterations=3,
-                            options=options,
-                            parallelism=:multithreading,
-                        )
-                        calculate_pareto_frontier(hall_of_fame)
-                    end
-                end
+                state = equation_search(
+                    X,
+                    y;
+                    niterations=start ? 3 : 1,
+                    options=options,
+                    parallelism=:multithreading,
+                    return_state=true,
+                )
+                hof = equation_search(
+                    X,
+                    y;
+                    niterations=0,
+                    options=options,
+                    parallelism=:multithreading,
+                    saved_state=state,
+                    return_state=false,
+                )
+                nout == 1 && calculate_pareto_frontier(hof)
             end
         end
     end
+    return nothing
 end

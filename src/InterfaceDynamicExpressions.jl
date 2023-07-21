@@ -1,5 +1,7 @@
 module InterfaceDynamicExpressionsModule
 
+import Printf: @sprintf
+using DynamicExpressions: DynamicExpressions
 import DynamicExpressions:
     Node,
     eval_tree_array,
@@ -8,8 +10,9 @@ import DynamicExpressions:
     print_tree,
     string_tree,
     differentiable_eval_tree_array
-using DynamicExpressions: DynamicExpressions
+import DynamicQuantities: dimension, ustrip
 import ..CoreModule: Options
+import ..UtilsModule: subscriptify
 #! format: off
 import ..deprecate_varmap
 #! format: on
@@ -130,10 +133,91 @@ Convert an equation to a string.
     to print for each feature.
 """
 @inline function string_tree(
-    tree::Node, options::Options; variable_names=nothing, varMap=nothing, kws...
+    tree::Node,
+    options::Options;
+    raw::Bool=true,
+    X_sym_units=nothing,
+    y_sym_units=nothing,
+    variable_names=nothing,
+    pretty_variable_names=nothing,
+    varMap=nothing,
+    kws...,
 )
     variable_names = deprecate_varmap(variable_names, varMap, :string_tree)
-    return string_tree(tree, options.operators; varMap=variable_names, kws...)
+
+    raw && return string_tree(
+        tree, options.operators; f_variable=string_variable_raw, variable_names
+    )
+
+    vprecision = vals[options.print_precision]
+    if X_sym_units !== nothing || y_sym_units !== nothing
+        return string_tree(
+            tree,
+            options.operators;
+            f_variable=(feature, vname) -> string_variable(feature, vname, X_sym_units),
+            f_constant=(val, bracketed) ->
+                string_constant(val, bracketed, vprecision, "[⋅]"),
+            variable_names=pretty_variable_names,
+            kws...,
+        )
+    else
+        return string_tree(
+            tree,
+            options.operators;
+            f_variable=string_variable,
+            f_constant=(val, bracketed) -> string_constant(val, bracketed, vprecision, ""),
+            variable_names=pretty_variable_names,
+            kws...,
+        )
+    end
+end
+const vals = ntuple(Val, 8192)
+function string_variable_raw(feature, variable_names)
+    if variable_names === nothing || feature > length(variable_names)
+        return "x" * string(feature)
+    else
+        return variable_names[feature]
+    end
+end
+function string_variable(feature, variable_names, variable_units=nothing)
+    base = if variable_names === nothing || feature > length(variable_names)
+        "x" * subscriptify(feature)
+    else
+        variable_names[feature]
+    end
+    if variable_units !== nothing
+        base *= format_dimensions(variable_units[feature])
+    end
+    return base
+end
+function string_constant(
+    val, bracketed, ::Val{precision}, unit_placeholder
+) where {precision}
+    does_not_need_brackets = typeof(val) <: Real
+    if does_not_need_brackets
+        return sprint_precision(val, Val(precision)) * unit_placeholder
+    else
+        return "(" * string(val) * ")" * unit_placeholder
+    end
+end
+function format_dimensions(::Nothing)
+    return ""
+end
+function format_dimensions(u)
+    if isone(ustrip(u))
+        dim = dimension(u)
+        if iszero(dim)
+            return ""
+        else
+            return "[" * string(dim) * "]"
+        end
+    else
+        return "[" * string(u) * "]"
+    end
+end
+@generated function sprint_precision(x, ::Val{precision}) where {precision}
+    fmt_string = "%.$(precision)g"
+    return :(@sprintf($fmt_string, x))
 end
 
 """

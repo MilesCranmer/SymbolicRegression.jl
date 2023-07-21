@@ -6,6 +6,7 @@ import ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 import ..PopMemberModule: PopMember, copy_pop_member
 import ..LossFunctionsModule: eval_loss
+import ..InterfaceDynamicExpressionsModule: format_dimensions
 using Printf: @sprintf
 
 """
@@ -136,8 +137,20 @@ function string_dominating_pareto_curve(
         delta_l_mse = log(abs(curMSE / lastMSE) + ZERO_POINT)
         score = convert(Float32, -delta_l_mse / delta_c)
         eqn_string = string_tree(
-            member.tree, options; variable_names=dataset.variable_names
+            member.tree,
+            options;
+            pretty_variable_names=dataset.pretty_variable_names,
+            X_sym_units=dataset.X_sym_units,
+            y_sym_units=dataset.y_sym_units,
+            raw=false,
         )
+        y_prefix = dataset.y_variable_name
+        unit_str = format_dimensions(dataset.y_sym_units)
+        y_prefix *= unit_str
+        if dataset.y_sym_units === nothing && dataset.X_sym_units !== nothing
+            y_prefix *= "[⋅]"
+        end
+        eqn_string = y_prefix * " = " * eqn_string
         base_string_length = length(@sprintf("%-10d  %-8.3e  %8.3e  ", 1, 1.0, 1.0))
 
         dots = "..."
@@ -162,12 +175,12 @@ function string_dominating_pareto_curve(
 end
 
 function format_hall_of_fame(
-    hof::HallOfFame{T,L}, options, baseline_loss::L
+    hof::HallOfFame{T,L}, options
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     ZERO_POINT = L(1e-10)
 
     dominating = calculate_pareto_frontier(hof)
-    cur_loss = baseline_loss
+    cur_loss = typemax(L)
     last_loss = cur_loss
     last_complexity = 0
 
@@ -189,9 +202,9 @@ function format_hall_of_fame(
     return (; trees=trees, scores=scores, losses=losses, complexities=complexities)
 end
 function format_hall_of_fame(
-    hof::AH, options, baseline_loss
+    hof::AH, options
 ) where {T,L,H<:HallOfFame{T,L},AH<:AbstractVector{H}}
-    outs = [format_hall_of_fame(h, options, baseline_loss) for h in hof]
+    outs = [format_hall_of_fame(h, options) for h in hof]
     return (;
         trees=[out.trees for out in outs],
         scores=[out.scores for out in outs],
