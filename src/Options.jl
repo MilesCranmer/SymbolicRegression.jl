@@ -573,8 +573,16 @@ function Options end
 
         # Get consistent type:
         promoted_type = promote_type(
-            (complexity_of_variables !== nothing) ? typeof(complexity_of_variables) : Int,
-            (complexity_of_constants !== nothing) ? typeof(complexity_of_constants) : Int,
+            if (complexity_of_variables !== nothing)
+                typeof(complexity_of_variables)
+            else
+                Int
+            end,
+            if (complexity_of_constants !== nothing)
+                typeof(complexity_of_constants)
+            else
+                Int
+            end,
             (x -> typeof(x)).(values(complexity_of_operators))...,
         )
 

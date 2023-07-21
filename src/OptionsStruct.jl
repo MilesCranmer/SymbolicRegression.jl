@@ -119,15 +119,7 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{
-    CT,
-    OP<:AbstractOperatorEnum,
-    use_recorder,
-    OPT<:Optim.Options,
-    EL<:Union{SupervisedLoss,Function},
-    FL<:Union{Nothing,Function},
-    W,
-}
+struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
