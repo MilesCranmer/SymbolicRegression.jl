@@ -28,7 +28,7 @@ abstract type AbstractSRRegressor <: MMI.Deterministic end
 
 """Generate an `SRRegressor` struct containing all the fields in `Options`."""
 function modelexpr(model_name::Symbol)
-    struct_def = :(Base.@kwdef mutable struct $(model_name){F,D<:AbstractDimensions,L} <:
+    struct_def = :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L} <:
                                  AbstractSRRegressor
         niterations::Int = 10
         parallelism::Symbol = :multithreading
@@ -37,7 +37,7 @@ function modelexpr(model_name::Symbol)
         addprocs_function::Union{Function,Nothing} = nothing
         runtests::Bool = true
         loss_type::L = Nothing
-        selection_method::F = choose_best
+        selection_method::Function = choose_best
         dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
     end)
     # TODO: store `procs` from initial run if parallelism is `:multiprocessing`
