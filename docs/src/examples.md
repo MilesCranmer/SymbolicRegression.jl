@@ -153,7 +153,7 @@ mach = machine(model, X, y)
 fit!(mach)
 ```
 
-## 7. Dimensional constraints
+## 6. Dimensional constraints
 
 One other feature we can exploit is dimensional analysis.
 Say that we know the physical units of each feature and output,
@@ -225,7 +225,7 @@ which can cancel out other units in the expression.) For example,
 would indicate that the expression is dimensionally consistent, with
 a constant `"2.6353e-22[m s⁻²]"`.
 
-## 6. Additional features
+## 7. Additional features
 
 For the many other features available in SymbolicRegression.jl,
 check out the API page for `Options`. You might also find it useful
@@ -233,4 +233,3 @@ to browse the documentation for the Python frontend
 [PySR](http://astroautomata.com/PySR), which has additional documentation.
 In particular, the [tuning page](http://astroautomata.com/PySR/tuning)
 is useful for improving search performance.
-
