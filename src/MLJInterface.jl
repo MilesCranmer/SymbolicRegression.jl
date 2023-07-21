@@ -39,7 +39,6 @@ function modelexpr(model_name::Symbol)
         loss_type::L = Nothing
         selection_method::F = choose_best
         dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
-        precompiling::Bool = false
     end)
     # TODO: store `procs` from initial run if parallelism is `:multiprocessing`
     fields = last(last(struct_def.args).args).args
@@ -132,10 +131,10 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         old_fitresult.types
     end
     X_t::types.X_t, variable_names, X_units::types.X_units = get_matrix_and_info(
-        X, m.dimensions_type, m.precompiling
+        X, m.dimensions_type
     )
     y_t::types.y_t, y_variable_names, y_units::types.y_units = format_input_for(
-        m, y, m.dimensions_type, m.precompiling
+        m, y, m.dimensions_type
     )
     X_units_clean::types.X_units_clean = clean_units(X_units)
     y_units_clean::types.y_units_clean = clean_units(y_units)
@@ -170,7 +169,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         options=options,
         variable_names=variable_names,
         y_variable_names=y_variable_names,
-        y_is_table=m.precompiling ? false : MMI.istable(y),
+        y_is_table=MMI.istable(y),
         X_units=X_units_clean,
         y_units=y_units_clean,
         types=(
@@ -198,8 +197,8 @@ function clean_units(units::Vector)
     return units
 end
 
-function get_matrix_and_info(X, ::Type{D}, precompiling) where {D}
-    sch = (!precompiling && MMI.istable(X)) ? MMI.schema(X) : nothing
+function get_matrix_and_info(X, ::Type{D}) where {D}
+    sch = MMI.istable(X) ? MMI.schema(X) : nothing
     Xm_t = MMI.matrix(X; transpose=true)
     colnames = if sch === nothing
         [map(i -> "x$(subscriptify(i))", axes(Xm_t, 1))...]
@@ -210,9 +209,9 @@ function get_matrix_and_info(X, ::Type{D}, precompiling) where {D}
     return Xm_t_strip, colnames, X_units
 end
 
-function format_input_for(::SRRegressor, y, ::Type{D}, precompiling) where {D}
+function format_input_for(::SRRegressor, y, ::Type{D}) where {D}
     @assert(
-        precompiling || !(MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1)),
+        !(MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1)),
         "For multi-output regression, please use `MultitargetSRRegressor`."
     )
     y_t = vec(y)
@@ -220,12 +219,12 @@ function format_input_for(::SRRegressor, y, ::Type{D}, precompiling) where {D}
     y_t_strip, y_units = unwrap_units_single(y_t, D)
     return y_t_strip, colnames, y_units
 end
-function format_input_for(::MultitargetSRRegressor, y, ::Type{D}, precompiling) where {D}
+function format_input_for(::MultitargetSRRegressor, y, ::Type{D}) where {D}
     @assert(
-        precompiling || MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1),
+        MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1),
         "For single-output regression, please use `SRRegressor`."
     )
-    return get_matrix_and_info(y, D, precompiling)
+    return get_matrix_and_info(y, D)
 end
 function validate_variable_names(variable_names, fitresult)
     @assert(
@@ -275,11 +274,8 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     )
 end
 function MMI.predict(m::SRRegressor, fitresult, Xnew)
-    types = fitresult.types
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t, variable_names, X_units = get_matrix_and_info(
-        Xnew, m.dimensions_type, m.precompiling
-    )
+    Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     X_units_clean = clean_units(X_units)
     validate_variable_names(variable_names, fitresult)
     validate_units(X_units_clean, fitresult.X_units)
@@ -290,9 +286,7 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
 end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = MMI.fitted_params(m, fitresult)
-    Xnew_t, variable_names, X_units = get_matrix_and_info(
-        Xnew, m.dimensions_type, m.precompiling
-    )
+    Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     X_units_clean = clean_units(X_units)
     validate_variable_names(variable_names, fitresult)
     validate_units(X_units_clean, fitresult.X_units)

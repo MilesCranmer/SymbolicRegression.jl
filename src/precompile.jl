@@ -1,5 +1,4 @@
 import PrecompileTools: @compile_workload, @setup_workload
-import MLJModelInterface as MMI
 
 macro maybe_setup_workload(mode, ex)
     precompile_ex = Expr(
