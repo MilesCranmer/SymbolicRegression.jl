@@ -1,7 +1,9 @@
-import SymbolicRegression: SRRegressor, MultitargetSRRegressor
+import SymbolicRegression:
+    Node, SRRegressor, MultitargetSRRegressor, node_to_symbolic, symbolic_to_node
 import MLJTestInterface as MTI
 import MLJBase: machine, fit!, report, predict
 using Test
+using SymbolicUtils: SymbolicUtils
 
 macro quiet(ex)
     return quote
@@ -11,7 +13,7 @@ macro quiet(ex)
     end |> esc
 end
 
-const stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
+stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
 
 @testset "Generic interface tests" begin
     failures, summary = MTI.test(
@@ -39,6 +41,13 @@ end
         rep = report(mach)
         @test occursin("a", rep.equation_strings[rep.best_idx])
         @test sum(abs2, predict(mach, X) .- y) / length(y) < 1e-5
+
+        @testset "Smoke test SymbolicUtils" begin
+            eqn = node_to_symbolic(rep.equations[rep.best_idx], model)
+            n = symbolic_to_node(eqn, model)
+            eqn2 = convert(SymbolicUtils.Symbolic, n, model)
+            n2 = convert(Node, eqn2, model)
+        end
     end
 
     @testset "Multiple outputs" begin
