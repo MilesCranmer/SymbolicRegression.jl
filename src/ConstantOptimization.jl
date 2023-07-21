@@ -14,7 +14,7 @@ function opt_func(
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     _set_constants!(x, constant_nodes)
     # TODO(mcranmer): This should use score_func batching.
-    loss = eval_loss(tree, dataset, options)
+    loss = eval_loss(tree, dataset, options, false)
     return loss::L
 end
 

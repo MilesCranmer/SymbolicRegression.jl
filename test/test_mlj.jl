@@ -1,7 +1,9 @@
-import SymbolicRegression: SRRegressor, MultitargetSRRegressor
+import SymbolicRegression:
+    Node, SRRegressor, MultitargetSRRegressor, node_to_symbolic, symbolic_to_node
 import MLJTestInterface as MTI
 import MLJBase: machine, fit!, report, predict
 using Test
+using SymbolicUtils: SymbolicUtils
 
 macro quiet(ex)
     return quote
@@ -10,6 +12,8 @@ macro quiet(ex)
         end
     end |> esc
 end
+
+stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
 
 @testset "Generic interface tests" begin
     failures, summary = MTI.test(
@@ -31,17 +35,25 @@ end
     @testset "Single outputs" begin
         X = (a=rand(32), b=rand(32))
         y = X.a .^ 2.1
-        model = SRRegressor(; niterations=10)
+        model = SRRegressor(; niterations=10, stop_kws...)
         mach = machine(model, X, y)
         fit!(mach)
         rep = report(mach)
         @test occursin("a", rep.equation_strings[rep.best_idx])
+        @test sum(abs2, predict(mach, X) .- y) / length(y) < 1e-5
+
+        @testset "Smoke test SymbolicUtils" begin
+            eqn = node_to_symbolic(rep.equations[rep.best_idx], model)
+            n = symbolic_to_node(eqn, model)
+            eqn2 = convert(SymbolicUtils.Symbolic, n, model)
+            n2 = convert(Node, eqn2, model)
+        end
     end
 
     @testset "Multiple outputs" begin
         X = (a=rand(32), b=rand(32))
         y = X.a .^ 2.1
-        model = MultitargetSRRegressor(; niterations=10)
+        model = MultitargetSRRegressor(; niterations=10, stop_kws...)
         mach = machine(model, X, reduce(hcat, [reshape(y, :, 1) for i in 1:3]))
         fit!(mach)
         rep = report(mach)
@@ -54,7 +66,7 @@ end
         X = (b1=randn(32), b2=randn(32))
         Y = (c1=X.b1 .* X.b2, c2=X.b1 .+ X.b2)
         w = ones(32)
-        model = MultitargetSRRegressor(; niterations=10)
+        model = MultitargetSRRegressor(; niterations=10, stop_kws...)
         mach = machine(model, X, Y, w)
         fit!(mach)
         test_outs = predict(mach, X)
@@ -69,7 +81,7 @@ end
 @testset "Good predictions" begin
     X = randn(100, 3)
     Y = X
-    model = MultitargetSRRegressor(; niterations=10)
+    model = MultitargetSRRegressor(; niterations=10, stop_kws...)
     mach = machine(model, X, Y)
     fit!(mach)
     @test sum(abs2, predict(mach, X) .- Y) < 1e-6

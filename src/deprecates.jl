@@ -34,12 +34,12 @@ using Base: @deprecate
         procs::Union{Vector{Int},Nothing}=nothing,
         addprocs_function::Union{Function,Nothing}=nothing,
         runtests::Bool=true,
-        saved_state::Union{StateType{T,L},Nothing}=nothing,
+        saved_state=nothing,
         loss_type::Type=Nothing,
         # Deprecated:
         multithreaded=nothing,
         varMap=nothing,
-    ) where {T<:DATA_TYPE,L<:LOSS_TYPE},
+    ) where {T<:DATA_TYPE},
     equation_search(
         X,
         y;
@@ -69,7 +69,7 @@ using Base: @deprecate
         procs::Union{Vector{Int},Nothing}=nothing,
         addprocs_function::Union{Function,Nothing}=nothing,
         runtests::Bool=true,
-        saved_state::Union{StateType{T,L},Nothing}=nothing,
+        saved_state=nothing,
     ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}},
     equation_search(
         datasets;

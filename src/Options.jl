@@ -230,6 +230,8 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     this is set equal to the maxsize.
 - `parsimony`: A multiplicative factor for how much complexity is
     punished.
+- `dimensional_constraint_penalty`: An additive factor if the dimensional
+    constraint is violated.
 - `use_frequency`: Whether to use a parsimony that adapts to the
     relative proportion of equations at each complexity; this will
     ensure that there are a balanced number of equations considered
@@ -279,6 +281,8 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     at which the maxsize should be reached.
 - `verbosity`: Whether to print debugging statements or
     not.
+- `print_precision`: How many digits to print when printing
+    equations. By default, this is 5.
 - `save_to_file`: Whether to save equations to a file during the search.
 - `bin_constraints`: See `constraints`. This is the same, but specified for binary
     operators only (for example, if you have an operator that is both a binary
@@ -334,6 +338,7 @@ function Options end
     complexity_of_constants::Union{Nothing,Real}=nothing,
     complexity_of_variables::Union{Nothing,Real}=nothing,
     parsimony::Real=0.0032,
+    dimensional_constraint_penalty::Union{Nothing,Real}=nothing,
     alpha::Real=0.100000,
     maxsize::Integer=20,
     maxdepth::Union{Nothing,Integer}=nothing,
@@ -360,6 +365,7 @@ function Options end
     fraction_replaced::Real=0.00036,
     fraction_replaced_hof::Real=0.035,
     verbosity::Real=convert(Int, 1e9),
+    print_precision::Integer=5,
     save_to_file::Bool=true,
     probability_negate_constant::Real=0.01,
     seed=nothing,
@@ -676,12 +682,13 @@ function Options end
         mutation_weights
     end
 
+    @assert print_precision > 0
+
     options = Options{
         eltype(complexity_mapping),
+        typeof(operators),
         use_recorder,
         typeof(optimizer_options),
-        typeof(elementwise_loss),
-        typeof(loss_function),
         typeof(tournament_selection_weights),
     }(
         operators,
@@ -692,6 +699,7 @@ function Options end
         tournament_selection_p,
         tournament_selection_weights,
         parsimony,
+        dimensional_constraint_penalty,
         alpha,
         maxsize,
         maxdepth,
@@ -719,6 +727,7 @@ function Options end
         fraction_replaced_hof,
         topn,
         verbosity,
+        print_precision,
         save_to_file,
         probability_negate_constant,
         nuna,
