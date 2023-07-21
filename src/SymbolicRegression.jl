@@ -448,7 +448,6 @@ function equation_search(
         Val(dim_out)
     end
 
-    # TODO: Should we pass a tuple of datasets instead?
     return _equation_search(
         v_concurrency,
         _v_dim_out,

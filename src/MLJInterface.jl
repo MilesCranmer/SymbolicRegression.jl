@@ -252,7 +252,6 @@ dimension_fallback(q::Union{<:Quantity{T,D}}, ::Type{D}) where {T,D} = dimension
 dimension_fallback(_, ::Type{D}) where {D} = D()
 
 function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
-    # TODO: This assumes all units in a column are equal.
     for (i, row) in enumerate(eachrow(A))
         allequal(Base.Fix2(dimension_fallback, D).(row)) ||
             error("Inconsistent units in feature $i of matrix.")

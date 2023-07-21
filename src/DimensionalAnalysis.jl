@@ -9,6 +9,13 @@ import ..CoreModule: Options, Dataset
 import ..CoreModule.OperatorsModule: safe_pow, safe_sqrt
 import ..UtilsModule: safe_call
 
+"""
+    @maybe_return_call(T, op, (args...))
+
+Basically, we try to evaluate the operator. If
+the method is defined AND there is no dimension error,
+we return. Otherwise, continue.
+"""
 macro maybe_return_call(T, op, inputs)
     result = gensym()
     successful = gensym()
@@ -135,7 +142,6 @@ end
     static_hasmethod(op, Tuple{W,T}) &&
         r.wildcard &&
         @maybe_return_call(W, op, (l, ustrip(r)))
-    # TODO: Should this also check for methods that take quantities as input?
     l.wildcard &&
         r.wildcard &&
         return W(Quantity(op(ustrip(l), ustrip(r))::T), false, false)
@@ -178,7 +184,6 @@ function violates_dimensional_constraints(
     if X_units === nothing && y_units === nothing
         return false
     end
-    # TODO: Should also check against output type.
     dimensional_output = violates_dimensional_constraints_dispatch(
         tree, X_units, x, options.operators
     )
