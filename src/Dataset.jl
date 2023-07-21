@@ -90,7 +90,7 @@ end
             loss_type::Type=Nothing,
             X_units::Union{AbstractVector, Nothing}=nothing,
             y_units=nothing,
-    )
+    ) where {T<:DATA_TYPE}
 
 Construct a dataset to pass between internal functions.
 """
