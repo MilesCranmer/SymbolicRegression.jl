@@ -224,6 +224,7 @@ function get_units(_, _, ::Nothing, ::Function)
     return nothing
 end
 function get_units(::Type{T}, ::Type{D}, x::AbstractString, f::Function) where {T,D}
+    isempty(x) && return one(Quantity{T,D})
     return convert(Quantity{T,D}, f(x))
 end
 function get_units(::Type{T}, ::Type{D}, x::Quantity, ::Function) where {T,D}

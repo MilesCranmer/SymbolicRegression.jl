@@ -1,7 +1,7 @@
 name = "SymbolicRegression"
 uuid = "8254be44-1295-4e6a-a16d-46603ac705cb"
 authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
-version = "0.21.1"
+version = "0.21.2"
 
 [deps]
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
