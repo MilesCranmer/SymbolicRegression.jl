@@ -19,7 +19,6 @@ options = SymbolicRegression.Options(;
     unary_operators=(_cos, _exp),
     npopulations=20,
     early_stop_condition=early_stop,
-    enable_autodiff=true,
     elementwise_loss=my_loss,
 )
 
