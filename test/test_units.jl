@@ -44,6 +44,7 @@ options = Options(;
         Quantity(1.5, SymbolicDimensions),
         Quantity(1.0, SymbolicDimensions),
     ]
+    @test get_units(Float64, SD, [""], sym_uparse) == [Quantity(1.0, SymbolicDimensions)]
     # Bad unit types:
     @test_throws ErrorException get_units(Float64, D, (; X=[1, 2]), uparse)
 
