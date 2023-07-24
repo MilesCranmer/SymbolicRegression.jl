@@ -350,7 +350,7 @@ function Options end
     should_simplify::Union{Nothing,Bool}=nothing,
     should_optimize_constants::Bool=true,
     output_file::Union{Nothing,AbstractString}=nothing,
-    npopulations::Union{Nothing,Integer}=15,
+    populations::Integer=15,
     perturbation_factor::Real=0.076,
     annealing::Bool=false,
     batching::Bool=false,
@@ -361,7 +361,7 @@ function Options end
     use_frequency::Bool=true,
     use_frequency_in_tournament::Bool=true,
     adaptive_parsimony_scaling::Real=20.0,
-    npop::Integer=33,
+    population_size::Integer=33,
     ncycles_per_iteration::Integer=550,
     fraction_replaced::Real=0.00036,
     fraction_replaced_hof::Real=0.035,
@@ -619,10 +619,6 @@ function Options end
         maxdepth = maxsize
     end
 
-    if npopulations === nothing
-        npopulations = nworkers()
-    end
-
     if define_helper_functions
         # We call here so that mapped operators, like ^
         # are correctly overloaded, rather than overloading
@@ -719,7 +715,7 @@ function Options end
         should_simplify,
         should_optimize_constants,
         output_file,
-        npopulations,
+        populations,
         perturbation_factor,
         annealing,
         batching,
@@ -730,7 +726,7 @@ function Options end
         use_frequency,
         use_frequency_in_tournament,
         adaptive_parsimony_scaling,
-        npop,
+        population_size,
         ncycles_per_iteration,
         fraction_replaced,
         fraction_replaced_hof,

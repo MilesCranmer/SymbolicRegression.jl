@@ -15,7 +15,7 @@ for T in (ComplexF16, ComplexF32, ComplexF64)
         options = SymbolicRegression.Options(;
             binary_operators=[+, *, -, /],
             unary_operators=[cos],
-            npopulations=20,
+            populations=20,
             early_stop_condition=early_stop,
             elementwise_loss=(prediction, target) -> abs2(prediction - target),
         )

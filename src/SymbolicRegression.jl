@@ -542,17 +542,17 @@ function _equation_search(
     tasks = [Task[] for j in 1:nout]
     # Set up a channel to send finished populations back to head node
     channels = if parallelism == :multiprocessing
-        [[RemoteChannel(1) for i in 1:(options.npopulations)] for j in 1:nout]
+        [[RemoteChannel(1) for i in 1:(options.populations)] for j in 1:nout]
     else
-        [[Channel(1) for i in 1:(options.npopulations)] for j in 1:nout]
+        [[Channel(1) for i in 1:(options.populations)] for j in 1:nout]
         # (Unused for :serial)
     end
 
     # This is a recorder for populations, but is not actually used for processing, just
     # for the final return.
-    returnPops = init_dummy_pops(options.npopulations, datasets, options)
+    returnPops = init_dummy_pops(options.populations, datasets, options)
     # These initial populations are discarded:
-    bestSubPops = init_dummy_pops(options.npopulations, datasets, options)
+    bestSubPops = init_dummy_pops(options.populations, datasets, options)
 
     actualMaxsize = options.maxsize + MAX_DEGREE
 
@@ -571,7 +571,7 @@ function _equation_search(
 
     # Records the number of evaluations:
     # Real numbers indicate use of batching.
-    num_evals = [[0.0 for i in 1:(options.npopulations)] for j in 1:nout]
+    num_evals = [[0.0 for i in 1:(options.populations)] for j in 1:nout]
 
     we_created_procs = false
     ##########################################################################
@@ -627,7 +627,7 @@ function _equation_search(
     @assert length(hallOfFame) == nout
     hallOfFame::Vector{HallOfFame{T,L}}
 
-    for j in 1:nout, i in 1:(options.npopulations)
+    for j in 1:nout, i in 1:(options.populations)
         worker_idx = next_worker(worker_assignment, procs)
         if parallelism == :multiprocessing
             worker_assignment[(j, i)] = worker_idx
@@ -635,7 +635,7 @@ function _equation_search(
 
         saved_pop = load_saved_population(saved_state; out=j, pop=i)
 
-        if saved_pop !== nothing && length(saved_pop.members) == options.npop
+        if saved_pop !== nothing && length(saved_pop.members) == options.population_size
             saved_pop::Population{T,L}
             ## Update losses:
             for member in saved_pop.members
@@ -654,21 +654,21 @@ function _equation_search(
             new_pop = @sr_spawner parallelism worker_idx (
                 Population(
                     datasets[j];
-                    npop=options.npop,
+                    population_size=options.population_size,
                     nlength=3,
                     options=options,
                     nfeatures=datasets[j].nfeatures,
                 ),
                 HallOfFame(options, T, L),
                 RecordType(),
-                Float64(options.npop),
+                Float64(options.population_size),
             )
-            # This involves npop evaluations, on the full dataset:
+            # This involves population_size evaluations, on the full dataset:
         end
         push!(init_pops[j], new_pop)
     end
     # 2. Start the cycle on every process:
-    for j in 1:nout, i in 1:(options.npopulations)
+    for j in 1:nout, i in 1:(options.populations)
         dataset = datasets[j]
         running_search_statistics = all_running_search_statistics[j]
         curmaxsize = curmaxsizes[j]
@@ -726,7 +726,7 @@ function _equation_search(
 
     debug(options.verbosity > 0 || options.progress, "Started!")
     start_time = time()
-    total_cycles = options.npopulations * niterations
+    total_cycles = options.populations * niterations
     cycles_remaining = [total_cycles for j in 1:nout]
     if options.progress && nout == 1
         #TODO: need to iterate this on the max cycles remaining!
@@ -744,7 +744,7 @@ function _equation_search(
     equation_speed = Float32[]
 
     if parallelism in (:multiprocessing, :multithreading)
-        for j in 1:nout, i in 1:(options.npopulations)
+        for j in 1:nout, i in 1:(options.populations)
             # Start listening for each population to finish:
             t = @async put!(channels[j][i], fetch(allPops[j][i]))
             push!(tasks[j], t)
@@ -753,21 +753,21 @@ function _equation_search(
 
     # Randomly order which order to check populations:
     # This is done so that we do work on all nout equally.
-    all_idx = [(j, i) for j in 1:nout for i in 1:(options.npopulations)]
+    all_idx = [(j, i) for j in 1:nout for i in 1:(options.populations)]
     shuffle!(all_idx)
     kappa = 0
     resource_monitor = ResourceMonitor(;
         absolute_start_time=time(),
         # Storing n times as many monitoring intervals as populations seems like it will
         # help get accurate resource estimates:
-        num_intervals_to_store=options.npopulations * 100 * nout,
+        num_intervals_to_store=options.populations * 100 * nout,
     )
     while sum(cycles_remaining) > 0
         kappa += 1
-        if kappa > options.npopulations * nout
+        if kappa > options.populations * nout
             kappa = 1
         end
-        # nout, npopulations:
+        # nout, populations:
         j, i = all_idx[kappa]
 
         # Check if error on population:
@@ -1026,7 +1026,7 @@ function _equation_search(
     if parallelism == :multiprocessing
         we_created_procs && rmprocs(procs)
     elseif parallelism == :multithreading
-        for j in 1:nout, i in 1:(options.npopulations)
+        for j in 1:nout, i in 1:(options.populations)
             wait(allPops[j][i])
         end
     end

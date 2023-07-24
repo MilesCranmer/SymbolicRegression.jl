@@ -15,7 +15,7 @@ for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma,
                 default_params...,
                 binary_operators=(+, *, ^, /, binop),
                 unary_operators=(unaop, abs),
-                npopulations=4,
+                populations=4,
                 verbosity=(unaop == gamma) ? 0 : Int(1e9),
                 kw...,
             )

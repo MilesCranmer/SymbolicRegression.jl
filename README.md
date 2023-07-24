@@ -182,7 +182,7 @@ y = 2 * cos.(X[2, :]) + X[1, :] .^ 2 .- 2
 options = Options(
     binary_operators=[+, *, /, -],
     unary_operators=[cos, exp],
-    npopulations=20
+    populations=20
 )
 
 hall_of_fame = equation_search(

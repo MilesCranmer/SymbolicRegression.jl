@@ -262,7 +262,7 @@ function test_entire_pipeline(
             @spawnat proc begin
                 tmp_pop = Population(
                     dataset;
-                    npop=20,
+                    population_size=20,
                     nlength=3,
                     options=options,
                     nfeatures=dataset.nfeatures,

@@ -67,7 +67,7 @@ for i in 0:5
             default_params...,
             binary_operators=(+, *),
             unary_operators=(cos,),
-            npopulations=4,
+            populations=4,
             batching=batching,
             crossover_probability=crossover_probability,
             skip_mutation_failures=skip_mutation_failures,

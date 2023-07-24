@@ -9,7 +9,7 @@ early_stop(loss, c) = ((loss <= 1e-10) && (c <= 10))
 options = SymbolicRegression.Options(;
     binary_operators=(+, *, /, -),
     unary_operators=(cos, exp),
-    npopulations=20,
+    populations=20,
     early_stop_condition=early_stop,
 )
 

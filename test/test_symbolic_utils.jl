@@ -9,7 +9,7 @@ options = Options(;
     binary_operators=(+, *, ^, /, greater),
     unary_operators=(_inv,),
     constraints=(_inv => 4,),
-    npopulations=4,
+    populations=4,
 )
 @extend_operators options
 tree = Node(5, safe_pow(Node(; val=3.0) * Node(1, Node("x1")), 2.0), Node(; val=-1.2))

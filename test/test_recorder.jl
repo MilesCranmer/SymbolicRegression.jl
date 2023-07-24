@@ -11,8 +11,8 @@ options = SymbolicRegression.Options(;
     val_recorder=Val(true),
     recorder_file="pysr_recorder.json",
     crossover_probability=0.0,  # required for recording, as not set up to track crossovers.
-    npopulations=2,
-    npop=100,
+    populations=2,
+    population_size=100,
     maxsize=20,
     complexity_of_operators=[cos => 2],
 )
