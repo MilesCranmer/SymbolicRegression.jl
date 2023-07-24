@@ -42,7 +42,7 @@ function Population(
     nfeatures::Int,
     npop=nothing,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    @assert population_size !== nothing ⊻ npop !== nothing
+    @assert (population_size !== nothing) ⊻ (npop !== nothing)
     population_size = if npop === nothing
         population_size
     else
@@ -79,6 +79,7 @@ function Population(
     loss_type::Type=Nothing,
     npop=nothing,
 ) where {T<:DATA_TYPE}
+    @assert (population_size !== nothing) ⊻ (npop !== nothing)
     population_size = if npop === nothing
         population_size
     else
