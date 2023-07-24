@@ -427,6 +427,8 @@ function Options end
         k == :stateReturn && (deprecated_return_state = kws[k]; true) && continue
         k == :ns && (tournament_selection_n = kws[k]; true) && continue
         k == :loss && (elementwise_loss = kws[k]; true) && continue
+        k == :npop && (population_size = kws[k]; true) && continue
+        k == :npopulations && (populations = kws[k]; true) && continue
         if k == :mutationWeights
             if typeof(kws[k]) <: AbstractVector
                 _mutation_weights = kws[k]
