@@ -143,6 +143,8 @@ const deprecated_options_mapping = NamedTuple([
     :return_state => :deprecated_return_state,
     :ns => :tournament_selection_n,
     :loss => :elementwise_loss,
+    :npopulations => :populations,
+    :npop => :population_size,
 ])
 
 const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators (functions) to use.
@@ -203,9 +205,8 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     the dataset. This also means you could use a custom evaluation
     for a particular expression. Take a look at `_eval_loss` in
     the file `src/LossFunctions.jl` for an example.
-- `npopulations`: How many populations of equations to use. By default
-    this is set equal to the number of cores
-- `npop`: How many equations in each population.
+- `populations`: How many populations of equations to use.
+- `population_size`: How many equations in each population.
 - `ncycles_per_iteration`: How many generations to consider per iteration.
 - `tournament_selection_n`: Number of expressions considered in each tournament.
 - `tournament_selection_p`: The fittest expression in a tournament is to be
