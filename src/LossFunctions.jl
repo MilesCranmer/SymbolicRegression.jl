@@ -33,8 +33,14 @@ function _weighted_loss(
     end
 end
 
-@inline maybe_getindex(v, ::Nothing) = v
-@inline maybe_getindex(v, i...) = getindex(v, i...)
+"""If any of the indices are `nothing`, just return."""
+@inline function maybe_getindex(v, i...)
+    if any(==(nothing), i)
+        return v
+    else
+        return getindex(v, i...)
+    end
+end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function _eval_loss(
