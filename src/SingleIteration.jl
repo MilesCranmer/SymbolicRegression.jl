@@ -47,6 +47,13 @@ function s_r_cycle(
         for member in pop.members
             size = compute_complexity(member, options)
             score = member.score
+            # TODO: Note that this per-population hall of fame only uses the batched
+            #       loss, and is therefore innaccurate. Therefore, some expressions
+            #       may be loss if a very small batch size is used.
+            # - Could have different batch size for different things (smaller for constant opt)
+            # - Could just recompute losses here (expensive)
+            # - Average over a few batches
+            # - Store multiple expressions in hall of fame
             if 0 < size <= options.maxsize && (
                 !best_examples_seen.exists[size] ||
                 score < best_examples_seen.members[size].score
@@ -77,6 +84,7 @@ function optimize_and_simplify_population(
             pop.members[j].tree = tree
         end
         if options.should_optimize_constants && do_optimization[j]
+            # TODO: Might want to do full batch optimization here?
             pop.members[j], array_num_evals[j] = optimize_constants(
                 dataset, pop.members[j], options
             )
