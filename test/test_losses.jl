@@ -1,4 +1,5 @@
 using SymbolicRegression
+import SymbolicRegression: eval_loss
 using Random
 using Test
 include("test_params.jl")
@@ -28,4 +29,21 @@ for (loss_fnc, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
         _weighted_loss(x, y, w, options.elementwise_loss) -
         sum(evaluator.(x, y, w)) / sum(w),
     ) < 1e-6
+end
+
+function custom_objective_batched(
+    tree::Node{T}, dataset::Dataset{T,L}, options, ::Nothing
+) where {T,L}
+    return one(T)
+end
+function custom_objective_batched(
+    tree::Node{T}, dataset::Dataset{T,L}, options, idx
+) where {T,L}
+    return sum(dataset.X[:, idx])
+end
+let options = Options(; binary_operators=[+, *], loss_function=custom_objective_batched),
+    d = Dataset(randn(3, 10), randn(10))
+
+    @test eval_loss(Node(; val=1.0), d, options) === 1.0
+    @test eval_loss(Node(; val=1.0), d, options; idx=[1, 2]) == sum(d.X[:, [1, 2]])
 end
