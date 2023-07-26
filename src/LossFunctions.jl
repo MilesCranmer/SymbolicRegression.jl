@@ -109,7 +109,7 @@ function eval_loss_batched(
 end
 
 function batch_sample(dataset, options)
-    return StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)
+    return StatsBase.sample(1:(dataset.n), options.batch_size; replace=false)
 end
 
 # Just so we can pass either PopMember or Node here:
