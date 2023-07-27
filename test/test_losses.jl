@@ -47,3 +47,13 @@ let options = Options(; binary_operators=[+, *], loss_function=custom_objective_
     @test eval_loss(Node(; val=1.0), d, options) === 1.0
     @test eval_loss(Node(; val=1.0), d, options; idx=[1, 2]) == sum(d.X[:, [1, 2]])
 end
+
+custom_objective_bad_batched(tree, dataset, options) = sum(dataset.X)
+
+let options = Options(;
+        binary_operators=[+, *], loss_function=custom_objective_bad_batched, batching=true
+    ),
+    d = Dataset(randn(3, 10), randn(10))
+
+    @test_throws ErrorException eval_loss(Node(; val=1.0), d, options; idx=[1, 2])
+end

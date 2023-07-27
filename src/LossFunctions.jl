@@ -78,6 +78,13 @@ function evaluator(
     if static_hasmethod(f, typeof((tree, dataset, options, idx)))
         # If user defines method that accepts batching indices:
         return f(tree, dataset, options, idx)
+    elseif options.batching
+        error(
+            "User-defined loss function must accept batching indices if `options.batching == true`. " *
+            "For example, `f(tree, dataset, options, idx)`, where `idx` " *
+            "is `nothing` if full dataset is to be used, " *
+            "and a vector of indices otherwise.",
+        )
     else
         return f(tree, dataset, options)
     end
