@@ -2,6 +2,7 @@ module LossFunctionsModule
 
 import Random: randperm
 using StatsBase: StatsBase
+import Tricks: static_hasmethod
 import DynamicExpressions: Node
 using LossFunctions: LossFunctions
 import LossFunctions: SupervisedLoss
@@ -32,11 +33,22 @@ function _weighted_loss(
     end
 end
 
+"""If any of the indices are `nothing`, just return."""
+@inline function maybe_getindex(v, i...)
+    if any(==(nothing), i)
+        return v
+    else
+        return getindex(v, i...)
+    end
+end
+
 # Evaluate the loss of a particular expression on the input dataset.
 function _eval_loss(
-    tree::Node{T}, dataset::Dataset{T,L,AX,AY}, options::Options, regularization::Bool
-)::L where {T<:DATA_TYPE,L<:LOSS_TYPE,AX<:AbstractArray{T},AY<:AbstractArray{T}}
-    (prediction, completion) = eval_tree_array(tree, dataset.X, options)
+    tree::Node{T}, dataset::Dataset{T,L}, options::Options, regularization::Bool, idx
+)::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    (prediction, completion) = eval_tree_array(
+        tree, maybe_getindex(dataset.X, :, idx), options
+    )
     if !completion
         return L(Inf)
     end
@@ -44,12 +56,12 @@ function _eval_loss(
     loss_val = if dataset.weighted
         _weighted_loss(
             prediction,
-            dataset.y::AY,
-            dataset.weights::AbstractVector{T},
+            maybe_getindex(dataset.y, idx),
+            maybe_getindex(dataset.weights, idx),
             options.elementwise_loss,
         )
     else
-        _loss(prediction, dataset.y::AY, options.elementwise_loss)
+        _loss(prediction, maybe_getindex(dataset.y, idx), options.elementwise_loss)
     end
 
     if regularization
@@ -61,52 +73,50 @@ end
 
 # This evaluates function F:
 function evaluator(
-    f::F, tree::Node{T}, dataset::Dataset{T,L}, options::Options
+    f::F, tree::Node{T}, dataset::Dataset{T,L}, options::Options, idx
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE,F}
-    return f(tree, dataset, options)
+    if static_hasmethod(f, typeof((tree, dataset, options, idx)))
+        # If user defines method that accepts batching indices:
+        return f(tree, dataset, options, idx)
+    elseif options.batching
+        error(
+            "User-defined loss function must accept batching indices if `options.batching == true`. " *
+            "For example, `f(tree, dataset, options, idx)`, where `idx` " *
+            "is `nothing` if full dataset is to be used, " *
+            "and a vector of indices otherwise.",
+        )
+    else
+        return f(tree, dataset, options)
+    end
 end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function eval_loss(
-    tree::Node{T}, dataset::Dataset{T,L}, options::Options, regularization::Bool=true
+    tree::Node{T},
+    dataset::Dataset{T,L},
+    options::Options;
+    regularization::Bool=true,
+    idx=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
     loss_val = if options.loss_function === nothing
-        _eval_loss(tree, dataset, options, regularization)
+        _eval_loss(tree, dataset, options, regularization, idx)
     else
         f = options.loss_function::Function
-        evaluator(f, tree, dataset, options)
+        evaluator(f, tree, dataset, options, idx)
     end
 
     return loss_val
 end
 
 function eval_loss_batched(
-    tree::Node{T}, dataset::Dataset{T,L}, options::Options, regularization::Bool=true
+    tree::Node{T}, dataset::Dataset{T,L}, options::Options; regularization::Bool=true
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    if options.loss_function !== nothing
-        error("Batched losses for custom objectives are not yet implemented.")
-    end
-    batch_idx = StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)
-    batch_X = view(dataset.X, :, batch_idx)
-    (prediction, completion) = eval_tree_array(tree, batch_X, options)
-    if !completion
-        return L(Inf)
-    end
+    idx = batch_sample(dataset, options)
+    return eval_loss(tree, dataset, options; regularization=regularization, idx=idx)
+end
 
-    batch_y = view(dataset.y::AbstractVector{T}, batch_idx)
-    loss_val = if !dataset.weighted
-        L(_loss(prediction, batch_y, options.elementwise_loss))
-    else
-        w = dataset.weights::AbstractVector{T}
-        batch_w = view(w, batch_idx)
-        L(_weighted_loss(prediction, batch_y, batch_w, options.elementwise_loss))
-    end
-
-    if regularization
-        loss_val += dimensional_regularization(tree, dataset, options)
-    end
-
-    return loss_val
+function batch_sample(dataset, options)
+    return StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)
 end
 
 # Just so we can pass either PopMember or Node here:
@@ -157,7 +167,7 @@ function score_func(
 end
 
 # Score an equation with a small batch
-function score_func_batch(
+function score_func_batched(
     dataset::Dataset{T,L}, member, options::Options, complexity::Union{Int,Nothing}=nothing
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     result_loss = eval_loss_batched(get_tree(member), dataset, options)

@@ -201,8 +201,21 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     scalar of type `T`. This is useful if you want to use a loss
     that takes into account derivatives, or correlations across
     the dataset. This also means you could use a custom evaluation
-    for a particular expression. Take a look at `_eval_loss` in
-    the file `src/LossFunctions.jl` for an example.
+    for a particular expression. If you are using
+    `batching=true`, then your function should
+    accept a fourth argument `idx`, which is either `nothing`
+    (indicating that the full dataset should be used), or a vector
+    of indices to use for the batch.
+    For example,
+
+        function my_loss(tree, dataset::Dataset{T,L}, options)::L where {T,L}
+            prediction, flag = eval_tree_array(tree, dataset.X, options)
+            if !flag
+                return L(Inf)
+            end
+            return sum((prediction .- dataset.y) .^ 2) / dataset.n
+        end
+
 - `npopulations`: How many populations of equations to use. By default
     this is set equal to the number of cores
 - `npop`: How many equations in each population.
