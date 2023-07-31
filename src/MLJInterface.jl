@@ -133,6 +133,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
     # To speed up iterative fits, we cache the types:
     types = if old_fitresult === nothing
         (;
+            T=Any,
             X_t=Any,
             y_t=Any,
             w_t=Any,
@@ -181,6 +182,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
     )
     fitresult = (;
         state=search_state,
+        num_out_features=isa(m, SRRegressor) ? 1 : size(y_t, 1),
         options=options,
         variable_names=variable_names,
         y_variable_names=y_variable_names,
@@ -188,6 +190,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         X_units=X_units_clean,
         y_units=y_units_clean,
         types=(
+            T=hof_eltype(search_state[2]),
             X_t=typeof(X_t),
             y_t=typeof(y_t),
             w_t=typeof(w_t),
@@ -200,6 +203,9 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
     )::(old_fitresult === nothing ? Any : typeof(old_fitresult))
     return (fitresult, nothing, full_report(m, fitresult))
 end
+hof_eltype(::Type{H}) where {T,H<:HallOfFame{T}} = T
+hof_eltype(::Type{V}) where {V<:Vector} = hof_eltype(eltype(V))
+hof_eltype(h) = hof_eltype(typeof(h))
 
 function clean_units(units)
     !isa(units, AbstractDimensions) && error("Unexpected units.")
@@ -264,6 +270,28 @@ function dimension_fallback(
 end
 dimension_fallback(q::Union{<:Quantity{T,D}}, ::Type{D}) where {T,D} = dimension(q)::D
 dimension_fallback(_, ::Type{D}) where {D} = D()
+function prediction_warn()
+    @warn "Evaluation failed either due to NaNs detected or due to unfinished search. Using 0s for prediction."
+end
+function prediction_fallback(::Type{T}, ::SRRegressor, Xnew_t, fitresult) where {T}
+    prediction_warn()
+    return fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T))
+end
+function prediction_fallback(
+    ::Type{T}, ::MultitargetSRRegressor, Xnew_t, fitresult, prototype
+) where {T}
+    prediction_warn()
+    out_matrix = reduce(
+        hcat,
+        [
+            fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T)) for
+            _ in 1:(fitresult.num_out_features)
+        ],
+    )
+    fill!(out_matrix, zero(T))
+    !fitresult.y_is_table && return out_matrix
+    return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
+end
 
 function unwrap_units_single(A::AbstractMatrix{T}, ::Type{D}) where {D,T<:Number}
     return A, [D() for _ in eachrow(A)]
@@ -294,35 +322,39 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
         equation_strings=report.equation_strings,
     )
 end
+
 function MMI.predict(m::SRRegressor, fitresult, Xnew)
     params = full_report(m, fitresult; v_with_strings=Val(false))
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
+    T = promote_type(eltype(Xnew_t), fitresult.types.T)
+    length(params.equations) == 0 && return prediction_fallback(T, m, Xnew_t, fitresult)
     X_units_clean = clean_units(X_units)
     validate_variable_names(variable_names, fitresult)
     validate_units(X_units_clean, fitresult.X_units)
     eq = params.equations[params.best_idx]
-    out, flag = eval_tree_array(eq, Xnew_t, fitresult.options)
-    !flag && error("Detected a NaN in evaluating expression.")
+    out, completed = eval_tree_array(eq, Xnew_t, fitresult.options)
+    !completed && return prediction_fallback(T, m, Xnew_t, fitresult)
     return out
 end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = full_report(m, fitresult; v_with_strings=Val(false))
     prototype = MMI.istable(Xnew) ? Xnew : nothing
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
+    T = promote_type(eltype(Xnew_t), fitresult.types.T)
     X_units_clean = clean_units(X_units)
     validate_variable_names(variable_names, fitresult)
     validate_units(X_units_clean, fitresult.X_units)
     equations = params.equations
+    length(equations) == 0 && return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
     best_idx = params.best_idx
-    outs = [
-        let (out, flag) = eval_tree_array(eq[i], Xnew_t, fitresult.options)
-            !flag && error("Detected a NaN in evaluating expression.")
-            out
-        end for (i, eq) in zip(best_idx, equations)
-    ]
+    outs = []
+    for (i, eq) in zip(best_idx, equations)
+        out, completed = eval_tree_array(eq[i], Xnew_t, fitresult.options)
+        !completed && return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
+        push!(outs, out)
+    end
     out_matrix = reduce(hcat, outs)
     !fitresult.y_is_table && return out_matrix
-    prototype = MMI.istable(Xnew) ? Xnew : nothing
     return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
 end
 
@@ -346,10 +378,10 @@ function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<
     ])
 end
 
-function dispatch_selection_for(m::SRRegressor, trees, losses, scores, complexities)
+function dispatch_selection_for(m::SRRegressor, trees, losses, scores, complexities)::Int
     return m.selection_method(;
         trees=trees, losses=losses, scores=scores, complexities=complexities
-    )::Integer
+    )
 end
 function dispatch_selection_for(
     m::MultitargetSRRegressor, trees, losses, scores, complexities
@@ -357,7 +389,7 @@ function dispatch_selection_for(
     return [
         m.selection_method(;
             trees=trees[i], losses=losses[i], scores=scores[i], complexities=complexities[i]
-        )::Integer for i in eachindex(trees)
+        ) for i in eachindex(trees)
     ]
 end
 
