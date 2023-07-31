@@ -83,16 +83,30 @@ eval(modelexpr(:SRRegressor))
 eval(modelexpr(:MultitargetSRRegressor))
 
 # Cleaning already taken care of by `Options` and `equation_search`
-function full_report(m::AbstractSRRegressor, fitresult)
+function full_report(
+    m::AbstractSRRegressor, fitresult; v_with_strings::Val{with_strings}=Val(true)
+) where {with_strings}
     _, hof = fitresult.state
     # TODO: Adjust baseline loss
     formatted = format_hall_of_fame(hof, fitresult.options)
-    equation_strings = get_equation_strings_for(
-        m, formatted.trees, fitresult.options, fitresult.variable_names
-    )
-    best_idx = dispatch_selection_for(
-        m, formatted.trees, formatted.losses, formatted.scores, formatted.complexities
-    )
+    equation_strings = if with_strings
+        get_equation_strings_for(
+            m, formatted.trees, fitresult.options, fitresult.variable_names
+        )
+    else
+        nothing
+    end
+    best_idx = if length(formatted.trees) == 0
+        0
+    else
+        dispatch_selection_for(
+            m,
+            formatted.trees,
+            formatted.losses,
+            formatted.scores,
+            formatted.complexities,
+        )
+    end
     return (;
         best_idx=best_idx,
         equations=formatted.trees,
@@ -281,7 +295,7 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     )
 end
 function MMI.predict(m::SRRegressor, fitresult, Xnew)
-    params = MMI.fitted_params(m, fitresult)
+    params = full_report(m, fitresult; v_with_strings=Val(false))
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     X_units_clean = clean_units(X_units)
     validate_variable_names(variable_names, fitresult)
@@ -292,7 +306,8 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
     return out
 end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
-    params = MMI.fitted_params(m, fitresult)
+    params = full_report(m, fitresult; v_with_strings=Val(false))
+    prototype = MMI.istable(Xnew) ? Xnew : nothing
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     X_units_clean = clean_units(X_units)
     validate_variable_names(variable_names, fitresult)
