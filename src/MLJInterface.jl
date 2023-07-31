@@ -251,6 +251,9 @@ end
 dimension_fallback(q::Union{<:Quantity{T,D}}, ::Type{D}) where {T,D} = dimension(q)::D
 dimension_fallback(_, ::Type{D}) where {D} = D()
 
+function unwrap_units_single(A::AbstractMatrix{T}, ::Type{D}) where {D,T<:Number}
+    return A, [D() for _ in eachrow(A)]
+end
 function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
     for (i, row) in enumerate(eachrow(A))
         allequal(Base.Fix2(dimension_fallback, D).(row)) ||
@@ -258,6 +261,9 @@ function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
     end
     dims = map(Base.Fix2(dimension_fallback, D) ∘ first, eachrow(A))
     return stack([ustrip.(row) for row in eachrow(A)]; dims=1), dims
+end
+function unwrap_units_single(v::AbstractVector{T}, ::Type{D}) where {D,T<:Number}
+    return v, D()
 end
 function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
     allequal(Base.Fix2(dimension_fallback, D).(v)) || error("Inconsistent units in vector.")
