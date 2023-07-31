@@ -404,6 +404,7 @@ MMI.metadata_pkg(
     is_wrapper=false,
 )
 
+# TODO: Allow for Count data, and coerce it into Continuous as needed.
 MMI.metadata_model(
     SRRegressor;
     input_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
