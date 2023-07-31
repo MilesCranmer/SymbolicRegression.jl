@@ -2,7 +2,7 @@ module HallOfFameModule
 
 import DynamicExpressions: Node, string_tree
 import ..UtilsModule: split_string
-import ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE
+import ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu
 import ..ComplexityModule: compute_complexity
 import ..PopMemberModule: PopMember, copy_pop_member
 import ..LossFunctionsModule: eval_loss
@@ -109,9 +109,6 @@ function string_dominating_pareto_curve(
 )
     twidth = (width === nothing) ? 100 : max(100, width::Integer)
     output = ""
-    curMSE = Float64(dataset.baseline_loss)
-    lastMSE = curMSE
-    lastComplexity = 0
     output *= "Hall of Fame:\n"
     # TODO: Get user's terminal width.
     output *= "-"^(twidth - 1) * "\n"
@@ -119,25 +116,11 @@ function string_dominating_pareto_curve(
         "%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation"
     )
 
-    dominating = calculate_pareto_frontier(hallOfFame)
-    for member in dominating
-        complexity = compute_complexity(member, options)
-        if member.loss < 0.0
-            throw(
-                DomainError(
-                    member.loss,
-                    "Your loss function must be non-negative. To do this, consider wrapping your loss inside an exponential, which will not affect the search (unless you are using annealing).",
-                ),
-            )
-        end
-        curMSE = member.loss
-
-        delta_c = complexity - lastComplexity
-        ZERO_POINT = 1e-10
-        delta_l_mse = log(abs(curMSE / lastMSE) + ZERO_POINT)
-        score = convert(Float32, -delta_l_mse / delta_c)
+    formatted = format_hall_of_fame(hallOfFame, options)
+    for (tree, score, loss, complexity) in
+        zip(formatted.trees, formatted.scores, formatted.losses, formatted.complexities)
         eqn_string = string_tree(
-            member.tree,
+            tree,
             options;
             pretty_variable_names=dataset.pretty_variable_names,
             X_sym_units=dataset.X_sym_units,
@@ -156,7 +139,7 @@ function string_dominating_pareto_curve(
         dots = "..."
         equation_width = (twidth - 1) - base_string_length - length(dots)
 
-        output *= @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, curMSE, score,)
+        output *= @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
 
         split_eqn = split_string(eqn_string, equation_width)
         print_pad = false
@@ -166,9 +149,6 @@ function string_dominating_pareto_curve(
             print_pad = true
         end
         output *= " "^(print_pad * base_string_length) * split_eqn[1] * "\n"
-
-        lastMSE = curMSE
-        lastComplexity = complexity
     end
     output *= "-"^(twidth - 1)
     return output
@@ -177,9 +157,19 @@ end
 function format_hall_of_fame(
     hof::HallOfFame{T,L}, options
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    ZERO_POINT = L(1e-10)
-
     dominating = calculate_pareto_frontier(hof)
+    foreach(dominating) do member
+        if member.loss < 0.0
+            throw(
+                DomainError(
+                    member.loss,
+                    "Your loss function must be non-negative. To do this, consider wrapping your loss inside an exponential, which will not affect the search (unless you are using annealing).",
+                ),
+            )
+        end
+    end
+
+    ZERO_POINT = eps(L)
     cur_loss = typemax(L)
     last_loss = cur_loss
     last_complexity = 0
@@ -193,13 +183,13 @@ function format_hall_of_fame(
         complexity = complexities[i]
         cur_loss = losses[i]
         delta_c = complexity - last_complexity
-        delta_l_mse = log(abs(cur_loss / last_loss) + ZERO_POINT)
+        delta_l_mse = log(relu(cur_loss / last_loss) + ZERO_POINT)
 
-        scores[i] = -delta_l_mse / delta_c
+        scores[i] = relu(-delta_l_mse / delta_c)
         last_loss = cur_loss
         last_complexity = complexity
     end
-    return (; trees=trees, scores=scores, losses=losses, complexities=complexities)
+    return (; trees, scores, losses, complexities)
 end
 function format_hall_of_fame(
     hof::AH, options
