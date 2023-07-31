@@ -155,7 +155,7 @@ struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
     fraction_replaced::Float32
     fraction_replaced_hof::Float32
     topn::Int
-    verbosity::Int
+    verbosity::Union{Int,Nothing}
     print_precision::Int
     save_to_file::Bool
     probability_negate_constant::Float32
@@ -164,7 +164,7 @@ struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
     seed::Union{Int,Nothing}
     elementwise_loss::Union{SupervisedLoss,Function}
     loss_function::Union{Nothing,Function}
-    progress::Bool
+    progress::Union{Bool,Nothing}
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::String
     optimizer_probability::Float32

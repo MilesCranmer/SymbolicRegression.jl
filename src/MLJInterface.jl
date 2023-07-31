@@ -177,6 +177,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         loss_type=m.loss_type,
         X_units=X_units_clean,
         y_units=y_units_clean,
+        verbosity=verbosity,
         # Help out with inference:
         v_dim_out=isa(m, SRRegressor) ? Val(1) : Val(2),
     )

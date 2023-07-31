@@ -332,6 +332,9 @@ function equation_search(
     saved_state=nothing,
     return_state::Union{Bool,Nothing}=nothing,
     loss_type::Type{Linit}=Nothing,
+    verbosity::Union{Integer,Nothing}=nothing,
+    progress::Union{Bool,Nothing}=nothing,
+    # TODO: ^ These are undocumented
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
     v_dim_out::Val{dim_out}=Val(nothing),
@@ -371,6 +374,8 @@ function equation_search(
         runtests=runtests,
         saved_state=saved_state,
         return_state=return_state,
+        verbosity=verbosity,
+        progress=progress,
         v_dim_out=Val(dim_out),
     )
 end
@@ -405,6 +410,8 @@ function equation_search(
     runtests::Bool=true,
     saved_state=nothing,
     return_state::Union{Bool,Nothing}=nothing,
+    verbosity::Union{Int,Nothing}=nothing,
+    progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{dim_out}=Val(nothing),
 ) where {dim_out,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
     v_concurrency, concurrency = if parallelism in (:multithreading, "multithreading")
@@ -448,6 +455,36 @@ function equation_search(
         Val(dim_out)
     end
 
+    verbosity = if verbosity === nothing && options.verbosity === nothing
+        1
+    elseif verbosity === nothing
+        options.verbosity
+    elseif options.verbosity === nothing
+        verbosity
+    else
+        error(
+            "You cannot set `verbosity` in both the search parameters `Options` and the call to `equation_search`.",
+        )
+    end
+    progress = if progress === nothing && options.progress === nothing
+        (verbosity > 0) && length(datasets) == 1
+    elseif progress === nothing
+        options.progress
+    elseif options.progress === nothing
+        progress
+    else
+        error(
+            "You cannot set `progress` in both the search parameters `Options` and the call to `equation_search`.",
+        )
+    end
+    if progress
+        @assert(
+            length(datasets) == 1,
+            "You cannot display a progress bar for multi-output searches."
+        )
+        @assert(verbosity > 0, "You cannot display a progress bar with `verbosity=0`.")
+    end
+
     return _equation_search(
         v_concurrency,
         _v_dim_out,
@@ -459,6 +496,8 @@ function equation_search(
         addprocs_function,
         runtests,
         saved_state,
+        verbosity,
+        progress,
         Val(should_return_state),
     )
 end
@@ -474,6 +513,8 @@ function _equation_search(
     addprocs_function::Union{Function,Nothing},
     runtests::Bool,
     saved_state,
+    verbosity,
+    progress,
     ::Val{should_return_state},
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},parallelism,should_return_state,dim_out}
     if options.deterministic
@@ -517,7 +558,7 @@ function _equation_search(
     if runtests
         test_option_configuration(T, options)
         # Testing the first output variable is the same:
-        test_dataset_configuration(example_dataset, options)
+        test_dataset_configuration(example_dataset, options, verbosity)
     end
 
     for dataset in datasets
@@ -594,16 +635,16 @@ function _equation_search(
 
         if we_created_procs
             project_path = splitdir(Pkg.project().path)[1]
-            activate_env_on_workers(procs, project_path, options)
-            import_module_on_workers(procs, @__FILE__, options)
+            activate_env_on_workers(procs, project_path, options, verbosity)
+            import_module_on_workers(procs, @__FILE__, options, verbosity)
         end
-        move_functions_to_workers(procs, options, example_dataset)
+        move_functions_to_workers(procs, options, example_dataset, verbosity)
         if runtests
-            test_module_on_workers(procs, options)
+            test_module_on_workers(procs, options, verbosity)
         end
 
         if runtests
-            test_entire_pipeline(procs, example_dataset, options)
+            test_entire_pipeline(procs, example_dataset, options, verbosity)
         end
     end
     # Get the next worker process to give a job:
@@ -700,7 +741,7 @@ function _equation_search(
                 options.ncycles_per_iteration,
                 curmaxsize,
                 c_rss;
-                verbosity=options.verbosity,
+                verbosity=verbosity,
                 options=options,
                 record=cur_record,
             )
@@ -724,11 +765,11 @@ function _equation_search(
         push!(allPops[j], updated_pop)
     end
 
-    debug(options.verbosity > 0 || options.progress, "Started!")
+    debug(verbosity > 0, "Started!")
     start_time = time()
     total_cycles = options.npopulations * niterations
     cycles_remaining = [total_cycles for j in 1:nout]
-    if options.progress && nout == 1
+    if progress
         #TODO: need to iterate this on the max cycles remaining!
         sum_cycle_remaining = sum(cycles_remaining)
         progress_bar = WrappedProgressBar(
@@ -903,7 +944,7 @@ function _equation_search(
                     options.ncycles_per_iteration,
                     curmaxsize,
                     c_rss;
-                    verbosity=options.verbosity,
+                    verbosity=verbosity,
                     options=options,
                     record=cur_record,
                 )
@@ -949,7 +990,7 @@ function _equation_search(
             end
             stop_work_monitor!(resource_monitor)
             move_window!(all_running_search_statistics[j])
-            if options.progress && nout == 1
+            if progress
                 head_node_occupation = estimate_work_fraction(resource_monitor)
                 update_progress_bar!(
                     progress_bar,
@@ -986,8 +1027,7 @@ function _equation_search(
         elapsed = time() - last_print_time
         # Update if time has passed
         if elapsed > print_every_n_seconds
-            if ((options.verbosity > 0) || (options.progress && nout > 1)) &&
-                length(equation_speed) > 0
+            if verbosity > 0 && !progress && length(equation_speed) > 0
 
                 # Dominating pareto curve - must be better than all simpler equations
                 head_node_occupation = estimate_work_fraction(resource_monitor)
