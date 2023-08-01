@@ -100,6 +100,10 @@ end
     @test_throws AssertionError @quiet(fit!(mach))
     VERSION >= v"1.8" &&
         @test_throws "For multi-output regression, please" @quiet(fit!(mach))
+
+    model = SRRegressor(; verbosity=0)
+    mach = machine(model, randn(32, 3), randn(32))
+    @test_throws ErrorException @quiet(fit!(mach; verbosity=0))
 end
 
 @testset "Unfinished search" begin
