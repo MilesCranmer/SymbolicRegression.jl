@@ -261,6 +261,12 @@ which is useful for debugging and profiling.
     which operators to use, evolution hyperparameters, etc.
 - `variable_names::Union{Vector{String}, Nothing}=nothing`: The names
     of each feature in `X`, which will be used during printing of equations.
+- `display_variable_names::Union{Vector{String}, Nothing}=variable_names`: Names
+    to use when printing expressions during the search, but not when saving
+    to an equation file.
+- `y_variable_names::Union{String,AbstractVector{String},Nothing}=nothing`: The
+    names of each output feature in `y`, which will be used during printing
+    of equations.
 - `parallelism=:multithreading`: What parallelism mode to use.
     The options are `:multithreading`, `:multiprocessing`, and `:serial`.
     By default, multithreading will be used. Multithreading uses less memory,
@@ -326,6 +332,7 @@ function equation_search(
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
     options::Options=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
+    display_variable_names::Union{AbstractVector{String},Nothing}=variable_names,
     y_variable_names::Union{String,AbstractVector{String},Nothing}=nothing,
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
@@ -362,7 +369,15 @@ function equation_search(
     end
 
     datasets = construct_datasets(
-        X, y, weights, variable_names, y_variable_names, X_units, y_units, loss_type
+        X,
+        y,
+        weights,
+        variable_names,
+        display_variable_names,
+        y_variable_names,
+        X_units,
+        y_units,
+        loss_type,
     )
 
     return equation_search(

@@ -303,7 +303,15 @@ end
 load_saved_population(::Nothing; kws...) = nothing
 
 function construct_datasets(
-    X, y, weights, variable_names, y_variable_names, X_units, y_units, loss_type
+    X,
+    y,
+    weights,
+    variable_names,
+    display_variable_names,
+    y_variable_names,
+    X_units,
+    y_units,
+    loss_type,
 )
     nout = size(y, 1)
     return [
@@ -312,6 +320,7 @@ function construct_datasets(
             y[j, :];
             weights=(weights === nothing ? weights : weights[j, :]),
             variable_names=variable_names,
+            display_variable_names=display_variable_names,
             y_variable_name=if y_variable_names === nothing
                 if nout > 1
                     "y$(subscriptify(j))"

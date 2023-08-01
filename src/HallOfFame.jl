@@ -122,7 +122,7 @@ function string_dominating_pareto_curve(
         eqn_string = string_tree(
             tree,
             options;
-            pretty_variable_names=dataset.pretty_variable_names,
+            display_variable_names=dataset.display_variable_names,
             X_sym_units=dataset.X_sym_units,
             y_sym_units=dataset.y_sym_units,
             raw=false,
