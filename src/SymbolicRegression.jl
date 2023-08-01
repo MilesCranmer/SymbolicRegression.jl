@@ -301,6 +301,9 @@ which is useful for debugging and profiling.
     for the loss than for the data you passed, specify the type here.
     Note that if you pass complex data `::Complex{L}`, then the loss
     type will automatically be set to `L`.
+- `verbosity`: Whether to print debugging statements or not.
+- `progress`: Whether to use a progress bar output. Only available for
+    single target output.
 - `X_units::Union{AbstractVector,Nothing}=nothing`: The units of the dataset,
     to be used for dimensional constraints. For example, if `X_units=["kg", "m"]`,
     then the first feature will have units of kilograms, and the second will
@@ -334,7 +337,6 @@ function equation_search(
     loss_type::Type{Linit}=Nothing,
     verbosity::Union{Integer,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
-    # TODO: ^ These are undocumented
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
     v_dim_out::Val{dim_out}=Val(nothing),
