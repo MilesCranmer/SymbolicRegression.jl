@@ -96,17 +96,9 @@ function full_report(
     else
         nothing
     end
-    best_idx = if length(formatted.trees) == 0
-        0
-    else
-        dispatch_selection_for(
-            m,
-            formatted.trees,
-            formatted.losses,
-            formatted.scores,
-            formatted.complexities,
-        )
-    end
+    best_idx = dispatch_selection_for(
+        m, formatted.trees, formatted.losses, formatted.scores, formatted.complexities
+    )
     return (;
         best_idx=best_idx,
         equations=formatted.trees,
@@ -183,7 +175,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
     )
     fitresult = (;
         state=search_state,
-        num_out_features=isa(m, SRRegressor) ? 1 : size(y_t, 1),
+        num_targets=isa(m, SRRegressor) ? 1 : size(y_t, 1),
         options=options,
         variable_names=variable_names,
         y_variable_names=y_variable_names,
@@ -269,7 +261,6 @@ function dimension_fallback(
 ) where {T,D}
     return dimension(convert(Quantity{T,D}, q))::D
 end
-dimension_fallback(q::Union{<:Quantity{T,D}}, ::Type{D}) where {T,D} = dimension(q)::D
 dimension_fallback(_, ::Type{D}) where {D} = D()
 function prediction_warn()
     @warn "Evaluation failed either due to NaNs detected or due to unfinished search. Using 0s for prediction."
@@ -286,7 +277,7 @@ function prediction_fallback(
         hcat,
         [
             fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T)) for
-            _ in 1:(fitresult.num_out_features)
+            _ in 1:(fitresult.num_targets)
         ],
     )
     fill!(out_matrix, zero(T))
@@ -328,7 +319,9 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
     params = full_report(m, fitresult; v_with_strings=Val(false))
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     T = promote_type(eltype(Xnew_t), fitresult.types.T)
-    length(params.equations) == 0 && return prediction_fallback(T, m, Xnew_t, fitresult)
+    if length(params.equations) == 0
+        return prediction_fallback(T, m, Xnew_t, fitresult)
+    end
     X_units_clean = clean_units(X_units)
     validate_variable_names(variable_names, fitresult)
     validate_units(X_units_clean, fitresult.X_units)
@@ -346,7 +339,9 @@ function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     validate_variable_names(variable_names, fitresult)
     validate_units(X_units_clean, fitresult.X_units)
     equations = params.equations
-    length(equations) == 0 && return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
+    if any(t -> length(t) == 0, equations)
+        return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
+    end
     best_idx = params.best_idx
     outs = []
     for (i, eq) in zip(best_idx, equations)
@@ -380,6 +375,7 @@ function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<
 end
 
 function dispatch_selection_for(m::SRRegressor, trees, losses, scores, complexities)::Int
+    length(trees) == 0 && return 0
     return m.selection_method(;
         trees=trees, losses=losses, scores=scores, complexities=complexities
     )
@@ -387,6 +383,7 @@ end
 function dispatch_selection_for(
     m::MultitargetSRRegressor, trees, losses, scores, complexities
 )
+    any(t -> length(t) == 0, trees) && return fill(0, length(trees))
     return [
         m.selection_method(;
             trees=trees[i], losses=losses[i], scores=scores[i], complexities=complexities[i]

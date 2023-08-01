@@ -62,10 +62,11 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MLJBase = "a7f614a8-145f-11e9-1d2a-a57a1082229d"
 MLJTestInterface = "72560011-54dd-4dc2-94f3-c5de45b75ecd"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
+Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Test", "SafeTestsets", "ForwardDiff", "LinearAlgebra", "JSON3", "MLJBase", "MLJTestInterface", "SymbolicUtils", "Zygote"]
+test = ["Test", "SafeTestsets", "ForwardDiff", "LinearAlgebra", "JSON3", "MLJBase", "MLJTestInterface", "Suppressor", "SymbolicUtils", "Zygote"]

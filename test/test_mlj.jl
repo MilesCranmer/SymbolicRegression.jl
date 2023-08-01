@@ -4,6 +4,7 @@ import MLJTestInterface as MTI
 import MLJBase: machine, fit!, report, predict
 using Test
 using SymbolicUtils: SymbolicUtils
+import Suppressor: @capture_err
 
 macro quiet(ex)
     return quote
@@ -99,4 +100,26 @@ end
     @test_throws AssertionError @quiet(fit!(mach))
     VERSION >= v"1.8" &&
         @test_throws "For multi-output regression, please" @quiet(fit!(mach))
+end
+
+@testset "Unfinished search" begin
+    model = SRRegressor(; timeout_in_seconds=1e-10)
+    mach = machine(model, randn(32, 3), randn(32))
+    fit!(mach)
+    @test report(mach).best_idx == 0
+    @test predict(mach, randn(32, 3)) == zeros(32)
+    msg = @capture_err begin
+        predict(mach, randn(32, 3))
+    end
+    @test occursin("Evaluation failed either due to", msg)
+
+    model = MultitargetSRRegressor(; timeout_in_seconds=1e-10)
+    mach = machine(model, randn(32, 3), randn(32, 3))
+    fit!(mach)
+    @test report(mach).best_idx == [0, 0, 0]
+    @test predict(mach, randn(32, 3)) == zeros(32, 3)
+    msg = @capture_err begin
+        predict(mach, randn(32, 3))
+    end
+    @test occursin("Evaluation failed either due to", msg)
 end
