@@ -110,6 +110,9 @@ end
     model = SRRegressor(; timeout_in_seconds=1e-10)
     mach = machine(model, randn(32, 3), randn(32))
     fit!(mach)
+    # Ensure that the hall of fame is empty:
+    _, hof = mach.fitresult.state
+    hof.exists .= false
     @test report(mach).best_idx == 0
     @test predict(mach, randn(32, 3)) == zeros(32)
     msg = @capture_err begin
@@ -120,6 +123,11 @@ end
     model = MultitargetSRRegressor(; timeout_in_seconds=1e-10)
     mach = machine(model, randn(32, 3), randn(32, 3))
     fit!(mach)
+    # Ensure that the hall of fame is empty:
+    _, hofs = mach.fitresult.state
+    foreach(hofs) do hof
+        hof.exists .= false
+    end
     @test report(mach).best_idx == [0, 0, 0]
     @test predict(mach, randn(32, 3)) == zeros(32, 3)
     msg = @capture_err begin
