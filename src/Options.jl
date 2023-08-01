@@ -377,14 +377,14 @@ function Options end
     ncycles_per_iteration::Integer=550,
     fraction_replaced::Real=0.00036,
     fraction_replaced_hof::Real=0.035,
-    verbosity::Real=convert(Int, 1e9),
+    verbosity::Union{Integer,Nothing}=nothing,
     print_precision::Integer=5,
     save_to_file::Bool=true,
     probability_negate_constant::Real=0.01,
     seed=nothing,
     bin_constraints=nothing,
     una_constraints=nothing,
-    progress::Bool=true,
+    progress::Union{Bool,Nothing}=nothing,
     terminal_width::Union{Nothing,Integer}=nothing,
     optimizer_algorithm::AbstractString="BFGS",
     optimizer_nrestarts::Integer=2,
@@ -656,10 +656,6 @@ function Options end
         enable_autodiff=enable_autodiff,
         define_helper_functions=define_helper_functions,
     )
-
-    if progress
-        verbosity = 0
-    end
 
     early_stop_condition = if typeof(early_stop_condition) <: Real
         # Need to make explicit copy here for this to work:
