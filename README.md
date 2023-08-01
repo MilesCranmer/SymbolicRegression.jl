@@ -105,16 +105,14 @@ Let's see an example:
 import SymbolicRegression: SRRegressor
 import MLJ: machine, fit!, predict, report
 
-# Create dataset with three features and one target:
-X = (;
-        a = rand(500) * 20,
-        b = rand(500) * 3,
-    gamma = randn(500)
-)
-y = [2 * cos(X.a[i]) - X.b[i] ^ 2 + 0.9 * X.gamma[i] for i=1:500]
+# Dataset with two named features:
+X = (a = rand(500), b = rand(500))
 
-# Add some noise:
-y = y + randn(500) * 1e-3
+# and one target:
+y = @. 2 * cos(X.a * 23.5) - X.b ^ 2 
+
+# with some noise:
+y = y .+ randn(500) .* 1e-3
 
 model = SRRegressor(
     niterations=50,
@@ -123,7 +121,8 @@ model = SRRegressor(
 )
 ```
 
-Now, let's create and train a machine on our data:
+Now, let's create and train this model
+on our data:
 
 ```julia
 mach = machine(model, X, y)
