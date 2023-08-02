@@ -38,7 +38,7 @@ import ...deprecate_varmap
     `update_baseline_loss!`.
 - `variable_names::Array{String,1}`: The names of the features,
     with shape `(nfeatures,)`.
-- `pretty_variable_names::Array{String,1}`: A version of `variable_names`
+- `display_variable_names::Array{String,1}`: A version of `variable_names`
     but for printing to the terminal (e.g., with unicode versions).
 - `y_variable_name::String`: The name of the output variable.
 - `X_units`: Unit information of `X`. When used, this is a vector
@@ -73,7 +73,7 @@ mutable struct Dataset{
     use_baseline::Bool
     baseline_loss::L
     variable_names::Array{String,1}
-    pretty_variable_names::Array{String,1}
+    display_variable_names::Array{String,1}
     y_variable_name::String
     X_units::XU
     y_units::YU
@@ -99,6 +99,7 @@ function Dataset(
     y::Union{AbstractVector{T},Nothing}=nothing;
     weights::Union{AbstractVector{T},Nothing}=nothing,
     variable_names::Union{Array{String,1},Nothing}=nothing,
+    display_variable_names=variable_names,
     y_variable_name::Union{String,Nothing}=nothing,
     extra::NamedTuple=NamedTuple(),
     loss_type::Type{Linit}=Nothing,
@@ -115,11 +116,17 @@ function Dataset(
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
     weighted = weights !== nothing
-    (variable_names, pretty_variable_names) = if variable_names === nothing
-        (["x$(i)" for i in 1:nfeatures], ["x$(subscriptify(i))" for i in 1:nfeatures])
+    variable_names = if variable_names === nothing
+        ["x$(i)" for i in 1:nfeatures]
     else
-        (variable_names, variable_names)
+        variable_names
     end
+    display_variable_names = if display_variable_names === nothing
+        ["x$(subscriptify(i))" for i in 1:nfeatures]
+    else
+        display_variable_names
+    end
+
     y_variable_name = if y_variable_name === nothing
         ("y" ∉ variable_names) ? "y" : "target"
     else
@@ -185,7 +192,7 @@ function Dataset(
         use_baseline,
         baseline,
         variable_names,
-        pretty_variable_names,
+        display_variable_names,
         y_variable_name,
         X_si_units,
         y_si_units,

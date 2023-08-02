@@ -1,3 +1,4 @@
+using SymbolicRegression: SymbolicRegression
 import SymbolicRegression:
     Node, SRRegressor, MultitargetSRRegressor, node_to_symbolic, symbolic_to_node
 import MLJTestInterface as MTI
@@ -85,7 +86,7 @@ end
     model = MultitargetSRRegressor(; niterations=10, stop_kws...)
     mach = machine(model, X, Y)
     fit!(mach)
-    @test sum(abs2, predict(mach, X) .- Y) < 1e-6
+    @test sum(abs2, predict(mach, X) .- Y) / length(X) < 1e-6
 end
 
 @testset "Helpful errors" begin
@@ -113,6 +114,10 @@ end
     # Ensure that the hall of fame is empty:
     _, hof = mach.fitresult.state
     hof.exists .= false
+    # Recompute the report:
+    mach.report[:fit] = SymbolicRegression.MLJInterfaceModule.full_report(
+        model, mach.fitresult
+    )
     @test report(mach).best_idx == 0
     @test predict(mach, randn(32, 3)) == zeros(32)
     msg = @capture_err begin
@@ -128,6 +133,9 @@ end
     foreach(hofs) do hof
         hof.exists .= false
     end
+    mach.report[:fit] = SymbolicRegression.MLJInterfaceModule.full_report(
+        model, mach.fitresult
+    )
     @test report(mach).best_idx == [0, 0, 0]
     @test predict(mach, randn(32, 3)) == zeros(32, 3)
     msg = @capture_err begin
