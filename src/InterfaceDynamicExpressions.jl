@@ -139,7 +139,7 @@ Convert an equation to a string.
     X_sym_units=nothing,
     y_sym_units=nothing,
     variable_names=nothing,
-    display_variable_names=nothing,
+    display_variable_names=variable_names,
     varMap=nothing,
     kws...,
 )
