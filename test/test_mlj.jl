@@ -115,7 +115,9 @@ end
     _, hof = mach.fitresult.state
     hof.exists .= false
     # Recompute the report:
-    mach.report = SymbolicRegression.MLJInterfaceModule.full_report(model, mach.fitresult)
+    mach.report[:fit] = SymbolicRegression.MLJInterfaceModule.full_report(
+        model, mach.fitresult
+    )
     @test report(mach).best_idx == 0
     @test predict(mach, randn(32, 3)) == zeros(32)
     msg = @capture_err begin
@@ -131,7 +133,9 @@ end
     foreach(hofs) do hof
         hof.exists .= false
     end
-    mach.report = SymbolicRegression.MLJInterfaceModule.full_report(model, mach.fitresult)
+    mach.report[:fit] = SymbolicRegression.MLJInterfaceModule.full_report(
+        model, mach.fitresult
+    )
     @test report(mach).best_idx == [0, 0, 0]
     @test predict(mach, randn(32, 3)) == zeros(32, 3)
     msg = @capture_err begin
