@@ -9,7 +9,7 @@ import ..PopulationModule: Population, finalize_scores, best_sub_pop
 import ..HallOfFameModule: HallOfFame
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..RegularizedEvolutionModule: reg_evol_cycle
-import ..LossFunctionsModule: score_func_batched
+import ..LossFunctionsModule: score_func_batched, batch_sample
 import ..ConstantOptimizationModule: optimize_constants
 import ..RecorderModule: @recorder
 
@@ -35,7 +35,7 @@ function s_r_cycle(
     num_evals = 0.0
 
     # For evaluating on a fixed batch (for batching)
-    fixed_batch_seed = rand(UInt64)
+    idx = options.batching ? batch_sample(dataset, options) : Int[]
     loss_cache = [(oid=zero(UInt64), score=zero(L)) for _ in pop.members]
     first_loop = true
 
@@ -60,7 +60,7 @@ function s_r_cycle(
                     # changes each iteration, and we evaluate on full-batch outside,
                     # so this is not biased).
                     _score, _ = score_func_batched(
-                        dataset, member, options; complexity=size, seed=fixed_batch_seed
+                        dataset, member, options; complexity=size, idx=idx
                     )
                     loss_cache[i] = (oid=oid, score=_score)
                     _score
