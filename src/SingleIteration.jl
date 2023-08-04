@@ -53,7 +53,7 @@ function s_r_cycle(
         for (i, member) in enumerate(pop.members)
             size = compute_complexity(member, options)
             score = if options.batching
-                oid = objectid(member)
+                oid = hash(member)
                 if loss_cache[i].oid != oid || first_loop
                     # Evaluate on fixed batch so that we can more accurately
                     # compare expressions with a batched loss (though the batch
