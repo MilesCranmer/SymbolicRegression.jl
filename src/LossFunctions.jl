@@ -1,6 +1,6 @@
 module LossFunctionsModule
 
-import Random: randperm
+import Random: MersenneTwister
 using StatsBase: StatsBase
 import Tricks: static_hasmethod
 import DynamicExpressions: Node
@@ -109,14 +109,23 @@ function eval_loss(
 end
 
 function eval_loss_batched(
-    tree::Node{T}, dataset::Dataset{T,L}, options::Options; regularization::Bool=true
+    tree::Node{T},
+    dataset::Dataset{T,L},
+    options::Options;
+    regularization::Bool=true,
+    seed=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    idx = batch_sample(dataset, options)
+    idx = batch_sample(dataset, options; seed=seed)
     return eval_loss(tree, dataset, options; regularization=regularization, idx=idx)
 end
 
-function batch_sample(dataset, options)
-    return StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)
+function batch_sample(dataset, options; seed=nothing)
+    return StatsBase.sample(
+        (seed === nothing ? () : (MersenneTwister(seed),))...,
+        1:(dataset.n),
+        options.batch_size;
+        replace=true,
+    )
 end
 
 # Just so we can pass either PopMember or Node here:
@@ -152,7 +161,7 @@ end
 
 # Score an equation
 function score_func(
-    dataset::Dataset{T,L}, member, options::Options, complexity::Union{Int,Nothing}=nothing
+    dataset::Dataset{T,L}, member, options::Options; complexity::Union{Int,Nothing}=nothing
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     result_loss = eval_loss(get_tree(member), dataset, options)
     score = loss_to_score(
@@ -168,9 +177,13 @@ end
 
 # Score an equation with a small batch
 function score_func_batched(
-    dataset::Dataset{T,L}, member, options::Options, complexity::Union{Int,Nothing}=nothing
+    dataset::Dataset{T,L},
+    member,
+    options::Options;
+    complexity::Union{Int,Nothing}=nothing,
+    seed=nothing,
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    result_loss = eval_loss_batched(get_tree(member), dataset, options)
+    result_loss = eval_loss_batched(get_tree(member), dataset, options; seed=seed)
     score = loss_to_score(
         result_loss,
         dataset.use_baseline,
