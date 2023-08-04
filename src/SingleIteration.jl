@@ -1,6 +1,6 @@
 module SingleIterationModule
 
-import DynamicExpressions: string_tree, simplify_tree, combine_operators
+import DynamicExpressions: Node, string_tree, simplify_tree, combine_operators
 import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 import ..UtilsModule: debug
@@ -36,7 +36,7 @@ function s_r_cycle(
 
     # For evaluating on a fixed batch (for batching)
     idx = options.batching ? batch_sample(dataset, options) : Int[]
-    loss_cache = [(oid=zero(UInt64), score=zero(L)) for _ in pop.members]
+    loss_cache = [(oid=Node(T; val=zero(T)), score=zero(L)) for _ in pop.members]
     first_loop = true
 
     for temperature in all_temperatures
@@ -53,7 +53,7 @@ function s_r_cycle(
         for (i, member) in enumerate(pop.members)
             size = compute_complexity(member, options)
             score = if options.batching
-                oid = hash(member)
+                oid = member.tree
                 if loss_cache[i].oid != oid || first_loop
                     # Evaluate on fixed batch so that we can more accurately
                     # compare expressions with a batched loss (though the batch
@@ -62,7 +62,7 @@ function s_r_cycle(
                     _score, _ = score_func_batched(
                         dataset, member, options; complexity=size, idx=idx
                     )
-                    loss_cache[i] = (oid=oid, score=_score)
+                    loss_cache[i] = (oid=copy(oid), score=_score)
                     _score
                 else
                     # Already evaluated this particular expression, so just use
