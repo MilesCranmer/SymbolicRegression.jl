@@ -13,6 +13,7 @@ import DynamicQuantities:
     dimension
 import LossFunctions: SupervisedLoss
 import Compat: allequal, stack
+import ..InterfaceDynamicQuantitiesModule: get_dimensions_type
 import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
 import ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 import ..ComplexityModule: compute_complexity
@@ -210,35 +211,6 @@ function clean_units(units::Vector)
     !all(Base.Fix2(isa, AbstractDimensions), units) && error("Unexpected units.")
     all(iszero, units) && return nothing
     return units
-end
-function get_dimensions_type(
-    A::Union{AbstractMatrix,AbstractVector{<:AbstractVector}}, ::Type{D}
-) where {D}
-    rows = eachrow(A)
-    return if isempty(rows[(begin + 1):end])
-        get_dimensions_type(rows[begin], D)
-    else
-        get_dimensions_type(rows[begin], rows[(begin + 1):end], D)
-    end
-end
-function get_dimensions_type(::AbstractVector, tail, ::Type{D}) where {D}
-    return get_dimensions_type(tail, D)
-end
-get_dimensions_type(::AbstractVector, ::Type{D}) where {D} = D
-function get_dimensions_type(
-    ::AbstractVector{Q}, _, ::Type{D}
-) where {Dout,Q<:AbstractQuantity{<:Any,Dout},D}
-    return Dout
-end
-function get_dimensions_type(
-    ::AbstractMatrix{Q}, ::Type{D}
-) where {Dout,Q<:AbstractQuantity{<:Any,Dout},D}
-    return Dout
-end
-function get_dimensions_type(
-    ::AbstractVector{Q}, ::Type{D}
-) where {Dout,Q<:AbstractQuantity{<:Any,Dout},D}
-    return Dout
 end
 
 function get_matrix_and_info(X, ::Type{D}) where {D}

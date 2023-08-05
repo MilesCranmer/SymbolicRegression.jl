@@ -10,6 +10,7 @@ import DynamicQuantities:
     DEFAULT_DIM_BASE_TYPE
 
 import ..UtilsModule: subscriptify
+import ..InterfaceDynamicQuantitiesModule: get_units
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 #! format: off
 import ...deprecate_varmap
@@ -219,34 +220,6 @@ function Dataset(
         weights = Base.Fix1(convert, T).(weights)
     end
     return Dataset(X, y; weights=weights, kws...)
-end
-
-# Base
-function get_units(args...)
-    return error(
-        "Unit information must be passed as one of `AbstractDimensions`, `AbstractQuantity`, `AbstractString`, `Real`.",
-    )
-end
-function get_units(_, _, ::Nothing, ::Function)
-    return nothing
-end
-function get_units(::Type{T}, ::Type{D}, x::AbstractString, f::Function) where {T,D}
-    isempty(x) && return one(Quantity{T,D})
-    return convert(Quantity{T,D}, f(x))
-end
-function get_units(::Type{T}, ::Type{D}, x::Quantity, ::Function) where {T,D}
-    return convert(Quantity{T,D}, x)
-end
-function get_units(::Type{T}, ::Type{D}, x::AbstractDimensions, ::Function) where {T,D}
-    return convert(Quantity{T,D}, Quantity(one(T), x))
-end
-function get_units(::Type{T}, ::Type{D}, x::Real, ::Function) where {T,D}
-    return Quantity(convert(T, x), D)::Quantity{T,D}
-end
-
-# Derived
-function get_units(::Type{T}, ::Type{D}, x::AbstractVector, f::Function) where {T,D}
-    return Quantity{T,D}[get_units(T, D, xi, f) for xi in x]
 end
 
 function error_on_mismatched_size(_, ::Nothing)
