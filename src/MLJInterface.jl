@@ -265,24 +265,42 @@ dimension_fallback(_, ::Type{D}) where {D} = D()
 function prediction_warn()
     @warn "Evaluation failed either due to NaNs detected or due to unfinished search. Using 0s for prediction."
 end
-function prediction_fallback(::Type{T}, ::SRRegressor, Xnew_t, fitresult) where {T}
+
+@inline function wrap_units(v, y_units, i::Integer)
+    if y_units === nothing
+        return v
+    else
+        return (yi -> Quantity(yi, y_units[i])).(v)
+    end
+end
+@inline function wrap_units(v, y_units, ::Nothing)
+    if y_units === nothing
+        return v
+    else
+        return (yi -> Quantity(yi, y_units)).(v)
+    end
+end
+
+function prediction_fallback(::Type{T}, m::SRRegressor, Xnew_t, fitresult) where {T}
     prediction_warn()
-    return fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T))
+    out = fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T))
+    return wrap_units(out, fitresult.y_units, nothing)
 end
 function prediction_fallback(
     ::Type{T}, ::MultitargetSRRegressor, Xnew_t, fitresult, prototype
 ) where {T}
     prediction_warn()
-    out_matrix = reduce(
-        hcat,
-        [
-            fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T)) for
-            _ in 1:(fitresult.num_targets)
-        ],
-    )
-    fill!(out_matrix, zero(T))
-    !fitresult.y_is_table && return out_matrix
-    return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
+    out_cols = [
+        wrap_units(
+            fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T)), fitresult.y_units, i
+        ) for i in 1:(fitresult.num_targets)
+    ]
+    out_matrix = reduce(hcat, out_cols)
+    if !fitresult.y_is_table
+        return out_matrix
+    else
+        return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
+    end
 end
 
 function unwrap_units_single(A::AbstractMatrix{T}, ::Type{D}) where {D,T<:Number}
@@ -327,8 +345,11 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
     validate_units(X_units_clean, fitresult.X_units)
     eq = params.equations[params.best_idx]
     out, completed = eval_tree_array(eq, Xnew_t, fitresult.options)
-    !completed && return prediction_fallback(T, m, Xnew_t, fitresult)
-    return out
+    if !completed
+        return prediction_fallback(T, m, Xnew_t, fitresult)
+    else
+        return wrap_units(out, fitresult.y_units, nothing)
+    end
 end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = full_report(m, fitresult; v_with_strings=Val(false))
@@ -346,12 +367,17 @@ function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     outs = []
     for (i, eq) in zip(best_idx, equations)
         out, completed = eval_tree_array(eq[i], Xnew_t, fitresult.options)
-        !completed && return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
-        push!(outs, out)
+        if !completed
+            return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
+        end
+        push!(outs, wrap_units(out, fitresult.y_units, i))
     end
     out_matrix = reduce(hcat, outs)
-    !fitresult.y_is_table && return out_matrix
-    return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
+    if !fitresult.y_is_table
+        return out_matrix
+    else
+        return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
+    end
 end
 
 function get_equation_strings_for(::SRRegressor, trees, options, variable_names)
