@@ -365,8 +365,8 @@ function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     end
     best_idx = params.best_idx
     outs = []
-    for (i, eq) in zip(best_idx, equations)
-        out, completed = eval_tree_array(eq[i], Xnew_t, fitresult.options)
+    for (i, (best_i, eq)) in enumerate(zip(best_idx, equations))
+        out, completed = eval_tree_array(eq[best_i], Xnew_t, fitresult.options)
         if !completed
             return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
         end
