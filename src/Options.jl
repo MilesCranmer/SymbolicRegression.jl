@@ -102,17 +102,7 @@ function binopmap(op)
     return op
 end
 function inverse_binopmap(op)
-    if op == +
-        return plus
-    elseif op == *
-        return mult
-    elseif op == -
-        return sub
-    elseif op == /
-        return div
-    elseif op == safe_pow
-        # TODO: we don't return `pow`, though
-        # it is another option.
+    if op == safe_pow
         return ^
     end
     return op

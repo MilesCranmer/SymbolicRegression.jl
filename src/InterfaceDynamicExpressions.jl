@@ -262,21 +262,20 @@ apply this macro to the operator enum in the same module you have the operators
 defined.
 """
 macro extend_operators(options)
-    operators = :($(esc(options)).operators)
+    operators = :($(options).operators)
     type_requirements = Options
     @gensym alias_operators
     return quote
-        if !isa($(esc(options)), $type_requirements)
+        if !isa($(options), $type_requirements)
             error("You must pass an options type to `@extend_operators`.")
         end
-        DynamicExpressions.@extend_operators $operators
-
-        # Define operator aliases:
         $alias_operators = $define_alias_operators($operators)
-        DynamicExpressions.@extend_operators $alias_operators empty_old_operators = false
-    end
+        $(DynamicExpressions).@extend_operators $alias_operators
+    end |> esc
 end
 function define_alias_operators(operators)
+    # We undo some of the aliases so that the user doesn't need to use, e.g.,
+    # `safe_pow(x1, 1.5)`. They can use `x1 ^ 1.5` instead.
     constructor = isa(operators, OperatorEnum) ? OperatorEnum : GenericOperatorEnum
     return constructor(;
         binary_operators=inverse_binopmap.(operators.binops),
