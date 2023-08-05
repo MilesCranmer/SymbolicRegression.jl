@@ -1,5 +1,5 @@
 using SymbolicRegression
-using SymbolicRegression.CoreModule.DatasetModule: get_units
+using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units
 using SymbolicRegression.DimensionalAnalysisModule:
     violates_dimensional_constraints, @maybe_return_call, WildcardQuantity
 import DynamicQuantities:

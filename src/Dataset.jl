@@ -8,9 +8,9 @@ import DynamicQuantities:
     uparse,
     sym_uparse,
     DEFAULT_DIM_BASE_TYPE
+import ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
 
 import ..UtilsModule: subscriptify
-import ..InterfaceDynamicQuantitiesModule: get_units
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 #! format: off
 import ...deprecate_varmap
@@ -145,24 +145,22 @@ function Dataset(
     out_loss_type = (Linit === Nothing) ? T : Linit
     use_baseline = true
     baseline = one(out_loss_type)
-    D = Dimensions{DEFAULT_DIM_BASE_TYPE}
-    SD = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
-    y_si_units = get_units(T, D, y_units, uparse)
-    y_sym_units = get_units(T, SD, y_units, sym_uparse)
+    y_si_units = get_si_units(T, y_units)
+    y_sym_units = get_sym_units(T, y_units)
 
     # TODO: Refactor
     # This basically just ensures that if the `y` units are set,
     # then the `X` units are set as well.
-    X_si_units = let (_X = get_units(T, D, X_units, uparse))
+    X_si_units = let (_X = get_si_units(T, X_units))
         if _X === nothing && y_si_units !== nothing
-            get_units(T, D, [one(T) for _ in 1:nfeatures], uparse)
+            get_si_units(T, [one(T) for _ in 1:nfeatures])
         else
             _X
         end
     end
-    X_sym_units = let _X = get_units(T, SD, X_units, sym_uparse)
+    X_sym_units = let _X = get_sym_units(T, X_units)
         if _X === nothing && y_sym_units !== nothing
-            get_units(T, SD, [one(T) for _ in 1:nfeatures], sym_uparse)
+            get_sym_units(T, [one(T) for _ in 1:nfeatures])
         else
             _X
         end

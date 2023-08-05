@@ -1,6 +1,14 @@
 module InterfaceDynamicQuantitiesModule
 
-import DynamicQuantities: AbstractDimensions, Quantity
+import DynamicQuantities:
+    AbstractDimensions,
+    AbstractQuantity,
+    Dimensions,
+    SymbolicDimensions,
+    Quantity,
+    uparse,
+    sym_uparse,
+    DEFAULT_DIM_BASE_TYPE
 
 """
     get_units(T, D, x, f)
@@ -31,10 +39,26 @@ end
 function get_units(::Type{T}, ::Type{D}, x::Real, ::Function) where {T,D}
     return Quantity(convert(T, x), D)::Quantity{T,D}
 end
-
-# Derived
 function get_units(::Type{T}, ::Type{D}, x::AbstractVector, f::Function) where {T,D}
     return Quantity{T,D}[get_units(T, D, xi, f) for xi in x]
+end
+
+"""
+    get_si_units(::Type{T}, units)
+
+Gets the units with Dimensions{DEFAULT_DIM_BASE_TYPE} type from a vector or scalar.
+"""
+function get_si_units(::Type{T}, units) where {T}
+    return get_units(T, Dimensions{DEFAULT_DIM_BASE_TYPE}, units, uparse)
+end
+
+"""
+    get_sym_units(::Type{T}, units)
+
+Gets the units with SymbolicDimensions{DEFAULT_DIM_BASE_TYPE} type from a vector or scalar.
+"""
+function get_sym_units(::Type{T}, units) where {T}
+    return get_units(T, SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}, units, sym_uparse)
 end
 
 """
