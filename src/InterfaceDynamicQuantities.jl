@@ -71,10 +71,10 @@ function get_dimensions_type(
     A::Union{AbstractMatrix,AbstractVector{<:AbstractVector}}, ::Type{D}
 ) where {D}
     rows = eachrow(A)
-    if isempty(rows[(begin + 1):end])
-        return get_dimensions_type(rows[begin], D)
+    if length(rows) == 1
+        return get_dimensions_type(rows[1], D)
     else
-        return get_dimensions_type(rows[begin], rows[(begin + 1):end], D)
+        return get_dimensions_type(rows[1], rows[2:end], D)
     end
 end
 function get_dimensions_type(::AbstractVector, tail, ::Type{D}) where {D}
