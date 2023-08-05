@@ -132,7 +132,6 @@ struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
     alpha::Float32
     maxsize::Int
     maxdepth::Int
-    fast_cycle::Bool
     turbo::Bool
     migration::Bool
     hof_migration::Bool

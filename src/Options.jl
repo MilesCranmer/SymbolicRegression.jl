@@ -254,9 +254,6 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `adaptive_parsimony_scaling`: How much to scale the adaptive parsimony term
     in the loss. Increase this if the search is spending too much time
     optimizing the most complex equations.
-- `fast_cycle`: Whether to thread over subsamples of equations during
-    regularized evolution. Slightly improves performance, but is a different
-    algorithm.
 - `turbo`: Whether to use `LoopVectorization.@turbo` to evaluate expressions.
     This can be significantly faster, but is only compatible with certain
     operators. *Experimental!*
@@ -355,7 +352,6 @@ function Options end
     alpha::Real=0.100000,
     maxsize::Integer=20,
     maxdepth::Union{Nothing,Integer}=nothing,
-    fast_cycle::Bool=false,
     turbo::Bool=false,
     migration::Bool=true,
     hof_migration::Bool=true,
@@ -404,6 +400,7 @@ function Options end
     define_helper_functions::Bool=true,
     deprecated_return_state=nothing,
     # Deprecated args:
+    fast_cycle::Bool=false,
     kws...,
 ) where {use_recorder}
     for k in keys(kws)
@@ -460,6 +457,7 @@ function Options end
             "Unknown deprecated keyword argument: $k. Please update `Options(;)` to transfer this key.",
         )
     end
+    fast_cycle && Base.depwarn("`fast_cycle` is deprecated and has no effect.", :Options)
 
     if elementwise_loss === nothing
         elementwise_loss = L2DistLoss()
