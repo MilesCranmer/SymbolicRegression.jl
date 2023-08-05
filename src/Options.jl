@@ -644,6 +644,7 @@ function Options end
             unary_operators=unary_operators,
             enable_autodiff=false,  # Not needed; we just want the constructors
             define_helper_functions=true,
+            empty_old_operators=true,
         )
     end
 
@@ -655,6 +656,7 @@ function Options end
         unary_operators=unary_operators,
         enable_autodiff=enable_autodiff,
         define_helper_functions=define_helper_functions,
+        empty_old_operators=false,
     )
 
     early_stop_condition = if typeof(early_stop_condition) <: Real
