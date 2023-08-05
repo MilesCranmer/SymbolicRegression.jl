@@ -101,6 +101,22 @@ function binopmap(op)
     end
     return op
 end
+function inverse_binopmap(op)
+    if op == +
+        return plus
+    elseif op == *
+        return mult
+    elseif op == -
+        return sub
+    elseif op == /
+        return div
+    elseif op == safe_pow
+        # TODO: we don't return `pow`, though
+        # it is another option.
+        return ^
+    end
+    return op
+end
 
 function unaopmap(op)
     if op == log
@@ -117,6 +133,24 @@ function unaopmap(op)
         return safe_acosh
     elseif op == atanh
         return atanh_clip
+    end
+    return op
+end
+function inverse_unaopmap(op)
+    if op == safe_log
+        return log
+    elseif op == safe_log10
+        return log10
+    elseif op == safe_log2
+        return log2
+    elseif op == safe_log1p
+        return log1p
+    elseif op == safe_sqrt
+        return sqrt
+    elseif op == safe_acosh
+        return acosh
+    elseif op == atanh_clip
+        return atanh
     end
     return op
 end

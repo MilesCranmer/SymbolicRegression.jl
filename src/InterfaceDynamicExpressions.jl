@@ -3,6 +3,8 @@ module InterfaceDynamicExpressionsModule
 import Printf: @sprintf
 using DynamicExpressions: DynamicExpressions
 import DynamicExpressions:
+    OperatorEnum,
+    GenericOperatorEnum,
     Node,
     eval_tree_array,
     eval_diff_tree_array,
@@ -12,6 +14,7 @@ import DynamicExpressions:
     differentiable_eval_tree_array
 import DynamicQuantities: dimension, ustrip
 import ..CoreModule: Options
+import ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
 import ..UtilsModule: subscriptify
 #! format: off
 import ..deprecate_varmap
@@ -261,12 +264,26 @@ defined.
 macro extend_operators(options)
     operators = :($(esc(options)).operators)
     type_requirements = Options
-    quote
+    @gensym alias_operators
+    return quote
         if !isa($(esc(options)), $type_requirements)
             error("You must pass an options type to `@extend_operators`.")
         end
         DynamicExpressions.@extend_operators $operators
+
+        # Define operator aliases:
+        $alias_operators = $define_alias_operators($operators)
+        DynamicExpressions.@extend_operators $alias_operators empty_old_operators = false
     end
+end
+function define_alias_operators(operators)
+    constructor = isa(operators, OperatorEnum) ? OperatorEnum : GenericOperatorEnum
+    return constructor(;
+        binary_operators=inverse_binopmap.(operators.binops),
+        unary_operators=inverse_unaopmap.(operators.unaops),
+        define_helper_functions=false,
+        empty_old_operators=false,
+    )
 end
 
 function (tree::Node)(X, options::Options; kws...)
