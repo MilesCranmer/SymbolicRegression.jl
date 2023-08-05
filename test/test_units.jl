@@ -11,7 +11,8 @@ import DynamicQuantities:
     @us_str,
     uparse,
     sym_uparse,
-    ustrip
+    ustrip,
+    dimension
 using Test
 import MLJBase as MLJ
 
@@ -203,6 +204,10 @@ end
             t.degree == 1 && t.op == 1  # safe_sqrt
         end
 
+        # Prediction should have same units:
+        ypred = MLJ.predict(mach; rows=1:3)
+        @test dimension(ypred[begin]) == dimension(y[begin])
+
         # Multiple outputs:
         model = MultitargetSRRegressor(;
             binary_operators=[+, *],
@@ -223,6 +228,12 @@ end
         report = MLJ.report(mach)
         @test minimum(report.losses[1]) < 1e-7
         @test minimum(report.losses[2]) < 1e-7
+
+        # Prediction should have same units:
+        ypred = MLJ.predict(mach; rows=1:3)
+        @test dimension(ypred.a[begin]) == dimension(y.a[begin])
+        @test typeof(ypred.a[begin]) == typeof(y.a[begin])
+        @test typeof(ypred.b[begin]) == typeof(y.b[begin])
     end
 end
 

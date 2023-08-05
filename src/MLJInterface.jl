@@ -4,6 +4,7 @@ using Optim: Optim
 import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
 import DynamicQuantities:
+    AbstractQuantity,
     AbstractDimensions,
     SymbolicDimensions,
     Quantity,
@@ -210,6 +211,35 @@ function clean_units(units::Vector)
     all(iszero, units) && return nothing
     return units
 end
+function get_dimensions_type(
+    A::Union{AbstractMatrix,AbstractVector{<:AbstractVector}}, ::Type{D}
+) where {D}
+    rows = eachrow(A)
+    return if isempty(rows[(begin + 1):end])
+        get_dimensions_type(rows[begin], D)
+    else
+        get_dimensions_type(rows[begin], rows[(begin + 1):end], D)
+    end
+end
+function get_dimensions_type(::AbstractVector, tail, ::Type{D}) where {D}
+    return get_dimensions_type(tail, D)
+end
+get_dimensions_type(::AbstractVector, ::Type{D}) where {D} = D
+function get_dimensions_type(
+    ::AbstractVector{Q}, _, ::Type{D}
+) where {Dout,Q<:AbstractQuantity{<:Any,Dout},D}
+    return Dout
+end
+function get_dimensions_type(
+    ::AbstractMatrix{Q}, ::Type{D}
+) where {Dout,Q<:AbstractQuantity{<:Any,Dout},D}
+    return Dout
+end
+function get_dimensions_type(
+    ::AbstractVector{Q}, ::Type{D}
+) where {Dout,Q<:AbstractQuantity{<:Any,Dout},D}
+    return Dout
+end
 
 function get_matrix_and_info(X, ::Type{D}) where {D}
     sch = MMI.istable(X) ? MMI.schema(X) : nothing
@@ -219,7 +249,8 @@ function get_matrix_and_info(X, ::Type{D}) where {D}
     else
         [string.(sch.names)...]
     end
-    Xm_t_strip, X_units = unwrap_units_single(Xm_t, D)
+    D_promoted = get_dimensions_type(Xm_t, D)
+    Xm_t_strip, X_units = unwrap_units_single(Xm_t, D_promoted)
     return Xm_t_strip, colnames, X_units
 end
 
@@ -230,7 +261,8 @@ function format_input_for(::SRRegressor, y, ::Type{D}) where {D}
     )
     y_t = vec(y)
     colnames = nothing
-    y_t_strip, y_units = unwrap_units_single(y_t, D)
+    D_promoted = get_dimensions_type(y_t, D)
+    y_t_strip, y_units = unwrap_units_single(y_t, D_promoted)
     return y_t_strip, colnames, y_units
 end
 function format_input_for(::MultitargetSRRegressor, y, ::Type{D}) where {D}
@@ -496,7 +528,7 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
         the score (a pound-for-pound rating) of expressions reaching the threshold
         of 1.5x the minimum loss. To fix the index at `5`, you could just write `Returns(5)`.
     - `dimensions_type::AbstractDimensions`: The type of dimensions to use when storing
-        the units of the data. By default this is `DynamicQuantities.DEFAULT_DIM_TYPE`.
+        the units of the data. By default this is `DynamicQuantities.SymbolicDimensions`.
     """
 
     bottom = """
