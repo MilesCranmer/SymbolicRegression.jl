@@ -17,7 +17,7 @@ my_loss(x, y, w) = abs(x - y)^2 * w
 options = SymbolicRegression.Options(;
     binary_operators=(_plus, _mult, _div, _min),
     unary_operators=(_cos, _exp),
-    npopulations=20,
+    populations=20,
     early_stop_condition=early_stop,
     elementwise_loss=my_loss,
 )

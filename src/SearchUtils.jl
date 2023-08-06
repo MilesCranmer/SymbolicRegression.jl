@@ -49,8 +49,10 @@ function init_dummy_pops(
     npops::Int, datasets::Vector{D}, options::Options
 ) where {T,L,D<:Dataset{T,L}}
     return [
-        [Population(d; npop=1, options=options, nfeatures=d.nfeatures) for i in 1:npops] for
-        d in datasets
+        [
+            Population(d; population_size=1, options=options, nfeatures=d.nfeatures) for
+            i in 1:npops
+        ] for d in datasets
     ]
 end
 

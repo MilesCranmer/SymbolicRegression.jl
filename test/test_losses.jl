@@ -17,7 +17,7 @@ for (loss_fnc, evaluator) in [(L1DistLoss(), testl1), (customloss, customloss)]
         default_params...,
         binary_operators=(+, *, -, /),
         unary_operators=(cos, exp),
-        npopulations=4,
+        populations=4,
         elementwise_loss=loss_fnc,
     )
     x = randn(MersenneTwister(0), Float32, 100)

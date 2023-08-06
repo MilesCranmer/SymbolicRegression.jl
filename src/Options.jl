@@ -240,9 +240,8 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
             return sum((prediction .- dataset.y) .^ 2) / dataset.n
         end
 
-- `npopulations`: How many populations of equations to use. By default
-    this is set equal to the number of cores
-- `npop`: How many equations in each population.
+- `populations`: How many populations of equations to use.
+- `population_size`: How many equations in each population.
 - `ncycles_per_iteration`: How many generations to consider per iteration.
 - `tournament_selection_n`: Number of expressions considered in each tournament.
 - `tournament_selection_p`: The fittest expression in a tournament is to be
@@ -382,7 +381,7 @@ function Options end
     should_simplify::Union{Nothing,Bool}=nothing,
     should_optimize_constants::Bool=true,
     output_file::Union{Nothing,AbstractString}=nothing,
-    npopulations::Union{Nothing,Integer}=15,
+    populations::Integer=15,
     perturbation_factor::Real=0.076,
     annealing::Bool=false,
     batching::Bool=false,
@@ -393,7 +392,7 @@ function Options end
     use_frequency::Bool=true,
     use_frequency_in_tournament::Bool=true,
     adaptive_parsimony_scaling::Real=20.0,
-    npop::Integer=33,
+    population_size::Integer=33,
     ncycles_per_iteration::Integer=550,
     fraction_replaced::Real=0.00036,
     fraction_replaced_hof::Real=0.035,
@@ -425,6 +424,8 @@ function Options end
     deprecated_return_state=nothing,
     # Deprecated args:
     fast_cycle::Bool=false,
+    npopulations::Union{Nothing,Integer}=nothing,
+    npop::Union{Nothing,Integer}=nothing,
     kws...,
 ) where {use_recorder}
     for k in keys(kws)
@@ -482,6 +483,14 @@ function Options end
         )
     end
     fast_cycle && Base.depwarn("`fast_cycle` is deprecated and has no effect.", :Options)
+    if npop !== nothing
+        Base.depwarn("`npop` is deprecated. Use `population_size` instead.", :Options)
+        population_size = npop
+    end
+    if npopulations !== nothing
+        Base.depwarn("`npopulations` is deprecated. Use `populations` instead.", :Options)
+        populations = npopulations
+    end
 
     if elementwise_loss === nothing
         elementwise_loss = L2DistLoss()
@@ -653,10 +662,6 @@ function Options end
         maxdepth = maxsize
     end
 
-    if npopulations === nothing
-        npopulations = nworkers()
-    end
-
     if define_helper_functions
         # We call here so that mapped operators, like ^
         # are correctly overloaded, rather than overloading
@@ -750,7 +755,7 @@ function Options end
         should_simplify,
         should_optimize_constants,
         output_file,
-        npopulations,
+        populations,
         perturbation_factor,
         annealing,
         batching,
@@ -761,7 +766,7 @@ function Options end
         use_frequency,
         use_frequency_in_tournament,
         adaptive_parsimony_scaling,
-        npop,
+        population_size,
         ncycles_per_iteration,
         fraction_replaced,
         fraction_replaced_hof,

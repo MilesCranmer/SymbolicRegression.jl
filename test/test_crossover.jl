@@ -8,7 +8,7 @@ options = SymbolicRegression.Options(;
     default_params...,
     binary_operators=(+, *, /, -),
     unary_operators=(cos, exp),
-    npopulations=8,
+    populations=8,
 )
 tree1 = cos(Node("x1")) + (3.0f0 + Node("x2"))
 tree2 = exp(Node("x1") - Node("x2") * Node("x2")) + 10.0f0 * Node("x3")

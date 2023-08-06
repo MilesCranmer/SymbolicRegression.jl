@@ -29,14 +29,25 @@ end
 
 """
     Population(dataset::Dataset{T,L};
-               npop::Int, nlength::Int=3, options::Options,
+               population_size, nlength::Int=3, options::Options,
                nfeatures::Int)
 
 Create random population and score them on the dataset.
 """
 function Population(
-    dataset::Dataset{T,L}; npop::Int, nlength::Int=3, options::Options, nfeatures::Int
+    dataset::Dataset{T,L};
+    population_size=nothing,
+    nlength::Int=3,
+    options::Options,
+    nfeatures::Int,
+    npop=nothing,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    @assert (population_size !== nothing) ⊻ (npop !== nothing)
+    population_size = if npop === nothing
+        population_size
+    else
+        npop
+    end
     return Population{T,L}(
         [
             PopMember(
@@ -45,14 +56,14 @@ function Population(
                 options;
                 parent=-1,
                 deterministic=options.deterministic,
-            ) for i in 1:npop
+            ) for i in 1:population_size
         ],
-        npop,
+        population_size,
     )
 end
 """
     Population(X::AbstractMatrix{T}, y::AbstractVector{T};
-               npop::Int, nlength::Int=3,
+               population_size, nlength::Int=3,
                options::Options, nfeatures::Int,
                loss_type::Type=Nothing)
 
@@ -61,15 +72,24 @@ Create random population and score them on the dataset.
 function Population(
     X::AbstractMatrix{T},
     y::AbstractVector{T};
-    npop::Int,
+    population_size=nothing,
     nlength::Int=3,
     options::Options,
     nfeatures::Int,
     loss_type::Type=Nothing,
+    npop=nothing,
 ) where {T<:DATA_TYPE}
+    @assert (population_size !== nothing) ⊻ (npop !== nothing)
+    population_size = if npop === nothing
+        population_size
+    else
+        npop
+    end
     dataset = Dataset(X, y; loss_type=loss_type)
     update_baseline_loss!(dataset, options)
-    return Population(dataset; npop=npop, options=options, nfeatures=nfeatures)
+    return Population(
+        dataset; population_size=population_size, options=options, nfeatures=nfeatures
+    )
 end
 
 function copy_population(pop::P)::P where {P<:Population}

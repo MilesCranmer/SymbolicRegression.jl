@@ -138,7 +138,7 @@ struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
     should_simplify::Bool
     should_optimize_constants::Bool
     output_file::String
-    npopulations::Int
+    populations::Int
     perturbation_factor::Float32
     annealing::Bool
     batching::Bool
@@ -149,7 +149,7 @@ struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
     use_frequency::Bool
     use_frequency_in_tournament::Bool
     adaptive_parsimony_scaling::Float64
-    npop::Int
+    population_size::Int
     ncycles_per_iteration::Int
     fraction_replaced::Float32
     fraction_replaced_hof::Float32

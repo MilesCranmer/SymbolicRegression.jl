@@ -6,7 +6,7 @@ X = rand(Float32, 5, 100) .+ 1
 y = 1.2f0 .+ 2 ./ X[3, :]
 
 options = SymbolicRegression.Options(;
-    default_params..., binary_operators=(+, *), unary_operators=(_inv,), npopulations=8
+    default_params..., binary_operators=(+, *), unary_operators=(_inv,), populations=8
 )
 hallOfFame = equation_search(
     X, y; niterations=8, options=options, numprocs=2, parallelism=:multiprocessing

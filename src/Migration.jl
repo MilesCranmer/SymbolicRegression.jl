@@ -19,17 +19,17 @@ function migrate!(
     frac::AbstractFloat,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     base_pop = migration.second
-    npop = length(base_pop.members)
-    mean_number_replaced = npop * frac
+    population_size = length(base_pop.members)
+    mean_number_replaced = population_size * frac
     num_replace = poisson_sample(mean_number_replaced)
 
     migrant_candidates = migration.first
 
     # Ensure `replace=true` is a valid setting:
     num_replace = min(num_replace, length(migrant_candidates))
-    num_replace = min(num_replace, npop)
+    num_replace = min(num_replace, population_size)
 
-    locations = StatsBase.sample(1:npop, num_replace; replace=true)
+    locations = StatsBase.sample(1:population_size, num_replace; replace=true)
     migrants = StatsBase.sample(migrant_candidates, num_replace; replace=true)
 
     for (i, migrant) in zip(locations, migrants)

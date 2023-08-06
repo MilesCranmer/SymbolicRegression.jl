@@ -10,6 +10,7 @@ options = Options(;
     nested_constraints=[sin => [sin => 0], exp => [exp => 0]],
     maxsize=30,
     npopulations=40,
+    # ^ Leave as deprecated param, just to test.
     parsimony=0.01,
 )
 

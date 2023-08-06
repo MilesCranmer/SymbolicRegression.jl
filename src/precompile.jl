@@ -42,8 +42,8 @@ function do_precompilation(::Val{mode}) where {mode}
                 options = SymbolicRegression.Options(;
                     binary_operators=[+, *, /, -, ^],
                     unary_operators=[sin, cos, exp, log, sqrt, abs],
-                    npopulations=3,
-                    npop=start ? 50 : 12,
+                    populations=3,
+                    population_size=start ? 50 : 12,
                     ncycles_per_iteration=start ? 30 : 1,
                     mutation_weights=MutationWeights(;
                         mutate_constant=1.0,

@@ -207,7 +207,7 @@ model = SRRegressor(
     complexity_of_constants=2,
     maxsize=25,
     niterations=100,
-    npopulations=50,
+    populations=50,
     dimensional_constraint_penalty=10^5,
 )
 mach = machine(model, X, y)
