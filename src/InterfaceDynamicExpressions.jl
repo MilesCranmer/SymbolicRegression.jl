@@ -3,6 +3,8 @@ module InterfaceDynamicExpressionsModule
 import Printf: @sprintf
 using DynamicExpressions: DynamicExpressions
 import DynamicExpressions:
+    OperatorEnum,
+    GenericOperatorEnum,
     Node,
     eval_tree_array,
     eval_diff_tree_array,
@@ -12,6 +14,7 @@ import DynamicExpressions:
     differentiable_eval_tree_array
 import DynamicQuantities: dimension, ustrip
 import ..CoreModule: Options
+import ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
 import ..UtilsModule: subscriptify
 #! format: off
 import ..deprecate_varmap
@@ -259,14 +262,27 @@ apply this macro to the operator enum in the same module you have the operators
 defined.
 """
 macro extend_operators(options)
-    operators = :($(esc(options)).operators)
+    operators = :($(options).operators)
     type_requirements = Options
-    quote
-        if !isa($(esc(options)), $type_requirements)
+    @gensym alias_operators
+    return quote
+        if !isa($(options), $type_requirements)
             error("You must pass an options type to `@extend_operators`.")
         end
-        DynamicExpressions.@extend_operators $operators
-    end
+        $alias_operators = $define_alias_operators($operators)
+        $(DynamicExpressions).@extend_operators $alias_operators
+    end |> esc
+end
+function define_alias_operators(operators)
+    # We undo some of the aliases so that the user doesn't need to use, e.g.,
+    # `safe_pow(x1, 1.5)`. They can use `x1 ^ 1.5` instead.
+    constructor = isa(operators, OperatorEnum) ? OperatorEnum : GenericOperatorEnum
+    return constructor(;
+        binary_operators=inverse_binopmap.(operators.binops),
+        unary_operators=inverse_unaopmap.(operators.unaops),
+        define_helper_functions=false,
+        empty_old_operators=false,
+    )
 end
 
 function (tree::Node)(X, options::Options; kws...)

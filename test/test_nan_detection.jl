@@ -31,7 +31,7 @@ for T in [Float16, Float32, Float64], turbo in [true, false]
     @test !flag
 
     # Creating a NaN via pow(-1, 0.5):
-    tree = safe_pow(Node(T; feature=1) - 1, 0.5)
+    tree = (^)(Node(T; feature=1) - 1, 0.5)
     tree = convert(Node{T}, tree)
     X = fill(T(0), 1, 10)
     output, flag = eval_tree_array(tree, X, options)

@@ -101,6 +101,12 @@ function binopmap(op)
     end
     return op
 end
+function inverse_binopmap(op)
+    if op == safe_pow
+        return ^
+    end
+    return op
+end
 
 function unaopmap(op)
     if op == log
@@ -117,6 +123,24 @@ function unaopmap(op)
         return safe_acosh
     elseif op == atanh
         return atanh_clip
+    end
+    return op
+end
+function inverse_unaopmap(op)
+    if op == safe_log
+        return log
+    elseif op == safe_log10
+        return log10
+    elseif op == safe_log2
+        return log2
+    elseif op == safe_log1p
+        return log1p
+    elseif op == safe_sqrt
+        return sqrt
+    elseif op == safe_acosh
+        return acosh
+    elseif op == atanh_clip
+        return atanh
     end
     return op
 end
@@ -642,6 +666,7 @@ function Options end
             unary_operators=unary_operators,
             enable_autodiff=false,  # Not needed; we just want the constructors
             define_helper_functions=true,
+            empty_old_operators=true,
         )
     end
 
@@ -653,6 +678,7 @@ function Options end
         unary_operators=unary_operators,
         enable_autodiff=enable_autodiff,
         define_helper_functions=define_helper_functions,
+        empty_old_operators=false,
     )
 
     early_stop_condition = if typeof(early_stop_condition) <: Real

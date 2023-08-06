@@ -89,7 +89,8 @@ import DynamicExpressions:
     symbolic_to_node,
     combine_operators,
     simplify_tree,
-    tree_mapreduce
+    tree_mapreduce,
+    set_default_variable_names!
 @reexport import LossFunctions:
     MarginLoss,
     DistanceLoss,
@@ -552,20 +553,8 @@ function _equation_search(
 
     stdin_reader = watch_stream(stdin)
 
-    # Redefine print, show:
-    options.define_helper_functions && @eval begin
-        function Base.print(io::IO, tree::Node)
-            return print(
-                io,
-                string_tree(tree, $(options); variable_names=$(datasets[1].variable_names)),
-            )
-        end
-        function Base.show(io::IO, tree::Node)
-            return print(
-                io,
-                string_tree(tree, $(options); variable_names=$(datasets[1].variable_names)),
-            )
-        end
+    if options.define_helper_functions
+        set_default_variable_names!(first(datasets).variable_names)
     end
 
     example_dataset = datasets[1]
