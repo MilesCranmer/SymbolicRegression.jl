@@ -37,7 +37,8 @@ end
     @testset "Single outputs" begin
         X = (a=rand(32), b=rand(32))
         y = X.a .^ 2.1
-        model = SRRegressor(; niterations=10, stop_kws...)
+        # We also make sure the deprecated npop and npopulations still work:
+        model = SRRegressor(; niterations=10, npop=33, npopulations=15, stop_kws...)
         mach = machine(model, X, y)
         fit!(mach)
         rep = report(mach)

@@ -143,8 +143,6 @@ const deprecated_options_mapping = NamedTuple([
     :return_state => :deprecated_return_state,
     :ns => :tournament_selection_n,
     :loss => :elementwise_loss,
-    :npopulations => :populations,
-    :npop => :population_size,
 ])
 
 const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators (functions) to use.
@@ -403,6 +401,8 @@ function Options end
     deprecated_return_state=nothing,
     # Deprecated args:
     fast_cycle::Bool=false,
+    npopulations::Union{Nothing,Integer}=nothing,
+    npop::Union{Nothing,Integer}=nothing,
     kws...,
 ) where {use_recorder}
     for k in keys(kws)
@@ -438,8 +438,6 @@ function Options end
         k == :stateReturn && (deprecated_return_state = kws[k]; true) && continue
         k == :ns && (tournament_selection_n = kws[k]; true) && continue
         k == :loss && (elementwise_loss = kws[k]; true) && continue
-        k == :npop && (population_size = kws[k]; true) && continue
-        k == :npopulations && (populations = kws[k]; true) && continue
         if k == :mutationWeights
             if typeof(kws[k]) <: AbstractVector
                 _mutation_weights = kws[k]
@@ -462,6 +460,14 @@ function Options end
         )
     end
     fast_cycle && Base.depwarn("`fast_cycle` is deprecated and has no effect.", :Options)
+    if npop !== nothing
+        Base.depwarn("`npop` is deprecated. Use `population_size` instead.", :Options)
+        population_size = npop
+    end
+    if npopulations !== nothing
+        Base.depwarn("`npopulations` is deprecated. Use `populations` instead.", :Options)
+        populations = npopulations
+    end
 
     if elementwise_loss === nothing
         elementwise_loss = L2DistLoss()
