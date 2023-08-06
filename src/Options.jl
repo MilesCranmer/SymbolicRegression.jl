@@ -216,7 +216,6 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
             return sum((prediction .- dataset.y) .^ 2) / dataset.n
         end
 
-
 - `populations`: How many populations of equations to use.
 - `population_size`: How many equations in each population.
 - `ncycles_per_iteration`: How many generations to consider per iteration.
