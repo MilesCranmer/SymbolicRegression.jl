@@ -77,8 +77,10 @@ Tiny equivalent to StaticArrays.MVector
 
 This is so we don't have to load StaticArrays, which takes a long time.
 """
-mutable struct MutableTuple{S,T} <: AbstractVector{T}
-    data::NTuple{S,T}
+mutable struct MutableTuple{S,T,N} <: AbstractVector{T}
+    data::N
+
+    MutableTuple(::Val{_S}, ::Type{_T}, data::_N) where {_S,_T,_N} = new{_S,_T,_N}(data)
 end
 @inline Base.eltype(::MutableTuple{S,T}) where {S,T} = T
 Base.@propagate_inbounds function Base.getindex(v::MutableTuple, i::Int)
@@ -114,8 +116,8 @@ function _bottomk_dispatch(x::AbstractVector{T}, ::Val{k}) where {T,k}
     if k == 1
         return (p -> [p]).(findmin_fast(x))
     end
-    indmin = MutableTuple{k,Int}(ntuple(_ -> 1, Val(k)))
-    minval = MutableTuple{k,T}(ntuple(_ -> typemax(T), Val(k)))
+    indmin = MutableTuple(Val(k), Int, ntuple(_ -> 1, Val(k)))
+    minval = MutableTuple(Val(k), T, ntuple(_ -> typemax(T), Val(k)))
     _bottomk!(x, minval, indmin)
     return _to_vec(minval), _to_vec(indmin)
 end
