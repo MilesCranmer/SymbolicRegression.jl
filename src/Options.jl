@@ -203,8 +203,22 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     scalar of type `T`. This is useful if you want to use a loss
     that takes into account derivatives, or correlations across
     the dataset. This also means you could use a custom evaluation
-    for a particular expression. Take a look at `_eval_loss` in
-    the file `src/LossFunctions.jl` for an example.
+    for a particular expression. If you are using
+    `batching=true`, then your function should
+    accept a fourth argument `idx`, which is either `nothing`
+    (indicating that the full dataset should be used), or a vector
+    of indices to use for the batch.
+    For example,
+
+        function my_loss(tree, dataset::Dataset{T,L}, options)::L where {T,L}
+            prediction, flag = eval_tree_array(tree, dataset.X, options)
+            if !flag
+                return L(Inf)
+            end
+            return sum((prediction .- dataset.y) .^ 2) / dataset.n
+        end
+
+
 - `populations`: How many populations of equations to use.
 - `population_size`: How many equations in each population.
 - `ncycles_per_iteration`: How many generations to consider per iteration.
@@ -242,9 +256,6 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `adaptive_parsimony_scaling`: How much to scale the adaptive parsimony term
     in the loss. Increase this if the search is spending too much time
     optimizing the most complex equations.
-- `fast_cycle`: Whether to thread over subsamples of equations during
-    regularized evolution. Slightly improves performance, but is a different
-    algorithm.
 - `turbo`: Whether to use `LoopVectorization.@turbo` to evaluate expressions.
     This can be significantly faster, but is only compatible with certain
     operators. *Experimental!*
@@ -343,7 +354,6 @@ function Options end
     alpha::Real=0.100000,
     maxsize::Integer=20,
     maxdepth::Union{Nothing,Integer}=nothing,
-    fast_cycle::Bool=false,
     turbo::Bool=false,
     migration::Bool=true,
     hof_migration::Bool=true,
@@ -365,14 +375,14 @@ function Options end
     ncycles_per_iteration::Integer=550,
     fraction_replaced::Real=0.00036,
     fraction_replaced_hof::Real=0.035,
-    verbosity::Real=convert(Int, 1e9),
+    verbosity::Union{Integer,Nothing}=nothing,
     print_precision::Integer=5,
     save_to_file::Bool=true,
     probability_negate_constant::Real=0.01,
     seed=nothing,
     bin_constraints=nothing,
     una_constraints=nothing,
-    progress::Bool=true,
+    progress::Union{Bool,Nothing}=nothing,
     terminal_width::Union{Nothing,Integer}=nothing,
     optimizer_algorithm::AbstractString="BFGS",
     optimizer_nrestarts::Integer=2,
@@ -392,6 +402,7 @@ function Options end
     define_helper_functions::Bool=true,
     deprecated_return_state=nothing,
     # Deprecated args:
+    fast_cycle::Bool=false,
     kws...,
 ) where {use_recorder}
     for k in keys(kws)
@@ -450,6 +461,7 @@ function Options end
             "Unknown deprecated keyword argument: $k. Please update `Options(;)` to transfer this key.",
         )
     end
+    fast_cycle && Base.depwarn("`fast_cycle` is deprecated and has no effect.", :Options)
 
     if elementwise_loss === nothing
         elementwise_loss = L2DistLoss()
@@ -643,10 +655,6 @@ function Options end
         define_helper_functions=define_helper_functions,
     )
 
-    if progress
-        verbosity = 0
-    end
-
     early_stop_condition = if typeof(early_stop_condition) <: Real
         # Need to make explicit copy here for this to work:
         stopping_point = Float64(early_stop_condition)
@@ -710,7 +718,6 @@ function Options end
         alpha,
         maxsize,
         maxdepth,
-        fast_cycle,
         turbo,
         migration,
         hof_migration,

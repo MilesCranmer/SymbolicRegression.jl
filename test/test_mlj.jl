@@ -1,9 +1,11 @@
+using SymbolicRegression: SymbolicRegression
 import SymbolicRegression:
     Node, SRRegressor, MultitargetSRRegressor, node_to_symbolic, symbolic_to_node
 import MLJTestInterface as MTI
 import MLJBase: machine, fit!, report, predict
 using Test
 using SymbolicUtils: SymbolicUtils
+import Suppressor: @capture_err
 
 macro quiet(ex)
     return quote
@@ -84,7 +86,7 @@ end
     model = MultitargetSRRegressor(; niterations=10, stop_kws...)
     mach = machine(model, X, Y)
     fit!(mach)
-    @test sum(abs2, predict(mach, X) .- Y) < 1e-6
+    @test sum(abs2, predict(mach, X) .- Y) / length(X) < 1e-6
 end
 
 @testset "Helpful errors" begin
@@ -99,4 +101,45 @@ end
     @test_throws AssertionError @quiet(fit!(mach))
     VERSION >= v"1.8" &&
         @test_throws "For multi-output regression, please" @quiet(fit!(mach))
+
+    model = SRRegressor(; verbosity=0)
+    mach = machine(model, randn(32, 3), randn(32))
+    @test_throws ErrorException @quiet(fit!(mach; verbosity=0))
+end
+
+@testset "Unfinished search" begin
+    model = SRRegressor(; timeout_in_seconds=1e-10)
+    mach = machine(model, randn(32, 3), randn(32))
+    fit!(mach)
+    # Ensure that the hall of fame is empty:
+    _, hof = mach.fitresult.state
+    hof.exists .= false
+    # Recompute the report:
+    mach.report[:fit] = SymbolicRegression.MLJInterfaceModule.full_report(
+        model, mach.fitresult
+    )
+    @test report(mach).best_idx == 0
+    @test predict(mach, randn(32, 3)) == zeros(32)
+    msg = @capture_err begin
+        predict(mach, randn(32, 3))
+    end
+    @test occursin("Evaluation failed either due to", msg)
+
+    model = MultitargetSRRegressor(; timeout_in_seconds=1e-10)
+    mach = machine(model, randn(32, 3), randn(32, 3))
+    fit!(mach)
+    # Ensure that the hall of fame is empty:
+    _, hofs = mach.fitresult.state
+    foreach(hofs) do hof
+        hof.exists .= false
+    end
+    mach.report[:fit] = SymbolicRegression.MLJInterfaceModule.full_report(
+        model, mach.fitresult
+    )
+    @test report(mach).best_idx == [0, 0, 0]
+    @test predict(mach, randn(32, 3)) == zeros(32, 3)
+    msg = @capture_err begin
+        predict(mach, randn(32, 3))
+    end
+    @test occursin("Evaluation failed either due to", msg)
 end

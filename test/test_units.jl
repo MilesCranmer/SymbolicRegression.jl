@@ -246,13 +246,13 @@ end
     @test string_tree(tree, options; raw=false) ==
         "((1 * (x₁ + ((x₂ * x₃) * 5.32))) - cos(1.5 * (x₁ - 0.5)))"
     @test string_tree(
-        tree, options; raw=false, pretty_variable_names=dataset.pretty_variable_names
+        tree, options; raw=false, display_variable_names=dataset.display_variable_names
     ) == "((1 * (x₁ + ((x₂ * x₃) * 5.32))) - cos(1.5 * (x₁ - 0.5)))"
     @test string_tree(
         tree,
         options;
         raw=false,
-        pretty_variable_names=dataset.pretty_variable_names,
+        display_variable_names=dataset.display_variable_names,
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
     ) ==
@@ -262,7 +262,7 @@ end
         x5 * 3.2,
         options;
         raw=false,
-        pretty_variable_names=dataset.pretty_variable_names,
+        display_variable_names=dataset.display_variable_names,
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
     ) == "(x₅ * 3.2[⋅])"
@@ -273,7 +273,7 @@ end
         x5 * 3.2,
         options;
         raw=false,
-        pretty_variable_names=dataset2.pretty_variable_names,
+        display_variable_names=dataset2.display_variable_names,
         X_sym_units=dataset2.X_sym_units,
         y_sym_units=dataset2.y_sym_units,
     ) == "(x₅[5.0 m] * 3.2[⋅])"

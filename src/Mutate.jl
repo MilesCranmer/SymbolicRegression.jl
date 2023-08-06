@@ -5,7 +5,7 @@ import DynamicExpressions:
 import ..CoreModule:
     Options, MutationWeights, Dataset, RecordType, sample_mutation, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
-import ..LossFunctionsModule: score_func, score_func_batch
+import ..LossFunctionsModule: score_func, score_func_batched
 import ..CheckConstraintsModule: check_constraints
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..PopMemberModule: PopMember
@@ -73,7 +73,7 @@ function next_generation(
     #TODO - reconsider this
     beforeScore, beforeLoss = if options.batching
         num_evals += (options.batch_size / dataset.n)
-        score_func_batch(dataset, member, options)
+        score_func_batched(dataset, member, options)
     else
         member.score, member.loss
     end
@@ -229,7 +229,7 @@ function next_generation(
     end
 
     if options.batching
-        afterScore, afterLoss = score_func_batch(dataset, tree, options)
+        afterScore, afterLoss = score_func_batched(dataset, tree, options)
         num_evals += (options.batch_size / dataset.n)
     else
         afterScore, afterLoss = score_func(dataset, tree, options)
@@ -355,16 +355,20 @@ function crossover_generation(
         num_tries += 1
     end
     if options.batching
-        afterScore1, afterLoss1 = score_func_batch(
-            dataset, child_tree1, options, afterSize1
+        afterScore1, afterLoss1 = score_func_batched(
+            dataset, child_tree1, options; complexity=afterSize1
         )
-        afterScore2, afterLoss2 = score_func_batch(
-            dataset, child_tree2, options, afterSize2
+        afterScore2, afterLoss2 = score_func_batched(
+            dataset, child_tree2, options; complexity=afterSize2
         )
         num_evals += 2 * (options.batch_size / dataset.n)
     else
-        afterScore1, afterLoss1 = score_func(dataset, child_tree1, options, afterSize1)
-        afterScore2, afterLoss2 = score_func(dataset, child_tree2, options, afterSize2)
+        afterScore1, afterLoss1 = score_func(
+            dataset, child_tree1, options; complexity=afterSize1
+        )
+        afterScore2, afterLoss2 = score_func(
+            dataset, child_tree2, options; complexity=afterSize2
+        )
         num_evals += options.batch_size / dataset.n
     end
 

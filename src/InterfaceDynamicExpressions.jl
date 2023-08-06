@@ -139,7 +139,7 @@ Convert an equation to a string.
     X_sym_units=nothing,
     y_sym_units=nothing,
     variable_names=nothing,
-    pretty_variable_names=nothing,
+    display_variable_names=variable_names,
     varMap=nothing,
     kws...,
 )
@@ -157,7 +157,7 @@ Convert an equation to a string.
             f_variable=(feature, vname) -> string_variable(feature, vname, X_sym_units),
             f_constant=(val, bracketed) ->
                 string_constant(val, bracketed, vprecision, "[⋅]"),
-            variable_names=pretty_variable_names,
+            variable_names=display_variable_names,
             kws...,
         )
     else
@@ -166,7 +166,7 @@ Convert an equation to a string.
             options.operators;
             f_variable=string_variable,
             f_constant=(val, bracketed) -> string_constant(val, bracketed, vprecision, ""),
-            variable_names=pretty_variable_names,
+            variable_names=display_variable_names,
             kws...,
         )
     end
