@@ -8,6 +8,7 @@ import DynamicQuantities:
     uparse,
     sym_uparse,
     DEFAULT_DIM_BASE_TYPE
+import ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
 
 import ..UtilsModule: subscriptify
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
@@ -144,24 +145,22 @@ function Dataset(
     out_loss_type = (Linit === Nothing) ? T : Linit
     use_baseline = true
     baseline = one(out_loss_type)
-    D = Dimensions{DEFAULT_DIM_BASE_TYPE}
-    SD = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
-    y_si_units = get_units(T, D, y_units, uparse)
-    y_sym_units = get_units(T, SD, y_units, sym_uparse)
+    y_si_units = get_si_units(T, y_units)
+    y_sym_units = get_sym_units(T, y_units)
 
     # TODO: Refactor
     # This basically just ensures that if the `y` units are set,
     # then the `X` units are set as well.
-    X_si_units = let (_X = get_units(T, D, X_units, uparse))
+    X_si_units = let (_X = get_si_units(T, X_units))
         if _X === nothing && y_si_units !== nothing
-            get_units(T, D, [one(T) for _ in 1:nfeatures], uparse)
+            get_si_units(T, [one(T) for _ in 1:nfeatures])
         else
             _X
         end
     end
-    X_sym_units = let _X = get_units(T, SD, X_units, sym_uparse)
+    X_sym_units = let _X = get_sym_units(T, X_units)
         if _X === nothing && y_sym_units !== nothing
-            get_units(T, SD, [one(T) for _ in 1:nfeatures], sym_uparse)
+            get_sym_units(T, [one(T) for _ in 1:nfeatures])
         else
             _X
         end
@@ -219,34 +218,6 @@ function Dataset(
         weights = Base.Fix1(convert, T).(weights)
     end
     return Dataset(X, y; weights=weights, kws...)
-end
-
-# Base
-function get_units(args...)
-    return error(
-        "Unit information must be passed as one of `AbstractDimensions`, `AbstractQuantity`, `AbstractString`, `Real`.",
-    )
-end
-function get_units(_, _, ::Nothing, ::Function)
-    return nothing
-end
-function get_units(::Type{T}, ::Type{D}, x::AbstractString, f::Function) where {T,D}
-    isempty(x) && return one(Quantity{T,D})
-    return convert(Quantity{T,D}, f(x))
-end
-function get_units(::Type{T}, ::Type{D}, x::Quantity, ::Function) where {T,D}
-    return convert(Quantity{T,D}, x)
-end
-function get_units(::Type{T}, ::Type{D}, x::AbstractDimensions, ::Function) where {T,D}
-    return convert(Quantity{T,D}, Quantity(one(T), x))
-end
-function get_units(::Type{T}, ::Type{D}, x::Real, ::Function) where {T,D}
-    return Quantity(convert(T, x), D)::Quantity{T,D}
-end
-
-# Derived
-function get_units(::Type{T}, ::Type{D}, x::AbstractVector, f::Function) where {T,D}
-    return Quantity{T,D}[get_units(T, D, xi, f) for xi in x]
 end
 
 function error_on_mismatched_size(_, ::Nothing)

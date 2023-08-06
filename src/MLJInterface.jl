@@ -4,6 +4,7 @@ using Optim: Optim
 import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
 import DynamicQuantities:
+    AbstractQuantity,
     AbstractDimensions,
     SymbolicDimensions,
     Quantity,
@@ -12,6 +13,7 @@ import DynamicQuantities:
     dimension
 import LossFunctions: SupervisedLoss
 import Compat: allequal, stack
+import ..InterfaceDynamicQuantitiesModule: get_dimensions_type
 import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
 import ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 import ..ComplexityModule: compute_complexity
@@ -219,7 +221,8 @@ function get_matrix_and_info(X, ::Type{D}) where {D}
     else
         [string.(sch.names)...]
     end
-    Xm_t_strip, X_units = unwrap_units_single(Xm_t, D)
+    D_promoted = get_dimensions_type(Xm_t, D)
+    Xm_t_strip, X_units = unwrap_units_single(Xm_t, D_promoted)
     return Xm_t_strip, colnames, X_units
 end
 
@@ -230,7 +233,8 @@ function format_input_for(::SRRegressor, y, ::Type{D}) where {D}
     )
     y_t = vec(y)
     colnames = nothing
-    y_t_strip, y_units = unwrap_units_single(y_t, D)
+    D_promoted = get_dimensions_type(y_t, D)
+    y_t_strip, y_units = unwrap_units_single(y_t, D_promoted)
     return y_t_strip, colnames, y_units
 end
 function format_input_for(::MultitargetSRRegressor, y, ::Type{D}) where {D}
@@ -265,24 +269,42 @@ dimension_fallback(_, ::Type{D}) where {D} = D()
 function prediction_warn()
     @warn "Evaluation failed either due to NaNs detected or due to unfinished search. Using 0s for prediction."
 end
-function prediction_fallback(::Type{T}, ::SRRegressor, Xnew_t, fitresult) where {T}
+
+@inline function wrap_units(v, y_units, i::Integer)
+    if y_units === nothing
+        return v
+    else
+        return (yi -> Quantity(yi, y_units[i])).(v)
+    end
+end
+@inline function wrap_units(v, y_units, ::Nothing)
+    if y_units === nothing
+        return v
+    else
+        return (yi -> Quantity(yi, y_units)).(v)
+    end
+end
+
+function prediction_fallback(::Type{T}, m::SRRegressor, Xnew_t, fitresult) where {T}
     prediction_warn()
-    return fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T))
+    out = fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T))
+    return wrap_units(out, fitresult.y_units, nothing)
 end
 function prediction_fallback(
     ::Type{T}, ::MultitargetSRRegressor, Xnew_t, fitresult, prototype
 ) where {T}
     prediction_warn()
-    out_matrix = reduce(
-        hcat,
-        [
-            fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T)) for
-            _ in 1:(fitresult.num_targets)
-        ],
-    )
-    fill!(out_matrix, zero(T))
-    !fitresult.y_is_table && return out_matrix
-    return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
+    out_cols = [
+        wrap_units(
+            fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T)), fitresult.y_units, i
+        ) for i in 1:(fitresult.num_targets)
+    ]
+    out_matrix = reduce(hcat, out_cols)
+    if !fitresult.y_is_table
+        return out_matrix
+    else
+        return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
+    end
 end
 
 function unwrap_units_single(A::AbstractMatrix{T}, ::Type{D}) where {D,T<:Number}
@@ -327,8 +349,11 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
     validate_units(X_units_clean, fitresult.X_units)
     eq = params.equations[params.best_idx]
     out, completed = eval_tree_array(eq, Xnew_t, fitresult.options)
-    !completed && return prediction_fallback(T, m, Xnew_t, fitresult)
-    return out
+    if !completed
+        return prediction_fallback(T, m, Xnew_t, fitresult)
+    else
+        return wrap_units(out, fitresult.y_units, nothing)
+    end
 end
 function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     params = full_report(m, fitresult; v_with_strings=Val(false))
@@ -344,14 +369,19 @@ function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
     end
     best_idx = params.best_idx
     outs = []
-    for (i, eq) in zip(best_idx, equations)
-        out, completed = eval_tree_array(eq[i], Xnew_t, fitresult.options)
-        !completed && return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
-        push!(outs, out)
+    for (i, (best_i, eq)) in enumerate(zip(best_idx, equations))
+        out, completed = eval_tree_array(eq[best_i], Xnew_t, fitresult.options)
+        if !completed
+            return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
+        end
+        push!(outs, wrap_units(out, fitresult.y_units, i))
     end
     out_matrix = reduce(hcat, outs)
-    !fitresult.y_is_table && return out_matrix
-    return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
+    if !fitresult.y_is_table
+        return out_matrix
+    else
+        return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
+    end
 end
 
 function get_equation_strings_for(::SRRegressor, trees, options, variable_names)
@@ -470,7 +500,7 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
         the score (a pound-for-pound rating) of expressions reaching the threshold
         of 1.5x the minimum loss. To fix the index at `5`, you could just write `Returns(5)`.
     - `dimensions_type::AbstractDimensions`: The type of dimensions to use when storing
-        the units of the data. By default this is `DynamicQuantities.DEFAULT_DIM_TYPE`.
+        the units of the data. By default this is `DynamicQuantities.SymbolicDimensions`.
     """
 
     bottom = """
