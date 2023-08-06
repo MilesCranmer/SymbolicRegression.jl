@@ -6,6 +6,7 @@ import DynamicQuantities:
     Dimensions,
     SymbolicDimensions,
     Quantity,
+    dimension,
     uparse,
     sym_uparse,
     DEFAULT_DIM_BASE_TYPE
@@ -61,42 +62,26 @@ function get_sym_units(::Type{T}, units) where {T}
     return get_units(T, SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}, units, sym_uparse)
 end
 
+#! format: off
 """
     get_dimensions_type(A, default_dimensions)
 
 Recursively finds the dimension type from an array, or,
 if no quantity is found, returns the default type.
 """
-function get_dimensions_type(
-    A::Union{AbstractMatrix,AbstractVector{<:AbstractVector}}, ::Type{D}
-) where {D}
-    rows = eachrow(A)
-    if length(rows) == 1
-        return get_dimensions_type(rows[1], D)
-    else
-        return get_dimensions_type(rows[1], rows[2:end], D)
+function get_dimensions_type(A::AbstractArray, ::Type{D}) where {D}
+    @inbounds for i in eachindex(A)
+        # Look through columns for any dimensions (so we can return the correct type)
+        A[i] isa AbstractQuantity && return typeof(dimension(A[i]))
     end
-end
-function get_dimensions_type(::AbstractVector, tail, ::Type{D}) where {D}
-    return get_dimensions_type(tail, D)
-end
-function get_dimensions_type(::AbstractVector, ::Type{D}) where {D}
     return D
 end
-function get_dimensions_type(
-    ::AbstractVector{Q}, _, ::Type{D}
-) where {Dout,Q<:AbstractQuantity{<:Any,Dout},D}
+function get_dimensions_type(::AbstractArray{T}, ::Type{D}) where {D,T<:Number}
+    return D
+end
+function get_dimensions_type(::AbstractArray{Q}, ::Type{D}) where {Dout,Q<:AbstractQuantity{<:Any,Dout},D}
     return Dout
 end
-function get_dimensions_type(
-    ::AbstractMatrix{Q}, ::Type{D}
-) where {Dout,Q<:AbstractQuantity{<:Any,Dout},D}
-    return Dout
-end
-function get_dimensions_type(
-    ::AbstractVector{Q}, ::Type{D}
-) where {Dout,Q<:AbstractQuantity{<:Any,Dout},D}
-    return Dout
-end
+#! format: on
 
 end
