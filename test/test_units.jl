@@ -233,7 +233,7 @@ end
         ypred = MLJ.predict(mach; rows=1:3)
         @test dimension(ypred.a[begin]) == dimension(y.a[begin])
         @test typeof(ypred.a[begin]) == typeof(y.a[begin])
-        @test typeof(ypred.b[begin]) == typeof(y.b[begin]) broken = true
+        VERSION >= v"1.8" && @eval @test(typeof(ypred.b[begin]) == typeof(y.b[begin]), broken = true)
     end
 end
 
