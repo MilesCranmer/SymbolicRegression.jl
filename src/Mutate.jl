@@ -356,15 +356,19 @@ function crossover_generation(
     end
     if options.batching
         afterScore1, afterLoss1 = score_func_batched(
-            dataset, child_tree1, options, afterSize1
+            dataset, child_tree1, options; complexity=afterSize1
         )
         afterScore2, afterLoss2 = score_func_batched(
-            dataset, child_tree2, options, afterSize2
+            dataset, child_tree2, options; complexity=afterSize2
         )
         num_evals += 2 * (options.batch_size / dataset.n)
     else
-        afterScore1, afterLoss1 = score_func(dataset, child_tree1, options, afterSize1)
-        afterScore2, afterLoss2 = score_func(dataset, child_tree2, options, afterSize2)
+        afterScore1, afterLoss1 = score_func(
+            dataset, child_tree1, options; complexity=afterSize1
+        )
+        afterScore2, afterLoss2 = score_func(
+            dataset, child_tree2, options; complexity=afterSize2
+        )
         num_evals += options.batch_size / dataset.n
     end
 
