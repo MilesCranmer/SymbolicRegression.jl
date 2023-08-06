@@ -1,5 +1,9 @@
 using SafeTestsets
 
+@safetestset "Aqua tests" begin
+    include("test_aqua.jl")
+end
+
 @safetestset "Test tree construction and scoring" begin
     include("test_tree_construction.jl")
 end
