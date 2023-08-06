@@ -718,7 +718,6 @@ function Options end
         alpha,
         maxsize,
         maxdepth,
-        fast_cycle,
         turbo,
         migration,
         hof_migration,
