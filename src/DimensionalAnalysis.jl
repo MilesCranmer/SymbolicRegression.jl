@@ -2,7 +2,7 @@ module DimensionalAnalysisModule
 
 import DynamicExpressions: Node
 import DynamicQuantities:
-    Quantity, DimensionError, AbstractQuantity, dimension, ustrip, uparse
+    Quantity, DimensionError, AbstractQuantity, dimension, ustrip, uparse, constructor_of
 import Tricks: static_hasmethod
 
 import ..CoreModule: Options, Dataset
@@ -74,11 +74,11 @@ for op in (:(Base.:+), :(Base.:-))
         if same_dimensions(l, r)
             return W($(op)(l.val, r.val), l.wildcard && r.wildcard, false)
         elseif l.wildcard && r.wildcard
-            return W(Q($(op)(ustrip(l), ustrip(r))), true, false)
+            return W(constructor_of(Q)($(op)(ustrip(l), ustrip(r))), true, false)
         elseif l.wildcard
-            return W($(op)(Q(ustrip(l), dimension(r)), r.val), false, false)
+            return W($(op)(constructor_of(Q)(ustrip(l), dimension(r)), r.val), false, false)
         elseif r.wildcard
-            return W($(op)(l.val, Q(ustrip(r), dimension(l))), false, false)
+            return W($(op)(l.val, constructor_of(Q)(ustrip(r), dimension(l))), false, false)
         else
             return W(one(Q), false, true)
         end
