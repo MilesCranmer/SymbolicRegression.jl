@@ -1,4 +1,5 @@
 using SymbolicRegression
+import SymbolicRegression.UtilsModule: recursive_merge
 using Test
 using JSON3
 
@@ -45,3 +46,5 @@ for (i, key) in enumerate(keys(data.mutations))
         break
     end
 end
+
+@test_throws ErrorException recursive_merge()
