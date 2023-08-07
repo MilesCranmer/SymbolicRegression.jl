@@ -74,7 +74,11 @@ for op in (:(Base.:+), :(Base.:-))
         if same_dimensions(l, r)
             return W($(op)(l.val, r.val), l.wildcard && r.wildcard, false)
         elseif l.wildcard && r.wildcard
-            return W(constructor_of(Q)($(op)(ustrip(l), ustrip(r))), true, false)
+            return W(
+                constructor_of(Q)($(op)(ustrip(l), ustrip(r)), typeof(dimension(l))),
+                true,
+                false,
+            )
         elseif l.wildcard
             return W($(op)(constructor_of(Q)(ustrip(l), dimension(r)), r.val), false, false)
         elseif r.wildcard
