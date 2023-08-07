@@ -3,6 +3,9 @@ using Test
 
 ENV["SYMBOLIC_REGRESSION_TEST"] = "true"
 
+@safetestset "Aqua tests" begin
+    include("test_aqua.jl")
+end
 @safetestset "Unit tests" begin
     include("unittest.jl")
 end
