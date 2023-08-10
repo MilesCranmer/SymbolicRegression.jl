@@ -14,7 +14,6 @@ using SymbolicRegression:
     safe_acosh,
     neg,
     greater,
-    greater,
     relu,
     logical_or,
     logical_and,
@@ -62,3 +61,45 @@ for T in types_to_test
     @test logical_or(T(0.0), val2) == T(1.0)
     @test logical_and(T(0.0), val2) == T(0.0)
 end
+
+# Test built-in operators pass validation:
+types_to_test = [Float16, Float32, Float64, BigFloat]
+options = Options(;
+    binary_operators=[plus, sub, mult, div, ^, greater, logical_or, logical_and],
+    unary_operators=[square, cube, log, log2, log10, sqrt, acosh, neg, relu],
+)
+for T in types_to_test
+    @test_nowarn SymbolicRegression.assert_operators_well_defined(T, options)
+end
+
+# Reduced set for complex numbers
+options = Options(;
+    binary_operators=[plus, sub, mult, div, ^],
+    unary_operators=[square, cube, log, log2, log10, sqrt, acosh, neg],
+)
+types_to_test = [ComplexF16, ComplexF32, ComplexF64]
+for T in types_to_test
+    @test_nowarn SymbolicRegression.assert_operators_well_defined(T, options)
+end
+
+# Some of these should fail:
+options = Options(; binary_operators=[greater])
+@test_throws ErrorException SymbolicRegression.assert_operators_well_defined(
+    ComplexF64, options
+)
+VERSION >= v"1.8" &&
+    @test_throws "complex plane" SymbolicRegression.assert_operators_well_defined(
+        ComplexF64, options
+    )
+
+# Operators which return the wrong type should fail:
+my_bad_op(x) = 1.0f0
+options = Options(; binary_operators=[], unary_operators=[my_bad_op])
+@test_throws ErrorException SymbolicRegression.assert_operators_well_defined(
+    Float64, options
+)
+VERSION >= v"1.8" &&
+    @test_throws "returned an output of type" SymbolicRegression.assert_operators_well_defined(
+        Float64, options
+    )
+@test_nowarn SymbolicRegression.assert_operators_well_defined(Float32, options)
