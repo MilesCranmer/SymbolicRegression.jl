@@ -31,7 +31,7 @@ function test_operator(op::F, x::T, y=nothing) where {F,T}
     return nothing
 end
 
-const TEST_INPUTS = collect(range(; start=-100, stop=100, length=99))
+const TEST_INPUTS = collect(range(-100, 100; length=99))
 
 function assert_operators_well_defined(T, options::Options)
     test_input = if T <: Complex
