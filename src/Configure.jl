@@ -1,9 +1,5 @@
 const TEST_TYPE = Float32
 
-struct InvalidOperator <: Exception
-    msg::String
-end
-
 function test_operator(op::F, x::T, y=nothing) where {F,T}
     local output
     try
