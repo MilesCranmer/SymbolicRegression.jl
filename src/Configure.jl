@@ -1,27 +1,45 @@
 const TEST_TYPE = Float32
 
-function assert_operators_defined_over_reals(T, options::Options)
-    test_input = map(x -> convert(T, x), LinRange(-100, 100, 99))
-    cur_op = nothing
+function test_operator(op::F, x::T, y=nothing) where {F,T}
+    local output
     try
-        for left in test_input
-            for right in test_input
-                for binop in options.operators.binops
-                    cur_op = binop
-                    test_output = binop.(left, right)
-                end
-            end
-            for unaop in options.operators.unaops
-                cur_op = unaop
-                test_output = unaop.(left)
-            end
-        end
-    catch error
-        throw(
-            AssertionError(
-                "Your configuration is invalid - one of your operators ($cur_op) is not well-defined over the real line. You can get around this by returning `NaN` for invalid inputs.",
-            ),
+        output = y === nothing ? op(x) : op(x, y)
+    catch e
+        error(
+            "The operator `$(op)` is not well-defined over the " *
+            ((T <: Complex) ? "complex plane, " : "real line, ") *
+            "as it threw the error `$(typeof(e))` when evaluating the " *
+            (y === nothing ? "input $(x). " : "inputs $(x) and $(y). ") *
+            "You can work around this by returning " *
+            "NaN for invalid inputs. For example, " *
+            "`safe_log(x::T) where {T} = x > 0 ? log(x) : T(NaN)`.",
         )
+    end
+    if !isa(output, T)
+        error(
+            "The operator `$(op)` returned an output of type `$(typeof(output))`, " *
+            "when it was given " *
+            (y === nothing ? "an input $(x) " : "inputs $(x) and $(y) ") *
+            "of type `$(T)`. " *
+            "Please ensure that your operators return the same type as their inputs.",
+        )
+    end
+    return nothing
+end
+
+const TEST_INPUTS = collect(range(-100, 100; length=99))
+
+function assert_operators_well_defined(T, options::Options)
+    test_input = if T <: Complex
+        (x -> convert(T, x)).(TEST_INPUTS .+ TEST_INPUTS .* im)
+    else
+        (x -> convert(T, x)).(TEST_INPUTS)
+    end
+    for x in test_input, y in test_input, op in options.operators.binops
+        test_operator(op, x, y)
+    end
+    for x in test_input, op in options.operators.unaops
+        test_operator(op, x)
     end
 end
 
@@ -37,7 +55,7 @@ function test_option_configuration(T, options::Options)
         end
     end
 
-    assert_operators_defined_over_reals(T, options)
+    assert_operators_well_defined(T, options)
 
     operator_intersection = intersect(options.operators.binops, options.operators.unaops)
     if length(operator_intersection) > 0
