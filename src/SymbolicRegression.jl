@@ -332,6 +332,7 @@ function equation_search(
     y::AbstractMatrix{T};
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
+    extra::Union{NamedTuple,Nothing}=nothing,
     options::Options=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
     display_variable_names::Union{AbstractVector{String},Nothing}=variable_names,
@@ -365,6 +366,13 @@ function equation_search(
         @assert length(weights) == length(y)
         weights = reshape(weights, size(y))
     end
+    if extra !== nothing
+        if options.loss_function === nothing
+            error(
+                "You have passed `extra`, but have not provided a custom `loss_function` to use it.",
+            )
+        end
+    end
     if T <: Complex && loss_type == Nothing
         get_base_type(::Type{Complex{BT}}) where {BT} = BT
         loss_type = get_base_type(T)
@@ -374,6 +382,7 @@ function equation_search(
         X,
         y,
         weights,
+        extra,
         variable_names,
         display_variable_names,
         y_variable_names,

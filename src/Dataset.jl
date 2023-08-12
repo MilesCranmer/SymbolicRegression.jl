@@ -25,6 +25,9 @@ import ...deprecate_varmap
 - `y::AbstractVector{T}`: The desired output values, with shape `(n,)`.
 - `n::Int`: The number of samples.
 - `nfeatures::Int`: The number of features.
+- `col::Int`: For multi-target problems, this is the column of `y` which
+    we have selected in this dataset. For single-target problems, this is
+    always `1`.
 - `weighted::Bool`: Whether the dataset is non-uniformly weighted.
 - `weights::Union{AbstractVector{T},Nothing}`: If the dataset is weighted,
     these specify the per-sample weight (with shape `(n,)`).
@@ -67,6 +70,7 @@ mutable struct Dataset{
     y::AY
     n::Int
     nfeatures::Int
+    col::Int
     weighted::Bool
     weights::AW
     extra::NT
@@ -84,6 +88,7 @@ end
 
 """
     Dataset(X::AbstractMatrix{T}, y::Union{AbstractVector{T},Nothing}=nothing;
+            col::Int=1,
             weights::Union{AbstractVector{T}, Nothing}=nothing,
             variable_names::Union{Array{String, 1}, Nothing}=nothing,
             y_variable_name::Union{String,Nothing}=nothing,
@@ -98,6 +103,7 @@ Construct a dataset to pass between internal functions.
 function Dataset(
     X::AbstractMatrix{T},
     y::Union{AbstractVector{T},Nothing}=nothing;
+    col::Int=1,
     weights::Union{AbstractVector{T},Nothing}=nothing,
     variable_names::Union{Array{String,1},Nothing}=nothing,
     display_variable_names=variable_names,
@@ -184,6 +190,7 @@ function Dataset(
         y,
         n,
         nfeatures,
+        col,
         weighted,
         weights,
         extra,

@@ -5,6 +5,7 @@ import MLJTestInterface as MTI
 import MLJBase: machine, fit!, report, predict
 using Test
 using SymbolicUtils: SymbolicUtils
+using Zygote
 import Suppressor: @capture_err
 
 macro quiet(ex)
@@ -143,4 +144,54 @@ end
         predict(mach, randn(32, 3))
     end
     @test occursin("Evaluation failed either due to", msg)
+end
+
+const WasEvaluated = Ref(false)
+const WasEvaluatedLock = Threads.SpinLock()
+
+# This tests both `.extra` and `idx`
+function derivative_loss(tree, dataset::Dataset{T,L}, options, idx) where {T,L}
+    # Select from the batch indices, if given
+    X = idx === nothing ? dataset.X : view(dataset.X, :, idx)
+
+    ŷ, ∂ŷ, completed = eval_grad_tree_array(tree, X, options; variable=true)
+
+    !completed && return L(Inf)
+
+    y = idx === nothing ? dataset.y : view(dataset.y, idx)
+    ∂y = idx === nothing ? dataset.extra.∂y : view(dataset.extra.∂y, idx)
+
+    mse_deriv = sum(i -> (∂ŷ[i] - ∂y[i])^2, eachindex(∂y)) / length(∂y)
+    mse_value = sum(i -> (ŷ[i] - y[i])^2, eachindex(y)) / length(y)
+
+    WasEvaluated[] || lock(WasEvaluatedLock) do
+        WasEvaluated[] = true
+    end
+
+    return mse_value + mse_deriv
+end
+
+true_f(x) = x^3 / 3 - cos(x)
+deriv_f(x) = x^2 + sin(x)
+
+@testset "Test `extra` parameter" begin
+    X = reshape(0.0:0.32:10.0, :, 1)
+    y = true_f.(X[:, 1])
+    ∂y = deriv_f.(X[:, 1])
+
+    model = SRRegressor(;
+        binary_operators=[+, -, *],
+        unary_operators=[cos],
+        loss_function=derivative_loss,
+        enable_autodiff=true,
+        batching=true,
+        batch_size=25,
+        niterations=100,
+        early_stop_condition=1e-6,
+    )
+    mach = machine(model, X, y, (; ∂y=∂y))
+    fit!(mach)
+
+    @test WasEvaluated[]
+    @test predict(mach, X) ≈ y
 end

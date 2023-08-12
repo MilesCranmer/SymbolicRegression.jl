@@ -308,6 +308,7 @@ function construct_datasets(
     X,
     y,
     weights,
+    extra,
     variable_names,
     display_variable_names,
     y_variable_names,
@@ -320,7 +321,9 @@ function construct_datasets(
         Dataset(
             X,
             y[j, :];
+            col=j,
             weights=(weights === nothing ? weights : weights[j, :]),
+            extra=extra,
             variable_names=variable_names,
             display_variable_names=display_variable_names,
             y_variable_name=if y_variable_names === nothing

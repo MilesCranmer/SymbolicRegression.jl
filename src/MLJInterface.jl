@@ -148,17 +148,13 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
     )
     X_units_clean::types.X_units_clean = clean_units(X_units)
     y_units_clean::types.y_units_clean = clean_units(y_units)
-    w_t::types.w_t = if w !== nothing && isa(m, MultitargetSRRegressor)
-        @assert(isa(w, AbstractVector) && ndims(w) == 1, "Unexpected input for `w`.")
-        repeat(w', size(y_t, 1))
-    else
-        w
-    end
+    w_t::types.w_t = validate_weights(size(y_t, 1), m, w)
     search_state::types.state = equation_search(
         X_t,
         y_t;
         niterations=m.niterations,
-        weights=w_t,
+        weights=isa(w_t, AbstractArray) ? w_t : nothing,
+        extra=isa(w_t, NamedTuple) ? w_t : nothing,
         variable_names=variable_names,
         options=options,
         parallelism=m.parallelism,
@@ -201,6 +197,16 @@ end
 hof_eltype(::Type{H}) where {T,H<:HallOfFame{T}} = T
 hof_eltype(::Type{V}) where {V<:Vector} = hof_eltype(eltype(V))
 hof_eltype(h) = hof_eltype(typeof(h))
+
+validate_weights(_, _, ::Nothing) = nothing
+validate_weights(num_cols, ::MultitargetSRRegressor, w::AbstractVector) = repeat(w', n)
+validate_weights(_, ::SRRegressor, w::AbstractVector) = w
+validate_weights(_, _, w::NamedTuple) = w
+function validate_weights(_, _, _)
+    return error(
+        "Unexpected input for `w`. This should usually be a vector. You may also pass a `NamedTuple` if you are using extra data in a custom objective.",
+    )
+end
 
 function clean_units(units)
     !isa(units, AbstractDimensions) && error("Unexpected units.")

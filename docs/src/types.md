@@ -76,6 +76,7 @@ HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_T
 ```@docs
 Dataset
 Dataset(X::AbstractMatrix{T}, y::Union{AbstractVector{T},Nothing}=nothing;
+        col::Int=1,
         weights::Union{AbstractVector{T}, Nothing}=nothing,
         variable_names::Union{Array{String, 1}, Nothing}=nothing,
         y_variable_name::Union{String,Nothing}=nothing,
