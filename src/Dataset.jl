@@ -31,7 +31,7 @@ import ...deprecate_varmap
 - `weighted::Bool`: Whether the dataset is non-uniformly weighted.
 - `weights::Union{AbstractVector{T},Nothing}`: If the dataset is weighted,
     these specify the per-sample weight (with shape `(n,)`).
-- `extra::NamedTuple`: Extra information to pass to a custom evaluation
+- `extra::Union{NamedTuple,Nothing}`: Extra information to pass to a custom evaluation
     function. Since this is an arbitrary named tuple, you could pass
     any sort of dataset you wish to here.
 - `avg_y`: The average value of `y` (weighted, if `weights` are passed).
@@ -60,7 +60,7 @@ mutable struct Dataset{
     AX<:AbstractMatrix{T},
     AY<:Union{AbstractVector{T},Nothing},
     AW<:Union{AbstractVector{T},Nothing},
-    NT<:NamedTuple,
+    EX<:Union{NamedTuple,Nothing},
     XU<:Union{AbstractVector{<:Quantity},Nothing},
     YU<:Union{Quantity,Nothing},
     XUS<:Union{AbstractVector{<:Quantity},Nothing},
@@ -73,7 +73,7 @@ mutable struct Dataset{
     col::Int
     weighted::Bool
     weights::AW
-    extra::NT
+    extra::EX
     avg_y::Union{T,Nothing}
     use_baseline::Bool
     baseline_loss::L
@@ -108,7 +108,7 @@ function Dataset(
     variable_names::Union{Array{String,1},Nothing}=nothing,
     display_variable_names=variable_names,
     y_variable_name::Union{String,Nothing}=nothing,
-    extra::NamedTuple=NamedTuple(),
+    extra::Union{NamedTuple,Nothing}=nothing,
     loss_type::Type{Linit}=Nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,

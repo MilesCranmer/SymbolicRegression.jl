@@ -198,10 +198,19 @@ hof_eltype(::Type{H}) where {T,H<:HallOfFame{T}} = T
 hof_eltype(::Type{V}) where {V<:Vector} = hof_eltype(eltype(V))
 hof_eltype(h) = hof_eltype(typeof(h))
 
-validate_weights(_, _, ::Nothing) = nothing
-validate_weights(num_cols, ::MultitargetSRRegressor, w::AbstractVector) = repeat(w', n)
-validate_weights(_, ::SRRegressor, w::AbstractVector) = w
-validate_weights(_, _, w::NamedTuple) = w
+function validate_weights(num_cols, ::MultitargetSRRegressor, w::AbstractVector)
+    return repeat(w', num_cols)
+end
+function validate_weights(_, ::SRRegressor, w::AbstractVector)
+    return w
+end
+function validate_weights(_, _, w::NamedTuple)
+    @warn "You are using an experimental interface. This API may change in the future."
+    return w
+end
+function validate_weights(_, _, ::Nothing)
+    return nothing
+end
 function validate_weights(_, _, _)
     return error(
         "Unexpected input for `w`. This should usually be a vector. You may also pass a `NamedTuple` if you are using extra data in a custom objective.",

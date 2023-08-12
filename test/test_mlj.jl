@@ -1,6 +1,13 @@
 using SymbolicRegression: SymbolicRegression
 import SymbolicRegression:
-    Node, SRRegressor, MultitargetSRRegressor, node_to_symbolic, symbolic_to_node
+    Node,
+    Dataset,
+    SRRegressor,
+    MultitargetSRRegressor,
+    node_to_symbolic,
+    symbolic_to_node,
+    eval_tree_array,
+    eval_grad_tree_array
 import MLJTestInterface as MTI
 import MLJBase: machine, fit!, report, predict
 using Test
@@ -190,8 +197,22 @@ deriv_f(x) = x^2 + sin(x)
         early_stop_condition=1e-6,
     )
     mach = machine(model, X, y, (; ∂y=∂y))
-    fit!(mach)
+    @test_warn "experimental" fit!(mach)
 
     @test WasEvaluated[]
     @test predict(mach, X) ≈ y
+
+    @testset "Test errors associated with `extra`" begin
+        # No loss function:
+        model = SRRegressor(; loss_function=nothing)
+        mach = machine(model, X, y, (; ∂y=∂y))
+        @test_throws ErrorException @quiet(fit!(mach; verbosity=0))
+        VERSION >= v"1.8" && @test_throws "You have passed" @quiet(fit!(mach))
+
+        # Bad setting for `extra`
+        model = SRRegressor(; loss_function=derivative_loss)
+        mach = machine(model, X, y, "extra")
+        @test_throws ErrorException @quiet(fit!(mach; verbosity=0))
+        VERSION >= v"1.8" && @test_throws "Unexpected input" @quiet(fit!(mach))
+    end
 end
