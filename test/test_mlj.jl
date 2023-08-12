@@ -197,7 +197,7 @@ deriv_f(x) = x^2 + sin(x)
         early_stop_condition=1e-6,
     )
     mach = machine(model, X, y, (; ∂y=∂y))
-    @test_warn "experimental" fit!(mach)
+    VERSION >= v"1.8" && @test_warn "experimental" fit!(mach)
 
     @test WasEvaluated[]
     @test predict(mach, X) ≈ y

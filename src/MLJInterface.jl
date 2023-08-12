@@ -205,7 +205,7 @@ function validate_weights(_, ::SRRegressor, w::AbstractVector)
     return w
 end
 function validate_weights(_, _, w::NamedTuple)
-    @warn "You are using an experimental interface. This API may change in the future."
+    @warn "You are using an experimental interface for the `extra` field of a `Dataset` type. This API may change in the future."
     return w
 end
 function validate_weights(_, _, ::Nothing)
