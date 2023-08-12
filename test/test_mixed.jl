@@ -55,6 +55,8 @@ for i in 0:5
         println("with default hyperparameters, Float64 type, and turbo=true")
         T = Float64
         turbo = true
+        parallelism = :multithreading
+        numprocs = nothing
     end
     if i == 5
         options = SymbolicRegression.Options(;
