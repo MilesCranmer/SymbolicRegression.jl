@@ -11,7 +11,7 @@ import DynamicQuantities:
 import ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
 
 import ..UtilsModule: subscriptify
-import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
+import ..ProgramConstantsModule: DATA_TYPE, LOSS_TYPE
 #! format: off
 import ...deprecate_varmap
 #! format: on
@@ -120,8 +120,8 @@ function Dataset(
     # Deprecation warning:
     variable_names = deprecate_varmap(variable_names, varMap, :Dataset)
 
-    n = size(X, BATCH_DIM)
-    nfeatures = size(X, FEATURE_DIM)
+    n = size(X, 2)
+    nfeatures = size(X, 1)
     weighted = weights !== nothing
     variable_names = if variable_names === nothing
         ["x$(i)" for i in 1:nfeatures]

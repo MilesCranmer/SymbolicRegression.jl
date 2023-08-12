@@ -7,8 +7,7 @@ include("OptionsStruct.jl")
 include("Operators.jl")
 include("Options.jl")
 
-import .ProgramConstantsModule:
-    MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, DATA_TYPE, LOSS_TYPE
+import .ProgramConstantsModule: MAX_DEGREE, RecordType, DATA_TYPE, LOSS_TYPE
 import .DatasetModule: Dataset
 import .OptionsStructModule: Options, ComplexityMapping, MutationWeights, sample_mutation
 import .OptionsModule: Options
