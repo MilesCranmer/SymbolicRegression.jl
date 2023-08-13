@@ -83,7 +83,7 @@ function _optimize_constants(
     optimizer_options,
     idx,
     ::Val{use_autodiff},
-)::Tuple{PopMember{T,L},Float64,use_autodiff} where {T,L}
+)::Tuple{PopMember{T,L},Float64} where {T,L,use_autodiff}
     tree = member.tree
     constant_nodes = filter(t -> t.degree == 0 && t.constant, tree)
 
