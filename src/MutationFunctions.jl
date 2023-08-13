@@ -149,35 +149,35 @@ function make_random_leaf(nfeatures::Int, ::Type{T})::Node{T} where {T<:DATA_TYP
 end
 
 # Return a random node from the tree with parent, and side ('n' for no parent)
-function random_node_and_parent(
-    tree::Node{T}, parent::Union{Node{T},Nothing}; side::Char
-)::Tuple{Node{T},Union{Node{T},Nothing},Char} where {T}
+function _random_node_and_parent(
+    tree::Node{T}, parent::Node{T}, side::Char, total_nodes
+) where {T}
     if tree.degree == 0
         return tree, parent, side
-    end
-    b = 0
-    c = 0
-    if tree.degree >= 1
-        b = count_nodes(tree.l)
-    end
-    if tree.degree == 2
-        c = count_nodes(tree.r)
-    end
+    elseif tree.degree == 1
+        i = rand(1:total_nodes)
+        if i == 1
+            return tree, parent, side
+        else
+            return _random_node_and_parent(tree.l, tree, 'l', total_nodes - 1)
+        end
+    else
+        num_left = count_nodes(tree.l)
+        num_right = total_nodes - num_left - 1
 
-    i = rand(1:(1 + b + c))
-    if i <= b
-        return random_node_and_parent(tree.l, tree; side='l')
-    elseif i == b + 1
-        return tree, parent, side
+        i = rand(1:total_nodes)
+        if i == 1
+            return tree, parent, side
+        elseif i <= num_left + 1
+            return _random_node_and_parent(tree.l, tree, 'l', num_left)
+        else
+            return _random_node_and_parent(tree.r, tree, 'r', num_right)
+        end
     end
-
-    return random_node_and_parent(tree.r, tree; side='r')
 end
 
-function random_node_and_parent(
-    tree::Node{T}
-)::Tuple{Node{T},Union{Node{T},Nothing},Char} where {T}
-    return random_node_and_parent(tree, nothing; side='n')
+function random_node_and_parent(tree::Node{T}) where {T}
+    return _random_node_and_parent(tree, tree, 'n', count_nodes(tree))
 end
 
 # Select a random node, and replace it an the subtree
@@ -186,7 +186,7 @@ function delete_random_op(
     tree::Node{T}, options::Options, nfeatures::Int
 )::Node{T} where {T<:DATA_TYPE}
     node, parent, side = random_node_and_parent(tree)
-    isroot = (parent === nothing)
+    isroot = side == 'n'
 
     if node.degree == 0
         # Replace with new constant
