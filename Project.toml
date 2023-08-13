@@ -27,10 +27,12 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 Tricks = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
 
 [weakdeps]
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 
 [extensions]
+SymbolicRegressionEnzymeExt = "Enzyme"
 SymbolicRegressionJSON3Ext = "JSON3"
 SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 
@@ -38,6 +40,7 @@ SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 Compat = "^4.2"
 DynamicExpressions = "0.13"
 DynamicQuantities = "^0.6.2"
+Enzyme = "0.11"
 JSON3 = "1"
 LineSearches = "7"
 LossFunctions = "0.10, 0.11"
@@ -57,6 +60,7 @@ julia = "1.6"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -69,4 +73,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Test", "SafeTestsets", "Aqua", "ForwardDiff", "LinearAlgebra", "JSON3", "MLJBase", "MLJTestInterface", "Suppressor", "SymbolicUtils", "Zygote"]
+test = ["Test", "SafeTestsets", "Aqua", "Enzyme", "ForwardDiff", "LinearAlgebra", "JSON3", "MLJBase", "MLJTestInterface", "Suppressor", "SymbolicUtils", "Zygote"]

@@ -8,6 +8,8 @@ import ..UtilsModule: get_birth_order
 import ..LossFunctionsModule: score_func, eval_loss, batch_sample
 import ..PopMemberModule: PopMember
 
+opt_func_g!(args...) = error("Please load the Enzyme package.")
+
 # Proxy function for optimization
 @inline function opt_func(
     x, dataset::Dataset{T,L}, tree, constant_nodes, options, idx
@@ -16,6 +18,10 @@ import ..PopMemberModule: PopMember
     # TODO(mcranmer): This should use score_func batching.
     loss = eval_loss(tree, dataset, options; regularization=false, idx=idx)
     return loss::L
+end
+@inline function opt_func!(result, args...)
+    result[1] = opt_func(args...)
+    return nothing
 end
 
 function _set_constants!(x::AbstractArray{T}, constant_nodes) where {T}
@@ -42,28 +48,26 @@ function dispatch_optimize_constants(
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     nconst = count_constants(member.tree)
     nconst == 0 && return (member, 0.0)
+    function call_opt(algorithm)
+        return _optimize_constants(
+            dataset,
+            member,
+            options,
+            algorithm,
+            options.optimizer_options,
+            idx,
+        )
+    end
     if T <: Complex
         # TODO: Make this more general. Also, do we even need Newton here at all??
-        algorithm = Optim.BFGS(; linesearch=LineSearches.BackTracking())#order=3))
-        return _optimize_constants(
-            dataset, member, options, algorithm, options.optimizer_options, idx
-        )
+        return call_opt(Optim.BFGS(; linesearch=LineSearches.BackTracking()))
     elseif nconst == 1
-        algorithm = Optim.Newton(; linesearch=LineSearches.BackTracking())
-        return _optimize_constants(
-            dataset, member, options, algorithm, options.optimizer_options, idx
-        )
+        return call_opt(Optim.Newton(; linesearch=LineSearches.BackTracking()))
     else
         if options.optimizer_algorithm == "NelderMead"
-            algorithm = Optim.NelderMead(; linesearch=LineSearches.BackTracking())
-            return _optimize_constants(
-                dataset, member, options, algorithm, options.optimizer_options, idx
-            )
+            return call_opt(Optim.NelderMead(; linesearch=LineSearches.BackTracking()))
         elseif options.optimizer_algorithm == "BFGS"
-            algorithm = Optim.BFGS(; linesearch=LineSearches.BackTracking())#order=3))
-            return _optimize_constants(
-                dataset, member, options, algorithm, options.optimizer_options, idx
-            )
+            return call_opt(Optim.BFGS(; linesearch=LineSearches.BackTracking()))
         else
             error("Optimization function not implemented.")
         end
