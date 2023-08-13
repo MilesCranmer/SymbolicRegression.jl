@@ -2,50 +2,31 @@ module MutationFunctionsModule
 
 import DynamicExpressions:
     Node, copy_node, set_node!, count_nodes, has_constants, has_operators
+import Compat: Returns, @inline
 import ..CoreModule: Options, DATA_TYPE
 
 """
-    random_node(tree::Node{T}; total_nodes=nothing)
+    random_node(tree::Node{T}; filter::F=Returns(true))
 
-Return a random node from the tree. You may optionally pass
-a pre-computed total number of nodes in the tree for efficiency,
-otherwise it will be computed on the fly.
+Return a random node from the tree. You may optionally
+filter the nodes matching some condition before sampling.
 """
-function random_node(tree::Node{T}; total_nodes=nothing)::Node{T} where {T}
-    if tree.degree == 0
-        return tree
-    elseif tree.degree == 1
-        total_nodes, num_nodes_left = if total_nodes === nothing
-            l = count_nodes(tree.l)
-            (1 + l, l)
-        else
-            (total_nodes, total_nodes - 1)
+function random_node(tree::Node{T}; filter::F=Returns(true))::Node{T} where {T,F<:Function}
+    num_matching = count(filter, tree)
+    chosen_node_idx = rand(1:num_matching)
+    chosen_node = Ref{typeof(tree)}()
+    cur_idx = Ref(0)
+    any(tree) do t
+        if @inline(filter(t))
+            cur_idx[] += 1
+            if cur_idx[] == chosen_node_idx
+                chosen_node[] = t
+                return true
+            end
         end
-
-        i = rand(1:total_nodes)
-        if i == 1
-            return tree
-        else
-            return random_node(tree.l; total_nodes=num_nodes_left)
-        end
-    else
-        num_nodes_left = count_nodes(tree.l)
-        total_nodes, num_nodes_right = if total_nodes === nothing
-            r = count_nodes(tree.r)
-            (1 + r + num_nodes_left, r)
-        else
-            (total_nodes, total_nodes - num_nodes_left - 1)
-        end
-
-        i = rand(1:total_nodes)
-        if i == 1
-            return tree
-        elseif i <= num_nodes_left + 1
-            return random_node(tree.l; total_nodes=num_nodes_left)
-        else
-            return random_node(tree.r; total_nodes=num_nodes_right)
-        end
+        return false
     end
+    return chosen_node[]
 end
 
 # Randomly convert an operator into another one (binary->binary;
@@ -54,10 +35,7 @@ function mutate_operator(tree::Node{T}, options::Options)::Node{T} where {T}
     if !(has_operators(tree))
         return tree
     end
-    node = random_node(tree)
-    while node.degree == 0
-        node = random_node(tree)
-    end
+    node = random_node(tree; filter=t -> t.degree != 0)
     if node.degree == 1
         node.op = rand(1:(options.nuna))
     else
@@ -75,10 +53,7 @@ function mutate_constant(
     if !(has_constants(tree))
         return tree
     end
-    node = random_node(tree)
-    while node.degree != 0 || node.constant == false
-        node = random_node(tree)
-    end
+    node = random_node(tree; filter=t -> (t.degree == 0 && t.constant))
 
     bottom = 1//10
     maxChange = options.perturbation_factor * temperature + 1 + bottom
@@ -105,10 +80,7 @@ function append_random_op(
     nfeatures::Int;
     makeNewBinOp::Union{Bool,Nothing}=nothing,
 )::Node{T} where {T<:DATA_TYPE}
-    node = random_node(tree)
-    while node.degree != 0
-        node = random_node(tree)
-    end
+    node = random_node(tree; filter=t -> t.degree == 0)
 
     if makeNewBinOp === nothing
         choice = rand()
