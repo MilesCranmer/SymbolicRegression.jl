@@ -4,28 +4,48 @@ import DynamicExpressions:
     Node, copy_node, set_node!, count_nodes, has_constants, has_operators
 import ..CoreModule: Options, DATA_TYPE
 
-# Return a random node from the tree
-function random_node(tree::Node{T})::Node{T} where {T}
+"""
+    random_node(tree::Node{T}; total_nodes=nothing)
+
+Return a random node from the tree. You may optionally pass
+a pre-computed total number of nodes in the tree for efficiency,
+otherwise it will be computed on the fly.
+"""
+function random_node(tree::Node{T}; total_nodes=nothing)::Node{T} where {T}
     if tree.degree == 0
         return tree
-    end
-    b = 0
-    c = 0
-    if tree.degree >= 1
-        b = count_nodes(tree.l)
-    end
-    if tree.degree == 2
-        c = count_nodes(tree.r)
-    end
+    elseif tree.degree == 1
+        total_nodes, num_nodes_left = if total_nodes === nothing
+            l = count_nodes(tree.l)
+            (1 + l, l)
+        else
+            (total_nodes, total_nodes - 1)
+        end
 
-    i = rand(1:(1 + b + c))
-    if i <= b
-        return random_node(tree.l)
-    elseif i == b + 1
-        return tree
-    end
+        i = rand(1:total_nodes)
+        if i == 1
+            return tree
+        else
+            return random_node(tree.l; total_nodes=num_nodes_left)
+        end
+    else
+        num_nodes_left = count_nodes(tree.l)
+        total_nodes, num_nodes_right = if total_nodes === nothing
+            r = count_nodes(tree.r)
+            (1 + r + num_nodes_left, r)
+        else
+            (total_nodes, total_nodes - num_nodes_left - 1)
+        end
 
-    return random_node(tree.r)
+        i = rand(1:total_nodes)
+        if i == 1
+            return tree
+        elseif i <= num_nodes_left + 1
+            return random_node(tree.l; total_nodes=num_nodes_left)
+        else
+            return random_node(tree.r; total_nodes=num_nodes_right)
+        end
+    end
 end
 
 # Randomly convert an operator into another one (binary->binary;
