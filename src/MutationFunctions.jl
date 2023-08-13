@@ -2,30 +2,31 @@ module MutationFunctionsModule
 
 import DynamicExpressions:
     Node, copy_node, set_node!, count_nodes, has_constants, has_operators
+import Compat: Returns, @inline
 import ..CoreModule: Options, DATA_TYPE
 
-# Return a random node from the tree
-function random_node(tree::Node{T})::Node{T} where {T}
-    if tree.degree == 0
-        return tree
-    end
-    b = 0
-    c = 0
-    if tree.degree >= 1
-        b = count_nodes(tree.l)
-    end
-    if tree.degree == 2
-        c = count_nodes(tree.r)
-    end
+"""
+    random_node(tree::Node{T}; filter::F=Returns(true))
 
-    i = rand(1:(1 + b + c))
-    if i <= b
-        return random_node(tree.l)
-    elseif i == b + 1
-        return tree
+Return a random node from the tree. You may optionally
+filter the nodes matching some condition before sampling.
+"""
+function random_node(tree::Node{T}; filter::F=Returns(true))::Node{T} where {T,F<:Function}
+    num_matching = count(filter, tree)
+    chosen_node_idx = rand(1:num_matching)
+    chosen_node = Ref{typeof(tree)}()
+    cur_idx = Ref(0)
+    any(tree) do t
+        if @inline(filter(t))
+            cur_idx[] += 1
+            if cur_idx[] == chosen_node_idx
+                chosen_node[] = t
+                return true
+            end
+        end
+        return false
     end
-
-    return random_node(tree.r)
+    return chosen_node[]
 end
 
 # Randomly convert an operator into another one (binary->binary;
@@ -34,10 +35,7 @@ function mutate_operator(tree::Node{T}, options::Options)::Node{T} where {T}
     if !(has_operators(tree))
         return tree
     end
-    node = random_node(tree)
-    while node.degree == 0
-        node = random_node(tree)
-    end
+    node = random_node(tree; filter=t -> t.degree != 0)
     if node.degree == 1
         node.op = rand(1:(options.nuna))
     else
@@ -55,10 +53,7 @@ function mutate_constant(
     if !(has_constants(tree))
         return tree
     end
-    node = random_node(tree)
-    while node.degree != 0 || node.constant == false
-        node = random_node(tree)
-    end
+    node = random_node(tree; filter=t -> (t.degree == 0 && t.constant))
 
     bottom = 1//10
     maxChange = options.perturbation_factor * temperature + 1 + bottom
@@ -85,10 +80,7 @@ function append_random_op(
     nfeatures::Int;
     makeNewBinOp::Union{Bool,Nothing}=nothing,
 )::Node{T} where {T<:DATA_TYPE}
-    node = random_node(tree)
-    while node.degree != 0
-        node = random_node(tree)
-    end
+    node = random_node(tree; filter=t -> t.degree == 0)
 
     if makeNewBinOp === nothing
         choice = rand()
@@ -157,35 +149,35 @@ function make_random_leaf(nfeatures::Int, ::Type{T})::Node{T} where {T<:DATA_TYP
 end
 
 # Return a random node from the tree with parent, and side ('n' for no parent)
-function random_node_and_parent(
-    tree::Node{T}, parent::Union{Node{T},Nothing}; side::Char
-)::Tuple{Node{T},Union{Node{T},Nothing},Char} where {T}
+function _random_node_and_parent(
+    tree::Node{T}, parent::Node{T}, side::Char, total_nodes
+) where {T}
     if tree.degree == 0
         return tree, parent, side
-    end
-    b = 0
-    c = 0
-    if tree.degree >= 1
-        b = count_nodes(tree.l)
-    end
-    if tree.degree == 2
-        c = count_nodes(tree.r)
-    end
+    elseif tree.degree == 1
+        i = rand(1:total_nodes)
+        if i == 1
+            return tree, parent, side
+        else
+            return _random_node_and_parent(tree.l, tree, 'l', total_nodes - 1)
+        end
+    else
+        num_left = count_nodes(tree.l)
+        num_right = total_nodes - num_left - 1
 
-    i = rand(1:(1 + b + c))
-    if i <= b
-        return random_node_and_parent(tree.l, tree; side='l')
-    elseif i == b + 1
-        return tree, parent, side
+        i = rand(1:total_nodes)
+        if i == 1
+            return tree, parent, side
+        elseif i <= num_left + 1
+            return _random_node_and_parent(tree.l, tree, 'l', num_left)
+        else
+            return _random_node_and_parent(tree.r, tree, 'r', num_right)
+        end
     end
-
-    return random_node_and_parent(tree.r, tree; side='r')
 end
 
-function random_node_and_parent(
-    tree::Node{T}
-)::Tuple{Node{T},Union{Node{T},Nothing},Char} where {T}
-    return random_node_and_parent(tree, nothing; side='n')
+function random_node_and_parent(tree::Node{T}) where {T}
+    return _random_node_and_parent(tree, tree, 'n', count_nodes(tree))
 end
 
 # Select a random node, and replace it an the subtree
@@ -194,7 +186,7 @@ function delete_random_op(
     tree::Node{T}, options::Options, nfeatures::Int
 )::Node{T} where {T<:DATA_TYPE}
     node, parent, side = random_node_and_parent(tree)
-    isroot = (parent === nothing)
+    isroot = side == 'n'
 
     if node.degree == 0
         # Replace with new constant
