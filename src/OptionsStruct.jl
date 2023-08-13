@@ -77,8 +77,18 @@ function Base.convert(::Type{Vector}, w::MutationWeights)::Vector{Float64}
 end
 
 """Copy MutationWeights."""
-function Base.copy(weightings::MutationWeights)
-    return MutationWeights(convert(Vector, weightings)...)
+function Base.copy(weights::MutationWeights)
+    return MutationWeights(
+        weights.mutate_constant,
+        weights.mutate_operator,
+        weights.add_node,
+        weights.insert_node,
+        weights.delete_node,
+        weights.simplify,
+        weights.randomize,
+        weights.do_nothing,
+        weights.optimize,
+    )
 end
 
 """Sample a mutation, given the weightings."""
