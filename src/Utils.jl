@@ -43,7 +43,7 @@ recursive_merge(x...) = x[end]
 recursive_merge() = error("Unexpected input.")
 
 const subscripts = ('₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉')
-function subscriptify(number::Int)
+function subscriptify(number::Integer)
     return join([subscripts[i + 1] for i in reverse(digits(number))])
 end
 
@@ -76,14 +76,14 @@ mutable struct MutableTuple{S,T,N} <: AbstractVector{T}
     MutableTuple(::Val{_S}, ::Type{_T}, data::_N) where {_S,_T,_N} = new{_S,_T,_N}(data)
 end
 @inline Base.eltype(::MutableTuple{S,T}) where {S,T} = T
-Base.@propagate_inbounds function Base.getindex(v::MutableTuple, i::Int)
+Base.@propagate_inbounds function Base.getindex(v::MutableTuple, i::Integer)
     T = eltype(v)
     # Trick from MArray.jl
     return GC.@preserve v unsafe_load(
         Base.unsafe_convert(Ptr{T}, pointer_from_objref(v)), i
     )
 end
-Base.@propagate_inbounds function Base.setindex!(v::MutableTuple, x, i::Int)
+Base.@propagate_inbounds function Base.setindex!(v::MutableTuple, x, i::Integer)
     T = eltype(v)
     GC.@preserve v unsafe_store!(Base.unsafe_convert(Ptr{T}, pointer_from_objref(v)), x, i)
     return x
