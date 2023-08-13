@@ -417,6 +417,7 @@ function Options end
     max_evals::Union{Nothing,Integer}=nothing,
     skip_mutation_failures::Bool=true,
     enable_autodiff::Bool=false,
+    enable_enzyme::Bool=false,
     nested_constraints=nothing,
     deterministic::Bool=false,
     # Not search options; just construction options:
@@ -796,6 +797,7 @@ function Options end
         nested_constraints,
         deterministic,
         define_helper_functions,
+        enable_enzyme,
     )
 
     return options

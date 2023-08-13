@@ -56,6 +56,7 @@ function dispatch_optimize_constants(
             algorithm,
             options.optimizer_options,
             idx,
+            options.enable_enzyme ? Val(true) : Val(false),
         )
     end
     if T <: Complex
@@ -75,19 +76,45 @@ function dispatch_optimize_constants(
 end
 
 function _optimize_constants(
-    dataset, member::PopMember{T,L}, options, algorithm, optimizer_options, idx
-)::Tuple{PopMember{T,L},Float64} where {T,L}
+    dataset,
+    member::PopMember{T,L},
+    options,
+    algorithm,
+    optimizer_options,
+    idx,
+    ::Val{use_autodiff},
+)::Tuple{PopMember{T,L},Float64,use_autodiff} where {T,L}
     tree = member.tree
     constant_nodes = filter(t -> t.degree == 0 && t.constant, tree)
+
+    ctree = use_autodiff ? copy(tree) : nothing
+    c_constant_nodes =
+        use_autodiff ? filter(t -> t.degree == 0 && t.constant, ctree) : nothing
+
     x0 = [n.val::T for n in constant_nodes]
-    f(x) = opt_func(x, dataset, tree, constant_nodes, options, idx)
-    result = Optim.optimize(f, x0, algorithm, optimizer_options)
+    function f(x)
+        return opt_func(x, dataset, tree, constant_nodes, options, idx)
+    end
+    function g!(storage, x)
+        return opt_func_g!(
+            x, storage, dataset, tree, ctree, constant_nodes, c_constant_nodes, options, idx
+        )
+    end
+    result = if use_autodiff
+        Optim.optimize(f, g!, x0, algorithm, optimizer_options)
+    else
+        Optim.optimize(f, x0, algorithm, optimizer_options)
+    end
     num_evals = 0.0
     num_evals += result.f_calls
     # Try other initial conditions:
     for i in 1:(options.optimizer_nrestarts)
         new_start = x0 .* (T(1) .+ T(1//2) * randn(T, size(x0, 1)))
-        tmpresult = Optim.optimize(f, new_start, algorithm, optimizer_options)
+        tmpresult = if use_autodiff
+            Optim.optimize(f, g!, new_start, algorithm, optimizer_options)
+        else
+            Optim.optimize(f, new_start, algorithm, optimizer_options)
+        end
         num_evals += tmpresult.f_calls
 
         if tmpresult.minimum < result.minimum

@@ -189,6 +189,7 @@ struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
     nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
     deterministic::Bool
     define_helper_functions::Bool
+    enable_enzyme::Bool
 end
 
 function Base.print(io::IO, options::Options)
