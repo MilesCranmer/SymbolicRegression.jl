@@ -8,7 +8,7 @@ import ..UtilsModule: get_birth_order
 import ..LossFunctionsModule: score_func, eval_loss, batch_sample
 import ..PopMemberModule: PopMember
 
-opt_func_g!(args...) = error("Please load the Enzyme package.")
+opt_func_g!(args...) = error("Please load the Enzyme.jl package.")
 
 # Proxy function for optimization
 @inline function opt_func(
