@@ -19,8 +19,8 @@ opt_func_g!(args...) = error("Please load the Enzyme package.")
     loss = eval_loss(tree, dataset, options; regularization=false, idx=idx)
     return loss::L
 end
-@inline function opt_func!(result, args...)
-    result[1] = opt_func(args...)
+function opt_func!(result, x, dataset, tree, constant_nodes, options, idx)
+    result[1] = opt_func(x, dataset, tree, constant_nodes, options, idx)
     return nothing
 end
 
