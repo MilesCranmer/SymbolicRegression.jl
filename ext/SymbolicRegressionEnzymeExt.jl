@@ -17,7 +17,7 @@ import SymbolicRegression.ConstantOptimizationModule: opt_func!, opt_func_g!
 ) where {T,L}
     result = [zero(L)]
     dresult = [one(L)]
-    dx .= one(T)
+    fill!(dx, one(T))
     foreach(ctree) do t
         if t.degree == 0 && t.constant
             t.val::T = zero(T)

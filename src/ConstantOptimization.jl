@@ -96,9 +96,13 @@ function _optimize_constants(
         return opt_func(x, dataset, tree, constant_nodes, options, idx)
     end
     function g!(storage, x)
-        return opt_func_g!(
-            x, storage, dataset, tree, ctree, constant_nodes, c_constant_nodes, options, idx
+        # TODO: Can we just use storage instead here?
+        dx = similar(x)
+        opt_func_g!(
+            x, dx, dataset, tree, ctree, constant_nodes, c_constant_nodes, options, idx
         )
+        storage .= dx
+        return nothing
     end
     result = if use_autodiff
         Optim.optimize(f, g!, x0, algorithm, optimizer_options)
