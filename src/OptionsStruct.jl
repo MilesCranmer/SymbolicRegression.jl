@@ -129,7 +129,7 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
+struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W,_turbo}
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
@@ -143,6 +143,7 @@ struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
     maxsize::Int
     maxdepth::Int
     turbo::Bool
+    v_turbo::Val{_turbo}
     migration::Bool
     hof_migration::Bool
     should_simplify::Bool

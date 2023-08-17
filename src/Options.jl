@@ -737,6 +737,7 @@ function Options end
         use_recorder,
         typeof(optimizer_options),
         typeof(tournament_selection_weights),
+        turbo,
     }(
         operators,
         bin_constraints,
@@ -751,6 +752,7 @@ function Options end
         maxsize,
         maxdepth,
         turbo,
+        turbo ? Val(true) : Val(false),
         migration,
         hof_migration,
         should_simplify,
