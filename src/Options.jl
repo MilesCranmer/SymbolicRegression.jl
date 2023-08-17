@@ -685,6 +685,7 @@ function Options end
         enable_autodiff=enable_autodiff,
         define_helper_functions=define_helper_functions,
         empty_old_operators=false,
+        specialize=enable_enzyme,
     )
 
     early_stop_condition = if typeof(early_stop_condition) <: Real
