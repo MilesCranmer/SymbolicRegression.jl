@@ -10,8 +10,7 @@ import DynamicExpressions:
     eval_diff_tree_array,
     eval_grad_tree_array,
     print_tree,
-    string_tree,
-    differentiable_eval_tree_array
+    string_tree
 import DynamicQuantities: dimension, ustrip
 import ..CoreModule: Options
 import ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
@@ -110,17 +109,6 @@ to every constant in the expression.
 """
 function eval_grad_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
     return eval_grad_tree_array(tree, X, options.operators; kws...)
-end
-
-"""
-    differentiable_eval_tree_array(tree::Node, X::AbstractArray, options::Options)
-
-Evaluate an expression tree in a way that can be auto-differentiated.
-"""
-function differentiable_eval_tree_array(
-    tree::Node, X::AbstractArray, options::Options; kws...
-)
-    return differentiable_eval_tree_array(tree, X, options.operators; kws...)
 end
 
 """

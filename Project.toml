@@ -38,7 +38,7 @@ SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 
 [compat]
 Compat = "^4.2"
-DynamicExpressions = "^0.13.1"
+DynamicExpressions = "0.14"
 DynamicQuantities = "^0.6.2"
 Enzyme = "0.11"
 JSON3 = "1"

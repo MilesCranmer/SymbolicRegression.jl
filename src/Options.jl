@@ -330,8 +330,6 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `max_evals`: Int (or Nothing) - the maximum number of evaluations of expressions to perform.
 - `skip_mutation_failures`: Whether to simply skip over mutations that fail or are rejected, rather than to replace the mutated
     expression with the original expression and proceed normally.
-- `enable_autodiff`: Whether to enable automatic differentiation functionality. This is turned off by default.
-    If turned on, this will be turned off if one of the operators does not have well-defined gradients.
 - `nested_constraints`: Specifies how many times a combination of operators can be nested. For example,
     `[sin => [cos => 0], cos => [cos => 2]]` specifies that `cos` may never appear within a `sin`,
     but `sin` can be nested with itself an unlimited number of times. The second term specifies that `cos`
@@ -416,7 +414,6 @@ function Options end
     timeout_in_seconds::Union{Nothing,Real}=nothing,
     max_evals::Union{Nothing,Integer}=nothing,
     skip_mutation_failures::Bool=true,
-    enable_autodiff::Bool=false,
     enable_enzyme::Bool=false,
     nested_constraints=nothing,
     deterministic::Bool=false,
@@ -425,6 +422,7 @@ function Options end
     deprecated_return_state=nothing,
     # Deprecated args:
     fast_cycle::Bool=false,
+    enable_autodiff=nothing,
     npopulations::Union{Nothing,Integer}=nothing,
     npop::Union{Nothing,Integer}=nothing,
     kws...,
@@ -491,6 +489,13 @@ function Options end
     if npopulations !== nothing
         Base.depwarn("`npopulations` is deprecated. Use `populations` instead.", :Options)
         populations = npopulations
+    end
+    if enable_autodiff !== nothing
+        Base.depwarn(
+            "`enable_autodiff` is deprecated and has no effect. " *
+            "Simply loading `Zygote` will enable differentiation.",
+            :Options,
+        )
     end
 
     if elementwise_loss === nothing
@@ -670,7 +675,6 @@ function Options end
         OperatorEnum(;
             binary_operators=binary_operators,
             unary_operators=unary_operators,
-            enable_autodiff=false,  # Not needed; we just want the constructors
             define_helper_functions=true,
             empty_old_operators=true,
         )
@@ -682,10 +686,8 @@ function Options end
     operators = OperatorEnum(;
         binary_operators=binary_operators,
         unary_operators=unary_operators,
-        enable_autodiff=enable_autodiff,
         define_helper_functions=define_helper_functions,
         empty_old_operators=false,
-        specialize=enable_enzyme,
     )
 
     early_stop_condition = if typeof(early_stop_condition) <: Real
