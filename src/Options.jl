@@ -732,6 +732,8 @@ function Options end
         mutation_weights
     end
 
+    v_enable_enzyme = Val(enable_enzyme)
+
     @assert print_precision > 0
 
     options = Options{
@@ -741,6 +743,7 @@ function Options end
         typeof(optimizer_options),
         typeof(tournament_selection_weights),
         turbo,
+        enable_enzyme,
     }(
         operators,
         bin_constraints,
@@ -802,7 +805,7 @@ function Options end
         nested_constraints,
         deterministic,
         define_helper_functions,
-        enable_enzyme,
+        v_enable_enzyme,
     )
 
     return options

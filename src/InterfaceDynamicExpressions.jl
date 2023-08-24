@@ -53,7 +53,10 @@ which speed up evaluation significantly.
     to the equation.
 """
 function eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
-    return eval_tree_array(tree, X, options.operators; turbo=options.v_turbo, kws...)
+    fuse_level = options.v_enable_enzyme === Val(true) ? Val(1) : Val(2)
+    return eval_tree_array(
+        tree, X, options.operators; turbo=options.v_turbo, fuse_level, kws...
+    )
 end
 
 """

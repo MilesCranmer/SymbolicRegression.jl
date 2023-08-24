@@ -129,7 +129,9 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W,_turbo}
+struct Options{
+    CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W,_turbo,enable_enzyme
+}
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
@@ -190,7 +192,7 @@ struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W,_tu
     nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
     deterministic::Bool
     define_helper_functions::Bool
-    enable_enzyme::Bool
+    v_enable_enzyme::Val{enable_enzyme}
 end
 
 function Base.print(io::IO, options::Options)

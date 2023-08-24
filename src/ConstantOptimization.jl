@@ -56,7 +56,7 @@ function dispatch_optimize_constants(
             algorithm,
             options.optimizer_options,
             idx,
-            options.enable_enzyme ? Val(true) : Val(false),
+            options.v_enable_enzyme,
         )
     end
     if T <: Complex
