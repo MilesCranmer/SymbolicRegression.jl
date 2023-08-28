@@ -8,6 +8,8 @@ import ..UtilsModule: get_birth_order
 import ..LossFunctionsModule: score_func, eval_loss, batch_sample
 import ..PopMemberModule: PopMember
 
+opt_func_g!(args...) = error("Please load the Enzyme.jl package.")
+
 # Proxy function for optimization
 @inline function opt_func(
     x, dataset::Dataset{T,L}, tree, constant_nodes, options, idx
@@ -16,6 +18,10 @@ import ..PopMemberModule: PopMember
     # TODO(mcranmer): This should use score_func batching.
     loss = eval_loss(tree, dataset, options; regularization=false, idx=idx)
     return loss::L
+end
+function opt_func!(result, x, dataset, tree, constant_nodes, options, idx)
+    result[1] = opt_func(x, dataset, tree, constant_nodes, options, idx)
+    return nothing
 end
 
 function _set_constants!(x::AbstractArray{T}, constant_nodes) where {T}
@@ -42,28 +48,27 @@ function dispatch_optimize_constants(
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     nconst = count_constants(member.tree)
     nconst == 0 && return (member, 0.0)
+    function call_opt(algorithm)
+        return _optimize_constants(
+            dataset,
+            member,
+            options,
+            algorithm,
+            options.optimizer_options,
+            idx,
+            options.v_enable_enzyme,
+        )
+    end
     if T <: Complex
         # TODO: Make this more general. Also, do we even need Newton here at all??
-        algorithm = Optim.BFGS(; linesearch=LineSearches.BackTracking())#order=3))
-        return _optimize_constants(
-            dataset, member, options, algorithm, options.optimizer_options, idx
-        )
+        return call_opt(Optim.BFGS(; linesearch=LineSearches.BackTracking()))
     elseif nconst == 1
-        algorithm = Optim.Newton(; linesearch=LineSearches.BackTracking())
-        return _optimize_constants(
-            dataset, member, options, algorithm, options.optimizer_options, idx
-        )
+        return call_opt(Optim.Newton(; linesearch=LineSearches.BackTracking()))
     else
         if options.optimizer_algorithm == "NelderMead"
-            algorithm = Optim.NelderMead(; linesearch=LineSearches.BackTracking())
-            return _optimize_constants(
-                dataset, member, options, algorithm, options.optimizer_options, idx
-            )
+            return call_opt(Optim.NelderMead(; linesearch=LineSearches.BackTracking()))
         elseif options.optimizer_algorithm == "BFGS"
-            algorithm = Optim.BFGS(; linesearch=LineSearches.BackTracking())#order=3))
-            return _optimize_constants(
-                dataset, member, options, algorithm, options.optimizer_options, idx
-            )
+            return call_opt(Optim.BFGS(; linesearch=LineSearches.BackTracking()))
         else
             error("Optimization function not implemented.")
         end
@@ -71,19 +76,49 @@ function dispatch_optimize_constants(
 end
 
 function _optimize_constants(
-    dataset, member::PopMember{T,L}, options, algorithm, optimizer_options, idx
-)::Tuple{PopMember{T,L},Float64} where {T,L}
+    dataset,
+    member::PopMember{T,L},
+    options,
+    algorithm,
+    optimizer_options,
+    idx,
+    ::Val{use_autodiff},
+)::Tuple{PopMember{T,L},Float64} where {T,L,use_autodiff}
     tree = member.tree
     constant_nodes = filter(t -> t.degree == 0 && t.constant, tree)
+
+    ctree = use_autodiff ? copy(tree) : nothing
+    c_constant_nodes =
+        use_autodiff ? filter(t -> t.degree == 0 && t.constant, ctree) : nothing
+
     x0 = [n.val::T for n in constant_nodes]
-    f(x) = opt_func(x, dataset, tree, constant_nodes, options, idx)
-    result = Optim.optimize(f, x0, algorithm, optimizer_options)
+    function f(x)
+        return opt_func(x, dataset, tree, constant_nodes, options, idx)
+    end
+    function g!(storage, x)
+        # TODO: Can we just use storage instead here?
+        dx = similar(x)
+        opt_func_g!(
+            x, dx, dataset, tree, ctree, constant_nodes, c_constant_nodes, options, idx
+        )
+        storage .= dx
+        return nothing
+    end
+    result = if use_autodiff
+        Optim.optimize(f, g!, x0, algorithm, optimizer_options)
+    else
+        Optim.optimize(f, x0, algorithm, optimizer_options)
+    end
     num_evals = 0.0
     num_evals += result.f_calls
     # Try other initial conditions:
     for i in 1:(options.optimizer_nrestarts)
         new_start = x0 .* (T(1) .+ T(1//2) * randn(T, size(x0, 1)))
-        tmpresult = Optim.optimize(f, new_start, algorithm, optimizer_options)
+        tmpresult = if use_autodiff
+            Optim.optimize(f, g!, new_start, algorithm, optimizer_options)
+        else
+            Optim.optimize(f, new_start, algorithm, optimizer_options)
+        end
         num_evals += tmpresult.f_calls
 
         if tmpresult.minimum < result.minimum
