@@ -29,7 +29,7 @@ import .OperatorsModule:
     safe_acosh,
     neg,
     greater,
-    greater,
+    cond,
     relu,
     logical_or,
     logical_and,

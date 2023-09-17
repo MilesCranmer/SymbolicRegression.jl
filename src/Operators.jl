@@ -95,6 +95,8 @@ end
 function greater(x, y)
     return (x > y) * one(x)
 end
+function cond(x, y)
+    return (x > zero(x)) * y
 end
 function relu(x)
     return (x > zero(x)) * x

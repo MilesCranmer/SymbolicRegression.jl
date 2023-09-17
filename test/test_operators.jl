@@ -14,6 +14,7 @@ using SymbolicRegression:
     safe_acosh,
     neg,
     greater,
+    cond,
     relu,
     logical_or,
     logical_and,
@@ -60,12 +61,16 @@ for T in types_to_test
     @test logical_or(val, val2) == T(1.0)
     @test logical_or(T(0.0), val2) == T(1.0)
     @test logical_and(T(0.0), val2) == T(0.0)
+
+    @inferred cond(val, val2)
+    @test cond(val, val2) == val2
+    @test cond(-val, val2) == zero(T)
 end
 
 # Test built-in operators pass validation:
 types_to_test = [Float16, Float32, Float64, BigFloat]
 options = Options(;
-    binary_operators=[plus, sub, mult, div, ^, greater, logical_or, logical_and],
+    binary_operators=[plus, sub, mult, div, ^, greater, logical_or, logical_and, cond],
     unary_operators=[square, cube, log, log2, log10, sqrt, acosh, neg, relu],
 )
 for T in types_to_test
