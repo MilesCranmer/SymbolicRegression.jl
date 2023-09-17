@@ -89,27 +89,21 @@ safe_log1p(x) = log1p(x)
 safe_acosh(x) = acosh(x)
 safe_sqrt(x) = sqrt(x)
 
-function neg(x::T)::T where {T}
+function neg(x)
     return -x
 end
-
-function greater(x::T, y::T)::T where {T}
-    return convert(T, (x > y))
-end
 function greater(x, y)
-    return (x > y)
+    return (x > y) * one(x)
 end
-function relu(x::T)::T where {T}
-    return (x + abs(x)) / T(2)
 end
-
-function logical_or(x::T, y::T)::T where {T}
-    return convert(T, (x > convert(T, 0) || y > convert(T, 0)))
+function relu(x)
+    return (x > zero(x)) * x
 end
-
-# (Just use multiplication normally)
-function logical_and(x::T, y::T)::T where {T}
-    return convert(T, (x > convert(T, 0) && y > convert(T, 0)))
+function logical_or(x, y)
+    return ((x > zero(x)) | (y > zero(y))) * one(x)
+end
+function logical_and(x, y)
+    return ((x > zero(x)) & (y > zero(y))) * one(x)
 end
 
 # Deprecated operations:
