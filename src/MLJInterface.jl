@@ -324,7 +324,7 @@ end
 function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
     allequal(Base.Fix2(dimension_fallback, D).(v)) || error("Inconsistent units in vector.")
     dims = dimension_fallback(first(v), D)
-    v = ustrip(v)
+    v = ustrip.(v)
     return v, dims
 end
 

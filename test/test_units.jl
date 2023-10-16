@@ -5,6 +5,7 @@ using SymbolicRegression.DimensionalAnalysisModule:
 import DynamicQuantities:
     DEFAULT_DIM_BASE_TYPE,
     Quantity,
+    QuantityArray,
     SymbolicDimensions,
     Dimensions,
     @u_str,
@@ -185,28 +186,34 @@ end
     end
 
     @testset "With MLJ" begin
-        model = SRRegressor(;
-            binary_operators=[+, *],
-            unary_operators=[sqrt, cbrt, abs],
-            early_stop_condition=(loss, complexity) -> (loss < 1e-7 && complexity <= 6),
-        )
-        X = (; x1=randn(128) .* u"kg^3", x2=randn(128) .* u"kg^2")
-        y = (@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* u"kg"
-        mach = MLJ.machine(model, X, y)
-        MLJ.fit!(mach)
-        report = MLJ.report(mach)
-        best_idx = findfirst(report.losses .< 1e-7)
-        @test report.complexities[best_idx] == 6
-        @test any(report.equations[best_idx]) do t
-            t.degree == 1 && t.op == 2  # cbrt
-        end
-        @test any(report.equations[best_idx]) do t
-            t.degree == 1 && t.op == 1  # safe_sqrt
-        end
+        for as_quantity_array in (false, true)
+            model = SRRegressor(;
+                binary_operators=[+, *],
+                unary_operators=[sqrt, cbrt, abs],
+                early_stop_condition=(loss, complexity) -> (loss < 1e-7 && complexity <= 6),
+            )
+            X = if as_quantity_array
+                (; x1=randn(128) .* u"kg^3", x2=QuantityArray(randn(128) .* u"kg^2"))
+            else
+                (; x1=randn(128) .* u"kg^3", x2=randn(128) .* u"kg^2")
+            end
+            y = (@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* u"kg"
+            mach = MLJ.machine(model, X, y)
+            MLJ.fit!(mach)
+            report = MLJ.report(mach)
+            best_idx = findfirst(report.losses .< 1e-7)
+            @test report.complexities[best_idx] == 6
+            @test any(report.equations[best_idx]) do t
+                t.degree == 1 && t.op == 2  # cbrt
+            end
+            @test any(report.equations[best_idx]) do t
+                t.degree == 1 && t.op == 1  # safe_sqrt
+            end
 
-        # Prediction should have same units:
-        ypred = MLJ.predict(mach; rows=1:3)
-        @test dimension(ypred[begin]) == dimension(y[begin])
+            # Prediction should have same units:
+            ypred = MLJ.predict(mach; rows=1:3)
+            @test dimension(ypred[begin]) == dimension(y[begin])
+        end
 
         # Multiple outputs:
         model = MultitargetSRRegressor(;
