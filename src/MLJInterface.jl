@@ -4,7 +4,7 @@ using Optim: Optim
 import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
 import DynamicQuantities:
-    AbstractQuantity,
+    UnionAbstractQuantity,
     AbstractDimensions,
     SymbolicDimensions,
     Quantity,
@@ -307,10 +307,10 @@ function prediction_fallback(
     end
 end
 
-function unwrap_units_single(A::AbstractMatrix{T}, ::Type{D}) where {D,T<:Number}
+function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
     return A, [D() for _ in eachrow(A)]
 end
-function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
+function unwrap_units_single(A::AbstractMatrix{T}, ::Type{D}) where {D,T<:UnionAbstractQuantity}
     for (i, row) in enumerate(eachrow(A))
         allequal(Base.Fix2(dimension_fallback, D).(row)) ||
             error("Inconsistent units in feature $i of matrix.")
@@ -318,10 +318,10 @@ function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
     dims = map(Base.Fix2(dimension_fallback, D) ∘ first, eachrow(A))
     return stack([ustrip.(row) for row in eachrow(A)]; dims=1), dims
 end
-function unwrap_units_single(v::AbstractVector{T}, ::Type{D}) where {D,T<:Number}
+function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
     return v, D()
 end
-function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
+function unwrap_units_single(v::AbstractVector{T}, ::Type{D}) where {D,T<:UnionAbstractQuantity}
     allequal(Base.Fix2(dimension_fallback, D).(v)) || error("Inconsistent units in vector.")
     dims = dimension_fallback(first(v), D)
     v = ustrip.(v)
