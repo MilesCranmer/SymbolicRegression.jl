@@ -310,7 +310,9 @@ end
 function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
     return A, [D() for _ in eachrow(A)]
 end
-function unwrap_units_single(A::AbstractMatrix{T}, ::Type{D}) where {D,T<:UnionAbstractQuantity}
+function unwrap_units_single(
+    A::AbstractMatrix{T}, ::Type{D}
+) where {D,T<:UnionAbstractQuantity}
     for (i, row) in enumerate(eachrow(A))
         allequal(Base.Fix2(dimension_fallback, D).(row)) ||
             error("Inconsistent units in feature $i of matrix.")
@@ -321,7 +323,9 @@ end
 function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
     return v, D()
 end
-function unwrap_units_single(v::AbstractVector{T}, ::Type{D}) where {D,T<:UnionAbstractQuantity}
+function unwrap_units_single(
+    v::AbstractVector{T}, ::Type{D}
+) where {D,T<:UnionAbstractQuantity}
     allequal(Base.Fix2(dimension_fallback, D).(v)) || error("Inconsistent units in vector.")
     dims = dimension_fallback(first(v), D)
     v = ustrip.(v)
