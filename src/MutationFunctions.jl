@@ -244,7 +244,7 @@ function gen_random_tree(
     length::Int, options::Options, nfeatures::Int, ::Type{T}, ::Type{N}
 ) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
     # Note that this base tree is just a placeholder; it will be replaced.
-    tree = constructorof(N)(; val=convert(T, 1))
+    tree = constructorof(N)(T; val=convert(T, 1))
     for i in 1:length
         # TODO: This can be larger number of nodes than length.
         tree = append_random_op(tree, options, nfeatures)
