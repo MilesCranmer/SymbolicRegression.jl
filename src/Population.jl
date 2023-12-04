@@ -2,7 +2,7 @@ module PopulationModule
 
 using StatsBase: StatsBase
 import Random: randperm
-import DynamicExpressions: string_tree
+import DynamicExpressions: Node, string_tree
 import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, update_baseline_loss!
