@@ -3,7 +3,7 @@ module OptionsModule
 using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
-import DynamicExpressions: OperatorEnum, Node, string_tree
+import DynamicExpressions: OperatorEnum
 import Distributed: nworkers
 import LossFunctions: L2DistLoss, SupervisedLoss
 #TODO - eventually move some of these
@@ -220,7 +220,7 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
             - `SigmoidLoss()`,
             - `DWDMarginLoss(q)`.
 - `loss_function`: Alternatively, you may redefine the loss used
-    as any function of `tree::Node{T}`, `dataset::Dataset{T}`,
+    as any function of `tree::AbstractExpressionNode{T}`, `dataset::Dataset{T}`,
     and `options::Options`, so long as you output a non-negative
     scalar of type `T`. This is useful if you want to use a loss
     that takes into account derivatives, or correlations across

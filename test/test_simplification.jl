@@ -41,7 +41,7 @@ eqn = convert(Symbolic, tree, options)
 @test repr(eqn) ≈ "x1*x1"
 # Test converting back:
 tree_copy = convert(Node, eqn, options)
-@test repr(tree_copy) ≈ "(x1*x1)"
+@test repr(tree_copy) ≈ "x1 * x1"
 
 # Let's test a much more complex function,
 # with custom operators, and unary operators:

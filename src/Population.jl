@@ -12,8 +12,8 @@ import ..PopMemberModule: PopMember, copy_pop_member
 import ..UtilsModule: bottomk_fast, argmin_fast
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
-mutable struct Population{T<:DATA_TYPE,L<:LOSS_TYPE}
-    members::Array{PopMember{T,L},1}
+mutable struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
+    members::Array{P,1}
     n::Int
 end
 """
@@ -21,10 +21,8 @@ end
 
 Create population from list of PopMembers.
 """
-function Population(
-    pop::AP
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,AP<:AbstractArray{PopMember{T,L},1}}
-    return Population{T,L}(pop, size(pop, 1))
+function Population(pop::Vector{<:PopMember})
+    return Population(pop, size(pop, 1))
 end
 
 """
@@ -41,22 +39,23 @@ function Population(
     options::Options,
     nfeatures::Int,
     npop=nothing,
-) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    node_type::Type=Node,
+) where {T,L}
     @assert (population_size !== nothing) ⊻ (npop !== nothing)
     population_size = if npop === nothing
         population_size
     else
         npop
     end
-    return Population{T,L}(
+    return Population(
         [
             PopMember(
                 dataset,
-                gen_random_tree(nlength, options, nfeatures, T),
+                gen_random_tree(nlength, options, nfeatures, T, node_type),
                 options;
                 parent=-1,
                 deterministic=options.deterministic,
-            ) for i in 1:population_size
+            ) for _ in 1:population_size
         ],
         population_size,
     )
@@ -78,6 +77,7 @@ function Population(
     nfeatures::Int,
     loss_type::Type=Nothing,
     npop=nothing,
+    node_type::Type=Node,
 ) where {T<:DATA_TYPE}
     @assert (population_size !== nothing) ⊻ (npop !== nothing)
     population_size = if npop === nothing
@@ -86,9 +86,13 @@ function Population(
         npop
     end
     dataset = Dataset(X, y; loss_type=loss_type)
-    update_baseline_loss!(dataset, options)
+    update_baseline_loss!(dataset, options, node_type)
     return Population(
-        dataset; population_size=population_size, options=options, nfeatures=nfeatures
+        dataset;
+        population_size=population_size,
+        options=options,
+        nfeatures=nfeatures,
+        node_type,
     )
 end
 
@@ -105,18 +109,16 @@ end
 
 # Sample the population, and get the best member from that sample
 function best_of_sample(
-    pop::Population{T,L},
+    pop::Population{T,L,P},
     running_search_statistics::RunningSearchStatistics,
     options::Options,
-)::PopMember{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+)::P where {T,L,P<:PopMember{T,L}}
     sample = sample_pop(pop, options)
     return _best_of_sample(sample.members, running_search_statistics, options)
 end
 function _best_of_sample(
-    members::Vector{PopMember{T,L}},
-    running_search_statistics::RunningSearchStatistics,
-    options::Options,
-) where {T,L}
+    members::Vector{P}, running_search_statistics::RunningSearchStatistics, options::Options
+) where {T,L,P<:PopMember{T,L}}
     p = options.tournament_selection_p
     n = length(members)  # == tournament_selection_n
     scores = Vector{L}(undef, n)
@@ -157,8 +159,8 @@ function _best_of_sample(
 end
 
 function finalize_scores(
-    dataset::Dataset{T,L}, pop::Population{T,L}, options::Options
-)::Tuple{Population{T,L},Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    dataset::Dataset{T,L}, pop::P, options::Options
+)::Tuple{P,Float64} where {T,L,P<:Population{T,L}}
     need_recalculate = options.batching
     num_evals = 0.0
     if need_recalculate

@@ -1,12 +1,14 @@
 module CheckConstraintsModule
 
-import DynamicExpressions: Node, count_depth, tree_mapreduce
+import DynamicExpressions: AbstractExpressionNode, count_depth, tree_mapreduce
 import ..UtilsModule: vals
 import ..CoreModule: Options
 import ..ComplexityModule: compute_complexity, past_complexity_limit
 
 # Check if any binary operator are overly complex
-function flag_bin_operator_complexity(tree::Node, op, cons, options::Options)::Bool
+function flag_bin_operator_complexity(
+    tree::AbstractExpressionNode, op, cons, options::Options
+)::Bool
     any(tree) do subtree
         if subtree.degree == 2 && subtree.op == op
             cons[1] > -1 &&
@@ -24,7 +26,9 @@ end
 Check if any unary operators are overly complex.
 This assumes  you have already checked whether the constraint is > -1.
 """
-function flag_una_operator_complexity(tree::Node, op, cons, options::Options)::Bool
+function flag_una_operator_complexity(
+    tree::AbstractExpressionNode, op, cons, options::Options
+)::Bool
     any(tree) do subtree
         if subtree.degree == 1 && tree.op == op
             past_complexity_limit(subtree.l, options, cons) && return true
@@ -34,6 +38,7 @@ function flag_una_operator_complexity(tree::Node, op, cons, options::Options)::B
 end
 
 function count_max_nestedness(tree, degree, op)
+    # TODO: Update this to correctly share nodes
     nestedness = tree_mapreduce(
         t -> 0,  # Leafs
         t -> (t.degree == degree && t.op == op) ? 1 : 0,  # Branches
@@ -46,7 +51,7 @@ function count_max_nestedness(tree, degree, op)
 end
 
 """Check if there are any illegal combinations of operators"""
-function flag_illegal_nests(tree::Node, options::Options)::Bool
+function flag_illegal_nests(tree::AbstractExpressionNode, options::Options)::Bool
     # We search from the top first, then from child nodes at end.
     (nested_constraints = options.nested_constraints) === nothing && return false
     for (degree, op_idx, op_constraint) in nested_constraints
@@ -65,7 +70,10 @@ end
 
 """Check if user-passed constraints are violated or not"""
 function check_constraints(
-    tree::Node, options::Options, maxsize::Int, cursize::Union{Int,Nothing}=nothing
+    tree::AbstractExpressionNode,
+    options::Options,
+    maxsize::Int,
+    cursize::Union{Int,Nothing}=nothing,
 )::Bool
     ((cursize === nothing) ? compute_complexity(tree, options) : cursize) > maxsize &&
         return false
@@ -84,7 +92,7 @@ function check_constraints(
     return true
 end
 
-check_constraints(tree::Node, options::Options)::Bool =
+check_constraints(tree::AbstractExpressionNode, options::Options)::Bool =
     check_constraints(tree, options, options.maxsize)
 
 end

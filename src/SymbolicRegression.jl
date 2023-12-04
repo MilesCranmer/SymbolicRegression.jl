@@ -8,6 +8,8 @@ export Population,
     Dataset,
     MutationWeights,
     Node,
+    GraphNode,
+    AbstractExpressionNode,
     SRRegressor,
     MultitargetSRRegressor,
     LOSS_TYPE,
@@ -72,6 +74,9 @@ import Random: seed!, shuffle!
 using Reexport
 import DynamicExpressions:
     Node,
+    GraphNode,
+    AbstractExpressionNode,
+    with_type_parameters,
     copy_node,
     set_node!,
     string_tree,
@@ -333,6 +338,7 @@ function equation_search(
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
     options::Options=Options(),
+    node_type::Type{N}=Node,
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
     display_variable_names::Union{AbstractVector{String},Nothing}=variable_names,
     y_variable_names::Union{String,AbstractVector{String},Nothing}=nothing,
@@ -352,7 +358,7 @@ function equation_search(
     # Deprecated:
     multithreaded=nothing,
     varMap=nothing,
-) where {T<:DATA_TYPE,Linit,dim_out}
+) where {T<:DATA_TYPE,Linit,dim_out,N<:AbstractExpressionNode}
     if multithreaded !== nothing
         error(
             "`multithreaded` is deprecated. Use the `parallelism` argument instead. " *
@@ -386,6 +392,7 @@ function equation_search(
         datasets;
         niterations=niterations,
         options=options,
+        node_type=N,
         parallelism=parallelism,
         numprocs=numprocs,
         procs=procs,
@@ -422,6 +429,7 @@ function equation_search(
     datasets::Vector{D};
     niterations::Int=10,
     options::Options=Options(),
+    node_type::Type{N}=Node,
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
@@ -432,7 +440,7 @@ function equation_search(
     verbosity::Union{Int,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{dim_out}=Val(nothing),
-) where {dim_out,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
+) where {dim_out,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},N<:AbstractExpressionNode}
     v_concurrency, concurrency = if parallelism in (:multithreading, "multithreading")
         (Val(:multithreading), :multithreading)
     elseif parallelism in (:multiprocessing, "multiprocessing")
@@ -510,6 +518,7 @@ function equation_search(
         datasets,
         niterations,
         options,
+        with_type_parameters(N, T),
         numprocs,
         procs,
         addprocs_function,
@@ -527,6 +536,7 @@ function _equation_search(
     datasets::Vector{D},
     niterations::Int,
     options::Options,
+    ::Type{N},
     numprocs::Union{Int,Nothing},
     procs::Union{Vector{Int},Nothing},
     addprocs_function::Union{Function,Nothing},
@@ -535,7 +545,15 @@ function _equation_search(
     verbosity,
     progress,
     ::Val{should_return_state},
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},parallelism,should_return_state,dim_out}
+) where {
+    T<:DATA_TYPE,
+    L<:LOSS_TYPE,
+    D<:Dataset{T,L},
+    parallelism,
+    should_return_state,
+    dim_out,
+    N<:AbstractExpressionNode{T},
+}
     if options.deterministic
         if parallelism != :serial
             error("Determinism is only guaranteed for serial mode.")
@@ -577,8 +595,11 @@ function _equation_search(
     end
     # Start a population on every process
     #    Store the population, hall of fame
+    PopMemberType = PopMember{T,L,N}
+    PopType = Population{T,L,PopMemberType}
+    HallOfFameType = HallOfFame{T,L,PopMemberType}
     allPopsType = if parallelism == :serial
-        Tuple{Population,HallOfFame,RecordType,Float64}
+        Tuple{PopType,HallOfFameType,RecordType,Float64}
     elseif parallelism == :multiprocessing
         Future
     else
@@ -598,9 +619,9 @@ function _equation_search(
 
     # This is a recorder for populations, but is not actually used for processing, just
     # for the final return.
-    returnPops = init_dummy_pops(options.populations, datasets, options)
+    returnPops = init_dummy_pops(options.populations, datasets, options, N)
     # These initial populations are discarded:
-    bestSubPops = init_dummy_pops(options.populations, datasets, options)
+    bestSubPops = init_dummy_pops(options.populations, datasets, options, N)
 
     actualMaxsize = options.maxsize + MAX_DEGREE
 
@@ -659,7 +680,7 @@ function _equation_search(
 
     hallOfFame = load_saved_hall_of_fame(saved_state)
     hallOfFame = if hallOfFame === nothing
-        [HallOfFame(options, T, L) for j in 1:nout]
+        [HallOfFame(options, T, L, N) for j in 1:nout]
     else
         # Recompute losses for the hall of fame, in
         # case the dataset changed:
@@ -673,7 +694,7 @@ function _equation_search(
         hallOfFame
     end
     @assert length(hallOfFame) == nout
-    hallOfFame::Vector{HallOfFame{T,L}}
+    hallOfFame::Vector{HallOfFameType}
 
     for j in 1:nout, i in 1:(options.populations)
         worker_idx = next_worker(worker_assignment, procs)
@@ -684,7 +705,7 @@ function _equation_search(
         saved_pop = load_saved_population(saved_state; out=j, pop=i)
 
         if saved_pop !== nothing && length(saved_pop.members) == options.population_size
-            saved_pop::Population{T,L}
+            saved_pop::PopType
             ## Update losses:
             for member in saved_pop.members
                 score, result_loss = score_func(datasets[j], member, options)
@@ -693,7 +714,7 @@ function _equation_search(
             end
             copy_pop = copy_population(saved_pop)
             new_pop = @sr_spawner parallelism worker_idx (
-                copy_pop, HallOfFame(options, T, L), RecordType(), 0.0
+                copy_pop, HallOfFame(options, T, L, N), RecordType(), 0.0
             )
         else
             if saved_pop !== nothing
@@ -706,8 +727,9 @@ function _equation_search(
                     nlength=3,
                     options=options,
                     nfeatures=datasets[j].nfeatures,
+                    node_type=N,
                 ),
-                HallOfFame(options, T, L),
+                HallOfFame(options, T, L, N),
                 RecordType(),
                 Float64(options.population_size),
             )
@@ -844,8 +866,8 @@ function _equation_search(
                 else
                     allPops[j][i]
                 end
-            cur_pop::Population
-            best_seen::HallOfFame
+            cur_pop::PopType
+            best_seen::HallOfFameType
             cur_record::RecordType
             cur_num_evals::Float64
             returnPops[j][i] = copy_population(cur_pop)
@@ -1105,7 +1127,7 @@ macro ignore(args...) end
 include("precompile.jl")
 redirect_stdout(devnull) do
     redirect_stderr(devnull) do
-        do_precompilation(Val(:precompile))
+        # do_precompilation(Val(:precompile))
     end
 end
 

@@ -1,7 +1,13 @@
 module MutateModule
 
 import DynamicExpressions:
-    Node, copy_node, count_nodes, count_constants, simplify_tree, combine_operators
+    AbstractExpressionNode,
+    Node,
+    copy_node,
+    count_nodes,
+    count_constants,
+    simplify_tree,
+    combine_operators
 import ..CoreModule:
     Options, MutationWeights, Dataset, RecordType, sample_mutation, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
@@ -58,14 +64,16 @@ end
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
 function next_generation(
-    dataset::Dataset{T,L},
-    member::PopMember{T,L},
+    dataset::D,
+    member::P,
     temperature,
     curmaxsize::Int,
     running_search_statistics::RunningSearchStatistics,
     options::Options;
     tmp_recorder::RecordType,
-)::Tuple{PopMember{T,L},Bool,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+)::Tuple{
+    P,Bool,Float64
+} where {T,L,D<:Dataset{T,L},N<:AbstractExpressionNode{T},P<:PopMember{T,L,N}}
     parent_ref = member.ref
     mutation_accepted = false
     num_evals = 0.0
@@ -131,7 +139,9 @@ function next_generation(
         elseif mutation_choice == :simplify
             @assert options.should_simplify
             tree = simplify_tree(tree, options.operators)
-            tree = combine_operators(tree, options.operators)
+            if tree isa Node
+                tree = combine_operators(tree, options.operators)
+            end
             @recorder tmp_recorder["type"] = "partial_simplify"
             mutation_accepted = true
             return (
@@ -155,7 +165,9 @@ function next_generation(
             # We select a random size, though the generated tree
             # may have fewer nodes than we request.
             tree_size_to_generate = rand(1:curmaxsize)
-            tree = gen_random_tree_fixed_size(tree_size_to_generate, options, nfeatures, T)
+            tree = gen_random_tree_fixed_size(
+                tree_size_to_generate, options, nfeatures, T, N
+            )
             @recorder tmp_recorder["type"] = "regenerate"
 
             is_success_always_possible = true
@@ -322,12 +334,8 @@ end
 
 """Generate a generation via crossover of two members."""
 function crossover_generation(
-    member1::PopMember{T,L},
-    member2::PopMember{T,L},
-    dataset::Dataset{T,L},
-    curmaxsize::Int,
-    options::Options,
-)::Tuple{PopMember{T,L},PopMember{T,L},Bool,Float64} where {T<:DATA_TYPE,L<:DATA_TYPE}
+    member1::P, member2::P, dataset::D, curmaxsize::Int, options::Options
+)::Tuple{P,P,Bool,Float64} where {T,L,D<:Dataset{T,L},P<:PopMember{T,L}}
     tree1 = member1.tree
     tree2 = member2.tree
     crossover_accepted = false

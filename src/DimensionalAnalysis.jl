@@ -1,6 +1,6 @@
 module DimensionalAnalysisModule
 
-import DynamicExpressions: Node
+import DynamicExpressions: AbstractExpressionNode
 import DynamicQuantities:
     Quantity, DimensionError, AbstractQuantity, dimension, ustrip, uparse, constructor_of
 import Tricks: static_hasmethod
@@ -116,7 +116,7 @@ end
 
 # Define dimensionally-aware evaluation routine:
 @inline function deg0_eval(
-    x::AbstractVector{T}, x_units::Vector{Q}, t::Node{T}
+    x::AbstractVector{T}, x_units::Vector{Q}, t::AbstractExpressionNode{T}
 ) where {T,R,Q<:AbstractQuantity{T,R}}
     t.constant && return WildcardQuantity{Q}(Quantity(t.val::T, R), true, false)
     return WildcardQuantity{Q}(
@@ -153,7 +153,7 @@ end
 end
 
 function violates_dimensional_constraints_dispatch(
-    tree::Node{T}, x_units::Vector{Q}, x::AbstractVector{T}, operators
+    tree::AbstractExpressionNode{T}, x_units::Vector{Q}, x::AbstractVector{T}, operators
 ) where {T,Q<:AbstractQuantity{T}}
     if tree.degree == 0
         return deg0_eval(x, x_units, tree)::WildcardQuantity{Q}
@@ -168,18 +168,20 @@ function violates_dimensional_constraints_dispatch(
 end
 
 """
-    violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
+    violates_dimensional_constraints(tree::AbstractExpressionNode, dataset::Dataset, options::Options)
 
 Checks whether an expression violates dimensional constraints.
 """
-function violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
+function violates_dimensional_constraints(
+    tree::AbstractExpressionNode, dataset::Dataset, options::Options
+)
     X = dataset.X
     return violates_dimensional_constraints(
         tree, dataset.X_units, dataset.y_units, (@view X[:, 1]), options
     )
 end
 function violates_dimensional_constraints(
-    tree::Node{T},
+    tree::AbstractExpressionNode{T},
     X_units::Union{AbstractVector{<:Quantity},Nothing},
     y_units::Union{Quantity,Nothing},
     x::AbstractVector{T},

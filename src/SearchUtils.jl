@@ -7,6 +7,7 @@ import Printf: @printf, @sprintf
 using Distributed
 import StatsBase: mean
 
+import DynamicExpressions: AbstractExpressionNode
 import ..UtilsModule: subscriptify
 import ..CoreModule: Dataset, Options
 import ..ComplexityModule: compute_complexity
@@ -46,12 +47,13 @@ macro sr_spawner(parallel, p, expr)
 end
 
 function init_dummy_pops(
-    npops::Int, datasets::Vector{D}, options::Options
-) where {T,L,D<:Dataset{T,L}}
+    npops::Int, datasets::Vector{D}, options::Options, node_type::Type{N}
+) where {T,L,D<:Dataset{T,L},N<:AbstractExpressionNode{T}}
     return [
         [
-            Population(d; population_size=1, options=options, nfeatures=d.nfeatures) for
-            i in 1:npops
+            Population(
+                d; population_size=1, options=options, nfeatures=d.nfeatures, node_type
+            ) for _ in 1:npops
         ] for d in datasets
     ]
 end
@@ -289,13 +291,11 @@ end
 load_saved_hall_of_fame(::Nothing)::Nothing = nothing
 
 function get_population(
-    pops::Vector{Vector{Population{T,L}}}; out::Int, pop::Int
-)::Population{T,L} where {T,L}
+    pops::Vector{Vector{P}}; out::Int, pop::Int
+)::P where {P<:Population}
     return pops[out][pop]
 end
-function get_population(
-    pops::Matrix{Population{T,L}}; out::Int, pop::Int
-)::Population{T,L} where {T,L}
+function get_population(pops::Matrix{P}; out::Int, pop::Int)::P where {P<:Population}
     return pops[out, pop]
 end
 function load_saved_population(saved_state; out::Int, pop::Int)

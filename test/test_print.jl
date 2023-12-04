@@ -14,7 +14,7 @@ f = (x1, x2, x3) -> (sin(cos(sin(cos(x1) * x3) * 3.0) * -0.5) + 2.0) * 5.0
 tree = f(Node("x1"), Node("x2"), Node("x3"))
 
 s = repr(tree)
-true_s = "((sin(cos(sin(cos(x1) * x3) * 3.0) * -0.5) + 2.0) * 5.0)"
+true_s = "(sin(cos(sin(cos(x1) * x3) * 3.0) * -0.5) + 2.0) * 5.0"
 
 @test s == true_s
 
@@ -28,7 +28,7 @@ equation_search(
 )
 
 s = repr(tree)
-true_s = "((sin(cos(sin(cos(v1) * v3) * 3.0) * -0.5) + 2.0) * 5.0)"
+true_s = "(sin(cos(sin(cos(v1) * v3) * 3.0) * -0.5) + 2.0) * 5.0"
 @test s == true_s
 
 for unaop in [safe_log, safe_log2, safe_log10, safe_log1p, safe_sqrt, safe_acosh]
@@ -44,7 +44,7 @@ for binop in [safe_pow, ^]
         default_params..., binary_operators=(+, *, /, -, binop), unary_operators=(cos,)
     )
     minitree = Node(5, Node("x1"), Node("x2"))
-    @test string_tree(minitree, opts) == "(x1 ^ x2)"
+    @test string_tree(minitree, opts) == "x1 ^ x2"
 end
 
 @testset "Test splitting of strings" begin

@@ -2,7 +2,7 @@ module ConstantOptimizationModule
 
 using LineSearches: LineSearches
 using Optim: Optim
-import DynamicExpressions: Node, count_constants
+import DynamicExpressions: count_constants
 import ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..UtilsModule: get_birth_order
 import ..LossFunctionsModule: score_func, eval_loss, batch_sample
@@ -27,8 +27,8 @@ end
 
 # Use Nelder-Mead to optimize the constants in an equation
 function optimize_constants(
-    dataset::Dataset{T,L}, member::PopMember{T,L}, options::Options
-)::Tuple{PopMember{T,L},Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    dataset::Dataset{T,L}, member::P, options::Options
+)::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
     if options.batching
         dispatch_optimize_constants(
             dataset, member, options, batch_sample(dataset, options)
@@ -38,8 +38,8 @@ function optimize_constants(
     end
 end
 function dispatch_optimize_constants(
-    dataset::Dataset{T,L}, member::PopMember{T,L}, options::Options, idx
-) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    dataset::Dataset{T,L}, member::P, options::Options, idx
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
     nconst = count_constants(member.tree)
     nconst == 0 && return (member, 0.0)
     if T <: Complex
@@ -71,8 +71,8 @@ function dispatch_optimize_constants(
 end
 
 function _optimize_constants(
-    dataset, member::PopMember{T,L}, options, algorithm, optimizer_options, idx
-)::Tuple{PopMember{T,L},Float64} where {T,L}
+    dataset, member::P, options, algorithm, optimizer_options, idx
+)::Tuple{P,Float64} where {T,L,P<:PopMember{T,L}}
     tree = member.tree
     constant_nodes = filter(t -> t.degree == 0 && t.constant, tree)
     x0 = [n.val::T for n in constant_nodes]

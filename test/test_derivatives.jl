@@ -136,9 +136,11 @@ options = Options(;
 tree = equation3(nx1, nx2, nx3)
 
 """Check whether the ordering of constant_list is the same as the ordering of node_index."""
-function check_tree(tree::Node, node_index::NodeIndex, constant_list::AbstractVector)
+function check_tree(
+    tree::AbstractExpressionNode, node_index::NodeIndex, constant_list::AbstractVector
+)
     if tree.degree == 0
-        (!tree.constant) || tree.val == constant_list[node_index.constant_index]
+        (!tree.constant) || tree.val == constant_list[node_index.val::UInt16]
     elseif tree.degree == 1
         check_tree(tree.l, node_index.l, constant_list)
     else
