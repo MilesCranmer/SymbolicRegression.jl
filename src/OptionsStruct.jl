@@ -15,6 +15,8 @@ mutable struct MutationWeights
     randomize::Float64
     do_nothing::Float64
     optimize::Float64
+    form_connection::Float64
+    break_connection::Float64
 end
 
 const mutations = [fieldnames(MutationWeights)...]
@@ -34,6 +36,10 @@ will be normalized to sum to 1.0 after initialization.
 - `randomize::Float64`: How often to create a random tree.
 - `do_nothing::Float64`: How often to do nothing.
 - `optimize::Float64`: How often to optimize the constants in the tree, as a mutation.
+- `form_connection::Float64`: How often to form a connection between two nodes. If
+  the node does not preserve sharing, this will automatically be set to 0.0.
+- `break_connection::Float64`: How often to break a connection between two nodes. If
+    the node does not preserve sharing, this will automatically be set to 0.0.
   Note that this is different from `optimizer_probability`, which is
   performed at the end of an iteration for all individuals.
 """
@@ -47,6 +53,8 @@ function MutationWeights(;
     randomize=0.00023,
     do_nothing=0.21,
     optimize=0.0,
+    form_connection=0.05,
+    break_connection=0.05,
 )
     return MutationWeights(
         mutate_constant,
@@ -58,6 +66,8 @@ function MutationWeights(;
         randomize,
         do_nothing,
         optimize,
+        form_connection,
+        break_connection,
     )
 end
 
@@ -73,6 +83,8 @@ function Base.convert(::Type{Vector}, w::MutationWeights)::Vector{Float64}
         w.randomize,
         w.do_nothing,
         w.optimize,
+        w.form_connection,
+        w.break_connection,
     ]
 end
 
@@ -88,6 +100,8 @@ function Base.copy(weights::MutationWeights)
         weights.randomize,
         weights.do_nothing,
         weights.optimize,
+        weights.form_connection,
+        weights.break_connection,
     )
 end
 

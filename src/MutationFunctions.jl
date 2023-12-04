@@ -302,4 +302,38 @@ function crossover_trees(
     return tree1, tree2
 end
 
+function form_random_connection!(tree::AbstractExpressionNode)
+    tree.degree == 0 && return nothing
+    n_attempts = 10
+    attempt = 1
+    parent = random_node(tree; filter=t -> t.degree > 0)
+    node = random_node(tree)
+    while attempt < n_attempts && parent in node #= looped =#
+        parent = random_node(tree; filter=t -> t.degree > 0)
+        node = random_node(tree)
+        attempt += 1
+    end
+    attempt == n_attempts && return nothing
+    if parent.degree == 1
+        parent.l = node
+    else
+        if rand(Bool)
+            parent.l = node
+        else
+            parent.r = node
+        end
+    end
+    return nothing
+end
+function break_random_connection!(tree::AbstractExpressionNode)
+    child, parent, side = random_node_and_parent(tree)
+    if side == 'l'
+        parent.l = copy_node(child)
+    elseif side == 'r'
+        parent.r = copy_node(child)
+    else # 'n'
+    end
+    return nothing
+end
+
 end
