@@ -35,6 +35,7 @@ SymbolicRegressionJSON3Ext = "JSON3"
 SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 
 [compat]
+Aqua = "0.7"
 Compat = "^4.2"
 DynamicExpressions = "0.13"
 DynamicQuantities = "0.9"
