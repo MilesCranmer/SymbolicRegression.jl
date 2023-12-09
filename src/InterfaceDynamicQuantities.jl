@@ -1,6 +1,7 @@
 module InterfaceDynamicQuantitiesModule
 
 import DynamicQuantities:
+    UnionAbstractQuantity,
     AbstractDimensions,
     AbstractQuantity,
     Dimensions,
@@ -9,6 +10,7 @@ import DynamicQuantities:
     dimension,
     uparse,
     sym_uparse,
+    dim_type,
     DEFAULT_DIM_BASE_TYPE
 
 """
@@ -43,6 +45,7 @@ end
 function get_units(::Type{T}, ::Type{D}, x::AbstractVector, f::Function) where {T,D}
     return Quantity{T,D}[get_units(T, D, xi, f) for xi in x]
 end
+# TODO: Allow for AbstractQuantity output here
 
 """
     get_si_units(::Type{T}, units)
@@ -62,26 +65,28 @@ function get_sym_units(::Type{T}, units) where {T}
     return get_units(T, SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}, units, sym_uparse)
 end
 
-#! format: off
 """
     get_dimensions_type(A, default_dimensions)
 
 Recursively finds the dimension type from an array, or,
 if no quantity is found, returns the default type.
 """
-function get_dimensions_type(A::AbstractArray, ::Type{D}) where {D}
-    @inbounds for i in eachindex(A)
+function get_dimensions_type(A::AbstractArray, default::Type{D}) where {D}
+    for a in A
         # Look through columns for any dimensions (so we can return the correct type)
-        A[i] isa AbstractQuantity && return typeof(dimension(A[i]))
+        if typeof(a) <: UnionAbstractQuantity
+            return dim_type(a)
+        end
     end
     return D
 end
-function get_dimensions_type(::AbstractArray{T}, ::Type{D}) where {D,T<:Number}
+function get_dimensions_type(
+    ::AbstractArray{Q}, default::Type
+) where {Q<:UnionAbstractQuantity}
+    return dim_type(Q)
+end
+function get_dimensions_type(_, default::Type{D}) where {D}
     return D
 end
-function get_dimensions_type(::AbstractArray{Q}, ::Type{D}) where {Dout,Q<:AbstractQuantity{<:Any,Dout},D}
-    return Dout
-end
-#! format: on
 
 end

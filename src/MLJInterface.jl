@@ -4,6 +4,7 @@ using Optim: Optim
 import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
 import DynamicQuantities:
+    QuantityArray,
     UnionAbstractQuantity,
     AbstractDimensions,
     SymbolicDimensions,
@@ -260,12 +261,12 @@ function validate_units(X_units, old_X_units)
 end
 
 # TODO: Test whether this conversion poses any issues in data normalization...
-function dimension_fallback(
-    q::Union{<:Quantity{T,<:AbstractDimensions}}, ::Type{D}
-) where {T,D}
+function dimension_with_fallback(q::UnionAbstractQuantity{T}, ::Type{D}) where {T,D}
     return dimension(convert(Quantity{T,D}, q))::D
 end
-dimension_fallback(_, ::Type{D}) where {D} = D()
+function dimension_with_fallback(_, ::Type{D}) where {D}
+    return D()
+end
 function prediction_warn()
     @warn "Evaluation failed either due to NaNs detected or due to unfinished search. Using 0s for prediction."
 end
@@ -307,29 +308,28 @@ function prediction_fallback(
     end
 end
 
+compat_ustrip(A::QuantityArray) = ustrip(A)
+compat_ustrip(A) = ustrip.(A)
+
+"""
+    unwrap_units_single(::AbstractArray, ::Type{<:AbstractDimensions})
+    
+Remove units from some features in a matrix, and return, as a tuple,
+(1) the matrix with stripped units, and (2) the dimensions for those features.
+"""
 function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
-    return A, [D() for _ in eachrow(A)]
-end
-function unwrap_units_single(
-    A::AbstractMatrix{T}, ::Type{D}
-) where {D,T<:UnionAbstractQuantity}
-    for (i, row) in enumerate(eachrow(A))
-        allequal(Base.Fix2(dimension_fallback, D).(row)) ||
+    dims = D[dimension_with_fallback(first(row), D) for row in eachrow(A)]
+    @inbounds for (i, row) in enumerate(eachrow(A))
+        all(xi -> dimension_with_fallback(xi, D) == dims[i], row) ||
             error("Inconsistent units in feature $i of matrix.")
     end
-    dims = map(Base.Fix2(dimension_fallback, D) ∘ first, eachrow(A))
-    return stack([ustrip.(row) for row in eachrow(A)]; dims=1), dims
+    return stack(compat_ustrip, eachrow(A); dims=1)::AbstractMatrix, dims
 end
 function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
-    return v, D()
-end
-function unwrap_units_single(
-    v::AbstractVector{T}, ::Type{D}
-) where {D,T<:UnionAbstractQuantity}
-    allequal(Base.Fix2(dimension_fallback, D).(v)) || error("Inconsistent units in vector.")
-    dims = dimension_fallback(first(v), D)
-    v = ustrip.(v)
-    return v, dims
+    dims = dimension_with_fallback(first(v), D)
+    all(xi -> dimension_with_fallback(xi, D) == dims, v) ||
+        error("Inconsistent units in vector.")
+    return compat_ustrip(v)::AbstractVector, dims
 end
 
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)

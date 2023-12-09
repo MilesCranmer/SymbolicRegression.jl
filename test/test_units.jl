@@ -1,5 +1,6 @@
 using SymbolicRegression
 using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units
+using SymbolicRegression.MLJInterfaceModule: unwrap_units_single
 using SymbolicRegression.DimensionalAnalysisModule:
     violates_dimensional_constraints, @maybe_return_call, WildcardQuantity
 import DynamicQuantities:
@@ -16,6 +17,7 @@ import DynamicQuantities:
     dimension
 using Test
 import MLJBase as MLJ
+import MLJModelInterface as MMI
 
 custom_op(x, y) = x + y
 
@@ -315,4 +317,23 @@ end
 
     # But method errors are safely caught
     @test test_return_call(+, 1.0, "1.0") === nothing
+
+    # Edge case
+    ## First, what happens if we just pass some data with quantities,
+    ## and some without?
+    data = (a=randn(3), b=fill(us"m", 3), c=fill(u"m/s", 3))
+    Xm_t = MMI.matrix(data; transpose=true)
+    @test typeof(Xm_t) <: Matrix{<:Quantity}
+    _, test_dims = unwrap_units_single(Xm_t, Dimensions)
+    @test test_dims == dimension.([u"1", u"m", u"m/s"])
+    @test test_dims != dimension.([u"m", u"m", u"m"])
+    @inferred unwrap_units_single(Xm_t, Dimensions)
+
+    ## Now, we force promotion to generic `Number` type:
+    data = (a=Number[randn(3)...], b=fill(us"m", 3), c=fill(u"m/s", 3))
+    Xm_t = MMI.matrix(data; transpose=true)
+    @test typeof(Xm_t) === Matrix{Number}
+    _, test_dims = unwrap_units_single(Xm_t, Dimensions)
+    @test test_dims == dimension.([u"1", u"m", u"m/s"])
+    @test_skip @inferred unwrap_units_single(Xm_t, Dimensions)
 end
