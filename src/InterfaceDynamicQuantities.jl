@@ -3,7 +3,6 @@ module InterfaceDynamicQuantitiesModule
 import DynamicQuantities:
     UnionAbstractQuantity,
     AbstractDimensions,
-    AbstractQuantity,
     Dimensions,
     SymbolicDimensions,
     Quantity,
