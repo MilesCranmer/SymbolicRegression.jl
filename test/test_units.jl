@@ -1,5 +1,5 @@
 using SymbolicRegression
-using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units
+using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units, get_dimensions_type
 using SymbolicRegression.MLJInterfaceModule: unwrap_units_single
 using SymbolicRegression.DimensionalAnalysisModule:
     violates_dimensional_constraints, @maybe_return_call, WildcardQuantity
@@ -336,4 +336,9 @@ end
     _, test_dims = unwrap_units_single(Xm_t, Dimensions)
     @test test_dims == dimension.([u"1", u"m", u"m/s"])
     @test_skip @inferred unwrap_units_single(Xm_t, Dimensions)
+
+    # Another edge case
+    ## Should be able to pull it out from array:
+    @test get_dimensions_type(Number[1.0, us"1"], Dimensions) <: SymbolicDimensions
+    @test get_dimensions_type(Number[1.0, 1.0], Dimensions) <: Dimensions
 end

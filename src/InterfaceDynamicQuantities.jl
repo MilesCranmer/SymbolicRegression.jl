@@ -72,13 +72,12 @@ Recursively finds the dimension type from an array, or,
 if no quantity is found, returns the default type.
 """
 function get_dimensions_type(A::AbstractArray, default::Type{D}) where {D}
-    for a in A
-        # Look through columns for any dimensions (so we can return the correct type)
-        if typeof(a) <: UnionAbstractQuantity
-            return dim_type(a)
-        end
+    i = findfirst(a -> isa(a, UnionAbstractQuantity), A)
+    if i === nothing
+        return D
+    else
+        return typeof(dimension(A[i]))
     end
-    return D
 end
 function get_dimensions_type(
     ::AbstractArray{Q}, default::Type
@@ -86,6 +85,48 @@ function get_dimensions_type(
     return dim_type(Q)
 end
 function get_dimensions_type(_, default::Type{D}) where {D}
+    return D
+end
+
+# Shortcut for basic numeric types
+function get_dimensions_type(
+    ::AbstractArray{
+        <:Union{
+            Bool,
+            Int8,
+            UInt8,
+            Int16,
+            UInt16,
+            Int32,
+            UInt32,
+            Int64,
+            UInt64,
+            Int128,
+            UInt128,
+            Float16,
+            Float32,
+            Float64,
+            BigFloat,
+            BigInt,
+            ComplexF16,
+            ComplexF32,
+            ComplexF64,
+            Complex{BigFloat},
+            Rational{Int8},
+            Rational{UInt8},
+            Rational{Int16},
+            Rational{UInt16},
+            Rational{Int32},
+            Rational{UInt32},
+            Rational{Int64},
+            Rational{UInt64},
+            Rational{Int128},
+            Rational{UInt128},
+            Rational{BigInt},
+        },
+    },
+    default::Type{D},
+) where {D}
     return D
 end
 
