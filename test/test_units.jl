@@ -5,6 +5,7 @@ using SymbolicRegression.DimensionalAnalysisModule:
     violates_dimensional_constraints, @maybe_return_call, WildcardQuantity
 import DynamicQuantities:
     DEFAULT_DIM_BASE_TYPE,
+    RealQuantity,
     Quantity,
     QuantityArray,
     SymbolicDimensions,
