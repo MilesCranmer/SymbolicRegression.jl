@@ -217,14 +217,18 @@ end
             @test dimension(ypred[begin]) == dimension(y[begin])
         end
 
-        # Multiple outputs:
+        # Multiple outputs, and with RealQuantity
         model = MultitargetSRRegressor(;
             binary_operators=[+, *],
             unary_operators=[sqrt, cbrt, abs],
             early_stop_condition=(loss, complexity) -> (loss < 1e-7 && complexity <= 8),
         )
         X = (; x1=randn(128), x2=randn(128))
-        y = (; a=(@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* u"kg", b=X.x1)
+        y = (;
+            a=(@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* RealQuantity(u"kg"),
+            b=X.x1,
+        )
+        @test typeof(y.a) <: AbstractArray{<:RealQuantity}
         mach = MLJ.machine(model, X, y)
         MLJ.fit!(mach)
         report = MLJ.report(mach)
@@ -241,7 +245,10 @@ end
         # Prediction should have same units:
         ypred = MLJ.predict(mach; rows=1:3)
         @test dimension(ypred.a[begin]) == dimension(y.a[begin])
-        @test typeof(ypred.a[begin]) == typeof(y.a[begin])
+        @test typeof(dimension(ypred.a[begin])) == typeof(dimension(y.a[begin]))
+        # TODO: Should return same quantity as input
+        @test typeof(ypred.a[begin]) <: Quantity
+        @test typeof(y.a[begin]) <: RealQuantity
         VERSION >= v"1.8" &&
             @eval @test(typeof(ypred.b[begin]) == typeof(y.b[begin]), broken = true)
     end

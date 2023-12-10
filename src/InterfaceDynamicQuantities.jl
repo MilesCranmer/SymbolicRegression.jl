@@ -23,7 +23,7 @@ argument is a function for parsing strings (in case a string is passed)
 """
 function get_units(args...)
     return error(
-        "Unit information must be passed as one of `AbstractDimensions`, `AbstractQuantity`, `AbstractString`, `Real`.",
+        "Unit information must be passed as one of `AbstractDimensions`, `AbstractQuantity`, `AbstractString`, `Function`.",
     )
 end
 function get_units(_, _, ::Nothing, ::Function)
