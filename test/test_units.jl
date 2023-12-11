@@ -1,4 +1,17 @@
 using SymbolicRegression
+using SymbolicRegression:
+    square,
+    cube,
+    plus,
+    sub,
+    mult,
+    greater,
+    cond,
+    relu,
+    logical_or,
+    logical_and,
+    safe_pow,
+    atanh_clip
 using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units, get_dimensions_type
 using SymbolicRegression.MLJInterfaceModule: unwrap_units_single
 using SymbolicRegression.DimensionalAnalysisModule:
@@ -10,6 +23,7 @@ import DynamicQuantities:
     QuantityArray,
     SymbolicDimensions,
     Dimensions,
+    DimensionError,
     @u_str,
     @us_str,
     uparse,
@@ -153,6 +167,46 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
     ]
     @test all(valid_trees)
     @test length(valid_trees) > 0
+end
+
+@testset "Operator compatibility" begin
+    ## square cube plus sub mult greater cond relu logical_or logical_and safe_pow atanh_clip
+    # Want to ensure these operators perform correctly in the context of units
+    @test square(1.0u"m") == 1.0u"m^2"
+    @test cube(1.0u"m") == 1.0u"m^3"
+    @test plus(1.0u"m", 1.0u"m") == 2.0u"m"
+    @test_throws DimensionError plus(1.0u"m", 1.0u"s")
+    @test sub(1.0u"m", 1.0u"m") == 0.0u"m"
+    @test_throws DimensionError sub(1.0u"m", 1.0u"s")
+    @test mult(1.0u"m", 1.0u"m") == 1.0u"m^2"
+    @test mult(1.0u"m", 1.0u"s") == 1.0u"m*s"
+    @test greater(1.1u"m", 1.0u"m") == true
+    @test greater(0.9u"m", 1.0u"m") == false
+    @test typeof(greater(1.1u"m", 1.0u"m")) === typeof(1.0u"m")
+    @test_throws DimensionError greater(1.0u"m", 1.0u"s")
+    @test cond(0.1u"m", 1.5u"m") == 1.5u"m"
+    @test cond(-0.1u"m", 1.5u"m") == 0.0u"m"
+    @test cond(-0.1u"s", 1.5u"m") == 0.0u"m"
+    @test relu(0.1u"m") == 0.1u"m"
+    @test relu(-0.1u"m") == 0.0u"m"
+    @test logical_or(0.1u"m", 0.0u"m") == 1.0
+    @test logical_or(-0.1u"m", 0.0u"m") == 0.0
+    @test logical_or(-0.5u"m", 1.0u"m") == 1.0
+    @test logical_or(-0.2u"m", -0.2u"m") == 0.0
+    @test logical_and(0.1u"m", 0.0u"m") == 0.0
+    @test logical_and(0.1u"s", 0.0u"m") == 0.0
+    @test logical_and(-0.1u"m", 0.0u"m") == 0.0
+    @test logical_and(-0.5u"m", 1.0u"m") == 0.0
+    @test logical_and(-0.2u"s", -0.2u"m") == 0.0
+    @test logical_and(0.2u"s", 0.2u"m") == 1.0
+    @test safe_pow(4.0u"m", 0.5u"1") == 2.0u"m^0.5"
+    @test isnan(safe_pow(-4.0u"m", 0.5u"1"))
+    @test typeof(safe_pow(-4.0u"m", 0.5u"1")) === typeof(1.0u"m")
+    @inferred safe_pow(4.0u"m", 0.5u"1")
+    @test_throws DimensionError safe_pow(1.0u"m", 1.0u"m")
+    @test atanh_clip(0.5u"1") == atanh(0.5)
+    @test atanh_clip(2.5u"1") == atanh(0.5)
+    @test_throws DimensionError atanh_clip(1.0u"m")
 end
 
 @testset "Search with dimensional constraints on output" begin
