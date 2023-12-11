@@ -84,7 +84,7 @@ function build_constraints(
     return una_constraints, bin_constraints
 end
 
-function binopmap(op)
+function binopmap(op::F) where {F}
     if op == plus
         return +
     elseif op == mult
@@ -100,14 +100,14 @@ function binopmap(op)
     end
     return op
 end
-function inverse_binopmap(op)
+function inverse_binopmap(op::F) where {F}
     if op == safe_pow
         return ^
     end
     return op
 end
 
-function unaopmap(op)
+function unaopmap(op::F) where {F}
     if op == log
         return safe_log
     elseif op == log10
@@ -125,7 +125,7 @@ function unaopmap(op)
     end
     return op
 end
-function inverse_unaopmap(op)
+function inverse_unaopmap(op::F) where {F}
     if op == safe_log
         return log
     elseif op == safe_log10
