@@ -1,9 +1,11 @@
 using SymbolicRegression
-using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units
+using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units, get_dimensions_type
+using SymbolicRegression.MLJInterfaceModule: unwrap_units_single
 using SymbolicRegression.DimensionalAnalysisModule:
     violates_dimensional_constraints, @maybe_return_call, WildcardQuantity
 import DynamicQuantities:
     DEFAULT_DIM_BASE_TYPE,
+    RealQuantity,
     Quantity,
     QuantityArray,
     SymbolicDimensions,
@@ -16,6 +18,7 @@ import DynamicQuantities:
     dimension
 using Test
 import MLJBase as MLJ
+import MLJModelInterface as MMI
 
 custom_op(x, y) = x + y
 
@@ -215,14 +218,18 @@ end
             @test dimension(ypred[begin]) == dimension(y[begin])
         end
 
-        # Multiple outputs:
+        # Multiple outputs, and with RealQuantity
         model = MultitargetSRRegressor(;
             binary_operators=[+, *],
             unary_operators=[sqrt, cbrt, abs],
             early_stop_condition=(loss, complexity) -> (loss < 1e-7 && complexity <= 8),
         )
         X = (; x1=randn(128), x2=randn(128))
-        y = (; a=(@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* u"kg", b=X.x1)
+        y = (;
+            a=(@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* RealQuantity(u"kg"),
+            b=X.x1,
+        )
+        @test typeof(y.a) <: AbstractArray{<:RealQuantity}
         mach = MLJ.machine(model, X, y)
         MLJ.fit!(mach)
         report = MLJ.report(mach)
@@ -239,7 +246,10 @@ end
         # Prediction should have same units:
         ypred = MLJ.predict(mach; rows=1:3)
         @test dimension(ypred.a[begin]) == dimension(y.a[begin])
-        @test typeof(ypred.a[begin]) == typeof(y.a[begin])
+        @test typeof(dimension(ypred.a[begin])) == typeof(dimension(y.a[begin]))
+        # TODO: Should return same quantity as input
+        @test typeof(ypred.a[begin]) <: Quantity
+        @test typeof(y.a[begin]) <: RealQuantity
         VERSION >= v"1.8" &&
             @eval @test(typeof(ypred.b[begin]) == typeof(y.b[begin]), broken = true)
     end
@@ -315,4 +325,28 @@ end
 
     # But method errors are safely caught
     @test test_return_call(+, 1.0, "1.0") === nothing
+
+    # Edge case
+    ## First, what happens if we just pass some data with quantities,
+    ## and some without?
+    data = (a=randn(3), b=fill(us"m", 3), c=fill(u"m/s", 3))
+    Xm_t = MMI.matrix(data; transpose=true)
+    @test typeof(Xm_t) <: Matrix{<:Quantity}
+    _, test_dims = unwrap_units_single(Xm_t, Dimensions)
+    @test test_dims == dimension.([u"1", u"m", u"m/s"])
+    @test test_dims != dimension.([u"m", u"m", u"m"])
+    @inferred unwrap_units_single(Xm_t, Dimensions)
+
+    ## Now, we force promotion to generic `Number` type:
+    data = (a=Number[randn(3)...], b=fill(us"m", 3), c=fill(u"m/s", 3))
+    Xm_t = MMI.matrix(data; transpose=true)
+    @test typeof(Xm_t) === Matrix{Number}
+    _, test_dims = unwrap_units_single(Xm_t, Dimensions)
+    @test test_dims == dimension.([u"1", u"m", u"m/s"])
+    @test_skip @inferred unwrap_units_single(Xm_t, Dimensions)
+
+    # Another edge case
+    ## Should be able to pull it out from array:
+    @test get_dimensions_type(Number[1.0, us"1"], Dimensions) <: SymbolicDimensions
+    @test get_dimensions_type(Number[1.0, 1.0], Dimensions) <: Dimensions
 end
