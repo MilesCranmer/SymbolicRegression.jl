@@ -20,6 +20,7 @@ using SymbolicRegression:
     logical_and,
     gamma
 using Test
+using Random: MersenneTwister
 include("test_params.jl")
 
 @testset "Generic operator tests" begin
@@ -114,3 +115,22 @@ end
     @test_nowarn SymbolicRegression.assert_operators_well_defined(Float32, options)
 end
 
+@testset "Turbo mode should be the same" begin
+    binary_operators = [plus, sub, mult, div, ^, greater, logical_or, logical_and, cond]
+    unary_operators = [square, cube, log, log2, log10, sqrt, acosh, neg, relu]
+    options = Options(; binary_operators, unary_operators)
+    for T in (Float32, Float64),
+        index_bin in 1:length(binary_operators),
+        index_una in 1:length(unary_operators)
+
+        x1, x2 = Node(T; feature=1), Node(T; feature=2)
+        tree = Node(index_bin, x1, Node(index_una, x2))
+        for seed in 1:20
+            X = rand(MersenneTwister(seed), T, 2, 1)
+            y, completed = eval_tree_array(tree, X, options)
+            completed || continue
+            y_turbo, _ = eval_tree_array(tree, X, options; turbo=true)
+            @test y[1] ≈ y_turbo[1]
+        end
+    end
+end
