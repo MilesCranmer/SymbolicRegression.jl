@@ -6,6 +6,7 @@ import Base: @deprecate
 import ..ProgramConstantsModule: DATA_TYPE
 #TODO - actually add these operators to the module!
 
+# TODO: Should this be limited to AbstractFloat instead?
 function gamma(x::T)::T where {T<:DATA_TYPE}
     out = SpecialFunctions.gamma(x)
     return isinf(out) ? T(NaN) : out
@@ -73,6 +74,7 @@ function safe_sqrt(x::T)::T where {T<:AbstractFloat}
     x < T(0) && return T(NaN)
     return sqrt(x)
 end
+# TODO: Should the above be made more generic, for, e.g., compatibility with units?
 
 # Generics (and SIMD)
 square(x) = x * x
