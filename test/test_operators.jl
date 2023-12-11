@@ -21,6 +21,7 @@ using SymbolicRegression:
     gamma
 using Test
 using Random: MersenneTwister
+using Suppressor: @capture_err
 include("test_params.jl")
 
 @testset "Generic operator tests" begin
@@ -34,6 +35,7 @@ include("test_params.jl")
         @test isnan(safe_log2(-val))
         @test abs(safe_log10(val) - log10(val)) < 1e-6
         @test isnan(safe_log10(-val))
+        @test abs(safe_log1p(val) - log1p(val)) < 1e-6
         @test abs(safe_acosh(val2) - acosh(val2)) < 1e-6
         @test isnan(safe_acosh(-val2))
         @test neg(-val) == val
@@ -54,6 +56,7 @@ include("test_params.jl")
         @test isnan(safe_log(zero(T)))
         @test isnan(safe_log2(zero(T)))
         @test isnan(safe_log10(zero(T)))
+        @test isnan(safe_log1p(T(-2.0)))
         @test div(val, val2) == val / val2
         @test greater(val, val2) == T(0.0)
         @test greater(val2, val) == T(1.0)
@@ -73,7 +76,9 @@ end
     types_to_test = [Float16, Float32, Float64, BigFloat]
     options = Options(;
         binary_operators=[plus, sub, mult, div, ^, greater, logical_or, logical_and, cond],
-        unary_operators=[square, cube, log, log2, log10, sqrt, acosh, neg, relu],
+        unary_operators=[
+            square, cube, log, log2, log10, log1p, sqrt, atanh, acosh, neg, relu
+        ],
     )
     for T in types_to_test
         @test_nowarn SymbolicRegression.assert_operators_well_defined(T, options)
@@ -84,7 +89,7 @@ end
     types_to_test = [ComplexF16, ComplexF32, ComplexF64]
     options = Options(;
         binary_operators=[plus, sub, mult, div, ^],
-        unary_operators=[square, cube, log, log2, log10, sqrt, acosh, neg],
+        unary_operators=[square, cube, log, log2, log10, log1p, sqrt, acosh, neg],
     )
     for T in types_to_test
         @test_nowarn SymbolicRegression.assert_operators_well_defined(T, options)
@@ -117,7 +122,7 @@ end
 
 @testset "Turbo mode should be the same" begin
     binary_operators = [plus, sub, mult, div, ^, greater, logical_or, logical_and, cond]
-    unary_operators = [square, cube, log, log2, log10, sqrt, acosh, neg, relu]
+    unary_operators = [square, cube, log, log2, log10, log1p, sqrt, atanh, acosh, neg, relu]
     options = Options(; binary_operators, unary_operators)
     for T in (Float32, Float64),
         index_bin in 1:length(binary_operators),
@@ -125,12 +130,19 @@ end
 
         x1, x2 = Node(T; feature=1), Node(T; feature=2)
         tree = Node(index_bin, x1, Node(index_una, x2))
+        X = rand(MersenneTwister(0), T, 2, 20)
         for seed in 1:20
-            X = rand(MersenneTwister(seed), T, 2, 1)
-            y, completed = eval_tree_array(tree, X, options)
+            Xpart = X[:, [seed]]
+            y, completed = eval_tree_array(tree, Xpart, options)
             completed || continue
-            y_turbo, _ = eval_tree_array(tree, X, options; turbo=true)
-            @test y[1] ≈ y_turbo[1]
+            local y_turbo
+            # We capture any warnings about the LoopVectorization not working
+            eval_warnings = @capture_err begin
+                y_turbo, _ = eval_tree_array(tree, Xpart, options; turbo=true)
+            end
+            test_info(@test y[1] ≈ y_turbo[1] && eval_warnings == "") do
+                @info T tree X[:, seed] y y_turbo eval_warnings
+            end
         end
     end
 end

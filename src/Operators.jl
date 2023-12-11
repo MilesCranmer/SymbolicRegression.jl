@@ -23,21 +23,6 @@ atanh_clip(x) = atanh(mod(x + 1, 2) - 1)
 # Define allowed operators. Any julia operator can also be used.
 # TODO: Add all of these operators to the precompilation.
 # TODO: Since simplification is done in DynamicExpressions.jl, are these names correct anymore?
-function plus(x::T, y::T)::T where {T<:DATA_TYPE}
-    return x + y #Do not change the name of this operator.
-end
-function sub(x::T, y::T)::T where {T<:DATA_TYPE}
-    return x - y #Do not change the name of this operator.
-end
-function mult(x::T, y::T)::T where {T<:DATA_TYPE}
-    return x * y #Do not change the name of this operator.
-end
-function square(x::T)::T where {T<:DATA_TYPE}
-    return x * x
-end
-function cube(x::T)::T where {T<:DATA_TYPE}
-    return x^3
-end
 function safe_pow(x::T, y::T)::T where {T<:AbstractFloat}
     if isinteger(y)
         y < T(0) && x == T(0) && return T(NaN)
@@ -46,9 +31,6 @@ function safe_pow(x::T, y::T)::T where {T<:AbstractFloat}
         y < T(0) && x <= T(0) && return T(NaN)
     end
     return x^y
-end
-function div(x::T, y::T)::T where {T<:AbstractFloat}
-    return x / y
 end
 function safe_log(x::T)::T where {T<:AbstractFloat}
     x <= T(0) && return T(NaN)
@@ -76,14 +58,16 @@ function safe_sqrt(x::T)::T where {T<:AbstractFloat}
 end
 # TODO: Should the above be made more generic, for, e.g., compatibility with units?
 
-# Generics (and SIMD)
+# Do not change the names of these operators, as
+# they have special use in simplifications and printing.
 square(x) = x * x
 cube(x) = x * x * x
 plus(x, y) = x + y
 sub(x, y) = x - y
 mult(x, y) = x * y
-safe_pow(x, y) = x^y
 div(x, y) = x / y
+# Generics (for SIMD)
+safe_pow(x, y) = x^y
 safe_log(x) = log(x)
 safe_log2(x) = log2(x)
 safe_log10(x) = log10(x)
