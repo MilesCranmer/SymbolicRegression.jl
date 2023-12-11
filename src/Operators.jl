@@ -65,7 +65,6 @@ cube(x) = x * x * x
 plus(x, y) = x + y
 sub(x, y) = x - y
 mult(x, y) = x * y
-div(x, y) = x / y
 # Generics (for SIMD)
 safe_pow(x, y) = x^y
 safe_log(x) = log(x)

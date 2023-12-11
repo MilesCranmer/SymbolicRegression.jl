@@ -15,7 +15,6 @@ import ..OperatorsModule:
     safe_pow,
     mult,
     sub,
-    div,
     safe_log,
     safe_log10,
     safe_log2,

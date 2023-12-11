@@ -20,7 +20,6 @@ import .OperatorsModule:
     cube,
     pow,
     safe_pow,
-    div,
     safe_log,
     safe_log2,
     safe_log10,

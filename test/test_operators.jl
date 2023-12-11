@@ -6,7 +6,6 @@ using SymbolicRegression:
     square,
     cube,
     safe_pow,
-    div,
     safe_log,
     safe_log2,
     safe_log10,
@@ -57,7 +56,6 @@ include("test_params.jl")
         @test isnan(safe_log2(zero(T)))
         @test isnan(safe_log10(zero(T)))
         @test isnan(safe_log1p(T(-2.0)))
-        @test div(val, val2) == val / val2
         @test greater(val, val2) == T(0.0)
         @test greater(val2, val) == T(1.0)
         @test relu(-val) == T(0.0)
@@ -75,7 +73,7 @@ end
 @testset "Test built-in operators pass validation" begin
     types_to_test = [Float16, Float32, Float64, BigFloat]
     options = Options(;
-        binary_operators=[plus, sub, mult, div, ^, greater, logical_or, logical_and, cond],
+        binary_operators=[plus, sub, mult, /, ^, greater, logical_or, logical_and, cond],
         unary_operators=[
             square, cube, log, log2, log10, log1p, sqrt, atanh, acosh, neg, relu
         ],
@@ -88,7 +86,7 @@ end
 @testset "Test built-in operators pass validation for complex numbers" begin
     types_to_test = [ComplexF16, ComplexF32, ComplexF64]
     options = Options(;
-        binary_operators=[plus, sub, mult, div, ^],
+        binary_operators=[plus, sub, mult, /, ^],
         unary_operators=[square, cube, log, log2, log10, log1p, sqrt, acosh, neg],
     )
     for T in types_to_test
@@ -121,7 +119,7 @@ end
 end
 
 @testset "Turbo mode should be the same" begin
-    binary_operators = [plus, sub, mult, div, ^, greater, logical_or, logical_and, cond]
+    binary_operators = [plus, sub, mult, /, ^, greater, logical_or, logical_and, cond]
     unary_operators = [square, cube, log, log2, log10, log1p, sqrt, atanh, acosh, neg, relu]
     options = Options(; binary_operators, unary_operators)
     for T in (Float32, Float64),
