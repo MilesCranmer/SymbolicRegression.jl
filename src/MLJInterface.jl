@@ -160,6 +160,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         y_t;
         niterations=m.niterations,
         weights=w_t,
+        node_type=m.node_type,
         variable_names=variable_names,
         options=options,
         parallelism=m.parallelism,

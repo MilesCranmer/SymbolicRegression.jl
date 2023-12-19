@@ -44,6 +44,7 @@ function count_max_nestedness(tree, degree, op)
         t -> (t.degree == degree && t.op == op) ? 1 : 0,  # Branches
         (p, c...) -> p + max(c...),  # Reduce
         tree,
+        break_sharing=Val(true),
     )
     # Remove count of self:
     is_self = tree.degree == degree && tree.op == op
