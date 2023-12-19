@@ -76,7 +76,6 @@ import DynamicExpressions:
     Node,
     GraphNode,
     AbstractExpressionNode,
-    with_type_parameters,
     copy_node,
     set_node!,
     string_tree,
@@ -96,6 +95,7 @@ import DynamicExpressions:
     simplify_tree,
     tree_mapreduce,
     set_default_variable_names!
+import DynamicExpressions.EquationModule: with_type_parameters
 @reexport import LossFunctions:
     MarginLoss,
     DistanceLoss,
@@ -266,6 +266,8 @@ which is useful for debugging and profiling.
     weight the loss for each `y` by this value (same shape as `y`).
 - `options::Options=Options()`: The options for the search, such as
     which operators to use, evolution hyperparameters, etc.
+- `node_type::Type{N}=Node`: The type of node to use for the search.
+    For example, `Node` or `GraphNode`.
 - `variable_names::Union{Vector{String}, Nothing}=nothing`: The names
     of each feature in `X`, which will be used during printing of equations.
 - `display_variable_names::Union{Vector{String}, Nothing}=variable_names`: Names
