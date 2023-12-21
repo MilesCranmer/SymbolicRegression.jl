@@ -339,6 +339,7 @@ function equation_search(
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
+    heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
     runtests::Bool=true,
     saved_state=nothing,
     return_state::Union{Bool,Nothing}=nothing,
@@ -389,6 +390,7 @@ function equation_search(
         numprocs=numprocs,
         procs=procs,
         addprocs_function=addprocs_function,
+        heap_size_hint_in_bytes=heap_size_hint_in_bytes,
         runtests=runtests,
         saved_state=saved_state,
         return_state=return_state,
@@ -425,6 +427,7 @@ function equation_search(
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
+    heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
     runtests::Bool=true,
     saved_state=nothing,
     return_state::Union{Bool,Nothing}=nothing,
@@ -457,7 +460,7 @@ function equation_search(
         )
 
     # TODO: Still not type stable. Should be able to pass `Val{return_state}`.
-    should_return_state = if options.return_state === nothing
+    _return_state = if options.return_state === nothing
         return_state === nothing ? false : return_state
     else
         @assert(
@@ -472,8 +475,15 @@ function equation_search(
     else
         Val(dim_out)
     end
-
-    verbosity = if verbosity === nothing && options.verbosity === nothing
+    _numprocs = if numprocs === nothing && procs === nothing
+        4
+    elseif procs !== nothing
+        @assert numprocs === nothing
+        length(procs)
+    else
+        numprocs
+    end
+    _verbosity = if verbosity === nothing && options.verbosity === nothing
         1
     elseif verbosity === nothing
         options.verbosity
@@ -484,8 +494,8 @@ function equation_search(
             "You cannot set `verbosity` in both the search parameters `Options` and the call to `equation_search`.",
         )
     end
-    progress = if progress === nothing && options.progress === nothing
-        (verbosity > 0) && length(datasets) == 1
+    _progress = if progress === nothing && options.progress === nothing
+        (_verbosity > 0) && length(datasets) == 1
     elseif progress === nothing
         options.progress
     elseif options.progress === nothing
@@ -495,28 +505,46 @@ function equation_search(
             "You cannot set `progress` in both the search parameters `Options` and the call to `equation_search`.",
         )
     end
-    if progress
+    if _progress
         @assert(
             length(datasets) == 1,
             "You cannot display a progress bar for multi-output searches."
         )
-        @assert(verbosity > 0, "You cannot display a progress bar with `verbosity=0`.")
+        @assert(_verbosity > 0, "You cannot display a progress bar with `verbosity=0`.")
+    end
+    _addprocs_function = if addprocs_function === nothing
+        addprocs
+    else
+        addprocs_function
+    end
+    _exeflags = if heap_size_hint_in_bytes !== nothing
+        heap_size_hint_in_megabytes = floor(Int, heap_size_hint_in_bytes / 1024^2)
+        @assert heap_size_hint_in_megabytes > 0
+        `--heap-size=$(heap_size_hint_in_megabytes)M`
+    elseif concurrency == :multiprocessing
+        heap_size_hint_in_megabytes = floor(Int, Sys.free_memory() / 1024^2 / _numprocs)
+        @info "Setting per-process heap size hint to $(heap_size_hint_in_megabytes * 1024^2) bytes. You can set this manually with `heap_size_hint_in_bytes`."
+        `--heap-size=$(heap_size_hint_in_megabytes)M`
+    else
+        ``
     end
 
+    # Underscores here mean that we have mutated the variable
     return _equation_search(
         v_concurrency,
         _v_dim_out,
         datasets,
         niterations,
         options,
-        numprocs,
+        _numprocs,
         procs,
-        addprocs_function,
+        _addprocs_function,
+        _exeflags,
         runtests,
         saved_state,
-        verbosity,
-        progress,
-        Val(should_return_state),
+        _verbosity,
+        _progress,
+        Val(_return_state),
     )
 end
 
@@ -526,9 +554,10 @@ function _equation_search(
     datasets::Vector{D},
     niterations::Int,
     options::Options,
-    numprocs::Union{Int,Nothing},
+    numprocs::Integer,
     procs::Union{Vector{Int},Nothing},
-    addprocs_function::Union{Function,Nothing},
+    addprocs_function::Function,
+    exeflags::Cmd,
     runtests::Bool,
     saved_state,
     verbosity,
@@ -625,18 +654,10 @@ function _equation_search(
     ### Distributed code:
     ##########################################################################
     if parallelism == :multiprocessing
-        if addprocs_function === nothing
-            addprocs_function = addprocs
-        end
-        if numprocs === nothing && procs === nothing
-            numprocs = 4
-            procs = addprocs_function(numprocs; lazy=false)
-            we_created_procs = true
-        elseif numprocs === nothing
-            numprocs = length(procs)
-        elseif procs === nothing
-            procs = addprocs_function(numprocs; lazy=false)
-            we_created_procs = true
+        procs, we_created_procs = if procs === nothing
+            addprocs_function(numprocs; lazy=false, exeflags), true
+        else
+            procs, false
         end
 
         if we_created_procs
