@@ -422,7 +422,7 @@ end
 function equation_search(
     datasets::Vector{D};
     niterations::Int=10,
-    options::Options=Options(),
+    @nospecialize(options::Options = Options()),
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
@@ -553,7 +553,7 @@ function _equation_search(
     ::Val{dim_out},
     datasets::Vector{D},
     niterations::Int,
-    options::Options,
+    @nospecialize(options::Options),
     numprocs::Integer,
     procs::Union{Vector{Int},Nothing},
     addprocs_function::Function,
