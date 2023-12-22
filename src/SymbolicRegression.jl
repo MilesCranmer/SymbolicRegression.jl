@@ -1136,4 +1136,11 @@ macro ignore(args...) end
 # Hack to get static analysis to work from within tests:
 @ignore include("../test/runtests.jl")
 
+include("precompile.jl")
+redirect_stdout(devnull) do
+    redirect_stderr(devnull) do
+        do_precompilation(Val(:precompile))
+    end
+end
+
 end #module SR
