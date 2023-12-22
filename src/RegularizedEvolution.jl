@@ -1,6 +1,5 @@
 module RegularizedEvolutionModule
 
-import Random: shuffle!
 import DynamicExpressions: string_tree
 import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 import ..PopMemberModule: PopMember
