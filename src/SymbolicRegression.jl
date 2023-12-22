@@ -422,7 +422,7 @@ end
 function equation_search(
     datasets::Vector{D};
     niterations::Int=10,
-    @nospecialize(options::Options = Options()),
+    options::Options = Options(),
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
@@ -529,6 +529,7 @@ function equation_search(
         )
         heap_size_hint_in_bytes === nothing &&
             @info "Automatically setting --heap-size-hint=$(heap_size_hint_in_megabytes)M on each Julia process. You can set this manually with `heap_size_hint_in_bytes`."
+
         `--heap-size=$(heap_size_hint_in_megabytes)M`
     else
         ``
@@ -558,7 +559,7 @@ function _equation_search(
     ::Val{dim_out},
     datasets::Vector{D},
     niterations::Int,
-    @nospecialize(options::Options),
+    options::Options,
     numprocs::Integer,
     procs::Union{Vector{Int},Nothing},
     addprocs_function::F,

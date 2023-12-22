@@ -39,6 +39,7 @@ function modelexpr(model_name::Symbol)
             numprocs::Union{Int,Nothing} = nothing
             procs::Union{Vector{Int},Nothing} = nothing
             addprocs_function::Union{Function,Nothing} = nothing
+            heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
             runtests::Bool = true
             loss_type::L = Nothing
             selection_method::Function = choose_best
@@ -166,6 +167,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         numprocs=m.numprocs,
         procs=m.procs,
         addprocs_function=m.addprocs_function,
+        heap_size_hint_in_bytes=m.heap_size_hint_in_bytes,
         runtests=m.runtests,
         saved_state=(old_fitresult === nothing ? nothing : old_fitresult.state),
         return_state=true,
