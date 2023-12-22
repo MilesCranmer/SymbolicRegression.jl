@@ -493,6 +493,7 @@ function equation_search(
         error(
             "You cannot set `verbosity` in both the search parameters `Options` and the call to `equation_search`.",
         )
+        false
     end
     _progress = if progress === nothing && options.progress === nothing
         (_verbosity > 0) && length(datasets) == 1
@@ -504,6 +505,7 @@ function equation_search(
         error(
             "You cannot set `progress` in both the search parameters `Options` and the call to `equation_search`.",
         )
+        false
     end
     if _progress
         @assert(
@@ -512,18 +514,16 @@ function equation_search(
         )
         @assert(_verbosity > 0, "You cannot display a progress bar with `verbosity=0`.")
     end
-    _addprocs_function = if addprocs_function === nothing
-        addprocs
-    else
-        addprocs_function
-    end
+
+    _addprocs_function = addprocs_function === nothing ? addprocs : addprocs_function
+
     _exeflags = if heap_size_hint_in_bytes !== nothing
         heap_size_hint_in_megabytes = floor(Int, heap_size_hint_in_bytes / 1024^2)
         @assert heap_size_hint_in_megabytes > 0
         `--heap-size=$(heap_size_hint_in_megabytes)M`
     elseif concurrency == :multiprocessing
         heap_size_hint_in_megabytes = floor(Int, Sys.free_memory() / 1024^2 / _numprocs)
-        @info "Setting per-process heap size hint to $(heap_size_hint_in_megabytes * 1024^2) bytes. You can set this manually with `heap_size_hint_in_bytes`."
+        @info "Automatically setting --heap-size-hint=$(heap_size_hint_in_megabytes)M on each Julia process. You can set this manually with `heap_size_hint_in_bytes`."
         `--heap-size=$(heap_size_hint_in_megabytes)M`
     else
         ``
@@ -556,14 +556,22 @@ function _equation_search(
     @nospecialize(options::Options),
     numprocs::Integer,
     procs::Union{Vector{Int},Nothing},
-    addprocs_function::Function,
+    addprocs_function::F,
     exeflags::Cmd,
     runtests::Bool,
     saved_state,
     verbosity,
     progress,
     ::Val{should_return_state},
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},parallelism,should_return_state,dim_out}
+) where {
+    T<:DATA_TYPE,
+    L<:LOSS_TYPE,
+    D<:Dataset{T,L},
+    parallelism,
+    should_return_state,
+    dim_out,
+    F<:Function,
+}
     if options.deterministic
         if parallelism != :serial
             error("Determinism is only guaranteed for serial mode.")
@@ -654,10 +662,10 @@ function _equation_search(
     ### Distributed code:
     ##########################################################################
     if parallelism == :multiprocessing
-        procs, we_created_procs = if procs === nothing
-            addprocs_function(numprocs; lazy=false, exeflags), true
+        (procs, we_created_procs) = if procs === nothing
+            (addprocs_function(numprocs; lazy=false, exeflags), true)
         else
-            procs, false
+            (procs, false)
         end
 
         if we_created_procs
