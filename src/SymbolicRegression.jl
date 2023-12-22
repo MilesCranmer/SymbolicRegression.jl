@@ -68,7 +68,7 @@ import Printf: @printf, @sprintf
 import PackageExtensionCompat: @require_extensions
 using Pkg: Pkg
 import TOML: parsefile
-import Random: seed!, shuffle!
+import Random: seed!, randperm
 using Reexport
 import DynamicExpressions:
     Node,
@@ -835,7 +835,7 @@ function _equation_search(
     # Randomly order which order to check populations:
     # This is done so that we do work on all nout equally.
     all_idx = [(j, i) for j in 1:nout for i in 1:(options.populations)]
-    shuffle!(all_idx)
+    all_idx = all_idx[randperm(length(all_idx))]
     kappa = 0
     resource_monitor = ResourceMonitor(;
         absolute_start_time=time(),
