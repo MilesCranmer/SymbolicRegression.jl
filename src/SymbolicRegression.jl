@@ -517,13 +517,18 @@ function equation_search(
 
     _addprocs_function = addprocs_function === nothing ? addprocs : addprocs_function
 
-    _exeflags = if heap_size_hint_in_bytes !== nothing
-        heap_size_hint_in_megabytes = floor(Int, heap_size_hint_in_bytes / 1024^2)
-        @assert heap_size_hint_in_megabytes > 0
-        `--heap-size=$(heap_size_hint_in_megabytes)M`
-    elseif concurrency == :multiprocessing
-        heap_size_hint_in_megabytes = floor(Int, Sys.free_memory() / 1024^2 / _numprocs)
-        @info "Automatically setting --heap-size-hint=$(heap_size_hint_in_megabytes)M on each Julia process. You can set this manually with `heap_size_hint_in_bytes`."
+    _exeflags = if VERSION >= v"1.9" && concurrency == :multiprocessing
+        heap_size_hint_in_megabytes = floor(
+            Int, (
+                if heap_size_hint_in_bytes === nothing
+                    (Sys.free_memory() / _numprocs)
+                else
+                    heap_size_hint_in_bytes
+                end
+            ) / 1024^2
+        )
+        heap_size_hint_in_bytes === nothing &&
+            @info "Automatically setting --heap-size-hint=$(heap_size_hint_in_megabytes)M on each Julia process. You can set this manually with `heap_size_hint_in_bytes`."
         `--heap-size=$(heap_size_hint_in_megabytes)M`
     else
         ``
