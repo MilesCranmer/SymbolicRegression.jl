@@ -10,9 +10,9 @@ import StatsBase: mean
 import ..UtilsModule: subscriptify
 import ..CoreModule: Dataset, Options
 import ..ComplexityModule: compute_complexity
-import ..PopulationModule: Population, copy_population
+import ..PopulationModule: Population
 import ..HallOfFameModule:
-    HallOfFame, copy_hall_of_fame, calculate_pareto_frontier, string_dominating_pareto_curve
+    HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 import ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
 
 function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Vector{Int})::Int
@@ -284,7 +284,7 @@ function load_saved_hall_of_fame(saved_state)
     else
         hall_of_fame
     end
-    return [copy_hall_of_fame(hof) for hof in hall_of_fame]
+    return [copy(hof) for hof in hall_of_fame]
 end
 load_saved_hall_of_fame(::Nothing)::Nothing = nothing
 
@@ -300,7 +300,7 @@ function get_population(
 end
 function load_saved_population(saved_state; out::Int, pop::Int)
     saved_pop = get_population(saved_state[1]; out=out, pop=pop)
-    return copy_population(saved_pop)
+    return copy(saved_pop)
 end
 load_saved_population(::Nothing; kws...) = nothing
 

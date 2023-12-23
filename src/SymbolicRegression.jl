@@ -208,7 +208,7 @@ import .InterfaceDynamicExpressionsModule: @extend_operators
 import .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
 import .PopMemberModule: PopMember, reset_birth!
 import .PopulationModule:
-    Population, copy_population, best_sub_pop, record_population, best_of_sample
+    Population, best_sub_pop, record_population, best_of_sample
 import .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 import .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
@@ -620,7 +620,7 @@ function _equation_search(
     # for the final return.
     returnPops = init_dummy_pops(options.populations, datasets, options)
     # These initial populations are discarded:
-    bestSubPops = init_dummy_pops(options.populations, datasets, options)
+    bestSubPops = copy(returnPops)
 
     actualMaxsize = options.maxsize + MAX_DEGREE
 
@@ -703,7 +703,7 @@ function _equation_search(
                 member.score = score
                 member.loss = result_loss
             end
-            copy_pop = copy_population(saved_pop)
+            copy_pop = copy(saved_pop)
             new_pop = @sr_spawner parallelism worker_idx (
                 copy_pop, HallOfFame(options, T, L), RecordType(), 0.0
             )
@@ -860,7 +860,7 @@ function _equation_search(
             best_seen::HallOfFame
             cur_record::RecordType
             cur_num_evals::Float64
-            returnPops[j][i] = copy_population(cur_pop)
+            returnPops[j][i] = copy(cur_pop)
             bestSubPops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
             @recorder record = recursive_merge(record, cur_record)
             num_evals[j][i] += cur_num_evals
@@ -946,7 +946,7 @@ function _equation_search(
             end
 
             c_rss = deepcopy(all_running_search_statistics[j])
-            c_cur_pop = copy_population(cur_pop)
+            c_cur_pop = copy(cur_pop)
             allPops[j][i] = @sr_spawner parallelism worker_idx let
                 cur_record = RecordType()
                 @recorder cur_record[key] = RecordType(

@@ -60,12 +60,9 @@ function HallOfFame(
     )
 end
 
-function copy_hall_of_fame(
-    hof::HallOfFame{T,L}
-)::HallOfFame{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+function Base.copy(hof::HallOfFame)
     return HallOfFame(
-        [copy(member) for member in hof.members],
-        [exists for exists in hof.exists],
+        [copy(member) for member in hof.members], [exists for exists in hof.exists]
     )
 end
 

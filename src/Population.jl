@@ -92,7 +92,7 @@ function Population(
     )
 end
 
-function copy_population(pop::P)::P where {P<:Population}
+function Base.copy(pop::P)::P where {P<:Population}
     return Population([copy(pm) for pm in pop.members])
 end
 
