@@ -493,7 +493,7 @@ function equation_search(
         error(
             "You cannot set `verbosity` in both the search parameters `Options` and the call to `equation_search`.",
         )
-        false
+        1
     end
     _progress = if progress === nothing && options.progress === nothing
         (_verbosity > 0) && length(datasets) == 1
@@ -562,7 +562,7 @@ function _equation_search(
     options::Options,
     numprocs::Integer,
     procs::Union{Vector{Int},Nothing},
-    addprocs_function::F,
+    addprocs_function::Function,
     exeflags::Cmd,
     runtests::Bool,
     saved_state,
@@ -576,7 +576,6 @@ function _equation_search(
     parallelism,
     should_return_state,
     dim_out,
-    F<:Function,
 }
     if options.deterministic
         if parallelism != :serial
