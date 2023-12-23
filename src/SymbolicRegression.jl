@@ -207,8 +207,7 @@ import .MutationFunctionsModule:
 import .InterfaceDynamicExpressionsModule: @extend_operators
 import .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
 import .PopMemberModule: PopMember, reset_birth!
-import .PopulationModule:
-    Population, best_sub_pop, record_population, best_of_sample
+import .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 import .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 import .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
@@ -605,8 +604,14 @@ function _equation_search(
         Task
     end
 
+    # Pointers to populations on each worker:
     allPops = [allPopsType[] for j in 1:nout]
-    init_pops = [allPopsType[] for j in 1:nout]
+    # Persistent storage of last-saved population for final return:
+    returnPops = init_dummy_pops(options.populations, datasets, options)
+    # Best 10 members from each population for migration:
+    bestSubPops = init_dummy_pops(options.populations, datasets, options)
+
+    # Initialize storage for workers
     tasks = [Task[] for j in 1:nout]
     # Set up a channel to send finished populations back to head node
     channels = if parallelism == :multiprocessing
@@ -615,12 +620,6 @@ function _equation_search(
         [[Channel(1) for i in 1:(options.populations)] for j in 1:nout]
         # (Unused for :serial)
     end
-
-    # This is a recorder for populations, but is not actually used for processing, just
-    # for the final return.
-    returnPops = init_dummy_pops(options.populations, datasets, options)
-    # These initial populations are discarded:
-    bestSubPops = copy(returnPops)
 
     actualMaxsize = options.maxsize + MAX_DEGREE
 
@@ -695,37 +694,38 @@ function _equation_search(
 
         saved_pop = load_saved_population(saved_state; out=j, pop=i)
 
-        if saved_pop !== nothing && length(saved_pop.members) == options.population_size
-            saved_pop::Population{T,L}
-            ## Update losses:
-            for member in saved_pop.members
-                score, result_loss = score_func(datasets[j], member, options)
-                member.score = score
-                member.loss = result_loss
+        new_pop =
+            if saved_pop !== nothing && length(saved_pop.members) == options.population_size
+                saved_pop::Population{T,L}
+                ## Update losses:
+                for member in saved_pop.members
+                    score, result_loss = score_func(datasets[j], member, options)
+                    member.score = score
+                    member.loss = result_loss
+                end
+                copy_pop = copy(saved_pop)
+                @sr_spawner parallelism worker_idx (
+                    copy_pop, HallOfFame(options, T, L), RecordType(), 0.0
+                )
+            else
+                if saved_pop !== nothing
+                    @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
+                end
+                @sr_spawner parallelism worker_idx (
+                    Population(
+                        datasets[j];
+                        population_size=options.population_size,
+                        nlength=3,
+                        options=options,
+                        nfeatures=datasets[j].nfeatures,
+                    ),
+                    HallOfFame(options, T, L),
+                    RecordType(),
+                    Float64(options.population_size),
+                )
+                # This involves population_size evaluations, on the full dataset:
             end
-            copy_pop = copy(saved_pop)
-            new_pop = @sr_spawner parallelism worker_idx (
-                copy_pop, HallOfFame(options, T, L), RecordType(), 0.0
-            )
-        else
-            if saved_pop !== nothing
-                @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
-            end
-            new_pop = @sr_spawner parallelism worker_idx (
-                Population(
-                    datasets[j];
-                    population_size=options.population_size,
-                    nlength=3,
-                    options=options,
-                    nfeatures=datasets[j].nfeatures,
-                ),
-                HallOfFame(options, T, L),
-                RecordType(),
-                Float64(options.population_size),
-            )
-            # This involves population_size evaluations, on the full dataset:
-        end
-        push!(init_pops[j], new_pop)
+        push!(allPops[j], new_pop)
     end
     # 2. Start the cycle on every process:
     for j in 1:nout, i in 1:(options.populations)
@@ -741,11 +741,12 @@ function _equation_search(
         # TODO - why is this needed??
         # Multi-threaded doesn't like to fetch within a new task:
         c_rss = deepcopy(running_search_statistics)
+        last_pop = allPops[j][i]
         updated_pop = @sr_spawner parallelism worker_idx let
             in_pop = if parallelism in (:multiprocessing, :multithreading)
-                fetch(init_pops[j][i])[1]
+                fetch(last_pop)[1]
             else
-                init_pops[j][i][1]
+                last_pop[1]
             end
 
             cur_record = RecordType()
@@ -781,7 +782,7 @@ function _equation_search(
             end
             (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
         end
-        push!(allPops[j], updated_pop)
+        allPops[j][i] = updated_pop
     end
 
     debug(verbosity > 0, "Started!")
