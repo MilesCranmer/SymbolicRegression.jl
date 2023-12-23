@@ -645,25 +645,9 @@ function _equation_search(
     ### Distributed code:
     ##########################################################################
     if parallelism == :multiprocessing
-        (procs, we_created_procs) = if procs === nothing
-            (addprocs_function(numprocs; lazy=false, exeflags), true)
-        else
-            (procs, false)
-        end
-
-        if we_created_procs
-            project_path = splitdir(Pkg.project().path)[1]
-            activate_env_on_workers(procs, project_path, options, verbosity)
-            import_module_on_workers(procs, @__FILE__, options, verbosity)
-        end
-        move_functions_to_workers(procs, options, example_dataset, verbosity)
-        if runtests
-            test_module_on_workers(procs, options, verbosity)
-        end
-
-        if runtests
-            test_entire_pipeline(procs, example_dataset, options, verbosity)
-        end
+        (procs, we_created_procs) = configure_workers(;
+            procs, numprocs, addprocs_function, options, exeflags, example_dataset, runtests
+        )
     end
     # Get the next worker process to give a job:
     worker_assignment = Dict{Tuple{Int,Int},Int}()
