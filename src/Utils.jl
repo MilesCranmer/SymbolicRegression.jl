@@ -4,18 +4,6 @@ module UtilsModule
 import Printf: @printf
 import MacroTools: splitdef, combinedef
 
-function debug(verbosity, string...)
-    if verbosity > 0
-        println(string...)
-    end
-end
-
-function debug_inline(verbosity, string...)
-    if verbosity > 0
-        print(string...)
-    end
-end
-
 const pseudo_time = Ref(0)
 
 function get_birth_order(; deterministic=false)::Int

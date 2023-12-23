@@ -3,7 +3,6 @@ module SingleIterationModule
 import DynamicExpressions: Node, string_tree, simplify_tree, combine_operators
 import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
-import ..UtilsModule: debug
 import ..PopMemberModule: generate_reference
 import ..PopulationModule: Population, finalize_scores, best_sub_pop
 import ..HallOfFameModule: HallOfFame

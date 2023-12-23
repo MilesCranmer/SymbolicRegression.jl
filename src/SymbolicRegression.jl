@@ -192,8 +192,7 @@ import .CoreModule:
     erf,
     erfc,
     atanh_clip
-import .UtilsModule:
-    debug, debug_inline, is_anonymous_function, recursive_merge, json3_write
+import .UtilsModule: is_anonymous_function, recursive_merge, json3_write
 import .ComplexityModule: compute_complexity
 import .CheckConstraintsModule: check_constraints
 import .AdaptiveParsimonyModule:
@@ -529,7 +528,8 @@ function equation_search(
                 end
             ) / 1024^2
         )
-        heap_size_hint_in_bytes === nothing &&
+        _verbosity > 0 &&
+            heap_size_hint_in_bytes === nothing &&
             @info "Automatically setting --heap-size-hint=$(heap_size_hint_in_megabytes)M on each Julia process. You can set this manually with `heap_size_hint_in_bytes`."
 
         `--heap-size=$(heap_size_hint_in_megabytes)M`
@@ -755,7 +755,7 @@ function _equation_search(
         allPops[j][i] = updated_pop
     end
 
-    debug(verbosity > 0, "Started!")
+    verbosity > 0 && @info "Started!"
     start_time = time()
     total_cycles = options.populations * niterations
     cycles_remaining = [total_cycles for j in 1:nout]
