@@ -68,7 +68,7 @@ import Printf: @printf, @sprintf
 import PackageExtensionCompat: @require_extensions
 using Pkg: Pkg
 import TOML: parsefile
-import Random: seed!, randperm
+import Random: seed!, shuffle!
 using Reexport
 import DynamicExpressions:
     Node,
@@ -422,7 +422,7 @@ end
 function equation_search(
     datasets::Vector{D};
     niterations::Int=10,
-    options::Options = Options(),
+    options::Options=Options(),
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
@@ -475,14 +475,17 @@ function equation_search(
     else
         Val(dim_out)
     end
-    _numprocs = if numprocs === nothing && procs === nothing
+    _numprocs::Int = if numprocs === nothing && procs === nothing
         4
-    elseif procs !== nothing
-        @assert numprocs === nothing
+    elseif numprocs !== nothing && procs === nothing
+        numprocs
+    elseif numprocs === nothing && procs !== nothing
         length(procs)
     else
+        @assert length(procs) == numprocs
         numprocs
     end
+
     _verbosity = if verbosity === nothing && options.verbosity === nothing
         1
     elseif verbosity === nothing
@@ -517,7 +520,7 @@ function equation_search(
 
     _addprocs_function = addprocs_function === nothing ? addprocs : addprocs_function
 
-    _exeflags = if VERSION >= v"1.9" && concurrency == :multiprocessing
+    exeflags = if VERSION >= v"1.9" && concurrency == :multiprocessing
         heap_size_hint_in_megabytes = floor(
             Int, (
                 if heap_size_hint_in_bytes === nothing
@@ -545,7 +548,7 @@ function equation_search(
         _numprocs,
         procs,
         _addprocs_function,
-        _exeflags,
+        exeflags,
         runtests,
         saved_state,
         _verbosity,
@@ -560,7 +563,7 @@ function _equation_search(
     datasets::Vector{D},
     niterations::Int,
     options::Options,
-    numprocs::Integer,
+    numprocs::Int,
     procs::Union{Vector{Int},Nothing},
     addprocs_function::Function,
     exeflags::Cmd,
@@ -569,14 +572,7 @@ function _equation_search(
     verbosity,
     progress,
     ::Val{should_return_state},
-) where {
-    T<:DATA_TYPE,
-    L<:LOSS_TYPE,
-    D<:Dataset{T,L},
-    parallelism,
-    should_return_state,
-    dim_out,
-}
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},parallelism,should_return_state,dim_out}
     if options.deterministic
         if parallelism != :serial
             error("Determinism is only guaranteed for serial mode.")
@@ -835,7 +831,7 @@ function _equation_search(
     # Randomly order which order to check populations:
     # This is done so that we do work on all nout equally.
     all_idx = [(j, i) for j in 1:nout for i in 1:(options.populations)]
-    all_idx = all_idx[randperm(length(all_idx))]
+    shuffle!(all_idx)
     kappa = 0
     resource_monitor = ResourceMonitor(;
         absolute_start_time=time(),
