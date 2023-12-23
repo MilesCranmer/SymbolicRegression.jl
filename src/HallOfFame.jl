@@ -4,7 +4,7 @@ import DynamicExpressions: Node, string_tree
 import ..UtilsModule: split_string
 import ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu
 import ..ComplexityModule: compute_complexity
-import ..PopMemberModule: PopMember, copy_pop_member
+import ..PopMemberModule: PopMember
 import ..LossFunctionsModule: eval_loss
 import ..InterfaceDynamicExpressionsModule: format_dimensions
 using Printf: @sprintf
@@ -64,7 +64,7 @@ function copy_hall_of_fame(
     hof::HallOfFame{T,L}
 )::HallOfFame{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     return HallOfFame(
-        [copy_pop_member(member) for member in hof.members],
+        [copy(member) for member in hof.members],
         [exists for exists in hof.exists],
     )
 end
@@ -98,7 +98,7 @@ function calculate_pareto_frontier(
             end
         end
         if betterThanAllSmaller
-            push!(dominating, copy_pop_member(member))
+            push!(dominating, copy(member))
         end
     end
     return dominating

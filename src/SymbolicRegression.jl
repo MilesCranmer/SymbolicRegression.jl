@@ -206,7 +206,7 @@ import .MutationFunctionsModule:
     crossover_trees
 import .InterfaceDynamicExpressionsModule: @extend_operators
 import .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
-import .PopMemberModule: PopMember, copy_pop_member, copy_pop_member_reset_birth
+import .PopMemberModule: PopMember, reset_birth!
 import .PopulationModule:
     Population, copy_population, best_sub_pop, record_population, best_of_sample
 import .HallOfFameModule:
@@ -891,7 +891,7 @@ function _equation_search(
                     already_filled = hallOfFame[j].exists[size]
                     better_than_current = member.score < hallOfFame[j].members[size].score
                     if !already_filled || better_than_current
-                        hallOfFame[j].members[size] = copy_pop_member(member)
+                        hallOfFame[j].members[size] = copy(member)
                         hallOfFame[j].exists[size] = true
                     end
                 end
