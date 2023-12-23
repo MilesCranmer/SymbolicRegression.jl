@@ -573,22 +573,6 @@ function _equation_search(
     progress,
     ::Val{should_return_state},
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},parallelism,should_return_state,dim_out}
-    if options.deterministic
-        if parallelism != :serial
-            error("Determinism is only guaranteed for serial mode.")
-        end
-    end
-    if parallelism == :multithreading
-        if Threads.nthreads() == 1
-            @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
-        end
-    end
-    if any(d -> d.X_units !== nothing || d.y_units !== nothing, datasets)
-        if options.dimensional_constraint_penalty === nothing && saved_state === nothing
-            @warn "You are using dimensional constraints, but `dimensional_constraint_penalty` was not set. The default penalty of `1000.0` will be used."
-        end
-    end
-
     stdin_reader = watch_stream(stdin)
 
     if options.define_helper_functions
@@ -600,8 +584,7 @@ function _equation_search(
     @assert (nout == 1 || dim_out == 2)
 
     if runtests
-        test_option_configuration(T, options)
-        # Testing the first output variable is the same:
+        test_option_configuration(parallelism, datasets, saved_state, options)
         test_dataset_configuration(example_dataset, options, verbosity)
     end
 
