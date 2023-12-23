@@ -628,7 +628,8 @@ function _equation_search(
         RunningSearchStatistics(; options=options) for j in 1:nout
     ]
 
-    record = RecordType("options" => "$(options)")
+    record = RecordType()
+    @recorder record["options"] = "$(options)"
 
     curmaxsizes = if iszero(options.warmup_maxsize_by)
         fill(options.maxsize, nout)
@@ -646,7 +647,14 @@ function _equation_search(
     ##########################################################################
     if parallelism == :multiprocessing
         (procs, we_created_procs) = configure_workers(;
-            procs, numprocs, addprocs_function, options, exeflags, example_dataset, runtests
+            procs,
+            numprocs,
+            addprocs_function,
+            options,
+            exeflags,
+            verbosity,
+            example_dataset,
+            runtests,
         )
     end
     # Get the next worker process to give a job:
