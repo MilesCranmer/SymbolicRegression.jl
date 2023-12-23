@@ -212,7 +212,7 @@ import .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 import .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
 import .ProgressBarsModule: WrappedProgressBar
-import .RecorderModule: @recorder, find_iteration_from_record
+import .RecorderModule: @recorder, is_recording, find_iteration_from_record
 import .MigrationModule: migrate!
 import .SearchUtilsModule:
     next_worker,
@@ -748,39 +748,17 @@ function _equation_search(
             else
                 last_pop[1]
             end
-
-            cur_record = RecordType()
-            @recorder cur_record["out$(j)_pop$(i)"] = RecordType(
-                "iteration0" => record_population(in_pop, options)
-            )
-            tmp_num_evals = 0.0
-            normalize_frequencies!(c_rss)
-            tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
+            _dispatch_s_r_cycle(;
+                i,
+                j,
+                iteration=0,
                 dataset,
+                options,
+                verbosity,
                 in_pop,
-                options.ncycles_per_iteration,
                 curmaxsize,
-                c_rss;
-                verbosity=verbosity,
-                options=options,
-                record=cur_record,
+                running_search_statistics=c_rss,
             )
-            tmp_num_evals += evals_from_cycle
-            tmp_pop, evals_from_optimize = optimize_and_simplify_population(
-                dataset, tmp_pop, options, curmaxsize, cur_record
-            )
-            tmp_num_evals += evals_from_optimize
-            if options.batching
-                for i_member in 1:(options.maxsize + MAX_DEGREE)
-                    score, result_loss = score_func(
-                        dataset, tmp_best_seen.members[i_member], options
-                    )
-                    tmp_best_seen.members[i_member].score = score
-                    tmp_best_seen.members[i_member].loss = result_loss
-                    tmp_num_evals += 1
-                end
-            end
-            (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
         end
         allPops[j][i] = updated_pop
     end
@@ -941,55 +919,26 @@ function _equation_search(
             if parallelism == :multiprocessing
                 worker_assignment[(j, i)] = worker_idx
             end
-            @recorder begin
+            iteration = if is_recording(options)
                 key = "out$(j)_pop$(i)"
-                iteration = find_iteration_from_record(key, record) + 1
+                find_iteration_from_record(key, record) + 1
+            else
+                0
             end
 
             c_rss = deepcopy(all_running_search_statistics[j])
-            c_cur_pop = copy(cur_pop)
-            allPops[j][i] = @sr_spawner parallelism worker_idx let
-                cur_record = RecordType()
-                @recorder cur_record[key] = RecordType(
-                    "iteration$(iteration)" => record_population(c_cur_pop, options)
-                )
-                tmp_num_evals = 0.0
-                normalize_frequencies!(c_rss)
-                # TODO: Could the dataset objects themselves be modified during the search??
-                # Perhaps inside the evaluation kernels?
-                # It shouldn't be too expensive to copy the dataset.
-                tmp_pop, tmp_best_seen, evals_from_cycle = s_r_cycle(
-                    dataset,
-                    c_cur_pop,
-                    options.ncycles_per_iteration,
-                    curmaxsize,
-                    c_rss;
-                    verbosity=verbosity,
-                    options=options,
-                    record=cur_record,
-                )
-                tmp_num_evals += evals_from_cycle
-                tmp_pop, evals_from_optimize = optimize_and_simplify_population(
-                    dataset, tmp_pop, options, curmaxsize, cur_record
-                )
-                tmp_num_evals += evals_from_optimize
-
-                # Update scores if using batching:
-                if options.batching
-                    for i_member in 1:(options.maxsize + MAX_DEGREE)
-                        if tmp_best_seen.exists[i_member]
-                            score, result_loss = score_func(
-                                dataset, tmp_best_seen.members[i_member], options
-                            )
-                            tmp_best_seen.members[i_member].score = score
-                            tmp_best_seen.members[i_member].loss = result_loss
-                            tmp_num_evals += 1
-                        end
-                    end
-                end
-
-                (tmp_pop, tmp_best_seen, cur_record, tmp_num_evals)
-            end
+            in_pop = copy(cur_pop)
+            allPops[j][i] = @sr_spawner parallelism worker_idx _dispatch_s_r_cycle(;
+                i,
+                j,
+                iteration,
+                dataset,
+                options,
+                verbosity,
+                in_pop,
+                curmaxsize,
+                running_search_statistics=c_rss,
+            )
             if parallelism in (:multiprocessing, :multithreading)
                 tasks[j][i] = @async put!(channels[j][i], fetch(allPops[j][i]))
             end
@@ -1102,6 +1051,49 @@ function _equation_search(
     else
         return (dim_out == 1 ? only(hallOfFame) : hallOfFame)
     end
+end
+
+function _dispatch_s_r_cycle(;
+    i,
+    j,
+    iteration,
+    dataset,
+    options,
+    verbosity,
+    in_pop,
+    curmaxsize,
+    running_search_statistics,
+)
+    record = RecordType()
+    @recorder record["out$(j)_pop$(i)"] = RecordType(
+        "iteration$(iteration)" => record_population(in_pop, options)
+    )
+    num_evals = 0.0
+    normalize_frequencies!(running_search_statistics)
+    out_pop, best_seen, evals_from_cycle = s_r_cycle(
+        dataset,
+        in_pop,
+        options.ncycles_per_iteration,
+        curmaxsize,
+        running_search_statistics;
+        verbosity=verbosity,
+        options=options,
+        record=record,
+    )
+    num_evals += evals_from_cycle
+    out_pop, evals_from_optimize = optimize_and_simplify_population(
+        dataset, out_pop, options, curmaxsize, record
+    )
+    num_evals += evals_from_optimize
+    if options.batching
+        for i_member in 1:(options.maxsize + MAX_DEGREE)
+            score, result_loss = score_func(dataset, best_seen.members[i_member], options)
+            best_seen.members[i_member].score = score
+            best_seen.members[i_member].loss = result_loss
+            num_evals += 1
+        end
+    end
+    return (out_pop, best_seen, record, num_evals)
 end
 
 include("MLJInterface.jl")
