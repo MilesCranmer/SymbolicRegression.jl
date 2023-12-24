@@ -30,6 +30,8 @@ recursive_merge(x::AbstractDict...) = merge(recursive_merge, x...)
 recursive_merge(x...) = x[end]
 recursive_merge() = error("Unexpected input.")
 
+get_base_type(::Type{Complex{BT}}) where {BT} = BT
+
 const subscripts = ('₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉')
 function subscriptify(number::Integer)
     return join([subscripts[i + 1] for i in reverse(digits(number))])
