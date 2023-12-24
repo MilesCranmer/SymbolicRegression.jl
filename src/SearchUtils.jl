@@ -304,6 +304,26 @@ function load_saved_population(saved_state; out::Int, pop::Int)
 end
 load_saved_population(::Nothing; kws...) = nothing
 
+"""
+    get_cur_maxsize(; options, total_cycles, cycles_remaining)
+
+For searches where the maxsize gradually increases, this function returns the
+current maxsize.
+"""
+function get_cur_maxsize(; options::Options, total_cycles::Int, cycles_remaining::Int)
+    cycles_elapsed = total_cycles - cycles_remaining
+    fraction_elapsed = 1.0f0 * cycles_elapsed / total_cycles
+    in_warmup_period = fraction_elapsed <= options.warmup_maxsize_by
+
+    if options.warmup_maxsize_by > 0 && in_warmup_period
+        return 3 + floor(
+            Int, (options.maxsize - 3) * fraction_elapsed / options.warmup_maxsize_by
+        )
+    else
+        return options.maxsize
+    end
+end
+
 function construct_datasets(
     X,
     y,
