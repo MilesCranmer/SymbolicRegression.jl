@@ -39,6 +39,7 @@ function modelexpr(model_name::Symbol)
             numprocs::Union{Int,Nothing} = nothing
             procs::Union{Vector{Int},Nothing} = nothing
             addprocs_function::Union{Function,Nothing} = nothing
+            heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
             runtests::Bool = true
             loss_type::L = Nothing
             selection_method::Function = choose_best
@@ -166,6 +167,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         numprocs=m.numprocs,
         procs=m.procs,
         addprocs_function=m.addprocs_function,
+        heap_size_hint_in_bytes=m.heap_size_hint_in_bytes,
         runtests=m.runtests,
         saved_state=(old_fitresult === nothing ? nothing : old_fitresult.state),
         return_state=true,
@@ -490,6 +492,11 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
         which is the number of processes to use, as well as the `lazy` keyword argument.
         For example, if set up on a slurm cluster, you could pass
         `addprocs_function = addprocs_slurm`, which will set up slurm processes.
+    - `heap_size_hint_in_bytes::Union{Int,Nothing}=nothing`: On Julia 1.9+, you may set the `--heap-size-hint`
+        flag on Julia processes, recommending garbage collection once a process
+        is close to the recommended size. This is important for long-running distributed
+        jobs where each process has an independent memory, and can help avoid
+        out-of-memory errors. By default, this is set to `Sys.free_memory() / numprocs`.
     - `runtests::Bool=true`: Whether to run (quick) tests before starting the
         search, to see if there will be any problems during the equation search
         related to the host environment.

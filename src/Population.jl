@@ -8,7 +8,7 @@ import ..ComplexityModule: compute_complexity
 import ..LossFunctionsModule: score_func, update_baseline_loss!
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
 import ..MutationFunctionsModule: gen_random_tree
-import ..PopMemberModule: PopMember, copy_pop_member
+import ..PopMemberModule: PopMember
 import ..UtilsModule: bottomk_fast, argmin_fast
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
@@ -92,8 +92,8 @@ function Population(
     )
 end
 
-function copy_population(pop::P)::P where {P<:Population}
-    return Population([copy_pop_member(pm) for pm in pop.members])
+function Base.copy(pop::P)::P where {P<:Population}
+    return Population([copy(pm) for pm in pop.members])
 end
 
 # Sample random members of the population, and make a new one

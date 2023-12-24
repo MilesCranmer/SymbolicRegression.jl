@@ -3,7 +3,7 @@ module MigrationModule
 using StatsBase: StatsBase
 import ..CoreModule: Options, DATA_TYPE, LOSS_TYPE
 import ..PopulationModule: Population
-import ..PopMemberModule: PopMember, copy_pop_member_reset_birth
+import ..PopMemberModule: PopMember, reset_birth!
 import ..UtilsModule: poisson_sample
 
 """
@@ -33,9 +33,8 @@ function migrate!(
     migrants = StatsBase.sample(migrant_candidates, num_replace; replace=true)
 
     for (i, migrant) in zip(locations, migrants)
-        base_pop.members[i] = copy_pop_member_reset_birth(
-            migrant; deterministic=options.deterministic
-        )
+        base_pop.members[i] = copy(migrant)
+        reset_birth!(base_pop.members[i]; options.deterministic)
     end
     return nothing
 end
