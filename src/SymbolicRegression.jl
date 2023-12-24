@@ -986,7 +986,7 @@ function _equation_search(
                     total_cycles,
                     cycles_remaining,
                     head_node_occupation,
-                    PARALLELISM,
+                    parallelism=PARALLELISM,
                     width=options.terminal_width,
                 )
             end
