@@ -29,8 +29,18 @@ function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Vector{
     return least_busy_worker
 end
 
-function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Nothing)::Int
-    return 0
+function assign_next_worker!(worker_assignment; pop, out, parallelism, procs)::Int
+    if parallelism == :multiprocessing
+        worker_idx = next_worker(worker_assignment, procs)
+        worker_assignment[(out, pop)] = worker_idx
+        return worker_idx
+    else
+        return 0
+    end
+end
+
+function initialize_worker_assignment()
+    return Dict{Tuple{Int,Int},Int}()
 end
 
 macro sr_spawner(parallel, p, expr)

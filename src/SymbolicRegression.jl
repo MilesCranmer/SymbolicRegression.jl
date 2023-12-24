@@ -214,7 +214,8 @@ import .ProgressBarsModule: WrappedProgressBar
 import .RecorderModule: @recorder, is_recording, find_iteration_from_record
 import .MigrationModule: migrate!
 import .SearchUtilsModule:
-    next_worker,
+    assign_next_worker!,
+    initialize_worker_assignment,
     @sr_spawner,
     watch_stream,
     close_reader!,
@@ -657,7 +658,7 @@ function _equation_search(
         )
     end
     # Get the next worker process to give a job:
-    worker_assignment = Dict{Tuple{Int,Int},Int}()
+    worker_assignment = initialize_worker_assignment()
 
     hallOfFame = load_saved_hall_of_fame(saved_state)
     hallOfFame = if hallOfFame === nothing
@@ -678,11 +679,9 @@ function _equation_search(
     hallOfFame::Vector{HallOfFame{T,L}}
 
     for j in 1:nout, i in 1:(options.populations)
-        worker_idx = next_worker(worker_assignment, procs)
-        if parallelism == :multiprocessing
-            worker_assignment[(j, i)] = worker_idx
-        end
-
+        worker_idx = assign_next_worker!(
+            worker_assignment; out=j, pop=i, parallelism, procs
+        )
         saved_pop = load_saved_population(saved_state; out=j, pop=i)
 
         new_pop =
@@ -730,10 +729,9 @@ function _equation_search(
         running_search_statistics = all_running_search_statistics[j]
         curmaxsize = curmaxsizes[j]
         @recorder record["out$(j)_pop$(i)"] = RecordType()
-        worker_idx = next_worker(worker_assignment, procs)
-        if parallelism == :multiprocessing
-            worker_assignment[(j, i)] = worker_idx
-        end
+        worker_idx = assign_next_worker!(
+            worker_assignment; out=j, pop=i, parallelism, procs
+        )
 
         # TODO - why is this needed??
         # Multi-threaded doesn't like to fetch within a new task:
@@ -746,8 +744,8 @@ function _equation_search(
                 last_pop[1]
             end
             _dispatch_s_r_cycle(;
-                i,
-                j,
+                pop=i,
+                out=j,
                 iteration=0,
                 dataset,
                 options,
@@ -891,10 +889,9 @@ function _equation_search(
             if cycles_remaining[j] == 0
                 break
             end
-            worker_idx = next_worker(worker_assignment, procs)
-            if parallelism == :multiprocessing
-                worker_assignment[(j, i)] = worker_idx
-            end
+            worker_idx = assign_next_worker!(
+                worker_assignment; out=j, pop=i, parallelism, procs
+            )
             iteration = if is_recording(options)
                 key = "out$(j)_pop$(i)"
                 find_iteration_from_record(key, record) + 1
@@ -905,8 +902,8 @@ function _equation_search(
             c_rss = deepcopy(all_running_search_statistics[j])
             in_pop = copy(cur_pop)
             worker_output[j][i] = @sr_spawner parallelism worker_idx _dispatch_s_r_cycle(;
-                i,
-                j,
+                pop=i,
+                out=j,
                 iteration,
                 dataset,
                 options,
@@ -1019,8 +1016,8 @@ function _equation_search(
 end
 
 function _dispatch_s_r_cycle(;
-    i,
-    j,
+    pop,
+    out,
     iteration,
     dataset,
     options,
@@ -1030,7 +1027,7 @@ function _dispatch_s_r_cycle(;
     running_search_statistics,
 )
     record = RecordType()
-    @recorder record["out$(j)_pop$(i)"] = RecordType(
+    @recorder record["out$(out)_pop$(pop)"] = RecordType(
         "iteration$(iteration)" => record_population(in_pop, options)
     )
     num_evals = 0.0
