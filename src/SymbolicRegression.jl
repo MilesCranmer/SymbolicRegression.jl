@@ -232,7 +232,8 @@ import .SearchUtilsModule:
     load_saved_hall_of_fame,
     load_saved_population,
     construct_datasets,
-    get_cur_maxsize
+    get_cur_maxsize,
+    update_hall_of_fame!
 
 include("deprecates.jl")
 include("Configure.jl")
@@ -627,8 +628,6 @@ function _equation_search(
         # (Unused for :serial)
     end
 
-    actualMaxsize = options.maxsize + MAX_DEGREE
-
     # TODO: Should really be one per population too.
     all_running_search_statistics = [
         RunningSearchStatistics(; options=options) for j in 1:nout
@@ -839,39 +838,17 @@ function _equation_search(
             bestSubPops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
             @recorder record = recursive_merge(record, cur_record)
             num_evals[j][i] += cur_num_evals
-
             dataset = datasets[j]
             curmaxsize = curmaxsizes[j]
 
-            #Try normal copy...
-            bestPops = Population([
-                member for pop in bestSubPops[j] for member in pop.members
-            ])
-
-            ###################################################################
-            # Hall Of Fame updating ###########################################
-            for (i_member, member) in enumerate(
-                Iterators.flatten((cur_pop.members, best_seen.members[best_seen.exists]))
-            )
-                part_of_cur_pop = i_member <= length(cur_pop.members)
+            for member in cur_pop.members
                 size = compute_complexity(member, options)
-
-                if part_of_cur_pop
-                    update_frequencies!(all_running_search_statistics[j]; size=size)
-                end
-                actualMaxsize = options.maxsize + MAX_DEGREE
-
-                valid_size = 0 < size < actualMaxsize
-                if valid_size
-                    already_filled = hallOfFame[j].exists[size]
-                    better_than_current = member.score < hallOfFame[j].members[size].score
-                    if !already_filled || better_than_current
-                        hallOfFame[j].members[size] = copy(member)
-                        hallOfFame[j].exists[size] = true
-                    end
-                end
+                update_frequencies!(all_running_search_statistics[j]; size)
             end
-            ###################################################################
+            #! format: off
+            update_hall_of_fame!(hallOfFame[j], cur_pop.members, options)
+            update_hall_of_fame!(hallOfFame[j], best_seen.members[best_seen.exists], options)
+            #! format: on
 
             # Dominating pareto curve - must be better than all simpler equations
             dominating = calculate_pareto_frontier(hallOfFame[j])
@@ -898,8 +875,11 @@ function _equation_search(
             ###################################################################
             # Migration #######################################################
             if options.migration
+                best_of_each = Population([
+                    member for pop in bestSubPops[j] for member in pop.members
+                ])
                 migrate!(
-                    bestPops.members => cur_pop, options; frac=options.fraction_replaced
+                    best_of_each.members => cur_pop, options; frac=options.fraction_replaced
                 )
             end
             if options.hof_migration && length(dominating) > 0

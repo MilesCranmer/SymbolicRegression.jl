@@ -307,14 +307,14 @@ function test_entire_pipeline(
 end
 
 function configure_workers(;
-    procs,
-    numprocs,
-    addprocs_function,
-    options,
-    exeflags,
+    procs::Union{Vector{Int},Nothing},
+    numprocs::Int,
+    addprocs_function::Function,
+    options::Options,
+    exeflags::Cmd,
     verbosity,
-    example_dataset,
-    runtests,
+    example_dataset::Dataset,
+    runtests::Bool,
 )
     (procs, we_created_procs) = if procs === nothing
         (addprocs_function(numprocs; lazy=false, exeflags), true)

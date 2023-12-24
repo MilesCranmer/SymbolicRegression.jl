@@ -8,12 +8,14 @@ using Distributed
 import StatsBase: mean
 
 import ..UtilsModule: subscriptify
-import ..CoreModule: Dataset, Options
+import ..CoreModule: Dataset, Options, MAX_DEGREE
 import ..ComplexityModule: compute_complexity
 import ..PopulationModule: Population
+import ..PopMemberModule: PopMember
 import ..HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 import ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
+import ..AdaptiveParsimonyModule: update_frequencies!
 
 function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Vector{Int})::Int
     job_counts = Dict(proc => 0 for proc in procs)
@@ -363,6 +365,24 @@ function construct_datasets(
             loss_type=loss_type,
         ) for j in 1:nout
     ]
+end
+
+function update_hall_of_fame!(
+    hall_of_fame::HallOfFame, members::Vector{PM}, options::Options
+) where {PM<:PopMember}
+    for member in members
+        size = compute_complexity(member, options)
+        valid_size = 0 < size < options.maxsize + MAX_DEGREE
+        if !valid_size
+            continue
+        end
+        not_filled = !hall_of_fame.exists[size]
+        better_than_current = member.score < hall_of_fame.members[size].score
+        if not_filled || better_than_current
+            hall_of_fame.members[size] = copy(member)
+            hall_of_fame.exists[size] = true
+        end
+    end
 end
 
 end
