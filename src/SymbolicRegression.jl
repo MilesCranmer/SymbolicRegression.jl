@@ -805,10 +805,6 @@ function _equation_search(
         num_intervals_to_store=options.populations * 100 * nout,
     )
     for (j, i) in Iterators.cycle(all_idx)
-        if sum(cycles_remaining) <= 0
-            break
-        end
-
         # Check if error on population:
         if PARALLELISM in (:multiprocessing, :multithreading)
             if istaskfailed(tasks[j][i])
@@ -893,7 +889,7 @@ function _equation_search(
             ###################################################################
 
             cycles_remaining[j] -= 1
-            if cycles_remaining[j] == 0
+            if sum(cycles_remaining) <= 0
                 break
             end
             worker_idx = assign_next_worker!(
