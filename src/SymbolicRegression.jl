@@ -900,7 +900,7 @@ function _equation_search(
                 break
             end
             worker_idx = assign_next_worker!(
-                worker_assignment; out=j, pop=i, parallelis=PARALLELISM, procs
+                worker_assignment; out=j, pop=i, parallelism=PARALLELISM, procs
             )
             iteration = if is_recording(options)
                 key = "out$(j)_pop$(i)"
