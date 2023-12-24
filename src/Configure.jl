@@ -245,7 +245,7 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
     else
         verbosity > 0 && @info "Importing installed module on workers..."
         @everywhere procs begin
-            Base.MainInclude.eval(using SymbolicRegression)
+            Base.MainInclude.eval(:(using SymbolicRegression))
         end
         verbosity > 0 && @info "Finished!"
     end
