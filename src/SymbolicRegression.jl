@@ -68,7 +68,7 @@ import Printf: @printf, @sprintf
 import PackageExtensionCompat: @require_extensions
 using Pkg: Pkg
 import TOML: parsefile
-import Random: seed!, shuffle!
+import Random: seed!, shuffle
 using Reexport
 import DynamicExpressions:
     Node,
@@ -797,22 +797,17 @@ function _equation_search(
 
     # Randomly order which order to check populations:
     # This is done so that we do work on all nout equally.
-    all_idx = [(j, i) for j in 1:nout for i in 1:(options.populations)]
-    shuffle!(all_idx)
-    kappa = 0
+    all_idx = shuffle([(j, i) for j in 1:nout for i in 1:(options.populations)])
     resource_monitor = ResourceMonitor(;
         absolute_start_time=time(),
         # Storing n times as many monitoring intervals as populations seems like it will
         # help get accurate resource estimates:
         num_intervals_to_store=options.populations * 100 * nout,
     )
-    while sum(cycles_remaining) > 0
-        kappa += 1
-        if kappa > options.populations * nout
-            kappa = 1
+    for (j, i) in Iterators.cycle(all_idx)
+        if sum(cycles_remaining) <= 0
+            break
         end
-        # nout, populations:
-        j, i = all_idx[kappa]
 
         # Check if error on population:
         if PARALLELISM in (:multiprocessing, :multithreading)
