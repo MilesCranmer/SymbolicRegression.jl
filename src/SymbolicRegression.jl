@@ -1016,14 +1016,14 @@ function _equation_search(
 end
 
 function _dispatch_s_r_cycle(;
-    pop,
-    out,
-    iteration,
-    dataset,
-    options,
+    pop::Int,
+    out::Int,
+    iteration::Int,
+    dataset::Dataset,
+    options::Options,
     verbosity,
-    in_pop,
-    curmaxsize,
+    in_pop::Population,
+    curmaxsize::Int,
     running_search_statistics,
 )
     record = RecordType()
