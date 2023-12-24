@@ -647,6 +647,8 @@ function _equation_search(
             numprocs,
             addprocs_function,
             options,
+            project_path=splitdir(Pkg.project().path)[1],
+            file=@__FILE__,
             exeflags,
             verbosity,
             example_dataset,

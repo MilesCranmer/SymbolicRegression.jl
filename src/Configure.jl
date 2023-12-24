@@ -311,6 +311,8 @@ function configure_workers(;
     numprocs::Int,
     addprocs_function::Function,
     options::Options,
+    project_path,
+    file,
     exeflags::Cmd,
     verbosity,
     example_dataset::Dataset,
@@ -323,9 +325,8 @@ function configure_workers(;
     end
 
     if we_created_procs
-        project_path = splitdir(Pkg.project().path)[1]
         activate_env_on_workers(procs, project_path, options, verbosity)
-        import_module_on_workers(procs, @__FILE__, options, verbosity)
+        import_module_on_workers(procs, file, options, verbosity)
     end
     move_functions_to_workers(procs, options, example_dataset, verbosity)
     if runtests
