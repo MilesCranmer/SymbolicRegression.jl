@@ -603,7 +603,7 @@ function _equation_search(
     # Start a population on every process
     #    Store the population, hall of fame
     WorkerOutputType = if parallelism == :serial
-        Tuple{Population,HallOfFame,RecordType,Float64}
+        Tuple{Population{T,L},HallOfFame{T,L},RecordType,Float64}
     elseif parallelism == :multiprocessing
         Future
     else
@@ -831,8 +831,8 @@ function _equation_search(
                 else
                     worker_output[j][i]
                 end
-            cur_pop::Population
-            best_seen::HallOfFame
+            cur_pop::Population{T,L}
+            best_seen::HallOfFame{T,L}
             cur_record::RecordType
             cur_num_evals::Float64
             returnPops[j][i] = copy(cur_pop)
