@@ -192,7 +192,7 @@ import .CoreModule:
     erf,
     erfc,
     atanh_clip
-import .UtilsModule: is_anonymous_function, recursive_merge, json3_write, get_base_type
+import .UtilsModule: is_anonymous_function, recursive_merge, json3_write
 import .ComplexityModule: compute_complexity
 import .CheckConstraintsModule: check_constraints
 import .AdaptiveParsimonyModule:
@@ -381,7 +381,7 @@ function equation_search(
         y_variable_names,
         X_units,
         y_units,
-        (T <: Complex && L === Nothing) ? get_base_type(T) : L,
+        L,
     )
 
     return equation_search(

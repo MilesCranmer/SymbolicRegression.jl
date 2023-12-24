@@ -103,12 +103,12 @@ function Dataset(
     display_variable_names=variable_names,
     y_variable_name::Union{String,Nothing}=nothing,
     extra::NamedTuple=NamedTuple(),
-    loss_type::Type{Linit}=Nothing,
+    loss_type::Type{L}=Nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
     # Deprecated:
     varMap=nothing,
-) where {T<:DATA_TYPE,Linit}
+) where {T<:DATA_TYPE,L}
     Base.require_one_based_indexing(X)
     y !== nothing && Base.require_one_based_indexing(y)
     # Deprecation warning:
@@ -142,7 +142,12 @@ function Dataset(
             sum(y) / n
         end
     end
-    out_loss_type = (Linit === Nothing) ? T : Linit
+    out_loss_type = if L === Nothing
+        T <: Complex ? get_base_type(T) : T
+    else
+        L
+    end
+
     use_baseline = true
     baseline = one(out_loss_type)
     y_si_units = get_si_units(T, y_units)
