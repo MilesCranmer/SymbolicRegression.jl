@@ -10,7 +10,7 @@ import DynamicQuantities:
     DEFAULT_DIM_BASE_TYPE
 import ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
 
-import ..UtilsModule: subscriptify
+import ..UtilsModule: subscriptify, get_base_type
 import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 #! format: off
 import ...deprecate_varmap
