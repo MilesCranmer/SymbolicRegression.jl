@@ -476,7 +476,7 @@ function equation_search(
         options.return_state
     end
 
-    _v_dim_out = if dim_out === nothing
+    v_dim_out = if dim_out === nothing
         length(datasets) > 1 ? Val(2) : Val(1)
     else
         Val(dim_out)
@@ -538,7 +538,7 @@ function equation_search(
         )
         _verbosity > 0 &&
             heap_size_hint_in_bytes === nothing &&
-            @info "Automatically setting --heap-size-hint=$(heap_size_hint_in_megabytes)M on each Julia process. You can set this manually with `heap_size_hint_in_bytes`."
+            @info "Automatically setting `--heap-size-hint=$(heap_size_hint_in_megabytes)M` on each Julia process. You can configure this with the `heap_size_hint_in_bytes` parameter."
 
         `--heap-size=$(heap_size_hint_in_megabytes)M`
     else
@@ -548,7 +548,7 @@ function equation_search(
     # Underscores here mean that we have mutated the variable
     return _equation_search(
         v_concurrency,
-        _v_dim_out,
+        v_dim_out,
         datasets,
         niterations,
         options,
@@ -694,24 +694,34 @@ function _equation_search(
                     member.loss = result_loss
                 end
                 copy_pop = copy(saved_pop)
-                @sr_spawner parallelism worker_idx (
-                    copy_pop, HallOfFame(options, T, L), RecordType(), 0.0
+                @sr_spawner(
+                    begin
+                        (copy_pop, HallOfFame(options, T, L), RecordType(), 0.0)
+                    end,
+                    parallelism = parallelism,
+                    worker_idx = worker_idx
                 )
             else
                 if saved_pop !== nothing
                     @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
                 end
-                @sr_spawner parallelism worker_idx (
-                    Population(
-                        datasets[j];
-                        population_size=options.population_size,
-                        nlength=3,
-                        options=options,
-                        nfeatures=datasets[j].nfeatures,
-                    ),
-                    HallOfFame(options, T, L),
-                    RecordType(),
-                    Float64(options.population_size),
+                @sr_spawner(
+                    begin
+                        (
+                            Population(
+                                datasets[j];
+                                population_size=options.population_size,
+                                nlength=3,
+                                options=options,
+                                nfeatures=datasets[j].nfeatures,
+                            ),
+                            HallOfFame(options, T, L),
+                            RecordType(),
+                            Float64(options.population_size),
+                        )
+                    end,
+                    parallelism = parallelism,
+                    worker_idx = worker_idx
                 )
                 # This involves population_size evaluations, on the full dataset:
             end
@@ -737,24 +747,28 @@ function _equation_search(
         # Multi-threaded doesn't like to fetch within a new task:
         c_rss = deepcopy(running_search_statistics)
         last_pop = worker_output[j][i]
-        updated_pop = @sr_spawner parallelism worker_idx let
-            in_pop = if parallelism in (:multiprocessing, :multithreading)
-                fetch(last_pop)[1]
-            else
-                last_pop[1]
-            end
-            _dispatch_s_r_cycle(;
-                pop=i,
-                out=j,
-                iteration=0,
-                dataset,
-                options,
-                verbosity,
-                in_pop,
-                curmaxsize,
-                running_search_statistics=c_rss,
-            )
-        end
+        updated_pop = @sr_spawner(
+            begin
+                in_pop = if parallelism in (:multiprocessing, :multithreading)
+                    fetch(last_pop)[1]
+                else
+                    last_pop[1]
+                end
+                _dispatch_s_r_cycle(;
+                    pop=i,
+                    out=j,
+                    iteration=0,
+                    dataset,
+                    options,
+                    verbosity,
+                    in_pop,
+                    curmaxsize,
+                    running_search_statistics=c_rss,
+                )
+            end,
+            parallelism = parallelism,
+            worker_idx = worker_idx
+        )
         worker_output[j][i] = updated_pop
     end
 
@@ -901,16 +915,22 @@ function _equation_search(
 
             c_rss = deepcopy(all_running_search_statistics[j])
             in_pop = copy(cur_pop)
-            worker_output[j][i] = @sr_spawner parallelism worker_idx _dispatch_s_r_cycle(;
-                pop=i,
-                out=j,
-                iteration,
-                dataset,
-                options,
-                verbosity,
-                in_pop,
-                curmaxsize,
-                running_search_statistics=c_rss,
+            worker_output[j][i] = @sr_spawner(
+                begin
+                    _dispatch_s_r_cycle(;
+                        pop=i,
+                        out=j,
+                        iteration,
+                        dataset,
+                        options,
+                        verbosity,
+                        in_pop,
+                        curmaxsize,
+                        running_search_statistics=c_rss,
+                    )
+                end,
+                parallelism = parallelism,
+                worker_idx = worker_idx
             )
             if parallelism in (:multiprocessing, :multithreading)
                 tasks[j][i] = @async put!(channels[j][i], fetch(worker_output[j][i]))

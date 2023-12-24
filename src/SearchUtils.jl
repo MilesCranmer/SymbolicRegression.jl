@@ -43,18 +43,25 @@ function initialize_worker_assignment()
     return Dict{Tuple{Int,Int},Int}()
 end
 
-macro sr_spawner(parallel, p, expr)
-    quote
-        if $(esc(parallel)) == :serial
-            $(esc(expr))
-        elseif $(esc(parallel)) == :multiprocessing
-            @spawnat($(esc(p)), $(esc(expr)))
-        elseif $(esc(parallel)) == :multithreading
-            Threads.@spawn($(esc(expr)))
+macro sr_spawner(expr, kws...)
+    # Extract parallelism and worker_idx parameters from kws
+    @assert length(kws) == 2
+    @assert all(ex -> ex.head == :(=), kws)
+    @assert any(ex -> ex.args[1] == :parallelism, kws)
+    @assert any(ex -> ex.args[1] == :worker_idx, kws)
+    parallelism = kws[findfirst(ex -> ex.args[1] == :parallelism, kws)].args[2]
+    worker_idx = kws[findfirst(ex -> ex.args[1] == :worker_idx, kws)].args[2]
+    return quote
+        if $(parallelism) == :serial
+            $(expr)
+        elseif $(parallelism) == :multiprocessing
+            @spawnat($(worker_idx), $(expr))
+        elseif $(parallelism) == :multithreading
+            Threads.@spawn($(expr))
         else
             error("Invalid parallel type.")
         end
-    end
+    end |> esc
 end
 
 function init_dummy_pops(
