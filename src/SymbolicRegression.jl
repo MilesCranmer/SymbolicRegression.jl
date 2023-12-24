@@ -602,7 +602,7 @@ function _equation_search(
     end
     # Start a population on every process
     #    Store the population, hall of fame
-    allPopsType = if parallelism == :serial
+    WorkerOutputType = if parallelism == :serial
         Tuple{Population,HallOfFame,RecordType,Float64}
     elseif parallelism == :multiprocessing
         Future
@@ -610,13 +610,13 @@ function _equation_search(
         Task
     end
 
-    # Pointers to populations on each worker:
-    allPops = [allPopsType[] for j in 1:nout]
     # Persistent storage of last-saved population for final return:
     returnPops = init_dummy_pops(options.populations, datasets, options)
     # Best 10 members from each population for migration:
     bestSubPops = init_dummy_pops(options.populations, datasets, options)
 
+    # Pointers to populations on each worker:
+    worker_output = [WorkerOutputType[] for j in 1:nout]
     # Initialize storage for workers
     tasks = [Task[] for j in 1:nout]
     # Set up a channel to send finished populations back to head node
@@ -717,7 +717,7 @@ function _equation_search(
                 )
                 # This involves population_size evaluations, on the full dataset:
             end
-        push!(allPops[j], new_pop)
+        push!(worker_output[j], new_pop)
     end
     total_cycles = options.populations * niterations
     cycles_remaining = [total_cycles for j in 1:nout]
@@ -739,7 +739,7 @@ function _equation_search(
         # TODO - why is this needed??
         # Multi-threaded doesn't like to fetch within a new task:
         c_rss = deepcopy(running_search_statistics)
-        last_pop = allPops[j][i]
+        last_pop = worker_output[j][i]
         updated_pop = @sr_spawner parallelism worker_idx let
             in_pop = if parallelism in (:multiprocessing, :multithreading)
                 fetch(last_pop)[1]
@@ -758,7 +758,7 @@ function _equation_search(
                 running_search_statistics=c_rss,
             )
         end
-        allPops[j][i] = updated_pop
+        worker_output[j][i] = updated_pop
     end
 
     verbosity > 0 && @info "Started!"
@@ -781,7 +781,7 @@ function _equation_search(
     if parallelism in (:multiprocessing, :multithreading)
         for j in 1:nout, i in 1:(options.populations)
             # Start listening for each population to finish:
-            t = @async put!(channels[j][i], fetch(allPops[j][i]))
+            t = @async put!(channels[j][i], fetch(worker_output[j][i]))
             push!(tasks[j], t)
         end
     end
@@ -829,7 +829,7 @@ function _equation_search(
                 if parallelism in (:multiprocessing, :multithreading)
                     take!(channels[j][i])
                 else
-                    allPops[j][i]
+                    worker_output[j][i]
                 end
             cur_pop::Population
             best_seen::HallOfFame
@@ -924,7 +924,7 @@ function _equation_search(
 
             c_rss = deepcopy(all_running_search_statistics[j])
             in_pop = copy(cur_pop)
-            allPops[j][i] = @sr_spawner parallelism worker_idx _dispatch_s_r_cycle(;
+            worker_output[j][i] = @sr_spawner parallelism worker_idx _dispatch_s_r_cycle(;
                 i,
                 j,
                 iteration,
@@ -936,7 +936,7 @@ function _equation_search(
                 running_search_statistics=c_rss,
             )
             if parallelism in (:multiprocessing, :multithreading)
-                tasks[j][i] = @async put!(channels[j][i], fetch(allPops[j][i]))
+                tasks[j][i] = @async put!(channels[j][i], fetch(worker_output[j][i]))
             end
 
             curmaxsizes[j] = get_cur_maxsize(;
@@ -1021,7 +1021,7 @@ function _equation_search(
         we_created_procs && rmprocs(procs)
     elseif parallelism == :multithreading
         for j in 1:nout, i in 1:(options.populations)
-            wait(allPops[j][i])
+            wait(worker_output[j][i])
         end
     end
 
