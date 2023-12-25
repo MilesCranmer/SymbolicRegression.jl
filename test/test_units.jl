@@ -348,7 +348,7 @@ end
         display_variable_names=dataset.display_variable_names,
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
-    ) == "(x₅ * 3.2[⋅])"
+    ) == "x₅ * 3.2[⋅]"
 
     # Should print numeric factor in unit if given:
     dataset2 = Dataset(X, y; X_units=[1.5, 1.9, 2.0, 3.0, 5.0u"m"], y_units="kg")
