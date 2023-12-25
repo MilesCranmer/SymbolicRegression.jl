@@ -551,6 +551,8 @@ function equation_search(
         ``
     end
 
+    _N = with_type_parameters(N, T)
+
     # Underscores here mean that we have mutated the variable
     return _equation_search(
         v_concurrency,
@@ -558,7 +560,7 @@ function equation_search(
         datasets,
         niterations,
         options,
-        with_type_parameters(N, T),
+        _N,
         _numprocs,
         procs,
         _addprocs_function,
