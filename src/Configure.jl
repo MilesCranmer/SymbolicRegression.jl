@@ -251,13 +251,13 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
     end
 end
 
-function test_module_on_workers(procs, options::Options, verbosity)
+function test_module_on_workers(procs, options::Options, verbosity, ::Type{N}) where {N<:AbstractExpressionNode}
     verbosity > 0 && @info "Testing module on workers..."
     futures = []
     for proc in procs
         push!(
             futures,
-            @spawnat proc SymbolicRegression.gen_random_tree(3, options, 5, TEST_TYPE)
+            @spawnat proc SymbolicRegression.gen_random_tree(3, options, 5, TEST_TYPE, N)
         )
     end
     for future in futures
@@ -268,8 +268,8 @@ function test_module_on_workers(procs, options::Options, verbosity)
 end
 
 function test_entire_pipeline(
-    procs, dataset::Dataset{T}, options::Options, verbosity
-) where {T<:DATA_TYPE}
+    procs, dataset::Dataset{T}, options::Options, verbosity, ::Type{N}
+) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
     futures = []
     verbosity > 0 && @info "Testing entire pipeline on workers..."
     for proc in procs
@@ -317,7 +317,8 @@ function configure_workers(;
     verbosity,
     example_dataset::Dataset,
     runtests::Bool,
-)
+    node_type::Type{N},
+) where {N}
     (procs, we_created_procs) = if procs === nothing
         (addprocs_function(numprocs; lazy=false, exeflags), true)
     else
@@ -330,11 +331,11 @@ function configure_workers(;
     end
     move_functions_to_workers(procs, options, example_dataset, verbosity)
     if runtests
-        test_module_on_workers(procs, options, verbosity)
+        test_module_on_workers(procs, options, verbosity, N)
     end
 
     if runtests
-        test_entire_pipeline(procs, example_dataset, options, verbosity)
+        test_entire_pipeline(procs, example_dataset, options, verbosity, N)
     end
 
     return (procs, we_created_procs)
