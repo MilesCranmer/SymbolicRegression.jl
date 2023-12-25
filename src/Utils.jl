@@ -4,18 +4,6 @@ module UtilsModule
 import Printf: @printf
 import MacroTools: splitdef, combinedef
 
-function debug(verbosity, string...)
-    if verbosity > 0
-        println(string...)
-    end
-end
-
-function debug_inline(verbosity, string...)
-    if verbosity > 0
-        print(string...)
-    end
-end
-
 const pseudo_time = Ref(0)
 
 function get_birth_order(; deterministic=false)::Int
@@ -41,6 +29,8 @@ recursive_merge(x::AbstractVector...) = cat(x...; dims=1)
 recursive_merge(x::AbstractDict...) = merge(recursive_merge, x...)
 recursive_merge(x...) = x[end]
 recursive_merge() = error("Unexpected input.")
+
+get_base_type(::Type{Complex{BT}}) where {BT} = BT
 
 const subscripts = ('₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉')
 function subscriptify(number::Integer)

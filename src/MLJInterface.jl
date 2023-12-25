@@ -4,7 +4,8 @@ using Optim: Optim
 import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, AbstractExpressionNode, Node
 import DynamicQuantities:
-    AbstractQuantity,
+    QuantityArray,
+    UnionAbstractQuantity,
     AbstractDimensions,
     SymbolicDimensions,
     Quantity,
@@ -39,6 +40,7 @@ function modelexpr(model_name::Symbol)
         numprocs::Union{Int,Nothing} = nothing
         procs::Union{Vector{Int},Nothing} = nothing
         addprocs_function::Union{Function,Nothing} = nothing
+        heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
         runtests::Bool = true
         loss_type::L = Nothing
         selection_method::Function = choose_best
@@ -167,6 +169,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         numprocs=m.numprocs,
         procs=m.procs,
         addprocs_function=m.addprocs_function,
+        heap_size_hint_in_bytes=m.heap_size_hint_in_bytes,
         runtests=m.runtests,
         saved_state=(old_fitresult === nothing ? nothing : old_fitresult.state),
         return_state=true,
@@ -262,12 +265,12 @@ function validate_units(X_units, old_X_units)
 end
 
 # TODO: Test whether this conversion poses any issues in data normalization...
-function dimension_fallback(
-    q::Union{<:Quantity{T,<:AbstractDimensions}}, ::Type{D}
-) where {T,D}
+function dimension_with_fallback(q::UnionAbstractQuantity{T}, ::Type{D}) where {T,D}
     return dimension(convert(Quantity{T,D}, q))::D
 end
-dimension_fallback(_, ::Type{D}) where {D} = D()
+function dimension_with_fallback(_, ::Type{D}) where {D}
+    return D()
+end
 function prediction_warn()
     @warn "Evaluation failed either due to NaNs detected or due to unfinished search. Using 0s for prediction."
 end
@@ -309,25 +312,28 @@ function prediction_fallback(
     end
 end
 
-function unwrap_units_single(A::AbstractMatrix{T}, ::Type{D}) where {D,T<:Number}
-    return A, [D() for _ in eachrow(A)]
-end
+compat_ustrip(A::QuantityArray) = ustrip(A)
+compat_ustrip(A) = ustrip.(A)
+
+"""
+    unwrap_units_single(::AbstractArray, ::Type{<:AbstractDimensions})
+    
+Remove units from some features in a matrix, and return, as a tuple,
+(1) the matrix with stripped units, and (2) the dimensions for those features.
+"""
 function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
-    for (i, row) in enumerate(eachrow(A))
-        allequal(Base.Fix2(dimension_fallback, D).(row)) ||
+    dims = D[dimension_with_fallback(first(row), D) for row in eachrow(A)]
+    @inbounds for (i, row) in enumerate(eachrow(A))
+        all(xi -> dimension_with_fallback(xi, D) == dims[i], row) ||
             error("Inconsistent units in feature $i of matrix.")
     end
-    dims = map(Base.Fix2(dimension_fallback, D) ∘ first, eachrow(A))
-    return stack([ustrip.(row) for row in eachrow(A)]; dims=1), dims
-end
-function unwrap_units_single(v::AbstractVector{T}, ::Type{D}) where {D,T<:Number}
-    return v, D()
+    return stack(compat_ustrip, eachrow(A); dims=1)::AbstractMatrix, dims
 end
 function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
-    allequal(Base.Fix2(dimension_fallback, D).(v)) || error("Inconsistent units in vector.")
-    dims = dimension_fallback(first(v), D)
-    v = ustrip.(v)
-    return v, dims
+    dims = dimension_with_fallback(first(v), D)
+    all(xi -> dimension_with_fallback(xi, D) == dims, v) ||
+        error("Inconsistent units in vector.")
+    return compat_ustrip(v)::AbstractVector, dims
 end
 
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
@@ -490,6 +496,11 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
         which is the number of processes to use, as well as the `lazy` keyword argument.
         For example, if set up on a slurm cluster, you could pass
         `addprocs_function = addprocs_slurm`, which will set up slurm processes.
+    - `heap_size_hint_in_bytes::Union{Int,Nothing}=nothing`: On Julia 1.9+, you may set the `--heap-size-hint`
+        flag on Julia processes, recommending garbage collection once a process
+        is close to the recommended size. This is important for long-running distributed
+        jobs where each process has an independent memory, and can help avoid
+        out-of-memory errors. By default, this is set to `Sys.free_memory() / numprocs`.
     - `runtests::Bool=true`: Whether to run (quick) tests before starting the
         search, to see if there will be any problems during the equation search
         related to the host environment.

@@ -109,8 +109,8 @@ function PopMember(
     )
 end
 
-function copy_pop_member(p::P) where {P<:PopMember}
-    tree = copy_node(p.tree)
+function Base.copy(p::P) where {P<:PopMember}
+    tree = copy(p.tree)
     score = copy(p.score)
     loss = copy(p.loss)
     birth = copy(p.birth)
@@ -120,10 +120,9 @@ function copy_pop_member(p::P) where {P<:PopMember}
     return P(tree, score, loss, birth, complexity, ref, parent)
 end
 
-function copy_pop_member_reset_birth(p::P; deterministic::Bool)::P where {P<:PopMember}
-    new_member = copy_pop_member(p)
-    new_member.birth = get_birth_order(; deterministic=deterministic)
-    return new_member
+function reset_birth!(p::PopMember; deterministic::Bool)
+    p.birth = get_birth_order(; deterministic)
+    return p
 end
 
 # Can read off complexity directly from pop members

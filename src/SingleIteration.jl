@@ -9,8 +9,7 @@ import DynamicExpressions:
     combine_operators
 import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
-import ..UtilsModule: debug
-import ..PopMemberModule: PopMember, copy_pop_member, generate_reference
+import ..PopMemberModule: generate_reference
 import ..PopulationModule: Population, finalize_scores, best_sub_pop
 import ..HallOfFameModule: HallOfFame
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
@@ -102,7 +101,7 @@ function s_r_cycle(
                 score < best_examples_seen.members[size].score
             )
                 best_examples_seen.exists[size] = true
-                best_examples_seen.members[size] = copy_pop_member(member)
+                best_examples_seen.members[size] = copy(member)
             end
         end
         first_loop = false
