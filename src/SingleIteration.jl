@@ -9,7 +9,7 @@ import DynamicExpressions:
     combine_operators
 import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
-import ..PopMemberModule: generate_reference
+import ..PopMemberModule: PopMember, generate_reference
 import ..PopulationModule: Population, finalize_scores, best_sub_pop
 import ..HallOfFameModule: HallOfFame
 import ..AdaptiveParsimonyModule: RunningSearchStatistics
