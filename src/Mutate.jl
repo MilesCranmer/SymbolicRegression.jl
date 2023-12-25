@@ -7,7 +7,7 @@ import DynamicExpressions:
     copy_node,
     count_nodes,
     count_constants,
-    simplify_tree,
+    simplify_tree!,
     combine_operators
 import ..CoreModule:
     Options, MutationWeights, Dataset, RecordType, sample_mutation, DATA_TYPE, LOSS_TYPE
@@ -145,7 +145,7 @@ function next_generation(
             is_success_always_possible = true
         elseif mutation_choice == :simplify
             @assert options.should_simplify
-            tree = simplify_tree(tree, options.operators)
+            simplify_tree!(tree, options.operators)
             if tree isa Node
                 tree = combine_operators(tree, options.operators)
             end

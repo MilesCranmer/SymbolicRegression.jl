@@ -31,7 +31,7 @@ export Population,
     copy_node,
     node_to_symbolic,
     symbolic_to_node,
-    simplify_tree,
+    simplify_tree!,
     tree_mapreduce,
     combine_operators,
     gen_random_tree,
@@ -92,7 +92,7 @@ import DynamicExpressions:
     node_to_symbolic,
     symbolic_to_node,
     combine_operators,
-    simplify_tree,
+    simplify_tree!,
     tree_mapreduce,
     set_default_variable_names!
 import DynamicExpressions.EquationModule: with_type_parameters
@@ -672,6 +672,7 @@ function _equation_search(
             verbosity,
             example_dataset,
             runtests,
+            node_type=N,
         )
     end
     # Get the next worker process to give a job:
