@@ -73,6 +73,7 @@ import TOML: parsefile
 import Random: seed!, shuffle!
 using Reexport
 import DynamicExpressions:
+    DynamicExpressions,
     Node,
     GraphNode,
     AbstractExpressionNode,
