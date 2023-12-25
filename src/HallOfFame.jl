@@ -1,7 +1,6 @@
 module HallOfFameModule
 
-import DynamicExpressions:
-    AbstractExpressionNode, Node, constructorof, string_tree
+import DynamicExpressions: AbstractExpressionNode, Node, constructorof, string_tree
 import DynamicExpressions.EquationModule: with_type_parameters
 import ..UtilsModule: split_string
 import ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu

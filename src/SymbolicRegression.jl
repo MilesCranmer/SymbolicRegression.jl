@@ -589,8 +589,15 @@ function _equation_search(
     verbosity,
     progress,
     ::Val{RETURN_STATE},
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},N<:AbstractExpressionNode{T},PARALLELISM,RETURN_STATE,DIM_OUT}
-
+) where {
+    T<:DATA_TYPE,
+    L<:LOSS_TYPE,
+    D<:Dataset{T,L},
+    N<:AbstractExpressionNode{T},
+    PARALLELISM,
+    RETURN_STATE,
+    DIM_OUT,
+}
     stdin_reader = watch_stream(stdin)
 
     if options.define_helper_functions
@@ -630,7 +637,6 @@ function _equation_search(
     returnPops = init_dummy_pops(options.populations, datasets, options, N)
     # Best 10 members from each population for migration:
     bestSubPops = init_dummy_pops(options.populations, datasets, options, N)
-
 
     # Pointers to populations on each worker:
     worker_output = [WorkerOutputType[] for j in 1:nout]

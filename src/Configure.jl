@@ -251,7 +251,9 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
     end
 end
 
-function test_module_on_workers(procs, options::Options, verbosity, ::Type{N}) where {N<:AbstractExpressionNode}
+function test_module_on_workers(
+    procs, options::Options, verbosity, ::Type{N}
+) where {N<:AbstractExpressionNode}
     verbosity > 0 && @info "Testing module on workers..."
     futures = []
     for proc in procs
