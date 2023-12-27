@@ -22,7 +22,8 @@ import ..OperatorsModule:
     safe_sqrt,
     safe_acosh,
     atanh_clip
-import ..OptionsStructModule: Options, ComplexityMapping, MutationWeights, mutations
+import ..MutationWeightsModule: MutationWeights, mutations
+import ..OptionsStructModule: Options, ComplexityMapping
 import ..UtilsModule: max_ops, @save_kwargs
 
 """
