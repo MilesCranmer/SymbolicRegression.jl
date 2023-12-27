@@ -2,6 +2,7 @@ module MutationFunctionsModule
 
 import DynamicExpressions:
     AbstractExpressionNode,
+    NodeSampler,
     constructorof,
     copy_node,
     set_node!,
@@ -20,30 +21,19 @@ filter the nodes matching some condition before sampling.
 function random_node(
     tree::AbstractExpressionNode{T}; filter::F=Returns(true)
 ) where {T,F<:Function}
-    num_matching = count(filter, tree)
-    chosen_node_idx = rand(1:num_matching)
-    chosen_node = Ref{typeof(tree)}()
-    cur_idx = Ref(0)
-    any(tree) do t
-        if @inline(filter(t))
-            cur_idx[] += 1
-            if cur_idx[] == chosen_node_idx
-                chosen_node[] = t
-                return true
-            end
-        end
-        return false
-    end
-    return chosen_node[]
+    Base.depwarn(
+        "Instead of `random_node(tree, filter)`, use `rand(NodeSampler(; tree, filter))`",
+        :random_node,
+    )
+    return rand(NodeSampler(; tree, filter))
 end
 
-# Randomly convert an operator into another one (binary->binary;
-# unary->unary)
+"""Randomly convert an operator into another one (binary->binary; unary->unary)"""
 function mutate_operator(tree::AbstractExpressionNode{T}, options::Options) where {T}
     if !(has_operators(tree))
         return tree
     end
-    node = random_node(tree; filter=t -> t.degree != 0)
+    node = rand(NodeSampler(; tree, filter=t -> t.degree != 0))
     if node.degree == 1
         node.op = rand(1:(options.nuna))
     else
@@ -52,7 +42,7 @@ function mutate_operator(tree::AbstractExpressionNode{T}, options::Options) wher
     return tree
 end
 
-# Randomly perturb a constant
+"""Randomly perturb a constant"""
 function mutate_constant(
     tree::AbstractExpressionNode{T}, temperature, options::Options
 ) where {T<:DATA_TYPE}
@@ -61,7 +51,7 @@ function mutate_constant(
     if !(has_constants(tree))
         return tree
     end
-    node = random_node(tree; filter=t -> (t.degree == 0 && t.constant))
+    node = rand(NodeSampler(; tree, filter=t -> (t.degree == 0 && t.constant)))
 
     bottom = 1//10
     maxChange = options.perturbation_factor * temperature + 1 + bottom
@@ -81,14 +71,14 @@ function mutate_constant(
     return tree
 end
 
-# Add a random unary/binary operation to the end of a tree
+"""Add a random unary/binary operation to the end of a tree"""
 function append_random_op(
     tree::AbstractExpressionNode{T},
     options::Options,
     nfeatures::Int;
     makeNewBinOp::Union{Bool,Nothing}=nothing,
 ) where {T<:DATA_TYPE}
-    node = random_node(tree; filter=t -> t.degree == 0)
+    node = rand(NodeSampler(; tree, filter=t -> t.degree == 0))
 
     if makeNewBinOp === nothing
         choice = rand()
@@ -112,11 +102,11 @@ function append_random_op(
     return tree
 end
 
-# Insert random node
+"""Insert random node"""
 function insert_random_op(
     tree::AbstractExpressionNode{T}, options::Options, nfeatures::Int
 ) where {T<:DATA_TYPE}
-    node = random_node(tree)
+    node = rand(NodeSampler(; tree))
     choice = rand()
     makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
     left = copy_node(node)
@@ -131,7 +121,7 @@ function insert_random_op(
     return tree
 end
 
-# Add random node to the top of a tree
+"""Add random node to the top of a tree"""
 function prepend_random_op(
     tree::AbstractExpressionNode{T}, options::Options, nfeatures::Int
 ) where {T<:DATA_TYPE}
@@ -160,7 +150,7 @@ function make_random_leaf(
     end
 end
 
-# Return a random node from the tree with parent, and side ('n' for no parent)
+"""Return a random node from the tree with parent, and side ('n' for no parent)"""
 function _random_node_and_parent(
     tree::AbstractExpressionNode{T},
     parent::AbstractExpressionNode{T},
@@ -195,8 +185,7 @@ function random_node_and_parent(tree::AbstractExpressionNode{T}) where {T}
     return _random_node_and_parent(tree, tree, 'n', count_nodes(tree))
 end
 
-# Select a random node, and replace it an the subtree
-# with a variable or constant
+"""Select a random node, and splice it out of the tree."""
 function delete_random_op(
     tree::AbstractExpressionNode{T}, options::Options, nfeatures::Int
 ) where {T<:DATA_TYPE}
@@ -239,7 +228,7 @@ function delete_random_op(
     return tree
 end
 
-# Create a random equation by appending random operators
+"""Create a random equation by appending random operators"""
 function gen_random_tree(
     length::Int, options::Options, nfeatures::Int, ::Type{T}, ::Type{N}
 ) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
