@@ -14,12 +14,12 @@ import Compat: Returns, @inline
 import ..CoreModule: Options, DATA_TYPE
 
 """
-    random_node(tree::AbstractExpressionNode{T}; filter::F=Returns(true))
+    random_node(tree::AbstractNode; filter::F=Returns(true))
 
 Return a random node from the tree. You may optionally
 filter the nodes matching some condition before sampling.
 """
-function random_node(tree::AbstractNode{T}; filter::F=Returns(true)) where {T,F<:Function}
+function random_node(tree::AbstractNode; filter::F=Returns(true)) where {F<:Function}
     Base.depwarn(
         "Instead of `random_node(tree, filter)`, use `rand(NodeSampler(; tree, filter))`",
         :random_node,
@@ -150,7 +150,7 @@ function make_random_leaf(
 end
 
 """Return a random node from the tree with parent, and side ('n' for no parent)"""
-function random_node_and_parent(tree::AbstractNode{T}) where {T}
+function random_node_and_parent(tree::AbstractNode)
     if tree.degree == 0
         return tree, tree, 'n'
     end
