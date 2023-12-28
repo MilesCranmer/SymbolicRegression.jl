@@ -19,9 +19,7 @@ import ..CoreModule: Options, DATA_TYPE
 Return a random node from the tree. You may optionally
 filter the nodes matching some condition before sampling.
 """
-function random_node(
-    tree::AbstractNode{T}; filter::F=Returns(true)
-) where {T,F<:Function}
+function random_node(tree::AbstractNode{T}; filter::F=Returns(true)) where {T,F<:Function}
     Base.depwarn(
         "Instead of `random_node(tree, filter)`, use `rand(NodeSampler(; tree, filter))`",
         :random_node,
@@ -165,7 +163,7 @@ function random_node_and_parent(tree::AbstractNode{T}) where {T}
 end
 
 """Select a random node, and splice it out of the tree."""
-function delete_random_op(
+function delete_random_op!(
     tree::AbstractExpressionNode{T}, options::Options, nfeatures::Int
 ) where {T<:DATA_TYPE}
     node, parent, side = random_node_and_parent(tree)
@@ -270,37 +268,41 @@ function crossover_trees(
     return tree1, tree2
 end
 
-function form_random_connection!(tree::AbstractExpressionNode)
-    tree.degree == 0 && return nothing
-    n_attempts = 10
-    attempt = 1
-    parent = random_node(tree; filter=t -> t.degree > 0)
-    node = random_node(tree)
-    while attempt < n_attempts && parent in node #= looped =#
-        parent = random_node(tree; filter=t -> t.degree > 0)
-        node = random_node(tree)
-        attempt += 1
+function form_random_connection!(tree::AbstractNode)
+    if length(tree) < 5
+        return nothing
     end
-    attempt == n_attempts && return nothing
-    if parent.degree == 1
-        parent.l = node
-    else
-        if rand(Bool)
-            parent.l = node
+
+    local parent, new_child, would_form_loop
+
+    attempt_number = 0
+    max_attempts = 10
+
+    while true
+        parent = rand(NodeSampler(; tree, filter=t -> t.degree != 0))
+        new_child = rand(NodeSampler(; tree, filter=t -> t !== tree))
+        attempt_number += 1
+        would_form_loop = any(t -> t === parent, new_child)
+        if would_form_loop && attempt_number <= max_attempts
+            continue
         else
-            parent.r = node
+            break
         end
     end
+    if would_form_loop
+        return nothing
+    end
+    # Set one of the children to be this new child:
+    side = (parent.degree == 1 || rand(Bool)) ? :l : :r
+    setproperty!(parent, side, new_child)
     return nothing
 end
-function break_random_connection!(tree::AbstractExpressionNode)
-    child, parent, side = random_node_and_parent(tree)
-    if side == 'l'
-        parent.l = copy_node(child)
-    elseif side == 'r'
-        parent.r = copy_node(child)
-    else # 'n'
-    end
+function break_random_connection!(tree::AbstractNode)
+    tree.degree == 0 && return nothing
+    parent = rand(NodeSampler(; tree, filter=t -> t.degree != 0))
+    side = (parent.degree == 1 || rand(Bool)) ? :l : :r
+    unshared_child = copy(getproperty(parent, side))
+    setproperty!(parent, side, unshared_child)
     return nothing
 end
 

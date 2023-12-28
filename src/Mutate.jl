@@ -23,7 +23,7 @@ import ..MutationFunctionsModule:
     append_random_op,
     prepend_random_op,
     insert_random_op,
-    delete_random_op,
+    delete_random_op!,
     crossover_trees,
     form_random_connection!,
     break_random_connection!
@@ -140,7 +140,7 @@ function next_generation(
             @recorder tmp_recorder["type"] = "insert_op"
             is_success_always_possible = false
         elseif mutation_choice == :delete_node
-            tree = delete_random_op(tree, options, nfeatures)
+            tree = delete_random_op!(tree, options, nfeatures)
             @recorder tmp_recorder["type"] = "delete_op"
             is_success_always_possible = true
         elseif mutation_choice == :simplify
