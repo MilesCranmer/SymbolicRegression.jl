@@ -20,7 +20,7 @@ Return a random node from the tree. You may optionally
 filter the nodes matching some condition before sampling.
 """
 function random_node(
-    tree::AbstractExpressionNode{T}; filter::F=Returns(true)
+    tree::AbstractNode{T}; filter::F=Returns(true)
 ) where {T,F<:Function}
     Base.depwarn(
         "Instead of `random_node(tree, filter)`, use `rand(NodeSampler(; tree, filter))`",
@@ -57,7 +57,7 @@ function mutate_constant(
     bottom = 1//10
     maxChange = options.perturbation_factor * temperature + 1 + bottom
     factor = T(maxChange^rand(T))
-    makeConstBigger = rand() > 0.5
+    makeConstBigger = rand(Bool)
 
     if makeConstBigger
         node.val::T *= factor
@@ -144,7 +144,7 @@ end
 function make_random_leaf(
     nfeatures::Int, ::Type{T}, ::Type{N}
 ) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
-    if rand() > 0.5
+    if rand(Bool)
         return constructorof(N)(; val=randn(T))
     else
         return constructorof(N)(T; feature=rand(1:nfeatures))
@@ -186,7 +186,7 @@ function delete_random_op(
         end
     else
         # Join one of the children with the parent
-        if rand() < 0.5
+        if rand(Bool)
             if isroot
                 return node.l
             elseif parent.l == node
