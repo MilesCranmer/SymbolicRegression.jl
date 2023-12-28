@@ -2,6 +2,7 @@ module MutationFunctionsModule
 
 import DynamicExpressions:
     AbstractExpressionNode,
+    AbstractNode,
     NodeSampler,
     constructorof,
     copy_node,
@@ -151,38 +152,16 @@ function make_random_leaf(
 end
 
 """Return a random node from the tree with parent, and side ('n' for no parent)"""
-function _random_node_and_parent(
-    tree::AbstractExpressionNode{T},
-    parent::AbstractExpressionNode{T},
-    side::Char,
-    total_nodes,
-) where {T}
+function random_node_and_parent(tree::AbstractNode{T}) where {T}
     if tree.degree == 0
-        return tree, parent, side
-    elseif tree.degree == 1
-        i = rand(1:total_nodes)
-        if i == 1
-            return tree, parent, side
-        else
-            return _random_node_and_parent(tree.l, tree, 'l', total_nodes - 1)
-        end
-    else
-        num_left = count_nodes(tree.l)
-        num_right = total_nodes - num_left - 1
-
-        i = rand(1:total_nodes)
-        if i == 1
-            return tree, parent, side
-        elseif i <= num_left + 1
-            return _random_node_and_parent(tree.l, tree, 'l', num_left)
-        else
-            return _random_node_and_parent(tree.r, tree, 'r', num_right)
-        end
+        return tree, tree, 'n'
     end
-end
-
-function random_node_and_parent(tree::AbstractExpressionNode{T}) where {T}
-    return _random_node_and_parent(tree, tree, 'n', count_nodes(tree))
+    parent = rand(NodeSampler(; tree, filter=t -> t.degree != 0))
+    if parent.degree == 1 || rand(Bool)
+        return (parent.l, parent, 'l')
+    else
+        return (parent.r, parent, 'r')
+    end
 end
 
 """Select a random node, and splice it out of the tree."""
