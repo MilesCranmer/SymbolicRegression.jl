@@ -50,8 +50,8 @@ function MutationWeights(;
     randomize=0.00023,
     do_nothing=0.21,
     optimize=0.0,
-    form_connection=0.05,
-    break_connection=0.05,
+    form_connection=0.5,
+    break_connection=0.1,
 )
     return MutationWeights(
         mutate_constant,
