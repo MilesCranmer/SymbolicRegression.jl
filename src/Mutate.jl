@@ -13,6 +13,7 @@ import ..MutationFunctionsModule:
     gen_random_tree_fixed_size,
     mutate_constant,
     mutate_operator,
+    swap_operands,
     append_random_op,
     prepend_random_op,
     insert_random_op,
@@ -28,6 +29,7 @@ function condition_mutation_weights!(
         # If equation is too small, don't delete operators
         # or simplify
         weights.mutate_operator = 0.0
+        weights.swap_operands = 0.0
         weights.delete_node = 0.0
         weights.simplify = 0.0
         if !member.tree.constant
@@ -35,6 +37,11 @@ function condition_mutation_weights!(
             weights.mutate_constant = 0.0
         end
         return nothing
+    end
+
+    if member.tree.degree != 2
+        # swap is implemented only for binary ops
+        weights.swap_operands = 0.0
     end
 
     #More constants => more likely to do constant mutation
@@ -109,6 +116,11 @@ function next_generation(
             @recorder tmp_recorder["type"] = "operator"
             is_success_always_possible = true
             # Can always mutate to the same operator
+
+        elseif mutation_choice == :swap_operands
+            tree = swap_operands(tree, options)
+            @recorder tmp_recorder["type"] = "swap_operands"
+            is_success_always_possible = true
 
         elseif mutation_choice == :add_node
             if rand() < 0.5
