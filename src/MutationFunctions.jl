@@ -31,7 +31,7 @@ end
 
 # Swap operands in binary operator for ops like pow and divide
 function swap_operands(tree::Node{T}, options::Options)::Node{T} where {T}
-    if !(has_operators(tree))
+    if !any(node -> node.degree == 2, tree)
         return tree
     end
     node = random_node(tree; filter=t -> t.degree == 2)
