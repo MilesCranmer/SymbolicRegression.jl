@@ -42,7 +42,7 @@ will be normalized to sum to 1.0 after initialization.
 function MutationWeights(;
     mutate_constant=0.048,
     mutate_operator=0.47,
-    swap_operands=0.024,
+    swap_operands=0.0,
     add_node=0.79,
     insert_node=5.1,
     delete_node=1.7,
