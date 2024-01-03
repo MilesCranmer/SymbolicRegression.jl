@@ -8,6 +8,7 @@ import LossFunctions: SupervisedLoss
 mutable struct MutationWeights
     mutate_constant::Float64
     mutate_operator::Float64
+    swap_operands::Float64
     add_node::Float64
     insert_node::Float64
     delete_node::Float64
@@ -27,6 +28,7 @@ will be normalized to sum to 1.0 after initialization.
 # Arguments
 - `mutate_constant::Float64`: How often to mutate a constant.
 - `mutate_operator::Float64`: How often to mutate an operator.
+- `swap_operands::Float64`: How often to swap operands in binary operators.
 - `add_node::Float64`: How often to append a node to the tree.
 - `insert_node::Float64`: How often to insert a node into the tree.
 - `delete_node::Float64`: How often to delete a node from the tree.
@@ -40,6 +42,7 @@ will be normalized to sum to 1.0 after initialization.
 function MutationWeights(;
     mutate_constant=0.048,
     mutate_operator=0.47,
+    swap_operands=0.0,
     add_node=0.79,
     insert_node=5.1,
     delete_node=1.7,
@@ -51,6 +54,7 @@ function MutationWeights(;
     return MutationWeights(
         mutate_constant,
         mutate_operator,
+        swap_operands,
         add_node,
         insert_node,
         delete_node,
@@ -66,6 +70,7 @@ function Base.convert(::Type{Vector}, w::MutationWeights)::Vector{Float64}
     return [
         w.mutate_constant,
         w.mutate_operator,
+        w.swap_operands,
         w.add_node,
         w.insert_node,
         w.delete_node,
@@ -81,6 +86,7 @@ function Base.copy(weights::MutationWeights)
     return MutationWeights(
         weights.mutate_constant,
         weights.mutate_operator,
+        weights.swap_operands,
         weights.add_node,
         weights.insert_node,
         weights.delete_node,

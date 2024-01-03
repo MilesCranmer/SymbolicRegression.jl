@@ -29,6 +29,16 @@ function random_node(tree::Node{T}; filter::F=Returns(true))::Node{T} where {T,F
     return chosen_node[]
 end
 
+# Swap operands in binary operator for ops like pow and divide
+function swap_operands(tree::Node{T}, options::Options)::Node{T} where {T}
+    if !any(node -> node.degree == 2, tree)
+        return tree
+    end
+    node = random_node(tree; filter=t -> t.degree == 2)
+    node.l, node.r = node.r, node.l
+    return tree
+end
+
 # Randomly convert an operator into another one (binary->binary;
 # unary->unary)
 function mutate_operator(tree::Node{T}, options::Options)::Node{T} where {T}
