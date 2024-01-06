@@ -280,7 +280,7 @@ end
 
 function form_random_connection!(tree::AbstractNode)
     if length(tree) < 5
-        return nothing
+        return tree
     end
 
     local parent, new_child, would_form_loop
@@ -300,20 +300,20 @@ function form_random_connection!(tree::AbstractNode)
         end
     end
     if would_form_loop
-        return nothing
+        return tree
     end
     # Set one of the children to be this new child:
     side = (parent.degree == 1 || rand(Bool)) ? :l : :r
     setproperty!(parent, side, new_child)
-    return nothing
+    return tree
 end
 function break_random_connection!(tree::AbstractNode)
-    tree.degree == 0 && return nothing
+    tree.degree == 0 && return tree
     parent = rand(NodeSampler(; tree, filter=t -> t.degree != 0))
     side = (parent.degree == 1 || rand(Bool)) ? :l : :r
     unshared_child = copy(getproperty(parent, side))
     setproperty!(parent, side, unshared_child)
-    return nothing
+    return tree
 end
 
 end

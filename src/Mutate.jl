@@ -228,11 +228,11 @@ function next_generation(
                 num_evals,
             )
         elseif mutation_choice == :form_connection
-            form_random_connection!(tree)
+            tree = form_random_connection!(tree)
             @recorder tmp_recorder["type"] = "form_connection"
             is_success_always_possible = true
         elseif mutation_choice == :break_connection
-            break_random_connection!(tree)
+            tree = break_random_connection!(tree)
             @recorder tmp_recorder["type"] = "break_connection"
             is_success_always_possible = true
         else
