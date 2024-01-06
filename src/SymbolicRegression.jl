@@ -66,6 +66,7 @@ export Population,
 using Distributed
 import Printf: @printf, @sprintf
 import PackageExtensionCompat: @require_extensions
+using Logging: AbstractLogger, with_logger
 using Pkg: Pkg
 import TOML: parsefile
 import Random: seed!, shuffle!
@@ -351,6 +352,7 @@ function equation_search(
     return_state::Union{Bool,Nothing}=nothing,
     loss_type::Type{L}=Nothing,
     verbosity::Union{Integer,Nothing}=nothing,
+    logger::Union{AbstractLogger,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
@@ -397,6 +399,7 @@ function equation_search(
         saved_state=saved_state,
         return_state=return_state,
         verbosity=verbosity,
+        logger=logger,
         progress=progress,
         v_dim_out=Val(DIM_OUT),
     )
@@ -434,6 +437,7 @@ function equation_search(
     saved_state=nothing,
     return_state::Union{Bool,Nothing}=nothing,
     verbosity::Union{Int,Nothing}=nothing,
+    logger::Union{AbstractLogger,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
 ) where {DIM_OUT,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
@@ -555,6 +559,7 @@ function equation_search(
         runtests,
         saved_state,
         _verbosity,
+        logger,
         _progress,
         Val(_return_state),
     )
@@ -573,6 +578,7 @@ function _equation_search(
     runtests::Bool,
     saved_state,
     verbosity,
+    logger,
     progress,
     ::Val{RETURN_STATE},
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},PARALLELISM,RETURN_STATE,DIM_OUT}
@@ -950,6 +956,29 @@ function _equation_search(
                     head_node_occupation,
                     PARALLELISM,
                 )
+            end
+            if logger !== nothing
+                with_logger(logger) do
+                    if nout == 1
+                        dominating = calculate_pareto_frontier(only(hallOfFame))
+                        best_loss = length(dominating) > 0 ? dominating[end].loss : L(Inf)
+                        @info(
+                            "search_state",
+                            num_evals = sum(sum, num_evals),
+                            pareto_front = dominating,
+                            best_loss = best_loss,
+                        )
+                    else
+                        dominating = calculate_pareto_frontier.(hallOfFame)
+                        best_loss = (d -> length(d) > 0 ? d[end].loss : L(Inf)).(dominating)
+                        @info(
+                            "search_state",
+                            num_evals = sum(sum, num_evals),
+                            pareto_front = dominating,
+                            best_loss = best_loss,
+                        )
+                    end
+                end
             end
         end
         sleep(1e-6)

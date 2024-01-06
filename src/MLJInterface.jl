@@ -1,6 +1,7 @@
 module MLJInterfaceModule
 
 using Optim: Optim
+using Logging: AbstractLogger
 import MLJModelInterface as MMI
 import DynamicExpressions: eval_tree_array, string_tree, Node
 import DynamicQuantities:
@@ -40,6 +41,7 @@ function modelexpr(model_name::Symbol)
             procs::Union{Vector{Int},Nothing} = nothing
             addprocs_function::Union{Function,Nothing} = nothing
             heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
+            logger::Union{AbstractLogger,Nothing} = nothing
             runtests::Bool = true
             loss_type::L = Nothing
             selection_method::Function = choose_best
@@ -175,6 +177,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         X_units=X_units_clean,
         y_units=y_units_clean,
         verbosity=verbosity,
+        logger=m.logger,
         # Help out with inference:
         v_dim_out=isa(m, SRRegressor) ? Val(1) : Val(2),
     )
