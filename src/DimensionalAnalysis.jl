@@ -1,8 +1,7 @@
 module DimensionalAnalysisModule
 
 using DynamicExpressions: AbstractExpressionNode
-using DynamicQuantities:
-    Quantity, DimensionError, AbstractQuantity, uparse, constructorof
+using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, uparse, constructorof
 using Tricks: static_hasmethod
 
 using ..CoreModule: Options, Dataset
