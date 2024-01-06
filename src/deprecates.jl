@@ -1,6 +1,15 @@
 using Base: @deprecate
 
 @deprecate(
+    gen_random_tree(length::Int, options::Options, nfeatures::Int, t::Type),
+    gen_random_tree(length, options, nfeatures, t, Node)
+)
+@deprecate(
+    gen_random_tree_fixed_size(node_count::Int, options::Options, nfeatures::Int, t::Type),
+    gen_random_tree_fixed_size(node_count, options, nfeatures, t, Node)
+)
+
+@deprecate(
     calculate_pareto_frontier(X, y, hallOfFame, options; weights=nothing, varMap=nothing),
     calculate_pareto_frontier(hallOfFame)
 )
