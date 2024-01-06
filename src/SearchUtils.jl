@@ -404,9 +404,8 @@ function update_hall_of_fame!(
     end
 end
 
-function default_logging_callback(
-    logger; options, num_evals, hall_of_fame, datasets::Vector{D}, kws...
-) where {T,L,D<:Dataset{T,L}}
+function default_logging_callback(logger; options, num_evals, hall_of_fame, datasets, _...)
+    L = typeof(first(datasets).baseline_loss)
     with_logger(logger) do
         @info("search_state", num_evals = sum(sum, num_evals))
         for (i, (hof, dataset)) in enumerate(zip(hall_of_fame, datasets))
