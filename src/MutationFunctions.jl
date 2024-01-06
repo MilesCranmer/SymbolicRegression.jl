@@ -28,7 +28,7 @@ function random_node(tree::AbstractNode; filter::F=Returns(true)) where {F<:Func
 end
 
 """Swap operands in binary operator for ops like pow and divide"""
-function swap_operands(tree::AbstractNode)::Node{T} where {T}
+function swap_operands(tree::AbstractNode)
     if !any(node -> node.degree == 2, tree)
         return tree
     end
