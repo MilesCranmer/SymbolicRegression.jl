@@ -23,7 +23,7 @@ for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma,
         options = make_options()
         @extend_operators options
 
-        # for unaop in 
+        # for unaop in
         f_true = (x,) -> binop(abs(3.0 * unaop(x))^2.0, -1.2)
 
         # binop at outside:

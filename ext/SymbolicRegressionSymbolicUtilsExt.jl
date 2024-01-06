@@ -7,7 +7,7 @@ import SymbolicRegression.MLJInterfaceModule: AbstractSRRegressor, get_options
 """
     node_to_symbolic(tree::Node, options::Options; kws...)
 
-Convert an expression to SymbolicUtils.jl form. 
+Convert an expression to SymbolicUtils.jl form.
 """
 function node_to_symbolic(tree::Node, options::Options; kws...)
     return node_to_symbolic(tree, options.operators; kws...)

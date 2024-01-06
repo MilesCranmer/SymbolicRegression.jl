@@ -315,7 +315,7 @@ compat_ustrip(A) = ustrip.(A)
 
 """
     unwrap_units_single(::AbstractArray, ::Type{<:AbstractDimensions})
-    
+
 Remove units from some features in a matrix, and return, as a tuple,
 (1) the matrix with stripped units, and (2) the dimensions for those features.
 """
@@ -572,7 +572,7 @@ eval(
         `Continuous`; check the scitype with `scitype(y)`. Units in `y` (use `DynamicQuantities`
         for units) will trigger dimensional analysis to be used.
 
-    - `w` is the observation weights which can either be `nothing` (default) or an 
+    - `w` is the observation weights which can either be `nothing` (default) or an
       `AbstractVector` whoose element scitype is `Count` or `Continuous`.
 
     Train the machine using `fit!(mach)`, inspect the discovered expressions with
@@ -693,7 +693,7 @@ eval(
       scitype is `Continuous`; check the scitype with `schema(y)`. Units in columns of
       `y` (use `DynamicQuantities` for units) will trigger dimensional analysis to be used.
 
-    - `w` is the observation weights which can either be `nothing` (default) or an 
+    - `w` is the observation weights which can either be `nothing` (default) or an
       `AbstractVector` whoose element scitype is `Count` or `Continuous`. The same
       weights are used for all targets.
 

@@ -58,7 +58,7 @@ eval_grad_tree_array(tree::Node, X::AbstractMatrix, options::Options; kws...)
 ## SymbolicUtils.jl interface
 
 ```@docs
-node_to_symbolic(tree::Node, options::Options; 
+node_to_symbolic(tree::Node, options::Options;
                      variable_names::Union{Array{String, 1}, Nothing}=nothing,
                      index_functions::Bool=false)
 ```

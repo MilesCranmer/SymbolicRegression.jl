@@ -148,7 +148,7 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
     @test compute_complexity(best_expr, options) >=
         compute_complexity(custom_op(cos(1 * x1), 1 * x1), options)
 
-    # Check that every cos(...) which contains x1 also has complexity 
+    # Check that every cos(...) which contains x1 also has complexity
     has_cos(tree) =
         any(tree) do t
             t.degree == 1 && options.operators.unaops[t.op] == cos
