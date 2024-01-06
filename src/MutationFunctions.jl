@@ -1,9 +1,9 @@
 module MutationFunctionsModule
 
-import DynamicExpressions:
+using DynamicExpressions:
     Node, copy_node, set_node!, count_nodes, has_constants, has_operators
-import Compat: Returns, @inline
-import ..CoreModule: Options, DATA_TYPE
+using Compat: Returns, @inline
+using ..CoreModule: Options, DATA_TYPE
 
 """
     random_node(tree::Node{T}; filter::F=Returns(true))

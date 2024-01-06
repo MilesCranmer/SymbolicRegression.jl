@@ -1,9 +1,9 @@
 module MLJInterfaceModule
 
 using Optim: Optim
-import MLJModelInterface as MMI
-import DynamicExpressions: eval_tree_array, string_tree, Node
-import DynamicQuantities:
+using MLJModelInterface: MLJModelInterface as MMI
+using DynamicExpressions: eval_tree_array, string_tree, Node
+using DynamicQuantities:
     QuantityArray,
     UnionAbstractQuantity,
     AbstractDimensions,
@@ -12,17 +12,16 @@ import DynamicQuantities:
     DEFAULT_DIM_BASE_TYPE,
     ustrip,
     dimension
-import LossFunctions: SupervisedLoss
-import Compat: allequal, stack
-import ..InterfaceDynamicQuantitiesModule: get_dimensions_type
-import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
-import ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
-import ..ComplexityModule: compute_complexity
-import ..HallOfFameModule: HallOfFame, format_hall_of_fame
-import ..UtilsModule: subscriptify
-#! format: off
+using LossFunctions: SupervisedLoss
+using Compat: allequal, stack
+using ..InterfaceDynamicQuantitiesModule: get_dimensions_type
+using ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
+using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
+using ..ComplexityModule: compute_complexity
+using ..HallOfFameModule: HallOfFame, format_hall_of_fame
+using ..UtilsModule: subscriptify
+
 import ..equation_search
-#! format: on
 
 abstract type AbstractSRRegressor <: MMI.Deterministic end
 

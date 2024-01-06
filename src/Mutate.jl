@@ -1,15 +1,15 @@
 module MutateModule
 
-import DynamicExpressions:
+using DynamicExpressions:
     Node, copy_node, count_nodes, count_constants, simplify_tree, combine_operators
-import ..CoreModule:
+using ..CoreModule:
     Options, MutationWeights, Dataset, RecordType, sample_mutation, DATA_TYPE, LOSS_TYPE
-import ..ComplexityModule: compute_complexity
-import ..LossFunctionsModule: score_func, score_func_batched
-import ..CheckConstraintsModule: check_constraints
-import ..AdaptiveParsimonyModule: RunningSearchStatistics
-import ..PopMemberModule: PopMember
-import ..MutationFunctionsModule:
+using ..ComplexityModule: compute_complexity
+using ..LossFunctionsModule: score_func, score_func_batched
+using ..CheckConstraintsModule: check_constraints
+using ..AdaptiveParsimonyModule: RunningSearchStatistics
+using ..PopMemberModule: PopMember
+using ..MutationFunctionsModule:
     gen_random_tree_fixed_size,
     mutate_constant,
     mutate_operator,
@@ -19,8 +19,8 @@ import ..MutationFunctionsModule:
     insert_random_op,
     delete_random_op,
     crossover_trees
-import ..ConstantOptimizationModule: optimize_constants
-import ..RecorderModule: @recorder
+using ..ConstantOptimizationModule: optimize_constants
+using ..RecorderModule: @recorder
 
 function condition_mutation_weights!(
     weights::MutationWeights, member::PopMember, options::Options, curmaxsize::Int

@@ -1,8 +1,10 @@
 module SymbolicRegressionSymbolicUtilsExt
 
-import SymbolicUtils: Symbolic
-import SymbolicRegression: node_to_symbolic, symbolic_to_node, Node, Options
-import SymbolicRegression.MLJInterfaceModule: AbstractSRRegressor, get_options
+using SymbolicUtils: Symbolic
+using SymbolicRegression: Node, Options
+using SymbolicRegression.MLJInterfaceModule: AbstractSRRegressor, get_options
+
+import SymbolicRegression: node_to_symbolic, symbolic_to_node
 
 """
     node_to_symbolic(tree::Node, options::Options; kws...)

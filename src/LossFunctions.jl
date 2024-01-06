@@ -1,14 +1,14 @@
 module LossFunctionsModule
 
-import Random: MersenneTwister
+using Random: MersenneTwister
 using StatsBase: StatsBase
-import DynamicExpressions: Node
+using DynamicExpressions: Node
 using LossFunctions: LossFunctions
-import LossFunctions: SupervisedLoss
-import ..InterfaceDynamicExpressionsModule: eval_tree_array
-import ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
-import ..ComplexityModule: compute_complexity
-import ..DimensionalAnalysisModule: violates_dimensional_constraints
+using LossFunctions: SupervisedLoss
+using ..InterfaceDynamicExpressionsModule: eval_tree_array
+using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
+using ..ComplexityModule: compute_complexity
+using ..DimensionalAnalysisModule: violates_dimensional_constraints
 
 function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::LT

@@ -2,9 +2,9 @@ module OperatorsModule
 
 using SpecialFunctions: SpecialFunctions
 using DynamicQuantities: UnionAbstractQuantity
-import SpecialFunctions: erf, erfc
-import Base: @deprecate
-import ..ProgramConstantsModule: DATA_TYPE
+using SpecialFunctions: erf, erfc
+using Base: @deprecate
+using ..ProgramConstantsModule: DATA_TYPE
 #TODO - actually add these operators to the module!
 
 # TODO: Should this be limited to AbstractFloat instead?

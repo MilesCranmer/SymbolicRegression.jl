@@ -1,5 +1,5 @@
 using SymbolicRegression
-import SymbolicRegression: eval_loss
+using SymbolicRegression: eval_loss
 using Random
 using Test
 include("test_params.jl")

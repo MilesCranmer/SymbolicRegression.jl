@@ -125,7 +125,7 @@ end
 
 println("Testing NodeIndex.")
 
-import SymbolicRegression: get_constants, NodeIndex, index_constants
+using SymbolicRegression: get_constants, NodeIndex, index_constants
 
 options = Options(;
     binary_operators=(+, *, -, /, pow_abs2),
