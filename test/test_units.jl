@@ -145,6 +145,7 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
     best_expr = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
 
     @test !violates_dimensional_constraints(best_expr, dataset, options)
+    x1 = Node(Float64; feature=1)
     @test compute_complexity(best_expr, options) >=
         compute_complexity(custom_op(cos(1 * x1), 1 * x1), options)
 
@@ -209,6 +210,9 @@ end
     @test_throws DimensionError atanh_clip(1.0u"m")
 end
 
+options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos])
+@extend_operators options
+
 @testset "Search with dimensional constraints on output" begin
     X = randn(2, 128)
     X[2, :] .= X[1, :]
@@ -221,6 +225,8 @@ end
     # Solution should be x2 * x2
     dominating = calculate_pareto_frontier(hof)
     best = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
+
+    x2 = Node(Float64; feature=2)
 
     @test compute_complexity(best, options) == 3
     @test best.degree == 2
