@@ -468,6 +468,11 @@ function equation_search(
         error(
             "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
         )
+    logging_callback !== nothing &&
+        logger !== nothing &&
+        error(
+            "You cannot set both `logging_callback` and `logger`. Instead, simply use your logger within the `logging_callback`.",
+        )
 
     # TODO: Still not type stable. Should be able to pass `Val{return_state}`.
     _return_state = if options.return_state === nothing
