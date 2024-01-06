@@ -235,7 +235,8 @@ import .SearchUtilsModule:
     load_saved_population,
     construct_datasets,
     get_cur_maxsize,
-    update_hall_of_fame!
+    update_hall_of_fame!,
+    default_logging_callback
 
 include("deprecates.jl")
 include("Configure.jl")
@@ -353,6 +354,7 @@ function equation_search(
     loss_type::Type{L}=Nothing,
     verbosity::Union{Integer,Nothing}=nothing,
     logger::Union{AbstractLogger,Nothing}=nothing,
+    logging_callback::Union{Function,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
@@ -400,6 +402,7 @@ function equation_search(
         return_state=return_state,
         verbosity=verbosity,
         logger=logger,
+        logging_callback=logging_callback,
         progress=progress,
         v_dim_out=Val(DIM_OUT),
     )
@@ -438,6 +441,7 @@ function equation_search(
     return_state::Union{Bool,Nothing}=nothing,
     verbosity::Union{Int,Nothing}=nothing,
     logger::Union{AbstractLogger,Nothing}=nothing,
+    logging_callback::Union{Function,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
 ) where {DIM_OUT,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
@@ -544,6 +548,11 @@ function equation_search(
     else
         ``
     end
+    _logging_callback = if logging_callback === nothing && logger !== nothing
+        (; kws...) -> default_logging_callback(logger; kws...)
+    else
+        logging_callback
+    end
 
     # Underscores here mean that we have mutated the variable
     return _equation_search(
@@ -559,7 +568,7 @@ function equation_search(
         runtests,
         saved_state,
         _verbosity,
-        logger,
+        _logging_callback,
         _progress,
         Val(_return_state),
     )
@@ -578,7 +587,7 @@ function _equation_search(
     runtests::Bool,
     saved_state,
     verbosity,
-    logger,
+    logging_callback,
     progress,
     ::Val{RETURN_STATE},
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},PARALLELISM,RETURN_STATE,DIM_OUT}
@@ -957,28 +966,16 @@ function _equation_search(
                     PARALLELISM,
                 )
             end
-            if logger !== nothing
-                with_logger(logger) do
-                    if nout == 1
-                        dominating = calculate_pareto_frontier(only(hallOfFame))
-                        best_loss = length(dominating) > 0 ? dominating[end].loss : L(Inf)
-                        @info(
-                            "search_state",
-                            num_evals = sum(sum, num_evals),
-                            pareto_front = dominating,
-                            best_loss = best_loss,
-                        )
-                    else
-                        dominating = calculate_pareto_frontier.(hallOfFame)
-                        best_loss = (d -> length(d) > 0 ? d[end].loss : L(Inf)).(dominating)
-                        @info(
-                            "search_state",
-                            num_evals = sum(sum, num_evals),
-                            pareto_front = dominating,
-                            best_loss = best_loss,
-                        )
-                    end
-                end
+            if logging_callback !== nothing
+                logging_callback(;
+                    options,
+                    num_evals,
+                    hall_of_fame=hallOfFame,
+                    worker_assignment,
+                    cycles_remaining,
+                    populations=returnPops,
+                    datasets=datasets,
+                )
             end
         end
         sleep(1e-6)

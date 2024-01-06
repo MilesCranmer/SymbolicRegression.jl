@@ -5,6 +5,8 @@ module SearchUtilsModule
 
 import Printf: @printf, @sprintf
 using Distributed
+using Logging: with_logger
+using DynamicExpressions: string_tree
 import StatsBase: mean
 
 import ..UtilsModule: subscriptify
@@ -398,6 +400,32 @@ function update_hall_of_fame!(
         if not_filled || better_than_current
             hall_of_fame.members[size] = copy(member)
             hall_of_fame.exists[size] = true
+        end
+    end
+end
+
+function default_logging_callback(
+    logger; options, num_evals, hall_of_fame, datasets::Vector{D}, kws...
+) where {T,L,D<:Dataset{T,L}}
+    with_logger(logger) do
+        @info("search_state", num_evals = sum(sum, num_evals))
+        for (i_hof, (hof, dataset)) in enumerate(zip(hall_of_fame, datasets))
+            dominating = calculate_pareto_frontier(hof)
+            best_loss = length(dominating) > 0 ? dominating[end].loss : L(Inf)
+            losses = L[member.loss for member in dominating]
+            complexities = Int[compute_complexity(member, options) for member in dominating]
+            equations = String[
+                string_tree(member.tree, options; variable_names=dataset.variable_names) for
+                member in dominating
+            ]
+            @info(
+                "search_state_$(i_hof)",
+                best_loss = best_loss,
+                equations = equations,
+                losses = losses,
+                complexities = complexities,
+                log_step_increment = 0,
+            )
         end
     end
 end
