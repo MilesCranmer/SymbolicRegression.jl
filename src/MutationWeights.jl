@@ -43,13 +43,16 @@ end
 const mutations = fieldnames(MutationWeights)
 const v_mutations = Symbol[mutations...]
 
-"""Convert MutationWeights to a vector."""
-function Base.convert(::Type{Vector}, w::MutationWeights)::Vector{Float64}
-    return [getproperty(w, field) for field in mutations]
-end
-
-function Base.copy(w::MutationWeights)
-    return MutationWeights(convert(Vector, w)...)
+# For some reason it's much faster to write out the fields explicitly:
+let contents = [Expr(:., :w, QuoteNode(field)) for field in mutations]
+    @eval begin
+        function Base.convert(::Type{Vector}, w::MutationWeights)::Vector{Float64}
+            return $(Expr(:vect, contents...))
+        end
+        function Base.copy(w::MutationWeights)
+            return $(Expr(:call, :MutationWeights, contents...))
+        end
+    end
 end
 
 """Sample a mutation, given the weightings."""
