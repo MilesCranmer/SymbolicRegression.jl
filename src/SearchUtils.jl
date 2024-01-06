@@ -409,7 +409,7 @@ function default_logging_callback(
 ) where {T,L,D<:Dataset{T,L}}
     with_logger(logger) do
         @info("search_state", num_evals = sum(sum, num_evals))
-        for (i_hof, (hof, dataset)) in enumerate(zip(hall_of_fame, datasets))
+        for (i, (hof, dataset)) in enumerate(zip(hall_of_fame, datasets))
             dominating = calculate_pareto_frontier(hof)
             best_loss = length(dominating) > 0 ? dominating[end].loss : L(Inf)
             losses = L[member.loss for member in dominating]
@@ -419,7 +419,7 @@ function default_logging_callback(
                 member in dominating
             ]
             @info(
-                "search_state_$(i_hof)",
+                "search_state_$(i)",
                 best_loss = best_loss,
                 equations = equations,
                 losses = losses,
