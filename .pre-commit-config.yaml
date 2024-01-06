@@ -10,3 +10,11 @@ repos:
     rev: v1.0.45
     hooks:
       - id: julia-formatter
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    # We only want to format yaml, md files
+    hooks:
+      - id: prettier
+        types_or:
+          - yaml
+          - markdown
