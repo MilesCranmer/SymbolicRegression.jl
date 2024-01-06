@@ -2,23 +2,6 @@ module MutationWeightsModule
 
 using StatsBase: StatsBase
 
-mutable struct MutationWeights
-    mutate_constant::Float64
-    mutate_operator::Float64
-    swap_operands::Float64
-    add_node::Float64
-    insert_node::Float64
-    delete_node::Float64
-    simplify::Float64
-    randomize::Float64
-    do_nothing::Float64
-    optimize::Float64
-    form_connection::Float64
-    break_connection::Float64
-end
-
-const mutations = [fieldnames(MutationWeights)...]
-
 """
     MutationWeights(;kws...)
 
@@ -42,76 +25,37 @@ will be normalized to sum to 1.0 after initialization.
   Note that this is different from `optimizer_probability`, which is
   performed at the end of an iteration for all individuals.
 """
-function MutationWeights(;
-    mutate_constant=0.048,
-    mutate_operator=0.47,
-    swap_operands=0.0,
-    add_node=0.79,
-    insert_node=5.1,
-    delete_node=1.7,
-    simplify=0.0020,
-    randomize=0.00023,
-    do_nothing=0.21,
-    optimize=0.0,
-    form_connection=0.5,
-    break_connection=0.1,
-)
-    return MutationWeights(
-        mutate_constant,
-        mutate_operator,
-        swap_operands,
-        add_node,
-        insert_node,
-        delete_node,
-        simplify,
-        randomize,
-        do_nothing,
-        optimize,
-        form_connection,
-        break_connection,
-    )
+Base.@kwdef mutable struct MutationWeights
+    mutate_constant::Float64 = 0.048
+    mutate_operator::Float64 = 0.47
+    swap_operands::Float64 = 0.0
+    add_node::Float64 = 0.79
+    insert_node::Float64 = 5.1
+    delete_node::Float64 = 1.7
+    simplify::Float64 = 0.0020
+    randomize::Float64 = 0.00023
+    do_nothing::Float64 = 0.21
+    optimize::Float64 = 0.0
+    form_connection::Float64 = 0.5
+    break_connection::Float64 = 0.1
 end
+
+const mutations = fieldnames(MutationWeights)
+const v_mutations = Symbol[mutations...]
 
 """Convert MutationWeights to a vector."""
 function Base.convert(::Type{Vector}, w::MutationWeights)::Vector{Float64}
-    return [
-        w.mutate_constant,
-        w.mutate_operator,
-        w.swap_operands,
-        w.add_node,
-        w.insert_node,
-        w.delete_node,
-        w.simplify,
-        w.randomize,
-        w.do_nothing,
-        w.optimize,
-        w.form_connection,
-        w.break_connection,
-    ]
+    return [getproperty(w, field) for field in mutations]
 end
 
-"""Copy MutationWeights."""
 function Base.copy(w::MutationWeights)
-    return MutationWeights(
-        w.mutate_constant,
-        w.mutate_operator,
-        w.swap_operands,
-        w.add_node,
-        w.insert_node,
-        w.delete_node,
-        w.simplify,
-        w.randomize,
-        w.do_nothing,
-        w.optimize,
-        w.form_connection,
-        w.break_connection,
-    )
+    return MutationWeights(convert(Vector, w)...)
 end
 
 """Sample a mutation, given the weightings."""
 function sample_mutation(w::MutationWeights)
     weights = convert(Vector, w)
-    return StatsBase.sample(mutations, StatsBase.Weights(weights))
+    return StatsBase.sample(v_mutations, StatsBase.Weights(weights))
 end
 
 end
