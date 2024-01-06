@@ -1,10 +1,10 @@
 module PopMemberModule
 
-import DynamicExpressions: AbstractExpressionNode, copy_node, count_nodes
-import ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
+using DynamicExpressions: AbstractExpressionNode, copy_node, count_nodes
+using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
-import ..UtilsModule: get_birth_order
-import ..LossFunctionsModule: score_func
+using ..UtilsModule: get_birth_order
+using ..LossFunctionsModule: score_func
 
 # Define a member of population by equation, score, and age
 mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}}

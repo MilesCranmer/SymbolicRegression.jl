@@ -4,9 +4,9 @@ name: format-check
 on:
   push:
     branches:
-      - 'master'
-      - 'release-'
-    tags: '*'
+      - "master"
+      - "release-"
+    tags: "*"
   pull_request:
 
 jobs:

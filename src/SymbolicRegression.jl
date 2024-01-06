@@ -67,14 +67,13 @@ export Population,
     atanh_clip
 
 using Distributed
-import Printf: @printf, @sprintf
-import PackageExtensionCompat: @require_extensions
+using Printf: @printf, @sprintf
+using PackageExtensionCompat: @require_extensions
 using Pkg: Pkg
-import TOML: parsefile
-import Random: seed!, shuffle!
+using TOML: parsefile
+using Random: seed!, shuffle!
 using Reexport
-import DynamicExpressions:
-    DynamicExpressions,
+using DynamicExpressions:
     Node,
     GraphNode,
     NodeSampler,
@@ -98,8 +97,8 @@ import DynamicExpressions:
     simplify_tree!,
     tree_mapreduce,
     set_default_variable_names!
-import DynamicExpressions.EquationModule: with_type_parameters
-@reexport import LossFunctions:
+using DynamicExpressions.EquationModule: with_type_parameters
+@reexport using LossFunctions:
     MarginLoss,
     DistanceLoss,
     SupervisedLoss,
@@ -167,7 +166,7 @@ include("ProgressBars.jl")
 include("Migration.jl")
 include("SearchUtils.jl")
 
-import .CoreModule:
+using .CoreModule:
     MAX_DEGREE,
     BATCH_DIM,
     FEATURE_DIM,
@@ -200,28 +199,28 @@ import .CoreModule:
     erf,
     erfc,
     atanh_clip
-import .UtilsModule: is_anonymous_function, recursive_merge, json3_write
-import .ComplexityModule: compute_complexity
-import .CheckConstraintsModule: check_constraints
-import .AdaptiveParsimonyModule:
+using .UtilsModule: is_anonymous_function, recursive_merge, json3_write
+using .ComplexityModule: compute_complexity
+using .CheckConstraintsModule: check_constraints
+using .AdaptiveParsimonyModule:
     RunningSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
-import .MutationFunctionsModule:
+using .MutationFunctionsModule:
     gen_random_tree,
     gen_random_tree_fixed_size,
     random_node,
     random_node_and_parent,
     crossover_trees
-import .InterfaceDynamicExpressionsModule: @extend_operators
-import .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
-import .PopMemberModule: PopMember, reset_birth!
-import .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
-import .HallOfFameModule:
+using .InterfaceDynamicExpressionsModule: @extend_operators
+using .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
+using .PopMemberModule: PopMember, reset_birth!
+using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
+using .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
-import .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
-import .ProgressBarsModule: WrappedProgressBar
-import .RecorderModule: @recorder, is_recording, find_iteration_from_record
-import .MigrationModule: migrate!
-import .SearchUtilsModule:
+using .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
+using .ProgressBarsModule: WrappedProgressBar
+using .RecorderModule: @recorder, is_recording, find_iteration_from_record
+using .MigrationModule: migrate!
+using .SearchUtilsModule:
     assign_next_worker!,
     initialize_worker_assignment,
     @sr_spawner,
@@ -1107,7 +1106,7 @@ function _dispatch_s_r_cycle(;
 end
 
 include("MLJInterface.jl")
-import .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
+using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
 
 function __init__()
     @require_extensions

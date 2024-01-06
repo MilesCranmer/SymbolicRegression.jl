@@ -3,20 +3,20 @@
 This includes: process management, stdin reading, checking for early stops."""
 module SearchUtilsModule
 
-import Printf: @printf, @sprintf
+using Printf: @printf, @sprintf
 using Distributed
-import StatsBase: mean
+using StatsBase: mean
 
-import DynamicExpressions: AbstractExpressionNode
-import ..UtilsModule: subscriptify
-import ..CoreModule: Dataset, Options, MAX_DEGREE
-import ..ComplexityModule: compute_complexity
-import ..PopulationModule: Population
-import ..PopMemberModule: PopMember
-import ..HallOfFameModule:
+using DynamicExpressions: AbstractExpressionNode
+using ..UtilsModule: subscriptify
+using ..CoreModule: Dataset, Options, MAX_DEGREE
+using ..ComplexityModule: compute_complexity
+using ..PopulationModule: Population
+using ..PopMemberModule: PopMember
+using ..HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
-import ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
-import ..AdaptiveParsimonyModule: update_frequencies!
+using ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
+using ..AdaptiveParsimonyModule: update_frequencies!
 
 function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Vector{Int})::Int
     job_counts = Dict(proc => 0 for proc in procs)

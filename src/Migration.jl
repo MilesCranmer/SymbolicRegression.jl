@@ -1,10 +1,10 @@
 module MigrationModule
 
 using StatsBase: StatsBase
-import ..CoreModule: Options, DATA_TYPE, LOSS_TYPE
-import ..PopulationModule: Population
-import ..PopMemberModule: PopMember, reset_birth!
-import ..UtilsModule: poisson_sample
+using ..CoreModule: Options, DATA_TYPE, LOSS_TYPE
+using ..PopulationModule: Population
+using ..PopMemberModule: PopMember, reset_birth!
+using ..UtilsModule: poisson_sample
 
 """
     migrate!(migration::Pair{Population{T,L},Population{T,L}}, options::Options; frac::AbstractFloat)

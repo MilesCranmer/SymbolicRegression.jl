@@ -1,7 +1,7 @@
 module ComplexityModule
 
-import DynamicExpressions: AbstractExpressionNode, count_nodes, tree_mapreduce
-import ..CoreModule: Options, ComplexityMapping
+using DynamicExpressions: AbstractExpressionNode, count_nodes, tree_mapreduce
+using ..CoreModule: Options, ComplexityMapping
 
 function past_complexity_limit(
     tree::AbstractExpressionNode, options::Options{CT}, limit

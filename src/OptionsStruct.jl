@@ -1,8 +1,8 @@
 module OptionsStructModule
 
 using Optim: Optim
-import DynamicExpressions: AbstractOperatorEnum
-import LossFunctions: SupervisedLoss
+using DynamicExpressions: AbstractOperatorEnum
+using LossFunctions: SupervisedLoss
 
 import ..MutationWeightsModule: MutationWeights
 

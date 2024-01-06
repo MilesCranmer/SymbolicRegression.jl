@@ -1,4 +1,4 @@
-import SymbolicRegression: L2DistLoss, MutationWeights
+using SymbolicRegression: L2DistLoss, MutationWeights
 using Test: Test
 
 maximum_residual = 1e-2

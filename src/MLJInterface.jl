@@ -1,9 +1,9 @@
 module MLJInterfaceModule
 
 using Optim: Optim
-import MLJModelInterface as MMI
-import DynamicExpressions: eval_tree_array, string_tree, AbstractExpressionNode, Node
-import DynamicQuantities:
+using MLJModelInterface: MLJModelInterface as MMI
+using DynamicExpressions: eval_tree_array, string_tree, AbstractExpressionNode, Node
+using DynamicQuantities:
     QuantityArray,
     UnionAbstractQuantity,
     AbstractDimensions,
@@ -12,17 +12,16 @@ import DynamicQuantities:
     DEFAULT_DIM_BASE_TYPE,
     ustrip,
     dimension
-import LossFunctions: SupervisedLoss
-import Compat: allequal, stack
-import ..InterfaceDynamicQuantitiesModule: get_dimensions_type
-import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
-import ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
-import ..ComplexityModule: compute_complexity
-import ..HallOfFameModule: HallOfFame, format_hall_of_fame
-import ..UtilsModule: subscriptify
-#! format: off
+using LossFunctions: SupervisedLoss
+using Compat: allequal, stack
+using ..InterfaceDynamicQuantitiesModule: get_dimensions_type
+using ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
+using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
+using ..ComplexityModule: compute_complexity
+using ..HallOfFameModule: HallOfFame, format_hall_of_fame
+using ..UtilsModule: subscriptify
+
 import ..equation_search
-#! format: on
 
 abstract type AbstractSRRegressor <: MMI.Deterministic end
 
@@ -317,7 +316,7 @@ compat_ustrip(A) = ustrip.(A)
 
 """
     unwrap_units_single(::AbstractArray, ::Type{<:AbstractDimensions})
-    
+
 Remove units from some features in a matrix, and return, as a tuple,
 (1) the matrix with stripped units, and (2) the dimensions for those features.
 """
@@ -576,7 +575,7 @@ eval(
         `Continuous`; check the scitype with `scitype(y)`. Units in `y` (use `DynamicQuantities`
         for units) will trigger dimensional analysis to be used.
 
-    - `w` is the observation weights which can either be `nothing` (default) or an 
+    - `w` is the observation weights which can either be `nothing` (default) or an
       `AbstractVector` whoose element scitype is `Count` or `Continuous`.
 
     Train the machine using `fit!(mach)`, inspect the discovered expressions with
@@ -697,7 +696,7 @@ eval(
       scitype is `Continuous`; check the scitype with `schema(y)`. Units in columns of
       `y` (use `DynamicQuantities` for units) will trigger dimensional analysis to be used.
 
-    - `w` is the observation weights which can either be `nothing` (default) or an 
+    - `w` is the observation weights which can either be `nothing` (default) or an
       `AbstractVector` whoose element scitype is `Count` or `Continuous`. The same
       weights are used for all targets.
 

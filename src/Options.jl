@@ -3,13 +3,13 @@ module OptionsModule
 using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
-import DynamicExpressions: OperatorEnum
-import Distributed: nworkers
-import LossFunctions: L2DistLoss, SupervisedLoss
+using DynamicExpressions: OperatorEnum
+using Distributed: nworkers
+using LossFunctions: L2DistLoss, SupervisedLoss
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
-import ..OperatorsModule:
+using ..OperatorsModule:
     plus,
     pow,
     safe_pow,
@@ -22,9 +22,10 @@ import ..OperatorsModule:
     safe_sqrt,
     safe_acosh,
     atanh_clip
-import ..MutationWeightsModule: MutationWeights, mutations
-import ..OptionsStructModule: Options, ComplexityMapping
-import ..UtilsModule: max_ops, @save_kwargs
+using ..MutationWeightsModule: MutationWeights, mutations
+import ..OptionsStructModule: Options
+using ..OptionsStructModule: ComplexityMapping
+using ..UtilsModule: max_ops, @save_kwargs
 
 """
          build_constraints(una_constraints, bin_constraints,

@@ -1,4 +1,4 @@
-import PrecompileTools: @compile_workload, @setup_workload
+using PrecompileTools: @compile_workload, @setup_workload
 
 macro maybe_setup_workload(mode, ex)
     precompile_ex = Expr(

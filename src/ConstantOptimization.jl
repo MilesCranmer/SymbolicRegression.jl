@@ -2,11 +2,11 @@ module ConstantOptimizationModule
 
 using LineSearches: LineSearches
 using Optim: Optim
-import DynamicExpressions: count_constants
-import ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
-import ..UtilsModule: get_birth_order
-import ..LossFunctionsModule: score_func, eval_loss, batch_sample
-import ..PopMemberModule: PopMember
+using DynamicExpressions: count_constants
+using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
+using ..UtilsModule: get_birth_order
+using ..LossFunctionsModule: score_func, eval_loss, batch_sample
+using ..PopMemberModule: PopMember
 
 # Proxy function for optimization
 @inline function opt_func(

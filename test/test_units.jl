@@ -16,7 +16,7 @@ using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units, get_dimens
 using SymbolicRegression.MLJInterfaceModule: unwrap_units_single
 using SymbolicRegression.DimensionalAnalysisModule:
     violates_dimensional_constraints, @maybe_return_call, WildcardQuantity
-import DynamicQuantities:
+using DynamicQuantities:
     DEFAULT_DIM_BASE_TYPE,
     RealQuantity,
     Quantity,
@@ -31,8 +31,8 @@ import DynamicQuantities:
     ustrip,
     dimension
 using Test
-import MLJBase as MLJ
-import MLJModelInterface as MMI
+using MLJBase: MLJBase as MLJ
+using MLJModelInterface: MLJModelInterface as MMI
 
 custom_op(x, y) = x + y
 
@@ -148,7 +148,7 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
     @test compute_complexity(best_expr, options) >=
         compute_complexity(custom_op(cos(1 * x1), 1 * x1), options)
 
-    # Check that every cos(...) which contains x1 also has complexity 
+    # Check that every cos(...) which contains x1 also has complexity
     has_cos(tree) =
         any(tree) do t
             t.degree == 1 && options.operators.unaops[t.op] == cos

@@ -1,8 +1,8 @@
 """Useful functions to be used throughout the library."""
 module UtilsModule
 
-import Printf: @printf
-import MacroTools: splitdef, combinedef
+using Printf: @printf
+using MacroTools: splitdef, combinedef
 
 const pseudo_time = Ref(0)
 

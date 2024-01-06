@@ -1,6 +1,6 @@
 module InterfaceDynamicQuantitiesModule
 
-import DynamicQuantities:
+using DynamicQuantities:
     UnionAbstractQuantity,
     AbstractDimensions,
     Dimensions,

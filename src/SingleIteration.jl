@@ -1,22 +1,22 @@
 module SingleIterationModule
 
-import DynamicExpressions:
+using DynamicExpressions:
     AbstractExpressionNode,
     Node,
     constructorof,
     string_tree,
     simplify_tree!,
     combine_operators
-import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
-import ..ComplexityModule: compute_complexity
-import ..PopMemberModule: PopMember, generate_reference
-import ..PopulationModule: Population, finalize_scores, best_sub_pop
-import ..HallOfFameModule: HallOfFame
-import ..AdaptiveParsimonyModule: RunningSearchStatistics
-import ..RegularizedEvolutionModule: reg_evol_cycle
-import ..LossFunctionsModule: score_func_batched, batch_sample
-import ..ConstantOptimizationModule: optimize_constants
-import ..RecorderModule: @recorder
+using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
+using ..ComplexityModule: compute_complexity
+using ..PopMemberModule: PopMember, generate_reference
+using ..PopulationModule: Population, finalize_scores, best_sub_pop
+using ..HallOfFameModule: HallOfFame
+using ..AdaptiveParsimonyModule: RunningSearchStatistics
+using ..RegularizedEvolutionModule: reg_evol_cycle
+using ..LossFunctionsModule: score_func_batched, batch_sample
+using ..ConstantOptimizationModule: optimize_constants
+using ..RecorderModule: @recorder
 
 # Cycle through regularized evolution many times,
 # printing the fittest equation every 10% through

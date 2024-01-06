@@ -1,11 +1,11 @@
 using SymbolicRegression: SymbolicRegression
-import SymbolicRegression:
+using SymbolicRegression:
     Node, SRRegressor, MultitargetSRRegressor, node_to_symbolic, symbolic_to_node
-import MLJTestInterface as MTI
-import MLJBase: machine, fit!, report, predict
+using MLJTestInterface: MLJTestInterface as MTI
+using MLJBase: machine, fit!, report, predict
 using Test
 using SymbolicUtils: SymbolicUtils
-import Suppressor: @capture_err
+using Suppressor: @capture_err
 
 macro quiet(ex)
     return quote

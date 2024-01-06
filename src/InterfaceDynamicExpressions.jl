@@ -1,25 +1,22 @@
 module InterfaceDynamicExpressionsModule
 
-import Printf: @sprintf
+using Printf: @sprintf
 using DynamicExpressions: DynamicExpressions
+using DynamicExpressions: OperatorEnum, GenericOperatorEnum, AbstractExpressionNode
+using DynamicQuantities: dimension, ustrip
+using ..CoreModule: Options
+using ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
+using ..UtilsModule: subscriptify
+
 import DynamicExpressions:
-    OperatorEnum,
-    GenericOperatorEnum,
-    AbstractExpressionNode,
-    Node,
     eval_tree_array,
     eval_diff_tree_array,
     eval_grad_tree_array,
     print_tree,
     string_tree,
     differentiable_eval_tree_array
-import DynamicQuantities: dimension, ustrip
-import ..CoreModule: Options
-import ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
-import ..UtilsModule: subscriptify
-#! format: off
+
 import ..deprecate_varmap
-#! format: on
 
 """
     eval_tree_array(tree::AbstractExpressionNode, X::AbstractArray, options::Options; kws...)
