@@ -1,6 +1,6 @@
 module AdaptiveParsimonyModule
 
-import ..CoreModule: Options, MAX_DEGREE
+using ..CoreModule: Options, MAX_DEGREE
 
 """
     RunningSearchStatistics

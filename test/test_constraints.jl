@@ -1,4 +1,4 @@
-import DynamicExpressions: count_depth
+using DynamicExpressions: count_depth
 using SymbolicRegression
 using SymbolicRegression: check_constraints
 using Test

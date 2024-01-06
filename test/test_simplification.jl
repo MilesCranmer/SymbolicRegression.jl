@@ -1,8 +1,8 @@
 include("test_params.jl")
 using SymbolicRegression, Test
-import SymbolicUtils: simplify, Symbolic
-import Random: MersenneTwister
-import Base: ≈
+using SymbolicUtils: simplify, Symbolic
+using Random: MersenneTwister
+using Base: ≈
 
 function Base.:≈(a::String, b::String)
     a = replace(a, r"\s+" => "")

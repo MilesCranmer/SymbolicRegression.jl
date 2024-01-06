@@ -1,5 +1,5 @@
 using SymbolicRegression
-import SymbolicRegression.UtilsModule: recursive_merge
+using SymbolicRegression.UtilsModule: recursive_merge
 using Test
 using JSON3
 

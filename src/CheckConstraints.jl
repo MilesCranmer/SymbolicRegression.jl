@@ -1,9 +1,9 @@
 module CheckConstraintsModule
 
-import DynamicExpressions: Node, count_depth, tree_mapreduce
-import ..UtilsModule: vals
-import ..CoreModule: Options
-import ..ComplexityModule: compute_complexity, past_complexity_limit
+using DynamicExpressions: Node, count_depth, tree_mapreduce
+using ..UtilsModule: vals
+using ..CoreModule: Options
+using ..ComplexityModule: compute_complexity, past_complexity_limit
 
 # Check if any binary operator are overly complex
 function flag_bin_operator_complexity(tree::Node, op, cons, options::Options)::Bool

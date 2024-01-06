@@ -1,13 +1,14 @@
 module DimensionalAnalysisModule
 
-import DynamicExpressions: Node
-import DynamicQuantities:
-    Quantity, DimensionError, AbstractQuantity, dimension, ustrip, uparse, constructorof
-import Tricks: static_hasmethod
+using DynamicExpressions: Node
+using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, uparse, constructorof
+using Tricks: static_hasmethod
 
-import ..CoreModule: Options, Dataset
+using ..CoreModule: Options, Dataset
+using ..UtilsModule: safe_call
+
+import DynamicQuantities: dimension, ustrip
 import ..CoreModule.OperatorsModule: safe_pow, safe_sqrt
-import ..UtilsModule: safe_call
 
 """
     @maybe_return_call(T, op, (args...))

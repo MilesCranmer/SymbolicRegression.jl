@@ -1,5 +1,5 @@
 using SymbolicRegression
-import SymbolicRegression.AdaptiveParsimonyModule:
+using SymbolicRegression.AdaptiveParsimonyModule:
     RunningSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
 using Test
 using Random
