@@ -27,6 +27,16 @@ function random_node(tree::AbstractNode; filter::F=Returns(true)) where {F<:Func
     return rand(NodeSampler(; tree, filter))
 end
 
+"""Swap operands in binary operator for ops like pow and divide"""
+function swap_operands(tree::AbstractNode)::Node{T} where {T}
+    if !any(node -> node.degree == 2, tree)
+        return tree
+    end
+    node = random_node(tree; filter=t -> t.degree == 2)
+    node.l, node.r = node.r, node.l
+    return tree
+end
+
 """Randomly convert an operator into another one (binary->binary; unary->unary)"""
 function mutate_operator(tree::AbstractExpressionNode{T}, options::Options) where {T}
     if !(has_operators(tree))

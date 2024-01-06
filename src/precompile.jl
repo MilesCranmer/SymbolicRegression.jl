@@ -48,6 +48,7 @@ function do_precompilation(::Val{mode}) where {mode}
                     mutation_weights=MutationWeights(;
                         mutate_constant=1.0,
                         mutate_operator=1.0,
+                        swap_operands=1.0,
                         add_node=1.0,
                         insert_node=1.0,
                         delete_node=1.0,
