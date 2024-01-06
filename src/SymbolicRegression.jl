@@ -66,7 +66,7 @@ export Population,
 using Distributed
 import Printf: @printf, @sprintf
 import PackageExtensionCompat: @require_extensions
-using Logging: AbstractLogger, with_logger
+using Logging: AbstractLogger
 using Pkg: Pkg
 import TOML: parsefile
 import Random: seed!, shuffle!
