@@ -41,6 +41,8 @@ function modelexpr(model_name::Symbol)
             addprocs_function::Union{Function,Nothing} = nothing
             heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
             logger::Union{AbstractLogger,Nothing} = nothing
+            logging_callback::Union{Function,Nothing} = nothing
+            log_every_n::Int = 1
             runtests::Bool = true
             loss_type::L = Nothing
             selection_method::Function = choose_best
@@ -177,6 +179,8 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         y_units=y_units_clean,
         verbosity=verbosity,
         logger=m.logger,
+        logging_callback=m.logging_callback,
+        log_every_n=m.log_every_n,
         # Help out with inference:
         v_dim_out=isa(m, SRRegressor) ? Val(1) : Val(2),
     )

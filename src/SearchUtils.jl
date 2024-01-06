@@ -407,7 +407,7 @@ end
 function default_logging_callback(logger; options, num_evals, hall_of_fame, datasets, _...)
     L = typeof(first(datasets).baseline_loss)
     with_logger(logger) do
-        @info("search_state", num_evals = sum(sum, num_evals))
+        d = Dict()
         for (i, (hof, dataset)) in enumerate(zip(hall_of_fame, datasets))
             dominating = calculate_pareto_frontier(hof)
             best_loss = length(dominating) > 0 ? dominating[end].loss : L(Inf)
@@ -417,15 +417,17 @@ function default_logging_callback(logger; options, num_evals, hall_of_fame, data
                 string_tree(member.tree, options; variable_names=dataset.variable_names) for
                 member in dominating
             ]
-            @info(
-                "search_state_$(i)",
-                best_loss = best_loss,
-                equations = equations,
-                losses = losses,
-                complexities = complexities,
-                log_step_increment = 0,
-            )
+            d[string(i)] = Dict()
+            d[string(i)]["best_loss"] = best_loss
+            d[string(i)]["equations"] = Dict()
+            for (complexity, loss, equation) in zip(complexities, losses, equations)
+                d[string(i)]["equations"][string(complexity)] = Dict(
+                    "loss" => loss, "equation" => equation
+                )
+            end
         end
+        d["num_evals"] = sum(sum, num_evals)
+        @info("search_state", data = d)
     end
 end
 

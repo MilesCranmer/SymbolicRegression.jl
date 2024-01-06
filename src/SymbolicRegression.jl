@@ -355,6 +355,7 @@ function equation_search(
     verbosity::Union{Integer,Nothing}=nothing,
     logger::Union{AbstractLogger,Nothing}=nothing,
     logging_callback::Union{Function,Nothing}=nothing,
+    log_every_n::Int=1,
     progress::Union{Bool,Nothing}=nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
@@ -403,6 +404,7 @@ function equation_search(
         verbosity=verbosity,
         logger=logger,
         logging_callback=logging_callback,
+        log_every_n=log_every_n,
         progress=progress,
         v_dim_out=Val(DIM_OUT),
     )
@@ -442,6 +444,7 @@ function equation_search(
     verbosity::Union{Int,Nothing}=nothing,
     logger::Union{AbstractLogger,Nothing}=nothing,
     logging_callback::Union{Function,Nothing}=nothing,
+    log_every_n::Int=1,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
 ) where {DIM_OUT,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
@@ -574,6 +577,7 @@ function equation_search(
         saved_state,
         _verbosity,
         _logging_callback,
+        log_every_n,
         _progress,
         Val(_return_state),
     )
@@ -593,6 +597,7 @@ function _equation_search(
     saved_state,
     verbosity,
     logging_callback,
+    log_every_n,
     progress,
     ::Val{RETURN_STATE},
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},PARALLELISM,RETURN_STATE,DIM_OUT}
@@ -800,6 +805,7 @@ function _equation_search(
         )
     end
 
+    log_step = 0
     last_print_time = time()
     last_speed_recording_time = time()
     num_evals_last = sum(sum, num_evals)
@@ -971,7 +977,7 @@ function _equation_search(
                     PARALLELISM,
                 )
             end
-            if logging_callback !== nothing
+            if logging_callback !== nothing && log_step % log_every_n == 0
                 logging_callback(;
                     options,
                     num_evals,
@@ -982,6 +988,7 @@ function _equation_search(
                     datasets=datasets,
                 )
             end
+            log_step += 1
         end
         sleep(1e-6)
 
