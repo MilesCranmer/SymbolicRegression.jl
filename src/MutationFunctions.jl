@@ -32,7 +32,7 @@ function swap_operands(tree::AbstractNode)
     if !any(node -> node.degree == 2, tree)
         return tree
     end
-    node = random_node(tree; filter=t -> t.degree == 2)
+    node = rand(NodeSampler(; tree, filter=t -> t.degree == 2))
     node.l, node.r = node.r, node.l
     return tree
 end
