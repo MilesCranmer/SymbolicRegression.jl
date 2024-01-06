@@ -2,8 +2,8 @@ module OptionsStructModule
 
 using Optim: Optim
 using StatsBase: StatsBase
-import DynamicExpressions: AbstractOperatorEnum
-import LossFunctions: SupervisedLoss
+using DynamicExpressions: AbstractOperatorEnum
+using LossFunctions: SupervisedLoss
 
 mutable struct MutationWeights
     mutate_constant::Float64

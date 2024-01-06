@@ -1,6 +1,6 @@
 module DatasetModule
 
-import DynamicQuantities:
+using DynamicQuantities:
     AbstractDimensions,
     Dimensions,
     SymbolicDimensions,
@@ -8,13 +8,12 @@ import DynamicQuantities:
     uparse,
     sym_uparse,
     DEFAULT_DIM_BASE_TYPE
-import ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
 
-import ..UtilsModule: subscriptify, get_base_type
-import ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
-#! format: off
+using ..UtilsModule: subscriptify, get_base_type
+using ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
+using ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
+
 import ...deprecate_varmap
-#! format: on
 
 """
     Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}

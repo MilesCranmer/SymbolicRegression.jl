@@ -1,5 +1,7 @@
 using Base: @deprecate
 
+import .HallOfFameModule: calculate_pareto_frontier
+
 @deprecate(
     calculate_pareto_frontier(X, y, hallOfFame, options; weights=nothing, varMap=nothing),
     calculate_pareto_frontier(hallOfFame)

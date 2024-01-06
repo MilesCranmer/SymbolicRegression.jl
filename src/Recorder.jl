@@ -1,6 +1,6 @@
 module RecorderModule
 
-import ..CoreModule: RecordType, Options
+using ..CoreModule: RecordType, Options
 
 is_recording(::Options{<:Any,<:Any,use_recorder}) where {use_recorder} = use_recorder
 

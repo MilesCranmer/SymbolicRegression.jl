@@ -1,12 +1,12 @@
 module HallOfFameModule
 
-import DynamicExpressions: Node, string_tree
-import ..UtilsModule: split_string
-import ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu
-import ..ComplexityModule: compute_complexity
-import ..PopMemberModule: PopMember
-import ..LossFunctionsModule: eval_loss
-import ..InterfaceDynamicExpressionsModule: format_dimensions
+using DynamicExpressions: Node, string_tree
+using ..UtilsModule: split_string
+using ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu
+using ..ComplexityModule: compute_complexity
+using ..PopMemberModule: PopMember
+using ..LossFunctionsModule: eval_loss
+using ..InterfaceDynamicExpressionsModule: format_dimensions
 using Printf: @sprintf
 
 """
