@@ -404,8 +404,9 @@ function update_hall_of_fame!(
     end
 end
 
-function sr_plot(args...; kws...)
-    return nothing
+# Defined by Plots extension
+function default_sr_plot(args...; kws...)
+    return "Load the Plots package to use this function."
 end
 
 function default_logging_callback(logger; options, num_evals, hall_of_fame, datasets, _...)
@@ -425,7 +426,7 @@ function default_logging_callback(logger; options, num_evals, hall_of_fame, data
             d[string(i)] = Dict()
             d[string(i)]["best_loss"] = best_loss
             d[string(i)]["equations"] = Dict()
-            d[string(i)]["plot"] = sr_plot(
+            d[string(i)]["plot"] = default_sr_plot(
                 trees, losses, complexities, options; variable_names=dataset.variable_names
             )
             for (complexity, loss, equation) in zip(complexities, losses, equations)
