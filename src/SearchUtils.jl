@@ -404,6 +404,10 @@ function update_hall_of_fame!(
     end
 end
 
+function sr_plot(args...; kws...)
+    return nothing
+end
+
 function default_logging_callback(logger; options, num_evals, hall_of_fame, datasets, _...)
     L = typeof(first(datasets).baseline_loss)
     with_logger(logger) do
@@ -411,6 +415,7 @@ function default_logging_callback(logger; options, num_evals, hall_of_fame, data
         for (i, (hof, dataset)) in enumerate(zip(hall_of_fame, datasets))
             dominating = calculate_pareto_frontier(hof)
             best_loss = length(dominating) > 0 ? dominating[end].loss : L(Inf)
+            trees = [member.tree for member in dominating]
             losses = L[member.loss for member in dominating]
             complexities = Int[compute_complexity(member, options) for member in dominating]
             equations = String[
@@ -420,6 +425,9 @@ function default_logging_callback(logger; options, num_evals, hall_of_fame, data
             d[string(i)] = Dict()
             d[string(i)]["best_loss"] = best_loss
             d[string(i)]["equations"] = Dict()
+            d[string(i)]["plot"] = sr_plot(
+                trees, losses, complexities, options; variable_names=dataset.variable_names
+            )
             for (complexity, loss, equation) in zip(complexities, losses, equations)
                 d[string(i)]["equations"][string(complexity)] = Dict(
                     "loss" => loss, "equation" => equation
