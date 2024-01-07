@@ -11,7 +11,9 @@ function plot(hall_of_fame::HallOfFame, options::Options; variable_names=nothing
     return default_sr_plot(hall_of_fame, options; variable_names, kws...)
 end
 
-function default_sr_plot(hall_of_fame::HallOfFame, options::Options; variable_names=nothing, kws...)
+function default_sr_plot(
+    hall_of_fame::HallOfFame, options::Options; variable_names=nothing, kws...
+)
     (; trees, losses, complexities) = format_hall_of_fame(hall_of_fame, options)
     return default_sr_plot(trees, losses, complexities, options; variable_names, kws...)
 end

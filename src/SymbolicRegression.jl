@@ -237,7 +237,7 @@ using .SearchUtilsModule:
     get_cur_maxsize,
     update_hall_of_fame!,
     default_logging_callback,
-    sr_plot
+    default_sr_plot
 
 include("deprecates.jl")
 include("Configure.jl")
