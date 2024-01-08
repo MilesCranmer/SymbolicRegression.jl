@@ -89,9 +89,84 @@ function get_options(::AbstractSRRegressor) end
 eval(modelexpr(:SRRegressor))
 eval(modelexpr(:MultitargetSRRegressor))
 
+"""
+    SRFitResultTypes
+
+A struct referencing types in the `SRFitResult` struct,
+to be used in type inference during MLJ.update to speed up iterative fits.
+"""
+Base.@kwdef struct SRFitResultTypes{
+    _T,_X_t,_y_t,_w_t,_state,_X_units,_y_units,_X_units_clean,_y_units_clean
+}
+    T::Type{_T} = Any
+    X_t::Type{_X_t} = Any
+    y_t::Type{_y_t} = Any
+    w_t::Type{_w_t} = Any
+    state::Type{_state} = Any
+    X_units::Type{_X_units} = Any
+    y_units::Type{_y_units} = Any
+    X_units_clean::Type{_X_units_clean} = Any
+    y_units_clean::Type{_y_units_clean} = Any
+end
+
+"""
+    SRFitResult
+
+A struct containing the result of a fit of an `SRRegressor` or `MultitargetSRRegressor`.
+"""
+Base.@kwdef struct SRFitResult{
+    M<:AbstractSRRegressor,
+    S,
+    O<:Options,
+    XD<:Union{Vector{<:AbstractDimensions},Nothing},
+    YD<:Union{AbstractDimensions,Vector{<:AbstractDimensions},Nothing},
+    TYPES<:SRFitResultTypes,
+}
+    model::M
+    state::S
+    num_targets::Int
+    options::O
+    variable_names::Vector{String}
+    y_variable_names::Union{Vector{String},Nothing}
+    y_is_table::Bool
+    X_units::XD
+    y_units::YD
+    types::TYPES
+end
+
+# Define a simpler print method for this:
+function Base.show(io::IO, ::MIME"text/plain", fitresult::SRFitResult)
+    print(io, "SRFitResult for $(fitresult.model):")
+    print(io, "\n")
+    print(io, "  state:\n")
+    print(io, "    [1]: $(typeof(fitresult.state[1])) with ")
+    print(io, "$(length(fitresult.state[1])) × $(length(fitresult.state[1][1])) ")
+    print(io, "populations of $(fitresult.state[1][1][1].n) members\n")
+    print(io, "    [2]: $(typeof(fitresult.state[2])) ")
+    if fitresult.model isa SRRegressor
+        print(io, "with $(sum(fitresult.state[2].exists)) saved expressions")
+    else
+        print(io, "with $(map(s -> sum(s.exists), fitresult.state[2])) saved expressions")
+    end
+    print(io, "\n")
+    print(io, "  num_targets: $(fitresult.num_targets)")
+    print(io, "\n")
+    print(io, "  variable_names: $(fitresult.variable_names)")
+    print(io, "\n")
+    print(io, "  y_variable_names: $(fitresult.y_variable_names)")
+    print(io, "\n")
+    print(io, "  X_units: $(fitresult.X_units)")
+    print(io, "\n")
+    print(io, "  y_units: $(fitresult.y_units)")
+    print(io, "\n")
+    return nothing
+end
+
 # Cleaning already taken care of by `Options` and `equation_search`
 function full_report(
-    m::AbstractSRRegressor, fitresult; v_with_strings::Val{with_strings}=Val(true)
+    m::AbstractSRRegressor,
+    fitresult::SRFitResult;
+    v_with_strings::Val{with_strings}=Val(true),
 ) where {with_strings}
     _, hof = fitresult.state
     # TODO: Adjust baseline loss
@@ -123,25 +198,23 @@ function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
     return MMI.update(m, verbosity, nothing, nothing, X, y, w)
 end
 function MMI.update(
-    m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
+    m::AbstractSRRegressor,
+    verbosity,
+    old_fitresult::Union{SRFitResult,Nothing},
+    old_cache,
+    X,
+    y,
+    w=nothing,
 )
     options = old_fitresult === nothing ? get_options(m) : old_fitresult.options
     return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
 end
-function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
+function _update(
+    m, verbosity, old_fitresult::Union{SRFitResult,Nothing}, old_cache, X, y, w, options
+)
     # To speed up iterative fits, we cache the types:
     types = if old_fitresult === nothing
-        (;
-            T=Any,
-            X_t=Any,
-            y_t=Any,
-            w_t=Any,
-            state=Any,
-            X_units=Any,
-            y_units=Any,
-            X_units_clean=Any,
-            y_units_clean=Any,
-        )
+        SRFitResultTypes()
     else
         old_fitresult.types
     end
@@ -184,7 +257,8 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         # Help out with inference:
         v_dim_out=isa(m, SRRegressor) ? Val(1) : Val(2),
     )
-    fitresult = (;
+    fitresult = SRFitResult(;
+        model=m,
         state=search_state,
         num_targets=isa(m, SRRegressor) ? 1 : size(y_t, 1),
         options=options,
@@ -193,7 +267,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         y_is_table=MMI.istable(y),
         X_units=X_units_clean,
         y_units=y_units_clean,
-        types=(
+        types=SRFitResultTypes(;
             T=hof_eltype(search_state[2]),
             X_t=typeof(X_t),
             y_t=typeof(y_t),
@@ -204,7 +278,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
             X_units_clean=typeof(X_units_clean),
             y_units_clean=typeof(y_units_clean),
         ),
-    )::(old_fitresult === nothing ? Any : typeof(old_fitresult))
+    )::(old_fitresult === nothing ? SRFitResult : typeof(old_fitresult))
     return (fitresult, nothing, full_report(m, fitresult))
 end
 hof_eltype(::Type{H}) where {T,H<:HallOfFame{T}} = T
@@ -253,7 +327,7 @@ function format_input_for(::MultitargetSRRegressor, y, ::Type{D}) where {D}
     )
     return get_matrix_and_info(y, D)
 end
-function validate_variable_names(variable_names, fitresult)
+function validate_variable_names(variable_names, fitresult::SRFitResult)
     @assert(
         variable_names == fitresult.variable_names,
         "Variable names do not match fitted regressor."
@@ -294,13 +368,15 @@ end
     end
 end
 
-function prediction_fallback(::Type{T}, m::SRRegressor, Xnew_t, fitresult) where {T}
+function prediction_fallback(
+    ::Type{T}, m::SRRegressor, Xnew_t, fitresult::SRFitResult
+) where {T}
     prediction_warn()
     out = fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T))
     return wrap_units(out, fitresult.y_units, nothing)
 end
 function prediction_fallback(
-    ::Type{T}, ::MultitargetSRRegressor, Xnew_t, fitresult, prototype
+    ::Type{T}, ::MultitargetSRRegressor, Xnew_t, fitresult::SRFitResult, prototype
 ) where {T}
     prediction_warn()
     out_cols = [
@@ -340,7 +416,7 @@ function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
     return compat_ustrip(v)::AbstractVector, dims
 end
 
-function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
+function MMI.fitted_params(m::AbstractSRRegressor, fitresult::SRFitResult)
     report = full_report(m, fitresult)
     return (;
         best_idx=report.best_idx,
@@ -349,7 +425,7 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     )
 end
 
-function MMI.predict(m::SRRegressor, fitresult, Xnew)
+function MMI.predict(m::SRRegressor, fitresult::SRFitResult{<:SRRegressor}, Xnew)
     params = full_report(m, fitresult; v_with_strings=Val(false))
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     T = promote_type(eltype(Xnew_t), fitresult.types.T)
@@ -367,7 +443,9 @@ function MMI.predict(m::SRRegressor, fitresult, Xnew)
         return wrap_units(out, fitresult.y_units, nothing)
     end
 end
-function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
+function MMI.predict(
+    m::MultitargetSRRegressor, fitresult::SRFitResult{<:MultitargetSRRegressor}, Xnew
+)
     params = full_report(m, fitresult; v_with_strings=Val(false))
     prototype = MMI.istable(Xnew) ? Xnew : nothing
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
