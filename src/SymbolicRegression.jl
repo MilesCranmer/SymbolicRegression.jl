@@ -159,6 +159,7 @@ include("SingleIteration.jl")
 include("ProgressBars.jl")
 include("Migration.jl")
 include("SearchUtils.jl")
+include("PlotRecipes.jl")
 
 using .CoreModule:
     MAX_DEGREE,

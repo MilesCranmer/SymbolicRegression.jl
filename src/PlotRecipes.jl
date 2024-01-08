@@ -1,11 +1,8 @@
-module SymbolicRegressionPlotsExt
+module PlotRecipesModule
 
-import Plots: plot
-import SymbolicRegression: default_sr_plot
-
-using DynamicExpressions: Node
-using SymbolicRegression: HallOfFame, Options, string_tree
-using SymbolicRegression.HallOfFameModule: format_hall_of_fame
+using DynamicExpressions: Node, string_tree
+using ..CoreModule: Options
+using ..HallOfFameModule: HallOfFame, format_hall_of_fame
 
 function plot(hall_of_fame::HallOfFame, options::Options; variable_names=nothing, kws...)
     return default_sr_plot(hall_of_fame, options; variable_names, kws...)
