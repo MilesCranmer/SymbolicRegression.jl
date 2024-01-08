@@ -2,7 +2,7 @@
 module PrintingModule
 
 using ..CoreModule: Options
-using ..MLJModelInterface: SRRegressor, SRFitResult
+using ..MLJInterfaceModule: SRRegressor, SRFitResult
 
 function Base.print(io::IO, options::Options)
     return print(

@@ -1,40 +1,36 @@
 module PlotRecipesModule
 
+using RecipesBase: @recipe
 using DynamicExpressions: Node, string_tree
 using ..CoreModule: Options
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
+using ..MLJInterfaceModule: SRFitResult, SRRegressor
 
-function plot(hall_of_fame::HallOfFame, options::Options; variable_names=nothing, kws...)
-    return default_sr_plot(hall_of_fame, options; variable_names, kws...)
+@recipe function default_sr_plot(fitresult::SRFitResult{<:SRRegressor})
+    return fitresult.state[2], fitresult.options
 end
 
-function default_sr_plot(
-    hall_of_fame::HallOfFame, options::Options; variable_names=nothing, kws...
-)
+# TODO: Add variable names
+@recipe function default_sr_plot(hall_of_fame::HallOfFame, options::Options)
     (; trees, losses, complexities) = format_hall_of_fame(hall_of_fame, options)
-    return default_sr_plot(trees, losses, complexities, options; variable_names, kws...)
+    return (trees, losses, complexities, options)
 end
 
-function default_sr_plot(
-    trees::Vector{N},
-    losses::Vector{L},
-    complexities::Vector{Int},
-    options::Options;
-    variable_names=nothing,
-    kws...,
+@recipe function default_sr_plot(
+    trees::Vector{N}, losses::Vector{L}, complexities::Vector{Int}, options::Options
 ) where {T,L,N<:Node{T}}
-    tree_strings = [string_tree(tree, options; variable_names) for tree in trees]
-    return plot(
-        complexities,
-        losses;
-        label=nothing,
-        xlabel="Complexity",
-        ylabel="Loss",
-        title="Hall of Fame",
-        xlims=(0, options.maxsize),
-        yscale=:log10,
-        kws...,
-    )
+    tree_strings = [string_tree(tree, options) for tree in trees]
+
+    xlabel --> "Complexity"
+    ylabel --> "Loss"
+
+    xlims --> (0.5, options.maxsize + 1)
+
+    xscale --> :log10
+    yscale --> :log10
+
+    # Data for plotting:
+    return complexities, losses
 end
 
 end

@@ -159,8 +159,6 @@ include("SingleIteration.jl")
 include("ProgressBars.jl")
 include("Migration.jl")
 include("SearchUtils.jl")
-include("Printing.jl")
-include("PlotRecipes.jl")
 
 using .CoreModule:
     MAX_DEGREE,
@@ -1119,6 +1117,9 @@ end
 
 include("MLJInterface.jl")
 using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
+
+include("Printing.jl")
+include("PlotRecipes.jl")
 
 function __init__()
     @require_extensions
