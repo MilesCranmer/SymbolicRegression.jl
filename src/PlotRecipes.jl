@@ -12,8 +12,8 @@ end
 
 # TODO: Add variable names
 @recipe function default_sr_plot(hall_of_fame::HallOfFame, options::Options)
-    (; trees, losses, complexities) = format_hall_of_fame(hall_of_fame, options)
-    return (trees, losses, complexities, options)
+    out = format_hall_of_fame(hall_of_fame, options)
+    return (out.trees, out.losses, out.complexities, options)
 end
 
 @recipe function default_sr_plot(
