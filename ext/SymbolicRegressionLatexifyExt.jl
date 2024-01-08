@@ -1,32 +1,6 @@
 module SymbolicRegressionLatexifyExt
 
-using SymbolicRegression:
-    Options,
-    Node,
-    string_tree,
-    plus,
-    sub,
-    mult,
-    square,
-    cube,
-    pow,
-    safe_pow,
-    safe_log,
-    safe_log2,
-    safe_log10,
-    safe_log1p,
-    safe_sqrt,
-    safe_acosh,
-    neg,
-    greater,
-    cond,
-    relu,
-    logical_or,
-    logical_and,
-    gamma,
-    erf,
-    erfc,
-    atanh_clip
+using SymbolicRegression: Options, Node, string_tree
 using Latexify
 
 @latexrecipe function latexify_node(::Node)
