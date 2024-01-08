@@ -159,6 +159,7 @@ include("SingleIteration.jl")
 include("ProgressBars.jl")
 include("Migration.jl")
 include("SearchUtils.jl")
+include("Printing.jl")
 include("PlotRecipes.jl")
 
 using .CoreModule:

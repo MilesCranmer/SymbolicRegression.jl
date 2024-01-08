@@ -197,28 +197,4 @@ struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
     define_helper_functions::Bool
 end
 
-function Base.print(io::IO, options::Options)
-    return print(
-        io,
-        "Options(" *
-        "binops=$(options.operators.binops), " *
-        "unaops=$(options.operators.unaops), "
-        # Fill in remaining fields automatically:
-        *
-        join(
-            [
-                if fieldname in (:optimizer_options, :mutation_weights)
-                    "$(fieldname)=..."
-                else
-                    "$(fieldname)=$(getfield(options, fieldname))"
-                end for
-                fieldname in fieldnames(Options) if fieldname ∉ [:operators, :nuna, :nbin]
-            ],
-            ", ",
-        ) *
-        ")",
-    )
-end
-Base.show(io::IO, ::MIME"text/plain", options::Options) = Base.print(io, options)
-
 end

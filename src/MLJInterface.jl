@@ -134,34 +134,6 @@ Base.@kwdef struct SRFitResult{
     types::TYPES
 end
 
-# Define a simpler print method for this:
-function Base.show(io::IO, ::MIME"text/plain", fitresult::SRFitResult)
-    print(io, "SRFitResult for $(fitresult.model):")
-    print(io, "\n")
-    print(io, "  state:\n")
-    print(io, "    [1]: $(typeof(fitresult.state[1])) with ")
-    print(io, "$(length(fitresult.state[1])) × $(length(fitresult.state[1][1])) ")
-    print(io, "populations of $(fitresult.state[1][1][1].n) members\n")
-    print(io, "    [2]: $(typeof(fitresult.state[2])) ")
-    if fitresult.model isa SRRegressor
-        print(io, "with $(sum(fitresult.state[2].exists)) saved expressions")
-    else
-        print(io, "with $(map(s -> sum(s.exists), fitresult.state[2])) saved expressions")
-    end
-    print(io, "\n")
-    print(io, "  num_targets: $(fitresult.num_targets)")
-    print(io, "\n")
-    print(io, "  variable_names: $(fitresult.variable_names)")
-    print(io, "\n")
-    print(io, "  y_variable_names: $(fitresult.y_variable_names)")
-    print(io, "\n")
-    print(io, "  X_units: $(fitresult.X_units)")
-    print(io, "\n")
-    print(io, "  y_units: $(fitresult.y_units)")
-    print(io, "\n")
-    return nothing
-end
-
 # Cleaning already taken care of by `Options` and `equation_search`
 function full_report(
     m::AbstractSRRegressor,
