@@ -223,9 +223,12 @@ The `output` array will contain the result of the tree at each of the 100 rows.
 This `did_succeed` flag detects whether an evaluation was successful, or whether
 encountered any NaNs or Infs during calculation (such as, e.g., `sqrt(-1)`).
 
-## Constructing trees
+## Constructing expressions
 
-You can also manipulate and construct trees directly. For example:
+Expressions are represented as the `Node` type which is developed
+in the [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl/) package.
+
+You can manipulate and construct expressions directly. For example:
 
 ```julia
 import SymbolicRegression: Options, Node, eval_tree_array
