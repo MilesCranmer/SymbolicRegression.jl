@@ -15,7 +15,7 @@ function _loss(
 ) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
     if !(typeof(x) <: Array)
         # Safer to avoid indexing for general arrays
-        return mean(@. loss(x, y))
+        return sum(@. loss(x, y)) / length(x)
     elseif LT <: SupervisedLoss
         return LossFunctions.mean(loss, x, y)
     else
@@ -43,7 +43,7 @@ function _weighted_loss(
 end
 
 """If any of the indices are `nothing`, just return."""
-@inline function maybe_getindex(v, i...)
+@inline function maybe_getindex(v, i::Vararg{Any,M}) where {M}
     if any(==(nothing), i)
         return v
     else
