@@ -267,9 +267,6 @@ end
 function dimension_with_fallback(q::UnionAbstractQuantity{T}, ::Type{D}) where {T,D}
     return dimension(convert(Quantity{T,D}, q))::D
 end
-function dimension_with_fallback(_, ::Type{D}) where {D}
-    return D()
-end
 function prediction_warn()
     @warn "Evaluation failed either due to NaNs detected or due to unfinished search. Using 0s for prediction."
 end
@@ -321,18 +318,34 @@ Remove units from some features in a matrix, and return, as a tuple,
 (1) the matrix with stripped units, and (2) the dimensions for those features.
 """
 function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
-    dims = D[dimension_with_fallback(first(row), D) for row in eachrow(A)]
-    @inbounds for (i, row) in enumerate(eachrow(A))
-        all(xi -> dimension_with_fallback(xi, D) == dims[i], row) ||
-            error("Inconsistent units in feature $i of matrix.")
+    dims = if eltype(A) <: UnionAbstractQuantity
+        D[dimension_with_fallback(first(row), D) for row in eachrow(A)]
+    else
+        [D() for _ in 1:size(A, 1)]
     end
-    return stack(compat_ustrip, eachrow(A); dims=1)::AbstractMatrix, dims
+    if eltype(A) <: UnionAbstractQuantity
+        @inbounds for (i, row) in enumerate(eachrow(A))
+            all(xi -> dimension_with_fallback(xi, D) == dims[i], row) ||
+                error("Inconsistent units in feature $i of matrix.")
+        end
+        return stack(compat_ustrip, eachrow(A); dims=1)::AbstractMatrix, dims
+    else
+        return A, dims
+    end
 end
 function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
-    dims = dimension_with_fallback(first(v), D)
-    all(xi -> dimension_with_fallback(xi, D) == dims, v) ||
-        error("Inconsistent units in vector.")
-    return compat_ustrip(v)::AbstractVector, dims
+    dims = if eltype(v) <: UnionAbstractQuantity
+        dimension_with_fallback(first(v), D)
+    else
+        D()
+    end
+    if eltype(v) <: UnionAbstractQuantity
+        all(xi -> dimension_with_fallback(xi, D) == dims, v) ||
+            error("Inconsistent units in vector.")
+        return compat_ustrip(v)::AbstractVector, dims
+    else
+        return v, dims
+    end
 end
 
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
