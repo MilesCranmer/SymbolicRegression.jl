@@ -38,7 +38,7 @@ function _weighted_loss(
         return LossFunctions.sum(loss, x, y, w; normalize=true)
     else
         l(i) = loss(x[i], y[i], w[i])
-        return sum(l, eachindex(x)) / sum(w)
+        return sum(l, eachindex(x))
     end
 end
 
