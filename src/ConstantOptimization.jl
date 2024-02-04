@@ -93,8 +93,8 @@ function _optimize_constants(
 
     if Optim.converged(result)
         _set_constants!(result.minimizer, constant_nodes)
-        member.score, member.loss = score_func(dataset, member, options)
-        num_evals += 1
+        member.score, member.loss = score_func_batched(dataset, member, options; idx=idx)
+        num_evals += eval_fraction
         member.birth = get_birth_order(; deterministic=options.deterministic)
     else
         _set_constants!(x0, constant_nodes)
