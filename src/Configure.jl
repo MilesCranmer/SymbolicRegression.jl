@@ -238,7 +238,7 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
         push!(expr.args, quote using $ext: $ext end)
     end
 
-    verbosity > 0 && 
+    verbosity > 0 &&
         if isempty(relevant_extensions)
             @info "Importing SymbolicRegression on workers."
         else
