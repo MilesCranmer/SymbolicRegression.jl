@@ -1,4 +1,6 @@
 using SymbolicRegression: L2DistLoss, MutationWeights
+using Optim: Optim
+using LineSearches: LineSearches
 using Test: Test
 
 maximum_residual = 1e-2
@@ -48,7 +50,7 @@ default_params = (
     una_constraints=nothing,
     progress=false,
     terminal_width=nothing,
-    optimizer_algorithm="NelderMead",
+    optimizer_algorithm=Optim.NelderMead(; linesearch=LineSearches.BackTracking()),
     optimizer_nrestarts=3,
     optimizer_probability=0.1f0,
     optimizer_iterations=100,
