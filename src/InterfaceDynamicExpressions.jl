@@ -157,7 +157,7 @@ Convert an equation to a string.
             tree,
             options.operators;
             f_variable=(feature, vname) -> string_variable(feature, vname, X_sym_units),
-            f_constant=(val, bracketed) -> string_constant(val, vprecision, "[⋅]"),
+            f_constant=(val,) -> string_constant(val, vprecision, "[⋅]"),
             variable_names=display_variable_names,
             kws...,
         )
