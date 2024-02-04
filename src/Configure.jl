@@ -114,14 +114,6 @@ end
 function move_functions_to_workers(
     procs, options::Options, dataset::Dataset{T}, verbosity
 ) where {T}
-    enable_autodiff =
-        :diff_binops in fieldnames(typeof(options.operators)) &&
-        :diff_unaops in fieldnames(typeof(options.operators)) &&
-        (
-            options.operators.diff_binops !== nothing ||
-            options.operators.diff_unaops !== nothing
-        )
-
     # All the types of functions we need to move to workers:
     function_sets = (
         :unaops,
@@ -139,18 +131,6 @@ function move_functions_to_workers(
             example_inputs = (zero(T),)
         elseif function_set == :binops
             ops = options.operators.binops
-            example_inputs = (zero(T), zero(T))
-        elseif function_set == :diff_unaops
-            if !enable_autodiff
-                continue
-            end
-            ops = options.operators.diff_unaops
-            example_inputs = (zero(T),)
-        elseif function_set == :diff_binops
-            if !enable_autodiff
-                continue
-            end
-            ops = options.operators.diff_binops
             example_inputs = (zero(T), zero(T))
         elseif function_set == :elementwise_loss
             if typeof(options.elementwise_loss) <: SupervisedLoss

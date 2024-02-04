@@ -6,6 +6,8 @@ using StatsBase: StatsBase
 using DynamicExpressions: OperatorEnum, Node, string_tree
 using Distributed: nworkers
 using LossFunctions: L2DistLoss, SupervisedLoss
+using Optim: Optim
+using LineSearches: LineSearches
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
@@ -165,6 +167,7 @@ const deprecated_options_mapping = NamedTuple([
     :earlyStopCondition => :early_stop_condition,
     :stateReturn => :deprecated_return_state,
     :return_state => :deprecated_return_state,
+    :enable_autodiff => :deprecated_enable_autodiff,
     :ns => :tournament_selection_n,
     :loss => :elementwise_loss,
 ])
@@ -280,6 +283,7 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `turbo`: Whether to use `LoopVectorization.@turbo` to evaluate expressions.
     This can be significantly faster, but is only compatible with certain
     operators. *Experimental!*
+- `bumper`: Whether to use Bumper.jl for faster evaluation. *Experimental!*
 - `migration`: Whether to migrate equations between processes.
 - `hof_migration`: Whether to migrate equations from the hall of fame
     to processes.
@@ -294,7 +298,7 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `optimizer_nrestarts`: How many different random starting positions to consider
     for optimization of constants.
 - `optimizer_algorithm`: Select algorithm to use for optimizing constants. Default
-    is "BFGS", but "NelderMead" is also supported.
+    is `Optim.BFGS(linesearch=LineSearches.BackTracking())`.
 - `optimizer_options`: General options for the constant optimization. For details
     we refer to the documentation on `Optim.Options` from the `Optim.jl` package.
     Options can be provided here as `NamedTuple`, e.g. `(iterations=16,)`, as a
@@ -330,8 +334,6 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `max_evals`: Int (or Nothing) - the maximum number of evaluations of expressions to perform.
 - `skip_mutation_failures`: Whether to simply skip over mutations that fail or are rejected, rather than to replace the mutated
     expression with the original expression and proceed normally.
-- `enable_autodiff`: Whether to enable automatic differentiation functionality. This is turned off by default.
-    If turned on, this will be turned off if one of the operators does not have well-defined gradients.
 - `nested_constraints`: Specifies how many times a combination of operators can be nested. For example,
     `[sin => [cos => 0], cos => [cos => 2]]` specifies that `cos` may never appear within a `sin`,
     but `sin` can be nested with itself an unlimited number of times. The second term specifies that `cos`
@@ -376,6 +378,7 @@ function Options end
     maxsize::Integer=20,
     maxdepth::Union{Nothing,Integer}=nothing,
     turbo::Bool=false,
+    bumper::Bool=false,
     migration::Bool=true,
     hof_migration::Bool=true,
     should_simplify::Union{Nothing,Bool}=nothing,
@@ -405,7 +408,9 @@ function Options end
     una_constraints=nothing,
     progress::Union{Bool,Nothing}=nothing,
     terminal_width::Union{Nothing,Integer}=nothing,
-    optimizer_algorithm::AbstractString="BFGS",
+    optimizer_algorithm::Union{AbstractString,Optim.AbstractOptimizer}=Optim.BFGS(;
+        linesearch=LineSearches.BackTracking()
+    ),
     optimizer_nrestarts::Integer=2,
     optimizer_probability::Real=0.14,
     optimizer_iterations::Union{Nothing,Integer}=nothing,
@@ -416,7 +421,6 @@ function Options end
     timeout_in_seconds::Union{Nothing,Real}=nothing,
     max_evals::Union{Nothing,Integer}=nothing,
     skip_mutation_failures::Bool=true,
-    enable_autodiff::Bool=false,
     nested_constraints=nothing,
     deterministic::Bool=false,
     # Not search options; just construction options:
@@ -459,6 +463,7 @@ function Options end
         k == :earlyStopCondition && (early_stop_condition = kws[k]; true) && continue
         k == :return_state && (deprecated_return_state = kws[k]; true) && continue
         k == :stateReturn && (deprecated_return_state = kws[k]; true) && continue
+        k == :enable_autodiff && continue
         k == :ns && (tournament_selection_n = kws[k]; true) && continue
         k == :loss && (elementwise_loss = kws[k]; true) && continue
         if k == :mutationWeights
@@ -490,6 +495,17 @@ function Options end
     if npopulations !== nothing
         Base.depwarn("`npopulations` is deprecated. Use `populations` instead.", :Options)
         populations = npopulations
+    end
+    if optimizer_algorithm isa AbstractString
+        Base.depwarn(
+            "The `optimizer_algorithm` argument should be an `AbstractOptimizer`, not a string.",
+            :Options,
+        )
+        optimizer_algorithm = if optimizer_algorithm == "NelderMead"
+            Optim.NelderMead(; linesearch=LineSearches.BackTracking())
+        else
+            Optim.BFGS(; linesearch=LineSearches.BackTracking())
+        end
     end
 
     if elementwise_loss === nothing
@@ -669,7 +685,6 @@ function Options end
         OperatorEnum(;
             binary_operators=binary_operators,
             unary_operators=unary_operators,
-            enable_autodiff=false,  # Not needed; we just want the constructors
             define_helper_functions=true,
             empty_old_operators=true,
         )
@@ -681,7 +696,6 @@ function Options end
     operators = OperatorEnum(;
         binary_operators=binary_operators,
         unary_operators=unary_operators,
-        enable_autodiff=enable_autodiff,
         define_helper_functions=define_helper_functions,
         empty_old_operators=false,
     )
@@ -735,6 +749,9 @@ function Options end
         typeof(operators),
         use_recorder,
         typeof(optimizer_options),
+        typeof(optimizer_algorithm),
+        turbo,
+        bumper,
         typeof(tournament_selection_weights),
     }(
         operators,
@@ -749,7 +766,8 @@ function Options end
         alpha,
         maxsize,
         maxdepth,
-        turbo,
+        Val(turbo),
+        Val(bumper),
         migration,
         hof_migration,
         should_simplify,

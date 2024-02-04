@@ -44,9 +44,7 @@ for type in [Float16, Float32, Float64]
     X = rand(rng, type, nfeatures, N) * 5
 
     options = Options(;
-        binary_operators=(+, *, -, /, pow_abs2),
-        unary_operators=(custom_cos, exp, sin),
-        enable_autodiff=true,
+        binary_operators=(+, *, -, /, pow_abs2), unary_operators=(custom_cos, exp, sin)
     )
     @extend_operators options
 
@@ -128,9 +126,7 @@ println("Testing NodeIndex.")
 using SymbolicRegression: get_constants, NodeIndex, index_constants
 
 options = Options(;
-    binary_operators=(+, *, -, /, pow_abs2),
-    unary_operators=(custom_cos, exp, sin),
-    enable_autodiff=true,
+    binary_operators=(+, *, -, /, pow_abs2), unary_operators=(custom_cos, exp, sin)
 )
 @extend_operators options
 tree = equation3(nx1, nx2, nx3)

@@ -3,6 +3,7 @@ module InterfaceDynamicExpressionsModule
 using Printf: @sprintf
 using DynamicExpressions: DynamicExpressions
 using DynamicExpressions: OperatorEnum, GenericOperatorEnum, Node
+using DynamicExpressions.EquationModule: needs_brackets
 using DynamicQuantities: dimension, ustrip
 using ..CoreModule: Options
 using ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
@@ -52,7 +53,9 @@ which speed up evaluation significantly.
     to the equation.
 """
 function eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
-    return eval_tree_array(tree, X, options.operators; turbo=options.turbo, kws...)
+    return eval_tree_array(
+        tree, X, options.operators; turbo=options.turbo, bumper=options.bumper, kws...
+    )
 end
 
 """
@@ -68,7 +71,6 @@ respect to `x1`.
 - `tree::Node`: The expression tree to evaluate.
 - `X::AbstractArray`: The data matrix, with each column being a data point.
 - `options::Options`: The options containing the operators used to create the `tree`.
-    `enable_autodiff` must be set to `true` when creating the options.
     This is needed to create the derivative operations.
 - `direction::Int`: The index of the variable to take the derivative with respect to.
 
@@ -96,7 +98,6 @@ to every constant in the expression.
 - `tree::Node`: The expression tree to evaluate.
 - `X::AbstractArray`: The data matrix, with each column being a data point.
 - `options::Options`: The options containing the operators used to create the `tree`.
-    `enable_autodiff` must be set to `true` when creating the options.
     This is needed to create the derivative operations.
 - `variable::Bool`: Whether to take derivatives with respect to features (i.e., `X` - with `variable=true`),
     or with respect to every constant in the expression (`variable=false`).
@@ -156,8 +157,7 @@ Convert an equation to a string.
             tree,
             options.operators;
             f_variable=(feature, vname) -> string_variable(feature, vname, X_sym_units),
-            f_constant=(val, bracketed) ->
-                string_constant(val, bracketed, vprecision, "[⋅]"),
+            f_constant=(val, bracketed) -> string_constant(val, vprecision, "[⋅]"),
             variable_names=display_variable_names,
             kws...,
         )
@@ -166,7 +166,7 @@ Convert an equation to a string.
             tree,
             options.operators;
             f_variable=string_variable,
-            f_constant=(val, bracketed) -> string_constant(val, bracketed, vprecision, ""),
+            f_constant=(val,) -> string_constant(val, vprecision, ""),
             variable_names=display_variable_names,
             kws...,
         )
@@ -191,11 +191,8 @@ function string_variable(feature, variable_names, variable_units=nothing)
     end
     return base
 end
-function string_constant(
-    val, bracketed, ::Val{precision}, unit_placeholder
-) where {precision}
-    does_not_need_brackets = typeof(val) <: Real
-    if does_not_need_brackets
+function string_constant(val, ::Val{precision}, unit_placeholder) where {precision}
+    if typeof(val) <: Real
         return sprint_precision(val, Val(precision)) * unit_placeholder
     else
         return "(" * string(val) * ")" * unit_placeholder
@@ -284,7 +281,7 @@ function define_alias_operators(operators)
 end
 
 function (tree::Node)(X, options::Options; kws...)
-    return tree(X, options.operators; turbo=options.turbo, kws...)
+    return tree(X, options.operators; turbo=options.turbo, bumper=options.bumper, kws...)
 end
 function DynamicExpressions.EvaluationHelpersModule._grad_evaluator(
     tree::Node, X, options::Options; kws...
