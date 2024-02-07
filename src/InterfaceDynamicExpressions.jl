@@ -3,7 +3,7 @@ module InterfaceDynamicExpressionsModule
 using Printf: @sprintf
 using DynamicExpressions: DynamicExpressions
 using DynamicExpressions: OperatorEnum, GenericOperatorEnum, Node
-using DynamicExpressions.EquationModule: needs_brackets
+using DynamicExpressions.StringsModule: needs_brackets
 using DynamicQuantities: dimension, ustrip
 using ..CoreModule: Options
 using ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
