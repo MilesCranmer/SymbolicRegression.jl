@@ -5,7 +5,7 @@ const BATCH_DIM = 2
 const FEATURE_DIM = 1
 const RecordType = Dict{String,Any}
 
-const DATA_TYPE = Number
+const DATA_TYPE = Any
 const LOSS_TYPE = Real
 
 end

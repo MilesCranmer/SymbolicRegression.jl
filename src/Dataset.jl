@@ -95,9 +95,9 @@ end
 Construct a dataset to pass between internal functions.
 """
 function Dataset(
-    X::AbstractMatrix{T},
-    y::Union{AbstractVector{T},Nothing}=nothing;
-    weights::Union{AbstractVector{T},Nothing}=nothing,
+    X::AbstractMatrix,
+    y::Union{AbstractVector,Nothing}=nothing;
+    weights::Union{AbstractVector,Nothing}=nothing,
     variable_names::Union{Array{String,1},Nothing}=nothing,
     display_variable_names=variable_names,
     y_variable_name::Union{String,Nothing}=nothing,
@@ -107,11 +107,24 @@ function Dataset(
     y_units=nothing,
     # Deprecated:
     varMap=nothing,
-) where {T<:DATA_TYPE,L}
+) where {L}
     Base.require_one_based_indexing(X)
     y !== nothing && Base.require_one_based_indexing(y)
     # Deprecation warning:
     variable_names = deprecate_varmap(variable_names, varMap, :Dataset)
+
+    T = promote_type(
+        eltype(X),
+        (y === nothing) ? eltype(X) : eltype(y),
+        (weights === nothing) ? eltype(X) : eltype(weights),
+    )
+    X = Base.Fix1(convert, T).(X)
+    if y !== nothing
+        y = Base.Fix1(convert, T).(y)
+    end
+    if weights !== nothing
+        weights = Base.Fix1(convert, T).(weights)
+    end
 
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
@@ -202,26 +215,6 @@ function Dataset(
         X_sym_units,
         y_sym_units,
     )
-end
-function Dataset(
-    X::AbstractMatrix,
-    y::Union{<:AbstractVector,Nothing}=nothing;
-    weights::Union{<:AbstractVector,Nothing}=nothing,
-    kws...,
-)
-    T = promote_type(
-        eltype(X),
-        (y === nothing) ? eltype(X) : eltype(y),
-        (weights === nothing) ? eltype(X) : eltype(weights),
-    )
-    X = Base.Fix1(convert, T).(X)
-    if y !== nothing
-        y = Base.Fix1(convert, T).(y)
-    end
-    if weights !== nothing
-        weights = Base.Fix1(convert, T).(weights)
-    end
-    return Dataset(X, y; weights=weights, kws...)
 end
 
 function error_on_mismatched_size(_, ::Nothing)

@@ -3,7 +3,7 @@ module OptionsModule
 using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
-using DynamicExpressions: OperatorEnum, Node, string_tree
+using DynamicExpressions: AbstractOperatorEnum, Node, string_tree
 using Distributed: nworkers
 using LossFunctions: L2DistLoss, SupervisedLoss
 #TODO - eventually move some of these
@@ -359,8 +359,9 @@ $(OPTION_DESCRIPTIONS)
 """
 function Options end
 @save_kwargs DEFAULT_OPTIONS function Options(;
-    binary_operators=[+, -, /, *],
-    unary_operators=[],
+    binary_operators=nothing,
+    unary_operators=nothing,
+    operators::Union{AbstractOperatorEnum,Nothing}=nothing,
     constraints=nothing,
     elementwise_loss::Union{Function,SupervisedLoss,Nothing}=nothing,
     loss_function::Union{Function,Nothing}=nothing,

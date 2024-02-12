@@ -5,6 +5,8 @@ export Population,
     PopMember,
     HallOfFame,
     Options,
+    OperatorEnum,
+    GenericOperatorEnum,
     Dataset,
     MutationWeights,
     Node,
@@ -71,6 +73,8 @@ using TOML: parsefile
 using Random: seed!, shuffle!
 using Reexport
 using DynamicExpressions:
+    OperatorEnum,
+    GenericOperatorEnum,
     Node,
     copy_node,
     set_node!,

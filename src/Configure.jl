@@ -29,7 +29,8 @@ end
 
 const TEST_INPUTS = collect(range(-100, 100; length=99))
 
-function assert_operators_well_defined(T, options::Options)
+assert_operators_well_defined(T, Options) = nothing
+function assert_operators_well_defined(T::Number, options::Options)
     test_input = if T <: Complex
         (x -> convert(T, x)).(TEST_INPUTS .+ TEST_INPUTS .* im)
     else
