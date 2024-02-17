@@ -112,6 +112,11 @@ function full_report(
     )
 end
 
+#! format: off
+empty_equations(::SRRegressor, params) = length(params.equations) == 0
+empty_equations(::MultitargetSRRegressor, params) = any(t -> length(t) == 0, params.equations)
+#! format: on
+
 MMI.clean!(::AbstractSRRegressor) = ""
 
 # TODO: Enable `verbosity` being passed to `equation_search`
@@ -272,22 +277,12 @@ function prediction_warn()
     @warn "Evaluation failed either due to NaNs detected or due to unfinished search. Using 0s for prediction."
 end
 
-@inline function wrap_units(v, y_units, i::Integer)
-    if y_units === nothing
-        return v
-    else
-        return (yi -> Quantity(yi, y_units[i])).(v)
-    end
-end
-@inline function wrap_units(v, y_units, ::Nothing)
-    if y_units === nothing
-        return v
-    else
-        return (yi -> Quantity(yi, y_units)).(v)
-    end
-end
+wrap_units(v, ::Nothing, ::Integer) = v
+wrap_units(v, ::Nothing, ::Nothing) = v
+wrap_units(v, y_units, i::Integer) = (yi -> Quantity(yi, y_units[i])).(v)
+wrap_units(v, y_units, ::Nothing) = (yi -> Quantity(yi, y_units)).(v)
 
-function prediction_fallback(::Type{T}, m::SRRegressor, Xnew_t, fitresult) where {T}
+function prediction_fallback(::Type{T}, ::SRRegressor, Xnew_t, fitresult, _) where {T}
     prediction_warn()
     out = fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T))
     return wrap_units(out, fitresult.y_units, nothing)
@@ -305,7 +300,7 @@ function prediction_fallback(
     if !fitresult.y_is_table
         return out_matrix
     else
-        return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
+        return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype)
     end
 end
 
@@ -357,9 +352,8 @@ function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRReg
     prototype = MMI.istable(Xnew) ? Xnew : nothing
 
     # Return if have empty search state:
-    if M <: SRRegressor && length(params.equations) == 0
-        return prediction_fallback(T, m, Xnew_t, fitresult)
-    elseif M <: MultitargetSRRegressor && any(t -> length(t) == 0, params.equations)
+    if empty_equations(m, params)
+        @warn "No equations found. Returning 0s for prediction."
         return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
     end
 
@@ -374,13 +368,15 @@ function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRReg
         return if completed
             wrap_units(out, fitresult.y_units, nothing)
         else
-            prediction_fallback(T, m, Xnew_t, fitresult)
+            prediction_fallback(T, m, Xnew_t, fitresult, prototype)
         end
     elseif M <: MultitargetSRRegressor
         outs = [
-            let (out, completed) = eval_tree_array(
+            let
+                (out, completed) = eval_tree_array(
                     params.equations[i][idx[i]], Xnew_t, fitresult.options
                 )
+
                 if completed
                     wrap_units(out, fitresult.y_units, i)
                 else
@@ -392,9 +388,7 @@ function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRReg
         if !fitresult.y_is_table
             return out_matrix
         else
-            return MMI.table(
-                out_matrix; names=fitresult.y_variable_names, prototype=prototype
-            )
+            return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype)
         end
     end
 end
