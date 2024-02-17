@@ -500,11 +500,14 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
         Note that if you pass complex data `::Complex{L}`, then the loss
         type will automatically be set to `L`.
     - `selection_method::Function`: Function to selection expression from
-        the Pareto frontier for use in `predict`. See `SymbolicRegression.MLJInterfaceModule.choose_best`
-        for an example. This function should return a single integer specifying
-        the index of the expression to use. By default, `choose_best` maximizes
+        the Pareto frontier for use in `predict`.
+        See `SymbolicRegression.MLJInterfaceModule.choose_best` for an example.
+        This function should return a single integer specifying
+        the index of the expression to use. By default, this maximizes
         the score (a pound-for-pound rating) of expressions reaching the threshold
-        of 1.5x the minimum loss. To fix the index at `5`, you could just write `Returns(5)`.
+        of 1.5x the minimum loss. To override this at prediction time, you can pass
+        a named tuple with keys `data` and `idx` to `predict`. See the Operations
+        section for details.
     - `dimensions_type::AbstractDimensions`: The type of dimensions to use when storing
         the units of the data. By default this is `DynamicQuantities.SymbolicDimensions`.
     """
@@ -515,7 +518,7 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
     - `predict(mach, Xnew)`: Return predictions of the target given features `Xnew`, which
       should have same scitype as `X` above. The expression used for prediction is defined
       by the `selection_method` function, which can be seen by viewing `report(mach).best_idx`.
-    - `predict(mach, (; data=Xnew, idx=i))`: Return predictions of the target given features
+    - `predict(mach, (data=Xnew, idx=i))`: Return predictions of the target given features
       `Xnew`, which should have same scitype as `X` above. By passing a named tuple with keys
       `data` and `idx`, you are able to specify the equation you wish to evaluate in `idx`.
 
@@ -578,7 +581,8 @@ eval(
     Note that unlike other regressors, symbolic regression stores a list of
     trained models. The model chosen from this list is defined by the function
     `selection_method` keyword argument, which by default balances accuracy
-    and complexity.
+    and complexity. You can override this at prediction time by passing a named
+    tuple with keys `data` and `idx`.
 
     """,
             r"^    " => "",
@@ -590,7 +594,8 @@ eval(
     The fields of `fitted_params(mach)` are:
 
     - `best_idx::Int`: The index of the best expression in the Pareto frontier,
-       as determined by the `selection_method` function.
+       as determined by the `selection_method` function. Override in `predict` by passing
+        a named tuple with keys `data` and `idx`.
     - `equations::Vector{Node{T}}`: The expressions discovered by the search, represented
       in a dominating Pareto frontier (i.e., the best expressions found for
       each complexity). `T` is equal to the element type
@@ -701,7 +706,8 @@ eval(
     Note that unlike other regressors, symbolic regression stores a list of lists of
     trained models. The models chosen from each of these lists is defined by the function
     `selection_method` keyword argument, which by default balances accuracy
-    and complexity.
+    and complexity. You can override this at prediction time by passing a named
+    tuple with keys `data` and `idx`.
 
     """,
             r"^    " => "",
@@ -713,7 +719,8 @@ eval(
     The fields of `fitted_params(mach)` are:
 
     - `best_idx::Vector{Int}`: The index of the best expression in each Pareto frontier,
-      as determined by the `selection_method` function.
+      as determined by the `selection_method` function. Override in `predict` by passing
+      a named tuple with keys `data` and `idx`.
     - `equations::Vector{Vector{Node{T}}}`: The expressions discovered by the search, represented
       in a dominating Pareto frontier (i.e., the best expressions found for
       each complexity). The outer vector is indexed by target variable, and the inner
@@ -727,7 +734,8 @@ eval(
     The fields of `report(mach)` are:
 
     - `best_idx::Vector{Int}`: The index of the best expression in each Pareto frontier,
-       as determined by the `selection_method` function.
+       as determined by the `selection_method` function. Override in `predict` by passing
+       a named tuple with keys `data` and `idx`.
     - `equations::Vector{Vector{Node{T}}}`: The expressions discovered by the search, represented
       in a dominating Pareto frontier (i.e., the best expressions found for
       each complexity). The outer vector is indexed by target variable, and the inner
