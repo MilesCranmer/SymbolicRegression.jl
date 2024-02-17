@@ -291,7 +291,7 @@ function prediction_fallback(
             fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T)), fitresult.y_units, i
         ) for i in 1:(fitresult.num_targets)
     ]
-    out_matrix = reduce(hcat, out_cols)
+    out_matrix = hcat(out_cols...)
     if !fitresult.y_is_table
         return out_matrix
     else
@@ -369,7 +369,9 @@ function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRReg
     idx = idx === nothing ? params.best_idx : idx
 
     if M <: SRRegressor
-        eval_tree_mlj(params.equations[idx], Xnew_t, m, T, fitresult, nothing, prototype)
+        return eval_tree_mlj(
+            params.equations[idx], Xnew_t, m, T, fitresult, nothing, prototype
+        )
     elseif M <: MultitargetSRRegressor
         outs = [
             eval_tree_mlj(
