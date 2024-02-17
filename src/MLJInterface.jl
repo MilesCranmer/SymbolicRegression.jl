@@ -353,9 +353,9 @@ function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRReg
     end
 
     params = full_report(m, fitresult; v_with_strings=Val(false))
+    prototype = MMI.istable(Xnew) ? Xnew : nothing
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     T = promote_type(eltype(Xnew_t), fitresult.types.T)
-    prototype = MMI.istable(Xnew) ? Xnew : nothing
 
     if isempty(params.equations) || any(isempty, params.equations)
         @warn "Equations not found. Returning 0s for prediction."
