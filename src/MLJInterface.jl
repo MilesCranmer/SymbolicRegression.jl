@@ -342,50 +342,60 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     )
 end
 
-function MMI.predict(m::SRRegressor, fitresult, Xnew)
+function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRRegressor}
+    if Xnew isa NamedTuple && (haskey(Xnew, :idx) || haskey(Xnew, :data))
+        @assert(
+            haskey(Xnew, :idx) && haskey(Xnew, :data) && length(keys(Xnew)) == 2,
+            "If specifying an equation index during prediction, you must use a named tuple with keys `idx` and `data`."
+        )
+        return MMI.predict(m, fitresult, Xnew.data; idx=Xnew.idx)
+    end
+
     params = full_report(m, fitresult; v_with_strings=Val(false))
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     T = promote_type(eltype(Xnew_t), fitresult.types.T)
-    if length(params.equations) == 0
-        return prediction_fallback(T, m, Xnew_t, fitresult)
-    end
-    X_units_clean = clean_units(X_units)
-    validate_variable_names(variable_names, fitresult)
-    validate_units(X_units_clean, fitresult.X_units)
-    eq = params.equations[params.best_idx]
-    out, completed = eval_tree_array(eq, Xnew_t, fitresult.options)
-    if !completed
-        return prediction_fallback(T, m, Xnew_t, fitresult)
-    else
-        return wrap_units(out, fitresult.y_units, nothing)
-    end
-end
-function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
-    params = full_report(m, fitresult; v_with_strings=Val(false))
     prototype = MMI.istable(Xnew) ? Xnew : nothing
-    Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
-    T = promote_type(eltype(Xnew_t), fitresult.types.T)
-    X_units_clean = clean_units(X_units)
-    validate_variable_names(variable_names, fitresult)
-    validate_units(X_units_clean, fitresult.X_units)
-    equations = params.equations
-    if any(t -> length(t) == 0, equations)
+
+    # Return if have empty search state:
+    if M <: SRRegressor && length(params.equations) == 0
+        return prediction_fallback(T, m, Xnew_t, fitresult)
+    elseif M <: MultitargetSRRegressor && any(t -> length(t) == 0, params.equations)
         return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
     end
-    best_idx = params.best_idx
-    outs = []
-    for (i, (best_i, eq)) in enumerate(zip(best_idx, equations))
-        out, completed = eval_tree_array(eq[best_i], Xnew_t, fitresult.options)
-        if !completed
-            return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
+
+    X_units_clean = clean_units(X_units)
+    validate_variable_names(variable_names, fitresult)
+    validate_units(X_units_clean, fitresult.X_units)
+
+    idx = idx === nothing ? params.best_idx : idx
+
+    if M <: SRRegressor
+        out, completed = eval_tree_array(params.equations[idx], Xnew_t, fitresult.options)
+        return if completed
+            wrap_units(out, fitresult.y_units, nothing)
+        else
+            prediction_fallback(T, m, Xnew_t, fitresult)
         end
-        push!(outs, wrap_units(out, fitresult.y_units, i))
-    end
-    out_matrix = reduce(hcat, outs)
-    if !fitresult.y_is_table
-        return out_matrix
-    else
-        return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
+    elseif M <: MultitargetSRRegressor
+        outs = [
+            let (out, completed) = eval_tree_array(
+                    params.equations[i][idx[i]], Xnew_t, fitresult.options
+                )
+                if completed
+                    wrap_units(out, fitresult.y_units, i)
+                else
+                    prediction_fallback(T, m, Xnew_t, fitresult, prototype)
+                end
+            end for i in eachindex(idx, params.equations)
+        ]
+        out_matrix = reduce(hcat, outs)
+        if !fitresult.y_is_table
+            return out_matrix
+        else
+            return MMI.table(
+                out_matrix; names=fitresult.y_variable_names, prototype=prototype
+            )
+        end
     end
 end
 
@@ -519,6 +529,9 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
     - `predict(mach, Xnew)`: Return predictions of the target given features `Xnew`, which
       should have same scitype as `X` above. The expression used for prediction is defined
       by the `selection_method` function, which can be seen by viewing `report(mach).best_idx`.
+    - `predict(mach, (; data=Xnew, idx=i))`: Return predictions of the target given features
+      `Xnew`, which should have same scitype as `X` above. By passing a named tuple with keys
+      `data` and `idx`, you are able to specify the equation you wish to evaluate in `idx`.
 
     $(bottom_matter)
     """
@@ -604,7 +617,8 @@ eval(
     The fields of `report(mach)` are:
 
     - `best_idx::Int`: The index of the best expression in the Pareto frontier,
-       as determined by the `selection_method` function.
+       as determined by the `selection_method` function. Override in `predict` by passing
+       a named tuple with keys `data` and `idx`.
     - `equations::Vector{Node{T}}`: The expressions discovered by the search, represented
       in a dominating Pareto frontier (i.e., the best expressions found for
       each complexity).
