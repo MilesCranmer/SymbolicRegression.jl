@@ -337,6 +337,17 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     )
 end
 
+function eval_tree_mlj(
+    tree::Node, X_t, m::AbstractSRRegressor, ::Type{T}, fitresult, i, prototype
+) where {T}
+    out, completed = eval_tree_array(tree, X_t, fitresult.options)
+    if completed
+        return wrap_units(out, fitresult.y_units, i)
+    else
+        return prediction_fallback(T, m, X_t, fitresult, prototype)
+    end
+end
+
 function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRRegressor}
     if Xnew isa NamedTuple && (haskey(Xnew, :idx) || haskey(Xnew, :data))
         @assert(
@@ -364,25 +375,12 @@ function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRReg
     idx = idx === nothing ? params.best_idx : idx
 
     if M <: SRRegressor
-        out, completed = eval_tree_array(params.equations[idx], Xnew_t, fitresult.options)
-        return if completed
-            wrap_units(out, fitresult.y_units, nothing)
-        else
-            prediction_fallback(T, m, Xnew_t, fitresult, prototype)
-        end
+        eval_tree_mlj(params.equations[idx], Xnew_t, m, T, fitresult, nothing, prototype)
     elseif M <: MultitargetSRRegressor
         outs = [
-            let
-                (out, completed) = eval_tree_array(
-                    params.equations[i][idx[i]], Xnew_t, fitresult.options
-                )
-
-                if completed
-                    wrap_units(out, fitresult.y_units, i)
-                else
-                    prediction_fallback(T, m, Xnew_t, fitresult, prototype)
-                end
-            end for i in eachindex(idx, params.equations)
+            eval_tree_mlj(
+                params.equations[i][idx[i]], Xnew_t, m, T, fitresult, i, prototype
+            ) for i in eachindex(idx, params.equations)
         ]
         out_matrix = reduce(hcat, outs)
         if !fitresult.y_is_table
