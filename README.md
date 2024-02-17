@@ -153,16 +153,20 @@ predict(mach, X)
 ```
 
 This will make predictions using the expression
-selected using the function passed to `selection_method`.
-By default this selection is made a mix of accuracy and complexity.
-For example, we can make predictions using expression 2 with:
+selected by `model.selection_method`,
+which by default is a mix of accuracy and complexity.
+
+You can override this selection and select an equation from
+the Pareto front manually with:
 
 ```julia
-mach.model.selection_method = Returns(2)
-predict(mach, X)
+predict(mach, (data=X, idx=2))
 ```
 
-For fitting multiple outputs, one can use `MultitargetSRRegressor`.
+where here we choose to evaluate the second equation.
+
+For fitting multiple outputs, one can use `MultitargetSRRegressor`
+(and pass an array of indices to `idx` in `predict` for selecting specific equations).
 For a full list of options available to each regressor, see the [API page](https://astroautomata.com/SymbolicRegression.jl/dev/api/).
 
 ### Low-Level Interface
