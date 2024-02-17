@@ -112,10 +112,12 @@ function full_report(
     )
 end
 
-#! format: off
-empty_equations(::SRRegressor, params) = length(params.equations) == 0
-empty_equations(::MultitargetSRRegressor, params) = any(t -> length(t) == 0, params.equations)
-#! format: on
+function incomplete_equations(::SRRegressor, params)
+    return length(params.equations) == 0
+end
+function incomplete_equations(::MultitargetSRRegressor, params)
+    return any(t -> length(t) == 0, params.equations)
+end
 
 MMI.clean!(::AbstractSRRegressor) = ""
 
@@ -363,7 +365,7 @@ function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRReg
     prototype = MMI.istable(Xnew) ? Xnew : nothing
 
     # Return if have empty search state:
-    if empty_equations(m, params)
+    if incomplete_equations(m, params)
         @warn "No equations found. Returning 0s for prediction."
         return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
     end
