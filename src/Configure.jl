@@ -219,29 +219,28 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
 
     # Need to import any extension code, if loaded on head node
     relevant_extensions = [
-        :SymbolicUtils,
-        :Bumper,
-        :LoopVectorization,
-        :Zygote,
-        :CUDA,
-        :Enzyme
+        :SymbolicUtils, :Bumper, :LoopVectorization, :Zygote, :CUDA, :Enzyme
     ]
     filter!(m -> String(m) ∈ loaded_modules_head_worker, relevant_extensions)
     # HACK TODO – this workaround is very fragile. Likely need to submit a bug report
     #             to JuliaLang.
 
     for ext in relevant_extensions
-        push!(expr.args, quote using $ext: $ext end)
+        push!(
+            expr.args,
+            quote
+                using $ext: $ext
+            end,
+        )
     end
 
-    verbosity > 0 &&
-        if isempty(relevant_extensions)
-            @info "Importing SymbolicRegression on workers."
-        else
-            @info "Importing SymbolicRegression on workers as well as extensions $(join(relevant_extensions, ',' * ' '))."
-        end
+    verbosity > 0 && if isempty(relevant_extensions)
+        @info "Importing SymbolicRegression on workers."
+    else
+        @info "Importing SymbolicRegression on workers as well as extensions $(join(relevant_extensions, ',' * ' '))."
+    end
     @everywhere procs Base.MainInclude.eval($expr)
-    verbosity > 0 && @info "Finished!"
+    return verbosity > 0 && @info "Finished!"
 end
 
 function test_module_on_workers(
