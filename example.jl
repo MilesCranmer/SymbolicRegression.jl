@@ -1,4 +1,4 @@
-using SymbolicRegression, SymbolicUtils
+using SymbolicRegression
 
 X = randn(Float32, 5, 100)
 y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
@@ -18,7 +18,6 @@ trees = [member.tree for member in dominating]
 tree = trees[end]
 output, did_succeed = eval_tree_array(tree, X, options)
 
-eqn = node_to_symbolic(dominating[end].tree, options)
 println("Complexity\tMSE\tEquation")
 
 for member in dominating

@@ -1,6 +1,7 @@
 module HallOfFameModule
 
-using DynamicExpressions: Node, string_tree
+using DynamicExpressions: AbstractExpressionNode, Node, constructorof, string_tree
+using DynamicExpressions.EquationModule: with_type_parameters
 using ..UtilsModule: split_string
 using ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu
 using ..ComplexityModule: compute_complexity
@@ -22,13 +23,13 @@ have been set, you can run `.members[exists]`.
     These are ordered by complexity, with `.members[1]` the member with complexity 1.
 - `exists::Array{Bool,1}`: Whether the member at the given complexity has been set.
 """
-mutable struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE}
-    members::Array{PopMember{T,L},1}
+mutable struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
+    members::Array{P,1}
     exists::Array{Bool,1} #Whether it has been set
 end
 
 """
-    HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    HallOfFame(options::Options, ::Type{T}, ::Type{L}, ::Type{N}=Node) where {T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode}
 
 Create empty HallOfFame. The HallOfFame stores a list
 of `PopMember` objects in `.members`, which is enumerated
@@ -40,15 +41,16 @@ Arguments:
 - `options`: Options containing specification about deterministic.
 - `T`: Type of Nodes to use in the population. e.g., `Float64`.
 - `L`: Type of loss to use in the population. e.g., `Float64`.
+- `N`: Type of Node to use in the population. e.g., `Node`.
 """
 function HallOfFame(
-    options::Options, ::Type{T}, ::Type{L}
-) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    options::Options, ::Type{T}, ::Type{L}, ::Type{N}=Node
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode}
     actualMaxsize = options.maxsize + MAX_DEGREE
-    return HallOfFame{T,L}(
+    return HallOfFame{T,L,PopMember{T,L,with_type_parameters(N, T)}}(
         [
             PopMember(
-                Node(; val=convert(T, 1)),
+                constructorof(N)(T; val=convert(T, 1)),
                 L(0),
                 L(Inf),
                 options;
@@ -67,14 +69,14 @@ function Base.copy(hof::HallOfFame)
 end
 
 """
-    calculate_pareto_frontier(hallOfFame::HallOfFame{T,L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,P}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 """
 function calculate_pareto_frontier(
-    hallOfFame::HallOfFame{T,L}
-)::Vector{PopMember{T,L}} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    hallOfFame::HallOfFame{T,L,P}
+)::Vector{P} where {T,L,P<:PopMember}
     # TODO - remove dataset from args.
     # Dominating pareto curve - must be better than all simpler equations
-    dominating = PopMember{T,L}[]
+    dominating = P[]
     actualMaxsize = length(hallOfFame.members)
     for size in 1:actualMaxsize
         if !hallOfFame.exists[size]
@@ -151,9 +153,7 @@ function string_dominating_pareto_curve(
     return output
 end
 
-function format_hall_of_fame(
-    hof::HallOfFame{T,L}, options
-) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}
     dominating = calculate_pareto_frontier(hof)
     foreach(dominating) do member
         if member.loss < 0.0
@@ -188,9 +188,7 @@ function format_hall_of_fame(
     end
     return (; trees, scores, losses, complexities)
 end
-function format_hall_of_fame(
-    hof::AH, options
-) where {T,L,H<:HallOfFame{T,L},AH<:AbstractVector{H}}
+function format_hall_of_fame(hof::AbstractVector{<:HallOfFame}, options)
     outs = [format_hall_of_fame(h, options) for h in hof]
     return (;
         trees=[out.trees for out in outs],

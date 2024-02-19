@@ -120,3 +120,31 @@ for type in [Float16, Float32, Float64]
     @test array_test(predicted_grad, true_grad)
     println("Done.")
 end
+
+println("Testing NodeIndex.")
+
+using SymbolicRegression: get_constants, NodeIndex, index_constants
+
+options = Options(;
+    binary_operators=(+, *, -, /, pow_abs2), unary_operators=(custom_cos, exp, sin)
+)
+@extend_operators options
+tree = equation3(nx1, nx2, nx3)
+
+"""Check whether the ordering of constant_list is the same as the ordering of node_index."""
+function check_tree(
+    tree::AbstractExpressionNode, node_index::NodeIndex, constant_list::AbstractVector
+)
+    if tree.degree == 0
+        (!tree.constant) || tree.val == constant_list[node_index.val::UInt16]
+    elseif tree.degree == 1
+        check_tree(tree.l, node_index.l, constant_list)
+    else
+        check_tree(tree.l, node_index.l, constant_list) &&
+            check_tree(tree.r, node_index.r, constant_list)
+    end
+end
+
+@test check_tree(tree, index_constants(tree), get_constants(tree))
+
+println("Done.")

@@ -3,7 +3,7 @@ module OptionsModule
 using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
-using DynamicExpressions: OperatorEnum, Node, string_tree
+using DynamicExpressions: OperatorEnum
 using Distributed: nworkers
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim
@@ -24,8 +24,9 @@ using ..OperatorsModule:
     safe_sqrt,
     safe_acosh,
     atanh_clip
+using ..MutationWeightsModule: MutationWeights, mutations
 import ..OptionsStructModule: Options
-using ..OptionsStructModule: ComplexityMapping, MutationWeights, mutations
+using ..OptionsStructModule: ComplexityMapping
 using ..UtilsModule: max_ops, @save_kwargs
 
 """
@@ -147,7 +148,7 @@ function inverse_unaopmap(op::F) where {F}
     return op
 end
 
-const deprecated_options_mapping = NamedTuple([
+const deprecated_options_mapping = Base.ImmutableDict(
     :mutationWeights => :mutation_weights,
     :hofMigration => :hof_migration,
     :shouldOptimizeConstants => :should_optimize_constants,
@@ -170,7 +171,7 @@ const deprecated_options_mapping = NamedTuple([
     :enable_autodiff => :deprecated_enable_autodiff,
     :ns => :tournament_selection_n,
     :loss => :elementwise_loss,
-])
+)
 
 const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators (functions) to use.
     Each operator should be defined for two input scalars,
@@ -223,7 +224,7 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
             - `SigmoidLoss()`,
             - `DWDMarginLoss(q)`.
 - `loss_function`: Alternatively, you may redefine the loss used
-    as any function of `tree::Node{T}`, `dataset::Dataset{T}`,
+    as any function of `tree::AbstractExpressionNode{T}`, `dataset::Dataset{T}`,
     and `options::Options`, so long as you output a non-negative
     scalar of type `T`. This is useful if you want to use a loss
     that takes into account derivatives, or correlations across
@@ -437,6 +438,10 @@ function Options end
         new_key = deprecated_options_mapping[k]
         if startswith(string(new_key), "deprecated_")
             Base.depwarn("The keyword argument `$(k)` is deprecated.", :Options)
+            if string(new_key) != "deprecated_return_state"
+                # This one we actually want to use
+                continue
+            end
         else
             Base.depwarn(
                 "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.",

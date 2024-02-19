@@ -9,8 +9,8 @@ using ..LossFunctionsModule: eval_loss, loss_to_score, batch_sample
 using ..PopMemberModule: PopMember
 
 function optimize_constants(
-    dataset::Dataset{T,L}, member::PopMember{T,L}, options::Options
-)::Tuple{PopMember{T,L},Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    dataset::Dataset{T,L}, member::P, options::Options
+)::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
     if options.batching
         dispatch_optimize_constants(
             dataset, member, options, batch_sample(dataset, options)
@@ -20,8 +20,8 @@ function optimize_constants(
     end
 end
 function dispatch_optimize_constants(
-    dataset::Dataset{T,L}, member::PopMember{T,L}, options::Options, idx
-) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    dataset::Dataset{T,L}, member::P, options::Options, idx
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
     nconst = count_constants(member.tree)
     nconst == 0 && return (member, 0.0)
     if nconst == 1 && !(T <: Complex)
@@ -41,8 +41,8 @@ function dispatch_optimize_constants(
 end
 
 function _optimize_constants(
-    dataset, member::PopMember{T,L}, options, algorithm, optimizer_options, idx
-)::Tuple{PopMember{T,L},Float64} where {T,L}
+    dataset, member::P, options, algorithm, optimizer_options, idx
+)::Tuple{P,Float64} where {T,L,P<:PopMember{T,L}}
     tree = member.tree
     eval_fraction = options.batching ? (options.batch_size / dataset.n) : 1.0
     f(t) = eval_loss(t, dataset, options; regularization=false, idx=idx)::L

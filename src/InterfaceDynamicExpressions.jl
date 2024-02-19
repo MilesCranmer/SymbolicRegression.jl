@@ -2,7 +2,7 @@ module InterfaceDynamicExpressionsModule
 
 using Printf: @sprintf
 using DynamicExpressions: DynamicExpressions
-using DynamicExpressions: OperatorEnum, GenericOperatorEnum, Node
+using DynamicExpressions: OperatorEnum, GenericOperatorEnum, AbstractExpressionNode
 using DynamicExpressions.StringsModule: needs_brackets
 using DynamicQuantities: dimension, ustrip
 using ..CoreModule: Options
@@ -20,7 +20,7 @@ import DynamicExpressions:
 import ..deprecate_varmap
 
 """
-    eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
+    eval_tree_array(tree::AbstractExpressionNode, X::AbstractArray, options::Options; kws...)
 
 Evaluate a binary tree (equation) over a given input data matrix. The
 operators contain all of the operators used. This function fuses doublets
@@ -41,7 +41,7 @@ The bulk of the code is for optimizations and pre-emptive NaN/Inf checks,
 which speed up evaluation significantly.
 
 # Arguments
-- `tree::Node`: The root node of the tree to evaluate.
+- `tree::AbstractExpressionNode`: The root node of the tree to evaluate.
 - `X::AbstractArray`: The input data to evaluate the tree on.
 - `options::Options`: Options used to define the operators used in the tree.
 
@@ -52,14 +52,16 @@ which speed up evaluation significantly.
     or nan was encountered, and a large loss should be assigned
     to the equation.
 """
-function eval_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
+function eval_tree_array(
+    tree::AbstractExpressionNode, X::AbstractArray, options::Options; kws...
+)
     return eval_tree_array(
         tree, X, options.operators; turbo=options.turbo, bumper=options.bumper, kws...
     )
 end
 
 """
-    eval_diff_tree_array(tree::Node, X::AbstractArray, options::Options, direction::Int)
+    eval_diff_tree_array(tree::AbstractExpressionNode, X::AbstractArray, options::Options, direction::Int)
 
 Compute the forward derivative of an expression, using a similar
 structure and optimization to eval_tree_array. `direction` is the index of a particular
@@ -68,10 +70,9 @@ respect to `x1`.
 
 # Arguments
 
-- `tree::Node`: The expression tree to evaluate.
+- `tree::AbstractExpressionNode`: The expression tree to evaluate.
 - `X::AbstractArray`: The data matrix, with each column being a data point.
 - `options::Options`: The options containing the operators used to create the `tree`.
-    This is needed to create the derivative operations.
 - `direction::Int`: The index of the variable to take the derivative with respect to.
 
 # Returns
@@ -80,13 +81,13 @@ respect to `x1`.
     the derivative, and whether the evaluation completed as normal (or encountered a nan or inf).
 """
 function eval_diff_tree_array(
-    tree::Node, X::AbstractArray, options::Options, direction::Int
+    tree::AbstractExpressionNode, X::AbstractArray, options::Options, direction::Int
 )
     return eval_diff_tree_array(tree, X, options.operators, direction)
 end
 
 """
-    eval_grad_tree_array(tree::Node, X::AbstractArray, options::Options; variable::Bool=false)
+    eval_grad_tree_array(tree::AbstractExpressionNode, X::AbstractArray, options::Options; variable::Bool=false)
 
 Compute the forward-mode derivative of an expression, using a similar
 structure and optimization to eval_tree_array. `variable` specifies whether
@@ -95,10 +96,9 @@ to every constant in the expression.
 
 # Arguments
 
-- `tree::Node`: The expression tree to evaluate.
+- `tree::AbstractExpressionNode`: The expression tree to evaluate.
 - `X::AbstractArray`: The data matrix, with each column being a data point.
 - `options::Options`: The options containing the operators used to create the `tree`.
-    This is needed to create the derivative operations.
 - `variable::Bool`: Whether to take derivatives with respect to features (i.e., `X` - with `variable=true`),
     or with respect to every constant in the expression (`variable=false`).
 
@@ -107,35 +107,37 @@ to every constant in the expression.
 - `(evaluation, gradient, complete)::Tuple{AbstractVector, AbstractArray, Bool}`: the normal evaluation,
     the gradient, and whether the evaluation completed as normal (or encountered a nan or inf).
 """
-function eval_grad_tree_array(tree::Node, X::AbstractArray, options::Options; kws...)
+function eval_grad_tree_array(
+    tree::AbstractExpressionNode, X::AbstractArray, options::Options; kws...
+)
     return eval_grad_tree_array(tree, X, options.operators; kws...)
 end
 
 """
-    differentiable_eval_tree_array(tree::Node, X::AbstractArray, options::Options)
+    differentiable_eval_tree_array(tree::AbstractExpressionNode, X::AbstractArray, options::Options)
 
 Evaluate an expression tree in a way that can be auto-differentiated.
 """
 function differentiable_eval_tree_array(
-    tree::Node, X::AbstractArray, options::Options; kws...
+    tree::AbstractExpressionNode, X::AbstractArray, options::Options; kws...
 )
     return differentiable_eval_tree_array(tree, X, options.operators; kws...)
 end
 
 """
-    string_tree(tree::Node, options::Options; kws...)
+    string_tree(tree::AbstractExpressionNode, options::Options; kws...)
 
 Convert an equation to a string.
 
 # Arguments
 
-- `tree::Node`: The equation to convert to a string.
+- `tree::AbstractExpressionNode`: The equation to convert to a string.
 - `options::Options`: The options holding the definition of operators.
 - `variable_names::Union{Array{String, 1}, Nothing}=nothing`: what variables
     to print for each feature.
 """
 @inline function string_tree(
-    tree::Node,
+    tree::AbstractExpressionNode,
     options::Options;
     raw::Bool=true,
     X_sym_units=nothing,
@@ -219,38 +221,40 @@ end
 end
 
 """
-    print_tree(tree::Node, options::Options; kws...)
+    print_tree(tree::AbstractExpressionNode, options::Options; kws...)
 
 Print an equation
 
 # Arguments
 
-- `tree::Node`: The equation to convert to a string.
+- `tree::AbstractExpressionNode`: The equation to convert to a string.
 - `options::Options`: The options holding the definition of operators.
 - `variable_names::Union{Array{String, 1}, Nothing}=nothing`: what variables
     to print for each feature.
 """
-function print_tree(tree::Node, options::Options; kws...)
+function print_tree(tree::AbstractExpressionNode, options::Options; kws...)
     return print_tree(tree, options.operators; kws...)
 end
-function print_tree(io::IO, tree::Node, options::Options; kws...)
+function print_tree(io::IO, tree::AbstractExpressionNode, options::Options; kws...)
     return print_tree(io, tree, options.operators; kws...)
 end
 
 """
-    convert(::Type{Node{T}}, tree::Node, options::Options; kws...)
+    convert(::Type{<:AbstractExpressionNode{T}}, tree::AbstractExpressionNode, options::Options; kws...) where {T}
 
 Convert an equation to a different base type `T`.
 """
-function Base.convert(::Type{Node{T}}, tree::Node, options::Options) where {T}
-    return convert(Node{T}, tree, options.operators)
+function Base.convert(
+    ::Type{N}, tree::AbstractExpressionNode, options::Options
+) where {T,N<:AbstractExpressionNode{T}}
+    return convert(N, tree, options.operators)
 end
 
 """
     @extend_operators options
 
 Extends all operators defined in this options object to work on the
-`Node` type. While by default this is already done for operators defined
+`AbstractExpressionNode` type. While by default this is already done for operators defined
 in `Base` when you create an options and pass `define_helper_functions=true`,
 this does not apply to the user-defined operators. Thus, to do so, you must
 apply this macro to the operator enum in the same module you have the operators
@@ -280,11 +284,11 @@ function define_alias_operators(operators)
     )
 end
 
-function (tree::Node)(X, options::Options; kws...)
+function (tree::AbstractExpressionNode)(X, options::Options; kws...)
     return tree(X, options.operators; turbo=options.turbo, bumper=options.bumper, kws...)
 end
 function DynamicExpressions.EvaluationHelpersModule._grad_evaluator(
-    tree::Node, X, options::Options; kws...
+    tree::AbstractExpressionNode, X, options::Options; kws...
 )
     return DynamicExpressions.EvaluationHelpersModule._grad_evaluator(
         tree, X, options.operators; turbo=options.turbo, kws...
