@@ -52,7 +52,7 @@ end
 
 end
 
-import .A: create_and_eval_tree
+using .A: create_and_eval_tree
 prediction, truth = create_and_eval_tree()
 @test prediction ≈ truth
 
@@ -64,7 +64,7 @@ my_func_d(x::T) where {T<:Real} = x / (abs(x)^T(0.2) + 0.1)
 
 end
 
-import .B: my_func_c, my_func_d
+using .B: my_func_c, my_func_d
 options = Options(; binary_operators=[my_func_c], unary_operators=[my_func_d])
 @extend_operators options
 

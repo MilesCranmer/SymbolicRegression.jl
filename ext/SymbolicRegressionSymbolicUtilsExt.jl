@@ -1,13 +1,15 @@
 module SymbolicRegressionSymbolicUtilsExt
 
-import SymbolicUtils: Symbolic
-import SymbolicRegression: node_to_symbolic, symbolic_to_node, Node, Options
-import SymbolicRegression.MLJInterfaceModule: AbstractSRRegressor, get_options
+using SymbolicUtils: Symbolic
+using SymbolicRegression: Node, Options
+using SymbolicRegression.MLJInterfaceModule: AbstractSRRegressor, get_options
+
+import SymbolicRegression: node_to_symbolic, symbolic_to_node
 
 """
     node_to_symbolic(tree::Node, options::Options; kws...)
 
-Convert an expression to SymbolicUtils.jl form. 
+Convert an expression to SymbolicUtils.jl form.
 """
 function node_to_symbolic(tree::Node, options::Options; kws...)
     return node_to_symbolic(tree, options.operators; kws...)

@@ -7,11 +7,11 @@ include("OptionsStruct.jl")
 include("Operators.jl")
 include("Options.jl")
 
-import .ProgramConstantsModule: MAX_DEGREE, RecordType, DATA_TYPE, LOSS_TYPE
-import .DatasetModule: Dataset
-import .OptionsStructModule: Options, ComplexityMapping, MutationWeights, sample_mutation
-import .OptionsModule: Options
-import .OperatorsModule:
+using .ProgramConstantsModule: MAX_DEGREE, RecordType, DATA_TYPE, LOSS_TYPE
+using .DatasetModule: Dataset
+using .OptionsStructModule: Options, ComplexityMapping, MutationWeights, sample_mutation
+using .OptionsModule: Options
+using .OperatorsModule:
     plus,
     sub,
     mult,
@@ -19,7 +19,6 @@ import .OperatorsModule:
     cube,
     pow,
     safe_pow,
-    div,
     safe_log,
     safe_log2,
     safe_log10,
@@ -28,7 +27,7 @@ import .OperatorsModule:
     safe_acosh,
     neg,
     greater,
-    greater,
+    cond,
     relu,
     logical_or,
     logical_and,

@@ -1,7 +1,7 @@
 module ComplexityModule
 
-import DynamicExpressions: Node, count_nodes, tree_mapreduce
-import ..CoreModule: Options, ComplexityMapping
+using DynamicExpressions: Node, count_nodes, tree_mapreduce
+using ..CoreModule: Options, ComplexityMapping
 
 function past_complexity_limit(tree::Node, options::Options{CT}, limit)::Bool where {CT}
     return compute_complexity(tree, options) > limit

@@ -1,12 +1,29 @@
 using SymbolicRegression
-using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units
+using SymbolicRegression:
+    square,
+    cube,
+    plus,
+    sub,
+    mult,
+    greater,
+    cond,
+    relu,
+    logical_or,
+    logical_and,
+    safe_pow,
+    atanh_clip
+using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units, get_dimensions_type
+using SymbolicRegression.MLJInterfaceModule: unwrap_units_single
 using SymbolicRegression.DimensionalAnalysisModule:
     violates_dimensional_constraints, @maybe_return_call, WildcardQuantity
-import DynamicQuantities:
+using DynamicQuantities:
     DEFAULT_DIM_BASE_TYPE,
+    RealQuantity,
     Quantity,
+    QuantityArray,
     SymbolicDimensions,
     Dimensions,
+    DimensionError,
     @u_str,
     @us_str,
     uparse,
@@ -14,7 +31,8 @@ import DynamicQuantities:
     ustrip,
     dimension
 using Test
-import MLJBase as MLJ
+using MLJBase: MLJBase as MLJ
+using MLJModelInterface: MLJModelInterface as MMI
 
 custom_op(x, y) = x + y
 
@@ -130,7 +148,7 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
     @test compute_complexity(best_expr, options) >=
         compute_complexity(custom_op(cos(1 * x1), 1 * x1), options)
 
-    # Check that every cos(...) which contains x1 also has complexity 
+    # Check that every cos(...) which contains x1 also has complexity
     has_cos(tree) =
         any(tree) do t
             t.degree == 1 && options.operators.unaops[t.op] == cos
@@ -149,6 +167,46 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
     ]
     @test all(valid_trees)
     @test length(valid_trees) > 0
+end
+
+@testset "Operator compatibility" begin
+    ## square cube plus sub mult greater cond relu logical_or logical_and safe_pow atanh_clip
+    # Want to ensure these operators perform correctly in the context of units
+    @test square(1.0u"m") == 1.0u"m^2"
+    @test cube(1.0u"m") == 1.0u"m^3"
+    @test plus(1.0u"m", 1.0u"m") == 2.0u"m"
+    @test_throws DimensionError plus(1.0u"m", 1.0u"s")
+    @test sub(1.0u"m", 1.0u"m") == 0.0u"m"
+    @test_throws DimensionError sub(1.0u"m", 1.0u"s")
+    @test mult(1.0u"m", 1.0u"m") == 1.0u"m^2"
+    @test mult(1.0u"m", 1.0u"s") == 1.0u"m*s"
+    @test greater(1.1u"m", 1.0u"m") == true
+    @test greater(0.9u"m", 1.0u"m") == false
+    @test typeof(greater(1.1u"m", 1.0u"m")) === typeof(1.0u"m")
+    @test_throws DimensionError greater(1.0u"m", 1.0u"s")
+    @test cond(0.1u"m", 1.5u"m") == 1.5u"m"
+    @test cond(-0.1u"m", 1.5u"m") == 0.0u"m"
+    @test cond(-0.1u"s", 1.5u"m") == 0.0u"m"
+    @test relu(0.1u"m") == 0.1u"m"
+    @test relu(-0.1u"m") == 0.0u"m"
+    @test logical_or(0.1u"m", 0.0u"m") == 1.0
+    @test logical_or(-0.1u"m", 0.0u"m") == 0.0
+    @test logical_or(-0.5u"m", 1.0u"m") == 1.0
+    @test logical_or(-0.2u"m", -0.2u"m") == 0.0
+    @test logical_and(0.1u"m", 0.0u"m") == 0.0
+    @test logical_and(0.1u"s", 0.0u"m") == 0.0
+    @test logical_and(-0.1u"m", 0.0u"m") == 0.0
+    @test logical_and(-0.5u"m", 1.0u"m") == 0.0
+    @test logical_and(-0.2u"s", -0.2u"m") == 0.0
+    @test logical_and(0.2u"s", 0.2u"m") == 1.0
+    @test safe_pow(4.0u"m", 0.5u"1") == 2.0u"m^0.5"
+    @test isnan(safe_pow(-4.0u"m", 0.5u"1"))
+    @test typeof(safe_pow(-4.0u"m", 0.5u"1")) === typeof(1.0u"m")
+    @inferred safe_pow(4.0u"m", 0.5u"1")
+    @test_throws DimensionError safe_pow(1.0u"m", 1.0u"m")
+    @test atanh_clip(0.5u"1") == atanh(0.5)
+    @test atanh_clip(2.5u"1") == atanh(0.5)
+    @test_throws DimensionError atanh_clip(1.0u"m")
 end
 
 @testset "Search with dimensional constraints on output" begin
@@ -185,37 +243,47 @@ end
     end
 
     @testset "With MLJ" begin
-        model = SRRegressor(;
-            binary_operators=[+, *],
-            unary_operators=[sqrt, cbrt, abs],
-            early_stop_condition=(loss, complexity) -> (loss < 1e-7 && complexity <= 6),
-        )
-        X = (; x1=randn(128) .* u"kg^3", x2=randn(128) .* u"kg^2")
-        y = (@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* u"kg"
-        mach = MLJ.machine(model, X, y)
-        MLJ.fit!(mach)
-        report = MLJ.report(mach)
-        best_idx = findfirst(report.losses .< 1e-7)
-        @test report.complexities[best_idx] == 6
-        @test any(report.equations[best_idx]) do t
-            t.degree == 1 && t.op == 2  # cbrt
-        end
-        @test any(report.equations[best_idx]) do t
-            t.degree == 1 && t.op == 1  # safe_sqrt
+        for as_quantity_array in (false, true)
+            model = SRRegressor(;
+                binary_operators=[+, *],
+                unary_operators=[sqrt, cbrt, abs],
+                early_stop_condition=(loss, complexity) -> (loss < 1e-7 && complexity <= 6),
+            )
+            X = if as_quantity_array
+                (; x1=randn(128) .* u"kg^3", x2=QuantityArray(randn(128) .* u"kg^2"))
+            else
+                (; x1=randn(128) .* u"kg^3", x2=randn(128) .* u"kg^2")
+            end
+            y = (@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* u"kg"
+            mach = MLJ.machine(model, X, y)
+            MLJ.fit!(mach)
+            report = MLJ.report(mach)
+            best_idx = findfirst(report.losses .< 1e-7)
+            @test report.complexities[best_idx] == 6
+            @test any(report.equations[best_idx]) do t
+                t.degree == 1 && t.op == 2  # cbrt
+            end
+            @test any(report.equations[best_idx]) do t
+                t.degree == 1 && t.op == 1  # safe_sqrt
+            end
+
+            # Prediction should have same units:
+            ypred = MLJ.predict(mach; rows=1:3)
+            @test dimension(ypred[begin]) == dimension(y[begin])
         end
 
-        # Prediction should have same units:
-        ypred = MLJ.predict(mach; rows=1:3)
-        @test dimension(ypred[begin]) == dimension(y[begin])
-
-        # Multiple outputs:
+        # Multiple outputs, and with RealQuantity
         model = MultitargetSRRegressor(;
             binary_operators=[+, *],
             unary_operators=[sqrt, cbrt, abs],
             early_stop_condition=(loss, complexity) -> (loss < 1e-7 && complexity <= 8),
         )
         X = (; x1=randn(128), x2=randn(128))
-        y = (; a=(@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* u"kg", b=X.x1)
+        y = (;
+            a=(@. cbrt(ustrip(X.x1)) + sqrt(abs(ustrip(X.x2)))) .* RealQuantity(u"kg"),
+            b=X.x1,
+        )
+        @test typeof(y.a) <: AbstractArray{<:RealQuantity}
         mach = MLJ.machine(model, X, y)
         MLJ.fit!(mach)
         report = MLJ.report(mach)
@@ -232,7 +300,10 @@ end
         # Prediction should have same units:
         ypred = MLJ.predict(mach; rows=1:3)
         @test dimension(ypred.a[begin]) == dimension(y.a[begin])
-        @test typeof(ypred.a[begin]) == typeof(y.a[begin])
+        @test typeof(dimension(ypred.a[begin])) == typeof(dimension(y.a[begin]))
+        # TODO: Should return same quantity as input
+        @test typeof(ypred.a[begin]) <: Quantity
+        @test typeof(y.a[begin]) <: RealQuantity
         VERSION >= v"1.8" &&
             @eval @test(typeof(ypred.b[begin]) == typeof(y.b[begin]), broken = true)
     end
@@ -308,4 +379,28 @@ end
 
     # But method errors are safely caught
     @test test_return_call(+, 1.0, "1.0") === nothing
+
+    # Edge case
+    ## First, what happens if we just pass some data with quantities,
+    ## and some without?
+    data = (a=randn(3), b=fill(us"m", 3), c=fill(u"m/s", 3))
+    Xm_t = MMI.matrix(data; transpose=true)
+    @test typeof(Xm_t) <: Matrix{<:Quantity}
+    _, test_dims = unwrap_units_single(Xm_t, Dimensions)
+    @test test_dims == dimension.([u"1", u"m", u"m/s"])
+    @test test_dims != dimension.([u"m", u"m", u"m"])
+    @inferred unwrap_units_single(Xm_t, Dimensions)
+
+    ## Now, we force promotion to generic `Number` type:
+    data = (a=Number[randn(3)...], b=fill(us"m", 3), c=fill(u"m/s", 3))
+    Xm_t = MMI.matrix(data; transpose=true)
+    @test typeof(Xm_t) === Matrix{Number}
+    _, test_dims = unwrap_units_single(Xm_t, Dimensions)
+    @test test_dims == dimension.([u"1", u"m", u"m/s"])
+    @test_skip @inferred unwrap_units_single(Xm_t, Dimensions)
+
+    # Another edge case
+    ## Should be able to pull it out from array:
+    @test get_dimensions_type(Number[1.0, us"1"], Dimensions) <: SymbolicDimensions
+    @test get_dimensions_type(Number[1.0, 1.0], Dimensions) <: Dimensions
 end

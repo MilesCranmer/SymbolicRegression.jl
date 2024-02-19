@@ -3,20 +3,20 @@ name: CI
 on:
   push:
     branches:
-      - '*'
+      - "*"
     paths:
-      - 'test/**'
-      - 'src/**'
-      - '.github/workflows/**'
-      - 'Project.toml'
+      - "test/**"
+      - "src/**"
+      - ".github/workflows/**"
+      - "Project.toml"
   pull_request:
     branches:
       - master
     paths:
-      - 'test/**'
-      - 'src/**'
-      - '.github/workflows/**'
-      - 'Project.toml'
+      - "test/**"
+      - "src/**"
+      - ".github/workflows/**"
+      - "Project.toml"
 concurrency:
   # Skip intermediate builds: always.
   # Cancel intermediate builds: only if it is a pull request build.
@@ -32,18 +32,18 @@ jobs:
       fail-fast: false
       matrix:
         julia-version:
-          - '1.6'
-          - '1.8'
-          - '1'
+          - "1.6"
+          - "1.8"
+          - "1"
         os:
           - ubuntu-latest
           - macOS-latest
         include:
           - os: windows-latest
-            julia-version: '1'
+            julia-version: "1"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: "Set up Julia"
         uses: julia-actions/setup-julia@v1
         with:
@@ -54,9 +54,9 @@ jobs:
         uses: julia-actions/julia-buildpkg@v1
       - name: "Run tests"
         run: |
-            julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
-            julia --color=yes --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
-            julia --color=yes coverage.jl
+          julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
+          julia --color=yes --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
+          julia --color=yes coverage.jl
         shell: bash
       - name: "Coveralls"
         uses: coverallsapp/github-action@v2

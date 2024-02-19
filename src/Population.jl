@@ -1,15 +1,15 @@
 module PopulationModule
 
 using StatsBase: StatsBase
-import Random: randperm
-import DynamicExpressions: string_tree
-import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
-import ..ComplexityModule: compute_complexity
-import ..LossFunctionsModule: score_func, update_baseline_loss!
-import ..AdaptiveParsimonyModule: RunningSearchStatistics
-import ..MutationFunctionsModule: gen_random_tree
-import ..PopMemberModule: PopMember, copy_pop_member
-import ..UtilsModule: bottomk_fast, argmin_fast
+using Random: randperm
+using DynamicExpressions: string_tree
+using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
+using ..ComplexityModule: compute_complexity
+using ..LossFunctionsModule: score_func, update_baseline_loss!
+using ..AdaptiveParsimonyModule: RunningSearchStatistics
+using ..MutationFunctionsModule: gen_random_tree
+using ..PopMemberModule: PopMember
+using ..UtilsModule: bottomk_fast, argmin_fast
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
 mutable struct Population{T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -92,8 +92,8 @@ function Population(
     )
 end
 
-function copy_population(pop::P)::P where {P<:Population}
-    return Population([copy_pop_member(pm) for pm in pop.members])
+function Base.copy(pop::P)::P where {P<:Population}
+    return Population([copy(pm) for pm in pop.members])
 end
 
 # Sample random members of the population, and make a new one

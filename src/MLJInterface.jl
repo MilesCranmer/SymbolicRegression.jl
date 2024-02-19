@@ -1,27 +1,27 @@
 module MLJInterfaceModule
 
 using Optim: Optim
-import MLJModelInterface as MMI
-import DynamicExpressions: eval_tree_array, string_tree, Node
-import DynamicQuantities:
-    AbstractQuantity,
+using MLJModelInterface: MLJModelInterface as MMI
+using DynamicExpressions: eval_tree_array, string_tree, Node
+using DynamicQuantities:
+    QuantityArray,
+    UnionAbstractQuantity,
     AbstractDimensions,
     SymbolicDimensions,
     Quantity,
     DEFAULT_DIM_BASE_TYPE,
     ustrip,
     dimension
-import LossFunctions: SupervisedLoss
-import Compat: allequal, stack
-import ..InterfaceDynamicQuantitiesModule: get_dimensions_type
-import ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
-import ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
-import ..ComplexityModule: compute_complexity
-import ..HallOfFameModule: HallOfFame, format_hall_of_fame
-import ..UtilsModule: subscriptify
-#! format: off
+using LossFunctions: SupervisedLoss
+using Compat: allequal, stack
+using ..InterfaceDynamicQuantitiesModule: get_dimensions_type
+using ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
+using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
+using ..ComplexityModule: compute_complexity
+using ..HallOfFameModule: HallOfFame, format_hall_of_fame
+using ..UtilsModule: subscriptify
+
 import ..equation_search
-#! format: on
 
 abstract type AbstractSRRegressor <: MMI.Deterministic end
 
@@ -38,6 +38,7 @@ function modelexpr(model_name::Symbol)
             numprocs::Union{Int,Nothing} = nothing
             procs::Union{Vector{Int},Nothing} = nothing
             addprocs_function::Union{Function,Nothing} = nothing
+            heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
             runtests::Bool = true
             loss_type::L = Nothing
             selection_method::Function = choose_best
@@ -161,6 +162,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         numprocs=m.numprocs,
         procs=m.procs,
         addprocs_function=m.addprocs_function,
+        heap_size_hint_in_bytes=m.heap_size_hint_in_bytes,
         runtests=m.runtests,
         saved_state=(old_fitresult === nothing ? nothing : old_fitresult.state),
         return_state=true,
@@ -275,32 +277,22 @@ function validate_units(X_units, old_X_units)
 end
 
 # TODO: Test whether this conversion poses any issues in data normalization...
-function dimension_fallback(
-    q::Union{<:Quantity{T,<:AbstractDimensions}}, ::Type{D}
-) where {T,D}
+function dimension_with_fallback(q::UnionAbstractQuantity{T}, ::Type{D}) where {T,D}
     return dimension(convert(Quantity{T,D}, q))::D
 end
-dimension_fallback(_, ::Type{D}) where {D} = D()
+function dimension_with_fallback(_, ::Type{D}) where {D}
+    return D()
+end
 function prediction_warn()
     @warn "Evaluation failed either due to NaNs detected or due to unfinished search. Using 0s for prediction."
 end
 
-@inline function wrap_units(v, y_units, i::Integer)
-    if y_units === nothing
-        return v
-    else
-        return (yi -> Quantity(yi, y_units[i])).(v)
-    end
-end
-@inline function wrap_units(v, y_units, ::Nothing)
-    if y_units === nothing
-        return v
-    else
-        return (yi -> Quantity(yi, y_units)).(v)
-    end
-end
+wrap_units(v, ::Nothing, ::Integer) = v
+wrap_units(v, ::Nothing, ::Nothing) = v
+wrap_units(v, y_units, i::Integer) = (yi -> Quantity(yi, y_units[i])).(v)
+wrap_units(v, y_units, ::Nothing) = (yi -> Quantity(yi, y_units)).(v)
 
-function prediction_fallback(::Type{T}, m::SRRegressor, Xnew_t, fitresult) where {T}
+function prediction_fallback(::Type{T}, ::SRRegressor, Xnew_t, fitresult, _) where {T}
     prediction_warn()
     out = fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T))
     return wrap_units(out, fitresult.y_units, nothing)
@@ -314,33 +306,36 @@ function prediction_fallback(
             fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T)), fitresult.y_units, i
         ) for i in 1:(fitresult.num_targets)
     ]
-    out_matrix = reduce(hcat, out_cols)
+    out_matrix = hcat(out_cols...)
     if !fitresult.y_is_table
         return out_matrix
     else
-        return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
+        return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype)
     end
 end
 
-function unwrap_units_single(A::AbstractMatrix{T}, ::Type{D}) where {D,T<:Number}
-    return A, [D() for _ in eachrow(A)]
-end
+compat_ustrip(A::QuantityArray) = ustrip(A)
+compat_ustrip(A) = ustrip.(A)
+
+"""
+    unwrap_units_single(::AbstractArray, ::Type{<:AbstractDimensions})
+
+Remove units from some features in a matrix, and return, as a tuple,
+(1) the matrix with stripped units, and (2) the dimensions for those features.
+"""
 function unwrap_units_single(A::AbstractMatrix, ::Type{D}) where {D}
-    for (i, row) in enumerate(eachrow(A))
-        allequal(Base.Fix2(dimension_fallback, D).(row)) ||
+    dims = D[dimension_with_fallback(first(row), D) for row in eachrow(A)]
+    @inbounds for (i, row) in enumerate(eachrow(A))
+        all(xi -> dimension_with_fallback(xi, D) == dims[i], row) ||
             error("Inconsistent units in feature $i of matrix.")
     end
-    dims = map(Base.Fix2(dimension_fallback, D) ∘ first, eachrow(A))
-    return stack([ustrip.(row) for row in eachrow(A)]; dims=1), dims
-end
-function unwrap_units_single(v::AbstractVector{T}, ::Type{D}) where {D,T<:Number}
-    return v, D()
+    return stack(compat_ustrip, eachrow(A); dims=1)::AbstractMatrix, dims
 end
 function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
-    allequal(Base.Fix2(dimension_fallback, D).(v)) || error("Inconsistent units in vector.")
-    dims = dimension_fallback(first(v), D)
-    v = ustrip(v)
-    return v, dims
+    dims = dimension_with_fallback(first(v), D)
+    all(xi -> dimension_with_fallback(xi, D) == dims, v) ||
+        error("Inconsistent units in vector.")
+    return compat_ustrip(v)::AbstractVector, dims
 end
 
 function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
@@ -352,50 +347,58 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
     )
 end
 
-function MMI.predict(m::SRRegressor, fitresult, Xnew)
-    params = full_report(m, fitresult; v_with_strings=Val(false))
-    Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
-    T = promote_type(eltype(Xnew_t), fitresult.types.T)
-    if length(params.equations) == 0
-        return prediction_fallback(T, m, Xnew_t, fitresult)
-    end
-    X_units_clean = clean_units(X_units)
-    validate_variable_names(variable_names, fitresult)
-    validate_units(X_units_clean, fitresult.X_units)
-    eq = params.equations[params.best_idx]
-    out, completed = eval_tree_array(eq, Xnew_t, fitresult.options)
-    if !completed
-        return prediction_fallback(T, m, Xnew_t, fitresult)
+function eval_tree_mlj(
+    tree::Node, X_t, m::AbstractSRRegressor, ::Type{T}, fitresult, i, prototype
+) where {T}
+    out, completed = eval_tree_array(tree, X_t, fitresult.options)
+    if completed
+        return wrap_units(out, fitresult.y_units, i)
     else
-        return wrap_units(out, fitresult.y_units, nothing)
+        return prediction_fallback(T, m, X_t, fitresult, prototype)
     end
 end
-function MMI.predict(m::MultitargetSRRegressor, fitresult, Xnew)
+
+function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRRegressor}
+    if Xnew isa NamedTuple && (haskey(Xnew, :idx) || haskey(Xnew, :data))
+        @assert(
+            haskey(Xnew, :idx) && haskey(Xnew, :data) && length(keys(Xnew)) == 2,
+            "If specifying an equation index during prediction, you must use a named tuple with keys `idx` and `data`."
+        )
+        return MMI.predict(m, fitresult, Xnew.data; idx=Xnew.idx)
+    end
+
     params = full_report(m, fitresult; v_with_strings=Val(false))
     prototype = MMI.istable(Xnew) ? Xnew : nothing
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     T = promote_type(eltype(Xnew_t), fitresult.types.T)
+
+    if isempty(params.equations) || any(isempty, params.equations)
+        @warn "Equations not found. Returning 0s for prediction."
+        return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
+    end
+
     X_units_clean = clean_units(X_units)
     validate_variable_names(variable_names, fitresult)
     validate_units(X_units_clean, fitresult.X_units)
-    equations = params.equations
-    if any(t -> length(t) == 0, equations)
-        return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
-    end
-    best_idx = params.best_idx
-    outs = []
-    for (i, (best_i, eq)) in enumerate(zip(best_idx, equations))
-        out, completed = eval_tree_array(eq[best_i], Xnew_t, fitresult.options)
-        if !completed
-            return prediction_fallback(T, m, Xnew_t, fitresult, prototype)
+
+    idx = idx === nothing ? params.best_idx : idx
+
+    if M <: SRRegressor
+        return eval_tree_mlj(
+            params.equations[idx], Xnew_t, m, T, fitresult, nothing, prototype
+        )
+    elseif M <: MultitargetSRRegressor
+        outs = [
+            eval_tree_mlj(
+                params.equations[i][idx[i]], Xnew_t, m, T, fitresult, i, prototype
+            ) for i in eachindex(idx, params.equations)
+        ]
+        out_matrix = reduce(hcat, outs)
+        if !fitresult.y_is_table
+            return out_matrix
+        else
+            return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype)
         end
-        push!(outs, wrap_units(out, fitresult.y_units, i))
-    end
-    out_matrix = reduce(hcat, outs)
-    if !fitresult.y_is_table
-        return out_matrix
-    else
-        return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
     end
 end
 
@@ -501,6 +504,11 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
         which is the number of processes to use, as well as the `lazy` keyword argument.
         For example, if set up on a slurm cluster, you could pass
         `addprocs_function = addprocs_slurm`, which will set up slurm processes.
+    - `heap_size_hint_in_bytes::Union{Int,Nothing}=nothing`: On Julia 1.9+, you may set the `--heap-size-hint`
+        flag on Julia processes, recommending garbage collection once a process
+        is close to the recommended size. This is important for long-running distributed
+        jobs where each process has an independent memory, and can help avoid
+        out-of-memory errors. By default, this is set to `Sys.free_memory() / numprocs`.
     - `runtests::Bool=true`: Whether to run (quick) tests before starting the
         search, to see if there will be any problems during the equation search
         related to the host environment.
@@ -509,11 +517,14 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
         Note that if you pass complex data `::Complex{L}`, then the loss
         type will automatically be set to `L`.
     - `selection_method::Function`: Function to selection expression from
-        the Pareto frontier for use in `predict`. See `SymbolicRegression.MLJInterfaceModule.choose_best`
-        for an example. This function should return a single integer specifying
-        the index of the expression to use. By default, `choose_best` maximizes
+        the Pareto frontier for use in `predict`.
+        See `SymbolicRegression.MLJInterfaceModule.choose_best` for an example.
+        This function should return a single integer specifying
+        the index of the expression to use. By default, this maximizes
         the score (a pound-for-pound rating) of expressions reaching the threshold
-        of 1.5x the minimum loss. To fix the index at `5`, you could just write `Returns(5)`.
+        of 1.5x the minimum loss. To override this at prediction time, you can pass
+        a named tuple with keys `data` and `idx` to `predict`. See the Operations
+        section for details.
     - `dimensions_type::AbstractDimensions`: The type of dimensions to use when storing
         the units of the data. By default this is `DynamicQuantities.SymbolicDimensions`.
     """
@@ -524,6 +535,9 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
     - `predict(mach, Xnew)`: Return predictions of the target given features `Xnew`, which
       should have same scitype as `X` above. The expression used for prediction is defined
       by the `selection_method` function, which can be seen by viewing `report(mach).best_idx`.
+    - `predict(mach, (data=Xnew, idx=i))`: Return predictions of the target given features
+      `Xnew`, which should have same scitype as `X` above. By passing a named tuple with keys
+      `data` and `idx`, you are able to specify the equation you wish to evaluate in `idx`.
 
     $(bottom_matter)
     """
@@ -576,7 +590,7 @@ eval(
         `Continuous`; check the scitype with `scitype(y)`. Units in `y` (use `DynamicQuantities`
         for units) will trigger dimensional analysis to be used.
 
-    - `w` is the observation weights which can either be `nothing` (default) or an 
+    - `w` is the observation weights which can either be `nothing` (default) or an
       `AbstractVector` whoose element scitype is `Count` or `Continuous`.
 
     Train the machine using `fit!(mach)`, inspect the discovered expressions with
@@ -584,7 +598,8 @@ eval(
     Note that unlike other regressors, symbolic regression stores a list of
     trained models. The model chosen from this list is defined by the function
     `selection_method` keyword argument, which by default balances accuracy
-    and complexity.
+    and complexity. You can override this at prediction time by passing a named
+    tuple with keys `data` and `idx`.
 
     """,
             r"^    " => "",
@@ -596,7 +611,8 @@ eval(
     The fields of `fitted_params(mach)` are:
 
     - `best_idx::Int`: The index of the best expression in the Pareto frontier,
-       as determined by the `selection_method` function.
+       as determined by the `selection_method` function. Override in `predict` by passing
+        a named tuple with keys `data` and `idx`.
     - `equations::Vector{Node{T}}`: The expressions discovered by the search, represented
       in a dominating Pareto frontier (i.e., the best expressions found for
       each complexity). `T` is equal to the element type
@@ -609,7 +625,8 @@ eval(
     The fields of `report(mach)` are:
 
     - `best_idx::Int`: The index of the best expression in the Pareto frontier,
-       as determined by the `selection_method` function.
+       as determined by the `selection_method` function. Override in `predict` by passing
+       a named tuple with keys `data` and `idx`.
     - `equations::Vector{Node{T}}`: The expressions discovered by the search, represented
       in a dominating Pareto frontier (i.e., the best expressions found for
       each complexity).
@@ -697,7 +714,7 @@ eval(
       scitype is `Continuous`; check the scitype with `schema(y)`. Units in columns of
       `y` (use `DynamicQuantities` for units) will trigger dimensional analysis to be used.
 
-    - `w` is the observation weights which can either be `nothing` (default) or an 
+    - `w` is the observation weights which can either be `nothing` (default) or an
       `AbstractVector` whoose element scitype is `Count` or `Continuous`. The same
       weights are used for all targets.
 
@@ -706,7 +723,8 @@ eval(
     Note that unlike other regressors, symbolic regression stores a list of lists of
     trained models. The models chosen from each of these lists is defined by the function
     `selection_method` keyword argument, which by default balances accuracy
-    and complexity.
+    and complexity. You can override this at prediction time by passing a named
+    tuple with keys `data` and `idx`.
 
     """,
             r"^    " => "",
@@ -718,7 +736,8 @@ eval(
     The fields of `fitted_params(mach)` are:
 
     - `best_idx::Vector{Int}`: The index of the best expression in each Pareto frontier,
-      as determined by the `selection_method` function.
+      as determined by the `selection_method` function. Override in `predict` by passing
+      a named tuple with keys `data` and `idx`.
     - `equations::Vector{Vector{Node{T}}}`: The expressions discovered by the search, represented
       in a dominating Pareto frontier (i.e., the best expressions found for
       each complexity). The outer vector is indexed by target variable, and the inner
@@ -732,7 +751,8 @@ eval(
     The fields of `report(mach)` are:
 
     - `best_idx::Vector{Int}`: The index of the best expression in each Pareto frontier,
-       as determined by the `selection_method` function.
+       as determined by the `selection_method` function. Override in `predict` by passing
+       a named tuple with keys `data` and `idx`.
     - `equations::Vector{Vector{Node{T}}}`: The expressions discovered by the search, represented
       in a dominating Pareto frontier (i.e., the best expressions found for
       each complexity). The outer vector is indexed by target variable, and the inner

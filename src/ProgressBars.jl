@@ -1,6 +1,6 @@
 module ProgressBarsModule
 
-import ProgressBars: ProgressBar, set_multiline_postfix
+using ProgressBars: ProgressBar, set_multiline_postfix
 
 # Simple wrapper for a progress bar which stores its own state
 mutable struct WrappedProgressBar

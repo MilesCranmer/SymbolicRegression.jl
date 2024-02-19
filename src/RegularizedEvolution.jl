@@ -1,14 +1,13 @@
 module RegularizedEvolutionModule
 
-import Random: shuffle!
-import DynamicExpressions: string_tree
-import ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
-import ..PopMemberModule: PopMember
-import ..PopulationModule: Population, best_of_sample
-import ..AdaptiveParsimonyModule: RunningSearchStatistics
-import ..MutateModule: next_generation, crossover_generation
-import ..RecorderModule: @recorder
-import ..UtilsModule: argmin_fast
+using DynamicExpressions: string_tree
+using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
+using ..PopMemberModule: PopMember
+using ..PopulationModule: Population, best_of_sample
+using ..AdaptiveParsimonyModule: RunningSearchStatistics
+using ..MutateModule: next_generation, crossover_generation
+using ..RecorderModule: @recorder
+using ..UtilsModule: argmin_fast
 
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample

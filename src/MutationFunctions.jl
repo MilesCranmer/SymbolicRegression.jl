@@ -1,9 +1,9 @@
 module MutationFunctionsModule
 
-import DynamicExpressions:
+using DynamicExpressions:
     Node, copy_node, set_node!, count_nodes, has_constants, has_operators
-import Compat: Returns, @inline
-import ..CoreModule: Options, DATA_TYPE
+using Compat: Returns, @inline
+using ..CoreModule: Options, DATA_TYPE
 
 """
     random_node(tree::Node{T}; filter::F=Returns(true))
@@ -27,6 +27,16 @@ function random_node(tree::Node{T}; filter::F=Returns(true))::Node{T} where {T,F
         return false
     end
     return chosen_node[]
+end
+
+# Swap operands in binary operator for ops like pow and divide
+function swap_operands(tree::Node{T}, options::Options)::Node{T} where {T}
+    if !any(node -> node.degree == 2, tree)
+        return tree
+    end
+    node = random_node(tree; filter=t -> t.degree == 2)
+    node.l, node.r = node.r, node.l
+    return tree
 end
 
 # Randomly convert an operator into another one (binary->binary;

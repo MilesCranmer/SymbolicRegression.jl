@@ -1,13 +1,14 @@
 module DimensionalAnalysisModule
 
-import DynamicExpressions: Node
-import DynamicQuantities:
-    Quantity, DimensionError, AbstractQuantity, dimension, ustrip, uparse, constructor_of
-import Tricks: static_hasmethod
+using DynamicExpressions: Node
+using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, uparse, constructorof
+using Tricks: static_hasmethod
 
-import ..CoreModule: Options, Dataset
+using ..CoreModule: Options, Dataset
+using ..UtilsModule: safe_call
+
+import DynamicQuantities: dimension, ustrip
 import ..CoreModule.OperatorsModule: safe_pow, safe_sqrt
-import ..UtilsModule: safe_call
 
 """
     @maybe_return_call(T, op, (args...))
@@ -75,14 +76,14 @@ for op in (:(Base.:+), :(Base.:-))
             return W($(op)(l.val, r.val), l.wildcard && r.wildcard, false)
         elseif l.wildcard && r.wildcard
             return W(
-                constructor_of(Q)($(op)(ustrip(l), ustrip(r)), typeof(dimension(l))),
+                constructorof(Q)($(op)(ustrip(l), ustrip(r)), typeof(dimension(l))),
                 true,
                 false,
             )
         elseif l.wildcard
-            return W($(op)(constructor_of(Q)(ustrip(l), dimension(r)), r.val), false, false)
+            return W($(op)(constructorof(Q)(ustrip(l), dimension(r)), r.val), false, false)
         elseif r.wildcard
-            return W($(op)(l.val, constructor_of(Q)(ustrip(r), dimension(l))), false, false)
+            return W($(op)(l.val, constructorof(Q)(ustrip(r), dimension(l))), false, false)
         else
             return W(one(Q), false, true)
         end

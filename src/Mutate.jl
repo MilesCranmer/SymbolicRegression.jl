@@ -1,25 +1,26 @@
 module MutateModule
 
-import DynamicExpressions:
+using DynamicExpressions:
     Node, copy_node, count_nodes, count_constants, simplify_tree, combine_operators
-import ..CoreModule:
+using ..CoreModule:
     Options, MutationWeights, Dataset, RecordType, sample_mutation, DATA_TYPE, LOSS_TYPE
-import ..ComplexityModule: compute_complexity
-import ..LossFunctionsModule: score_func, score_func_batched
-import ..CheckConstraintsModule: check_constraints
-import ..AdaptiveParsimonyModule: RunningSearchStatistics
-import ..PopMemberModule: PopMember
-import ..MutationFunctionsModule:
+using ..ComplexityModule: compute_complexity
+using ..LossFunctionsModule: score_func, score_func_batched
+using ..CheckConstraintsModule: check_constraints
+using ..AdaptiveParsimonyModule: RunningSearchStatistics
+using ..PopMemberModule: PopMember
+using ..MutationFunctionsModule:
     gen_random_tree_fixed_size,
     mutate_constant,
     mutate_operator,
+    swap_operands,
     append_random_op,
     prepend_random_op,
     insert_random_op,
     delete_random_op,
     crossover_trees
-import ..ConstantOptimizationModule: optimize_constants
-import ..RecorderModule: @recorder
+using ..ConstantOptimizationModule: optimize_constants
+using ..RecorderModule: @recorder
 
 function condition_mutation_weights!(
     weights::MutationWeights, member::PopMember, options::Options, curmaxsize::Int
@@ -28,6 +29,7 @@ function condition_mutation_weights!(
         # If equation is too small, don't delete operators
         # or simplify
         weights.mutate_operator = 0.0
+        weights.swap_operands = 0.0
         weights.delete_node = 0.0
         weights.simplify = 0.0
         if !member.tree.constant
@@ -35,6 +37,11 @@ function condition_mutation_weights!(
             weights.mutate_constant = 0.0
         end
         return nothing
+    end
+
+    if !any(node -> node.degree == 2, member.tree)
+        # swap is implemented only for binary ops
+        weights.swap_operands = 0.0
     end
 
     #More constants => more likely to do constant mutation
@@ -109,6 +116,11 @@ function next_generation(
             @recorder tmp_recorder["type"] = "operator"
             is_success_always_possible = true
             # Can always mutate to the same operator
+
+        elseif mutation_choice == :swap_operands
+            tree = swap_operands(tree, options)
+            @recorder tmp_recorder["type"] = "swap_operands"
+            is_success_always_possible = true
 
         elseif mutation_choice == :add_node
             if rand() < 0.5

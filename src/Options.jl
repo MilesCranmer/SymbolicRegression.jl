@@ -3,19 +3,18 @@ module OptionsModule
 using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
-import DynamicExpressions: OperatorEnum, Node, string_tree
-import Distributed: nworkers
-import LossFunctions: L2DistLoss, SupervisedLoss
+using DynamicExpressions: OperatorEnum, Node, string_tree
+using Distributed: nworkers
+using LossFunctions: L2DistLoss, SupervisedLoss
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
-import ..OperatorsModule:
+using ..OperatorsModule:
     plus,
     pow,
     safe_pow,
     mult,
     sub,
-    div,
     safe_log,
     safe_log10,
     safe_log2,
@@ -23,8 +22,9 @@ import ..OperatorsModule:
     safe_sqrt,
     safe_acosh,
     atanh_clip
-import ..OptionsStructModule: Options, ComplexityMapping, MutationWeights, mutations
-import ..UtilsModule: max_ops, @save_kwargs
+import ..OptionsStructModule: Options
+using ..OptionsStructModule: ComplexityMapping, MutationWeights, mutations
+using ..UtilsModule: max_ops, @save_kwargs
 
 """
          build_constraints(una_constraints, bin_constraints,
@@ -85,7 +85,7 @@ function build_constraints(
     return una_constraints, bin_constraints
 end
 
-function binopmap(op)
+function binopmap(op::F) where {F}
     if op == plus
         return +
     elseif op == mult
@@ -101,14 +101,14 @@ function binopmap(op)
     end
     return op
 end
-function inverse_binopmap(op)
+function inverse_binopmap(op::F) where {F}
     if op == safe_pow
         return ^
     end
     return op
 end
 
-function unaopmap(op)
+function unaopmap(op::F) where {F}
     if op == log
         return safe_log
     elseif op == log10
@@ -126,7 +126,7 @@ function unaopmap(op)
     end
     return op
 end
-function inverse_unaopmap(op)
+function inverse_unaopmap(op::F) where {F}
     if op == safe_log
         return log
     elseif op == safe_log10

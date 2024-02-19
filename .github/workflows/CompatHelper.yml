@@ -1,7 +1,7 @@
 name: CompatHelper
 on:
   schedule:
-    - cron: '00 00 * * *'
+    - cron: "00 00 * * *"
   workflow_dispatch:
 jobs:
   CompatHelper:

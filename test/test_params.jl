@@ -1,4 +1,5 @@
-import SymbolicRegression: L2DistLoss, MutationWeights
+using SymbolicRegression: L2DistLoss, MutationWeights
+using Test: Test
 
 maximum_residual = 1e-2
 custom_cos(x) = cos(x)
@@ -58,3 +59,7 @@ default_params = (
     timeout_in_seconds=nothing,
     skip_mutation_failures=false,
 )
+
+test_info(_, x) = error("Test failed: $x")
+test_info(_, ::Test.Pass) = nothing
+test_info(f::F, ::Test.Fail) where {F} = f()

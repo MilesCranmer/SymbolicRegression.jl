@@ -1,10 +1,10 @@
 module PopMemberModule
 
-import DynamicExpressions: Node, copy_node, count_nodes
-import ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
+using DynamicExpressions: Node, copy_node, count_nodes
+using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
-import ..UtilsModule: get_birth_order
-import ..LossFunctionsModule: score_func
+using ..UtilsModule: get_birth_order
+using ..LossFunctionsModule: score_func
 
 # Define a member of population by equation, score, and age
 mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -109,10 +109,8 @@ function PopMember(
     )
 end
 
-function copy_pop_member(
-    p::PopMember{T,L}
-)::PopMember{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    tree = copy_node(p.tree)
+function Base.copy(p::PopMember{T,L})::PopMember{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    tree = copy(p.tree)
     score = copy(p.score)
     loss = copy(p.loss)
     birth = copy(p.birth)
@@ -122,12 +120,9 @@ function copy_pop_member(
     return PopMember{T,L}(tree, score, loss, birth, complexity, ref, parent)
 end
 
-function copy_pop_member_reset_birth(
-    p::PopMember{T,L}; deterministic::Bool
-)::PopMember{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    new_member = copy_pop_member(p)
-    new_member.birth = get_birth_order(; deterministic=deterministic)
-    return new_member
+function reset_birth!(p::PopMember; deterministic::Bool)
+    p.birth = get_birth_order(; deterministic)
+    return p
 end
 
 # Can read off complexity directly from pop members

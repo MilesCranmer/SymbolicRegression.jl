@@ -1,15 +1,14 @@
 module LossFunctionsModule
 
-import Random: MersenneTwister
+using Random: MersenneTwister
 using StatsBase: StatsBase
-import Tricks: static_hasmethod
-import DynamicExpressions: Node
+using DynamicExpressions: Node
 using LossFunctions: LossFunctions
-import LossFunctions: SupervisedLoss
-import ..InterfaceDynamicExpressionsModule: eval_tree_array
-import ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
-import ..ComplexityModule: compute_complexity
-import ..DimensionalAnalysisModule: violates_dimensional_constraints
+using LossFunctions: SupervisedLoss
+using ..InterfaceDynamicExpressionsModule: eval_tree_array
+using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
+using ..ComplexityModule: compute_complexity
+using ..DimensionalAnalysisModule: violates_dimensional_constraints
 
 function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
@@ -75,7 +74,7 @@ end
 function evaluator(
     f::F, tree::Node{T}, dataset::Dataset{T,L}, options::Options, idx
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE,F}
-    if static_hasmethod(f, typeof((tree, dataset, options, idx)))
+    if hasmethod(f, typeof((tree, dataset, options, idx)))
         # If user defines method that accepts batching indices:
         return f(tree, dataset, options, idx)
     elseif options.batching
