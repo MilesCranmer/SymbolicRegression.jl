@@ -115,16 +115,32 @@ end
 MMI.clean!(::AbstractSRRegressor) = ""
 
 # TODO: Enable `verbosity` being passed to `equation_search`
-function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing; extra...)
-    return MMI.update(m, verbosity, nothing, nothing, X, y, w; extra...)
+function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
+    return MMI.update(m, verbosity, nothing, nothing, X, y, w)
 end
 function MMI.update(
-    m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing; extra...
+    m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
 )
     options = old_fitresult === nothing ? get_options(m) : old_fitresult.options
-    return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options; extra...)
+    return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, nothing)
 end
-function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options; extra...)
+function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, extra)
+    if extra === nothing
+        if hasproperty(X, :data) || hasproperty(X, :extra)
+            @assert(
+                hasproperty(X, :data) &&
+                    hasproperty(X, :extra) &&
+                    length(propertynames(X)) == 2,
+                "If passing extra data to the MLJ interface of symblic regression, you must use the format " *
+                    "(data=X, extra=extra), for the standard types of `X` and arbitrary named tuple `extra`."
+            )
+            return _update(
+                m, verbosity, old_fitresult, old_cache, X.data, y, w, options, X.extra
+            )
+        end
+    elseif !isempty(extra)
+        @info "Received extra arguments $(keys(extra)) which will be stored in the dataset."
+    end
     # To speed up iterative fits, we cache the types:
     types = if old_fitresult === nothing
         (;

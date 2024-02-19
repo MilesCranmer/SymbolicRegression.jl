@@ -233,8 +233,8 @@ deriv_f(x) = x^2 + sin(x)
         niterations=100,
         early_stop_condition=1e-6,
     )
-    mach = machine(model, X, y)
-    VERSION >= v"1.8" && @test_warn "experimental" fit!(mach; ∂y=∂y)
+    mach = machine(model, (data=X, extra=(∂y=∂y,)), y)
+    VERSION >= v"1.8" && @test_warn "experimental" fit!(mach)
 
     @test WasEvaluated[]
     @test predict(mach, X) ≈ y
@@ -253,8 +253,8 @@ deriv_f(x) = x^2 + sin(x)
         niterations=100,
         early_stop_condition=1e-6,
     )
-    mach = machine(model, X, y, w)
-    VERSION >= v"1.8" && @test_warn "experimental" fit!(mach; ∂y=∂y)
+    mach = machine(model, (data=X, extra=(; ∂y)), y, w)
+    VERSION >= v"1.8" && @test_warn "experimental" fit!(mach)
     @test WasEvaluated[]
     @test HasWeights[]
     @test predict(mach, X) ≈ y
@@ -262,8 +262,8 @@ deriv_f(x) = x^2 + sin(x)
     @testset "Test errors associated with `extra`" begin
         # No loss function:
         model = SRRegressor(; loss_function=nothing)
-        mach = machine(model, X, y)
-        @test_throws ErrorException @quiet(fit!(mach; verbosity=0, ∂y=∂y))
-        VERSION >= v"1.8" && @test_throws "You have passed" @quiet(fit!(mach, ∂y=∂y))
+        mach = machine(model, (data=X, extra=(∂y=∂y,)), y)
+        @test_throws ErrorException @quiet(fit!(mach; verbosity=0))
+        VERSION >= v"1.8" && @test_throws "You have passed" @quiet(fit!(mach))
     end
 end
