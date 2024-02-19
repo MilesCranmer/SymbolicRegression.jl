@@ -257,6 +257,9 @@ which is useful for debugging and profiling.
     More iterations will improve the results.
 - `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
     weight the loss for each `y` by this value (same shape as `y`).
+- `extra::Union{NamedTuple, Base.Pairs, Nothing}=nothing`: Extra information to pass to a custom
+    evaluation function. Since this is an arbitrary named tuple, you could pass
+    any sort of dataset you wish to here.
 - `options::Options=Options()`: The options for the search, such as
     which operators to use, evolution hyperparameters, etc.
 - `variable_names::Union{Vector{String}, Nothing}=nothing`: The names
@@ -335,7 +338,7 @@ function equation_search(
     y::AbstractMatrix{T};
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
-    extra::Union{NamedTuple,Nothing}=nothing,
+    extra::Union{NamedTuple,Base.Pairs,Nothing}=nothing,
     options::Options=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
     display_variable_names::Union{AbstractVector{String},Nothing}=variable_names,
@@ -370,7 +373,7 @@ function equation_search(
         @assert length(weights) == length(y)
         weights = reshape(weights, size(y))
     end
-    if extra !== nothing
+    if extra !== nothing && !isempty(extra)
         if options.loss_function === nothing
             error(
                 "You have passed `extra`, but have not provided a custom `loss_function` to use it.",

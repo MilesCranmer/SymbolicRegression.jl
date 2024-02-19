@@ -115,16 +115,16 @@ end
 MMI.clean!(::AbstractSRRegressor) = ""
 
 # TODO: Enable `verbosity` being passed to `equation_search`
-function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
-    return MMI.update(m, verbosity, nothing, nothing, X, y, w)
+function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing; extra...)
+    return MMI.update(m, verbosity, nothing, nothing, X, y, w; extra...)
 end
 function MMI.update(
-    m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
+    m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing; extra...
 )
     options = old_fitresult === nothing ? get_options(m) : old_fitresult.options
-    return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
+    return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options; extra...)
 end
-function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
+function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options; extra...)
     # To speed up iterative fits, we cache the types:
     types = if old_fitresult === nothing
         (;
@@ -154,8 +154,8 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         X_t,
         y_t;
         niterations=m.niterations,
-        weights=isa(w_t, AbstractArray) ? w_t : nothing,
-        extra=isa(w_t, NamedTuple) ? w_t : nothing,
+        weights=w_t,
+        extra=extra,
         variable_names=variable_names,
         options=options,
         parallelism=m.parallelism,
@@ -206,17 +206,11 @@ end
 function validate_weights(_, ::SRRegressor, w::AbstractVector)
     return w
 end
-function validate_weights(_, _, w::NamedTuple)
-    @warn "You are using an experimental interface for the `extra` field of a `Dataset` type. This API may change in the future."
-    return w
-end
 function validate_weights(_, _, ::Nothing)
     return nothing
 end
 function validate_weights(_, _, _)
-    return error(
-        "Unexpected input for `w`. This should usually be a vector. You may also pass a `NamedTuple` if you are using extra data in a custom objective.",
-    )
+    return error("Unexpected input for `w`. This should usually be a vector.")
 end
 
 function clean_units(units)

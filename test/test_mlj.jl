@@ -185,6 +185,7 @@ end
 end
 
 const WasEvaluated = Ref(false)
+const HasWeights = Ref(false)
 const WasEvaluatedLock = Threads.SpinLock()
 
 # This tests both `.extra` and `idx`
@@ -204,6 +205,11 @@ function derivative_loss(tree, dataset::Dataset{T,L}, options, idx) where {T,L}
 
     WasEvaluated[] || lock(WasEvaluatedLock) do
         WasEvaluated[] = true
+    end
+    if dataset.weights !== nothing
+        HasWeights[] || lock(WasEvaluatedLock) do
+            HasWeights[] = true
+        end
     end
 
     return mse_value + mse_deriv
@@ -227,23 +233,37 @@ deriv_f(x) = x^2 + sin(x)
         niterations=100,
         early_stop_condition=1e-6,
     )
-    mach = machine(model, X, y, (; ∂y=∂y))
-    VERSION >= v"1.8" && @test_warn "experimental" fit!(mach)
+    mach = machine(model, X, y)
+    VERSION >= v"1.8" && @test_warn "experimental" fit!(mach; ∂y=∂y)
 
     @test WasEvaluated[]
+    @test predict(mach, X) ≈ y
+
+    WasEvaluated[] = false
+    HasWeights[] = false
+    # Try again but with weights parameter
+    w = ones(size(y))
+    model = SRRegressor(;
+        binary_operators=[+, -, *],
+        unary_operators=[cos],
+        loss_function=derivative_loss,
+        enable_autodiff=true,
+        batching=true,
+        batch_size=25,
+        niterations=100,
+        early_stop_condition=1e-6,
+    )
+    mach = machine(model, X, y, w)
+    VERSION >= v"1.8" && @test_warn "experimental" fit!(mach; ∂y=∂y)
+    @test WasEvaluated[]
+    @test HasWeights[]
     @test predict(mach, X) ≈ y
 
     @testset "Test errors associated with `extra`" begin
         # No loss function:
         model = SRRegressor(; loss_function=nothing)
-        mach = machine(model, X, y, (; ∂y=∂y))
-        @test_throws ErrorException @quiet(fit!(mach; verbosity=0))
-        VERSION >= v"1.8" && @test_throws "You have passed" @quiet(fit!(mach))
-
-        # Bad setting for `extra`
-        model = SRRegressor(; loss_function=derivative_loss)
-        mach = machine(model, X, y, "extra")
-        @test_throws ErrorException @quiet(fit!(mach; verbosity=0))
-        VERSION >= v"1.8" && @test_throws "Unexpected input" @quiet(fit!(mach))
+        mach = machine(model, X, y)
+        @test_throws ErrorException @quiet(fit!(mach; verbosity=0, ∂y=∂y))
+        VERSION >= v"1.8" && @test_throws "You have passed" @quiet(fit!(mach, ∂y=∂y))
     end
 end

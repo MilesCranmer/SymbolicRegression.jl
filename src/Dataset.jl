@@ -30,7 +30,7 @@ import ...deprecate_varmap
 - `weighted::Bool`: Whether the dataset is non-uniformly weighted.
 - `weights::Union{AbstractVector{T},Nothing}`: If the dataset is weighted,
     these specify the per-sample weight (with shape `(n,)`).
-- `extra::Union{NamedTuple,Nothing}`: Extra information to pass to a custom evaluation
+- `extra::Union{NamedTuple,Base.Pairs,Nothing}`: Extra information to pass to a custom evaluation
     function. Since this is an arbitrary named tuple, you could pass
     any sort of dataset you wish to here.
 - `avg_y`: The average value of `y` (weighted, if `weights` are passed).
@@ -59,7 +59,7 @@ mutable struct Dataset{
     AX<:AbstractMatrix{T},
     AY<:Union{AbstractVector{T},Nothing},
     AW<:Union{AbstractVector{T},Nothing},
-    EX<:Union{NamedTuple,Nothing},
+    EX<:Union{NamedTuple,Base.Pairs,Nothing},
     XU<:Union{AbstractVector{<:Quantity},Nothing},
     YU<:Union{Quantity,Nothing},
     XUS<:Union{AbstractVector{<:Quantity},Nothing},
@@ -85,20 +85,7 @@ mutable struct Dataset{
     y_sym_units::YUS
 end
 
-"""
-    Dataset(X::AbstractMatrix{T}, y::Union{AbstractVector{T},Nothing}=nothing;
-            col::Int=1,
-            weights::Union{AbstractVector{T}, Nothing}=nothing,
-            variable_names::Union{Array{String, 1}, Nothing}=nothing,
-            y_variable_name::Union{String,Nothing}=nothing,
-            extra::NamedTuple=NamedTuple(),
-            loss_type::Type=Nothing,
-            X_units::Union{AbstractVector, Nothing}=nothing,
-            y_units=nothing,
-    ) where {T<:DATA_TYPE}
-
-Construct a dataset to pass between internal functions.
-"""
+"""Construct a dataset to pass between internal functions."""
 function Dataset(
     X::AbstractMatrix{T},
     y::Union{AbstractVector{T},Nothing}=nothing;
@@ -107,7 +94,7 @@ function Dataset(
     variable_names::Union{Array{String,1},Nothing}=nothing,
     display_variable_names=variable_names,
     y_variable_name::Union{String,Nothing}=nothing,
-    extra::Union{NamedTuple,Nothing}=nothing,
+    extra::Union{NamedTuple,Base.Pairs,Nothing}=nothing,
     loss_type::Type{L}=Nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
