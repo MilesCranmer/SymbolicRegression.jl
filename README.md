@@ -1,10 +1,10 @@
+<!-- prettier-ignore-start -->
 <div align="center">
 
 SymbolicRegression.jl searches for symbolic expressions which optimize a particular objective.
 
 https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0
 
-<!-- prettier-ignore-start -->
 | Latest release | Documentation | Forums | Paper |
 | :---: | :---: | :---: | :---: |
 | [![version](https://juliahub.com/docs/SymbolicRegression/version.svg)](https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS) | [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://astroautomata.com/SymbolicRegression.jl/dev/) | [![Discussions](https://img.shields.io/badge/discussions-github-informational)](https://github.com/MilesCranmer/PySR/discussions) | [![Paper](https://img.shields.io/badge/arXiv-2305.01582-b31b1b)](https://arxiv.org/abs/2305.01582) |
@@ -12,13 +12,13 @@ https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-98
 | Build status | Coverage |
 | :---: | :---: |
 | [![CI](https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/CI/badge.svg)](.github/workflows/CI.yml) | [![Coverage Status](https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master)](https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master)<br>[![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl) |
-<!-- prettier-ignore-end >
 
 Check out [PySR](https://github.com/MilesCranmer/PySR) for
 a Python frontend.
 [Cite this software](https://arxiv.org/abs/2305.01582)
 
 </div>
+<!-- prettier-ignore-end >
 
 **Contents**:
 
@@ -153,16 +153,20 @@ predict(mach, X)
 ```
 
 This will make predictions using the expression
-selected using the function passed to `selection_method`.
-By default this selection is made a mix of accuracy and complexity.
-For example, we can make predictions using expression 2 with:
+selected by `model.selection_method`,
+which by default is a mix of accuracy and complexity.
+
+You can override this selection and select an equation from
+the Pareto front manually with:
 
 ```julia
-mach.model.selection_method = Returns(2)
-predict(mach, X)
+predict(mach, (data=X, idx=2))
 ```
 
-For fitting multiple outputs, one can use `MultitargetSRRegressor`.
+where here we choose to evaluate the second equation.
+
+For fitting multiple outputs, one can use `MultitargetSRRegressor`
+(and pass an array of indices to `idx` in `predict` for selecting specific equations).
 For a full list of options available to each regressor, see the [API page](https://astroautomata.com/SymbolicRegression.jl/dev/api/).
 
 ### Low-Level Interface
@@ -223,9 +227,12 @@ The `output` array will contain the result of the tree at each of the 100 rows.
 This `did_succeed` flag detects whether an evaluation was successful, or whether
 encountered any NaNs or Infs during calculation (such as, e.g., `sqrt(-1)`).
 
-## Constructing trees
+## Constructing expressions
 
-You can also manipulate and construct trees directly. For example:
+Expressions are represented as the `Node` type which is developed
+in the [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl/) package.
+
+You can manipulate and construct expressions directly. For example:
 
 ```julia
 import SymbolicRegression: Options, Node, eval_tree_array
