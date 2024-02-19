@@ -146,7 +146,7 @@ function inverse_unaopmap(op::F) where {F}
     return op
 end
 
-const deprecated_options_mapping = NamedTuple([
+const deprecated_options_mapping = Base.ImmutableDict(
     :mutationWeights => :mutation_weights,
     :hofMigration => :hof_migration,
     :shouldOptimizeConstants => :should_optimize_constants,
@@ -166,9 +166,10 @@ const deprecated_options_mapping = NamedTuple([
     :earlyStopCondition => :early_stop_condition,
     :stateReturn => :deprecated_return_state,
     :return_state => :deprecated_return_state,
+    :enable_autodiff => :deprecated_enable_autodiff,
     :ns => :tournament_selection_n,
     :loss => :elementwise_loss,
-])
+)
 
 const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators (functions) to use.
     Each operator should be defined for two input scalars,
@@ -331,8 +332,6 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `max_evals`: Int (or Nothing) - the maximum number of evaluations of expressions to perform.
 - `skip_mutation_failures`: Whether to simply skip over mutations that fail or are rejected, rather than to replace the mutated
     expression with the original expression and proceed normally.
-- `enable_autodiff`: Whether to enable automatic differentiation functionality. This is turned off by default.
-    If turned on, this will be turned off if one of the operators does not have well-defined gradients.
 - `nested_constraints`: Specifies how many times a combination of operators can be nested. For example,
     `[sin => [cos => 0], cos => [cos => 2]]` specifies that `cos` may never appear within a `sin`,
     but `sin` can be nested with itself an unlimited number of times. The second term specifies that `cos`
@@ -417,7 +416,6 @@ function Options end
     timeout_in_seconds::Union{Nothing,Real}=nothing,
     max_evals::Union{Nothing,Integer}=nothing,
     skip_mutation_failures::Bool=true,
-    enable_autodiff::Bool=false,
     nested_constraints=nothing,
     deterministic::Bool=false,
     # Not search options; just construction options:
@@ -434,6 +432,10 @@ function Options end
         new_key = deprecated_options_mapping[k]
         if startswith(string(new_key), "deprecated_")
             Base.depwarn("The keyword argument `$(k)` is deprecated.", :Options)
+            if string(new_key) != "deprecated_return_state"
+                # This one we actually want to use
+                continue
+            end
         else
             Base.depwarn(
                 "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.",
@@ -670,7 +672,6 @@ function Options end
         OperatorEnum(;
             binary_operators=binary_operators,
             unary_operators=unary_operators,
-            enable_autodiff=false,  # Not needed; we just want the constructors
             define_helper_functions=true,
             empty_old_operators=true,
         )
@@ -682,7 +683,6 @@ function Options end
     operators = OperatorEnum(;
         binary_operators=binary_operators,
         unary_operators=unary_operators,
-        enable_autodiff=enable_autodiff,
         define_helper_functions=define_helper_functions,
         empty_old_operators=false,
     )

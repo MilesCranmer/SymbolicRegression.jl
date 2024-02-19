@@ -1,5 +1,8 @@
 using SafeTestsets
 
+# Trigger extensions:
+using LoopVectorization
+
 @safetestset "Test custom operators and additional types" begin
     include("test_operators.jl")
 end

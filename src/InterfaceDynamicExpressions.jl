@@ -70,8 +70,6 @@ respect to `x1`.
 - `tree::AbstractExpressionNode`: The expression tree to evaluate.
 - `X::AbstractArray`: The data matrix, with each column being a data point.
 - `options::Options`: The options containing the operators used to create the `tree`.
-    `enable_autodiff` must be set to `true` when creating the options.
-    This is needed to create the derivative operations.
 - `direction::Int`: The index of the variable to take the derivative with respect to.
 
 # Returns
@@ -98,8 +96,6 @@ to every constant in the expression.
 - `tree::AbstractExpressionNode`: The expression tree to evaluate.
 - `X::AbstractArray`: The data matrix, with each column being a data point.
 - `options::Options`: The options containing the operators used to create the `tree`.
-    `enable_autodiff` must be set to `true` when creating the options.
-    This is needed to create the derivative operations.
 - `variable::Bool`: Whether to take derivatives with respect to features (i.e., `X` - with `variable=true`),
     or with respect to every constant in the expression (`variable=false`).
 
