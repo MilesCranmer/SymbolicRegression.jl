@@ -54,7 +54,7 @@ function _optimize_constants(
         tmptree = copy(tree)
         foreach(tmptree) do node
             if node.degree == 0 && node.constant
-                node.val::T = (node.val::T) * (T(1) + T(1//2) * randn(T))
+                node.val = (node.val) * (T(1) + T(1//2) * randn(T))
             end
         end
         tmpresult = Optim.optimize(

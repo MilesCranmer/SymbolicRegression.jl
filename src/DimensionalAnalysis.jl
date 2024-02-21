@@ -119,7 +119,7 @@ end
 @inline function deg0_eval(
     x::AbstractVector{T}, x_units::Vector{Q}, t::AbstractExpressionNode{T}
 ) where {T,R,Q<:AbstractQuantity{T,R}}
-    t.constant && return WildcardQuantity{Q}(Quantity(t.val::T, R), true, false)
+    t.constant && return WildcardQuantity{Q}(Quantity(t.val, R), true, false)
     return WildcardQuantity{Q}(
         (@inbounds x[t.feature]) * (@inbounds x_units[t.feature]), false, false
     )

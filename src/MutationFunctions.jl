@@ -68,13 +68,13 @@ function mutate_constant(
     makeConstBigger = rand(Bool)
 
     if makeConstBigger
-        node.val::T *= factor
+        node.val *= factor
     else
-        node.val::T /= factor
+        node.val /= factor
     end
 
     if rand() > options.probability_negate_constant
-        node.val::T *= -1
+        node.val *= -1
     end
 
     return tree
