@@ -103,3 +103,7 @@ end
 @safetestset "Dataset" begin
     include("test_dataset.jl")
 end
+
+@safetestset "Latexify" begin
+    include("test_latexify.jl")
+end
