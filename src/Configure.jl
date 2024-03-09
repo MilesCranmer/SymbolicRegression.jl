@@ -203,26 +203,44 @@ function activate_env_on_workers(procs, project_path::String, options::Options, 
 end
 
 function import_module_on_workers(procs, filename::String, options::Options, verbosity)
-    included_local = !("SymbolicRegression" in [k.name for (k, v) in Base.loaded_modules])
-    if included_local
-        verbosity > 0 && @info "Importing local module ($filename) on workers..."
-        @everywhere procs begin
-            # Parse functions on every worker node
-            Base.MainInclude.eval(
-                quote
-                    include($$filename)
-                    using .SymbolicRegression
-                end,
-            )
+    loaded_modules_head_worker = [k.name for (k, _) in Base.loaded_modules]
+
+    included_as_local = "SymbolicRegression" ∉ loaded_modules_head_worker
+    expr = if included_as_local
+        quote
+            include($filename)
+            using .SymbolicRegression
         end
-        verbosity > 0 && @info "Finished!"
     else
-        verbosity > 0 && @info "Importing installed module on workers..."
-        @everywhere procs begin
-            Base.MainInclude.eval(:(using SymbolicRegression))
+        quote
+            using SymbolicRegression
         end
-        verbosity > 0 && @info "Finished!"
     end
+
+    # Need to import any extension code, if loaded on head node
+    relevant_extensions = [
+        :SymbolicUtils, :Bumper, :LoopVectorization, :Zygote, :CUDA, :Enzyme
+    ]
+    filter!(m -> String(m) ∈ loaded_modules_head_worker, relevant_extensions)
+    # HACK TODO – this workaround is very fragile. Likely need to submit a bug report
+    #             to JuliaLang.
+
+    for ext in relevant_extensions
+        push!(
+            expr.args,
+            quote
+                using $ext: $ext
+            end,
+        )
+    end
+
+    verbosity > 0 && if isempty(relevant_extensions)
+        @info "Importing SymbolicRegression on workers."
+    else
+        @info "Importing SymbolicRegression on workers as well as extensions $(join(relevant_extensions, ',' * ' '))."
+    end
+    @everywhere procs Base.MainInclude.eval($expr)
+    return verbosity > 0 && @info "Finished!"
 end
 
 function test_module_on_workers(

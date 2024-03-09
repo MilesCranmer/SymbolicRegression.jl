@@ -38,7 +38,16 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
+struct Options{
+    CT,
+    OP<:AbstractOperatorEnum,
+    use_recorder,
+    OPT<:Optim.Options,
+    OPT_A<:Optim.AbstractOptimizer,
+    _turbo,
+    _bumper,
+    W,
+}
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
@@ -51,7 +60,8 @@ struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
     alpha::Float32
     maxsize::Int
     maxdepth::Int
-    turbo::Bool
+    turbo::Val{_turbo}
+    bumper::Val{_bumper}
     migration::Bool
     hof_migration::Bool
     should_simplify::Bool
@@ -84,7 +94,7 @@ struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
     loss_function::Union{Nothing,Function}
     progress::Union{Bool,Nothing}
     terminal_width::Union{Int,Nothing}
-    optimizer_algorithm::String
+    optimizer_algorithm::OPT_A
     optimizer_probability::Float32
     optimizer_nrestarts::Int
     optimizer_options::OPT

@@ -6,6 +6,8 @@ using StatsBase: StatsBase
 using DynamicExpressions: OperatorEnum
 using Distributed: nworkers
 using LossFunctions: L2DistLoss, SupervisedLoss
+using Optim: Optim
+using LineSearches: LineSearches
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
@@ -282,6 +284,7 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `turbo`: Whether to use `LoopVectorization.@turbo` to evaluate expressions.
     This can be significantly faster, but is only compatible with certain
     operators. *Experimental!*
+- `bumper`: Whether to use Bumper.jl for faster evaluation. *Experimental!*
 - `migration`: Whether to migrate equations between processes.
 - `hof_migration`: Whether to migrate equations from the hall of fame
     to processes.
@@ -296,7 +299,7 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `optimizer_nrestarts`: How many different random starting positions to consider
     for optimization of constants.
 - `optimizer_algorithm`: Select algorithm to use for optimizing constants. Default
-    is "BFGS", but "NelderMead" is also supported.
+    is `Optim.BFGS(linesearch=LineSearches.BackTracking())`.
 - `optimizer_options`: General options for the constant optimization. For details
     we refer to the documentation on `Optim.Options` from the `Optim.jl` package.
     Options can be provided here as `NamedTuple`, e.g. `(iterations=16,)`, as a
@@ -376,6 +379,7 @@ function Options end
     maxsize::Integer=20,
     maxdepth::Union{Nothing,Integer}=nothing,
     turbo::Bool=false,
+    bumper::Bool=false,
     migration::Bool=true,
     hof_migration::Bool=true,
     should_simplify::Union{Nothing,Bool}=nothing,
@@ -405,7 +409,9 @@ function Options end
     una_constraints=nothing,
     progress::Union{Bool,Nothing}=nothing,
     terminal_width::Union{Nothing,Integer}=nothing,
-    optimizer_algorithm::AbstractString="BFGS",
+    optimizer_algorithm::Union{AbstractString,Optim.AbstractOptimizer}=Optim.BFGS(;
+        linesearch=LineSearches.BackTracking()
+    ),
     optimizer_nrestarts::Integer=2,
     optimizer_probability::Real=0.14,
     optimizer_iterations::Union{Nothing,Integer}=nothing,
@@ -462,6 +468,7 @@ function Options end
         k == :earlyStopCondition && (early_stop_condition = kws[k]; true) && continue
         k == :return_state && (deprecated_return_state = kws[k]; true) && continue
         k == :stateReturn && (deprecated_return_state = kws[k]; true) && continue
+        k == :enable_autodiff && continue
         k == :ns && (tournament_selection_n = kws[k]; true) && continue
         k == :loss && (elementwise_loss = kws[k]; true) && continue
         if k == :mutationWeights
@@ -493,6 +500,17 @@ function Options end
     if npopulations !== nothing
         Base.depwarn("`npopulations` is deprecated. Use `populations` instead.", :Options)
         populations = npopulations
+    end
+    if optimizer_algorithm isa AbstractString
+        Base.depwarn(
+            "The `optimizer_algorithm` argument should be an `AbstractOptimizer`, not a string.",
+            :Options,
+        )
+        optimizer_algorithm = if optimizer_algorithm == "NelderMead"
+            Optim.NelderMead(; linesearch=LineSearches.BackTracking())
+        else
+            Optim.BFGS(; linesearch=LineSearches.BackTracking())
+        end
     end
 
     if elementwise_loss === nothing
@@ -736,6 +754,9 @@ function Options end
         typeof(operators),
         use_recorder,
         typeof(optimizer_options),
+        typeof(optimizer_algorithm),
+        turbo,
+        bumper,
         typeof(tournament_selection_weights),
     }(
         operators,
@@ -750,7 +771,8 @@ function Options end
         alpha,
         maxsize,
         maxdepth,
-        turbo,
+        Val(turbo),
+        Val(bumper),
         migration,
         hof_migration,
         should_simplify,

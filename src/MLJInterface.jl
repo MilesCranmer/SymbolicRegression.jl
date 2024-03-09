@@ -1,6 +1,7 @@
 module MLJInterfaceModule
 
 using Optim: Optim
+using LineSearches: LineSearches
 using MLJModelInterface: MLJModelInterface as MMI
 using DynamicExpressions: eval_tree_array, string_tree, AbstractExpressionNode, Node
 using DynamicQuantities:
