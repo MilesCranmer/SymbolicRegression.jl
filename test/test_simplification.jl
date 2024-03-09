@@ -52,6 +52,7 @@ custom_cos(x) = cos(x)^2
 options = Options(;
     binary_operators=(+, *, -, /, pow_abs2), unary_operators=(custom_cos, exp, sin)
 )
+@extend_operators options
 tree = (
     ((x2 + x2) * ((-0.5982493 / pow_abs2(x1, x2)) / -0.54734415)) + (
         sin(
