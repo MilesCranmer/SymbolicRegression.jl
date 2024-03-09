@@ -30,7 +30,7 @@ will be normalized to sum to 1.0 after initialization.
 Base.@kwdef mutable struct MutationWeights
     mutate_constant::Float64 = 0.048
     mutate_operator::Float64 = 0.47
-    swap_operands::Float64 = 0.0
+    swap_operands::Float64 = 0.1
     add_node::Float64 = 0.79
     insert_node::Float64 = 5.1
     delete_node::Float64 = 1.7
