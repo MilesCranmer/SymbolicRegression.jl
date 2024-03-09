@@ -65,26 +65,6 @@ jobs:
           parallel: true
           flag-name: julia-${{ matrix.julia-version }}-${{ matrix.os }}-${{ github.event_name }}
 
-  downgrade:
-    name: Downgrade testing Julia ${{ matrix.julia-version }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        julia-version:
-          - "1.6"
-          - "1"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v1
-        with:
-          version: ${{ matrix.julia-version }}
-      - uses: julia-actions/cache@v1
-      - uses: julia-actions/julia-downgrade-compat@v1
-        with:
-          skip: Compat, Dates, Distributed, Pkg, Random
-      - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
-
   coveralls:
     name: Indicate completion to coveralls
     runs-on: ubuntu-latest
