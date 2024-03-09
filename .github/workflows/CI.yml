@@ -78,6 +78,7 @@ jobs:
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.julia-version }}
+      - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-downgrade-compat@v1
         with:
           skip: Compat, Dates, Distributed, Pkg, Random
