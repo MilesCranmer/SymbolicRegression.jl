@@ -720,15 +720,20 @@ function Options end
             optimizer_iterations = default_optimizer_iterations
         end
         if isnothing(optimizer_options)
-            optimizer_options = Optim.Options(; iterations=optimizer_iterations)
+            optimizer_options = Optim.Options(;
+                iterations=optimizer_iterations, show_warnings=false
+            )
         else
             if haskey(optimizer_options, :iterations)
                 optimizer_iterations = optimizer_options[:iterations]
             end
             optimizer_options = Optim.Options(;
-                optimizer_options..., iterations=optimizer_iterations
+                optimizer_options..., iterations=optimizer_iterations, show_warnings=false
             )
         end
+    end
+    if optimizer_options.show_warnings
+        @warn "Optimizer warnings are turned on. This might result in a lot of warnings being printed from NaNs, as these are common during symbolic regression"
     end
 
     ## Create tournament weights:6
