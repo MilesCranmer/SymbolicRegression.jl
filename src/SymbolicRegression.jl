@@ -606,6 +606,10 @@ function _equation_search(
         set_default_variable_names!(first(datasets).variable_names)
     end
 
+    if N <: GraphNode
+        @warn "The `GraphNode` interface and mutation operators are experimental and will change in future versions."
+    end
+
     example_dataset = datasets[1]
     nout = size(datasets, 1)
     @assert (nout == 1 || DIM_OUT == 2)
