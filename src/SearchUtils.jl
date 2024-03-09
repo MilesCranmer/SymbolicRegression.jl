@@ -220,7 +220,7 @@ function get_load_string(; head_node_occupation::Float64, parallelism=:serial)
     if raise_usage_warning
         out *= "."
         out *= " This is high, and will prevent efficient resource usage."
-        out *= " Increase `ncyclesperiteration` to reduce load on head worker."
+        out *= " Increase `ncycles_per_iteration` to reduce load on head worker."
     end
 
     out *= "\n"
