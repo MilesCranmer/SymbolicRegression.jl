@@ -4,6 +4,7 @@ using SymbolicRegression.AdaptiveParsimonyModule: RunningSearchStatistics
 using SymbolicRegression.PopulationModule: best_of_sample
 using SymbolicRegression.ConstantOptimizationModule: optimize_constants
 using SymbolicRegression.CheckConstraintsModule: check_constraints
+using Bumper, LoopVectorization
 
 function create_search_benchmark()
     suite = BenchmarkGroup()
@@ -12,7 +13,9 @@ function create_search_benchmark()
     T = Float32
 
     extra_kws = NamedTuple()
-    if hasfield(Options, :turbo)
+    if hasfield(Options, :bumper)
+        extra_kws = merge(extra_kws, (bumper=true,))
+    elseif hasfield(Options, :turbo)
         extra_kws = merge(extra_kws, (turbo=true,))
     end
     if hasfield(Options, :save_to_file)
