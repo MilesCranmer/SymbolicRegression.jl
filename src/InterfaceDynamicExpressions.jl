@@ -2,7 +2,8 @@ module InterfaceDynamicExpressionsModule
 
 using Printf: @sprintf
 using DynamicExpressions: DynamicExpressions
-using DynamicExpressions: OperatorEnum, GenericOperatorEnum, AbstractExpressionNode
+using DynamicExpressions:
+    OperatorEnum, GenericOperatorEnum, AbstractExpressionNode, Node, GraphNode
 using DynamicExpressions.StringsModule: needs_brackets
 using DynamicQuantities: dimension, ustrip
 using ..CoreModule: Options
@@ -149,9 +150,12 @@ Convert an equation to a string.
 )
     variable_names = deprecate_varmap(variable_names, varMap, :string_tree)
 
-    raw && return string_tree(
-        tree, options.operators; f_variable=string_variable_raw, variable_names
-    )
+    if raw
+        tree = tree isa GraphNode ? convert(Node, tree) : tree
+        return string_tree(
+            tree, options.operators; f_variable=string_variable_raw, variable_names
+        )
+    end
 
     vprecision = vals[options.print_precision]
     if X_sym_units !== nothing || y_sym_units !== nothing
