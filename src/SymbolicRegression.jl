@@ -128,8 +128,13 @@ using DynamicExpressions.EquationModule: with_type_parameters
 
 # https://discourse.julialang.org/t/how-to-find-out-the-version-of-a-package-from-its-module/37755/15
 const PACKAGE_VERSION = try
-    let project = parsefile(joinpath(pkgdir(@__MODULE__), "Project.toml"))
-        VersionNumber(project["version"])
+    root = pkgdir(@__MODULE__)
+    if root == String
+        let project = parsefile(joinpath(root, "Project.toml"))
+            VersionNumber(project["version"])
+        end
+    else
+        VersionNumber(0, 0, 0)
     end
 catch
     VersionNumber(0, 0, 0)
@@ -490,15 +495,19 @@ function equation_search(
     else
         Val(DIM_OUT)
     end
-    _numprocs::Int = if numprocs === nothing && procs === nothing
-        4
-    elseif numprocs !== nothing && procs === nothing
-        numprocs
-    elseif numprocs === nothing && procs !== nothing
-        length(procs)
+    _numprocs::Int = if numprocs === nothing
+        if procs === nothing
+            4
+        else
+            length(procs)
+        end
     else
-        @assert length(procs) == numprocs
-        numprocs
+        if procs === nothing
+            numprocs
+        else
+            @assert length(procs) == numprocs
+            numprocs
+        end
     end
 
     _verbosity = if verbosity === nothing && options.verbosity === nothing
