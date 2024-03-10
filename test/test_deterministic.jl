@@ -19,8 +19,14 @@ begin
 
     all_outputs = []
     for i in 1:2
-        hall_of_fame = equation_search(
-            X, y; niterations=5, options=options, parallelism=:serial
+        hall_of_fame = @inferred equation_search(
+            X,
+            y;
+            niterations=5,
+            options=options,
+            parallelism=:serial,
+            v_dim_out=Val(1),
+            return_state=Val(false),
         )
         dominating = calculate_pareto_frontier(hall_of_fame)
         push!(all_outputs, dominating[end].tree)

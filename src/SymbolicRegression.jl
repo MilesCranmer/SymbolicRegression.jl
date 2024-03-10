@@ -366,7 +366,7 @@ function equation_search(
     heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
     runtests::Bool=true,
     saved_state=nothing,
-    return_state::Union{Bool,Nothing}=nothing,
+    return_state::Union{Bool,Nothing,Val}=nothing,
     loss_type::Type{L}=Nothing,
     verbosity::Union{Integer,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
@@ -454,7 +454,7 @@ function equation_search(
     heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
     runtests::Bool=true,
     saved_state=nothing,
-    return_state::Union{Bool,Nothing}=nothing,
+    return_state::Union{Bool,Nothing,Val}=nothing,
     verbosity::Union{Int,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
@@ -483,15 +483,18 @@ function equation_search(
             "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
         )
 
-    # TODO: Still not type stable. Should be able to pass `Val{return_state}`.
-    _return_state = if options.return_state === nothing
-        return_state === nothing ? false : return_state
+    v_return_state = if return_state isa Val
+        return_state
     else
-        @assert(
-            return_state === nothing,
-            "You cannot set `return_state` in both the `Options` and in the passed arguments."
-        )
-        options.return_state
+        if options.return_state === nothing
+            Val(return_state === nothing ? false : return_state)
+        else
+            @assert(
+                return_state === nothing,
+                "You cannot set `return_state` in both the `Options` and in the passed arguments."
+            )
+            Val(options.return_state)
+        end
     end
 
     v_dim_out = if DIM_OUT === nothing
@@ -585,7 +588,7 @@ function equation_search(
         saved_state,
         _verbosity,
         _progress,
-        Val(_return_state),
+        v_return_state,
     )
 end
 
