@@ -13,9 +13,7 @@ function create_search_benchmark()
     T = Float32
 
     extra_kws = NamedTuple()
-    if hasfield(Options, :bumper)
-        extra_kws = merge(extra_kws, (bumper=true,))
-    elseif hasfield(Options, :turbo)
+    if hasfield(Options, :turbo)
         extra_kws = merge(extra_kws, (turbo=true,))
     end
     if hasfield(Options, :save_to_file)
