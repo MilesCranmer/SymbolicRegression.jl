@@ -30,6 +30,8 @@ macro maybe_compile_workload(mode, ex)
     end
 end
 
+const PRECOMPILE_OPTIMIZATION = VERSION >= v"1.9.0-DEV.0"
+
 """`mode=:precompile` will use `@precompile_*` directives; `mode=:compile` runs."""
 function do_precompilation(::Val{mode}) where {mode}
     @maybe_setup_workload mode begin
@@ -55,12 +57,13 @@ function do_precompilation(::Val{mode}) where {mode}
                         simplify=1.0,
                         randomize=1.0,
                         do_nothing=1.0,
-                        optimize=1.0,
+                        optimize=PRECOMPILE_OPTIMIZATION ? 1.0 : 0.0,
                     ),
                     fraction_replaced=0.2,
                     fraction_replaced_hof=0.2,
                     define_helper_functions=false,
-                    optimizer_probability=0.05,
+                    optimizer_probability=PRECOMPILE_OPTIMIZATION ? 0.05 : 0.0,
+                    should_optimize_constants=PRECOMPILE_OPTIMIZATION,
                     save_to_file=false,
                 )
                 state = equation_search(
