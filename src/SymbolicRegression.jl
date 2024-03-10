@@ -223,6 +223,7 @@ using .MigrationModule: migrate!
 using .SearchUtilsModule:
     assign_next_worker!,
     initialize_worker_assignment,
+    get_worker_output_type,
     @sr_spawner,
     watch_stream,
     close_reader!,
@@ -395,10 +396,10 @@ function equation_search(
     )
 
     return equation_search(
-        datasets;
+        datasets,
+        node_type;
         niterations=niterations,
         options=options,
-        node_type=N,
         parallelism=parallelism,
         numprocs=numprocs,
         procs=procs,
@@ -433,10 +434,10 @@ function equation_search(dataset::Dataset; kws...)
 end
 
 function equation_search(
-    datasets::Vector{D};
+    datasets::Vector{D},
+    ::Type{N}=Node;
     niterations::Int=10,
     options::Options=Options(),
-    node_type::Type{N}=Node,
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
@@ -631,13 +632,7 @@ function _equation_search(
     PopMemberType = PopMember{T,L,N}
     PopType = Population{T,L,PopMemberType}
     HallOfFameType = HallOfFame{T,L,PopMemberType}
-    WorkerOutputType = if PARALLELISM == :serial
-        Tuple{PopType,HallOfFameType,RecordType,Float64}
-    elseif PARALLELISM == :multiprocessing
-        Future
-    else
-        Task
-    end
+    WorkerOutputType = get_worker_output_type(Val(PARALLELISM), PopType, HallOfFameType)
 
     # Persistent storage of last-saved population for final return:
     returnPops = init_dummy_pops(options.populations, datasets, options, N)
@@ -739,12 +734,12 @@ function _equation_search(
                     begin
                         (
                             Population(
-                                datasets[j];
+                                datasets[j],
+                                N;
                                 population_size=options.population_size,
                                 nlength=3,
                                 options=options,
                                 nfeatures=datasets[j].nfeatures,
-                                node_type=N,
                             ),
                             HallOfFame(options, T, L, N),
                             RecordType(),

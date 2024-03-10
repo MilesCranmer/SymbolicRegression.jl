@@ -2,7 +2,7 @@ module PopulationModule
 
 using StatsBase: StatsBase
 using Random: randperm
-using DynamicExpressions: Node, string_tree
+using DynamicExpressions: AbstractExpressionNode, Node, string_tree
 using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: score_func, update_baseline_loss!
@@ -26,21 +26,21 @@ function Population(pop::Vector{<:PopMember})
 end
 
 """
-    Population(dataset::Dataset{T,L};
+    Population(dataset::Dataset{T,L}, ::Type{N}=Node{T};
                population_size, nlength::Int=3, options::Options,
                nfeatures::Int)
 
 Create random population and score them on the dataset.
 """
 function Population(
-    dataset::Dataset{T,L};
+    dataset::Dataset{T,L},
+    ::Type{N}=Node{T};
+    options::Options,
     population_size=nothing,
     nlength::Int=3,
-    options::Options,
     nfeatures::Int,
     npop=nothing,
-    node_type::Type=Node,
-) where {T,L}
+) where {T,L,N<:AbstractExpressionNode{T}}
     @assert (population_size !== nothing) ⊻ (npop !== nothing)
     population_size = if npop === nothing
         population_size
@@ -51,7 +51,7 @@ function Population(
         [
             PopMember(
                 dataset,
-                gen_random_tree(nlength, options, nfeatures, T, node_type),
+                gen_random_tree(nlength, options, nfeatures, T, N),
                 options;
                 parent=-1,
                 deterministic=options.deterministic,
@@ -61,7 +61,7 @@ function Population(
     )
 end
 """
-    Population(X::AbstractMatrix{T}, y::AbstractVector{T};
+    Population(X::AbstractMatrix{T}, y::AbstractVector{T}, ::Type{N}=Node{T};
                population_size, nlength::Int=3,
                options::Options, nfeatures::Int,
                loss_type::Type=Nothing)
@@ -70,15 +70,15 @@ Create random population and score them on the dataset.
 """
 function Population(
     X::AbstractMatrix{T},
-    y::AbstractVector{T};
+    y::AbstractVector{T},
+    ::Type{N}=Node{T};
     population_size=nothing,
     nlength::Int=3,
     options::Options,
     nfeatures::Int,
     loss_type::Type=Nothing,
     npop=nothing,
-    node_type::Type=Node,
-) where {T<:DATA_TYPE}
+) where {T<:DATA_TYPE,N<:AbstractExpressionNode{T}}
     @assert (population_size !== nothing) ⊻ (npop !== nothing)
     population_size = if npop === nothing
         population_size
@@ -86,13 +86,9 @@ function Population(
         npop
     end
     dataset = Dataset(X, y; loss_type=loss_type)
-    update_baseline_loss!(dataset, options, node_type)
+    update_baseline_loss!(dataset, options, N)
     return Population(
-        dataset;
-        population_size=population_size,
-        options=options,
-        nfeatures=nfeatures,
-        node_type,
+        dataset, N; population_size=population_size, options=options, nfeatures=nfeatures
     )
 end
 

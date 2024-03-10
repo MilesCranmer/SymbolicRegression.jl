@@ -21,7 +21,7 @@ eval_tree_array(tree, dataset.X, options)
 @test compute_complexity(tree, options; break_sharing=Val(true)) == 22
 
 pop = Population(
-    dataset; nlength=3, options, nfeatures=3, node_type=GraphNode, population_size=100
+    dataset, GraphNode{Float64}; nlength=3, options, nfeatures=3, population_size=100
 )
 
-equation_search([dataset]; niterations=10000, options, node_type=GraphNode)
+equation_search([dataset], GraphNode; niterations=10000, options)

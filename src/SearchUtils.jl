@@ -9,7 +9,7 @@ using StatsBase: mean
 
 using DynamicExpressions: AbstractExpressionNode
 using ..UtilsModule: subscriptify
-using ..CoreModule: Dataset, Options, MAX_DEGREE
+using ..CoreModule: Dataset, Options, MAX_DEGREE, RecordType
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
@@ -44,6 +44,18 @@ function initialize_worker_assignment()
     return Dict{Tuple{Int,Int},Int}()
 end
 
+function get_worker_output_type(
+    ::Val{PARALLELISM}, ::Type{PopType}, ::Type{HallOfFameType}
+) where {PARALLELISM,PopType,HallOfFameType}
+    if PARALLELISM == :serial
+        Tuple{PopType,HallOfFameType,RecordType,Float64}
+    elseif PARALLELISM == :multiprocessing
+        Future
+    else
+        Task
+    end
+end
+
 macro sr_spawner(expr, kws...)
     # Extract parallelism and worker_idx parameters from kws
     @assert length(kws) == 2
@@ -66,13 +78,12 @@ macro sr_spawner(expr, kws...)
 end
 
 function init_dummy_pops(
-    npops::Int, datasets::Vector{D}, options::Options, node_type::Type{N}
+    npops::Int, datasets::Vector{D}, options::Options, ::Type{N}
 ) where {T,L,D<:Dataset{T,L},N<:AbstractExpressionNode{T}}
     return [
         [
-            Population(
-                d; population_size=1, options=options, nfeatures=d.nfeatures, node_type
-            ) for _ in 1:npops
+            Population(d, N; population_size=1, options=options, nfeatures=d.nfeatures) for
+            _ in 1:npops
         ] for d in datasets
     ]
 end
@@ -352,13 +363,14 @@ function construct_datasets(
     y_variable_names,
     X_units,
     y_units,
-    loss_type,
-)
+    ::Type{L},
+) where {L}
     nout = size(y, 1)
     return [
         Dataset(
             X,
-            y[j, :];
+            y[j, :],
+            L;
             weights=(weights === nothing ? weights : weights[j, :]),
             variable_names=variable_names,
             display_variable_names=display_variable_names,
@@ -379,7 +391,6 @@ function construct_datasets(
             end,
             X_units=X_units,
             y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
-            loss_type=loss_type,
         ) for j in 1:nout
     ]
 end
