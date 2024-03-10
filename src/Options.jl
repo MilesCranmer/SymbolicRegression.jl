@@ -148,6 +148,9 @@ function inverse_unaopmap(op::F) where {F}
     return op
 end
 
+create_mutation_weights(w::MutationWeights) = w
+create_mutation_weights(w::NamedTuple) = MutationWeights(; w...)
+
 const deprecated_options_mapping = Base.ImmutableDict(
     :mutationWeights => :mutation_weights,
     :hofMigration => :hof_migration,
@@ -745,12 +748,7 @@ function Options end
             StatsBase.Weights(prob_each, sum(prob_each))
         end
 
-    # Create mutation weights:
-    set_mutation_weights = if typeof(mutation_weights) <: NamedTuple
-        MutationWeights(; mutation_weights...)
-    else
-        mutation_weights
-    end
+    set_mutation_weights = create_mutation_weights(mutation_weights)
 
     @assert print_precision > 0
 
