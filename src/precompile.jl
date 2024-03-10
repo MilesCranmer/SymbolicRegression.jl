@@ -70,6 +70,7 @@ function do_precompilation(::Val{mode}) where {mode}
                     options=options,
                     parallelism=:multithreading,
                     return_state=true,
+                    verbosity=0,
                 )
                 hof = equation_search(
                     X,
@@ -79,6 +80,7 @@ function do_precompilation(::Val{mode}) where {mode}
                     parallelism=:multithreading,
                     saved_state=state,
                     return_state=false,
+                    verbosity=0,
                 )
                 nout == 1 && calculate_pareto_frontier(hof)
             end

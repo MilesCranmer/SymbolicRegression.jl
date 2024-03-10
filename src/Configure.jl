@@ -45,18 +45,20 @@ end
 
 # Check for errors before they happen
 function test_option_configuration(
-    parallelism, datasets::Vector{D}, saved_state, options::Options
+    parallelism, datasets::Vector{D}, saved_state, options::Options, verbosity
 ) where {T,D<:Dataset{T}}
     if options.deterministic && parallelism != :serial
         error("Determinism is only guaranteed for serial mode.")
     end
     if parallelism == :multithreading && Threads.nthreads() == 1
-        @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
+        verbosity > 0 &&
+            @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
     end
     if any(d -> d.X_units !== nothing || d.y_units !== nothing, datasets) &&
         options.dimensional_constraint_penalty === nothing &&
         saved_state === nothing
-        @warn "You are using dimensional constraints, but `dimensional_constraint_penalty` was not set. The default penalty of `1000.0` will be used."
+        verbosity > 0 &&
+            @warn "You are using dimensional constraints, but `dimensional_constraint_penalty` was not set. The default penalty of `1000.0` will be used."
     end
 
     for op in (options.operators.binops..., options.operators.unaops...)

@@ -623,7 +623,7 @@ function _equation_search(
         set_default_variable_names!(first(datasets).variable_names)
     end
 
-    if N <: GraphNode
+    if N <: GraphNode && verbosity > 0
         @warn "The `GraphNode` interface and mutation operators are experimental and will change in future versions."
     end
 
@@ -632,7 +632,7 @@ function _equation_search(
     @assert (nout == 1 || DIM_OUT == 2)
 
     if runtests
-        test_option_configuration(PARALLELISM, datasets, saved_state, options)
+        test_option_configuration(PARALLELISM, datasets, saved_state, options, verbosity)
         test_dataset_configuration(example_dataset, options, verbosity)
     end
 
@@ -743,7 +743,7 @@ function _equation_search(
                     worker_idx = worker_idx
                 )
             else
-                if saved_pop !== nothing
+                if saved_pop !== nothing && verbosity > 0
                     @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
                 end
                 @sr_spawner(
