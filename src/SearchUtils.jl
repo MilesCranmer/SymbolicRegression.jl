@@ -44,17 +44,25 @@ function initialize_worker_assignment()
     return Dict{Tuple{Int,Int},Int}()
 end
 
+const DefaultWorkerOutputType{P,H} = Tuple{P,H,RecordType,Float64}
+
 function get_worker_output_type(
     ::Val{PARALLELISM}, ::Type{PopType}, ::Type{HallOfFameType}
 ) where {PARALLELISM,PopType,HallOfFameType}
     if PARALLELISM == :serial
-        Tuple{PopType,HallOfFameType,RecordType,Float64}
+        DefaultWorkerOutputType{PopType,HallOfFameType}
     elseif PARALLELISM == :multiprocessing
         Future
     else
         Task
     end
 end
+
+#! format: off
+extract_from_worker(p::DefaultWorkerOutputType, _, _) = p
+extract_from_worker(f::Future, ::Type{P}, ::Type{H}) where {P,H} = fetch(f)::DefaultWorkerOutputType{P,H}
+extract_from_worker(t::Task, ::Type{P}, ::Type{H}) where {P,H} = fetch(t)::DefaultWorkerOutputType{P,H}
+#! format: on
 
 macro sr_spawner(expr, kws...)
     # Extract parallelism and worker_idx parameters from kws

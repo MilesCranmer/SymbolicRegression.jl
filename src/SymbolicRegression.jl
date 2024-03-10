@@ -226,9 +226,11 @@ using .ProgressBarsModule: WrappedProgressBar
 using .RecorderModule: @recorder, is_recording, find_iteration_from_record
 using .MigrationModule: migrate!
 using .SearchUtilsModule:
+    DefaultWorkerOutputType,
     assign_next_worker!,
     initialize_worker_assignment,
     get_worker_output_type,
+    extract_from_worker,
     @sr_spawner,
     watch_stream,
     close_reader!,
@@ -651,7 +653,7 @@ function _equation_search(
     bestSubPops = init_dummy_pops(options.populations, datasets, options, N)
 
     # Pointers to populations on each worker:
-    worker_output = [WorkerOutputType[] for j in 1:nout]
+    worker_output = Vector{WorkerOutputType}[WorkerOutputType[] for j in 1:nout]
     # Initialize storage for workers
     tasks = [Task[] for j in 1:nout]
     # Set up a channel to send finished populations back to head node
@@ -786,22 +788,18 @@ function _equation_search(
         last_pop = worker_output[j][i]
         updated_pop = @sr_spawner(
             begin
-                in_pop = if PARALLELISM in (:multiprocessing, :multithreading)
-                    fetch(last_pop)[1]
-                else
-                    last_pop[1]
-                end
-                _dispatch_s_r_cycle(;
+                in_pop = first(extract_from_worker(last_pop, PopType, HallOfFameType))
+                _dispatch_s_r_cycle(
+                    in_pop,
+                    dataset,
+                    options;
                     pop=i,
                     out=j,
                     iteration=0,
-                    dataset,
-                    options,
                     verbosity,
-                    in_pop,
                     curmaxsize,
                     running_search_statistics=c_rss,
-                )
+                )::DefaultWorkerOutputType{PopType,HallOfFameType}
             end,
             parallelism = PARALLELISM,
             worker_idx = worker_idx
@@ -875,7 +873,7 @@ function _equation_search(
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record, cur_num_evals) =
                 if PARALLELISM in (:multiprocessing, :multithreading)
-                    take!(channels[j][i])
+                    take!(channels[j][i])::DefaultWorkerOutputType{PopType,HallOfFameType}
                 else
                     worker_output[j][i]
                 end
@@ -954,14 +952,14 @@ function _equation_search(
             in_pop = copy(cur_pop)
             worker_output[j][i] = @sr_spawner(
                 begin
-                    _dispatch_s_r_cycle(;
+                    _dispatch_s_r_cycle(
+                        in_pop,
+                        dataset,
+                        options;
                         pop=i,
                         out=j,
                         iteration,
-                        dataset,
-                        options,
                         verbosity,
-                        in_pop,
                         curmaxsize,
                         running_search_statistics=c_rss,
                     )
@@ -1072,14 +1070,14 @@ function _equation_search(
     end
 end
 
-function _dispatch_s_r_cycle(;
+function _dispatch_s_r_cycle(
+    in_pop::Population,
+    dataset::Dataset,
+    options::Options;
     pop::Int,
     out::Int,
     iteration::Int,
-    dataset::Dataset,
-    options::Options,
     verbosity,
-    in_pop::Population,
     curmaxsize::Int,
     running_search_statistics,
 )
