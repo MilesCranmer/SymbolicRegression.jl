@@ -434,8 +434,10 @@ function equation_search(
     return equation_search(X, reshape(y, (1, size(y, 1))); kw..., v_dim_out=Val(1))
 end
 
-function equation_search(dataset::Dataset; kws...)
-    return equation_search([dataset]; kws..., v_dim_out=Val(1))
+function equation_search(
+    dataset::Dataset, ::Type{N}=Node; kws...
+) where {N<:AbstractExpressionNode}
+    return equation_search([dataset], N; kws..., v_dim_out=Val(1))
 end
 
 function equation_search(
