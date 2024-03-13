@@ -28,9 +28,19 @@ function create_search_benchmark()
         maxsize=30,
         verbosity=0,
         progress=false,
+        mutation_weights=MutationWeights(),
         loss=(pred, target) -> (pred - target)^2,
         extra_kws...,
     )
+    if hasfield(MutationWeights, :swap_operands)
+        option_kws.mutation_weights.swap_operands = 0.0
+    end
+    if hasfield(MutationWeights, :form_connection)
+        option_kws.mutation_weights.form_connection = 0.0
+    end
+    if hasfield(MutationWeights, :break_connection)
+        option_kws.mutation_weights.break_connection = 0.0
+    end
     seeds = 1:3
     niterations = 30
     # We create an equation that cannot be found exactly, so the search
