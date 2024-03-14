@@ -355,7 +355,7 @@ function equation_search(
     y::AbstractMatrix{T};
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
-    options::Options = Options(),
+    options::Options=Options(),
     node_type::Type{N}=Node,
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
     display_variable_names::Union{AbstractVector{String},Nothing}=variable_names,
@@ -447,7 +447,7 @@ function equation_search(
     datasets::Vector{D},
     ::Type{N}=Node;
     niterations::Int=10,
-    options::Options = Options(),
+    options::Options=Options(),
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
@@ -641,7 +641,7 @@ end
 function _equation_search(
     datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
 ) where {D<:Dataset}
-    _validate_options(datasets, ropt, options, saved_state)
+    _validate_options(datasets, ropt, options)
     state = _create_workers(datasets, ropt, options, saved_state)
     _initialize_search!(state, datasets, ropt, options, saved_state)
     _warmup_search!(state, datasets, ropt, options)
@@ -651,7 +651,7 @@ function _equation_search(
 end
 
 function _validate_options(
-    datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
+    datasets::Vector{D}, ropt::RuntimeOptions, options::Options
 ) where {T,L,D<:Dataset{T,L}}
     if options.define_helper_functions
         set_default_variable_names!(first(datasets).variable_names)
@@ -665,9 +665,7 @@ function _validate_options(
     @assert (nout == 1 || ropt.dim_out == 2)
     @assert options.populations >= 1
     if ropt.runtests
-        test_option_configuration(
-            ropt.parallelism, datasets, saved_state, options, ropt.verbosity
-        )
+        test_option_configuration(ropt.parallelism, datasets, options, ropt.verbosity)
         test_dataset_configuration(example_dataset, options, ropt.verbosity)
     end
     for dataset in datasets
@@ -804,7 +802,12 @@ function _initialize_search!(
                 copy_pop = copy(saved_pop)
                 @sr_spawner(
                     begin
-                        (copy_pop, HallOfFame(options, T, L, ropt.node_type), RecordType(), 0.0)
+                        (
+                            copy_pop,
+                            HallOfFame(options, T, L, ropt.node_type),
+                            RecordType(),
+                            0.0,
+                        )
                     end,
                     parallelism = ropt.parallelism,
                     worker_idx = worker_idx
