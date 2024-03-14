@@ -592,7 +592,7 @@ function equation_search(
     )
 end
 
-function _equation_search(
+@noinline function _equation_search(
     ::Val{PARALLELISM},
     ::Val{DIM_OUT},
     datasets::Vector{D},
@@ -954,7 +954,7 @@ function _equation_search(
             end
 
             c_rss = deepcopy(all_running_search_statistics[j])
-            in_pop = copy(cur_pop)
+            in_pop = copy(cur_pop::PopType)
             worker_output[j][i] = @sr_spawner(
                 begin
                     _dispatch_s_r_cycle(
@@ -1075,7 +1075,7 @@ function _equation_search(
     end
 end
 
-function _dispatch_s_r_cycle(
+@noinline function _dispatch_s_r_cycle(
     in_pop::Population,
     dataset::Dataset,
     @nospecialize(options::Options);
