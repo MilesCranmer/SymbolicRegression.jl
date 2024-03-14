@@ -1076,7 +1076,7 @@ end
 end
 
 @noinline function _dispatch_s_r_cycle(
-    in_pop::Population,
+    in_pop::Population{T,L,P},
     dataset::Dataset,
     @nospecialize(options::Options);
     pop::Int,
@@ -1085,7 +1085,7 @@ end
     verbosity,
     curmaxsize::Int,
     running_search_statistics,
-)
+) where {T,L,P}
     record = RecordType()
     @recorder record["out$(out)_pop$(pop)"] = RecordType(
         "iteration$(iteration)" => record_population(in_pop, options)
