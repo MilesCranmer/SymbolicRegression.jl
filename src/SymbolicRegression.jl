@@ -638,7 +638,7 @@ Base.@kwdef struct SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelTy
     record::Base.RefValue{RecordType}
 end
 
-function _equation_search(
+@noinline function _equation_search(
     datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
 ) where {D<:Dataset}
     _validate_options(datasets, ropt, options)
@@ -781,13 +781,13 @@ function _initialize_search!(
         # Recompute losses for the hall of fame, in
         # case the dataset changed:
         for j in eachindex(init_hall_of_fame, datasets, state.halls_of_fame)
-            hof = init_hall_of_fame[i]
+            hof = init_hall_of_fame[j]
             for member in hof.members[hof.exists]
-                score, result_loss = score_func(dataset, member, options)
+                score, result_loss = score_func(datasets[j], member, options)
                 member.score = score
                 member.loss = result_loss
             end
-            state.halls_of_fame[i] = hof
+            state.halls_of_fame[j] = hof
         end
     end
 
