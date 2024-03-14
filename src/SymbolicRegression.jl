@@ -1047,7 +1047,7 @@ function _main_search_loop!(
                     ropt.total_cycles,
                     state.cycles_remaining,
                     head_node_occupation,
-                    parallelism=state.parallelism,
+                    parallelism=ropt.parallelism,
                     width=options.terminal_width,
                 )
             end
