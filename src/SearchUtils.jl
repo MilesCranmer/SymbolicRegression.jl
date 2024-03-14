@@ -80,7 +80,7 @@ macro sr_spawner(expr, kws...)
         elseif $(parallelism) == :multithreading
             Threads.@spawn($(expr))
         else
-            error("Invalid parallel type.")
+            error("Invalid parallel type ", string($(parallelism)), ".")
         end
     end |> esc
 end
