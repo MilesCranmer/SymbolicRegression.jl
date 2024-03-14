@@ -517,9 +517,9 @@ function equation_search(
 
     _verbosity = if verbosity === nothing && options.verbosity === nothing
         1
-    elseif verbosity === nothing
+    elseif verbosity === nothing && options.verbosity !== nothing
         options.verbosity
-    elseif options.verbosity === nothing
+    elseif verbosity !== nothing && options.verbosity === nothing
         verbosity
     else
         error(
@@ -538,13 +538,6 @@ function equation_search(
             "You cannot set `progress` in both the search parameters `Options` and the call to `equation_search`.",
         )
         false
-    end
-    if _progress
-        @assert(
-            length(datasets) == 1,
-            "You cannot display a progress bar for multi-output searches."
-        )
-        @assert(_verbosity > 0, "You cannot display a progress bar with `verbosity=0`.")
     end
 
     _addprocs_function = addprocs_function === nothing ? addprocs : addprocs_function
@@ -602,23 +595,27 @@ end
 function _validate_options(
     datasets::Vector{D}, ropt::RuntimeOptions, options::Options
 ) where {T,L,D<:Dataset{T,L}}
-    if options.define_helper_functions
-        set_default_variable_names!(first(datasets).variable_names)
-    end
-    if options.node_type <: GraphNode && ropt.verbosity > 0
-        @warn "The `GraphNode` interface and mutation operators are experimental and will change in future versions."
-    end
     example_dataset = first(datasets)
     nout = length(datasets)
     @assert nout >= 1
     @assert (nout == 1 || ropt.dim_out == 2)
     @assert options.populations >= 1
+    if ropt.progress
+        @assert(nout == 1, "You cannot display a progress bar for multi-output searches.")
+        @assert(ropt.verbosity > 0, "You cannot display a progress bar with `verbosity=0`.")
+    end
+    if options.node_type <: GraphNode && ropt.verbosity > 0
+        @warn "The `GraphNode` interface and mutation operators are experimental and will change in future versions."
+    end
     if ropt.runtests
         test_option_configuration(ropt.parallelism, datasets, options, ropt.verbosity)
         test_dataset_configuration(example_dataset, options, ropt.verbosity)
     end
     for dataset in datasets
         update_baseline_loss!(dataset, options)
+    end
+    if options.define_helper_functions
+        set_default_variable_names!(first(datasets).variable_names)
     end
     if options.seed !== nothing
         seed!(options.seed)

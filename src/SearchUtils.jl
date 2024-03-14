@@ -48,6 +48,9 @@ function Base.getproperty(roptions::RuntimeOptions{P,D,R}, name::Symbol) where {
         getfield(roptions, name)
     end
 end
+function Base.propertynames(roptions::RuntimeOptions)
+    return (Base.fieldnames(typeof(roptions))..., :parallelism, :dim_out, :return_state)
+end
 
 """A simple dictionary to track worker allocations."""
 const WorkerAssignments = Dict{Tuple{Int,Int},Int}
