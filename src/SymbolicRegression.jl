@@ -226,9 +226,11 @@ using .ProgressBarsModule: WrappedProgressBar
 using .RecorderModule: @recorder, find_iteration_from_record
 using .MigrationModule: migrate!
 using .SearchUtilsModule:
+    SearchState,
+    RuntimeOptions,
+    WorkerAssignments,
     DefaultWorkerOutputType,
     assign_next_worker!,
-    initialize_worker_assignment,
     get_worker_output_type,
     extract_from_worker,
     @sr_spawner,
@@ -595,49 +597,6 @@ function equation_search(
     )
 end
 
-Base.@kwdef struct RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}
-    node_type::Type{N}
-    niterations::Int64
-    total_cycles::Int64
-    numprocs::Int64
-    init_procs::Union{Vector{Int},Nothing}
-    addprocs_function::Function
-    exeflags::Cmd
-    runtests::Bool
-    verbosity::Int64
-    progress::Bool
-end
-function Base.getproperty(roptions::RuntimeOptions{N,P,D,R}, name::Symbol) where {N,P,D,R}
-    if name == :parallelism
-        return P
-    elseif name == :dim_out
-        return D
-    elseif name == :return_state
-        return R
-    else
-        getfield(roptions, name)
-    end
-end
-
-Base.@kwdef struct SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelType}
-    procs::Vector{Int}
-    we_created_procs::Bool
-    worker_output::Vector{Vector{WorkerOutputType}}
-    tasks::Vector{Vector{Task}}
-    channels::Vector{Vector{ChannelType}}
-    worker_assignment::Dict{Tuple{Int,Int},Int}
-    task_order::Vector{Tuple{Int,Int}}
-    halls_of_fame::Vector{HallOfFameType}
-    last_pops::Vector{Vector{PopType}}
-    best_sub_pops::Vector{Vector{PopType}}
-    all_running_search_statistics::Vector{RunningSearchStatistics}
-    num_evals::Vector{Vector{Float64}}
-    cycles_remaining::Vector{Int}
-    cur_maxsizes::Vector{Int}
-    stdin_reader::StdinReader
-    record::Base.RefValue{RecordType}
-end
-
 @noinline function _equation_search(
     datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
 ) where {D<:Dataset}
@@ -718,7 +677,7 @@ function _create_workers(
         Int[], false
     end
     # Get the next worker process to give a job:
-    worker_assignment = initialize_worker_assignment()
+    worker_assignment = WorkerAssignments()
     # Randomly order which order to check populations:
     # This is done so that we do work on all nout equally.
     task_order = [(j, i) for j in 1:nout for i in 1:(options.populations)]

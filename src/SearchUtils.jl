@@ -16,9 +16,45 @@ using ..PopMemberModule: PopMember
 using ..HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 using ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
-using ..AdaptiveParsimonyModule: update_frequencies!
+using ..AdaptiveParsimonyModule: update_frequencies!, RunningSearchStatistics
 
-function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Vector{Int})::Int
+"""
+    RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}
+
+Parameters for a search that are passed to `equation_search` directly,
+rather than set within `Options`. This is to differentiate between
+parameters that relate to processing and the duration of the search,
+and parameters dealing with the search hyperparameters itself.
+"""
+Base.@kwdef struct RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}
+    # TODO: Should move `node_type` to options.
+    node_type::Type{N}
+    niterations::Int64
+    total_cycles::Int64
+    numprocs::Int64
+    init_procs::Union{Vector{Int},Nothing}
+    addprocs_function::Function
+    exeflags::Cmd
+    runtests::Bool
+    verbosity::Int64
+    progress::Bool
+end
+function Base.getproperty(roptions::RuntimeOptions{N,P,D,R}, name::Symbol) where {N,P,D,R}
+    if name == :parallelism
+        return P
+    elseif name == :dim_out
+        return D
+    elseif name == :return_state
+        return R
+    else
+        getfield(roptions, name)
+    end
+end
+
+"""A simple dictionary to track worker allocations."""
+const WorkerAssignments = Dict{Tuple{Int,Int},Int}
+
+function next_worker(worker_assignment::WorkerAssignments, procs::Vector{Int})::Int
     job_counts = Dict(proc => 0 for proc in procs)
     for (key, value) in worker_assignment
         @assert haskey(job_counts, value)
@@ -30,7 +66,9 @@ function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Vector{
     return least_busy_worker
 end
 
-function assign_next_worker!(worker_assignment; pop, out, parallelism, procs)::Int
+function assign_next_worker!(
+    worker_assignment::WorkerAssignments; pop, out, parallelism, procs
+)::Int
     if parallelism == :multiprocessing
         worker_idx = next_worker(worker_assignment, procs)
         worker_assignment[(out, pop)] = worker_idx
@@ -38,10 +76,6 @@ function assign_next_worker!(worker_assignment; pop, out, parallelism, procs)::I
     else
         return 0
     end
-end
-
-function initialize_worker_assignment()
-    return Dict{Tuple{Int,Int},Int}()
 end
 
 const DefaultWorkerOutputType{P,H} = Tuple{P,H,RecordType,Float64}
@@ -341,6 +375,32 @@ function load_saved_population(saved_state; out::Int, pop::Int)
     return copy(saved_pop)
 end
 load_saved_population(::Nothing; kws...) = nothing
+
+"""
+    SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelType}
+
+The state of a search, including the populations, worker outputs, tasks, and
+channels. This is used to manage the search and keep track of runtime variables
+in a single struct.
+"""
+Base.@kwdef struct SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelType}
+    procs::Vector{Int}
+    we_created_procs::Bool
+    worker_output::Vector{Vector{WorkerOutputType}}
+    tasks::Vector{Vector{Task}}
+    channels::Vector{Vector{ChannelType}}
+    worker_assignment::WorkerAssignments
+    task_order::Vector{Tuple{Int,Int}}
+    halls_of_fame::Vector{HallOfFameType}
+    last_pops::Vector{Vector{PopType}}
+    best_sub_pops::Vector{Vector{PopType}}
+    all_running_search_statistics::Vector{RunningSearchStatistics}
+    num_evals::Vector{Vector{Float64}}
+    cycles_remaining::Vector{Int}
+    cur_maxsizes::Vector{Int}
+    stdin_reader::StdinReader
+    record::Base.RefValue{RecordType}
+end
 
 """
     get_cur_maxsize(; options, total_cycles, cycles_remaining)
