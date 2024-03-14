@@ -583,7 +583,7 @@ function equation_search(
             niterations=niterations,
             total_cycles=options.populations * niterations,
             numprocs=_numprocs,
-            procs=procs,
+            init_procs=procs,
             addprocs_function=_addprocs_function,
             exeflags=exeflags,
             runtests=runtests,
@@ -600,7 +600,7 @@ Base.@kwdef struct RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}
     niterations::Int64
     total_cycles::Int64
     numprocs::Int64
-    procs::Union{Vector{Int},Nothing}
+    init_procs::Union{Vector{Int},Nothing}
     addprocs_function::Function
     exeflags::Cmd
     runtests::Bool
@@ -704,7 +704,7 @@ function _create_workers(
     channels = [[ChannelType(1) for i in 1:(options.populations)] for j in 1:nout]
     (procs, we_created_procs) = if ropt.parallelism == :multiprocessing
         configure_workers(;
-            procs,
+            procs=ropt.init_procs,
             numprocs,
             addprocs_function,
             options,
@@ -846,7 +846,7 @@ function _warmup_search!(
         dataset = datasets[j]
         running_search_statistics = state.all_running_search_statistics[j]
         cur_maxsize = state.cur_maxsizes[j]
-        @recorder ropt.record[]["out$(j)_pop$(i)"] = RecordType()
+        @recorder state.record[]["out$(j)_pop$(i)"] = RecordType()
         worker_idx = assign_next_worker!(
             state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
         )
@@ -947,7 +947,7 @@ function _main_search_loop!(
                 end
             state.last_pops[j][i] = copy(cur_pop)
             state.best_sub_pops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
-            @recorder ropt.record[] = recursive_merge(ropt.record[], cur_record)
+            @recorder state.record[] = recursive_merge(state.record[], cur_record)
             state.num_evals[j][i] += cur_num_evals
             dataset = datasets[j]
             cur_maxsize = state.cur_maxsizes[j]
@@ -1011,7 +1011,7 @@ function _main_search_loop!(
             )
             iteration = if options.use_recorder
                 key = "out$(j)_pop$(i)"
-                find_iteration_from_record(key, ropt.record[]) + 1
+                find_iteration_from_record(key, state.record[]) + 1
             else
                 0
             end
