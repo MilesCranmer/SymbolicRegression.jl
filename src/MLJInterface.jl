@@ -31,11 +31,9 @@ abstract type AbstractSRRegressor <: MMI.Deterministic end
 
 """Generate an `SRRegressor` struct containing all the fields in `Options`."""
 function modelexpr(model_name::Symbol)
-    struct_def = :(Base.@kwdef mutable struct $(model_name){
-        D<:AbstractDimensions,L,N<:AbstractExpressionNode
-    } <: AbstractSRRegressor
+    struct_def = :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L} <:
+                                 AbstractSRRegressor
         niterations::Int = 10
-        node_type::Type{N} = Node
         parallelism::Symbol = :multithreading
         numprocs::Union{Int,Nothing} = nothing
         procs::Union{Vector{Int},Nothing} = nothing
@@ -162,7 +160,6 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         y_t;
         niterations=m.niterations,
         weights=w_t,
-        node_type=m.node_type,
         variable_names=variable_names,
         options=options,
         parallelism=m.parallelism,
@@ -468,8 +465,6 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
     # TODO: These ones are copied (or written) manually:
     append_arguments = """- `niterations::Int=10`: The number of iterations to perform the search.
         More iterations will improve the results.
-    - `node_type::Type{N}=Node`: The type of node to use for the search.
-        For example, `Node` or `GraphNode`.
     - `parallelism=:multithreading`: What parallelism mode to use.
         The options are `:multithreading`, `:multiprocessing`, and `:serial`.
         By default, multithreading will be used. Multithreading uses less memory,

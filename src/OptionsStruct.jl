@@ -1,7 +1,7 @@
 module OptionsStructModule
 
 using Optim: Optim
-using DynamicExpressions: AbstractOperatorEnum, OperatorEnum
+using DynamicExpressions: AbstractOperatorEnum, AbstractExpressionNode, OperatorEnum
 using LossFunctions: SupervisedLoss
 
 import ..MutationWeightsModule: MutationWeights
@@ -38,7 +38,7 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{CT,_turbo,_bumper,W}
+struct Options{CT,N<:AbstractExpressionNode,_turbo,_bumper,W}
     operators::AbstractOperatorEnum
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
@@ -83,6 +83,7 @@ struct Options{CT,_turbo,_bumper,W}
     seed::Union{Int,Nothing}
     elementwise_loss::Union{SupervisedLoss,Function}
     loss_function::Union{Nothing,Function}
+    node_type::Type{N}
     progress::Union{Bool,Nothing}
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::Optim.AbstractOptimizer

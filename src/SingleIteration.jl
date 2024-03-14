@@ -38,7 +38,7 @@ function s_r_cycle(
         min_temp = max_temp
     end
     all_temperatures = LinRange(max_temp, min_temp, ncycles)
-    best_examples_seen = HallOfFame(options, T, L, N)
+    best_examples_seen = HallOfFame(options, T, L)
     num_evals = 0.0
 
     # For evaluating on a fixed batch (for batching)

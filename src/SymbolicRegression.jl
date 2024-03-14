@@ -279,8 +279,6 @@ which is useful for debugging and profiling.
     weight the loss for each `y` by this value (same shape as `y`).
 - `options::Options=Options()`: The options for the search, such as
     which operators to use, evolution hyperparameters, etc.
-- `node_type::Type{N}=Node`: The type of node to use for the search.
-    For example, `Node` or `GraphNode`.
 - `variable_names::Union{Vector{String}, Nothing}=nothing`: The names
     of each feature in `X`, which will be used during printing of equations.
 - `display_variable_names::Union{Vector{String}, Nothing}=variable_names`: Names
@@ -358,7 +356,6 @@ function equation_search(
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
     options::Options=Options(),
-    node_type::Type{N}=Node,
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
     display_variable_names::Union{AbstractVector{String},Nothing}=variable_names,
     y_variable_names::Union{String,AbstractVector{String},Nothing}=nothing,
@@ -379,7 +376,7 @@ function equation_search(
     # Deprecated:
     multithreaded=nothing,
     varMap=nothing,
-) where {T<:DATA_TYPE,L,DIM_OUT,N<:AbstractExpressionNode}
+) where {T<:DATA_TYPE,L,DIM_OUT}
     if multithreaded !== nothing
         error(
             "`multithreaded` is deprecated. Use the `parallelism` argument instead. " *
@@ -406,8 +403,7 @@ function equation_search(
     )
 
     return equation_search(
-        datasets,
-        node_type;
+        datasets;
         niterations=niterations,
         options=options,
         parallelism=parallelism,
@@ -439,15 +435,12 @@ function equation_search(
     return equation_search(X, reshape(y, (1, size(y, 1))); kw..., v_dim_out=Val(1))
 end
 
-function equation_search(
-    dataset::Dataset, ::Type{N}=Node; kws...
-) where {N<:AbstractExpressionNode}
-    return equation_search([dataset], N; kws..., v_dim_out=Val(1))
+function equation_search(dataset::Dataset; kws...)
+    return equation_search([dataset]; kws..., v_dim_out=Val(1))
 end
 
 function equation_search(
-    datasets::Vector{D},
-    ::Type{N}=Node;
+    datasets::Vector{D};
     niterations::Int=10,
     options::Options=Options(),
     parallelism=:multithreading,
@@ -461,7 +454,7 @@ function equation_search(
     verbosity::Union{Int,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
-) where {DIM_OUT,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},N<:AbstractExpressionNode}
+) where {DIM_OUT,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
     concurrency = if parallelism in (:multithreading, "multithreading")
         :multithreading
     elseif parallelism in (:multiprocessing, "multiprocessing")
@@ -575,13 +568,10 @@ function equation_search(
         ``
     end
 
-    _N = with_type_parameters(N, T)
-
     # Underscores here mean that we have mutated the variable
     return _equation_search(
         datasets,
-        RuntimeOptions{_N,concurrency,dim_out,_return_state}(;
-            node_type=_N,
+        RuntimeOptions{concurrency,dim_out,_return_state}(;
             niterations=niterations,
             total_cycles=options.populations * niterations,
             numprocs=_numprocs,
@@ -615,7 +605,7 @@ function _validate_options(
     if options.define_helper_functions
         set_default_variable_names!(first(datasets).variable_names)
     end
-    if ropt.node_type <: GraphNode && ropt.verbosity > 0
+    if options.node_type <: GraphNode && ropt.verbosity > 0
         @warn "The `GraphNode` interface and mutation operators are experimental and will change in future versions."
     end
     example_dataset = first(datasets)
@@ -645,8 +635,9 @@ function _create_workers(
 
     nout = length(datasets)
     example_dataset = first(datasets)
-    PopType = Population{T,L,ropt.node_type}
-    HallOfFameType = HallOfFame{T,L,ropt.node_type}
+    NT = with_type_parameters(options.node_type, T)
+    PopType = Population{T,L,NT}
+    HallOfFameType = HallOfFame{T,L,NT}
     WorkerOutputType = get_worker_output_type(
         Val(ropt.parallelism), PopType, HallOfFameType
     )
@@ -670,7 +661,6 @@ function _create_workers(
             ropt.verbosity,
             example_dataset,
             ropt.runtests,
-            ropt.node_type,
         )
     else
         Int[], false
@@ -683,9 +673,9 @@ function _create_workers(
     shuffle!(task_order)
 
     # Persistent storage of last-saved population for final return:
-    last_pops = init_dummy_pops(options.populations, datasets, options, ropt.node_type)
+    last_pops = init_dummy_pops(options.populations, datasets, options)
     # Best 10 members from each population for migration:
-    best_sub_pops = init_dummy_pops(options.populations, datasets, options, ropt.node_type)
+    best_sub_pops = init_dummy_pops(options.populations, datasets, options)
     # TODO: Should really be one per population too.
     all_running_search_statistics = [
         RunningSearchStatistics(; options=options) for j in 1:nout
@@ -702,7 +692,9 @@ function _create_workers(
         for j in 1:nout
     ]
 
-    return SearchState{T,L,ropt.node_type,WorkerOutputType,ChannelType}(;
+    return SearchState{
+        T,L,with_type_parameters(options.node_type, T),WorkerOutputType,ChannelType
+    }(;
         procs=procs,
         we_created_procs=we_created_procs,
         worker_output=worker_output,
@@ -729,7 +721,7 @@ function _initialize_search!(
     init_hall_of_fame = load_saved_hall_of_fame(saved_state)
     if init_hall_of_fame === nothing
         for j in 1:nout
-            state.halls_of_fame[j] = HallOfFame(options, T, L, ropt.node_type)
+            state.halls_of_fame[j] = HallOfFame(options, T, L)
         end
     else
         # Recompute losses for the hall of fame, in
@@ -762,12 +754,7 @@ function _initialize_search!(
                 copy_pop = copy(saved_pop)
                 @sr_spawner(
                     begin
-                        (
-                            copy_pop,
-                            HallOfFame(options, T, L, ropt.node_type),
-                            RecordType(),
-                            0.0,
-                        )
+                        (copy_pop, HallOfFame(options, T, L), RecordType(), 0.0)
                     end,
                     parallelism = ropt.parallelism,
                     worker_idx = worker_idx
@@ -780,14 +767,13 @@ function _initialize_search!(
                     begin
                         (
                             Population(
-                                datasets[j],
-                                ropt.node_type;
+                                datasets[j];
                                 population_size=options.population_size,
                                 nlength=3,
                                 options=options,
                                 nfeatures=datasets[j].nfeatures,
                             ),
-                            HallOfFame(options, T, L, ropt.node_type),
+                            HallOfFame(options, T, L),
                             RecordType(),
                             Float64(options.population_size),
                         )

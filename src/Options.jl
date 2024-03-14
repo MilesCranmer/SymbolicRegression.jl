@@ -3,7 +3,7 @@ module OptionsModule
 using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
-using DynamicExpressions: OperatorEnum
+using DynamicExpressions: OperatorEnum, Node
 using Distributed: nworkers
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim
@@ -247,6 +247,8 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
             return sum((prediction .- dataset.y) .^ 2) / dataset.n
         end
 
+- `node_type::Type{N}=Node`: The type of node to use for the search.
+    For example, `Node` or `GraphNode`.
 - `populations`: How many populations of equations to use.
 - `population_size`: How many equations in each population.
 - `ncycles_per_iteration`: How many generations to consider per iteration.
@@ -388,6 +390,7 @@ function Options end
     should_simplify::Union{Nothing,Bool}=nothing,
     should_optimize_constants::Bool=true,
     output_file::Union{Nothing,AbstractString}=nothing,
+    node_type::Type=Node,
     populations::Integer=15,
     perturbation_factor::Real=0.076,
     annealing::Bool=false,
@@ -753,7 +756,11 @@ function Options end
     @assert print_precision > 0
 
     options = Options{
-        eltype(complexity_mapping),turbo,bumper,typeof(tournament_selection_weights)
+        eltype(complexity_mapping),
+        node_type,
+        turbo,
+        bumper,
+        typeof(tournament_selection_weights),
     }(
         operators,
         bin_constraints,
@@ -799,6 +806,7 @@ function Options end
         seed,
         elementwise_loss,
         loss_function,
+        node_type,
         progress,
         terminal_width,
         optimizer_algorithm,

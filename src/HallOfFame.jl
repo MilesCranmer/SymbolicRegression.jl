@@ -29,7 +29,7 @@ mutable struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}
 end
 
 """
-    HallOfFame(options::Options, ::Type{T}, ::Type{L}, ::Type{N}=Node) where {T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode}
+    HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode}
 
 Create empty HallOfFame. The HallOfFame stores a list
 of `PopMember` objects in `.members`, which is enumerated
@@ -41,16 +41,16 @@ Arguments:
 - `options`: Options containing specification about deterministic.
 - `T`: Type of Nodes to use in the population. e.g., `Float64`.
 - `L`: Type of loss to use in the population. e.g., `Float64`.
-- `N`: Type of Node to use in the population. e.g., `Node`.
 """
 function HallOfFame(
-    options::Options, ::Type{T}, ::Type{L}, ::Type{N}=Node
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode}
+    options::Options, ::Type{T}, ::Type{L}
+) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     actualMaxsize = options.maxsize + MAX_DEGREE
-    return HallOfFame{T,L,with_type_parameters(N, T)}(
+    NT = with_type_parameters(options.node_type, T)
+    return HallOfFame{T,L,NT}(
         [
             PopMember(
-                constructorof(N)(T; val=convert(T, 1)),
+                constructorof(options.node_type)(T; val=convert(T, 1)),
                 L(0),
                 L(Inf),
                 options;

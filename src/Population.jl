@@ -26,21 +26,20 @@ function Population(pop::Vector{<:PopMember})
 end
 
 """
-    Population(dataset::Dataset{T,L}, ::Type{N}=Node{T};
+    Population(dataset::Dataset{T,L};
                population_size, nlength::Int=3, options::Options,
                nfeatures::Int)
 
 Create random population and score them on the dataset.
 """
 function Population(
-    dataset::Dataset{T,L},
-    ::Type{N}=Node{T};
+    dataset::Dataset{T,L};
     options::Options,
     population_size=nothing,
     nlength::Int=3,
     nfeatures::Int,
     npop=nothing,
-) where {T,L,N<:AbstractExpressionNode{T}}
+) where {T,L}
     @assert (population_size !== nothing) ⊻ (npop !== nothing)
     population_size = if npop === nothing
         population_size
@@ -51,7 +50,7 @@ function Population(
         [
             PopMember(
                 dataset,
-                gen_random_tree(nlength, options, nfeatures, T, N),
+                gen_random_tree(nlength, options, nfeatures, T),
                 options;
                 parent=-1,
                 deterministic=options.deterministic,
@@ -61,7 +60,7 @@ function Population(
     )
 end
 """
-    Population(X::AbstractMatrix{T}, y::AbstractVector{T}, ::Type{N}=Node{T};
+    Population(X::AbstractMatrix{T}, y::AbstractVector{T};
                population_size, nlength::Int=3,
                options::Options, nfeatures::Int,
                loss_type::Type=Nothing)
@@ -70,15 +69,14 @@ Create random population and score them on the dataset.
 """
 function Population(
     X::AbstractMatrix{T},
-    y::AbstractVector{T},
-    ::Type{N}=Node{T};
+    y::AbstractVector{T};
     population_size=nothing,
     nlength::Int=3,
     options::Options,
     nfeatures::Int,
     loss_type::Type=Nothing,
     npop=nothing,
-) where {T<:DATA_TYPE,N<:AbstractExpressionNode{T}}
+) where {T<:DATA_TYPE}
     @assert (population_size !== nothing) ⊻ (npop !== nothing)
     population_size = if npop === nothing
         population_size
@@ -86,9 +84,9 @@ function Population(
         npop
     end
     dataset = Dataset(X, y; loss_type=loss_type)
-    update_baseline_loss!(dataset, options, N)
+    update_baseline_loss!(dataset, options)
     return Population(
-        dataset, N; population_size=population_size, options=options, nfeatures=nfeatures
+        dataset; population_size=population_size, options=options, nfeatures=nfeatures
     )
 end
 

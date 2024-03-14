@@ -199,9 +199,9 @@ end
 Update the baseline loss of the dataset using the loss function specified in `options`.
 """
 function update_baseline_loss!(
-    dataset::Dataset{T,L}, options::Options, ::Type{N}=Node
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode}
-    example_tree = constructorof(N)(T; val=dataset.avg_y)
+    dataset::Dataset{T,L}, options::Options
+) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    example_tree = constructorof(options.node_type)(T; val=dataset.avg_y)
     # TODO: It could be that the loss function is not defined for this example type?
     baseline_loss = eval_loss(example_tree, dataset, options)
     if isfinite(baseline_loss)

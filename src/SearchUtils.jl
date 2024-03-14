@@ -26,9 +26,7 @@ rather than set within `Options`. This is to differentiate between
 parameters that relate to processing and the duration of the search,
 and parameters dealing with the search hyperparameters itself.
 """
-Base.@kwdef struct RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}
-    # TODO: Should move `node_type` to options.
-    node_type::Type{N}
+Base.@kwdef struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE}
     niterations::Int64
     total_cycles::Int64
     numprocs::Int64
@@ -39,7 +37,7 @@ Base.@kwdef struct RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}
     verbosity::Int64
     progress::Bool
 end
-function Base.getproperty(roptions::RuntimeOptions{N,P,D,R}, name::Symbol) where {N,P,D,R}
+function Base.getproperty(roptions::RuntimeOptions{P,D,R}, name::Symbol) where {P,D,R}
     if name == :parallelism
         return P
     elseif name == :dim_out
@@ -120,11 +118,11 @@ macro sr_spawner(expr, kws...)
 end
 
 function init_dummy_pops(
-    npops::Int, datasets::Vector{D}, options::Options, ::Type{N}
-) where {T,L,D<:Dataset{T,L},N<:AbstractExpressionNode{T}}
+    npops::Int, datasets::Vector{D}, options::Options
+) where {T,L,D<:Dataset{T,L}}
     return [
         [
-            Population(d, N; population_size=1, options=options, nfeatures=d.nfeatures) for
+            Population(d; population_size=1, options=options, nfeatures=d.nfeatures) for
             _ in 1:npops
         ] for d in datasets
     ]

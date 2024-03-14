@@ -235,15 +235,10 @@ end
 
 """Create a random equation by appending random operators"""
 function gen_random_tree(
-    length::Int,
-    options::Options,
-    nfeatures::Int,
-    ::Type{T},
-    ::Type{N},
-    rng::AbstractRNG=default_rng(),
-) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
+    length::Int, options::Options, nfeatures::Int, ::Type{T}, rng::AbstractRNG=default_rng()
+) where {T<:DATA_TYPE}
     # Note that this base tree is just a placeholder; it will be replaced.
-    tree = constructorof(N)(T; val=convert(T, 1))
+    tree = constructorof(options.node_type)(T; val=convert(T, 1))
     for i in 1:length
         # TODO: This can be larger number of nodes than length.
         tree = append_random_op(tree, options, nfeatures, rng)
@@ -256,10 +251,9 @@ function gen_random_tree_fixed_size(
     options::Options,
     nfeatures::Int,
     ::Type{T},
-    ::Type{N},
     rng::AbstractRNG=default_rng(),
-) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
-    tree = make_random_leaf(nfeatures, T, N, rng)
+) where {T<:DATA_TYPE}
+    tree = make_random_leaf(nfeatures, T, options.node_type, rng)
     cur_size = count_nodes(tree)
     while cur_size < node_count
         if cur_size == node_count - 1  # only unary operator allowed.
