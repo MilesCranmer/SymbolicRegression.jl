@@ -419,7 +419,7 @@ function Options end
     optimizer_probability::Real=0.14,
     optimizer_iterations::Union{Nothing,Integer}=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
-    val_recorder::Val{use_recorder}=Val(false),
+    use_recorder::Bool=false,
     recorder_file::AbstractString="pysr_recorder.json",
     early_stop_condition::Union{Function,Real,Nothing}=nothing,
     timeout_in_seconds::Union{Nothing,Real}=nothing,
@@ -435,7 +435,7 @@ function Options end
     npopulations::Union{Nothing,Integer}=nothing,
     npop::Union{Nothing,Integer}=nothing,
     kws...,
-) where {use_recorder}
+)
     for k in keys(kws)
         !haskey(deprecated_options_mapping, k) && error("Unknown keyword argument: $k")
         new_key = deprecated_options_mapping[k]
@@ -753,14 +753,7 @@ function Options end
     @assert print_precision > 0
 
     options = Options{
-        eltype(complexity_mapping),
-        typeof(operators),
-        use_recorder,
-        typeof(optimizer_options),
-        typeof(optimizer_algorithm),
-        turbo,
-        bumper,
-        typeof(tournament_selection_weights),
+        eltype(complexity_mapping),turbo,bumper,typeof(tournament_selection_weights)
     }(
         operators,
         bin_constraints,
@@ -822,6 +815,7 @@ function Options end
         nested_constraints,
         deterministic,
         define_helper_functions,
+        use_recorder,
     )
 
     return options

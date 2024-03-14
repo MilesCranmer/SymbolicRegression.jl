@@ -1,7 +1,7 @@
 module OptionsStructModule
 
 using Optim: Optim
-using DynamicExpressions: AbstractOperatorEnum
+using DynamicExpressions: AbstractOperatorEnum, OperatorEnum
 using LossFunctions: SupervisedLoss
 
 import ..MutationWeightsModule: MutationWeights
@@ -38,17 +38,8 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{
-    CT,
-    OP<:AbstractOperatorEnum,
-    use_recorder,
-    OPT<:Optim.Options,
-    OPT_A<:Optim.AbstractOptimizer,
-    _turbo,
-    _bumper,
-    W,
-}
-    operators::OP
+struct Options{CT,_turbo,_bumper,W}
+    operators::AbstractOperatorEnum
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
     complexity_mapping::ComplexityMapping{CT}
@@ -94,10 +85,10 @@ struct Options{
     loss_function::Union{Nothing,Function}
     progress::Union{Bool,Nothing}
     terminal_width::Union{Int,Nothing}
-    optimizer_algorithm::OPT_A
+    optimizer_algorithm::Optim.AbstractOptimizer
     optimizer_probability::Float32
     optimizer_nrestarts::Int
-    optimizer_options::OPT
+    optimizer_options::Optim.Options
     recorder_file::String
     prob_pick_first::Float32
     early_stop_condition::Union{Function,Nothing}
@@ -108,6 +99,7 @@ struct Options{
     nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
     deterministic::Bool
     define_helper_functions::Bool
+    use_recorder::Bool
 end
 
 function Base.print(io::IO, options::Options)

@@ -223,7 +223,7 @@ using .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 using .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
 using .ProgressBarsModule: WrappedProgressBar
-using .RecorderModule: @recorder, is_recording, find_iteration_from_record
+using .RecorderModule: @recorder, find_iteration_from_record
 using .MigrationModule: migrate!
 using .SearchUtilsModule:
     DefaultWorkerOutputType,
@@ -354,7 +354,7 @@ function equation_search(
     y::AbstractMatrix{T};
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
-    options::Options=Options(),
+    @nospecialize(options::Options = Options()),
     node_type::Type{N}=Node,
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
     display_variable_names::Union{AbstractVector{String},Nothing}=variable_names,
@@ -446,7 +446,7 @@ function equation_search(
     datasets::Vector{D},
     ::Type{N}=Node;
     niterations::Int=10,
-    options::Options=Options(),
+    @nospecialize(options::Options = Options()),
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
@@ -597,7 +597,7 @@ function _equation_search(
     ::Val{DIM_OUT},
     datasets::Vector{D},
     niterations::Int,
-    options::Options,
+    @nospecialize(options::Options),
     ::Type{N},
     numprocs::Int,
     procs::Union{Vector{Int},Nothing},
@@ -629,7 +629,9 @@ function _equation_search(
 
     example_dataset = datasets[1]
     nout = size(datasets, 1)
+    @assert nout >= 1
     @assert (nout == 1 || DIM_OUT == 2)
+    @assert options.populations >= 1
 
     if runtests
         test_option_configuration(PARALLELISM, datasets, saved_state, options, verbosity)
@@ -701,23 +703,23 @@ function _equation_search(
     # Get the next worker process to give a job:
     worker_assignment = initialize_worker_assignment()
 
-    hallOfFame = load_saved_hall_of_fame(saved_state)
-    hallOfFame = if hallOfFame === nothing
-        [HallOfFame(options, T, L, N) for j in 1:nout]
+    init_hall_of_fame = load_saved_hall_of_fame(saved_state)
+    hallOfFame = if init_hall_of_fame === nothing
+        HallOfFameType[HallOfFame(options, T, L, N) for j in 1:nout]
     else
         # Recompute losses for the hall of fame, in
         # case the dataset changed:
-        for (hof, dataset) in zip(hallOfFame, datasets)
+        for (hof, dataset) in zip(init_hall_of_fame, datasets)
             for member in hof.members[hof.exists]
                 score, result_loss = score_func(dataset, member, options)
                 member.score = score
                 member.loss = result_loss
             end
         end
-        hallOfFame
+        init_hall_of_fame
     end
-    @assert length(hallOfFame) == nout
     hallOfFame::Vector{HallOfFameType}
+    @assert length(hallOfFame) == nout
 
     for j in 1:nout, i in 1:(options.populations)
         worker_idx = assign_next_worker!(
@@ -944,7 +946,7 @@ function _equation_search(
             worker_idx = assign_next_worker!(
                 worker_assignment; out=j, pop=i, parallelism=PARALLELISM, procs
             )
-            iteration = if is_recording(options)
+            iteration = if options.use_recorder
                 key = "out$(j)_pop$(i)"
                 find_iteration_from_record(key, record) + 1
             else
@@ -1076,7 +1078,7 @@ end
 function _dispatch_s_r_cycle(
     in_pop::Population,
     dataset::Dataset,
-    options::Options;
+    @nospecialize(options::Options);
     pop::Int,
     out::Int,
     iteration::Int,

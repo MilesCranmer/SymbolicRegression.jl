@@ -32,7 +32,7 @@ abstract type AbstractSRRegressor <: MMI.Deterministic end
 """Generate an `SRRegressor` struct containing all the fields in `Options`."""
 function modelexpr(model_name::Symbol)
     struct_def = :(Base.@kwdef mutable struct $(model_name){
-        D<:AbstractDimensions,L,use_recorder,N<:AbstractExpressionNode
+        D<:AbstractDimensions,L,N<:AbstractExpressionNode
     } <: AbstractSRRegressor
         niterations::Int = 10
         node_type::Type{N} = Node
