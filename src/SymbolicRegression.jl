@@ -642,7 +642,7 @@ function _equation_search(
     datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
 ) where {D<:Dataset}
     _validate_options(datasets, ropt, options)
-    state = _create_workers(datasets, ropt, options, saved_state)
+    state = _create_workers(datasets, ropt, options)
     _initialize_search!(state, datasets, ropt, options, saved_state)
     _warmup_search!(state, datasets, ropt, options)
     _main_search_loop!(state, datasets, ropt, options)
@@ -677,7 +677,7 @@ function _validate_options(
     return nothing
 end
 function _create_workers(
-    datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
+    datasets::Vector{D}, ropt::RuntimeOptions, options::Options
 ) where {T,L,D<:Dataset{T,L}}
     stdin_reader = watch_stream(stdin)
 
@@ -703,8 +703,8 @@ function _create_workers(
     (procs, we_created_procs) = if ropt.parallelism == :multiprocessing
         configure_workers(;
             procs=ropt.init_procs,
-            numprocs,
-            addprocs_function,
+            ropt.numprocs,
+            ropt.addprocs_function,
             options,
             project_path=splitdir(Pkg.project().path)[1],
             file=@__FILE__,
@@ -736,21 +736,7 @@ function _create_workers(
     # Real numbers indicate use of batching.
     num_evals = [[0.0 for i in 1:(options.populations)] for j in 1:nout]
 
-    init_hall_of_fame = load_saved_hall_of_fame(saved_state)
-    halls_of_fame = if init_hall_of_fame === nothing
-        HallOfFameType[HallOfFame(options, T, L, ropt.node_type) for j in 1:nout]
-    else
-        # Recompute losses for the hall of fame, in
-        # case the dataset changed:
-        for (hof, dataset) in zip(init_hall_of_fame, datasets)
-            for member in hof.members[hof.exists]
-                score, result_loss = score_func(dataset, member, options)
-                member.score = score
-                member.loss = result_loss
-            end
-        end
-        init_hall_of_fame
-    end
+    halls_of_fame = Vector{HallOfFameType}(undef, nout)
 
     cycles_remaining = [ropt.total_cycles for j in 1:nout]
     cur_maxsizes = [
@@ -785,6 +771,26 @@ function _initialize_search!(
     saved_state,
 ) where {T,L,D<:Dataset{T,L},P}
     nout = length(datasets)
+
+    init_hall_of_fame = load_saved_hall_of_fame(saved_state)
+    if init_hall_of_fame === nothing
+        for j in 1:nout
+            state.halls_of_fame[j] = HallOfFame(options, T, L, ropt.node_type)
+        end
+    else
+        # Recompute losses for the hall of fame, in
+        # case the dataset changed:
+        for j in eachindex(init_hall_of_fame, datasets, state.halls_of_fame)
+            hof = init_hall_of_fame[i]
+            for member in hof.members[hof.exists]
+                score, result_loss = score_func(dataset, member, options)
+                member.score = score
+                member.loss = result_loss
+            end
+            state.halls_of_fame[i] = hof
+        end
+    end
+
     for j in 1:nout, i in 1:(options.populations)
         worker_idx = assign_next_worker!(
             state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
