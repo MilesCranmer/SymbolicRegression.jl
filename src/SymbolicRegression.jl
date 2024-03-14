@@ -1047,7 +1047,7 @@ function _main_search_loop!(
                     datasets;
                     options,
                     equation_speed,
-                    state.total_cycles,
+                    ropt.total_cycles,
                     state.cycles_remaining,
                     head_node_occupation,
                     parallelism=state.parallelism,
