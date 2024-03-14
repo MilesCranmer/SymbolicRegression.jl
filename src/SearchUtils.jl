@@ -383,7 +383,9 @@ The state of a search, including the populations, worker outputs, tasks, and
 channels. This is used to manage the search and keep track of runtime variables
 in a single struct.
 """
-Base.@kwdef struct SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelType}
+Base.@kwdef struct SearchState{
+    T,L,N<:AbstractExpressionNode{T},WorkerOutputType,ChannelType
+}
     procs::Vector{Int}
     we_created_procs::Bool
     worker_output::Vector{Vector{WorkerOutputType}}
@@ -391,9 +393,9 @@ Base.@kwdef struct SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelTy
     channels::Vector{Vector{ChannelType}}
     worker_assignment::WorkerAssignments
     task_order::Vector{Tuple{Int,Int}}
-    halls_of_fame::Vector{HallOfFameType}
-    last_pops::Vector{Vector{PopType}}
-    best_sub_pops::Vector{Vector{PopType}}
+    halls_of_fame::Vector{HallOfFame{T,L,N}}
+    last_pops::Vector{Vector{Population{T,L,N}}}
+    best_sub_pops::Vector{Vector{Population{T,L,N}}}
     all_running_search_statistics::Vector{RunningSearchStatistics}
     num_evals::Vector{Vector{Float64}}
     cycles_remaining::Vector{Int}

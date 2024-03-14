@@ -30,15 +30,8 @@ function s_r_cycle(
     options::Options,
     record::RecordType,
 )::Tuple{
-    P,HallOfFame{T,L,PM},Float64
-} where {
-    T,
-    L,
-    D<:Dataset{T,L},
-    N<:AbstractExpressionNode{T},
-    PM<:PopMember{T,L,N},
-    P<:Population{T,L,PM},
-}
+    P,HallOfFame{T,L,N},Float64
+} where {T,L,D<:Dataset{T,L},N<:AbstractExpressionNode{T},P<:Population{T,L,N}}
     max_temp = 1.0
     min_temp = 0.0
     if !options.annealing

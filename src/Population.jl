@@ -12,8 +12,8 @@ using ..PopMemberModule: PopMember
 using ..UtilsModule: bottomk_fast, argmin_fast
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
-mutable struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
-    members::Array{P,1}
+mutable struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}}
+    members::Array{PopMember{T,L,N},1}
     n::Int
 end
 """
@@ -105,12 +105,14 @@ end
 
 # Sample the population, and get the best member from that sample
 function best_of_sample(
-    pop::Population{T,L,P},
+    pop::Population{T,L,N},
     running_search_statistics::RunningSearchStatistics,
     options::Options,
-)::P where {T,L,P<:PopMember{T,L}}
+) where {T,L,N}
     sample = sample_pop(pop, options)
-    return _best_of_sample(sample.members, running_search_statistics, options)
+    return _best_of_sample(
+        sample.members, running_search_statistics, options
+    )::PopMember{T,L,N}
 end
 function _best_of_sample(
     members::Vector{P}, running_search_statistics::RunningSearchStatistics, options::Options

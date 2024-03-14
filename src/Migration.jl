@@ -15,7 +15,7 @@ to do so. The original migrant population is not modified. Pass with, e.g.,
 """
 function migrate!(
     migration::Pair{Vector{PM},P}, options::Options; frac::AbstractFloat
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,PM<:PopMember,P<:Population{T,L,PM}}
+) where {T,L,N,PM<:PopMember{T,L,N},P<:Population{T,L,N}}
     base_pop = migration.second
     population_size = length(base_pop.members)
     mean_number_replaced = population_size * frac

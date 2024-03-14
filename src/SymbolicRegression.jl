@@ -645,9 +645,8 @@ function _create_workers(
 
     nout = length(datasets)
     example_dataset = first(datasets)
-    PopMemberType = PopMember{T,L,ropt.node_type}
-    PopType = Population{T,L,PopMemberType}
-    HallOfFameType = HallOfFame{T,L,PopMemberType}
+    PopType = Population{T,L,ropt.node_type}
+    HallOfFameType = HallOfFame{T,L,ropt.node_type}
     WorkerOutputType = get_worker_output_type(
         Val(ropt.parallelism), PopType, HallOfFameType
     )
@@ -703,7 +702,7 @@ function _create_workers(
         for j in 1:nout
     ]
 
-    return SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelType}(;
+    return SearchState{T,L,ropt.node_type,WorkerOutputType,ChannelType}(;
         procs=procs,
         we_created_procs=we_created_procs,
         worker_output=worker_output,
@@ -723,12 +722,8 @@ function _create_workers(
     )
 end
 function _initialize_search!(
-    state::SearchState{P},
-    datasets::Vector{D},
-    ropt::RuntimeOptions,
-    options::Options,
-    saved_state,
-) where {T,L,D<:Dataset{T,L},P}
+    state::SearchState{T,L,N}, datasets, ropt::RuntimeOptions, options::Options, saved_state
+) where {T,L,N}
     nout = length(datasets)
 
     init_hall_of_fame = load_saved_hall_of_fame(saved_state)
@@ -757,7 +752,7 @@ function _initialize_search!(
         saved_pop = load_saved_population(saved_state; out=j, pop=i)
         new_pop =
             if saved_pop !== nothing && length(saved_pop.members) == options.population_size
-                saved_pop::P
+                saved_pop::Population{T,L,N}
                 ## Update losses:
                 for member in saved_pop.members
                     score, result_loss = score_func(datasets[j], member, options)
@@ -807,8 +802,8 @@ function _initialize_search!(
     return nothing
 end
 function _warmup_search!(
-    state::SearchState{P,H}, datasets::Vector{D}, ropt::RuntimeOptions, options::Options
-) where {T,L,D<:Dataset{T,L},P,H}
+    state::SearchState{T,L,N}, datasets, ropt::RuntimeOptions, options::Options
+) where {T,L,N}
     nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
         dataset = datasets[j]
@@ -825,7 +820,9 @@ function _warmup_search!(
         last_pop = state.worker_output[j][i]
         updated_pop = @sr_spawner(
             begin
-                in_pop = first(extract_from_worker(last_pop, P, H))
+                in_pop = first(
+                    extract_from_worker(last_pop, Population{T,L,N}, HallOfFame{T,L,N})
+                )
                 _dispatch_s_r_cycle(
                     in_pop,
                     dataset,
@@ -836,7 +833,7 @@ function _warmup_search!(
                     ropt.verbosity,
                     cur_maxsize,
                     running_search_statistics=c_rss,
-                )::DefaultWorkerOutputType{P,H}
+                )::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N}}
             end,
             parallelism = ropt.parallelism,
             worker_idx = worker_idx
@@ -846,8 +843,8 @@ function _warmup_search!(
     return nothing
 end
 function _main_search_loop!(
-    state::SearchState{P,H}, datasets::Vector{D}, ropt::RuntimeOptions, options::Options
-) where {T,L,D<:Dataset{T,L},P,H}
+    state::SearchState{T,L,N}, datasets, ropt::RuntimeOptions, options::Options
+) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
     start_time = time()
@@ -907,12 +904,16 @@ function _main_search_loop!(
         if population_ready
             start_work_monitor!(resource_monitor)
             # Take the fetch operation from the channel since its ready
-            (cur_pop, best_seen, cur_record, cur_num_evals) =
-                if ropt.parallelism in (:multiprocessing, :multithreading)
-                    take!(state.channels[j][i])::DefaultWorkerOutputType{P,H}
-                else
-                    state.worker_output[j][i]::DefaultWorkerOutputType{P,H}
-                end
+            (cur_pop, best_seen, cur_record, cur_num_evals) = if ropt.parallelism in
+                (
+                :multiprocessing, :multithreading
+            )
+                take!(
+                    state.channels[j][i]
+                )
+            else
+                state.worker_output[j][i]
+            end::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N}}
             state.last_pops[j][i] = copy(cur_pop)
             state.best_sub_pops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
             @recorder state.record[] = recursive_merge(state.record[], cur_record)
@@ -985,7 +986,7 @@ function _main_search_loop!(
             end
 
             c_rss = deepcopy(state.all_running_search_statistics[j])
-            in_pop = copy(cur_pop::P)
+            in_pop = copy(cur_pop::Population{T,L,N})
             state.worker_output[j][i] = @sr_spawner(
                 begin
                     _dispatch_s_r_cycle(

@@ -23,8 +23,8 @@ have been set, you can run `.members[exists]`.
     These are ordered by complexity, with `.members[1]` the member with complexity 1.
 - `exists::Array{Bool,1}`: Whether the member at the given complexity has been set.
 """
-mutable struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
-    members::Array{P,1}
+mutable struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}}
+    members::Array{PopMember{T,L,N},1}
     exists::Array{Bool,1} #Whether it has been set
 end
 
@@ -47,7 +47,7 @@ function HallOfFame(
     options::Options, ::Type{T}, ::Type{L}, ::Type{N}=Node
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode}
     actualMaxsize = options.maxsize + MAX_DEGREE
-    return HallOfFame{T,L,PopMember{T,L,with_type_parameters(N, T)}}(
+    return HallOfFame{T,L,with_type_parameters(N, T)}(
         [
             PopMember(
                 constructorof(N)(T; val=convert(T, 1)),
@@ -71,10 +71,9 @@ end
 """
     calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,P}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 """
-function calculate_pareto_frontier(
-    hallOfFame::HallOfFame{T,L,P}
-)::Vector{P} where {T,L,P<:PopMember}
+function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
     # TODO - remove dataset from args.
+    P = PopMember{T,L,N}
     # Dominating pareto curve - must be better than all simpler equations
     dominating = P[]
     actualMaxsize = length(hallOfFame.members)
