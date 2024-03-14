@@ -355,7 +355,7 @@ function equation_search(
     y::AbstractMatrix{T};
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
-    @nospecialize(options::Options = Options()),
+    options::Options = Options(),
     node_type::Type{N}=Node,
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
     display_variable_names::Union{AbstractVector{String},Nothing}=variable_names,
@@ -447,7 +447,7 @@ function equation_search(
     datasets::Vector{D},
     ::Type{N}=Node;
     niterations::Int=10,
-    @nospecialize(options::Options = Options()),
+    options::Options = Options(),
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
