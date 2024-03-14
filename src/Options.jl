@@ -725,20 +725,21 @@ function Options end
         if isnothing(optimizer_iterations)
             optimizer_iterations = default_optimizer_iterations
         end
+        extra_kws = hasfield(Optim.Options, :show_warnings) ? (; show_warnings=false) : ()
         if isnothing(optimizer_options)
             optimizer_options = Optim.Options(;
-                iterations=optimizer_iterations, show_warnings=false
+                iterations=optimizer_iterations, extra_kws...
             )
         else
             if haskey(optimizer_options, :iterations)
                 optimizer_iterations = optimizer_options[:iterations]
             end
             optimizer_options = Optim.Options(;
-                optimizer_options..., iterations=optimizer_iterations, show_warnings=false
+                optimizer_options..., iterations=optimizer_iterations, extra_kws...
             )
         end
     end
-    if optimizer_options.show_warnings
+    if hasfield(Optim.Options, :show_warnings) && optimizer_options.show_warnings
         @warn "Optimizer warnings are turned on. This might result in a lot of warnings being printed from NaNs, as these are common during symbolic regression"
     end
 
