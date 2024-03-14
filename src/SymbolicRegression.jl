@@ -527,11 +527,11 @@ function equation_search(
         )
         1
     end
-    _progress = if progress === nothing && options.progress === nothing
+    _progress::Bool = if progress === nothing && options.progress === nothing
         (_verbosity > 0) && length(datasets) == 1
-    elseif progress === nothing
+    elseif progress === nothing && options.progress !== nothing
         options.progress
-    elseif options.progress === nothing
+    elseif progress !== nothing && options.progress === nothing
         progress
     else
         error(
