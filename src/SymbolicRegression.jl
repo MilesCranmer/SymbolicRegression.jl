@@ -232,6 +232,7 @@ using .SearchUtilsModule:
     get_worker_output_type,
     extract_from_worker,
     @sr_spawner,
+    StdinReader,
     watch_stream,
     close_reader!,
     check_for_user_quit,
@@ -459,17 +460,18 @@ function equation_search(
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
 ) where {DIM_OUT,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L},N<:AbstractExpressionNode}
-    v_concurrency, concurrency = if parallelism in (:multithreading, "multithreading")
-        (Val(:multithreading), :multithreading)
+    concurrency = if parallelism in (:multithreading, "multithreading")
+        :multithreading
     elseif parallelism in (:multiprocessing, "multiprocessing")
-        (Val(:multiprocessing), :multiprocessing)
+        :multiprocessing
     elseif parallelism in (:serial, "serial")
-        (Val(:serial), :serial)
+        :serial
     else
         error(
             "Invalid parallelism mode: $parallelism. " *
             "You must choose one of :multithreading, :multiprocessing, or :serial.",
         )
+        :serial
     end
     not_distributed = concurrency in (:multithreading, :serial)
     not_distributed &&
@@ -483,24 +485,25 @@ function equation_search(
             "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
         )
 
-    v_return_state = if return_state isa Val
-        return_state
+    _return_state = if return_state isa Val
+        get_val(::Val{x}) where {x} = x
+        get_val(return_state)
     else
         if options.return_state === nothing
-            Val(return_state === nothing ? false : return_state)
+            return_state === nothing ? false : return_state
         else
             @assert(
                 return_state === nothing,
                 "You cannot set `return_state` in both the `Options` and in the passed arguments."
             )
-            Val(options.return_state)
+            options.return_state
         end
     end
 
-    v_dim_out = if DIM_OUT === nothing
-        length(datasets) > 1 ? Val(2) : Val(1)
+    dim_out = if DIM_OUT === nothing
+        length(datasets) > 1 ? 2 : 1
     else
-        Val(DIM_OUT)
+        DIM_OUT
     end
     _numprocs::Int = if numprocs === nothing
         if procs === nothing
@@ -574,138 +577,170 @@ function equation_search(
 
     # Underscores here mean that we have mutated the variable
     return _equation_search(
-        v_concurrency,
-        v_dim_out,
         datasets,
-        niterations,
+        RuntimeOptions{_N,concurrency,dim_out,_return_state}(;
+            node_type=_N,
+            niterations=niterations,
+            total_cycles=options.populations * niterations,
+            numprocs=_numprocs,
+            procs=procs,
+            addprocs_function=_addprocs_function,
+            exeflags=exeflags,
+            runtests=runtests,
+            verbosity=_verbosity,
+            progress=_progress,
+        ),
         options,
-        _N,
-        _numprocs,
-        procs,
-        _addprocs_function,
-        exeflags,
-        runtests,
         saved_state,
-        _verbosity,
-        _progress,
-        v_return_state,
     )
 end
 
-@noinline function _equation_search(
-    ::Val{PARALLELISM},
-    ::Val{DIM_OUT},
-    datasets::Vector{D},
-    niterations::Int,
-    @nospecialize(options::Options),
-    ::Type{N},
-    numprocs::Int,
-    procs::Union{Vector{Int},Nothing},
-    addprocs_function::Function,
-    exeflags::Cmd,
-    runtests::Bool,
-    saved_state,
-    verbosity,
-    progress,
-    ::Val{RETURN_STATE},
-) where {
-    T<:DATA_TYPE,
-    L<:LOSS_TYPE,
-    D<:Dataset{T,L},
-    N<:AbstractExpressionNode{T},
-    PARALLELISM,
-    RETURN_STATE,
-    DIM_OUT,
-}
-    stdin_reader = watch_stream(stdin)
+Base.@kwdef struct RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}
+    node_type::Type{N}
+    niterations::Int64
+    total_cycles::Int64
+    numprocs::Int64
+    procs::Union{Vector{Int},Nothing}
+    addprocs_function::Function
+    exeflags::Cmd
+    runtests::Bool
+    verbosity::Int64
+    progress::Bool
+end
+function Base.getproperty(roptions::RuntimeOptions{N,P,D,R}, name::Symbol) where {N,P,D,R}
+    if name == :parallelism
+        return P
+    elseif name == :dim_out
+        return D
+    elseif name == :return_state
+        return R
+    else
+        getfield(roptions, name)
+    end
+end
 
+Base.@kwdef struct SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelType}
+    procs::Vector{Int}
+    we_created_procs::Bool
+    worker_output::Vector{Vector{WorkerOutputType}}
+    tasks::Vector{Vector{Task}}
+    channels::Vector{Vector{ChannelType}}
+    worker_assignment::Dict{Tuple{Int,Int},Int}
+    task_order::Vector{Tuple{Int,Int}}
+    halls_of_fame::Vector{HallOfFameType}
+    last_pops::Vector{Vector{PopType}}
+    best_sub_pops::Vector{Vector{PopType}}
+    all_running_search_statistics::Vector{RunningSearchStatistics}
+    num_evals::Vector{Vector{Float64}}
+    cycles_remaining::Vector{Int}
+    cur_maxsizes::Vector{Int}
+    stdin_reader::StdinReader
+    record::Base.RefValue{RecordType}
+end
+
+function _equation_search(
+    datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
+) where {D<:Dataset}
+    _validate_options(datasets, ropt, options, saved_state)
+    state = _create_workers(datasets, ropt, options, saved_state)
+    _initialize_search!(state, datasets, ropt, options, saved_state)
+    _warmup_search!(state, datasets, ropt, options)
+    _main_search_loop!(state, datasets, ropt, options)
+    _tear_down!(state, ropt, options)
+    return _format_output(state, ropt)
+end
+
+function _validate_options(
+    datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
+) where {T,L,D<:Dataset{T,L}}
     if options.define_helper_functions
         set_default_variable_names!(first(datasets).variable_names)
     end
-
-    if N <: GraphNode && verbosity > 0
+    if ropt.node_type <: GraphNode && ropt.verbosity > 0
         @warn "The `GraphNode` interface and mutation operators are experimental and will change in future versions."
     end
-
-    example_dataset = datasets[1]
-    nout = size(datasets, 1)
+    example_dataset = first(datasets)
+    nout = length(datasets)
     @assert nout >= 1
-    @assert (nout == 1 || DIM_OUT == 2)
+    @assert (nout == 1 || ropt.dim_out == 2)
     @assert options.populations >= 1
-
-    if runtests
-        test_option_configuration(PARALLELISM, datasets, saved_state, options, verbosity)
-        test_dataset_configuration(example_dataset, options, verbosity)
+    if ropt.runtests
+        test_option_configuration(
+            ropt.parallelism, datasets, saved_state, options, ropt.verbosity
+        )
+        test_dataset_configuration(example_dataset, options, ropt.verbosity)
     end
-
     for dataset in datasets
         update_baseline_loss!(dataset, options)
     end
-
     if options.seed !== nothing
         seed!(options.seed)
     end
-    # Start a population on every process
-    #    Store the population, hall of fame
-    PopMemberType = PopMember{T,L,N}
+    return nothing
+end
+function _create_workers(
+    datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
+) where {T,L,D<:Dataset{T,L}}
+    stdin_reader = watch_stream(stdin)
+
+    record = RecordType()
+    @recorder record["options"] = "$(options)"
+
+    nout = length(datasets)
+    example_dataset = first(datasets)
+    PopMemberType = PopMember{T,L,ropt.node_type}
     PopType = Population{T,L,PopMemberType}
     HallOfFameType = HallOfFame{T,L,PopMemberType}
-    WorkerOutputType = get_worker_output_type(Val(PARALLELISM), PopType, HallOfFameType)
-
-    # Persistent storage of last-saved population for final return:
-    returnPops = init_dummy_pops(options.populations, datasets, options, N)
-    # Best 10 members from each population for migration:
-    bestSubPops = init_dummy_pops(options.populations, datasets, options, N)
+    WorkerOutputType = get_worker_output_type(
+        Val(ropt.parallelism), PopType, HallOfFameType
+    )
+    ChannelType = ropt.parallelism == :multiprocessing ? RemoteChannel : Channel
 
     # Pointers to populations on each worker:
     worker_output = Vector{WorkerOutputType}[WorkerOutputType[] for j in 1:nout]
     # Initialize storage for workers
     tasks = [Task[] for j in 1:nout]
     # Set up a channel to send finished populations back to head node
-    channels = if PARALLELISM == :multiprocessing
-        [[RemoteChannel(1) for i in 1:(options.populations)] for j in 1:nout]
-    else
-        [[Channel(1) for i in 1:(options.populations)] for j in 1:nout]
-        # (Unused for :serial)
-    end
-
-    # TODO: Should really be one per population too.
-    all_running_search_statistics = [
-        RunningSearchStatistics(; options=options) for j in 1:nout
-    ]
-
-    record = RecordType()
-    @recorder record["options"] = "$(options)"
-
-    # Records the number of evaluations:
-    # Real numbers indicate use of batching.
-    num_evals = [[0.0 for i in 1:(options.populations)] for j in 1:nout]
-
-    we_created_procs = false
-    ##########################################################################
-    ### Distributed code:
-    ##########################################################################
-    if PARALLELISM == :multiprocessing
-        (procs, we_created_procs) = configure_workers(;
+    channels = [[ChannelType(1) for i in 1:(options.populations)] for j in 1:nout]
+    (procs, we_created_procs) = if ropt.parallelism == :multiprocessing
+        configure_workers(;
             procs,
             numprocs,
             addprocs_function,
             options,
             project_path=splitdir(Pkg.project().path)[1],
             file=@__FILE__,
-            exeflags,
-            verbosity,
+            ropt.exeflags,
+            ropt.verbosity,
             example_dataset,
-            runtests,
-            node_type=N,
+            ropt.runtests,
+            ropt.node_type,
         )
+    else
+        Int[], false
     end
     # Get the next worker process to give a job:
     worker_assignment = initialize_worker_assignment()
+    # Randomly order which order to check populations:
+    # This is done so that we do work on all nout equally.
+    task_order = [(j, i) for j in 1:nout for i in 1:(options.populations)]
+    shuffle!(task_order)
+
+    # Persistent storage of last-saved population for final return:
+    last_pops = init_dummy_pops(options.populations, datasets, options, ropt.node_type)
+    # Best 10 members from each population for migration:
+    best_sub_pops = init_dummy_pops(options.populations, datasets, options, ropt.node_type)
+    # TODO: Should really be one per population too.
+    all_running_search_statistics = [
+        RunningSearchStatistics(; options=options) for j in 1:nout
+    ]
+    # Records the number of evaluations:
+    # Real numbers indicate use of batching.
+    num_evals = [[0.0 for i in 1:(options.populations)] for j in 1:nout]
 
     init_hall_of_fame = load_saved_hall_of_fame(saved_state)
-    hallOfFame = if init_hall_of_fame === nothing
-        HallOfFameType[HallOfFame(options, T, L, N) for j in 1:nout]
+    halls_of_fame = if init_hall_of_fame === nothing
+        HallOfFameType[HallOfFame(options, T, L, ropt.node_type) for j in 1:nout]
     else
         # Recompute losses for the hall of fame, in
         # case the dataset changed:
@@ -718,18 +753,48 @@ end
         end
         init_hall_of_fame
     end
-    hallOfFame::Vector{HallOfFameType}
-    @assert length(hallOfFame) == nout
 
+    cycles_remaining = [ropt.total_cycles for j in 1:nout]
+    cur_maxsizes = [
+        get_cur_maxsize(; options, ropt.total_cycles, cycles_remaining=cycles_remaining[j])
+        for j in 1:nout
+    ]
+
+    return SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelType}(;
+        procs=procs,
+        we_created_procs=we_created_procs,
+        worker_output=worker_output,
+        tasks=tasks,
+        channels=channels,
+        worker_assignment=worker_assignment,
+        task_order=task_order,
+        halls_of_fame=halls_of_fame,
+        last_pops=last_pops,
+        best_sub_pops=best_sub_pops,
+        all_running_search_statistics=all_running_search_statistics,
+        num_evals=num_evals,
+        cycles_remaining=cycles_remaining,
+        cur_maxsizes=cur_maxsizes,
+        stdin_reader=stdin_reader,
+        record=Ref(record),
+    )
+end
+function _initialize_search!(
+    state::SearchState{P},
+    datasets::Vector{D},
+    ropt::RuntimeOptions,
+    options::Options,
+    saved_state,
+) where {T,L,D<:Dataset{T,L},P}
+    nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
         worker_idx = assign_next_worker!(
-            worker_assignment; out=j, pop=i, parallelism=PARALLELISM, procs
+            state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
         )
         saved_pop = load_saved_population(saved_state; out=j, pop=i)
-
         new_pop =
             if saved_pop !== nothing && length(saved_pop.members) == options.population_size
-                saved_pop::PopType
+                saved_pop::P
                 ## Update losses:
                 for member in saved_pop.members
                     score, result_loss = score_func(datasets[j], member, options)
@@ -739,13 +804,13 @@ end
                 copy_pop = copy(saved_pop)
                 @sr_spawner(
                     begin
-                        (copy_pop, HallOfFame(options, T, L, N), RecordType(), 0.0)
+                        (copy_pop, HallOfFame(options, T, L, ropt.node_type), RecordType(), 0.0)
                     end,
-                    parallelism = PARALLELISM,
+                    parallelism = ropt.parallelism,
                     worker_idx = worker_idx
                 )
             else
-                if saved_pop !== nothing && verbosity > 0
+                if saved_pop !== nothing && ropt.verbosity > 0
                     @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
                 end
                 @sr_spawner(
@@ -753,47 +818,46 @@ end
                         (
                             Population(
                                 datasets[j],
-                                N;
+                                ropt.node_type;
                                 population_size=options.population_size,
                                 nlength=3,
                                 options=options,
                                 nfeatures=datasets[j].nfeatures,
                             ),
-                            HallOfFame(options, T, L, N),
+                            HallOfFame(options, T, L, ropt.node_type),
                             RecordType(),
                             Float64(options.population_size),
                         )
                     end,
-                    parallelism = PARALLELISM,
+                    parallelism = ropt.parallelism,
                     worker_idx = worker_idx
                 )
                 # This involves population_size evaluations, on the full dataset:
             end
-        push!(worker_output[j], new_pop)
+        push!(state.worker_output[j], new_pop)
     end
-    total_cycles = options.populations * niterations
-    cycles_remaining = [total_cycles for j in 1:nout]
-    curmaxsizes = [
-        get_cur_maxsize(; options, total_cycles, cycles_remaining=cycles_remaining[j]) for
-        j in 1:nout
-    ]
-    # 2. Start the cycle on every process:
+    return nothing
+end
+function _warmup_search!(
+    state::SearchState{P,H}, datasets::Vector{D}, ropt::RuntimeOptions, options::Options
+) where {T,L,D<:Dataset{T,L},P,H}
+    nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
         dataset = datasets[j]
-        running_search_statistics = all_running_search_statistics[j]
-        curmaxsize = curmaxsizes[j]
-        @recorder record["out$(j)_pop$(i)"] = RecordType()
+        running_search_statistics = state.all_running_search_statistics[j]
+        cur_maxsize = state.cur_maxsizes[j]
+        @recorder ropt.record[]["out$(j)_pop$(i)"] = RecordType()
         worker_idx = assign_next_worker!(
-            worker_assignment; out=j, pop=i, parallelism=PARALLELISM, procs
+            state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
         )
 
         # TODO - why is this needed??
         # Multi-threaded doesn't like to fetch within a new task:
         c_rss = deepcopy(running_search_statistics)
-        last_pop = worker_output[j][i]
+        last_pop = state.worker_output[j][i]
         updated_pop = @sr_spawner(
             begin
-                in_pop = first(extract_from_worker(last_pop, PopType, HallOfFameType))
+                in_pop = first(extract_from_worker(last_pop, P, H))
                 _dispatch_s_r_cycle(
                     in_pop,
                     dataset,
@@ -801,46 +865,45 @@ end
                     pop=i,
                     out=j,
                     iteration=0,
-                    verbosity,
-                    curmaxsize,
+                    ropt.verbosity,
+                    cur_maxsize,
                     running_search_statistics=c_rss,
-                )::DefaultWorkerOutputType{PopType,HallOfFameType}
+                )::DefaultWorkerOutputType{P,H}
             end,
-            parallelism = PARALLELISM,
+            parallelism = ropt.parallelism,
             worker_idx = worker_idx
         )
-        worker_output[j][i] = updated_pop
+        state.worker_output[j][i] = updated_pop
     end
-
-    verbosity > 0 && @info "Started!"
+    return nothing
+end
+function _main_search_loop!(
+    state::SearchState{P,H}, datasets::Vector{D}, ropt::RuntimeOptions, options::Options
+) where {T,L,D<:Dataset{T,L},P,H}
+    ropt.verbosity > 0 && @info "Started!"
+    nout = length(datasets)
     start_time = time()
-    if progress
+    if ropt.progress
         #TODO: need to iterate this on the max cycles remaining!
-        sum_cycle_remaining = sum(cycles_remaining)
+        sum_cycle_remaining = sum(state.cycles_remaining)
         progress_bar = WrappedProgressBar(
             1:sum_cycle_remaining; width=options.terminal_width
         )
     end
-
     last_print_time = time()
     last_speed_recording_time = time()
-    num_evals_last = sum(sum, num_evals)
-    num_evals_since_last = sum(sum, num_evals) - num_evals_last
+    num_evals_last = sum(sum, state.num_evals)
+    num_evals_since_last = sum(sum, state.num_evals) - num_evals_last  # i.e., start at 0
     print_every_n_seconds = 5
     equation_speed = Float32[]
 
-    if PARALLELISM in (:multiprocessing, :multithreading)
+    if ropt.parallelism in (:multiprocessing, :multithreading)
         for j in 1:nout, i in 1:(options.populations)
             # Start listening for each population to finish:
-            t = @async put!(channels[j][i], fetch(worker_output[j][i]))
-            push!(tasks[j], t)
+            t = @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
+            push!(state.tasks[j], t)
         end
     end
-
-    # Randomly order which order to check populations:
-    # This is done so that we do work on all nout equally.
-    all_idx = [(j, i) for j in 1:nout for i in 1:(options.populations)]
-    shuffle!(all_idx)
     kappa = 0
     resource_monitor = ResourceMonitor(;
         absolute_start_time=time(),
@@ -848,62 +911,58 @@ end
         # help get accurate resource estimates:
         num_intervals_to_store=options.populations * 100 * nout,
     )
-    while sum(cycles_remaining) > 0
+    while sum(state.cycles_remaining) > 0
         kappa += 1
         if kappa > options.populations * nout
             kappa = 1
         end
         # nout, populations:
-        j, i = all_idx[kappa]
+        j, i = state.task_order[kappa]
 
         # Check if error on population:
-        if PARALLELISM in (:multiprocessing, :multithreading)
-            if istaskfailed(tasks[j][i])
-                fetch(tasks[j][i])
+        if ropt.parallelism in (:multiprocessing, :multithreading)
+            if istaskfailed(state.tasks[j][i])
+                fetch(state.tasks[j][i])
                 error("Task failed for population")
             end
         end
         # Non-blocking check if a population is ready:
-        population_ready = if PARALLELISM in (:multiprocessing, :multithreading)
+        population_ready = if ropt.parallelism in (:multiprocessing, :multithreading)
             # TODO: Implement type assertions based on parallelism.
-            isready(channels[j][i])
+            isready(state.channels[j][i])
         else
             true
         end
         # Don't start more if this output has finished its cycles:
         # TODO - this might skip extra cycles?
-        population_ready &= (cycles_remaining[j] > 0)
+        population_ready &= (state.cycles_remaining[j] > 0)
         if population_ready
             start_work_monitor!(resource_monitor)
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record, cur_num_evals) =
-                if PARALLELISM in (:multiprocessing, :multithreading)
-                    take!(channels[j][i])::DefaultWorkerOutputType{PopType,HallOfFameType}
+                if ropt.parallelism in (:multiprocessing, :multithreading)
+                    take!(state.channels[j][i])::DefaultWorkerOutputType{P,H}
                 else
-                    worker_output[j][i]
+                    state.worker_output[j][i]::DefaultWorkerOutputType{P,H}
                 end
-            cur_pop::PopType
-            best_seen::HallOfFameType
-            cur_record::RecordType
-            cur_num_evals::Float64
-            returnPops[j][i] = copy(cur_pop)
-            bestSubPops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
-            @recorder record = recursive_merge(record, cur_record)
-            num_evals[j][i] += cur_num_evals
+            state.last_pops[j][i] = copy(cur_pop)
+            state.best_sub_pops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
+            @recorder ropt.record[] = recursive_merge(ropt.record[], cur_record)
+            state.num_evals[j][i] += cur_num_evals
             dataset = datasets[j]
-            curmaxsize = curmaxsizes[j]
+            cur_maxsize = state.cur_maxsizes[j]
 
             for member in cur_pop.members
                 size = compute_complexity(member, options)
-                update_frequencies!(all_running_search_statistics[j]; size)
+                update_frequencies!(state.all_running_search_statistics[j]; size)
             end
             #! format: off
-            update_hall_of_fame!(hallOfFame[j], cur_pop.members, options)
-            update_hall_of_fame!(hallOfFame[j], best_seen.members[best_seen.exists], options)
+            update_hall_of_fame!(state.halls_of_fame[j], cur_pop.members, options)
+            update_hall_of_fame!(state.halls_of_fame[j], best_seen.members[best_seen.exists], options)
             #! format: on
 
             # Dominating pareto curve - must be better than all simpler equations
-            dominating = calculate_pareto_frontier(hallOfFame[j])
+            dominating = calculate_pareto_frontier(state.halls_of_fame[j])
 
             if options.save_to_file
                 output_file = options.output_file
@@ -928,7 +987,7 @@ end
             # Migration #######################################################
             if options.migration
                 best_of_each = Population([
-                    member for pop in bestSubPops[j] for member in pop.members
+                    member for pop in state.best_sub_pops[j] for member in pop.members
                 ])
                 migrate!(
                     best_of_each.members => cur_pop, options; frac=options.fraction_replaced
@@ -939,23 +998,27 @@ end
             end
             ###################################################################
 
-            cycles_remaining[j] -= 1
-            if cycles_remaining[j] == 0
+            state.cycles_remaining[j] -= 1
+            if state.cycles_remaining[j] == 0
                 break
             end
             worker_idx = assign_next_worker!(
-                worker_assignment; out=j, pop=i, parallelism=PARALLELISM, procs
+                state.worker_assignment;
+                out=j,
+                pop=i,
+                parallelism=ropt.parallelism,
+                state.procs,
             )
             iteration = if options.use_recorder
                 key = "out$(j)_pop$(i)"
-                find_iteration_from_record(key, record) + 1
+                find_iteration_from_record(key, ropt.record[]) + 1
             else
                 0
             end
 
-            c_rss = deepcopy(all_running_search_statistics[j])
-            in_pop = copy(cur_pop::PopType)
-            worker_output[j][i] = @sr_spawner(
+            c_rss = deepcopy(state.all_running_search_statistics[j])
+            in_pop = copy(cur_pop::P)
+            state.worker_output[j][i] = @sr_spawner(
                 begin
                     _dispatch_s_r_cycle(
                         in_pop,
@@ -964,33 +1027,35 @@ end
                         pop=i,
                         out=j,
                         iteration,
-                        verbosity,
-                        curmaxsize,
+                        ropt.verbosity,
+                        cur_maxsize,
                         running_search_statistics=c_rss,
                     )
                 end,
-                parallelism = PARALLELISM,
+                parallelism = ropt.parallelism,
                 worker_idx = worker_idx
             )
-            if PARALLELISM in (:multiprocessing, :multithreading)
-                tasks[j][i] = @async put!(channels[j][i], fetch(worker_output[j][i]))
+            if ropt.parallelism in (:multiprocessing, :multithreading)
+                state.tasks[j][i] = @async put!(
+                    state.channels[j][i], fetch(state.worker_output[j][i])
+                )
             end
 
-            curmaxsizes[j] = get_cur_maxsize(;
-                options, total_cycles, cycles_remaining=cycles_remaining[j]
+            state.cur_maxsizes[j] = get_cur_maxsize(;
+                options, ropt.total_cycles, cycles_remaining=state.cycles_remaining[j]
             )
             stop_work_monitor!(resource_monitor)
-            move_window!(all_running_search_statistics[j])
-            if progress
+            move_window!(state.all_running_search_statistics[j])
+            if ropt.progress
                 head_node_occupation = estimate_work_fraction(resource_monitor)
                 update_progress_bar!(
                     progress_bar,
-                    only(hallOfFame),
+                    only(state.halls_of_fame),
                     only(datasets),
                     options,
                     equation_speed,
                     head_node_occupation,
-                    PARALLELISM,
+                    ropt.parallelism,
                 )
             end
         end
@@ -1000,7 +1065,7 @@ end
         ## Search statistics
         elapsed_since_speed_recording = time() - last_speed_recording_time
         if elapsed_since_speed_recording > 1.0
-            num_evals_since_last, num_evals_last = let s = sum(sum, num_evals)
+            num_evals_since_last, num_evals_last = let s = sum(sum, state.num_evals)
                 s - num_evals_last, s
             end
             current_speed = num_evals_since_last / elapsed_since_speed_recording
@@ -1018,19 +1083,19 @@ end
         elapsed = time() - last_print_time
         # Update if time has passed
         if elapsed > print_every_n_seconds
-            if verbosity > 0 && !progress && length(equation_speed) > 0
+            if ropt.verbosity > 0 && !ropt.progress && length(equation_speed) > 0
 
                 # Dominating pareto curve - must be better than all simpler equations
                 head_node_occupation = estimate_work_fraction(resource_monitor)
                 print_search_state(
-                    hallOfFame,
+                    state.halls_of_fame,
                     datasets;
                     options,
                     equation_speed,
-                    total_cycles,
-                    cycles_remaining,
+                    state.total_cycles,
+                    state.cycles_remaining,
                     head_node_occupation,
-                    parallelism=PARALLELISM,
+                    parallelism=state.parallelism,
                     width=options.terminal_width,
                 )
             end
@@ -1041,37 +1106,37 @@ end
         ################################################################
         ## Early stopping code
         if any((
-            check_for_loss_threshold(hallOfFame, options),
-            check_for_user_quit(stdin_reader),
+            check_for_loss_threshold(state.halls_of_fame, options),
+            check_for_user_quit(state.stdin_reader),
             check_for_timeout(start_time, options),
-            check_max_evals(num_evals, options),
+            check_max_evals(state.num_evals, options),
         ))
             break
         end
         ################################################################
     end
-
-    close_reader!(stdin_reader)
-
+    return nothing
+end
+function _tear_down!(state::SearchState, ropt::RuntimeOptions, options::Options)
+    close_reader!(state.stdin_reader)
     # Safely close all processes or threads
-    if PARALLELISM == :multiprocessing
-        we_created_procs && rmprocs(procs)
-    elseif PARALLELISM == :multithreading
-        for j in 1:nout, i in 1:(options.populations)
-            wait(worker_output[j][i])
+    if ropt.parallelism == :multiprocessing
+        state.we_created_procs && rmprocs(state.procs)
+    elseif ropt.parallelism == :multithreading
+        nout = length(state.worker_output)
+        for j in 1:nout, i in eachindex(state.worker_output[j])
+            wait(state.worker_output[j][i])
         end
     end
-
-    ##########################################################################
-    ### Distributed code^
-    ##########################################################################
-
-    @recorder json3_write(record, options.recorder_file)
-
-    if RETURN_STATE
-        return (returnPops, (DIM_OUT == 1 ? only(hallOfFame) : hallOfFame))
+    @recorder json3_write(state.record[], options.recorder_file)
+    return nothing
+end
+function _format_output(state::SearchState, ropt::RuntimeOptions)
+    out_hof = (ropt.dim_out == 1 ? only(state.halls_of_fame) : state.halls_of_fame)
+    if ropt.return_state
+        return (state.last_pops, out_hof)
     else
-        return (DIM_OUT == 1 ? only(hallOfFame) : hallOfFame)
+        return out_hof
     end
 end
 
@@ -1083,7 +1148,7 @@ end
     out::Int,
     iteration::Int,
     verbosity,
-    curmaxsize::Int,
+    cur_maxsize::Int,
     running_search_statistics,
 ) where {T,L,P}
     record = RecordType()
@@ -1096,7 +1161,7 @@ end
         dataset,
         in_pop,
         options.ncycles_per_iteration,
-        curmaxsize,
+        cur_maxsize,
         running_search_statistics;
         verbosity=verbosity,
         options=options,
@@ -1104,7 +1169,7 @@ end
     )
     num_evals += evals_from_cycle
     out_pop, evals_from_optimize = optimize_and_simplify_population(
-        dataset, out_pop, options, curmaxsize, record
+        dataset, out_pop, options, cur_maxsize, record
     )
     num_evals += evals_from_optimize
     if options.batching
