@@ -1,7 +1,8 @@
 module OptionsStructModule
 
 using Optim: Optim
-using DynamicExpressions: AbstractOperatorEnum, AbstractExpressionNode, OperatorEnum
+using DynamicExpressions:
+    AbstractOperatorEnum, AbstractExpressionNode, OperatorEnum, GenericOperatorEnum
 using LossFunctions: SupervisedLoss
 
 import ..MutationWeightsModule: MutationWeights
@@ -38,8 +39,13 @@ function ComplexityMapping(;
     )
 end
 
-struct Options{CT,N<:AbstractExpressionNode,_turbo,_bumper,W}
-    operators::AbstractOperatorEnum
+# Controls level of specialization we compile
+operator_specialization(::Type{<:AbstractOperatorEnum}) = AbstractOperatorEnum
+operator_specialization(::Type{<:OperatorEnum}) = OperatorEnum
+operator_specialization(::Type{<:GenericOperatorEnum}) = GenericOperatorEnum
+
+struct Options{CT,OP<:AbstractOperatorEnum,N<:AbstractExpressionNode,_turbo,_bumper,W}
+    operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
     complexity_mapping::ComplexityMapping{CT}

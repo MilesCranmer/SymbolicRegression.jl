@@ -26,7 +26,7 @@ using ..OperatorsModule:
     atanh_clip
 using ..MutationWeightsModule: MutationWeights, mutations
 import ..OptionsStructModule: Options
-using ..OptionsStructModule: ComplexityMapping
+using ..OptionsStructModule: ComplexityMapping, operator_specialization
 using ..UtilsModule: max_ops, @save_kwargs
 
 """
@@ -758,6 +758,7 @@ function Options end
 
     options = Options{
         eltype(complexity_mapping),
+        operator_specialization(typeof(operators)),
         node_type,
         turbo,
         bumper,

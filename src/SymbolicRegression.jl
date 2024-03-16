@@ -1093,7 +1093,7 @@ function _format_output(state::SearchState, ropt::RuntimeOptions)
 end
 
 @noinline function _dispatch_s_r_cycle(
-    in_pop::Population{T,L,P},
+    in_pop::Population{T,L,N},
     dataset::Dataset,
     @nospecialize(options::Options);
     pop::Int,
@@ -1102,7 +1102,7 @@ end
     verbosity,
     cur_maxsize::Int,
     running_search_statistics,
-) where {T,L,P}
+) where {T,L,N}
     record = RecordType()
     @recorder record["out$(out)_pop$(pop)"] = RecordType(
         "iteration$(iteration)" => record_population(in_pop, options)

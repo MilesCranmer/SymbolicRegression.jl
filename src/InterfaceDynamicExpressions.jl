@@ -58,7 +58,12 @@ function eval_tree_array(
 )
     return eval_tree_array(
         tree, X, options.operators; turbo=options.turbo, bumper=options.bumper, kws...
-    )
+    )::Tuple{expected_array_type(tree, X, options.operators),Bool}
+end
+
+# Improve type inference by telling Julia the expected array returned
+function expected_array_type(::AbstractExpressionNode, X::AbstractArray, ::OperatorEnum)
+    return typeof(similar(X, axes(X, 2)))
 end
 
 """
