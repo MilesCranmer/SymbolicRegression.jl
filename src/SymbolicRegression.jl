@@ -481,8 +481,7 @@ function equation_search(
         )
 
     _return_state = if return_state isa Val
-        get_val(::Val{x}) where {x} = x
-        get_val(return_state)
+        first(typeof(return_state).parameters)
     else
         if options.return_state === nothing
             return_state === nothing ? false : return_state
