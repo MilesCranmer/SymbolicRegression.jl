@@ -762,6 +762,7 @@ function Options end
         node_type,
         turbo,
         bumper,
+        deprecated_return_state,
         typeof(tournament_selection_weights),
     }(
         operators,
@@ -818,7 +819,7 @@ function Options end
         recorder_file,
         tournament_selection_p,
         early_stop_condition,
-        deprecated_return_state,
+        Val(deprecated_return_state),
         timeout_in_seconds,
         max_evals,
         skip_mutation_failures,

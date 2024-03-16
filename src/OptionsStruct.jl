@@ -42,7 +42,9 @@ end
 # Controls level of specialization we compile
 operator_specialization(::Type{<:OperatorEnum}) = OperatorEnum
 
-struct Options{CT,OP<:AbstractOperatorEnum,N<:AbstractExpressionNode,_turbo,_bumper,W}
+struct Options{
+    CT,OP<:AbstractOperatorEnum,N<:AbstractExpressionNode,_turbo,_bumper,_return_state,W
+}
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
@@ -97,7 +99,7 @@ struct Options{CT,OP<:AbstractOperatorEnum,N<:AbstractExpressionNode,_turbo,_bum
     recorder_file::String
     prob_pick_first::Float32
     early_stop_condition::Union{Function,Nothing}
-    return_state::Union{Bool,Nothing}
+    return_state::Val{_return_state}
     timeout_in_seconds::Union{Float64,Nothing}
     max_evals::Union{Int,Nothing}
     skip_mutation_failures::Bool

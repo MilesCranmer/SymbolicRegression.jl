@@ -483,14 +483,14 @@ function equation_search(
     _return_state = if return_state isa Val
         first(typeof(return_state).parameters)
     else
-        if options.return_state === nothing
+        if options.return_state === Val(nothing)
             return_state === nothing ? false : return_state
         else
             @assert(
                 return_state === nothing,
                 "You cannot set `return_state` in both the `Options` and in the passed arguments."
             )
-            options.return_state
+            first(typeof(options.return_state).parameters)
         end
     end
 
