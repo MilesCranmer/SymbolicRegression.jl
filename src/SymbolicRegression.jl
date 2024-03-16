@@ -1091,10 +1091,10 @@ function _format_output(state::SearchState, ropt::RuntimeOptions)
     end
 end
 
-@noinline function _dispatch_s_r_cycle(
+function _dispatch_s_r_cycle(
     in_pop::Population{T,L,N},
     dataset::Dataset,
-    @nospecialize(options::Options);
+    options::Options;
     pop::Int,
     out::Int,
     iteration::Int,
