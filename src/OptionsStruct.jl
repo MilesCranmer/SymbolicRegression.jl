@@ -40,9 +40,7 @@ function ComplexityMapping(;
 end
 
 # Controls level of specialization we compile
-operator_specialization(::Type{<:AbstractOperatorEnum}) = AbstractOperatorEnum
 operator_specialization(::Type{<:OperatorEnum}) = OperatorEnum
-operator_specialization(::Type{<:GenericOperatorEnum}) = GenericOperatorEnum
 
 struct Options{CT,OP<:AbstractOperatorEnum,N<:AbstractExpressionNode,_turbo,_bumper,W}
     operators::OP
