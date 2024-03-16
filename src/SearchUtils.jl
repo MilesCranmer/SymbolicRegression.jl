@@ -440,8 +440,8 @@ function construct_datasets(
     return [
         Dataset(
             X,
-            y[j, :],
-            L;
+            y[j, :];
+            loss_type=L,
             weights=(weights === nothing ? weights : weights[j, :]),
             variable_names=variable_names,
             display_variable_names=display_variable_names,

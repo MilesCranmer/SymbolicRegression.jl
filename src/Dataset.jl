@@ -97,8 +97,8 @@ Construct a dataset to pass between internal functions.
 """
 function Dataset(
     X::AbstractMatrix{T},
-    y::Union{AbstractVector{T},Nothing}=nothing,
-    loss_type::Type{L}=Nothing;
+    y::Union{AbstractVector{T},Nothing}=nothing;
+    loss_type::Type{L}=Nothing,
     weights::Union{AbstractVector{T},Nothing}=nothing,
     variable_names::Union{Array{String,1},Nothing}=nothing,
     display_variable_names=variable_names,
@@ -114,24 +114,6 @@ function Dataset(
     y !== nothing && Base.require_one_based_indexing(y)
     # Deprecation warning:
     variable_names = deprecate_varmap(variable_names, varMap, :Dataset)
-    if haskey(kws, :loss_type)
-        Base.depwarn(
-            "The `loss_type` keyword argument is deprecated. Pass as an argument instead.",
-            :Dataset,
-        )
-        return Dataset(
-            X,
-            y,
-            kws[:loss_type];
-            weights,
-            variable_names,
-            display_variable_names,
-            y_variable_name,
-            extra,
-            X_units,
-            y_units,
-        )
-    end
 
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
