@@ -301,10 +301,17 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     pass a custom objective, this will be set to `false`.
 - `should_optimize_constants`: Whether to use an optimization algorithm
     to periodically optimize constants in equations.
-- `optimizer_nrestarts`: How many different random starting positions to consider
-    for optimization of constants.
 - `optimizer_algorithm`: Select algorithm to use for optimizing constants. Default
     is `Optim.BFGS(linesearch=LineSearches.BackTracking())`.
+- `optimizer_nrestarts`: How many different random starting positions to consider
+    for optimization of constants.
+- `optimizer_probability`: Probability of performing optimization of constants at
+    the end of a given iteration.
+- `optimizer_iterations`: How many optimization iterations to perform. This gets
+   passed to `Optim.Options` as `iterations`. The default is 8.
+- `optimizer_f_calls_limit`: How many function calls to allow during optimization.
+    This gets passed to `Optim.Options` as `f_calls_limit`. The default is
+    `optimizer_iterations * 30`.
 - `optimizer_options`: General options for the constant optimization. For details
     we refer to the documentation on `Optim.Options` from the `Optim.jl` package.
     Options can be provided here as `NamedTuple`, e.g. `(iterations=16,)`, as a
