@@ -421,6 +421,7 @@ function Options end
     optimizer_nrestarts::Integer=2,
     optimizer_probability::Real=0.14,
     optimizer_iterations::Union{Nothing,Integer}=nothing,
+    optimizer_f_calls_limit::Union{Nothing,Integer}=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
     use_recorder::Bool=false,
     recorder_file::AbstractString="pysr_recorder.json",
@@ -720,24 +721,22 @@ function Options end
     end
 
     # Parse optimizer options
-    default_optimizer_iterations = 8
     if !isa(optimizer_options, Optim.Options)
-        if isnothing(optimizer_iterations)
-            optimizer_iterations = default_optimizer_iterations
+        optimizer_iterations = isnothing(optimizer_iterations) ? 8 : optimizer_iterations
+        optimizer_f_calls_limit = if isnothing(optimizer_f_calls_limit)
+            (optimizer_iterations * 30)
+        else
+            optimizer_f_calls_limit
         end
         extra_kws = hasfield(Optim.Options, :show_warnings) ? (; show_warnings=false) : ()
-        if isnothing(optimizer_options)
-            optimizer_options = Optim.Options(;
-                iterations=optimizer_iterations, extra_kws...
-            )
-        else
-            if haskey(optimizer_options, :iterations)
-                optimizer_iterations = optimizer_options[:iterations]
-            end
-            optimizer_options = Optim.Options(;
-                optimizer_options..., iterations=optimizer_iterations, extra_kws...
-            )
-        end
+        optimizer_options = Optim.Options(;
+            iterations=optimizer_iterations,
+            f_calls_limit=optimizer_f_calls_limit,
+            extra_kws...,
+            (isnothing(optimizer_options) ? () : optimizer_options)...,
+        )
+    else
+        @assert optimizer_iterations === nothing && optimizer_f_calls_limit === nothing
     end
     if hasfield(Optim.Options, :show_warnings) && optimizer_options.show_warnings
         @warn "Optimizer warnings are turned on. This might result in a lot of warnings being printed from NaNs, as these are common during symbolic regression"
