@@ -5,13 +5,14 @@ using DynamicExpressions:
     AbstractOperatorEnum, AbstractExpressionNode, OperatorEnum, GenericOperatorEnum
 using LossFunctions: SupervisedLoss
 
-import ..MutationWeightsModule: MutationWeights
+using ..MutationWeightsModule: MutationWeights
+using ..UtilsModule: @readonly, ReadOnlyVector
 
 """This struct defines how complexity is calculated."""
 struct ComplexityMapping{T<:Real}
     use::Bool  # Whether we use custom complexity, or just use 1 for everythign.
-    binop_complexities::Vector{T}  # Complexity of each binary operator.
-    unaop_complexities::Vector{T}  # Complexity of each unary operator.
+    binop_complexities::ReadOnlyVector{T}  # Complexity of each binary operator.
+    unaop_complexities::ReadOnlyVector{T}  # Complexity of each unary operator.
     variable_complexity::T  # Complexity of using a variable.
     constant_complexity::T  # Complexity of using a constant.
 end
@@ -19,7 +20,9 @@ end
 Base.eltype(::ComplexityMapping{T}) where {T} = T
 
 function ComplexityMapping(use::Bool)
-    return ComplexityMapping{Int}(use, zeros(Int, 0), zeros(Int, 0), 1, 1)
+    return ComplexityMapping{Int}(
+        use, @readonly(zeros(Int, 0)), @readonly(zeros(Int, 0)), 1, 1
+    )
 end
 
 """Promote type when defining complexity mapping."""
@@ -32,8 +35,8 @@ function ComplexityMapping(;
     promoted_T = promote_type(T1, T2, T3, T4)
     return ComplexityMapping{promoted_T}(
         true,
-        binop_complexities,
-        unaop_complexities,
+        @readonly(binop_complexities),
+        @readonly(unaop_complexities),
         variable_complexity,
         constant_complexity,
     )

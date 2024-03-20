@@ -158,7 +158,10 @@ Convert an equation to a string.
     if raw
         tree = tree isa GraphNode ? convert(Node, tree) : tree
         return string_tree(
-            tree, options.operators; f_variable=string_variable_raw, variable_names
+            tree,
+            options.operators;
+            f_variable=string_variable_raw,
+            variable_names=variable_names,
         )
     end
 

@@ -9,7 +9,14 @@ using DynamicQuantities:
     sym_uparse,
     DEFAULT_DIM_BASE_TYPE
 
-using ..UtilsModule: subscriptify, get_base_type, @constcompat
+using ..UtilsModule:
+    subscriptify,
+    get_base_type,
+    @constcompat,
+    @readonly,
+    ReadOnlyAbstractVector,
+    ReadOnlyAbstractMatrix,
+    ReadOnlyVector
 using ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 using ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
 
@@ -53,13 +60,13 @@ import ...deprecate_varmap
 @constcompat mutable struct Dataset{
     T<:DATA_TYPE,
     L<:LOSS_TYPE,
-    AX<:AbstractMatrix{T},
-    AY<:Union{AbstractVector{T},Nothing},
-    AW<:Union{AbstractVector{T},Nothing},
+    AX<:ReadOnlyAbstractMatrix{T},
+    AY<:Union{ReadOnlyAbstractVector{T},Nothing},
+    AW<:Union{ReadOnlyAbstractVector{T},Nothing},
     NT<:NamedTuple,
-    XU<:Union{AbstractVector{<:Quantity},Nothing},
+    XU<:Union{ReadOnlyAbstractVector{<:Quantity},Nothing},
     YU<:Union{Quantity,Nothing},
-    XUS<:Union{AbstractVector{<:Quantity},Nothing},
+    XUS<:Union{ReadOnlyAbstractVector{<:Quantity},Nothing},
     YUS<:Union{Quantity,Nothing},
 }
     const X::AX
@@ -72,8 +79,8 @@ import ...deprecate_varmap
     const avg_y::Union{T,Nothing}
     use_baseline::Bool
     baseline_loss::L
-    const variable_names::Array{String,1}
-    const display_variable_names::Array{String,1}
+    const variable_names::ReadOnlyVector{String}
+    const display_variable_names::ReadOnlyVector{String}
     const y_variable_name::String
     const X_units::XU
     const y_units::YU
@@ -133,15 +140,19 @@ function Dataset(
         )
     end
 
+    X = @readonly X
+    y = @readonly y
+    weights = @readonly weights
+
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
     weighted = weights !== nothing
-    variable_names = if variable_names === nothing
+    variable_names = @readonly if variable_names === nothing
         ["x$(i)" for i in 1:nfeatures]
     else
         variable_names
     end
-    display_variable_names = if display_variable_names === nothing
+    display_variable_names = @readonly if display_variable_names === nothing
         ["x$(subscriptify(i))" for i in 1:nfeatures]
     else
         display_variable_names
@@ -175,14 +186,14 @@ function Dataset(
     # TODO: Refactor
     # This basically just ensures that if the `y` units are set,
     # then the `X` units are set as well.
-    X_si_units = let (_X = get_si_units(T, X_units))
+    X_si_units = @readonly let (_X = get_si_units(T, X_units))
         if _X === nothing && y_si_units !== nothing
             get_si_units(T, [one(T) for _ in 1:nfeatures])
         else
             _X
         end
     end
-    X_sym_units = let _X = get_sym_units(T, X_units)
+    X_sym_units = @readonly let _X = get_sym_units(T, X_units)
         if _X === nothing && y_sym_units !== nothing
             get_sym_units(T, [one(T) for _ in 1:nfeatures])
         else

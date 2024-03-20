@@ -614,7 +614,7 @@ function _validate_options(
         update_baseline_loss!(dataset, options)
     end
     if options.define_helper_functions
-        set_default_variable_names!(first(datasets).variable_names)
+        set_default_variable_names!(first(datasets).variable_names.parent)
     end
     if options.seed !== nothing
         seed!(options.seed)

@@ -3,6 +3,12 @@ module UtilsModule
 
 using Printf: @printf
 using MacroTools: splitdef, combinedef
+using ReadOnlyArrays: ReadOnlyArray
+
+const ReadOnlyAbstractVector{T,A} = ReadOnlyArray{T,1,A}
+const ReadOnlyAbstractMatrix{T,A} = ReadOnlyArray{T,2,A}
+const ReadOnlyVector{T} = ReadOnlyArray{T,1,Vector{T}}
+const ReadOnlyMatrix{T} = ReadOnlyArray{T,2,Matrix{T}}
 
 const pseudo_time = Ref(0)
 
@@ -224,5 +230,12 @@ function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
 end
 
 json3_write(args...) = error("Please load the JSON3.jl package.")
+
+macro readonly(expr)
+    return esc(:($(_readonly)($expr)))
+end
+_readonly(::Type{A}) where {T,N,A<:AbstractArray{T,N}} = ReadOnlyArray{T,N,A}
+_readonly(ar::AbstractArray) = ReadOnlyArray(ar)
+_readonly(x) = x
 
 end
