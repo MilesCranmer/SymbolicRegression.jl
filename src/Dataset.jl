@@ -12,7 +12,7 @@ using DynamicQuantities:
 using ..UtilsModule:
     subscriptify,
     get_base_type,
-    @constcompat,
+    @constfield,
     readonly,
     ReadOnlyAbstractVector,
     ReadOnlyAbstractMatrix,
@@ -57,7 +57,7 @@ import ...deprecate_varmap
 - `y_sym_units`: Unit information of `y`. When used, this is a single
     `DynamicQuantities.Quantity{<:Any,<:SymbolicDimensions}`.
 """
-@constcompat mutable struct Dataset{
+mutable struct Dataset{
     T<:DATA_TYPE,
     L<:LOSS_TYPE,
     AX<:ReadOnlyAbstractMatrix{T},
@@ -69,23 +69,23 @@ import ...deprecate_varmap
     XUS<:Union{ReadOnlyAbstractVector{<:Quantity},Nothing},
     YUS<:Union{Quantity,Nothing},
 }
-    const X::AX
-    const y::AY
-    const n::Int
-    const nfeatures::Int
-    const weighted::Bool
-    const weights::AW
-    const extra::NT
-    const avg_y::Union{T,Nothing}
+    @constfield X::AX
+    @constfield y::AY
+    @constfield n::Int
+    @constfield nfeatures::Int
+    @constfield weighted::Bool
+    @constfield weights::AW
+    @constfield extra::NT
+    @constfield avg_y::Union{T,Nothing}
     use_baseline::Bool
     baseline_loss::L
-    const variable_names::ReadOnlyVector{String}
-    const display_variable_names::ReadOnlyVector{String}
-    const y_variable_name::String
-    const X_units::XU
-    const y_units::YU
-    const X_sym_units::XUS
-    const y_sym_units::YUS
+    @constfield variable_names::ReadOnlyVector{String}
+    @constfield display_variable_names::ReadOnlyVector{String}
+    @constfield y_variable_name::String
+    @constfield X_units::XU
+    @constfield y_units::YU
+    @constfield X_sym_units::XUS
+    @constfield y_sym_units::YUS
 end
 
 """
