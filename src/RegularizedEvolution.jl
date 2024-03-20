@@ -13,13 +13,13 @@ using ..UtilsModule: argmin_fast
 # with the fittest of a small subsample
 function reg_evol_cycle(
     dataset::Dataset{T,L},
-    pop::Population{T,L},
+    pop::P,
     temperature,
     curmaxsize::Int,
     running_search_statistics::RunningSearchStatistics,
     options::Options,
     record::RecordType,
-)::Tuple{Population{T,L},Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+)::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:Population{T,L}}
     # Batch over each subsample. Can give 15% improvement in speed; probably moreso for large pops.
     # but is ultimately a different algorithm than regularized evolution, and might not be
     # as good.
