@@ -1,8 +1,9 @@
 module MLJInterfaceModule
 
 using Optim: Optim
+using LineSearches: LineSearches
 using MLJModelInterface: MLJModelInterface as MMI
-using DynamicExpressions: eval_tree_array, string_tree, Node
+using DynamicExpressions: eval_tree_array, string_tree, AbstractExpressionNode, Node
 using DynamicQuantities:
     QuantityArray,
     UnionAbstractQuantity,
@@ -30,20 +31,19 @@ abstract type AbstractSRRegressor <: MMI.Deterministic end
 
 """Generate an `SRRegressor` struct containing all the fields in `Options`."""
 function modelexpr(model_name::Symbol)
-    struct_def =
-        :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L,use_recorder} <:
-                                     AbstractSRRegressor
-            niterations::Int = 10
-            parallelism::Symbol = :multithreading
-            numprocs::Union{Int,Nothing} = nothing
-            procs::Union{Vector{Int},Nothing} = nothing
-            addprocs_function::Union{Function,Nothing} = nothing
-            heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
-            runtests::Bool = true
-            loss_type::L = Nothing
-            selection_method::Function = choose_best
-            dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
-        end)
+    struct_def = :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L} <:
+                                 AbstractSRRegressor
+        niterations::Int = 10
+        parallelism::Symbol = :multithreading
+        numprocs::Union{Int,Nothing} = nothing
+        procs::Union{Vector{Int},Nothing} = nothing
+        addprocs_function::Union{Function,Nothing} = nothing
+        heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
+        runtests::Bool = true
+        loss_type::L = Nothing
+        selection_method::Function = choose_best
+        dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
+    end)
     # TODO: store `procs` from initial run if parallelism is `:multiprocessing`
     fields = last(last(struct_def.args).args).args
 

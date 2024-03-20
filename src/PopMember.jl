@@ -1,14 +1,14 @@
 module PopMemberModule
 
-using DynamicExpressions: Node, copy_node, count_nodes
+using DynamicExpressions: AbstractExpressionNode, copy_node, count_nodes
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: score_func
 
 # Define a member of population by equation, score, and age
-mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE}
-    tree::Node{T}
+mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}}
+    tree::N
     score::L  # Inludes complexity penalty, normalization
     loss::L  # Raw loss
     birth::Int
@@ -35,7 +35,7 @@ end
 generate_reference() = abs(rand(Int))
 
 """
-    PopMember(t::Node{T}, score::L, loss::L)
+    PopMember(t::AbstractExpressionNode{T}, score::L, loss::L)
 
 Create a population member with a birth date at the current time.
 The type of the `Node` may be different from the type of the score
@@ -43,12 +43,12 @@ and loss.
 
 # Arguments
 
-- `t::Node{T}`: The tree for the population member.
+- `t::AbstractExpressionNode{T}`: The tree for the population member.
 - `score::L`: The score (normalized to a baseline, and offset by a complexity penalty)
 - `loss::L`: The raw loss to assign.
 """
 function PopMember(
-    t::Node{T},
+    t::AbstractExpressionNode{T},
     score::L,
     loss::L,
     options::Options,
@@ -61,7 +61,7 @@ function PopMember(
         ref = generate_reference()
     end
     complexity = complexity === nothing ? -1 : complexity
-    return PopMember{T,L}(
+    return PopMember{T,L,typeof(t)}(
         t,
         score,
         loss,
@@ -74,7 +74,7 @@ end
 
 """
     PopMember(dataset::Dataset{T,L},
-              t::Node{T}, options::Options)
+              t::AbstractExpressionNode{T}, options::Options)
 
 Create a population member with a birth date at the current time.
 Automatically compute the score for this tree.
@@ -82,12 +82,12 @@ Automatically compute the score for this tree.
 # Arguments
 
 - `dataset::Dataset{T,L}`: The dataset to evaluate the tree on.
-- `t::Node{T}`: The tree for the population member.
+- `t::AbstractExpressionNode{T}`: The tree for the population member.
 - `options::Options`: What options to use.
 """
 function PopMember(
     dataset::Dataset{T,L},
-    t::Node{T},
+    t::AbstractExpressionNode{T},
     options::Options,
     complexity::Union{Int,Nothing}=nothing;
     ref::Int=-1,
@@ -109,7 +109,7 @@ function PopMember(
     )
 end
 
-function Base.copy(p::PopMember{T,L})::PopMember{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+function Base.copy(p::P) where {P<:PopMember}
     tree = copy(p.tree)
     score = copy(p.score)
     loss = copy(p.loss)
@@ -117,7 +117,7 @@ function Base.copy(p::PopMember{T,L})::PopMember{T,L} where {T<:DATA_TYPE,L<:LOS
     complexity = copy(getfield(p, :complexity))
     ref = copy(p.ref)
     parent = copy(p.parent)
-    return PopMember{T,L}(tree, score, loss, birth, complexity, ref, parent)
+    return P(tree, score, loss, birth, complexity, ref, parent)
 end
 
 function reset_birth!(p::PopMember; deterministic::Bool)
@@ -126,14 +126,18 @@ function reset_birth!(p::PopMember; deterministic::Bool)
 end
 
 # Can read off complexity directly from pop members
-function compute_complexity(member::PopMember, options::Options)::Int
+function compute_complexity(
+    member::PopMember, options::Options; break_sharing=Val(false)
+)::Int
     complexity = getfield(member, :complexity)
-    complexity == -1 && return recompute_complexity!(member, options)
+    complexity == -1 && return recompute_complexity!(member, options; break_sharing)
     # TODO: Turn this into a warning, and then return normal compute_complexity instead.
     return complexity
 end
-function recompute_complexity!(member::PopMember, options::Options)::Int
-    complexity = compute_complexity(member.tree, options)
+function recompute_complexity!(
+    member::PopMember, options::Options; break_sharing=Val(false)
+)::Int
+    complexity = compute_complexity(member.tree, options; break_sharing)
     setfield!(member, :complexity, complexity)
     return complexity
 end

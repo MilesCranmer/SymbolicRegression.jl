@@ -9,7 +9,7 @@ using DynamicQuantities:
     sym_uparse,
     DEFAULT_DIM_BASE_TYPE
 
-using ..UtilsModule: subscriptify, get_base_type
+using ..UtilsModule: subscriptify, get_base_type, @constfield
 using ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 using ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
 
@@ -62,32 +62,33 @@ mutable struct Dataset{
     XUS<:Union{AbstractVector{<:Quantity},Nothing},
     YUS<:Union{Quantity,Nothing},
 }
-    X::AX
-    y::AY
-    n::Int
-    nfeatures::Int
-    weighted::Bool
-    weights::AW
-    extra::NT
-    avg_y::Union{T,Nothing}
+    @constfield X::AX
+    @constfield y::AY
+    @constfield n::Int
+    @constfield nfeatures::Int
+    @constfield weighted::Bool
+    @constfield weights::AW
+    @constfield extra::NT
+    @constfield avg_y::Union{T,Nothing}
     use_baseline::Bool
     baseline_loss::L
-    variable_names::Array{String,1}
-    display_variable_names::Array{String,1}
-    y_variable_name::String
-    X_units::XU
-    y_units::YU
-    X_sym_units::XUS
-    y_sym_units::YUS
+    @constfield variable_names::Array{String,1}
+    @constfield display_variable_names::Array{String,1}
+    @constfield y_variable_name::String
+    @constfield X_units::XU
+    @constfield y_units::YU
+    @constfield X_sym_units::XUS
+    @constfield y_sym_units::YUS
 end
 
 """
-    Dataset(X::AbstractMatrix{T}, y::Union{AbstractVector{T},Nothing}=nothing;
+    Dataset(X::AbstractMatrix{T},
+            y::Union{AbstractVector{T},Nothing}=nothing,
+            loss_type::Type=Nothing;
             weights::Union{AbstractVector{T}, Nothing}=nothing,
             variable_names::Union{Array{String, 1}, Nothing}=nothing,
             y_variable_name::Union{String,Nothing}=nothing,
             extra::NamedTuple=NamedTuple(),
-            loss_type::Type=Nothing,
             X_units::Union{AbstractVector, Nothing}=nothing,
             y_units=nothing,
     ) where {T<:DATA_TYPE}
@@ -96,22 +97,41 @@ Construct a dataset to pass between internal functions.
 """
 function Dataset(
     X::AbstractMatrix{T},
-    y::Union{AbstractVector{T},Nothing}=nothing;
+    y::Union{AbstractVector{T},Nothing}=nothing,
+    loss_type::Type{L}=Nothing;
     weights::Union{AbstractVector{T},Nothing}=nothing,
     variable_names::Union{Array{String,1},Nothing}=nothing,
     display_variable_names=variable_names,
     y_variable_name::Union{String,Nothing}=nothing,
     extra::NamedTuple=NamedTuple(),
-    loss_type::Type{L}=Nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
     # Deprecated:
     varMap=nothing,
+    kws...,
 ) where {T<:DATA_TYPE,L}
     Base.require_one_based_indexing(X)
     y !== nothing && Base.require_one_based_indexing(y)
     # Deprecation warning:
     variable_names = deprecate_varmap(variable_names, varMap, :Dataset)
+    if haskey(kws, :loss_type)
+        Base.depwarn(
+            "The `loss_type` keyword argument is deprecated. Pass as an argument instead.",
+            :Dataset,
+        )
+        return Dataset(
+            X,
+            y,
+            kws[:loss_type];
+            weights,
+            variable_names,
+            display_variable_names,
+            y_variable_name,
+            extra,
+            X_units,
+            y_units,
+        )
+    end
 
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)

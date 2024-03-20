@@ -7,17 +7,55 @@ using Printf: @printf, @sprintf
 using Distributed
 using StatsBase: mean
 
+using DynamicExpressions: AbstractExpressionNode
 using ..UtilsModule: subscriptify
-using ..CoreModule: Dataset, Options, MAX_DEGREE
+using ..CoreModule: Dataset, Options, MAX_DEGREE, RecordType
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
 using ..HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 using ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
-using ..AdaptiveParsimonyModule: update_frequencies!
+using ..AdaptiveParsimonyModule: update_frequencies!, RunningSearchStatistics
 
-function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Vector{Int})::Int
+"""
+    RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}
+
+Parameters for a search that are passed to `equation_search` directly,
+rather than set within `Options`. This is to differentiate between
+parameters that relate to processing and the duration of the search,
+and parameters dealing with the search hyperparameters itself.
+"""
+Base.@kwdef struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE}
+    niterations::Int64
+    total_cycles::Int64
+    numprocs::Int64
+    init_procs::Union{Vector{Int},Nothing}
+    addprocs_function::Function
+    exeflags::Cmd
+    runtests::Bool
+    verbosity::Int64
+    progress::Bool
+end
+function Base.getproperty(roptions::RuntimeOptions{P,D,R}, name::Symbol) where {P,D,R}
+    if name == :parallelism
+        return P
+    elseif name == :dim_out
+        return D
+    elseif name == :return_state
+        return R
+    else
+        getfield(roptions, name)
+    end
+end
+function Base.propertynames(roptions::RuntimeOptions)
+    return (Base.fieldnames(typeof(roptions))..., :parallelism, :dim_out, :return_state)
+end
+
+"""A simple dictionary to track worker allocations."""
+const WorkerAssignments = Dict{Tuple{Int,Int},Int}
+
+function next_worker(worker_assignment::WorkerAssignments, procs::Vector{Int})::Int
     job_counts = Dict(proc => 0 for proc in procs)
     for (key, value) in worker_assignment
         @assert haskey(job_counts, value)
@@ -29,7 +67,9 @@ function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Vector{
     return least_busy_worker
 end
 
-function assign_next_worker!(worker_assignment; pop, out, parallelism, procs)::Int
+function assign_next_worker!(
+    worker_assignment::WorkerAssignments; pop, out, parallelism, procs
+)::Int
     if parallelism == :multiprocessing
         worker_idx = next_worker(worker_assignment, procs)
         worker_assignment[(out, pop)] = worker_idx
@@ -39,9 +79,25 @@ function assign_next_worker!(worker_assignment; pop, out, parallelism, procs)::I
     end
 end
 
-function initialize_worker_assignment()
-    return Dict{Tuple{Int,Int},Int}()
+const DefaultWorkerOutputType{P,H} = Tuple{P,H,RecordType,Float64}
+
+function get_worker_output_type(
+    ::Val{PARALLELISM}, ::Type{PopType}, ::Type{HallOfFameType}
+) where {PARALLELISM,PopType,HallOfFameType}
+    if PARALLELISM == :serial
+        DefaultWorkerOutputType{PopType,HallOfFameType}
+    elseif PARALLELISM == :multiprocessing
+        Future
+    else
+        Task
+    end
 end
+
+#! format: off
+extract_from_worker(p::DefaultWorkerOutputType, _, _) = p
+extract_from_worker(f::Future, ::Type{P}, ::Type{H}) where {P,H} = fetch(f)::DefaultWorkerOutputType{P,H}
+extract_from_worker(t::Task, ::Type{P}, ::Type{H}) where {P,H} = fetch(t)::DefaultWorkerOutputType{P,H}
+#! format: on
 
 macro sr_spawner(expr, kws...)
     # Extract parallelism and worker_idx parameters from kws
@@ -59,7 +115,7 @@ macro sr_spawner(expr, kws...)
         elseif $(parallelism) == :multithreading
             Threads.@spawn($(expr))
         else
-            error("Invalid parallel type.")
+            error("Invalid parallel type ", string($(parallelism)), ".")
         end
     end |> esc
 end
@@ -70,7 +126,7 @@ function init_dummy_pops(
     return [
         [
             Population(d; population_size=1, options=options, nfeatures=d.nfeatures) for
-            i in 1:npops
+            _ in 1:npops
         ] for d in datasets
     ]
 end
@@ -308,13 +364,11 @@ end
 load_saved_hall_of_fame(::Nothing)::Nothing = nothing
 
 function get_population(
-    pops::Vector{Vector{Population{T,L}}}; out::Int, pop::Int
-)::Population{T,L} where {T,L}
+    pops::Vector{Vector{P}}; out::Int, pop::Int
+)::P where {P<:Population}
     return pops[out][pop]
 end
-function get_population(
-    pops::Matrix{Population{T,L}}; out::Int, pop::Int
-)::Population{T,L} where {T,L}
+function get_population(pops::Matrix{P}; out::Int, pop::Int)::P where {P<:Population}
     return pops[out, pop]
 end
 function load_saved_population(saved_state; out::Int, pop::Int)
@@ -322,6 +376,34 @@ function load_saved_population(saved_state; out::Int, pop::Int)
     return copy(saved_pop)
 end
 load_saved_population(::Nothing; kws...) = nothing
+
+"""
+    SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelType}
+
+The state of a search, including the populations, worker outputs, tasks, and
+channels. This is used to manage the search and keep track of runtime variables
+in a single struct.
+"""
+Base.@kwdef struct SearchState{
+    T,L,N<:AbstractExpressionNode{T},WorkerOutputType,ChannelType
+}
+    procs::Vector{Int}
+    we_created_procs::Bool
+    worker_output::Vector{Vector{WorkerOutputType}}
+    tasks::Vector{Vector{Task}}
+    channels::Vector{Vector{ChannelType}}
+    worker_assignment::WorkerAssignments
+    task_order::Vector{Tuple{Int,Int}}
+    halls_of_fame::Vector{HallOfFame{T,L,N}}
+    last_pops::Vector{Vector{Population{T,L,N}}}
+    best_sub_pops::Vector{Vector{Population{T,L,N}}}
+    all_running_search_statistics::Vector{RunningSearchStatistics}
+    num_evals::Vector{Vector{Float64}}
+    cycles_remaining::Vector{Int}
+    cur_maxsizes::Vector{Int}
+    stdin_reader::StdinReader
+    record::Base.RefValue{RecordType}
+end
 
 """
     get_cur_maxsize(; options, total_cycles, cycles_remaining)
@@ -352,13 +434,14 @@ function construct_datasets(
     y_variable_names,
     X_units,
     y_units,
-    loss_type,
-)
+    ::Type{L},
+) where {L}
     nout = size(y, 1)
     return [
         Dataset(
             X,
-            y[j, :];
+            y[j, :],
+            L;
             weights=(weights === nothing ? weights : weights[j, :]),
             variable_names=variable_names,
             display_variable_names=display_variable_names,
@@ -379,7 +462,6 @@ function construct_datasets(
             end,
             X_units=X_units,
             y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
-            loss_type=loss_type,
         ) for j in 1:nout
     ]
 end

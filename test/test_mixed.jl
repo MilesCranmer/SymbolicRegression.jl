@@ -21,6 +21,7 @@ for i in 0:5
     use_frequency = false
     use_frequency_in_tournament = false
     turbo = false
+    bumper = false
     T = Float32
     print("Testing with batching=$(batching) and weighted=$(weighted), ")
     if i == 0
@@ -37,11 +38,14 @@ for i in 0:5
         use_frequency = true
         parallelism = "multiprocessing"
     elseif i == 3
-        println("with multi-threading and crossover and use_frequency_in_tournament")
+        println(
+            "with multi-threading and crossover and use_frequency_in_tournament and bumper=true",
+        )
         parallelism = :multithreading
         numprocs = nothing
         crossover_probability = 0.02f0
         use_frequency_in_tournament = true
+        bumper = true
     elseif i == 4
         println(
             "with crossover and skip mutation failures and both frequencies options, and Float16 type",
@@ -80,6 +84,7 @@ for i in 0:5
             use_frequency=use_frequency,
             use_frequency_in_tournament=use_frequency_in_tournament,
             turbo=turbo,
+            bumper=bumper,
         )
     end
 

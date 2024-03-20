@@ -2,7 +2,7 @@ module LossFunctionsModule
 
 using Random: MersenneTwister
 using StatsBase: StatsBase
-using DynamicExpressions: Node
+using DynamicExpressions: AbstractExpressionNode, Node, constructorof
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
 using ..InterfaceDynamicExpressionsModule: eval_tree_array
@@ -43,7 +43,11 @@ end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function _eval_loss(
-    tree::Node{T}, dataset::Dataset{T,L}, options::Options, regularization::Bool, idx
+    tree::AbstractExpressionNode{T},
+    dataset::Dataset{T,L},
+    options::Options,
+    regularization::Bool,
+    idx,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
     (prediction, completion) = eval_tree_array(
         tree, maybe_getindex(dataset.X, :, idx), options
@@ -72,7 +76,7 @@ end
 
 # This evaluates function F:
 function evaluator(
-    f::F, tree::Node{T}, dataset::Dataset{T,L}, options::Options, idx
+    f::F, tree::AbstractExpressionNode{T}, dataset::Dataset{T,L}, options::Options, idx
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE,F}
     if hasmethod(f, typeof((tree, dataset, options, idx)))
         # If user defines method that accepts batching indices:
@@ -91,7 +95,7 @@ end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function eval_loss(
-    tree::Node{T},
+    tree::AbstractExpressionNode{T},
     dataset::Dataset{T,L},
     options::Options;
     regularization::Bool=true,
@@ -108,7 +112,7 @@ function eval_loss(
 end
 
 function eval_loss_batched(
-    tree::Node{T},
+    tree::AbstractExpressionNode{T},
     dataset::Dataset{T,L},
     options::Options;
     regularization::Bool=true,
@@ -123,7 +127,7 @@ function batch_sample(dataset, options)
 end
 
 # Just so we can pass either PopMember or Node here:
-get_tree(t::Node) = t
+get_tree(t::AbstractExpressionNode) = t
 get_tree(m) = m.tree
 # Beware: this is a circular dependency situation...
 # PopMember is using losses, but then we also want
@@ -197,7 +201,8 @@ Update the baseline loss of the dataset using the loss function specified in `op
 function update_baseline_loss!(
     dataset::Dataset{T,L}, options::Options
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    example_tree = Node(T; val=dataset.avg_y)
+    example_tree = constructorof(options.node_type)(T; val=dataset.avg_y)
+    # TODO: It could be that the loss function is not defined for this example type?
     baseline_loss = eval_loss(example_tree, dataset, options)
     if isfinite(baseline_loss)
         dataset.baseline_loss = baseline_loss
@@ -210,7 +215,7 @@ function update_baseline_loss!(
 end
 
 function dimensional_regularization(
-    tree::Node{T}, dataset::Dataset{T,L}, options::Options
+    tree::AbstractExpressionNode{T}, dataset::Dataset{T,L}, options::Options
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if !violates_dimensional_constraints(tree, dataset, options)
         return zero(L)

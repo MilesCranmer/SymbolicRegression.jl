@@ -174,6 +174,11 @@ function _save_kwargs(log_variable::Symbol, fdef::Expr)
     end
 end
 
+# Allows using `const` fields in older versions of Julia.
+macro constfield(ex)
+    return esc(VERSION < v"1.8.0" ? ex : Expr(:const, ex))
+end
+
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
 # Faster way to catch method errors:
 @enum IsGood::Int8 begin

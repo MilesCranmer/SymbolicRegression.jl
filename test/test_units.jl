@@ -145,6 +145,7 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
     best_expr = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
 
     @test !violates_dimensional_constraints(best_expr, dataset, options)
+    x1 = Node(Float64; feature=1)
     @test compute_complexity(best_expr, options) >=
         compute_complexity(custom_op(cos(1 * x1), 1 * x1), options)
 
@@ -209,6 +210,9 @@ end
     @test_throws DimensionError atanh_clip(1.0u"m")
 end
 
+options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos])
+@extend_operators options
+
 @testset "Search with dimensional constraints on output" begin
     X = randn(2, 128)
     X[2, :] .= X[1, :]
@@ -221,6 +225,8 @@ end
     # Solution should be x2 * x2
     dominating = calculate_pareto_frontier(hof)
     best = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
+
+    x2 = Node(Float64; feature=2)
 
     @test compute_complexity(best, options) == 3
     @test best.degree == 2
@@ -325,12 +331,12 @@ end
     tree = 1.0 * (x1 + x2 * x3 * 5.32) - cos(1.5 * (x1 - 0.5))
 
     @test string_tree(tree, options) ==
-        "((1.0 * (x1 + ((x2 * x3) * 5.32))) - cos(1.5 * (x1 - 0.5)))"
+        "(1.0 * (x1 + ((x2 * x3) * 5.32))) - cos(1.5 * (x1 - 0.5))"
     @test string_tree(tree, options; raw=false) ==
-        "((1 * (x₁ + ((x₂ * x₃) * 5.32))) - cos(1.5 * (x₁ - 0.5)))"
+        "(1 * (x₁ + ((x₂ * x₃) * 5.32))) - cos(1.5 * (x₁ - 0.5))"
     @test string_tree(
         tree, options; raw=false, display_variable_names=dataset.display_variable_names
-    ) == "((1 * (x₁ + ((x₂ * x₃) * 5.32))) - cos(1.5 * (x₁ - 0.5)))"
+    ) == "(1 * (x₁ + ((x₂ * x₃) * 5.32))) - cos(1.5 * (x₁ - 0.5))"
     @test string_tree(
         tree,
         options;
@@ -339,7 +345,7 @@ end
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
     ) ==
-        "((1[⋅] * (x₁[m³] + ((x₂[s⁻¹ km] * x₃[kg]) * 5.32[⋅]))) - cos(1.5[⋅] * (x₁[m³] - 0.5[⋅])))"
+        "(1[⋅] * (x₁[m³] + ((x₂[s⁻¹ km] * x₃[kg]) * 5.32[⋅]))) - cos(1.5[⋅] * (x₁[m³] - 0.5[⋅]))"
 
     @test string_tree(
         x5 * 3.2,
@@ -348,7 +354,7 @@ end
         display_variable_names=dataset.display_variable_names,
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
-    ) == "(x₅ * 3.2[⋅])"
+    ) == "x₅ * 3.2[⋅]"
 
     # Should print numeric factor in unit if given:
     dataset2 = Dataset(X, y; X_units=[1.5, 1.9, 2.0, 3.0, 5.0u"m"], y_units="kg")
@@ -359,7 +365,7 @@ end
         display_variable_names=dataset2.display_variable_names,
         X_sym_units=dataset2.X_sym_units,
         y_sym_units=dataset2.y_sym_units,
-    ) == "(x₅[5.0 m] * 3.2[⋅])"
+    ) == "x₅[5.0 m] * 3.2[⋅]"
 end
 
 @testset "Miscellaneous" begin
