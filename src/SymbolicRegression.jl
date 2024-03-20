@@ -204,7 +204,7 @@ using .CoreModule:
     erf,
     erfc,
     atanh_clip
-using .UtilsModule: is_anonymous_function, recursive_merge, json3_write
+using .UtilsModule: is_anonymous_function, recursive_merge, json3_write, readonly
 using .ComplexityModule: compute_complexity
 using .CheckConstraintsModule: check_constraints
 using .AdaptiveParsimonyModule:
@@ -436,11 +436,11 @@ function equation_search(
 end
 
 function equation_search(dataset::Dataset; kws...)
-    return equation_search([dataset]; kws..., v_dim_out=Val(1))
+    return equation_search(readonly([dataset]); kws..., v_dim_out=Val(1))
 end
 
 function equation_search(
-    datasets::Vector{D};
+    datasets::AbstractVector{D};
     niterations::Int=10,
     options::Options=Options(),
     parallelism=:multithreading,
@@ -580,7 +580,7 @@ function equation_search(
 end
 
 @noinline function _equation_search(
-    datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
+    datasets::AbstractVector{D}, ropt::RuntimeOptions, options::Options, saved_state
 ) where {D<:Dataset}
     _validate_options(datasets, ropt, options)
     state = _create_workers(datasets, ropt, options)
@@ -592,7 +592,7 @@ end
 end
 
 function _validate_options(
-    datasets::Vector{D}, ropt::RuntimeOptions, options::Options
+    datasets::AbstractVector{D}, ropt::RuntimeOptions, options::Options
 ) where {T,L,D<:Dataset{T,L}}
     example_dataset = first(datasets)
     nout = length(datasets)
@@ -622,7 +622,7 @@ function _validate_options(
     return nothing
 end
 function _create_workers(
-    datasets::Vector{D}, ropt::RuntimeOptions, options::Options
+    datasets::AbstractVector{D}, ropt::RuntimeOptions, options::Options
 ) where {T,L,D<:Dataset{T,L}}
     stdin_reader = watch_stream(stdin)
 

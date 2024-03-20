@@ -8,7 +8,7 @@ using Distributed
 using StatsBase: mean
 
 using DynamicExpressions: AbstractExpressionNode
-using ..UtilsModule: subscriptify
+using ..UtilsModule: subscriptify, readonly, ReadOnlyVector
 using ..CoreModule: Dataset, Options, MAX_DEGREE, RecordType
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
@@ -121,7 +121,7 @@ macro sr_spawner(expr, kws...)
 end
 
 function init_dummy_pops(
-    npops::Int, datasets::Vector{D}, options::Options
+    npops::Int, datasets::AbstractVector{D}, options::Options
 ) where {T,L,D<:Dataset{T,L}}
     return [
         [
@@ -437,7 +437,7 @@ function construct_datasets(
     ::Type{L},
 ) where {L}
     nout = size(y, 1)
-    return [
+    return readonly([
         Dataset(
             X,
             y[j, :],
@@ -463,7 +463,7 @@ function construct_datasets(
             X_units=X_units,
             y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
         ) for j in 1:nout
-    ]
+    ])
 end
 
 function update_hall_of_fame!(

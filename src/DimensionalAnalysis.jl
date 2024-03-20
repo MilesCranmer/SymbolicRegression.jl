@@ -154,7 +154,10 @@ end
 end
 
 function violates_dimensional_constraints_dispatch(
-    tree::AbstractExpressionNode{T}, x_units::AbstractVector{Q}, x::AbstractVector{T}, operators
+    tree::AbstractExpressionNode{T},
+    x_units::AbstractVector{Q},
+    x::AbstractVector{T},
+    operators,
 ) where {T,Q<:AbstractQuantity{T}}
     if tree.degree == 0
         return deg0_eval(x, x_units, tree)::WildcardQuantity{Q}

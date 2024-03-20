@@ -27,7 +27,7 @@ using ..OperatorsModule:
 using ..MutationWeightsModule: MutationWeights, mutations
 import ..OptionsStructModule: Options
 using ..OptionsStructModule: ComplexityMapping, operator_specialization
-using ..UtilsModule: max_ops, @save_kwargs
+using ..UtilsModule: max_ops, @save_kwargs, readonly
 
 """
          build_constraints(una_constraints, bin_constraints,
@@ -589,30 +589,28 @@ function Options end
             end
         end
 
-        # Lastly, we clean it up into a dict of (degree,op_idx) => max_nesting.
-        new_nested_constraints = []
-        # Dict()
-        for (op, nested_constraint) in nested_constraints
-            (degree, idx) = if op ∈ binary_operators
-                2, findfirst(isequal(op), binary_operators)
-            else
-                1, findfirst(isequal(op), unary_operators)
-            end
-            new_max_nesting_dict = []
-            # Dict()
-            for (nested_op, max_nesting) in nested_constraint
-                (nested_degree, nested_idx) = if nested_op ∈ binary_operators
-                    2, findfirst(isequal(nested_op), binary_operators)
-                else
-                    1, findfirst(isequal(nested_op), unary_operators)
-                end
-                # new_max_nesting_dict[(nested_degree, nested_idx)] = max_nesting
-                push!(new_max_nesting_dict, (nested_degree, nested_idx, max_nesting))
-            end
-            # new_nested_constraints[(degree, idx)] = new_max_nesting_dict
-            push!(new_nested_constraints, (degree, idx, new_max_nesting_dict))
-        end
-        nested_constraints = new_nested_constraints
+        # Lastly, we clean it up into a dict of (degree, op_idx) => max_nesting.
+        nested_constraints = readonly([
+            let
+                degree = op ∈ binary_operators ? 2 : 1
+                idx = findfirst(
+                    isequal(op), degree == 2 ? binary_operators : unary_operators
+                )::Int
+                new_max_nesting_dict = readonly([
+                    let
+                        degree = nested_op ∈ binary_operators ? 2 : 1
+                        idx = findfirst(
+                            isequal(nested_op),
+                            degree == 2 ? binary_operators : unary_operators,
+                        )::Int
+
+                        (degree, idx, max_nesting)
+                    end for (nested_op, max_nesting) in nested_constraint
+                ])
+
+                (degree, idx, new_max_nesting_dict)
+            end for (op, nested_constraint) in nested_constraints
+        ])
     end
 
     if typeof(constraints) <: Tuple
@@ -772,8 +770,8 @@ function Options end
         typeof(tournament_selection_weights),
     }(
         operators,
-        bin_constraints,
-        una_constraints,
+        readonly(bin_constraints),
+        readonly(una_constraints),
         complexity_mapping,
         tournament_selection_n,
         tournament_selection_p,

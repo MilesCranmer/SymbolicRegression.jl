@@ -73,7 +73,7 @@ import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
 
 @deprecate(
     EquationSearch(
-        datasets::Vector{D};
+        datasets::AbstractVector{D};
         niterations::Int=10,
         options::Options=Options(),
         parallelism=:multithreading,

@@ -45,7 +45,7 @@ end
 
 # Check for errors before they happen
 function test_option_configuration(
-    parallelism, datasets::Vector{D}, options::Options, verbosity
+    parallelism, datasets::AbstractVector{D}, options::Options, verbosity
 ) where {T,D<:Dataset{T}}
     if options.deterministic && parallelism != :serial
         error("Determinism is only guaranteed for serial mode.")

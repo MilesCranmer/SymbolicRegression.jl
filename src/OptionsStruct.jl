@@ -54,8 +54,8 @@ struct Options{
     CT,OP<:AbstractOperatorEnum,N<:AbstractExpressionNode,_turbo,_bumper,_return_state,W
 }
     operators::OP
-    bin_constraints::Vector{Tuple{Int,Int}}
-    una_constraints::Vector{Int}
+    bin_constraints::ReadOnlyVector{Tuple{Int,Int}}
+    una_constraints::ReadOnlyVector{Int}
     complexity_mapping::ComplexityMapping{CT}
     tournament_selection_n::Int
     tournament_selection_p::Float32
@@ -111,7 +111,9 @@ struct Options{
     timeout_in_seconds::Union{Float64,Nothing}
     max_evals::Union{Int,Nothing}
     skip_mutation_failures::Bool
-    nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
+    nested_constraints::Union{
+        ReadOnlyVector{Tuple{Int,Int,ReadOnlyVector{Tuple{Int,Int,Int}}}},Nothing
+    }
     deterministic::Bool
     define_helper_functions::Bool
     use_recorder::Bool
