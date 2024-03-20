@@ -117,7 +117,7 @@ end
 
 # Define dimensionally-aware evaluation routine:
 @inline function deg0_eval(
-    x::AbstractVector{T}, x_units::Vector{Q}, t::AbstractExpressionNode{T}
+    x::AbstractVector{T}, x_units::AbstractVector{Q}, t::AbstractExpressionNode{T}
 ) where {T,R,Q<:AbstractQuantity{T,R}}
     t.constant && return WildcardQuantity{Q}(Quantity(t.val, R), true, false)
     return WildcardQuantity{Q}(
@@ -154,7 +154,7 @@ end
 end
 
 function violates_dimensional_constraints_dispatch(
-    tree::AbstractExpressionNode{T}, x_units::Vector{Q}, x::AbstractVector{T}, operators
+    tree::AbstractExpressionNode{T}, x_units::AbstractVector{Q}, x::AbstractVector{T}, operators
 ) where {T,Q<:AbstractQuantity{T}}
     if tree.degree == 0
         return deg0_eval(x, x_units, tree)::WildcardQuantity{Q}

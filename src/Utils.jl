@@ -231,11 +231,8 @@ end
 
 json3_write(args...) = error("Please load the JSON3.jl package.")
 
-macro readonly(expr)
-    return esc(:($(_readonly)($expr)))
-end
-_readonly(::Type{A}) where {T,N,A<:AbstractArray{T,N}} = ReadOnlyArray{T,N,A}
-_readonly(ar::AbstractArray) = ReadOnlyArray(ar)
-_readonly(x) = x
+readonly(::Type{A}) where {T,N,A<:AbstractArray{T,N}} = ReadOnlyArray{T,N,A}
+readonly(ar::AbstractArray) = ReadOnlyArray(ar)
+readonly(x) = x
 
 end

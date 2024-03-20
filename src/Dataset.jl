@@ -13,7 +13,7 @@ using ..UtilsModule:
     subscriptify,
     get_base_type,
     @constcompat,
-    @readonly,
+    readonly,
     ReadOnlyAbstractVector,
     ReadOnlyAbstractMatrix,
     ReadOnlyVector
@@ -140,19 +140,15 @@ function Dataset(
         )
     end
 
-    X = @readonly X
-    y = @readonly y
-    weights = @readonly weights
-
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
     weighted = weights !== nothing
-    variable_names = @readonly if variable_names === nothing
+    variable_names = if variable_names === nothing
         ["x$(i)" for i in 1:nfeatures]
     else
         variable_names
     end
-    display_variable_names = @readonly if display_variable_names === nothing
+    display_variable_names = if display_variable_names === nothing
         ["x$(subscriptify(i))" for i in 1:nfeatures]
     else
         display_variable_names
@@ -186,14 +182,14 @@ function Dataset(
     # TODO: Refactor
     # This basically just ensures that if the `y` units are set,
     # then the `X` units are set as well.
-    X_si_units = @readonly let (_X = get_si_units(T, X_units))
+    X_si_units = let (_X = get_si_units(T, X_units))
         if _X === nothing && y_si_units !== nothing
             get_si_units(T, [one(T) for _ in 1:nfeatures])
         else
             _X
         end
     end
-    X_sym_units = @readonly let _X = get_sym_units(T, X_units)
+    X_sym_units = let _X = get_sym_units(T, X_units)
         if _X === nothing && y_sym_units !== nothing
             get_sym_units(T, [one(T) for _ in 1:nfeatures])
         else
@@ -202,6 +198,14 @@ function Dataset(
     end
 
     error_on_mismatched_size(nfeatures, X_si_units)
+
+    X = readonly(X)
+    y = readonly(y)
+    weights = readonly(weights)
+    variable_names = readonly(variable_names)
+    display_variable_names = readonly(display_variable_names)
+    X_si_units = readonly(X_si_units)
+    X_sym_units = readonly(X_sym_units)
 
     return Dataset{
         T,

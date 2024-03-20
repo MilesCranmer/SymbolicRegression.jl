@@ -6,7 +6,7 @@ using DynamicExpressions:
 using LossFunctions: SupervisedLoss
 
 using ..MutationWeightsModule: MutationWeights
-using ..UtilsModule: @readonly, ReadOnlyVector
+using ..UtilsModule: readonly, ReadOnlyVector
 
 """This struct defines how complexity is calculated."""
 struct ComplexityMapping{T<:Real}
@@ -21,7 +21,7 @@ Base.eltype(::ComplexityMapping{T}) where {T} = T
 
 function ComplexityMapping(use::Bool)
     return ComplexityMapping{Int}(
-        use, @readonly(zeros(Int, 0)), @readonly(zeros(Int, 0)), 1, 1
+        use, readonly(zeros(Int, 0)), readonly(zeros(Int, 0)), 1, 1
     )
 end
 
@@ -35,8 +35,8 @@ function ComplexityMapping(;
     promoted_T = promote_type(T1, T2, T3, T4)
     return ComplexityMapping{promoted_T}(
         true,
-        @readonly(binop_complexities),
-        @readonly(unaop_complexities),
+        readonly(binop_complexities),
+        readonly(unaop_complexities),
         variable_complexity,
         constant_complexity,
     )
