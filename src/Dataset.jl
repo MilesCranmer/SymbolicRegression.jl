@@ -9,7 +9,7 @@ using DynamicQuantities:
     sym_uparse,
     DEFAULT_DIM_BASE_TYPE
 
-using ..UtilsModule: subscriptify, get_base_type, @constcompat
+using ..UtilsModule: subscriptify, get_base_type, @constfield
 using ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 using ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
 
@@ -50,7 +50,7 @@ import ...deprecate_varmap
 - `y_sym_units`: Unit information of `y`. When used, this is a single
     `DynamicQuantities.Quantity{<:Any,<:SymbolicDimensions}`.
 """
-@constcompat mutable struct Dataset{
+mutable struct Dataset{
     T<:DATA_TYPE,
     L<:LOSS_TYPE,
     AX<:AbstractMatrix{T},
@@ -62,23 +62,23 @@ import ...deprecate_varmap
     XUS<:Union{AbstractVector{<:Quantity},Nothing},
     YUS<:Union{Quantity,Nothing},
 }
-    const X::AX
-    const y::AY
-    const n::Int
-    const nfeatures::Int
-    const weighted::Bool
-    const weights::AW
-    const extra::NT
-    const avg_y::Union{T,Nothing}
+    @constfield X::AX
+    @constfield y::AY
+    @constfield n::Int
+    @constfield nfeatures::Int
+    @constfield weighted::Bool
+    @constfield weights::AW
+    @constfield extra::NT
+    @constfield avg_y::Union{T,Nothing}
     use_baseline::Bool
     baseline_loss::L
-    const variable_names::Array{String,1}
-    const display_variable_names::Array{String,1}
-    const y_variable_name::String
-    const X_units::XU
-    const y_units::YU
-    const X_sym_units::XUS
-    const y_sym_units::YUS
+    @constfield variable_names::Array{String,1}
+    @constfield display_variable_names::Array{String,1}
+    @constfield y_variable_name::String
+    @constfield X_units::XU
+    @constfield y_units::YU
+    @constfield X_sym_units::XUS
+    @constfield y_sym_units::YUS
 end
 
 """
