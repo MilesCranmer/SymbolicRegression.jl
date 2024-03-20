@@ -364,7 +364,7 @@ end
 load_saved_hall_of_fame(::Nothing)::Nothing = nothing
 
 function get_population(
-    pops::Vector{Vector{P}}; out::Int, pop::Int
+    pops::AbstractVector{Vector{P}}; out::Int, pop::Int
 )::P where {P<:Population}
     return pops[out][pop]
 end
@@ -387,18 +387,18 @@ in a single struct.
 Base.@kwdef struct SearchState{
     T,L,N<:AbstractExpressionNode{T},WorkerOutputType,ChannelType
 }
-    procs::Vector{Int}
+    procs::ReadOnlyVector{Int}
     we_created_procs::Bool
-    worker_output::Vector{Vector{WorkerOutputType}}
-    tasks::Vector{Vector{Task}}
-    channels::Vector{Vector{ChannelType}}
+    worker_output::ReadOnlyVector{Vector{WorkerOutputType}}
+    tasks::ReadOnlyVector{Vector{Task}}
+    channels::ReadOnlyVector{Vector{ChannelType}}
     worker_assignment::WorkerAssignments
-    task_order::Vector{Tuple{Int,Int}}
+    task_order::ReadOnlyVector{Tuple{Int,Int}}
     halls_of_fame::Vector{HallOfFame{T,L,N}}
-    last_pops::Vector{Vector{Population{T,L,N}}}
-    best_sub_pops::Vector{Vector{Population{T,L,N}}}
-    all_running_search_statistics::Vector{RunningSearchStatistics}
-    num_evals::Vector{Vector{Float64}}
+    last_pops::ReadOnlyVector{Vector{Population{T,L,N}}}
+    best_sub_pops::ReadOnlyVector{Vector{Population{T,L,N}}}
+    all_running_search_statistics::ReadOnlyVector{RunningSearchStatistics}
+    num_evals::ReadOnlyVector{Vector{Float64}}
     cycles_remaining::Vector{Int}
     cur_maxsizes::Vector{Int}
     stdin_reader::StdinReader

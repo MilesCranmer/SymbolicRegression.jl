@@ -71,7 +71,7 @@ using Printf: @printf, @sprintf
 using PackageExtensionCompat: @require_extensions
 using Pkg: Pkg
 using TOML: parsefile
-using Random: seed!, shuffle!
+using Random: seed!, shuffle
 using Reexport
 using DynamicExpressions:
     Node,
@@ -640,12 +640,16 @@ function _create_workers(
     ChannelType = ropt.parallelism == :multiprocessing ? RemoteChannel : Channel
 
     # Pointers to populations on each worker:
-    worker_output = Vector{WorkerOutputType}[WorkerOutputType[] for j in 1:nout]
+    worker_output = readonly([
+        Array{WorkerOutputType}(undef, options.populations) for j in 1:nout
+    ])
     # Initialize storage for workers
-    tasks = [Task[] for j in 1:nout]
+    tasks = readonly([Array{Task}(undef, options.populations) for j in 1:nout])
     # Set up a channel to send finished populations back to head node
-    channels = [[ChannelType(1) for i in 1:(options.populations)] for j in 1:nout]
-    (procs, we_created_procs) = if ropt.parallelism == :multiprocessing
+    channels = readonly([
+        ChannelType[ChannelType(1) for i in 1:(options.populations)] for j in 1:nout
+    ])
+    (_procs, we_created_procs) = if ropt.parallelism == :multiprocessing
         configure_workers(;
             procs=ropt.init_procs,
             ropt.numprocs,
@@ -661,24 +665,26 @@ function _create_workers(
     else
         Int[], false
     end
+    procs = readonly(_procs)
     # Get the next worker process to give a job:
     worker_assignment = WorkerAssignments()
     # Randomly order which order to check populations:
     # This is done so that we do work on all nout equally.
-    task_order = [(j, i) for j in 1:nout for i in 1:(options.populations)]
-    shuffle!(task_order)
+    task_order = readonly(
+        shuffle([(j, i) for j in 1:nout for i in 1:(options.populations)])
+    )
 
     # Persistent storage of last-saved population for final return:
-    last_pops = init_dummy_pops(options.populations, datasets, options)
+    last_pops = readonly(init_dummy_pops(options.populations, datasets, options))
     # Best 10 members from each population for migration:
-    best_sub_pops = init_dummy_pops(options.populations, datasets, options)
+    best_sub_pops = readonly(init_dummy_pops(options.populations, datasets, options))
     # TODO: Should really be one per population too.
-    all_running_search_statistics = [
+    all_running_search_statistics = readonly([
         RunningSearchStatistics(; options=options) for j in 1:nout
-    ]
+    ])
     # Records the number of evaluations:
     # Real numbers indicate use of batching.
-    num_evals = [[0.0 for i in 1:(options.populations)] for j in 1:nout]
+    num_evals = readonly([[0.0 for i in 1:(options.populations)] for j in 1:nout])
 
     halls_of_fame = Vector{HallOfFameType}(undef, nout)
 
@@ -779,7 +785,7 @@ function _initialize_search!(
                 )
                 # This involves population_size evaluations, on the full dataset:
             end
-        push!(state.worker_output[j], new_pop)
+        state.worker_output[j][i] = new_pop
     end
     return nothing
 end
@@ -847,8 +853,9 @@ function _main_search_loop!(
     if ropt.parallelism in (:multiprocessing, :multithreading)
         for j in 1:nout, i in 1:(options.populations)
             # Start listening for each population to finish:
-            t = @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
-            push!(state.tasks[j], t)
+            state.tasks[j][i] = @async put!(
+                state.channels[j][i], fetch(state.worker_output[j][i])
+            )
         end
     end
     kappa = 0
