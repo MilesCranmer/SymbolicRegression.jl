@@ -5,8 +5,6 @@ module SearchUtilsModule
 
 using Printf: @printf, @sprintf
 using Distributed
-using Logging: with_logger
-using DynamicExpressions: string_tree
 using StatsBase: mean
 
 using DynamicExpressions: AbstractExpressionNode

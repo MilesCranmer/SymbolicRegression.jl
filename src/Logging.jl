@@ -1,6 +1,8 @@
 module LoggingModule
 
 using Base: AbstractLogger
+using Logging: with_logger
+using DynamicExpressions: string_tree
 
 using ..CoreModule: Options, Dataset
 using ..SearchUtilsModule: SearchState, RuntimeOptions
