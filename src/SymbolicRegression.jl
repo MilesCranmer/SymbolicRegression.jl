@@ -171,6 +171,7 @@ include("SingleIteration.jl")
 include("ProgressBars.jl")
 include("Migration.jl")
 include("SearchUtils.jl")
+include("Logging.jl")
 
 using .CoreModule:
     MAX_DEGREE,
@@ -253,9 +254,8 @@ using .SearchUtilsModule:
     load_saved_population,
     construct_datasets,
     get_cur_maxsize,
-    update_hall_of_fame!,
-    default_logging_callback,
-    default_sr_plot
+    update_hall_of_fame!
+using .LoggingModule: default_logging_callback, default_sr_plot
 
 include("deprecates.jl")
 include("Configure.jl")
@@ -1036,15 +1036,7 @@ function _main_search_loop!(
                 )
             end
             if ropt.logging_callback !== nothing && log_step % ropt.log_every_n == 0
-                ropt.logging_callback(;
-                    options,
-                    state.num_evals,
-                    hall_of_fame=state.halls_of_fame,
-                    state.worker_assignment,
-                    state.cycles_remaining,
-                    populations=state.last_pops,
-                    datasets=datasets,
-                )
+                ropt.logging_callback(; log_step, state, datasets, ropt, options)
             end
             log_step += 1
         end

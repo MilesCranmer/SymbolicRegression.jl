@@ -331,8 +331,8 @@ wrap_units(v, y_units, i::Integer) = (yi -> Quantity(yi, y_units[i])).(v)
 wrap_units(v, y_units, ::Nothing) = (yi -> Quantity(yi, y_units)).(v)
 
 function prediction_fallback(
-    ::Type{T}, ::SRRegressor, Xnew_t, fitresult::SRFitResult
-, _) where {T}
+    ::Type{T}, ::SRRegressor, Xnew_t, fitresult::SRFitResult, _
+) where {T}
     prediction_warn()
     out = fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T))
     return wrap_units(out, fitresult.y_units, nothing)
@@ -416,7 +416,9 @@ function MMI.predict(m::SRRegressor, fitresult::SRFitResult{<:SRRegressor}, Xnew
         return prediction_fallback(T, m, X_t, fitresult, prototype)
     end
 end
-function MMI.predict(m::MultitargetSRRegressor, fitresult::SRFitResult{<:MultitargetSRRegressor}, Xnew)
+function MMI.predict(
+    m::MultitargetSRRegressor, fitresult::SRFitResult{<:MultitargetSRRegressor}, Xnew
+)
     params = full_report(m, fitresult; v_with_strings=Val(false))
     prototype = MMI.istable(Xnew) ? Xnew : nothing
     Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
