@@ -374,7 +374,7 @@ function equation_search(
     verbosity::Union{Integer,Nothing}=nothing,
     logger::Union{AbstractLogger,Nothing}=nothing,
     logging_callback::Union{Function,Nothing}=nothing,
-    log_every_n::Int=1,
+    log_every_n::Union{Integer,NamedTuple}=1,
     progress::Union{Bool,Nothing}=nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
@@ -463,7 +463,7 @@ function equation_search(
     verbosity::Union{Int,Nothing}=nothing,
     logger::Union{AbstractLogger,Nothing}=nothing,
     logging_callback::Union{Function,Nothing}=nothing,
-    log_every_n::Int=1,
+    log_every_n::Union{Integer,NamedTuple}=1,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
 ) where {DIM_OUT,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
@@ -581,11 +581,16 @@ function equation_search(
     else
         logging_callback
     end
+    _log_every_n = if log_every_n isa Integer
+        (; scalars=log_every_n, plots=0)
+    else
+        log_every_n
+    end
 
     # Underscores here mean that we have mutated the variable
     return _equation_search(
         datasets,
-        RuntimeOptions{concurrency,dim_out,_return_state}(;
+        RuntimeOptions{concurrency,dim_out,_return_state,typeof(_log_every_n)}(;
             niterations=niterations,
             total_cycles=options.populations * niterations,
             numprocs=_numprocs,
@@ -596,7 +601,7 @@ function equation_search(
             verbosity=_verbosity,
             progress=_progress,
             logging_callback=_logging_callback,
-            log_every_n=log_every_n,
+            log_every_n=_log_every_n,
         ),
         options,
         saved_state,
@@ -1035,7 +1040,7 @@ function _main_search_loop!(
                     ropt.parallelism,
                 )
             end
-            if ropt.logging_callback !== nothing && log_step % ropt.log_every_n == 0
+            if ropt.logging_callback !== nothing && log_step % ropt.log_every_n.scalars == 0
                 ropt.logging_callback(; log_step, state, datasets, ropt, options)
             end
             log_step += 1

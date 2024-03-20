@@ -5,6 +5,8 @@ using Logging: with_logger
 using DynamicExpressions: string_tree
 
 using ..CoreModule: Options, Dataset
+using ..ComplexityModule: compute_complexity
+using ..HallOfFameModule: calculate_pareto_frontier
 using ..SearchUtilsModule: SearchState, RuntimeOptions
 
 # Defined by Plots extension
@@ -20,7 +22,7 @@ function default_logging_callback(
     ropt::RuntimeOptions,
     options::Options,
 ) where {T,L}
-    data = let d = Dict()
+    data = let d = Dict{String,Union{Dict{String,Any},Float64}}()
         for i in eachindex(datasets, state.halls_of_fame)
             dominating = calculate_pareto_frontier(state.halls_of_fame[i])
             best_loss = length(dominating) > 0 ? dominating[end].loss : L(Inf)
@@ -33,19 +35,20 @@ function default_logging_callback(
                 ) for member in dominating
             ]
             is = string(i)
-            d[is] = Dict()
+            d[is] = Dict{String,Any}()
             d[is]["best_loss"] = best_loss
-            d[is]["equations"] = Dict()
-            d[is]["plot"] = default_sr_plot(
-                trees,
-                losses,
-                complexities,
-                options;
-                variable_names=datasets[i].variable_names,
-            )
-            for i_eqn in eachindex(complexities, losses, equations)
-                d[is]["equations"][string(complexities[i_eqn])] = Dict(
-                    "loss" => losses[i_eqn], "equation" => equations[i_eqn]
+            d[is]["equations"] = Dict([
+                string(complexities[i_eqn]) =>
+                    Dict("loss" => losses[i_eqn], "equation" => equations[i_eqn]) for
+                i_eqn in eachindex(complexities, losses, equations)
+            ])
+            if ropt.log_every_n.plots > 0 && log_step % ropt.log_every_n.plots == 0
+                d[is]["plot"] = default_sr_plot(
+                    trees,
+                    losses,
+                    complexities,
+                    options;
+                    variable_names=datasets[i].variable_names,
                 )
             end
         end

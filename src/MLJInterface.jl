@@ -42,7 +42,7 @@ function modelexpr(model_name::Symbol)
         heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
         logger::Union{AbstractLogger,Nothing} = nothing
         logging_callback::Union{Function,Nothing} = nothing
-        log_every_n::Int = 1
+        log_every_n::Union{Integer,NamedTuple} = 1
         runtests::Bool = true
         loss_type::L = Nothing
         selection_method::Function = choose_best
