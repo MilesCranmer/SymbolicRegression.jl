@@ -17,7 +17,7 @@ equations, for use in adaptive losses and parsimony.
 - `normalized_frequencies::Vector{Float64}`: This is the same as `frequencies`, but
     normalized to sum to 1.0. This is updated once in a while.
 """
-mutable struct RunningSearchStatistics
+struct RunningSearchStatistics
     window_size::Int
     frequencies::Vector{Float64}
     normalized_frequencies::Vector{Float64}  # Stores `frequencies`, but normalized (updated once in a while)

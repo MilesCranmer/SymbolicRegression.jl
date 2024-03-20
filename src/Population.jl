@@ -12,7 +12,7 @@ using ..PopMemberModule: PopMember
 using ..UtilsModule: bottomk_fast, argmin_fast
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
-mutable struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}}
+struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}}
     members::Array{PopMember{T,L,N},1}
     n::Int
 end

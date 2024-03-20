@@ -174,6 +174,25 @@ function _save_kwargs(log_variable::Symbol, fdef::Expr)
     end
 end
 
+# `const` is only available on 1.8+, so we simply disable it
+# for older versions.
+macro constcompat(struct_def)
+    if VERSION < v"1.8.0"
+        return esc(strip_const(struct_def))
+    else
+        return esc(struct_def)
+    end
+end
+function strip_const(ex)
+    if Meta.isexpr(ex, :const)
+        only(ex.args)
+    elseif ex isa Expr
+        Expr(ex.head, map(strip_const, ex.args)...)
+    else
+        ex
+    end
+end
+
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
 # Faster way to catch method errors:
 @enum IsGood::Int8 begin
