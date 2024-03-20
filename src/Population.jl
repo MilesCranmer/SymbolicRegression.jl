@@ -2,7 +2,7 @@ module PopulationModule
 
 using StatsBase: StatsBase
 using Random: randperm
-using DynamicExpressions: string_tree
+using DynamicExpressions: AbstractExpressionNode, Node, string_tree
 using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: score_func, update_baseline_loss!
@@ -12,8 +12,8 @@ using ..PopMemberModule: PopMember
 using ..UtilsModule: bottomk_fast, argmin_fast
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
-mutable struct Population{T<:DATA_TYPE,L<:LOSS_TYPE}
-    members::Array{PopMember{T,L},1}
+struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}}
+    members::Array{PopMember{T,L,N},1}
     n::Int
 end
 """
@@ -21,10 +21,8 @@ end
 
 Create population from list of PopMembers.
 """
-function Population(
-    pop::AP
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,AP<:AbstractArray{PopMember{T,L},1}}
-    return Population{T,L}(pop, size(pop, 1))
+function Population(pop::Vector{<:PopMember})
+    return Population(pop, size(pop, 1))
 end
 
 """
@@ -36,19 +34,19 @@ Create random population and score them on the dataset.
 """
 function Population(
     dataset::Dataset{T,L};
+    options::Options,
     population_size=nothing,
     nlength::Int=3,
-    options::Options,
     nfeatures::Int,
     npop=nothing,
-) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+) where {T,L}
     @assert (population_size !== nothing) ⊻ (npop !== nothing)
     population_size = if npop === nothing
         population_size
     else
         npop
     end
-    return Population{T,L}(
+    return Population(
         [
             PopMember(
                 dataset,
@@ -56,7 +54,7 @@ function Population(
                 options;
                 parent=-1,
                 deterministic=options.deterministic,
-            ) for i in 1:population_size
+            ) for _ in 1:population_size
         ],
         population_size,
     )
@@ -105,18 +103,18 @@ end
 
 # Sample the population, and get the best member from that sample
 function best_of_sample(
-    pop::Population{T,L},
+    pop::Population{T,L,N},
     running_search_statistics::RunningSearchStatistics,
     options::Options,
-)::PopMember{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+) where {T,L,N}
     sample = sample_pop(pop, options)
-    return _best_of_sample(sample.members, running_search_statistics, options)
+    return _best_of_sample(
+        sample.members, running_search_statistics, options
+    )::PopMember{T,L,N}
 end
 function _best_of_sample(
-    members::Vector{PopMember{T,L}},
-    running_search_statistics::RunningSearchStatistics,
-    options::Options,
-) where {T,L}
+    members::Vector{P}, running_search_statistics::RunningSearchStatistics, options::Options
+) where {T,L,P<:PopMember{T,L}}
     p = options.tournament_selection_p
     n = length(members)  # == tournament_selection_n
     scores = Vector{L}(undef, n)
@@ -157,8 +155,8 @@ function _best_of_sample(
 end
 
 function finalize_scores(
-    dataset::Dataset{T,L}, pop::Population{T,L}, options::Options
-)::Tuple{Population{T,L},Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    dataset::Dataset{T,L}, pop::P, options::Options
+)::Tuple{P,Float64} where {T,L,P<:Population{T,L}}
     need_recalculate = options.batching
     num_evals = 0.0
     if need_recalculate

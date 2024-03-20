@@ -1,7 +1,14 @@
 module MutateModule
 
 using DynamicExpressions:
-    Node, copy_node, count_nodes, count_constants, simplify_tree, combine_operators
+    AbstractExpressionNode,
+    Node,
+    preserve_sharing,
+    copy_node,
+    count_nodes,
+    count_constants,
+    simplify_tree!,
+    combine_operators
 using ..CoreModule:
     Options, MutationWeights, Dataset, RecordType, sample_mutation, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
@@ -17,14 +24,20 @@ using ..MutationFunctionsModule:
     append_random_op,
     prepend_random_op,
     insert_random_op,
-    delete_random_op,
-    crossover_trees
+    delete_random_op!,
+    crossover_trees,
+    form_random_connection!,
+    break_random_connection!
 using ..ConstantOptimizationModule: optimize_constants
 using ..RecorderModule: @recorder
 
 function condition_mutation_weights!(
     weights::MutationWeights, member::PopMember, options::Options, curmaxsize::Int
 )
+    if !preserve_sharing(typeof(member.tree))
+        weights.form_connection = 0.0
+        weights.break_connection = 0.0
+    end
     if member.tree.degree == 0
         # If equation is too small, don't delete operators
         # or simplify
@@ -65,14 +78,16 @@ end
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
 function next_generation(
-    dataset::Dataset{T,L},
-    member::PopMember{T,L},
+    dataset::D,
+    member::P,
     temperature,
     curmaxsize::Int,
     running_search_statistics::RunningSearchStatistics,
     options::Options;
     tmp_recorder::RecordType,
-)::Tuple{PopMember{T,L},Bool,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+)::Tuple{
+    P,Bool,Float64
+} where {T,L,D<:Dataset{T,L},N<:AbstractExpressionNode{T},P<:PopMember{T,L,N}}
     parent_ref = member.ref
     mutation_accepted = false
     num_evals = 0.0
@@ -118,7 +133,7 @@ function next_generation(
             # Can always mutate to the same operator
 
         elseif mutation_choice == :swap_operands
-            tree = swap_operands(tree, options)
+            tree = swap_operands(tree)
             @recorder tmp_recorder["type"] = "swap_operands"
             is_success_always_possible = true
 
@@ -137,13 +152,15 @@ function next_generation(
             @recorder tmp_recorder["type"] = "insert_op"
             is_success_always_possible = false
         elseif mutation_choice == :delete_node
-            tree = delete_random_op(tree, options, nfeatures)
+            tree = delete_random_op!(tree, options, nfeatures)
             @recorder tmp_recorder["type"] = "delete_op"
             is_success_always_possible = true
         elseif mutation_choice == :simplify
             @assert options.should_simplify
-            tree = simplify_tree(tree, options.operators)
-            tree = combine_operators(tree, options.operators)
+            simplify_tree!(tree, options.operators)
+            if tree isa Node
+                tree = combine_operators(tree, options.operators)
+            end
             @recorder tmp_recorder["type"] = "partial_simplify"
             mutation_accepted = true
             return (
@@ -208,6 +225,14 @@ function next_generation(
                 mutation_accepted,
                 num_evals,
             )
+        elseif mutation_choice == :form_connection
+            tree = form_random_connection!(tree)
+            @recorder tmp_recorder["type"] = "form_connection"
+            is_success_always_possible = true
+        elseif mutation_choice == :break_connection
+            tree = break_random_connection!(tree)
+            @recorder tmp_recorder["type"] = "break_connection"
+            is_success_always_possible = true
         else
             error("Unknown mutation choice: $mutation_choice")
         end
@@ -334,12 +359,8 @@ end
 
 """Generate a generation via crossover of two members."""
 function crossover_generation(
-    member1::PopMember{T,L},
-    member2::PopMember{T,L},
-    dataset::Dataset{T,L},
-    curmaxsize::Int,
-    options::Options,
-)::Tuple{PopMember{T,L},PopMember{T,L},Bool,Float64} where {T<:DATA_TYPE,L<:DATA_TYPE}
+    member1::P, member2::P, dataset::D, curmaxsize::Int, options::Options
+)::Tuple{P,P,Bool,Float64} where {T,L,D<:Dataset{T,L},P<:PopMember{T,L}}
     tree1 = member1.tree
     tree2 = member2.tree
     crossover_accepted = false

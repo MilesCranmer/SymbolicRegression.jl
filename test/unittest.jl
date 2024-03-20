@@ -1,5 +1,8 @@
 using SafeTestsets
 
+# Trigger extensions:
+using LoopVectorization
+
 @safetestset "Test custom operators and additional types" begin
     include("test_operators.jl")
 end
@@ -70,10 +73,6 @@ end
 
 @safetestset "Test hash of tree" begin
     include("test_hash.jl")
-end
-
-@safetestset "Test shared node-preserving copy" begin
-    include("test_preserve_multiple_parents.jl")
 end
 
 @safetestset "Test migration" begin

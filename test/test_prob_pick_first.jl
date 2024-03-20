@@ -1,5 +1,6 @@
 println("Testing whether tournament_selection_p works.")
 using SymbolicRegression
+using DynamicExpressions.EquationModule: with_type_parameters
 using Test
 include("test_params.jl")
 
@@ -14,7 +15,9 @@ options = Options(;
 )
 
 for reverse in [false, true]
-    members = PopMember{Float32,Float32}[]
+    T = Float32
+    NT = with_type_parameters(options.node_type, T)
+    members = PopMember{T,T,NT}[]
 
     # Generate members with scores from 0 to 1:
     for i in 1:n

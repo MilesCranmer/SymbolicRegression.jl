@@ -7,3 +7,8 @@ using Test
     @test typeof(dataset.y) == Array{Float64,1}
     @test typeof(dataset.weights) == Array{Float64,1}
 end
+
+@testset "With deprecated kwarg" begin
+    dataset = Dataset(randn(ComplexF32, 3, 32), randn(ComplexF32, 32); loss_type=Float64)
+    @test dataset isa Dataset{ComplexF32,Float64}
+end
