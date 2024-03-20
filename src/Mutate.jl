@@ -10,7 +10,14 @@ using DynamicExpressions:
     simplify_tree!,
     combine_operators
 using ..CoreModule:
-    Options, MutationWeights, Dataset, RecordType, sample_mutation, DATA_TYPE, LOSS_TYPE
+    Options,
+    MutationWeights,
+    @set,
+    Dataset,
+    RecordType,
+    sample_mutation,
+    DATA_TYPE,
+    LOSS_TYPE
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: score_func, score_func_batched
 using ..CheckConstraintsModule: check_constraints
@@ -31,48 +38,46 @@ using ..MutationFunctionsModule:
 using ..ConstantOptimizationModule: optimize_constants
 using ..RecorderModule: @recorder
 
-function condition_mutation_weights!(
-    weights::MutationWeights, member::PopMember, options::Options, curmaxsize::Int
-)
+function condition_mutation_weights(member::PopMember, options::Options, curmaxsize::Int)
+    weights = options.mutation_weights
     if !preserve_sharing(typeof(member.tree))
-        weights.form_connection = 0.0
-        weights.break_connection = 0.0
+        @set weights.form_connection = 0.0
+        @set weights.break_connection = 0.0
     end
     if member.tree.degree == 0
         # If equation is too small, don't delete operators
         # or simplify
-        weights.mutate_operator = 0.0
-        weights.swap_operands = 0.0
-        weights.delete_node = 0.0
-        weights.simplify = 0.0
+        @set weights.mutate_operator = 0.0
+        @set weights.swap_operands = 0.0
+        @set weights.delete_node = 0.0
+        @set weights.simplify = 0.0
         if !member.tree.constant
-            weights.optimize = 0.0
-            weights.mutate_constant = 0.0
+            @set weights.optimize = 0.0
+            @set weights.mutate_constant = 0.0
         end
-        return nothing
+        return weights
     end
 
     if !any(node -> node.degree == 2, member.tree)
         # swap is implemented only for binary ops
-        weights.swap_operands = 0.0
+        @set weights.swap_operands = 0.0
     end
 
     #More constants => more likely to do constant mutation
     n_constants = count_constants(member.tree)
-    weights.mutate_constant *= min(8, n_constants) / 8.0
+    @set weights.mutate_constant = (weights.mutate_constant * min(8, n_constants) / 8.0)
     complexity = compute_complexity(member, options)
 
-    if complexity >= curmaxsize
-        # If equation is too big, don't add new operators
-        weights.add_node = 0.0
-        weights.insert_node = 0.0
+    if complexity >= curmaxsize # If equation is too big, don't add new operators
+        @set weights.add_node = 0.0
+        @set weights.insert_node = 0.0
     end
 
     if !options.should_simplify
-        weights.simplify = 0.0
+        @set weights.simplify = 0.0
     end
 
-    return nothing
+    return weights
 end
 
 # Go through one simulated options.annealing mutation cycle
@@ -102,9 +107,7 @@ function next_generation(
 
     nfeatures = dataset.nfeatures
 
-    weights = copy(options.mutation_weights)
-
-    condition_mutation_weights!(weights, member, options, curmaxsize)
+    weights = condition_mutation_weights(member, options, curmaxsize)
 
     mutation_choice = sample_mutation(weights)
 

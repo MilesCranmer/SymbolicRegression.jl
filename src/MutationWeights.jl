@@ -27,7 +27,7 @@ will be normalized to sum to 1.0 after initialization.
    Otherwise, this will automatically be set to 0.0. How often to break a
    connection between two nodes.
 """
-Base.@kwdef mutable struct MutationWeights
+Base.@kwdef struct MutationWeights
     mutate_constant::Float64 = 0.048
     mutate_operator::Float64 = 0.47
     swap_operands::Float64 = 0.1
@@ -40,6 +40,25 @@ Base.@kwdef mutable struct MutationWeights
     optimize::Float64 = 0.0
     form_connection::Float64 = 0.5
     break_connection::Float64 = 0.1
+end
+
+macro set(ex)
+    # Expect `<weights>.<property> = <value>`:
+    @assert ex.head == :(=) && ex.args[1].head == :.
+    variable = ex.args[1].args[1]
+    property = ex.args[1].args[2].value
+    value = ex.args[2]
+
+    return :($(variable) = $(copy_with)($variable; $property=$value)) |> esc
+end
+
+let out = :(MutationWeights(;)), params = out.args[2].args
+    for k in fieldnames(MutationWeights)
+        push!(params, Expr(:kw, k, :(getproperty(w, $(Meta.quot(k))))))
+    end
+    push!(params, :(kwargs...))
+
+    @eval copy_with(w::MutationWeights; kwargs...) = $(out)
 end
 
 const mutations = fieldnames(MutationWeights)
