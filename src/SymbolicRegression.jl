@@ -255,7 +255,7 @@ using .SearchUtilsModule:
     construct_datasets,
     get_cur_maxsize,
     update_hall_of_fame!
-using .LoggingModule: default_logging_callback, default_sr_plot
+using .LoggingModule: default_logging_callback
 
 include("deprecates.jl")
 include("Configure.jl")

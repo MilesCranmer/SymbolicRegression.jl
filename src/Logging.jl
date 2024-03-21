@@ -4,16 +4,12 @@ using Base: AbstractLogger
 using Logging: with_logger
 using DynamicExpressions: string_tree
 using Infiltrator: @infiltrate
+using RecipesBase: plot
 
 using ..CoreModule: Options, Dataset
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: calculate_pareto_frontier
 using ..SearchUtilsModule: SearchState, RuntimeOptions
-
-# Defined by Plots extension
-function default_sr_plot(args...; kws...)
-    return "Load the Plots package to use this function."
-end
 
 function default_logging_callback(
     logger::AbstractLogger;
@@ -35,7 +31,7 @@ function default_logging_callback(
                     for pop in state.last_pops[i], member in pop.members
                         push!(complexities, compute_complexity(member, options))
                     end
-                    [count(==(c), complexities) for c in 1:(options.maxsize)]
+                    complexities
                 end,
             ])
 
@@ -83,7 +79,7 @@ function default_logging_callback(
             end
             cur_out["plot"] =
                 if ropt.log_every_n.plots > 0 && log_step % ropt.log_every_n.plots == 0
-                    default_sr_plot(
+                    plot(
                         trees,
                         losses,
                         complexities,

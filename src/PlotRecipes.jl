@@ -7,6 +7,8 @@ using ..HallOfFameModule: HallOfFame, format_hall_of_fame
 using ..MLJInterfaceModule: SRFitResult, SRRegressor
 using ..LoggingModule: convex_hull
 
+function default_sr_plot end
+
 @recipe function default_sr_plot(fitresult::SRFitResult{<:SRRegressor})
     return fitresult.state[2], fitresult.options
 end
