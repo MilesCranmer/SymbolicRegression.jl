@@ -28,6 +28,17 @@ function default_logging_callback(
         for i in eachindex(datasets, state.halls_of_fame)
             cur_out = Dict{String,Any}()
 
+            #### Population diagnostics
+            cur_out["population"] = Dict([
+                "complexities" => let
+                    complexities = Int[]
+                    for pop in state.last_pops[i], member in pop.members
+                        push!(complexities, compute_complexity(member, options))
+                    end
+                    [count(==(c), complexities) for c in 1:(options.maxsize)]
+                end,
+            ])
+
             #### Summaries
             dominating = calculate_pareto_frontier(state.halls_of_fame[i])
             trees = [member.tree for member in dominating]
