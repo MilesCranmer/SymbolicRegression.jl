@@ -102,3 +102,7 @@ end
 @safetestset "Dataset" begin
     include("test_dataset.jl")
 end
+
+@safetestset "Logging" begin
+    include("test_logging.jl")
+end
