@@ -5,6 +5,7 @@ using DynamicExpressions: Node, string_tree
 using ..CoreModule: Options
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
 using ..MLJInterfaceModule: SRFitResult, SRRegressor
+using ..LoggingModule: convex_hull
 
 @recipe function default_sr_plot(fitresult::SRFitResult{<:SRRegressor})
     return fitresult.state[2], fitresult.options
@@ -59,32 +60,6 @@ end
 
         first.(hull), last.(hull)
     end
-end
-
-"""Uses gift wrapping algorithm to create a convex hull."""
-function convex_hull(xy)
-    cur_point = xy[sortperm(xy[:, 1])[1], :]
-    hull = typeof(cur_point)[]
-    while true
-        push!(hull, cur_point)
-        end_point = xy[1, :]
-        for candidate_point in eachrow(xy)
-            if end_point == cur_point || isleftof(candidate_point, (cur_point, end_point))
-                end_point = candidate_point
-            end
-        end
-        cur_point = end_point
-        if end_point == hull[1]
-            break
-        end
-    end
-    return hull
-end
-
-function isleftof(point, line)
-    (start_point, end_point) = line
-    return (end_point[1] - start_point[1]) * (point[2] - start_point[2]) -
-           (end_point[2] - start_point[2]) * (point[1] - start_point[1]) > 0
 end
 
 end
