@@ -278,13 +278,12 @@ function test_entire_pipeline(
                 )
                 tmp_pop = s_r_cycle(
                     dataset,
+                    options,
                     tmp_pop,
                     5,
                     5,
-                    RunningSearchStatistics(; options=options);
-                    verbosity=verbosity,
-                    options=options,
-                    record=RecordType(),
+                    RunningSearchStatistics(; options=options),
+                    RecordType(),
                 )[1]
                 tmp_pop = optimize_and_simplify_population(
                     dataset, tmp_pop, options, options.maxsize, RecordType()

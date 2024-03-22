@@ -2,6 +2,23 @@ using Base: @deprecate
 
 import .HallOfFameModule: calculate_pareto_frontier
 import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
+import .SingleIterationModule: s_r_cycle
+
+@deprecate(
+    s_r_cycle(
+        dataset::D,
+        pop::P,
+        ncycles::Int,
+        curmaxsize::Int,
+        running_search_statistics::RunningSearchStatistics;
+        verbosity::Int=0,
+        options::Options,
+        record::RecordType,
+    ) where {T,L,D<:Dataset{T,L},N<:AbstractExpressionNode{T},P<:Population{T,L,N}},
+    s_r_cycle(
+        dataset, options, pop, ncycles, curmaxsize, running_search_statistics, record
+    )
+)
 
 @deprecate(
     gen_random_tree(length::Int, options::Options, nfeatures::Int, t::Type),

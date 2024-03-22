@@ -22,12 +22,11 @@ using ..RecorderModule: @recorder
 # printing the fittest equation every 10% through
 function s_r_cycle(
     dataset::D,
+    options::Options,
     pop::P,
     ncycles::Int,
     curmaxsize::Int,
-    running_search_statistics::RunningSearchStatistics;
-    verbosity::Int=0,
-    options::Options,
+    running_search_statistics::RunningSearchStatistics,
     record::RecordType,
 )::Tuple{
     P,HallOfFame{T,L,N},Float64

@@ -812,7 +812,6 @@ function _warmup_search!(
                     pop=i,
                     out=j,
                     iteration=0,
-                    ropt.verbosity,
                     cur_maxsize,
                     running_search_statistics=c_rss,
                 )::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N}}
@@ -978,7 +977,6 @@ function _main_search_loop!(
                         pop=i,
                         out=j,
                         iteration,
-                        ropt.verbosity,
                         cur_maxsize,
                         running_search_statistics=c_rss,
                     )
@@ -1098,7 +1096,6 @@ function _dispatch_s_r_cycle(
     pop::Int,
     out::Int,
     iteration::Int,
-    verbosity,
     cur_maxsize::Int,
     running_search_statistics,
 ) where {T,L,N}
@@ -1110,13 +1107,12 @@ function _dispatch_s_r_cycle(
     normalize_frequencies!(running_search_statistics)
     out_pop, best_seen, evals_from_cycle = s_r_cycle(
         dataset,
+        options,
         in_pop,
         options.ncycles_per_iteration,
         cur_maxsize,
-        running_search_statistics;
-        verbosity=verbosity,
-        options=options,
-        record=record,
+        running_search_statistics,
+        record,
     )
     num_evals += evals_from_cycle
     out_pop, evals_from_optimize = optimize_and_simplify_population(
