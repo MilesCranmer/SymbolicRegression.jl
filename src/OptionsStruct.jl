@@ -40,12 +40,7 @@ function ComplexityMapping(;
 end
 
 # Controls level of specialization we compile
-function operator_specialization end
-if VERSION >= v"1.10.0-DEV.0"
-    @eval operator_specialization(::Type{<:OperatorEnum}) = OperatorEnum
-else
-    @eval operator_specialization(O::Type{<:OperatorEnum}) = O
-end
+operator_specialization(O::Type{<:OperatorEnum}) = O
 
 struct Options{
     CT,OP<:AbstractOperatorEnum,N<:AbstractExpressionNode,_turbo,_bumper,_return_state,W
