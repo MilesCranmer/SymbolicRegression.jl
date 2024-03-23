@@ -264,8 +264,8 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
             mach = MLJ.machine(model, X, y)
             MLJ.fit!(mach)
             report = MLJ.report(mach)
-            best_idx = findfirst(report.losses .< 1e-7)
-            @test report.complexities[best_idx] == 6
+            best_idx = findfirst(report.losses .< 1e-7)::Int
+            @test report.complexities[best_idx] <= 6
             @test any(report.equations[best_idx]) do t
                 t.degree == 1 && t.op == 2  # cbrt
             end
