@@ -220,13 +220,14 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
 
     # Need to import any extension code, if loaded on head node
     relevant_extensions = [
-        :ClusterManagers,
-        :SymbolicUtils,
         :Bumper,
-        :LoopVectorization,
-        :Zygote,
         :CUDA,
+        :ClusterManagers,
         :Enzyme,
+        :LoopVectorization,
+        :Pkg,
+        :SymbolicUtils,
+        :Zygote,
     ]
     filter!(m -> String(m) ∈ loaded_modules_head_worker, relevant_extensions)
     # HACK TODO – this workaround is very fragile. Likely need to submit a bug report
