@@ -1,13 +1,14 @@
 module DimensionalAnalysisModule
 
-import DynamicExpressions: Node
-import DynamicQuantities:
-    Quantity, DimensionError, AbstractQuantity, dimension, ustrip, uparse, constructor_of
-import Tricks: static_hasmethod
+using DynamicExpressions: AbstractExpressionNode
+using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, uparse, constructorof
+using Tricks: static_hasmethod
 
-import ..CoreModule: Options, Dataset
+using ..CoreModule: Options, Dataset
+using ..UtilsModule: safe_call
+
+import DynamicQuantities: dimension, ustrip
 import ..CoreModule.OperatorsModule: safe_pow, safe_sqrt
-import ..UtilsModule: safe_call
 
 """
     @maybe_return_call(T, op, (args...))
@@ -75,14 +76,14 @@ for op in (:(Base.:+), :(Base.:-))
             return W($(op)(l.val, r.val), l.wildcard && r.wildcard, false)
         elseif l.wildcard && r.wildcard
             return W(
-                constructor_of(Q)($(op)(ustrip(l), ustrip(r)), typeof(dimension(l))),
+                constructorof(Q)($(op)(ustrip(l), ustrip(r)), typeof(dimension(l))),
                 true,
                 false,
             )
         elseif l.wildcard
-            return W($(op)(constructor_of(Q)(ustrip(l), dimension(r)), r.val), false, false)
+            return W($(op)(constructorof(Q)(ustrip(l), dimension(r)), r.val), false, false)
         elseif r.wildcard
-            return W($(op)(l.val, constructor_of(Q)(ustrip(r), dimension(l))), false, false)
+            return W($(op)(l.val, constructorof(Q)(ustrip(r), dimension(l))), false, false)
         else
             return W(one(Q), false, true)
         end
@@ -116,9 +117,9 @@ end
 
 # Define dimensionally-aware evaluation routine:
 @inline function deg0_eval(
-    x::AbstractVector{T}, x_units::Vector{Q}, t::Node{T}
+    x::AbstractVector{T}, x_units::Vector{Q}, t::AbstractExpressionNode{T}
 ) where {T,R,Q<:AbstractQuantity{T,R}}
-    t.constant && return WildcardQuantity{Q}(Quantity(t.val::T, R), true, false)
+    t.constant && return WildcardQuantity{Q}(Quantity(t.val, R), true, false)
     return WildcardQuantity{Q}(
         (@inbounds x[t.feature]) * (@inbounds x_units[t.feature]), false, false
     )
@@ -153,7 +154,7 @@ end
 end
 
 function violates_dimensional_constraints_dispatch(
-    tree::Node{T}, x_units::Vector{Q}, x::AbstractVector{T}, operators
+    tree::AbstractExpressionNode{T}, x_units::Vector{Q}, x::AbstractVector{T}, operators
 ) where {T,Q<:AbstractQuantity{T}}
     if tree.degree == 0
         return deg0_eval(x, x_units, tree)::WildcardQuantity{Q}
@@ -168,18 +169,20 @@ function violates_dimensional_constraints_dispatch(
 end
 
 """
-    violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
+    violates_dimensional_constraints(tree::AbstractExpressionNode, dataset::Dataset, options::Options)
 
 Checks whether an expression violates dimensional constraints.
 """
-function violates_dimensional_constraints(tree::Node, dataset::Dataset, options::Options)
+function violates_dimensional_constraints(
+    tree::AbstractExpressionNode, dataset::Dataset, options::Options
+)
     X = dataset.X
     return violates_dimensional_constraints(
         tree, dataset.X_units, dataset.y_units, (@view X[:, 1]), options
     )
 end
 function violates_dimensional_constraints(
-    tree::Node{T},
+    tree::AbstractExpressionNode{T},
     X_units::Union{AbstractVector{<:Quantity},Nothing},
     y_units::Union{Quantity,Nothing},
     x::AbstractVector{T},

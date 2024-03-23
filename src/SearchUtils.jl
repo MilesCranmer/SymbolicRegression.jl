@@ -3,19 +3,59 @@
 This includes: process management, stdin reading, checking for early stops."""
 module SearchUtilsModule
 
-import Printf: @printf, @sprintf
+using Printf: @printf, @sprintf
 using Distributed
-import StatsBase: mean
+using StatsBase: mean
 
-import ..UtilsModule: subscriptify
-import ..CoreModule: Dataset, Options
-import ..ComplexityModule: compute_complexity
-import ..PopulationModule: Population, copy_population
-import ..HallOfFameModule:
-    HallOfFame, copy_hall_of_fame, calculate_pareto_frontier, string_dominating_pareto_curve
-import ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
+using DynamicExpressions: AbstractExpressionNode
+using ..UtilsModule: subscriptify
+using ..CoreModule: Dataset, Options, MAX_DEGREE, RecordType
+using ..ComplexityModule: compute_complexity
+using ..PopulationModule: Population
+using ..PopMemberModule: PopMember
+using ..HallOfFameModule:
+    HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
+using ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
+using ..AdaptiveParsimonyModule: update_frequencies!, RunningSearchStatistics
 
-function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Vector{Int})::Int
+"""
+    RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}
+
+Parameters for a search that are passed to `equation_search` directly,
+rather than set within `Options`. This is to differentiate between
+parameters that relate to processing and the duration of the search,
+and parameters dealing with the search hyperparameters itself.
+"""
+Base.@kwdef struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE}
+    niterations::Int64
+    total_cycles::Int64
+    numprocs::Int64
+    init_procs::Union{Vector{Int},Nothing}
+    addprocs_function::Function
+    exeflags::Cmd
+    runtests::Bool
+    verbosity::Int64
+    progress::Bool
+end
+function Base.getproperty(roptions::RuntimeOptions{P,D,R}, name::Symbol) where {P,D,R}
+    if name == :parallelism
+        return P
+    elseif name == :dim_out
+        return D
+    elseif name == :return_state
+        return R
+    else
+        getfield(roptions, name)
+    end
+end
+function Base.propertynames(roptions::RuntimeOptions)
+    return (Base.fieldnames(typeof(roptions))..., :parallelism, :dim_out, :return_state)
+end
+
+"""A simple dictionary to track worker allocations."""
+const WorkerAssignments = Dict{Tuple{Int,Int},Int}
+
+function next_worker(worker_assignment::WorkerAssignments, procs::Vector{Int})::Int
     job_counts = Dict(proc => 0 for proc in procs)
     for (key, value) in worker_assignment
         @assert haskey(job_counts, value)
@@ -27,22 +67,57 @@ function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Vector{
     return least_busy_worker
 end
 
-function next_worker(worker_assignment::Dict{Tuple{Int,Int},Int}, procs::Nothing)::Int
-    return 0
+function assign_next_worker!(
+    worker_assignment::WorkerAssignments; pop, out, parallelism, procs
+)::Int
+    if parallelism == :multiprocessing
+        worker_idx = next_worker(worker_assignment, procs)
+        worker_assignment[(out, pop)] = worker_idx
+        return worker_idx
+    else
+        return 0
+    end
 end
 
-macro sr_spawner(parallel, p, expr)
-    quote
-        if $(esc(parallel)) == :serial
-            $(esc(expr))
-        elseif $(esc(parallel)) == :multiprocessing
-            @spawnat($(esc(p)), $(esc(expr)))
-        elseif $(esc(parallel)) == :multithreading
-            Threads.@spawn($(esc(expr)))
-        else
-            error("Invalid parallel type.")
-        end
+const DefaultWorkerOutputType{P,H} = Tuple{P,H,RecordType,Float64}
+
+function get_worker_output_type(
+    ::Val{PARALLELISM}, ::Type{PopType}, ::Type{HallOfFameType}
+) where {PARALLELISM,PopType,HallOfFameType}
+    if PARALLELISM == :serial
+        DefaultWorkerOutputType{PopType,HallOfFameType}
+    elseif PARALLELISM == :multiprocessing
+        Future
+    else
+        Task
     end
+end
+
+#! format: off
+extract_from_worker(p::DefaultWorkerOutputType, _, _) = p
+extract_from_worker(f::Future, ::Type{P}, ::Type{H}) where {P,H} = fetch(f)::DefaultWorkerOutputType{P,H}
+extract_from_worker(t::Task, ::Type{P}, ::Type{H}) where {P,H} = fetch(t)::DefaultWorkerOutputType{P,H}
+#! format: on
+
+macro sr_spawner(expr, kws...)
+    # Extract parallelism and worker_idx parameters from kws
+    @assert length(kws) == 2
+    @assert all(ex -> ex.head == :(=), kws)
+    @assert any(ex -> ex.args[1] == :parallelism, kws)
+    @assert any(ex -> ex.args[1] == :worker_idx, kws)
+    parallelism = kws[findfirst(ex -> ex.args[1] == :parallelism, kws)].args[2]
+    worker_idx = kws[findfirst(ex -> ex.args[1] == :worker_idx, kws)].args[2]
+    return quote
+        if $(parallelism) == :serial
+            $(expr)
+        elseif $(parallelism) == :multiprocessing
+            @spawnat($(worker_idx), $(expr))
+        elseif $(parallelism) == :multithreading
+            Threads.@spawn($(expr))
+        else
+            error("Invalid parallel type ", string($(parallelism)), ".")
+        end
+    end |> esc
 end
 
 function init_dummy_pops(
@@ -51,7 +126,7 @@ function init_dummy_pops(
     return [
         [
             Population(d; population_size=1, options=options, nfeatures=d.nfeatures) for
-            i in 1:npops
+            _ in 1:npops
         ] for d in datasets
     ]
 end
@@ -199,7 +274,7 @@ function get_load_string(; head_node_occupation::Float64, parallelism=:serial)
     if raise_usage_warning
         out *= "."
         out *= " This is high, and will prevent efficient resource usage."
-        out *= " Increase `ncyclesperiteration` to reduce load on head worker."
+        out *= " Increase `ncycles_per_iteration` to reduce load on head worker."
     end
 
     out *= "\n"
@@ -284,25 +359,71 @@ function load_saved_hall_of_fame(saved_state)
     else
         hall_of_fame
     end
-    return [copy_hall_of_fame(hof) for hof in hall_of_fame]
+    return [copy(hof) for hof in hall_of_fame]
 end
 load_saved_hall_of_fame(::Nothing)::Nothing = nothing
 
 function get_population(
-    pops::Vector{Vector{Population{T,L}}}; out::Int, pop::Int
-)::Population{T,L} where {T,L}
+    pops::Vector{Vector{P}}; out::Int, pop::Int
+)::P where {P<:Population}
     return pops[out][pop]
 end
-function get_population(
-    pops::Matrix{Population{T,L}}; out::Int, pop::Int
-)::Population{T,L} where {T,L}
+function get_population(pops::Matrix{P}; out::Int, pop::Int)::P where {P<:Population}
     return pops[out, pop]
 end
 function load_saved_population(saved_state; out::Int, pop::Int)
     saved_pop = get_population(saved_state[1]; out=out, pop=pop)
-    return copy_population(saved_pop)
+    return copy(saved_pop)
 end
 load_saved_population(::Nothing; kws...) = nothing
+
+"""
+    SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelType}
+
+The state of a search, including the populations, worker outputs, tasks, and
+channels. This is used to manage the search and keep track of runtime variables
+in a single struct.
+"""
+Base.@kwdef struct SearchState{
+    T,L,N<:AbstractExpressionNode{T},WorkerOutputType,ChannelType
+}
+    procs::Vector{Int}
+    we_created_procs::Bool
+    worker_output::Vector{Vector{WorkerOutputType}}
+    tasks::Vector{Vector{Task}}
+    channels::Vector{Vector{ChannelType}}
+    worker_assignment::WorkerAssignments
+    task_order::Vector{Tuple{Int,Int}}
+    halls_of_fame::Vector{HallOfFame{T,L,N}}
+    last_pops::Vector{Vector{Population{T,L,N}}}
+    best_sub_pops::Vector{Vector{Population{T,L,N}}}
+    all_running_search_statistics::Vector{RunningSearchStatistics}
+    num_evals::Vector{Vector{Float64}}
+    cycles_remaining::Vector{Int}
+    cur_maxsizes::Vector{Int}
+    stdin_reader::StdinReader
+    record::Base.RefValue{RecordType}
+end
+
+"""
+    get_cur_maxsize(; options, total_cycles, cycles_remaining)
+
+For searches where the maxsize gradually increases, this function returns the
+current maxsize.
+"""
+function get_cur_maxsize(; options::Options, total_cycles::Int, cycles_remaining::Int)
+    cycles_elapsed = total_cycles - cycles_remaining
+    fraction_elapsed = 1.0f0 * cycles_elapsed / total_cycles
+    in_warmup_period = fraction_elapsed <= options.warmup_maxsize_by
+
+    if options.warmup_maxsize_by > 0 && in_warmup_period
+        return 3 + floor(
+            Int, (options.maxsize - 3) * fraction_elapsed / options.warmup_maxsize_by
+        )
+    else
+        return options.maxsize
+    end
+end
 
 function construct_datasets(
     X,
@@ -313,13 +434,14 @@ function construct_datasets(
     y_variable_names,
     X_units,
     y_units,
-    loss_type,
-)
+    ::Type{L},
+) where {L}
     nout = size(y, 1)
     return [
         Dataset(
             X,
-            y[j, :];
+            y[j, :],
+            L;
             weights=(weights === nothing ? weights : weights[j, :]),
             variable_names=variable_names,
             display_variable_names=display_variable_names,
@@ -340,9 +462,26 @@ function construct_datasets(
             end,
             X_units=X_units,
             y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
-            loss_type=loss_type,
         ) for j in 1:nout
     ]
+end
+
+function update_hall_of_fame!(
+    hall_of_fame::HallOfFame, members::Vector{PM}, options::Options
+) where {PM<:PopMember}
+    for member in members
+        size = compute_complexity(member, options)
+        valid_size = 0 < size < options.maxsize + MAX_DEGREE
+        if !valid_size
+            continue
+        end
+        not_filled = !hall_of_fame.exists[size]
+        better_than_current = member.score < hall_of_fame.members[size].score
+        if not_filled || better_than_current
+            hall_of_fame.members[size] = copy(member)
+            hall_of_fame.exists[size] = true
+        end
+    end
 end
 
 end

@@ -1,11 +1,14 @@
 using SafeTestsets
 
-@safetestset "Test tree construction and scoring" begin
-    include("test_tree_construction.jl")
-end
+# Trigger extensions:
+using LoopVectorization
 
 @safetestset "Test custom operators and additional types" begin
     include("test_operators.jl")
+end
+
+@safetestset "Test tree construction and scoring" begin
+    include("test_tree_construction.jl")
 end
 
 @safetestset "Test SymbolicUtils interface" begin
@@ -70,10 +73,6 @@ end
 
 @safetestset "Test hash of tree" begin
     include("test_hash.jl")
-end
-
-@safetestset "Test shared node-preserving copy" begin
-    include("test_preserve_multiple_parents.jl")
 end
 
 @safetestset "Test migration" begin

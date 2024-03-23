@@ -1,12 +1,13 @@
 module HallOfFameModule
 
-import DynamicExpressions: Node, string_tree
-import ..UtilsModule: split_string
-import ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu
-import ..ComplexityModule: compute_complexity
-import ..PopMemberModule: PopMember, copy_pop_member
-import ..LossFunctionsModule: eval_loss
-import ..InterfaceDynamicExpressionsModule: format_dimensions
+using DynamicExpressions: AbstractExpressionNode, Node, constructorof, string_tree
+using DynamicExpressions.EquationModule: with_type_parameters
+using ..UtilsModule: split_string
+using ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu
+using ..ComplexityModule: compute_complexity
+using ..PopMemberModule: PopMember
+using ..LossFunctionsModule: eval_loss
+using ..InterfaceDynamicExpressionsModule: format_dimensions
 using Printf: @sprintf
 
 """
@@ -22,13 +23,13 @@ have been set, you can run `.members[exists]`.
     These are ordered by complexity, with `.members[1]` the member with complexity 1.
 - `exists::Array{Bool,1}`: Whether the member at the given complexity has been set.
 """
-mutable struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE}
-    members::Array{PopMember{T,L},1}
+struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}}
+    members::Array{PopMember{T,L,N},1}
     exists::Array{Bool,1} #Whether it has been set
 end
 
 """
-    HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode}
 
 Create empty HallOfFame. The HallOfFame stores a list
 of `PopMember` objects in `.members`, which is enumerated
@@ -45,10 +46,11 @@ function HallOfFame(
     options::Options, ::Type{T}, ::Type{L}
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     actualMaxsize = options.maxsize + MAX_DEGREE
-    return HallOfFame{T,L}(
+    NT = with_type_parameters(options.node_type, T)
+    return HallOfFame{T,L,NT}(
         [
             PopMember(
-                Node(; val=convert(T, 1)),
+                constructorof(options.node_type)(T; val=convert(T, 1)),
                 L(0),
                 L(Inf),
                 options;
@@ -60,24 +62,20 @@ function HallOfFame(
     )
 end
 
-function copy_hall_of_fame(
-    hof::HallOfFame{T,L}
-)::HallOfFame{T,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+function Base.copy(hof::HallOfFame)
     return HallOfFame(
-        [copy_pop_member(member) for member in hof.members],
-        [exists for exists in hof.exists],
+        [copy(member) for member in hof.members], [exists for exists in hof.exists]
     )
 end
 
 """
-    calculate_pareto_frontier(hallOfFame::HallOfFame{T,L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,P}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 """
-function calculate_pareto_frontier(
-    hallOfFame::HallOfFame{T,L}
-)::Vector{PopMember{T,L}} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
     # TODO - remove dataset from args.
+    P = PopMember{T,L,N}
     # Dominating pareto curve - must be better than all simpler equations
-    dominating = PopMember{T,L}[]
+    dominating = P[]
     actualMaxsize = length(hallOfFame.members)
     for size in 1:actualMaxsize
         if !hallOfFame.exists[size]
@@ -98,7 +96,7 @@ function calculate_pareto_frontier(
             end
         end
         if betterThanAllSmaller
-            push!(dominating, copy_pop_member(member))
+            push!(dominating, copy(member))
         end
     end
     return dominating
@@ -154,9 +152,7 @@ function string_dominating_pareto_curve(
     return output
 end
 
-function format_hall_of_fame(
-    hof::HallOfFame{T,L}, options
-) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}
     dominating = calculate_pareto_frontier(hof)
     foreach(dominating) do member
         if member.loss < 0.0
@@ -191,9 +187,7 @@ function format_hall_of_fame(
     end
     return (; trees, scores, losses, complexities)
 end
-function format_hall_of_fame(
-    hof::AH, options
-) where {T,L,H<:HallOfFame{T,L},AH<:AbstractVector{H}}
+function format_hall_of_fame(hof::AbstractVector{<:HallOfFame}, options)
     outs = [format_hall_of_fame(h, options) for h in hof]
     return (;
         trees=[out.trees for out in outs],

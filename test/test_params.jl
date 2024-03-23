@@ -1,4 +1,7 @@
-import SymbolicRegression: L2DistLoss, MutationWeights
+using SymbolicRegression: L2DistLoss, MutationWeights
+using Optim: Optim
+using LineSearches: LineSearches
+using Test: Test
 
 maximum_residual = 1e-2
 custom_cos(x) = cos(x)
@@ -47,14 +50,18 @@ default_params = (
     una_constraints=nothing,
     progress=false,
     terminal_width=nothing,
-    optimizer_algorithm="NelderMead",
+    optimizer_algorithm=Optim.NelderMead(; linesearch=LineSearches.BackTracking()),
     optimizer_nrestarts=3,
     optimizer_probability=0.1f0,
     optimizer_iterations=100,
-    val_recorder=Val(false),
+    use_recorder=false,
     recorder_file="pysr_recorder.json",
     tournament_selection_p=1.0,
     early_stop_condition=nothing,
     timeout_in_seconds=nothing,
     skip_mutation_failures=false,
 )
+
+test_info(_, x) = error("Test failed: $x")
+test_info(_, ::Test.Pass) = nothing
+test_info(f::F, ::Test.Fail) where {F} = f()

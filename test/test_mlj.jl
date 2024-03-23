@@ -1,11 +1,11 @@
 using SymbolicRegression: SymbolicRegression
-import SymbolicRegression:
+using SymbolicRegression:
     Node, SRRegressor, MultitargetSRRegressor, node_to_symbolic, symbolic_to_node
-import MLJTestInterface as MTI
-import MLJBase: machine, fit!, report, predict
+using MLJTestInterface: MLJTestInterface as MTI
+using MLJBase: machine, fit!, report, predict
 using Test
 using SymbolicUtils: SymbolicUtils
-import Suppressor: @capture_err
+using Suppressor: @capture_err
 
 macro quiet(ex)
     return quote
@@ -43,7 +43,16 @@ end
         fit!(mach)
         rep = report(mach)
         @test occursin("a", rep.equation_strings[rep.best_idx])
+        ypred_good = predict(mach, X)
         @test sum(abs2, predict(mach, X) .- y) / length(y) < 1e-5
+
+        @testset "Check that we can choose the equation" begin
+            ypred_same = predict(mach, (data=X, idx=rep.best_idx))
+            @test ypred_good == ypred_same
+
+            ypred_bad = predict(mach, (data=X, idx=1))
+            @test ypred_good != ypred_bad
+        end
 
         @testset "Smoke test SymbolicUtils" begin
             eqn = node_to_symbolic(rep.equations[rep.best_idx], model)
@@ -63,6 +72,28 @@ end
         @test all(
             eq -> occursin("a", eq), [rep.equation_strings[i][rep.best_idx[i]] for i in 1:3]
         )
+        ypred_good = predict(mach, X)
+
+        @testset "Test that we can choose the equation" begin
+            ypred_same = predict(mach, (data=X, idx=rep.best_idx))
+            @test ypred_good == ypred_same
+
+            ypred_bad = predict(mach, (data=X, idx=[1, 1, 1]))
+            @test ypred_good != ypred_bad
+
+            ypred_mixed = predict(mach, (data=X, idx=[rep.best_idx[1], 1, rep.best_idx[3]]))
+            @test ypred_mixed == hcat(ypred_good[:, 1], ypred_bad[:, 2], ypred_good[:, 3])
+
+            @test_throws AssertionError predict(mach, (data=X,))
+            VERSION >= v"1.8" &&
+                @test_throws "If specifying an equation index during" predict(
+                    mach, (data=X,)
+                )
+            VERSION >= v"1.8" &&
+                @test_throws "If specifying an equation index during" predict(
+                    mach, (X=X, idx=1)
+                )
+        end
     end
 
     @testset "Named outputs" begin

@@ -2,7 +2,9 @@ using SymbolicRegression
 using Test
 include("test_params.jl")
 
-function my_custom_loss(tree::Node{T}, dataset::Dataset{T}, options::Options) where {T}
+function my_custom_loss(
+    tree::AbstractExpressionNode{T}, dataset::Dataset{T}, options::Options
+) where {T}
     # We multiply the tree by 2.0:
     tree = Node(1, tree, Node(T; val=2.0))
     out, completed = eval_tree_array(tree, dataset.X, options)

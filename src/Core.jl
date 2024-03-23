@@ -3,16 +3,18 @@ module CoreModule
 include("Utils.jl")
 include("ProgramConstants.jl")
 include("Dataset.jl")
+include("MutationWeights.jl")
 include("OptionsStruct.jl")
 include("Operators.jl")
 include("Options.jl")
 
-import .ProgramConstantsModule:
+using .ProgramConstantsModule:
     MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, DATA_TYPE, LOSS_TYPE
-import .DatasetModule: Dataset
-import .OptionsStructModule: Options, ComplexityMapping, MutationWeights, sample_mutation
-import .OptionsModule: Options
-import .OperatorsModule:
+using .DatasetModule: Dataset
+using .MutationWeightsModule: MutationWeights, sample_mutation
+using .OptionsStructModule: Options, ComplexityMapping
+using .OptionsModule: Options
+using .OperatorsModule:
     plus,
     sub,
     mult,
@@ -20,7 +22,6 @@ import .OperatorsModule:
     cube,
     pow,
     safe_pow,
-    div,
     safe_log,
     safe_log2,
     safe_log10,
@@ -29,7 +30,7 @@ import .OperatorsModule:
     safe_acosh,
     neg,
     greater,
-    greater,
+    cond,
     relu,
     logical_or,
     logical_and,

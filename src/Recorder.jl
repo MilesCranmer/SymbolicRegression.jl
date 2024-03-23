@@ -1,13 +1,11 @@
 module RecorderModule
 
-import ..CoreModule: RecordType, Options
-
-is_recording(::Options{<:Any,<:Any,use_recorder}) where {use_recorder} = use_recorder
+using ..CoreModule: RecordType, Options
 
 "Assumes that `options` holds the user options::Options"
 macro recorder(ex)
     quote
-        if is_recording($(esc(:options)))
+        if $(esc(:options)).use_recorder
             $(esc(ex))
         end
     end

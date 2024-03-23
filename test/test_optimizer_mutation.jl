@@ -2,8 +2,8 @@ using SymbolicRegression
 using SymbolicRegression: SymbolicRegression
 using SymbolicRegression: Dataset, RunningSearchStatistics, RecordType
 using Optim: Optim
-import SymbolicRegression.MutateModule: next_generation
-import DynamicExpressions: get_constants
+using SymbolicRegression.MutateModule: next_generation
+using DynamicExpressions: get_constants
 using Test
 
 mutation_weights = (; optimize=1e30)  # We also test whether a named tuple works.
@@ -18,8 +18,8 @@ X = randn(5, 100)
 y = sin.(X[1, :] .* 2.1 .+ 0.8) .+ X[2, :] .^ 2
 dataset = Dataset(X, y)
 
-x1 = Node(; feature=1)
-x2 = Node(; feature=2)
+x1 = Node(Float64; feature=1)
+x2 = Node(Float64; feature=2)
 tree = sin(x1 * 1.9 + 0.2) + x2 * x2
 
 member = PopMember(dataset, tree, options; deterministic=false)

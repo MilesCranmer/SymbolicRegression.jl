@@ -1,9 +1,11 @@
 module ComplexityModule
 
-import DynamicExpressions: Node, count_nodes, tree_mapreduce
-import ..CoreModule: Options, ComplexityMapping
+using DynamicExpressions: AbstractExpressionNode, count_nodes, tree_mapreduce
+using ..CoreModule: Options, ComplexityMapping
 
-function past_complexity_limit(tree::Node, options::Options{CT}, limit)::Bool where {CT}
+function past_complexity_limit(
+    tree::AbstractExpressionNode, options::Options{CT}, limit
+)::Bool where {CT}
     return compute_complexity(tree, options) > limit
 end
 
@@ -14,16 +16,20 @@ By default, this is the number of nodes in a tree.
 However, it could use the custom settings in options.complexity_mapping
 if these are defined.
 """
-function compute_complexity(tree::Node, options::Options{CT})::Int where {CT}
+function compute_complexity(
+    tree::AbstractExpressionNode, options::Options{CT}; break_sharing=Val(false)
+)::Int where {CT}
     if options.complexity_mapping.use
-        raw_complexity = _compute_complexity(tree, options)
+        raw_complexity = _compute_complexity(tree, options; break_sharing)
         return round(Int, raw_complexity)
     else
-        return count_nodes(tree)
+        return count_nodes(tree; break_sharing)
     end
 end
 
-function _compute_complexity(tree::Node, options::Options{CT})::CT where {CT}
+function _compute_complexity(
+    tree::AbstractExpressionNode, options::Options{CT}; break_sharing=Val(false)
+)::CT where {CT}
     cmap = options.complexity_mapping
     constant_complexity = cmap.constant_complexity
     variable_complexity = cmap.variable_complexity
@@ -34,7 +40,9 @@ function _compute_complexity(tree::Node, options::Options{CT})::CT where {CT}
         t -> t.degree == 1 ? unaop_complexities[t.op] : binop_complexities[t.op],
         +,
         tree,
-        CT,
+        CT;
+        break_sharing=break_sharing,
+        f_on_shared=(result, is_shared) -> is_shared ? result : zero(CT),
     )
 end
 

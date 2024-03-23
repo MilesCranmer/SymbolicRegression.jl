@@ -1,10 +1,10 @@
 module MigrationModule
 
 using StatsBase: StatsBase
-import ..CoreModule: Options, DATA_TYPE, LOSS_TYPE
-import ..PopulationModule: Population
-import ..PopMemberModule: PopMember, copy_pop_member_reset_birth
-import ..UtilsModule: poisson_sample
+using ..CoreModule: Options, DATA_TYPE, LOSS_TYPE
+using ..PopulationModule: Population
+using ..PopMemberModule: PopMember, reset_birth!
+using ..UtilsModule: poisson_sample
 
 """
     migrate!(migration::Pair{Population{T,L},Population{T,L}}, options::Options; frac::AbstractFloat)
@@ -14,10 +14,8 @@ to do so. The original migrant population is not modified. Pass with, e.g.,
 `migrate!(migration_candidates => destination, options; frac=0.1)`
 """
 function migrate!(
-    migration::Pair{Vector{PopMember{T,L}},Population{T,L}},
-    options::Options;
-    frac::AbstractFloat,
-) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    migration::Pair{Vector{PM},P}, options::Options; frac::AbstractFloat
+) where {T,L,N,PM<:PopMember{T,L,N},P<:Population{T,L,N}}
     base_pop = migration.second
     population_size = length(base_pop.members)
     mean_number_replaced = population_size * frac
@@ -33,9 +31,8 @@ function migrate!(
     migrants = StatsBase.sample(migrant_candidates, num_replace; replace=true)
 
     for (i, migrant) in zip(locations, migrants)
-        base_pop.members[i] = copy_pop_member_reset_birth(
-            migrant; deterministic=options.deterministic
-        )
+        base_pop.members[i] = copy(migrant)
+        reset_birth!(base_pop.members[i]; options.deterministic)
     end
     return nothing
 end
