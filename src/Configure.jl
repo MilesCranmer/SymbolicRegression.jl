@@ -225,7 +225,6 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
         :ClusterManagers,
         :Enzyme,
         :LoopVectorization,
-        :Pkg,
         :SymbolicUtils,
         :Zygote,
     ]
@@ -325,15 +324,17 @@ function configure_workers(;
     end
 
     if we_created_procs
-        activate_env_on_workers(procs, project_path, options, verbosity)
+        if VERSION < v"1.9.0"
+            # On newer Julia; environment is activated automatically
+            activate_env_on_workers(procs, project_path, options, verbosity)
+        end
         import_module_on_workers(procs, file, options, verbosity)
     end
+
     move_functions_to_workers(procs, options, example_dataset, verbosity)
-    if runtests
-        test_module_on_workers(procs, options, verbosity)
-    end
 
     if runtests
+        test_module_on_workers(procs, options, verbosity)
         test_entire_pipeline(procs, example_dataset, options, verbosity)
     end
 
