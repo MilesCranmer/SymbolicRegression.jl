@@ -8,7 +8,7 @@ using MLJ
 ## 1. Simple search
 
 Here's a simple example where we
-find the expression `2 cos(x3) + x0^2 - 2`.
+find the expression `2 cos(x4) + x1^2 - 2`.
 
 ```julia
 X = 2randn(1000, 5)
