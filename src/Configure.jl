@@ -246,7 +246,12 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
     else
         @info "Importing SymbolicRegression on workers as well as extensions $(join(relevant_extensions, ',' * ' '))."
     end
-    @everywhere procs Base.MainInclude.eval($expr)
+    if VERSION < v"1.11.0-alpha1"
+        @everywhere procs Base.MainInclude.eval($expr)
+    else
+        # See https://github.com/JuliaLang/julia/issues/54057
+        @everywhere procs Core.eval(Base.MainInclude, $expr)
+    end
     return verbosity > 0 && @info "Finished!"
 end
 
