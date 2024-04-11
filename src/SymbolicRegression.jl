@@ -164,6 +164,7 @@ include("PopMember.jl")
 include("ConstantOptimization.jl")
 include("Population.jl")
 include("HallOfFame.jl")
+include("Cache.jl")
 include("Mutate.jl")
 include("RegularizedEvolution.jl")
 include("SingleIteration.jl")
@@ -221,6 +222,7 @@ using .PopMemberModule: PopMember, reset_birth!
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 using .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
+using .CacheModule: Cache
 using .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
 using .ProgressBarsModule: WrappedProgressBar
 using .RecorderModule: @recorder, find_iteration_from_record
@@ -672,6 +674,11 @@ function _create_workers(
     last_pops = init_dummy_pops(options.populations, datasets, options)
     # Best 10 members from each population for migration:
     best_sub_pops = init_dummy_pops(options.populations, datasets, options)
+
+    caches = [
+        [Cache{T,L,NT}(; maxsize=100_000) for i in 1:(options.populations)] for j in 1:nout
+    ]
+
     # TODO: Should really be one per population too.
     all_running_search_statistics = [
         RunningSearchStatistics(; options=options) for j in 1:nout
@@ -701,6 +708,7 @@ function _create_workers(
         halls_of_fame=halls_of_fame,
         last_pops=last_pops,
         best_sub_pops=best_sub_pops,
+        caches=caches,
         all_running_search_statistics=all_running_search_statistics,
         num_evals=num_evals,
         cycles_remaining=cycles_remaining,
@@ -1101,6 +1109,7 @@ function _dispatch_s_r_cycle(
     verbosity,
     cur_maxsize::Int,
     running_search_statistics,
+    cache=nothing,
 ) where {T,L,N}
     record = RecordType()
     @recorder record["out$(out)_pop$(pop)"] = RecordType(
@@ -1125,7 +1134,9 @@ function _dispatch_s_r_cycle(
     num_evals += evals_from_optimize
     if options.batching
         for i_member in 1:(options.maxsize + MAX_DEGREE)
-            score, result_loss = score_func(dataset, best_seen.members[i_member], options)
+            score, result_loss = score_func(
+                dataset, best_seen.members[i_member], options; cache
+            )
             best_seen.members[i_member].score = score
             best_seen.members[i_member].loss = result_loss
             num_evals += 1

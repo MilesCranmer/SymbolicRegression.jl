@@ -93,10 +93,11 @@ function PopMember(
     ref::Int=-1,
     parent::Int=-1,
     deterministic=nothing,
+    cache=nothing,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     set_complexity = complexity === nothing ? compute_complexity(t, options) : complexity
     @assert set_complexity != -1
-    score, loss = score_func(dataset, t, options; complexity=set_complexity)
+    score, loss = score_func(dataset, t, options; complexity=set_complexity, cache)
     return PopMember(
         t,
         score,

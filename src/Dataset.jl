@@ -79,6 +79,7 @@ mutable struct Dataset{
     @constfield y_units::YU
     @constfield X_sym_units::XUS
     @constfield y_sym_units::YUS
+    @constfield _hash::UInt64
 end
 
 """
@@ -192,6 +193,21 @@ function Dataset(
 
     error_on_mismatched_size(nfeatures, X_si_units)
 
+    # Pre-compute a hash key for the dataset
+    _hash = hash((
+        X,
+        y,
+        n,
+        nfeatures,
+        weighted,
+        weights,
+        extra,
+        X_si_units,
+        y_si_units,
+        X_sym_units,
+        y_sym_units,
+    ))
+
     return Dataset{
         T,
         out_loss_type,
@@ -221,6 +237,7 @@ function Dataset(
         y_si_units,
         X_sym_units,
         y_sym_units,
+        _hash,
     )
 end
 function Dataset(
@@ -243,6 +260,8 @@ function Dataset(
     end
     return Dataset(X, y; weights=weights, kws...)
 end
+
+Base.hash(d::Dataset, h::UInt=UInt(0)) = hash(d._hash, h)
 
 function error_on_mismatched_size(_, ::Nothing)
     return nothing

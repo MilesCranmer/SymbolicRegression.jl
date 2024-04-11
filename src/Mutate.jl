@@ -85,6 +85,7 @@ function next_generation(
     running_search_statistics::RunningSearchStatistics,
     options::Options;
     tmp_recorder::RecordType,
+    cache=nothing,
 )::Tuple{
     P,Bool,Float64
 } where {T,L,D<:Dataset{T,L},N<:AbstractExpressionNode{T},P<:PopMember{T,L,N}}
@@ -95,7 +96,7 @@ function next_generation(
     #TODO - reconsider this
     beforeScore, beforeLoss = if options.batching
         num_evals += (options.batch_size / dataset.n)
-        score_func_batched(dataset, member, options)
+        score_func_batched(dataset, member, options; cache)
     else
         member.score, member.loss
     end
@@ -266,10 +267,10 @@ function next_generation(
     end
 
     if options.batching
-        afterScore, afterLoss = score_func_batched(dataset, tree, options)
+        afterScore, afterLoss = score_func_batched(dataset, tree, options; cache)
         num_evals += (options.batch_size / dataset.n)
     else
-        afterScore, afterLoss = score_func(dataset, tree, options)
+        afterScore, afterLoss = score_func(dataset, tree, options; cache)
         num_evals += 1
     end
 
@@ -359,7 +360,7 @@ end
 
 """Generate a generation via crossover of two members."""
 function crossover_generation(
-    member1::P, member2::P, dataset::D, curmaxsize::Int, options::Options
+    member1::P, member2::P, dataset::D, curmaxsize::Int, options::Options; cache=nothing
 )::Tuple{P,P,Bool,Float64} where {T,L,D<:Dataset{T,L},P<:PopMember{T,L}}
     tree1 = member1.tree
     tree2 = member2.tree
@@ -389,18 +390,18 @@ function crossover_generation(
     end
     if options.batching
         afterScore1, afterLoss1 = score_func_batched(
-            dataset, child_tree1, options; complexity=afterSize1
+            dataset, child_tree1, options; complexity=afterSize1, cache
         )
         afterScore2, afterLoss2 = score_func_batched(
-            dataset, child_tree2, options; complexity=afterSize2
+            dataset, child_tree2, options; complexity=afterSize2, cache
         )
         num_evals += 2 * (options.batch_size / dataset.n)
     else
         afterScore1, afterLoss1 = score_func(
-            dataset, child_tree1, options; complexity=afterSize1
+            dataset, child_tree1, options; complexity=afterSize1, cache
         )
         afterScore2, afterLoss2 = score_func(
-            dataset, child_tree2, options; complexity=afterSize2
+            dataset, child_tree2, options; complexity=afterSize2, cache
         )
         num_evals += options.batch_size / dataset.n
     end

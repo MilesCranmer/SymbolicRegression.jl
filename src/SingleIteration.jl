@@ -29,6 +29,7 @@ function s_r_cycle(
     verbosity::Int=0,
     options::Options,
     record::RecordType,
+    cache=nothing,
 )::Tuple{
     P,HallOfFame{T,L,N},Float64
 } where {T,L,D<:Dataset{T,L},N<:AbstractExpressionNode{T},P<:Population{T,L,N}}
@@ -70,7 +71,7 @@ function s_r_cycle(
                     # changes each iteration, and we evaluate on full-batch outside,
                     # so this is not biased).
                     _score, _ = score_func_batched(
-                        dataset, member, options; complexity=size, idx=idx
+                        dataset, member, options; complexity=size, idx, cache
                     )
                     loss_cache[i] = (oid=copy(oid), score=_score)
                     _score

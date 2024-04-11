@@ -15,6 +15,7 @@ using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
 using ..HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
+using ..CacheModule: Cache
 using ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
 using ..AdaptiveParsimonyModule: update_frequencies!, RunningSearchStatistics
 
@@ -397,6 +398,7 @@ Base.@kwdef struct SearchState{
     halls_of_fame::Vector{HallOfFame{T,L,N}}
     last_pops::Vector{Vector{Population{T,L,N}}}
     best_sub_pops::Vector{Vector{Population{T,L,N}}}
+    caches::Vector{Vector{Cache{T,L,N}}}
     all_running_search_statistics::Vector{RunningSearchStatistics}
     num_evals::Vector{Vector{Float64}}
     cycles_remaining::Vector{Int}

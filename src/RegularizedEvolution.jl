@@ -18,7 +18,8 @@ function reg_evol_cycle(
     curmaxsize::Int,
     running_search_statistics::RunningSearchStatistics,
     options::Options,
-    record::RecordType,
+    record::RecordType;
+    cache=nothing,
 )::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:Population{T,L}}
     # Batch over each subsample. Can give 15% improvement in speed; probably moreso for large pops.
     # but is ultimately a different algorithm than regularized evolution, and might not be
@@ -42,6 +43,7 @@ function reg_evol_cycle(
                 running_search_statistics,
                 options;
                 tmp_recorder=mutation_recorder,
+                cache,
             )
             num_evals += tmp_num_evals
 
@@ -89,7 +91,7 @@ function reg_evol_cycle(
             allstar2 = best_of_sample(pop, running_search_statistics, options)
 
             baby1, baby2, crossover_accepted, tmp_num_evals = crossover_generation(
-                allstar1, allstar2, dataset, curmaxsize, options
+                allstar1, allstar2, dataset, curmaxsize, options; cache
             )
             num_evals += tmp_num_evals
 

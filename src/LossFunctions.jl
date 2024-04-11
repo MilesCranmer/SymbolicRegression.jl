@@ -100,7 +100,9 @@ function eval_loss(
     options::Options;
     regularization::Bool=true,
     idx=nothing,
+    cache=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    # @assert cache !== nothing
     loss_val = if options.loss_function === nothing
         _eval_loss(tree, dataset, options, regularization, idx)
     else
@@ -159,9 +161,13 @@ end
 
 # Score an equation
 function score_func(
-    dataset::Dataset{T,L}, member, options::Options; complexity::Union{Int,Nothing}=nothing
+    dataset::Dataset{T,L},
+    member,
+    options::Options;
+    complexity::Union{Int,Nothing}=nothing,
+    cache=nothing,
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    result_loss = eval_loss(get_tree(member), dataset, options)
+    result_loss = eval_loss(get_tree(member), dataset, options; cache)
     score = loss_to_score(
         result_loss,
         dataset.use_baseline,
@@ -180,6 +186,7 @@ function score_func_batched(
     options::Options;
     complexity::Union{Int,Nothing}=nothing,
     idx=nothing,
+    cache=nothing,
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     result_loss = eval_loss_batched(get_tree(member), dataset, options; idx=idx)
     score = loss_to_score(
