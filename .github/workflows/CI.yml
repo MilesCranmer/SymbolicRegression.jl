@@ -41,6 +41,8 @@ jobs:
         include:
           - os: windows-latest
             julia-version: "1"
+          - os: ubuntu-latest
+            julia-version: "~1.11.0-0"
 
     steps:
       - uses: actions/checkout@v4
