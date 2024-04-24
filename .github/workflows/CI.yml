@@ -37,10 +37,13 @@ jobs:
           - "1"
         os:
           - ubuntu-latest
-          - macOS-latest
         include:
           - os: windows-latest
             julia-version: "1"
+          - os: macOS-latest
+            julia-version: "1"
+          - os: macOS-latest
+            julia-version: "1.8"
           - os: ubuntu-latest
             julia-version: "~1.11.0-0"
 
