@@ -921,15 +921,33 @@ function _main_search_loop!(
                     output_file = output_file * ".out$j"
                 end
                 # Write file twice in case exit in middle of filewrite
-                for out_file in (output_file, output_file * ".bkup")
-                    open(out_file, "w") do io
-                        println(io, "Complexity,Loss,Equation")
-                        for member in dominating
-                            println(
-                                io,
-                                "$(compute_complexity(member, options)),$(member.loss),\"" *
-                                "$(string_tree(member.tree, options, variable_names=dataset.variable_names))\"",
-                            )
+                let
+                    dominating_n = length(dominating)
+
+                    complexities = Vector{Int}(undef, dominating_n)
+                    losses = Vector{L}(undef, dominating_n)
+                    strings = Vector{String}(undef, dominating_n)
+
+                    Threads.@threads for i in 1:dominating_n
+                        member = dominating[i]
+                        complexities[i] = compute_complexity(member, options)
+                        losses[i] = member.loss
+                        strings[i] = string_tree(
+                            member.tree, options; variable_names=dataset.variable_names
+                        )
+                    end
+
+                    s = let tmp_io = IOBuffer()
+                        println(tmp_io, "Complexity,Loss,Equation")
+                        for i in 1:dominating_n
+                            println(tmp_io, "$complexities[i],$losses[i],\"$strings[i]\"")
+                        end
+
+                        String(take!(tmp_io))
+                    end
+                    for out_file in (output_file, output_file * ".bkup")
+                        open(out_file, "w") do io
+                            write(io, s)
                         end
                     end
                 end
