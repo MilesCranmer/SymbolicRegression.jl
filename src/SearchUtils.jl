@@ -270,7 +270,7 @@ function get_load_string(; head_node_occupation::Float64, parallelism=:serial)
     parallelism == :serial && return ""
     out = @sprintf("Head worker occupation: %.1f%%", head_node_occupation * 100)
 
-    raise_usage_warning = head_node_occupation > 0.2
+    raise_usage_warning = head_node_occupation > 0.4
     if raise_usage_warning
         out *= "."
         out *= " This is high, and will prevent efficient resource usage."
