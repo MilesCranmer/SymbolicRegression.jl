@@ -108,7 +108,7 @@ function optimize_and_simplify_population(
 )::Tuple{P,Float64} where {T,L,D<:Dataset{T,L},P<:Population{T,L}}
     array_num_evals = zeros(Float64, pop.n)
     do_optimization = rand(pop.n) .< options.optimizer_probability
-    for j in 1:(pop.n)
+    Threads.@threads for j in 1:(pop.n)
         if options.should_simplify
             tree = pop.members[j].tree
             tree = simplify_tree!(tree, options.operators)
