@@ -251,6 +251,7 @@ using .SearchUtilsModule:
     load_saved_hall_of_fame,
     load_saved_population,
     construct_datasets,
+    save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!
 
@@ -916,41 +917,7 @@ function _main_search_loop!(
             dominating = calculate_pareto_frontier(state.halls_of_fame[j])
 
             if options.save_to_file
-                output_file = options.output_file
-                if nout > 1
-                    output_file = output_file * ".out$j"
-                end
-                # Write file twice in case exit in middle of filewrite
-                let
-                    dominating_n = length(dominating)
-
-                    complexities = Vector{Int}(undef, dominating_n)
-                    losses = Vector{L}(undef, dominating_n)
-                    strings = Vector{String}(undef, dominating_n)
-
-                    Threads.@threads for i in 1:dominating_n
-                        member = dominating[i]
-                        complexities[i] = compute_complexity(member, options)
-                        losses[i] = member.loss
-                        strings[i] = string_tree(
-                            member.tree, options; variable_names=dataset.variable_names
-                        )
-                    end
-
-                    s = let tmp_io = IOBuffer()
-                        println(tmp_io, "Complexity,Loss,Equation")
-                        for i in 1:dominating_n
-                            println(tmp_io, "$complexities[i],$losses[i],\"$strings[i]\"")
-                        end
-
-                        String(take!(tmp_io))
-                    end
-                    for out_file in (output_file, output_file * ".bkup")
-                        open(out_file, "w") do io
-                            write(io, s)
-                        end
-                    end
-                end
+                save_to_file(dominating, j, dataset, options)
             end
             ###################################################################
             # Migration #######################################################
