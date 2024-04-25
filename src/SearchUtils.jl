@@ -7,7 +7,7 @@ using Printf: @printf, @sprintf
 using Distributed
 using StatsBase: mean
 
-using DynamicExpressions: AbstractExpressionNode
+using DynamicExpressions: AbstractExpressionNode, string_tree
 using ..UtilsModule: subscriptify
 using ..CoreModule: Dataset, Options, MAX_DEGREE, RecordType
 using ..ComplexityModule: compute_complexity
@@ -270,7 +270,7 @@ function get_load_string(; head_node_occupation::Float64, parallelism=:serial)
     parallelism == :serial && return ""
     out = @sprintf("Head worker occupation: %.1f%%", head_node_occupation * 100)
 
-    raise_usage_warning = head_node_occupation > 0.2
+    raise_usage_warning = head_node_occupation > 0.4
     if raise_usage_warning
         out *= "."
         out *= " This is high, and will prevent efficient resource usage."
@@ -403,6 +403,48 @@ Base.@kwdef struct SearchState{
     cur_maxsizes::Vector{Int}
     stdin_reader::StdinReader
     record::Base.RefValue{RecordType}
+end
+
+function save_to_file(
+    dominating, nout::Integer, j::Integer, dataset::Dataset{T,L}, options::Options
+) where {T,L}
+    output_file = options.output_file
+    if nout > 1
+        output_file = output_file * ".out$j"
+    end
+    dominating_n = length(dominating)
+
+    complexities = Vector{Int}(undef, dominating_n)
+    losses = Vector{L}(undef, dominating_n)
+    strings = Vector{String}(undef, dominating_n)
+
+    Threads.@threads for i in 1:dominating_n
+        member = dominating[i]
+        complexities[i] = compute_complexity(member, options)
+        losses[i] = member.loss
+        strings[i] = string_tree(
+            member.tree, options; variable_names=dataset.variable_names
+        )
+    end
+
+    s = let
+        tmp_io = IOBuffer()
+
+        println(tmp_io, "Complexity,Loss,Equation")
+        for i in 1:dominating_n
+            println(tmp_io, "$(complexities[i]),$(losses[i]),\"$(strings[i])\"")
+        end
+
+        String(take!(tmp_io))
+    end
+
+    # Write file twice in case exit in middle of filewrite
+    for out_file in (output_file, output_file * ".bkup")
+        open(out_file, "w") do io
+            write(io, s)
+        end
+    end
+    return nothing
 end
 
 """
