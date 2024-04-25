@@ -406,7 +406,7 @@ Base.@kwdef struct SearchState{
 end
 
 function save_to_file(
-    dominating, j::Integer, dataset::Dataset{T,L}, options::Options
+    dominating, nout::Integer, j::Integer, dataset::Dataset{T,L}, options::Options
 ) where {T,L}
     output_file = options.output_file
     if nout > 1

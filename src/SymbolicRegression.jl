@@ -917,7 +917,7 @@ function _main_search_loop!(
             dominating = calculate_pareto_frontier(state.halls_of_fame[j])
 
             if options.save_to_file
-                save_to_file(dominating, j, dataset, options)
+                save_to_file(dominating, nout, j, dataset, options)
             end
             ###################################################################
             # Migration #######################################################
