@@ -995,7 +995,11 @@ function _main_search_loop!(
                 )
             end
         end
-        Libc.systemsleep(1e-6)
+        let
+            t = Threads.@spawn Libc.systemsleep(1e-6)
+            yield()
+            fetch(t)
+        end
         # Regular sleep has issues:
         # https://discourse.julialang.org/t/julia-seems-an-order-of-magnitude-slower-than-python-when-printing-to-the-terminal-because-of-issue-with-sleep/78151/44
 
