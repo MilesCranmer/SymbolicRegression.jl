@@ -348,7 +348,7 @@ end
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
     ) ==
-        "(1[⋅] * (x₁[m³] + ((x₂[s⁻¹ km] * x₃[kg]) * 5.32[⋅]))) - cos(1.5[⋅] * (x₁[m³] - 0.5[⋅]))"
+        "(1[?] * (x₁[m³] + ((x₂[s⁻¹ km] * x₃[kg]) * 5.32[?]))) - cos(1.5[?] * (x₁[m³] - 0.5[?]))"
 
     @test string_tree(
         x5 * 3.2,
@@ -357,7 +357,7 @@ end
         display_variable_names=dataset.display_variable_names,
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
-    ) == "x₅ * 3.2[⋅]"
+    ) == "x₅ * 3.2[?]"
 
     # Should print numeric factor in unit if given:
     dataset2 = Dataset(X, y; X_units=[1.5, 1.9, 2.0, 3.0, 5.0u"m"], y_units="kg")
@@ -368,7 +368,7 @@ end
         display_variable_names=dataset2.display_variable_names,
         X_sym_units=dataset2.X_sym_units,
         y_sym_units=dataset2.y_sym_units,
-    ) == "x₅[5.0 m] * 3.2[⋅]"
+    ) == "x₅[5.0 m] * 3.2[?]"
 end
 
 @testset "Miscellaneous" begin

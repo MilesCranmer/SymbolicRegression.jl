@@ -130,6 +130,8 @@ function differentiable_eval_tree_array(
     return differentiable_eval_tree_array(tree, X, options.operators; kws...)
 end
 
+const WILDCARD_UNIT_STRING = "[?]"
+
 """
     string_tree(tree::AbstractExpressionNode, options::Options; kws...)
 
@@ -168,7 +170,7 @@ Convert an equation to a string.
             tree,
             options.operators;
             f_variable=(feature, vname) -> string_variable(feature, vname, X_sym_units),
-            f_constant=(val,) -> string_constant(val, vprecision, "[⋅]"),
+            f_constant=(val,) -> string_constant(val, vprecision, WILDCARD_UNIT_STRING),
             variable_names=display_variable_names,
             kws...,
         )
