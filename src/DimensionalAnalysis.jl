@@ -2,7 +2,6 @@ module DimensionalAnalysisModule
 
 using DynamicExpressions: AbstractExpressionNode
 using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, uparse, constructorof
-using Tricks: static_hasmethod
 
 using ..CoreModule: Options, Dataset
 using ..UtilsModule: safe_call
@@ -130,7 +129,7 @@ end
     l.violates && return l
     !isfinite(l) && return W(one(Q), false, true)
 
-    static_hasmethod(op, Tuple{W}) && @maybe_return_call(W, op, (l,))
+    hasmethod(op, Tuple{W}) && @maybe_return_call(W, op, (l,))
     l.wildcard && return W(Quantity(op(ustrip(l))::T), false, false)
     return W(one(Q), false, true)
 end
@@ -140,13 +139,9 @@ end
     l.violates && return l
     r.violates && return r
     (!isfinite(l) || !isfinite(r)) && return W(one(Q), false, true)
-    static_hasmethod(op, Tuple{W,W}) && @maybe_return_call(W, op, (l, r))
-    static_hasmethod(op, Tuple{T,W}) &&
-        l.wildcard &&
-        @maybe_return_call(W, op, (ustrip(l), r))
-    static_hasmethod(op, Tuple{W,T}) &&
-        r.wildcard &&
-        @maybe_return_call(W, op, (l, ustrip(r)))
+    hasmethod(op, Tuple{W,W}) && @maybe_return_call(W, op, (l, r))
+    hasmethod(op, Tuple{T,W}) && l.wildcard && @maybe_return_call(W, op, (ustrip(l), r))
+    hasmethod(op, Tuple{W,T}) && r.wildcard && @maybe_return_call(W, op, (l, ustrip(r)))
     l.wildcard &&
         r.wildcard &&
         return W(Quantity(op(ustrip(l), ustrip(r))::T), false, false)
