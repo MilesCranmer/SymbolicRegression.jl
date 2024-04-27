@@ -327,16 +327,21 @@ function form_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rn
         return tree
     end
     # Set one of the children to be this new child:
-    side = (parent.degree == 1 || rand(rng, Bool)) ? :l : :r
-    setproperty!(parent, side, new_child)
+    if parent.degree == 1 || rand(rng, Bool)
+        parent.l = new_child
+    else
+        parent.r = new_child
+    end
     return tree
 end
 function break_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     tree.degree == 0 && return tree
     parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
-    side = (parent.degree == 1 || rand(rng, Bool)) ? :l : :r
-    unshared_child = copy(getproperty(parent, side))
-    setproperty!(parent, side, unshared_child)
+    if parent.degree == 1 || rand(rng, Bool)
+        parent.l = copy(parent.l)
+    else
+        parent.r = copy(parent.r)
+    end
     return tree
 end
 
