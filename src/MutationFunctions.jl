@@ -302,25 +302,25 @@ function crossover_trees(
     return tree1, tree2
 end
 
+function get_two_nodes_without_loop(tree::AbstractNode, rng::AbstractRNG; max_attempts=10)
+    for _ in 1:max_attempts
+        parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
+        new_child = rand(rng, NodeSampler(; tree, filter=t -> t !== tree))
+
+        would_form_loop = any(t -> t === parent, new_child)
+        if !would_form_loop
+            return (parent, new_child, false)
+        end
+    end
+    return (tree, tree, true)
+end
+
 function form_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     if length(tree) < 5
         return tree
     end
 
-    attempt_number = 0
-    max_attempts = 10
-
-    parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
-    new_child = rand(rng, NodeSampler(; tree, filter=t -> t !== tree))
-    attempt_number += 1
-    would_form_loop = any(t -> t === parent, new_child)
-
-    while would_form_loop && attempt_number <= max_attempts
-        parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
-        new_child = rand(rng, NodeSampler(; tree, filter=t -> t !== tree))
-        attempt_number += 1
-        would_form_loop = any(t -> t === parent, new_child)
-    end
+    parent, new_child, would_form_loop = get_two_nodes_without_loop(tree, rng)
 
     if would_form_loop
         return tree
