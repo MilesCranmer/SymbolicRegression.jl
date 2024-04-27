@@ -307,25 +307,25 @@ function form_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rn
         return tree
     end
 
-    local parent, new_child, would_form_loop
-
     attempt_number = 0
     max_attempts = 10
 
-    while true
+    parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
+    new_child = rand(rng, NodeSampler(; tree, filter=t -> t !== tree))
+    attempt_number += 1
+    would_form_loop = any(t -> t === parent, new_child)
+
+    while would_form_loop && attempt_number <= max_attempts
         parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
         new_child = rand(rng, NodeSampler(; tree, filter=t -> t !== tree))
         attempt_number += 1
         would_form_loop = any(t -> t === parent, new_child)
-        if would_form_loop && attempt_number <= max_attempts
-            continue
-        else
-            break
-        end
     end
+
     if would_form_loop
         return tree
     end
+
     # Set one of the children to be this new child:
     if parent.degree == 1 || rand(rng, Bool)
         parent.l = new_child
