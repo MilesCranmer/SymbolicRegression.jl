@@ -116,12 +116,18 @@ end
 
 # Define dimensionally-aware evaluation routine:
 @inline function deg0_eval(
-    x::AbstractVector{T}, x_units::Vector{Q}, t::AbstractExpressionNode{T}
+    x::AbstractVector{T},
+    x_units::Vector{Q},
+    t::AbstractExpressionNode{T},
+    allow_wildcards::Bool,
 ) where {T,R,Q<:AbstractQuantity{T,R}}
-    t.constant && return WildcardQuantity{Q}(Quantity(t.val, R), true, false)
-    return WildcardQuantity{Q}(
-        (@inbounds x[t.feature]) * (@inbounds x_units[t.feature]), false, false
-    )
+    if t.constant
+        return WildcardQuantity{Q}(Quantity(t.val, R), allow_wildcards, false)
+    else
+        return WildcardQuantity{Q}(
+            (@inbounds x[t.feature]) * (@inbounds x_units[t.feature]), false, false
+        )
+    end
 end
 @inline function deg1_eval(
     op::F, l::W
@@ -149,16 +155,26 @@ end
 end
 
 function violates_dimensional_constraints_dispatch(
-    tree::AbstractExpressionNode{T}, x_units::Vector{Q}, x::AbstractVector{T}, operators
+    tree::AbstractExpressionNode{T},
+    x_units::Vector{Q},
+    x::AbstractVector{T},
+    operators,
+    allow_wildcards,
 ) where {T,Q<:AbstractQuantity{T}}
     if tree.degree == 0
-        return deg0_eval(x, x_units, tree)::WildcardQuantity{Q}
+        return deg0_eval(x, x_units, tree, allow_wildcards)::WildcardQuantity{Q}
     elseif tree.degree == 1
-        l = violates_dimensional_constraints_dispatch(tree.l, x_units, x, operators)
+        l = violates_dimensional_constraints_dispatch(
+            tree.l, x_units, x, operators, allow_wildcards
+        )
         return deg1_eval((@inbounds operators.unaops[tree.op]), l)::WildcardQuantity{Q}
     else
-        l = violates_dimensional_constraints_dispatch(tree.l, x_units, x, operators)
-        r = violates_dimensional_constraints_dispatch(tree.r, x_units, x, operators)
+        l = violates_dimensional_constraints_dispatch(
+            tree.l, x_units, x, operators, allow_wildcards
+        )
+        r = violates_dimensional_constraints_dispatch(
+            tree.r, x_units, x, operators, allow_wildcards
+        )
         return deg2_eval((@inbounds operators.binops[tree.op]), l, r)::WildcardQuantity{Q}
     end
 end
@@ -186,8 +202,9 @@ function violates_dimensional_constraints(
     if X_units === nothing && y_units === nothing
         return false
     end
+    allow_wildcards = !(options.dimensionless_constants_only)
     dimensional_output = violates_dimensional_constraints_dispatch(
-        tree, X_units, x, options.operators
+        tree, X_units, x, options.operators, allow_wildcards
     )
     # ^ Eventually do this with map_treereduce. However, right now it seems
     # like we are passing around too many arguments, which slows things down.

@@ -59,6 +59,7 @@ struct Options{
     tournament_selection_weights::W
     parsimony::Float32
     dimensional_constraint_penalty::Union{Float32,Nothing}
+    dimensionless_constants_only::Bool
     alpha::Float32
     maxsize::Int
     maxdepth::Int

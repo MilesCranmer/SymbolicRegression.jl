@@ -170,7 +170,11 @@ Convert an equation to a string.
             tree,
             options.operators;
             f_variable=(feature, vname) -> string_variable(feature, vname, X_sym_units),
-            f_constant=(val,) -> string_constant(val, vprecision, WILDCARD_UNIT_STRING),
+            f_constant=let
+                unit_placeholder =
+                    options.dimensionless_constants_only ? "" : WILDCARD_UNIT_STRING
+                (val,) -> string_constant(val, vprecision, unit_placeholder)
+            end,
             variable_names=display_variable_names,
             kws...,
         )
