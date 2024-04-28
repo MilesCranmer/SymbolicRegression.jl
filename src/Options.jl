@@ -277,6 +277,8 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     punished.
 - `dimensional_constraint_penalty`: An additive factor if the dimensional
     constraint is violated.
+- `dimensionless_constants_only`: Whether to only allow dimensionless
+    constants.
 - `use_frequency`: Whether to use a parsimony that adapts to the
     relative proportion of equations at each complexity; this will
     ensure that there are a balanced number of equations considered
@@ -387,6 +389,7 @@ function Options end
     complexity_of_variables::Union{Nothing,Real}=nothing,
     parsimony::Real=0.0032,
     dimensional_constraint_penalty::Union{Nothing,Real}=nothing,
+    dimensionless_constants_only::Bool=false,
     alpha::Real=0.100000,
     maxsize::Integer=20,
     maxdepth::Union{Nothing,Integer}=nothing,
@@ -780,6 +783,7 @@ function Options end
         tournament_selection_weights,
         parsimony,
         dimensional_constraint_penalty,
+        dimensionless_constants_only,
         alpha,
         maxsize,
         maxdepth,

@@ -225,6 +225,9 @@ which can cancel out other units in the expression.) For example,
 would indicate that the expression is dimensionally consistent, with
 a constant `"2.6353e-22[m s⁻²]"`.
 
+Note that you can also search for dimensionless units by settings
+`dimensionless_constants_only` to `true`.
+
 ## 7. Additional features
 
 For the many other features available in SymbolicRegression.jl,

@@ -33,6 +33,7 @@ using DynamicQuantities:
 using Test
 using MLJBase: MLJBase as MLJ
 using MLJModelInterface: MLJModelInterface as MMI
+include("utils.jl")
 
 custom_op(x, y) = x + y
 
@@ -369,6 +370,57 @@ end
         X_sym_units=dataset2.X_sym_units,
         y_sym_units=dataset2.y_sym_units,
     ) == "x₅[5.0 m] * 3.2[?]"
+
+    # With dimensionless_constants_only, it will not print the [?]:
+    options = Options(;
+        binary_operators=[+, -, *, /],
+        unary_operators=[cos, sin],
+        dimensionless_constants_only=true,
+    )
+    @test string_tree(
+        x5 * 3.2,
+        options;
+        raw=false,
+        display_variable_names=dataset2.display_variable_names,
+        X_sym_units=dataset2.X_sym_units,
+        y_sym_units=dataset2.y_sym_units,
+    ) == "x₅[5.0 m] * 3.2"
+end
+
+@testset "Dimensionless constants" begin
+    options = Options(;
+        binary_operators=[+, -, *, /, square, cube],
+        unary_operators=[cos, sin],
+        dimensionless_constants_only=true,
+    )
+    X = randn(5, 64)
+    y = randn(64)
+    dataset = Dataset(X, y; X_units=["m^3", "km/s", "kg", "hr", "1"], y_units="kg")
+    x1, x2, x3, x4, x5 = [Node(Float64; feature=i) for i in 1:5]
+
+    dimensionally_valid_equations = [
+        1.5 * x1 / (cube(x2) * cube(x4)) * x3, x3, (square(x3) / x3) + x3
+    ]
+    for tree in dimensionally_valid_equations
+        onfail(@test !violates_dimensional_constraints(tree, dataset, options)) do
+            @warn "Failed on" tree
+        end
+    end
+    dimensionally_invalid_equations = [Node(Float64; val=1.5), 1.5 * x1, x3 - 1.0 * x1]
+    for tree in dimensionally_invalid_equations
+        onfail(@test violates_dimensional_constraints(tree, dataset, options)) do
+            @warn "Failed on" tree
+        end
+    end
+    # But, all of these would be fine if we allow dimensionless constants:
+    let
+        options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos, sin])
+        for tree in dimensionally_invalid_equations
+            onfail(@test !violates_dimensional_constraints(tree, dataset, options)) do
+                @warn "Failed on" tree
+            end
+        end
+    end
 end
 
 @testset "Miscellaneous" begin
