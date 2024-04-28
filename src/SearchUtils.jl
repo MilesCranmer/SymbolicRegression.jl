@@ -181,32 +181,28 @@ function check_for_user_quit(reader::StdinReader)::Bool
     return false
 end
 
-function check_for_loss_threshold(hallOfFame, options::Options)::Bool
-    options.early_stop_condition === nothing && return false
+function check_for_loss_threshold(halls_of_fame, options::Options)::Bool
+    return _check_for_loss_threshold(halls_of_fame, options.early_stop_condition, options)
+end
 
-    # Check if all nout are below stopping condition.
-    for hof in hallOfFame
-        stop_conditions = [
-            exists &&
-            options.early_stop_condition(member.loss, compute_complexity(member, options))
-            for (exists, member) in zip(hof.exists, hof.members)
-        ]
-        if any(stop_conditions)
-            # This means some expressions hit the stop condition.
-        else
-            return false
+function _check_for_loss_threshold(_, ::Nothing, ::Options)
+    return false
+end
+function _check_for_loss_threshold(halls_of_fame, f::F, options::Options) where {F}
+    return all(halls_of_fame) do hof
+        any(hof.members[hof.exists]) do member
+            f(member.loss, compute_complexity(member, options))::Bool
         end
     end
-    return true
 end
 
 function check_for_timeout(start_time::Float64, options::Options)::Bool
     return options.timeout_in_seconds !== nothing &&
-           time() - start_time > options.timeout_in_seconds
+           time() - start_time > options.timeout_in_seconds::Float64
 end
 
 function check_max_evals(num_evals, options::Options)::Bool
-    return options.max_evals !== nothing && options.max_evals <= sum(sum, num_evals)
+    return options.max_evals !== nothing && options.max_evals::Int <= sum(sum, num_evals)
 end
 
 const TIME_TYPE = Float64

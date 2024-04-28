@@ -2,7 +2,7 @@ module ConstantOptimizationModule
 
 using LineSearches: LineSearches
 using Optim: Optim
-using DynamicExpressions: Node, count_constants, get_constant_refs
+using DynamicExpressions: Node, count_constants
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_loss, loss_to_score, batch_sample

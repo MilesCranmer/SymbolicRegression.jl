@@ -19,16 +19,13 @@ mutable struct WrappedProgressBar
 end
 
 """Iterate a progress bar without needing to store cycle/state externally."""
-function manually_iterate!(progress_bar::WrappedProgressBar)
-    cur_cycle = progress_bar.cycle
-    cur_state = progress_bar.state
+function manually_iterate!(pbar::WrappedProgressBar)
+    cur_cycle = pbar.cycle
     if cur_cycle === nothing
-        cur_cycle, cur_state = iterate(progress_bar.bar)
+        pbar.cycle, pbar.state = iterate(pbar.bar)
     else
-        cur_cycle, cur_state = iterate(progress_bar.bar, cur_state)
+        pbar.cycle, pbar.state = iterate(pbar.bar, pbar.state)
     end
-    progress_bar.cycle = cur_cycle
-    progress_bar.state = cur_state
     return nothing
 end
 
