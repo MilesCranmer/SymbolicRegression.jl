@@ -25,12 +25,15 @@ concurrency:
 
 jobs:
   test:
-    name: Julia ${{ matrix.julia-version }} - ${{ matrix.os }} - ${{ github.event_name }}
+    name: Julia ${{ matrix.julia-version }}-${{ matrix.os }}-${{ matrix.test }}-${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
+        test:
+          - "unit"
+          - "integration"
         julia-version:
           - "1.6"
           - "1.8"
@@ -40,10 +43,22 @@ jobs:
         include:
           - os: windows-latest
             julia-version: "1"
+            test: "unit"
+          - os: windows-latest
+            julia-version: "1"
+            test: "integration"
           - os: macOS-latest
             julia-version: "1"
+            test: "unit"
+          - os: macOS-latest
+            julia-version: "1"
+            test: "integration"
           - os: ubuntu-latest
             julia-version: "~1.11.0-0"
+            test: "unit"
+          - os: ubuntu-latest
+            julia-version: "~1.11.0-0"
+            test: "integration"
 
     steps:
       - uses: actions/checkout@v4
@@ -56,6 +71,8 @@ jobs:
       - name: "Build package"
         uses: julia-actions/julia-buildpkg@v1
       - name: "Run tests"
+        env:
+          SYMBOLIC_REGRESSION_TEST_SUITE: ${{ matrix.test }}
         run: |
           julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
           julia --color=yes --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
@@ -66,7 +83,7 @@ jobs:
         with:
           path-to-lcov: lcov.info
           parallel: true
-          flag-name: julia-${{ matrix.julia-version }}-${{ matrix.os }}-${{ github.event_name }}
+          flag-name: julia-${{ matrix.julia-version }}-${{ matrix.os }}-${{ matrix.test }}-${{ github.event_name }}
 
   coveralls:
     name: Indicate completion to coveralls
