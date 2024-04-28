@@ -148,6 +148,16 @@ function poisson_sample(λ::T) where {T}
     return k - 1
 end
 
+macro threads_if(flag, ex)
+    return quote
+        if $flag
+            Threads.@threads $ex
+        else
+            $ex
+        end
+    end |> esc
+end
+
 """
     @save_kwargs variable function ... end
 

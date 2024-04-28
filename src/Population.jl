@@ -90,8 +90,12 @@ function Population(
     )
 end
 
-function Base.copy(pop::P)::P where {P<:Population}
-    return Population([copy(pm) for pm in pop.members])
+function Base.copy(pop::P)::P where {T,L,N,P<:Population{T,L,N}}
+    copied_members = Vector{PopMember{T,L,N}}(undef, pop.n)
+    Threads.@threads for i in 1:(pop.n)
+        copied_members[i] = copy(pop.members[i])
+    end
+    return Population(copied_members)
 end
 
 # Sample random members of the population, and make a new one

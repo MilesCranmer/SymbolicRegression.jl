@@ -749,7 +749,7 @@ function Options end
         @warn "Optimizer warnings are turned on. This might result in a lot of warnings being printed from NaNs, as these are common during symbolic regression"
     end
 
-    ## Create tournament weights:6
+    ## Create tournament weights:
     tournament_selection_weights =
         let n = tournament_selection_n, p = tournament_selection_p
             k = collect(0:(n - 1))

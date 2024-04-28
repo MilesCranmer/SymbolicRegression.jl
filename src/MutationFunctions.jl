@@ -302,41 +302,46 @@ function crossover_trees(
     return tree1, tree2
 end
 
+function get_two_nodes_without_loop(tree::AbstractNode, rng::AbstractRNG; max_attempts=10)
+    for _ in 1:max_attempts
+        parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
+        new_child = rand(rng, NodeSampler(; tree, filter=t -> t !== tree))
+
+        would_form_loop = any(t -> t === parent, new_child)
+        if !would_form_loop
+            return (parent, new_child, false)
+        end
+    end
+    return (tree, tree, true)
+end
+
 function form_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     if length(tree) < 5
         return tree
     end
 
-    local parent, new_child, would_form_loop
+    parent, new_child, would_form_loop = get_two_nodes_without_loop(tree, rng)
 
-    attempt_number = 0
-    max_attempts = 10
-
-    while true
-        parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
-        new_child = rand(rng, NodeSampler(; tree, filter=t -> t !== tree))
-        attempt_number += 1
-        would_form_loop = any(t -> t === parent, new_child)
-        if would_form_loop && attempt_number <= max_attempts
-            continue
-        else
-            break
-        end
-    end
     if would_form_loop
         return tree
     end
+
     # Set one of the children to be this new child:
-    side = (parent.degree == 1 || rand(rng, Bool)) ? :l : :r
-    setproperty!(parent, side, new_child)
+    if parent.degree == 1 || rand(rng, Bool)
+        parent.l = new_child
+    else
+        parent.r = new_child
+    end
     return tree
 end
 function break_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     tree.degree == 0 && return tree
     parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
-    side = (parent.degree == 1 || rand(rng, Bool)) ? :l : :r
-    unshared_child = copy(getproperty(parent, side))
-    setproperty!(parent, side, unshared_child)
+    if parent.degree == 1 || rand(rng, Bool)
+        parent.l = copy(parent.l)
+    else
+        parent.r = copy(parent.r)
+    end
     return tree
 end
 

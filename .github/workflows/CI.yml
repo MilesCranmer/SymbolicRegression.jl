@@ -37,15 +37,18 @@ jobs:
           - "1"
         os:
           - ubuntu-latest
-          - macOS-latest
         include:
           - os: windows-latest
             julia-version: "1"
+          - os: macOS-latest
+            julia-version: "1"
+          - os: ubuntu-latest
+            julia-version: "~1.11.0-0"
 
     steps:
       - uses: actions/checkout@v4
       - name: "Set up Julia"
-        uses: julia-actions/setup-julia@v1
+        uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.julia-version }}
       - name: "Cache dependencies"

@@ -251,6 +251,7 @@ using .SearchUtilsModule:
     load_saved_hall_of_fame,
     load_saved_population,
     construct_datasets,
+    save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!
 
@@ -916,23 +917,7 @@ function _main_search_loop!(
             dominating = calculate_pareto_frontier(state.halls_of_fame[j])
 
             if options.save_to_file
-                output_file = options.output_file
-                if nout > 1
-                    output_file = output_file * ".out$j"
-                end
-                # Write file twice in case exit in middle of filewrite
-                for out_file in (output_file, output_file * ".bkup")
-                    open(out_file, "w") do io
-                        println(io, "Complexity,Loss,Equation")
-                        for member in dominating
-                            println(
-                                io,
-                                "$(compute_complexity(member, options)),$(member.loss),\"" *
-                                "$(string_tree(member.tree, options, variable_names=dataset.variable_names))\"",
-                            )
-                        end
-                    end
-                end
+                save_to_file(dominating, nout, j, dataset, options)
             end
             ###################################################################
             # Migration #######################################################
