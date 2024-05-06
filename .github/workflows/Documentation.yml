@@ -21,7 +21,7 @@ jobs:
         with:
           version: "1"
       - name: "Cache dependencies"
-        uses: julia-actions/cache@v1
+        uses: julia-actions/cache@v2
       - name: Force use of updated Julia registry
         run: |
           rm -rf ~/.julia/registries/General
