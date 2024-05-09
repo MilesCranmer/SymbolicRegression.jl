@@ -17,7 +17,7 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
       - name: "Cache dependencies"
-        uses: julia-actions/cache@v1
+        uses: julia-actions/cache@v2
       - name: "Install JuliaFormatter and format"
         run: |
           julia  -e 'import Pkg; Pkg.add("JuliaFormatter")'
