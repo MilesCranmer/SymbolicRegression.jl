@@ -7,7 +7,7 @@ using Printf: @printf, @sprintf
 using Distributed
 using StatsBase: mean
 
-using DynamicExpressions: AbstractExpressionNode, string_tree
+using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
 using ..CoreModule: Dataset, Options, MAX_DEGREE, RecordType
 using ..ComplexityModule: compute_complexity
@@ -380,9 +380,7 @@ The state of a search, including the populations, worker outputs, tasks, and
 channels. This is used to manage the search and keep track of runtime variables
 in a single struct.
 """
-Base.@kwdef struct SearchState{
-    T,L,N<:AbstractExpressionNode{T},WorkerOutputType,ChannelType
-}
+Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,ChannelType}
     procs::Vector{Int}
     we_created_procs::Bool
     worker_output::Vector{Vector{WorkerOutputType}}

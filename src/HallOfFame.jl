@@ -1,7 +1,8 @@
 module HallOfFameModule
 
-using DynamicExpressions: AbstractExpressionNode, Node, constructorof, string_tree
-using DynamicExpressions.EquationModule: with_type_parameters
+using DynamicExpressions:
+    AbstractExpression, parse_expression, Node, constructorof, string_tree
+using DynamicExpressions: with_type_parameters
 using ..UtilsModule: split_string
 using ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu
 using ..ComplexityModule: compute_complexity
@@ -23,13 +24,13 @@ have been set, you can run `.members[exists]`.
     These are ordered by complexity, with `.members[1]` the member with complexity 1.
 - `exists::Array{Bool,1}`: Whether the member at the given complexity has been set.
 """
-struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}}
+struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
     members::Array{PopMember{T,L,N},1}
     exists::Array{Bool,1} #Whether it has been set
 end
 
 """
-    HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode}
+    HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression}
 
 Create empty HallOfFame. The HallOfFame stores a list
 of `PopMember` objects in `.members`, which is enumerated
@@ -46,11 +47,18 @@ function HallOfFame(
     options::Options, ::Type{T}, ::Type{L}
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     actualMaxsize = options.maxsize + MAX_DEGREE
-    NT = with_type_parameters(options.node_type, T)
-    return HallOfFame{T,L,NT}(
+    # NT = with_type_parameters(options.node_type, T)
+    base_tree = parse_expression(
+        one(T);
+        operators=options.operators,
+        node_type=options.node_type,
+        expression_type=options.expression_type,
+    )
+
+    return HallOfFame{T,L,typeof(base_tree)}(
         [
             PopMember(
-                constructorof(options.node_type)(T; val=convert(T, 1)),
+                copy(base_tree),
                 L(0),
                 L(Inf),
                 options;

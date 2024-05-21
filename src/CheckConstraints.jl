@@ -1,6 +1,7 @@
 module CheckConstraintsModule
 
-using DynamicExpressions: AbstractExpressionNode, count_depth, tree_mapreduce
+using DynamicExpressions:
+    AbstractExpressionNode, AbstractExpression, get_tree, count_depth, tree_mapreduce
 using ..UtilsModule: vals
 using ..CoreModule: Options
 using ..ComplexityModule: compute_complexity, past_complexity_limit
@@ -71,11 +72,12 @@ end
 
 """Check if user-passed constraints are violated or not"""
 function check_constraints(
-    tree::AbstractExpressionNode,
+    ex::AbstractExpression,
     options::Options,
     maxsize::Int,
     cursize::Union{Int,Nothing}=nothing,
 )::Bool
+    tree = get_tree(ex)
     ((cursize === nothing) ? compute_complexity(tree, options) : cursize) > maxsize &&
         return false
     count_depth(tree) > options.maxdepth && return false
@@ -93,7 +95,7 @@ function check_constraints(
     return true
 end
 
-check_constraints(tree::AbstractExpressionNode, options::Options)::Bool =
-    check_constraints(tree, options, options.maxsize)
+check_constraints(ex::AbstractExpression, options::Options)::Bool =
+    check_constraints(ex, options, options.maxsize)
 
 end

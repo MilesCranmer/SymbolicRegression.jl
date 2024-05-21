@@ -1,12 +1,7 @@
 module SingleIterationModule
 
 using DynamicExpressions:
-    AbstractExpressionNode,
-    Node,
-    constructorof,
-    string_tree,
-    simplify_tree!,
-    combine_operators
+    AbstractExpression, Node, constructorof, string_tree, simplify_tree!, combine_operators, parse_expression
 using ..UtilsModule: @threads_if
 using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
@@ -32,7 +27,7 @@ function s_r_cycle(
     record::RecordType,
 )::Tuple{
     P,HallOfFame{T,L,N},Float64
-} where {T,L,D<:Dataset{T,L},N<:AbstractExpressionNode{T},P<:Population{T,L,N}}
+} where {T,L,D<:Dataset{T,L},N<:AbstractExpression{T},P<:Population{T,L,N}}
     max_temp = 1.0
     min_temp = 0.0
     if !options.annealing
@@ -44,8 +39,11 @@ function s_r_cycle(
 
     # For evaluating on a fixed batch (for batching)
     idx = options.batching ? batch_sample(dataset, options) : Int[]
+    example_tree = parse_expression(
+        zero(T); operators=options.operators, node_type=options.node_type, expression_type=options.expression_type
+    )
     loss_cache = [
-        (oid=constructorof(typeof(member.tree))(T; val=zero(T)), score=zero(L)) for
+        (oid=example_tree, score=zero(L)) for
         member in pop.members
     ]
     first_loop = true

@@ -10,6 +10,7 @@ export Population,
     Node,
     GraphNode,
     NodeSampler,
+    AbstractExpression,
     AbstractExpressionNode,
     SRRegressor,
     MultitargetSRRegressor,
@@ -22,6 +23,7 @@ export Population,
     calculate_pareto_frontier,
     count_nodes,
     compute_complexity,
+    parse_expression,
     print_tree,
     string_tree,
     eval_tree_array,
@@ -77,7 +79,9 @@ using DynamicExpressions:
     Node,
     GraphNode,
     NodeSampler,
+    AbstractExpression,
     AbstractExpressionNode,
+    parse_expression,
     copy_node,
     set_node!,
     string_tree,
@@ -97,7 +101,7 @@ using DynamicExpressions:
     simplify_tree!,
     tree_mapreduce,
     set_default_variable_names!
-using DynamicExpressions.EquationModule: with_type_parameters
+using DynamicExpressions: with_type_parameters
 @reexport using LossFunctions:
     MarginLoss,
     DistanceLoss,
@@ -632,7 +636,7 @@ function _create_workers(
 
     nout = length(datasets)
     example_dataset = first(datasets)
-    NT = with_type_parameters(options.node_type, T)
+    NT = typeof(parse_expression(zero(T); operators=options.operators, node_type=options.node_type, expression_type=options.expression_type))
     PopType = Population{T,L,NT}
     HallOfFameType = HallOfFame{T,L,NT}
     WorkerOutputType = get_worker_output_type(
@@ -689,8 +693,15 @@ function _create_workers(
         for j in 1:nout
     ]
 
+    example_ex = parse_expression(
+        zero(T);
+        operators=options.operators,
+        node_type=options.node_type,
+        expression_type=options.expression_type
+    )
+
     return SearchState{
-        T,L,with_type_parameters(options.node_type, T),WorkerOutputType,ChannelType
+        T,L,typeof(example_ex),WorkerOutputType,ChannelType
     }(;
         procs=procs,
         we_created_procs=we_created_procs,

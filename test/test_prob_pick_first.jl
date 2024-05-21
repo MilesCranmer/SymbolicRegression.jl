@@ -1,6 +1,6 @@
 println("Testing whether tournament_selection_p works.")
 using SymbolicRegression
-using DynamicExpressions.EquationModule: with_type_parameters
+using DynamicExpressions: with_type_parameters
 using Test
 include("test_params.jl")
 

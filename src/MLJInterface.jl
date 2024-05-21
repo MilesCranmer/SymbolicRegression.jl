@@ -3,7 +3,13 @@ module MLJInterfaceModule
 using Optim: Optim
 using LineSearches: LineSearches
 using MLJModelInterface: MLJModelInterface as MMI
-using DynamicExpressions: eval_tree_array, string_tree, AbstractExpressionNode, Node
+using DynamicExpressions:
+    eval_tree_array,
+    string_tree,
+    AbstractExpressionNode,
+    AbstractExpression,
+    Node,
+    Expression
 using DynamicQuantities:
     QuantityArray,
     UnionAbstractQuantity,
@@ -333,7 +339,7 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
 end
 
 function eval_tree_mlj(
-    tree::Node, X_t, m::AbstractSRRegressor, ::Type{T}, fitresult, i, prototype
+    tree::Expression, X_t, m::AbstractSRRegressor, ::Type{T}, fitresult, i, prototype
 ) where {T}
     out, completed = eval_tree_array(tree, X_t, fitresult.options)
     if completed

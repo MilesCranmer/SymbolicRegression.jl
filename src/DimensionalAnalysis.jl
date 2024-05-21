@@ -1,6 +1,6 @@
 module DimensionalAnalysisModule
 
-using DynamicExpressions: AbstractExpressionNode
+using DynamicExpressions: AbstractExpression, AbstractExpressionNode, get_tree
 using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, uparse, constructorof
 
 using ..CoreModule: Options, Dataset
@@ -180,12 +180,12 @@ function violates_dimensional_constraints_dispatch(
 end
 
 """
-    violates_dimensional_constraints(tree::AbstractExpressionNode, dataset::Dataset, options::Options)
+    violates_dimensional_constraints(tree::AbstractExpression, dataset::Dataset, options::Options)
 
 Checks whether an expression violates dimensional constraints.
 """
 function violates_dimensional_constraints(
-    tree::AbstractExpressionNode, dataset::Dataset, options::Options
+    tree::AbstractExpression, dataset::Dataset, options::Options
 )
     X = dataset.X
     return violates_dimensional_constraints(
@@ -193,7 +193,7 @@ function violates_dimensional_constraints(
     )
 end
 function violates_dimensional_constraints(
-    tree::AbstractExpressionNode{T},
+    tree::AbstractExpression{T},
     X_units::Union{AbstractVector{<:Quantity},Nothing},
     y_units::Union{Quantity,Nothing},
     x::AbstractVector{T},
@@ -204,7 +204,7 @@ function violates_dimensional_constraints(
     end
     allow_wildcards = !(options.dimensionless_constants_only)
     dimensional_output = violates_dimensional_constraints_dispatch(
-        tree, X_units, x, options.operators, allow_wildcards
+        get_tree(tree), X_units, x, options.operators, allow_wildcards
     )
     # ^ Eventually do this with map_treereduce. However, right now it seems
     # like we are passing around too many arguments, which slows things down.

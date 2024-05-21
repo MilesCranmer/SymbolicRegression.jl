@@ -2,7 +2,11 @@ module OptionsStructModule
 
 using Optim: Optim
 using DynamicExpressions:
-    AbstractOperatorEnum, AbstractExpressionNode, OperatorEnum, GenericOperatorEnum
+    AbstractOperatorEnum,
+    AbstractExpressionNode,
+    AbstractExpression,
+    OperatorEnum,
+    GenericOperatorEnum
 using LossFunctions: SupervisedLoss
 
 import ..MutationWeightsModule: MutationWeights
@@ -48,7 +52,14 @@ else
 end
 
 struct Options{
-    CT,OP<:AbstractOperatorEnum,N<:AbstractExpressionNode,_turbo,_bumper,_return_state,W
+    CT,
+    OP<:AbstractOperatorEnum,
+    N<:AbstractExpressionNode,
+    E<:AbstractExpression,
+    _turbo,
+    _bumper,
+    _return_state,
+    W,
 }
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
@@ -96,6 +107,7 @@ struct Options{
     elementwise_loss::Union{SupervisedLoss,Function}
     loss_function::Union{Nothing,Function}
     node_type::Type{N}
+    expression_type::Type{E}
     progress::Union{Bool,Nothing}
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::Optim.AbstractOptimizer

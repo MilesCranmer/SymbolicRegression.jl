@@ -1,7 +1,7 @@
 module MutateModule
 
 using DynamicExpressions:
-    AbstractExpressionNode,
+    AbstractExpression,
     Node,
     preserve_sharing,
     copy_node,
@@ -87,7 +87,7 @@ function next_generation(
     tmp_recorder::RecordType,
 )::Tuple{
     P,Bool,Float64
-} where {T,L,D<:Dataset{T,L},N<:AbstractExpressionNode{T},P<:PopMember{T,L,N}}
+} where {T,L,D<:Dataset{T,L},N<:AbstractExpression{T},P<:PopMember{T,L,N}}
     parent_ref = member.ref
     mutation_accepted = false
     num_evals = 0.0
