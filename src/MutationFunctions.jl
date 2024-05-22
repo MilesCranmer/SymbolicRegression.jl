@@ -147,7 +147,7 @@ function append_random_op(
     else
         newnode = constructorof(typeof(tree))(;
             op=rand(rng, 1:(options.nuna)),
-            l=make_random_leaf(nfeatures, T, typeof(tree), rng, options)
+            l=make_random_leaf(nfeatures, T, typeof(tree), rng, options),
         )
     end
 
@@ -180,7 +180,9 @@ function insert_random_op(
 
     if makeNewBinOp
         right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
-        newnode = constructorof(typeof(tree))(; op=rand(rng, 1:(options.nbin)), l=left, r=right)
+        newnode = constructorof(typeof(tree))(;
+            op=rand(rng, 1:(options.nbin)), l=left, r=right
+        )
     else
         newnode = constructorof(typeof(tree))(; op=rand(rng, 1:(options.nuna)), l=left)
     end
@@ -212,7 +214,9 @@ function prepend_random_op(
 
     if makeNewBinOp
         right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
-        newnode = constructorof(typeof(tree))(; op=rand(rng, 1:(options.nbin)), l=left, r=right)
+        newnode = constructorof(typeof(tree))(;
+            op=rand(rng, 1:(options.nbin)), l=left, r=right
+        )
     else
         newnode = constructorof(typeof(tree))(; op=rand(rng, 1:(options.nuna)), l=left)
     end
@@ -221,7 +225,11 @@ function prepend_random_op(
 end
 
 function make_random_leaf(
-    nfeatures::Int, ::Type{T}, ::Type{N}, rng::AbstractRNG=default_rng(), ::Union{Options,Nothing}=nothing
+    nfeatures::Int,
+    ::Type{T},
+    ::Type{N},
+    rng::AbstractRNG=default_rng(),
+    ::Union{Options,Nothing}=nothing,
 ) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
     if rand(rng, Bool)
         return constructorof(N)(; val=randn(rng, T))

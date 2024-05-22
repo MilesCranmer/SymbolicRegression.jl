@@ -2,7 +2,7 @@ module ConstantOptimizationModule
 
 using LineSearches: LineSearches
 using Optim: Optim
-using DynamicExpressions: Node, count_constants, get_constants, set_constants!
+using DynamicExpressions: Expression, Node, count_constants, get_constants, set_constants!
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_loss, loss_to_score, batch_sample
@@ -22,7 +22,7 @@ end
 function dispatch_optimize_constants(
     dataset::Dataset{T,L}, member::P, options::Options, idx
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
-    nconst = count_constants(member.tree)
+    nconst = count_constants_for_optimization(member.tree)
     nconst == 0 && return (member, 0.0)
     if nconst == 1 && !(T <: Complex)
         algorithm = Optim.Newton(; linesearch=LineSearches.BackTracking())
@@ -39,6 +39,7 @@ function dispatch_optimize_constants(
         idx,
     )
 end
+count_constants_for_optimization(ex::Expression) = count_constants(ex)
 
 function _optimize_constants(
     dataset, member::P, options, algorithm, optimizer_options, idx

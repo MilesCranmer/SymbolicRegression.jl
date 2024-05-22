@@ -41,10 +41,10 @@ end
     end
 end
 
-function eval_tree_dispatch(tree::AbstractExpression{T}, dataset::Dataset{T}, options::Options, idx) where {T<:DATA_TYPE}
-    return eval_tree_array(
-        tree, maybe_getindex(dataset.X, :, idx), options
-    )
+function eval_tree_dispatch(
+    tree::AbstractExpression{T}, dataset::Dataset{T}, options::Options, idx
+) where {T<:DATA_TYPE}
+    return eval_tree_array(tree, maybe_getindex(dataset.X, :, idx), options)
 end
 
 # Evaluate the loss of a particular expression on the input dataset.

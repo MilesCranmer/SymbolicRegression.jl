@@ -8,7 +8,8 @@ using DynamicExpressions:
     constructorof,
     parse_expression,
     get_tree,
-    with_tree
+    with_tree,
+    count_constants
 using Random: default_rng, AbstractRNG
 using StatsBase: StatsBase
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
@@ -18,24 +19,36 @@ using ..InterfaceDynamicExpressionsModule: eval_tree_array
 import ..CoreModule: create_expression
 import ..MutationFunctionsModule: make_random_leaf, crossover_trees
 import ..LossFunctionsModule: eval_tree_dispatch
+import ..ConstantOptimizationModule: count_constants_for_optimization
 
 function create_expression(t, options::Options, dataset::Dataset{T,L}) where {T,L}
-    return create_expression(t, options, dataset, options.node_type, options.expression_type)
+    return create_expression(
+        t, options, dataset, options.node_type, options.expression_type
+    )
 end
-function create_expression(t, options::Options, ::Dataset{T,L}, ::Type{N}, ::Type{E}) where {T,L,N<:AbstractExpressionNode,E<:AbstractExpression}
+function create_expression(
+    t, options::Options, ::Dataset{T,L}, ::Type{N}, ::Type{E}
+) where {T,L,N<:AbstractExpressionNode,E<:AbstractExpression}
     return parse_expression(t; operators=options.operators, node_type=N, expression_type=E)
 end
-function create_expression(t, options::Options, dataset::Dataset{T,L}, ::Type{N}, ::Type{E}) where {T,L,N<:ParametricNode,E<:ParametricExpression}
+function create_expression(
+    t, options::Options, dataset::Dataset{T,L}, ::Type{N}, ::Type{E}
+) where {T,L,N<:ParametricNode,E<:ParametricExpression}
     return parse_expression(
         t;
         operators=options.operators,
         node_type=N,
         expression_type=E,
-        parameter_names=["p$i" for i in 1:options.expression_options.max_parameters],
-        parameters=randn(T, (options.expression_options.max_parameters, only(size(dataset.extra.classes))))
+        parameter_names=["p$i" for i in 1:(options.expression_options.max_parameters)],
+        parameters=randn(
+            T,
+            (options.expression_options.max_parameters, only(size(dataset.extra.classes))),
+        ),
     )
 end
-function eval_tree_dispatch(tree::ParametricExpression{T}, dataset::Dataset{T}, options::Options, idx) where {T<:DATA_TYPE}
+function eval_tree_dispatch(
+    tree::ParametricExpression{T}, dataset::Dataset{T}, options::Options, idx
+) where {T<:DATA_TYPE}
     return eval_tree_array(
         tree,
         maybe_getindex(dataset.X, :, idx),
@@ -45,7 +58,11 @@ function eval_tree_dispatch(tree::ParametricExpression{T}, dataset::Dataset{T}, 
 end
 
 function make_random_leaf(
-    nfeatures::Int, ::Type{T}, ::Type{N}, rng::AbstractRNG=default_rng(), options::Union{Options,Nothing}=nothing
+    nfeatures::Int,
+    ::Type{T},
+    ::Type{N},
+    rng::AbstractRNG=default_rng(),
+    options::Union{Options,Nothing}=nothing,
 ) where {T<:DATA_TYPE,N<:ParametricNode}
     choice = rand(rng, 1:3)
     if choice == 1
@@ -59,7 +76,9 @@ function make_random_leaf(
         tree.feature = 0
         tree.constant = false
         tree.is_parameter = true
-        tree.parameter = rand(rng, UInt16(1):UInt16(options.expression_options.max_parameters))
+        tree.parameter = rand(
+            rng, UInt16(1):UInt16(options.expression_options.max_parameters)
+        )
         return tree
     end
 end
@@ -77,7 +96,9 @@ function crossover_trees(
     nparams1 = size(ex1.metadata.parameters, 1)
     nparams2 = size(ex2.metadata.parameters, 1)
     num_params_switch = min(nparams1, nparams2)
-    idx_to_switch = StatsBase.sample(rng, 1:num_params_switch, num_params_switch; replace=false)
+    idx_to_switch = StatsBase.sample(
+        rng, 1:num_params_switch, num_params_switch; replace=false
+    )
     for param_idx in idx_to_switch
         ex2_params = ex2.metadata.parameters[param_idx, :]
         ex2.metadata.parameters[param_idx, :] .= ex1.metadata.parameters[param_idx, :]
@@ -86,5 +107,7 @@ function crossover_trees(
 
     return ex1, ex2
 end
+
+count_constants_for_optimization(ex::ParametricExpression) = count_constants(get_tree(ex))
 
 end
