@@ -3,8 +3,11 @@ module MutationFunctionsModule
 using Random: default_rng, AbstractRNG
 using DynamicExpressions:
     AbstractExpressionNode,
+    AbstractExpression,
     AbstractNode,
     NodeSampler,
+    get_tree,
+    with_tree,
     constructorof,
     copy_node,
     set_node!,
@@ -31,6 +34,11 @@ function random_node(
 end
 
 """Swap operands in binary operator for ops like pow and divide"""
+function swap_operands(ex::AbstractExpression, rng::AbstractRNG=default_rng())
+    tree = get_tree(ex)
+    ex = with_tree(ex, swap_operands(tree, rng))
+    return ex
+end
 function swap_operands(tree::AbstractNode, rng::AbstractRNG=default_rng())
     if !any(node -> node.degree == 2, tree)
         return tree
@@ -41,6 +49,13 @@ function swap_operands(tree::AbstractNode, rng::AbstractRNG=default_rng())
 end
 
 """Randomly convert an operator into another one (binary->binary; unary->unary)"""
+function mutate_operator(
+    ex::AbstractExpression{T}, options::Options, rng::AbstractRNG=default_rng()
+) where {T<:DATA_TYPE}
+    tree = get_tree(ex)
+    ex = with_tree(ex, mutate_operator(tree, options, rng))
+    return ex
+end
 function mutate_operator(
     tree::AbstractExpressionNode{T}, options::Options, rng::AbstractRNG=default_rng()
 ) where {T}
@@ -57,6 +72,16 @@ function mutate_operator(
 end
 
 """Randomly perturb a constant"""
+function mutate_constant(
+    ex::AbstractExpression{T},
+    temperature,
+    options::Options,
+    rng::AbstractRNG=default_rng(),
+) where {T<:DATA_TYPE}
+    tree = get_tree(ex)
+    ex = with_tree(ex, mutate_constant(tree, temperature, options, rng))
+    return ex
+end
 function mutate_constant(
     tree::AbstractExpressionNode{T},
     temperature,
@@ -90,6 +115,17 @@ end
 
 """Add a random unary/binary operation to the end of a tree"""
 function append_random_op(
+    ex::AbstractExpression{T},
+    options::Options,
+    nfeatures::Int,
+    rng::AbstractRNG=default_rng();
+    makeNewBinOp::Union{Bool,Nothing}=nothing,
+) where {T<:DATA_TYPE}
+    tree = get_tree(ex)
+    ex = with_tree(ex, append_random_op(tree, options, nfeatures, rng; makeNewBinOp))
+    return ex
+end
+function append_random_op(
     tree::AbstractExpressionNode{T},
     options::Options,
     nfeatures::Int,
@@ -122,6 +158,16 @@ end
 
 """Insert random node"""
 function insert_random_op(
+    ex::AbstractExpression{T},
+    options::Options,
+    nfeatures::Int,
+    rng::AbstractRNG=default_rng(),
+) where {T<:DATA_TYPE}
+    tree = get_tree(ex)
+    ex = with_tree(ex, insert_random_op(tree, options, nfeatures, rng))
+    return ex
+end
+function insert_random_op(
     tree::AbstractExpressionNode{T},
     options::Options,
     nfeatures::Int,
@@ -143,6 +189,16 @@ function insert_random_op(
 end
 
 """Add random node to the top of a tree"""
+function prepend_random_op(
+    ex::AbstractExpression{T},
+    options::Options,
+    nfeatures::Int,
+    rng::AbstractRNG=default_rng(),
+) where {T<:DATA_TYPE}
+    tree = get_tree(ex)
+    ex = with_tree(ex, prepend_random_op(tree, options, nfeatures, rng))
+    return ex
+end
 function prepend_random_op(
     tree::AbstractExpressionNode{T},
     options::Options,
@@ -188,6 +244,16 @@ function random_node_and_parent(tree::AbstractNode, rng::AbstractRNG=default_rng
 end
 
 """Select a random node, and splice it out of the tree."""
+function delete_random_op!(
+    ex::AbstractExpression{T},
+    options::Options,
+    nfeatures::Int,
+    rng::AbstractRNG=default_rng(),
+) where {T<:DATA_TYPE}
+    tree = get_tree(ex)
+    ex = with_tree(ex, delete_random_op!(tree, options, nfeatures, rng))
+    return ex
+end
 function delete_random_op!(
     tree::AbstractExpressionNode{T},
     options::Options,
@@ -267,7 +333,14 @@ function gen_random_tree_fixed_size(
     return tree
 end
 
-function crossover_trees()
+function crossover_trees(ex1::AbstractExpression{T}, ex2::AbstractExpression{T}, rng::AbstractRNG=default_rng()) where {T}
+    tree1 = get_tree(ex1)
+    tree2 = get_tree(ex2)
+    out1, out2 = crossover_trees(tree1, tree2, rng)
+    ex1 = with_tree(ex1, out1)
+    ex2 = with_tree(ex2, out2)
+    return ex1, ex2
+end
 
 """Crossover between two expressions"""
 function crossover_trees(

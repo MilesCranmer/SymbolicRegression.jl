@@ -3,6 +3,7 @@ module MutateModule
 using DynamicExpressions:
     AbstractExpression,
     Node,
+    get_tree,
     preserve_sharing,
     copy_node,
     count_nodes,
@@ -34,11 +35,12 @@ using ..RecorderModule: @recorder
 function condition_mutation_weights!(
     weights::MutationWeights, member::PopMember, options::Options, curmaxsize::Int
 )
+    tree = get_tree(member.tree)
     if !preserve_sharing(typeof(member.tree))
         weights.form_connection = 0.0
         weights.break_connection = 0.0
     end
-    if member.tree.degree == 0
+    if tree.degree == 0
         # If equation is too small, don't delete operators
         # or simplify
         weights.mutate_operator = 0.0
@@ -52,7 +54,7 @@ function condition_mutation_weights!(
         return nothing
     end
 
-    if !any(node -> node.degree == 2, member.tree)
+    if !any(node -> node.degree == 2, tree)
         # swap is implemented only for binary ops
         weights.swap_operands = 0.0
     end

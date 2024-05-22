@@ -1,6 +1,6 @@
 module ComplexityModule
 
-using DynamicExpressions: AbstractExpression, get_tree, count_nodes, tree_mapreduce
+using DynamicExpressions: AbstractExpression, AbstractExpressionNode, get_tree, count_nodes, tree_mapreduce
 using ..CoreModule: Options, ComplexityMapping
 
 function past_complexity_limit(
@@ -17,7 +17,12 @@ However, it could use the custom settings in options.complexity_mapping
 if these are defined.
 """
 function compute_complexity(
-    tree::AbstractExpression, options::Options{CT}; break_sharing=Val(false)
+    tree::AbstractExpression, options::Options; break_sharing=Val(false)
+)
+    return compute_complexity(get_tree(tree), options; break_sharing)
+end
+function compute_complexity(
+    tree::AbstractExpressionNode, options::Options{CT}; break_sharing=Val(false)
 )::Int where {CT}
     if options.complexity_mapping.use
         raw_complexity = _compute_complexity(tree, options; break_sharing)
@@ -28,7 +33,7 @@ function compute_complexity(
 end
 
 function _compute_complexity(
-    tree::AbstractExpression, options::Options{CT}; break_sharing=Val(false)
+    tree::AbstractExpressionNode, options::Options{CT}; break_sharing=Val(false)
 )::CT where {CT}
     cmap = options.complexity_mapping
     constant_complexity = cmap.constant_complexity
@@ -39,7 +44,7 @@ function _compute_complexity(
         t -> t.constant ? constant_complexity : variable_complexity,
         t -> t.degree == 1 ? unaop_complexities[t.op] : binop_complexities[t.op],
         +,
-        get_tree(tree),
+        tree,
         CT;
         break_sharing=break_sharing,
         f_on_shared=(result, is_shared) -> is_shared ? result : zero(CT),
