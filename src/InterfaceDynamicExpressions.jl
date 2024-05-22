@@ -3,7 +3,12 @@ module InterfaceDynamicExpressionsModule
 using Printf: @sprintf
 using DynamicExpressions: DynamicExpressions
 using DynamicExpressions:
-    OperatorEnum, GenericOperatorEnum, AbstractExpression, AbstractExpressionNode, Node, GraphNode
+    OperatorEnum,
+    GenericOperatorEnum,
+    AbstractExpression,
+    AbstractExpressionNode,
+    Node,
+    GraphNode
 using DynamicExpressions.StringsModule: needs_brackets
 using DynamicQuantities: dimension, ustrip
 using ..CoreModule: Options

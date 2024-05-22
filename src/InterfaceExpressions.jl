@@ -18,7 +18,8 @@ using ..InterfaceDynamicExpressionsModule: eval_tree_array
 
 import DynamicExpressions: get_operators, string_tree
 import ..CoreModule: create_expression
-import ..MutationFunctionsModule: make_random_leaf, crossover_trees, mutate_constant, mutate_factor
+import ..MutationFunctionsModule:
+    make_random_leaf, crossover_trees, mutate_constant, mutate_factor
 import ..LossFunctionsModule: eval_tree_dispatch
 import ..ConstantOptimizationModule: count_constants_for_optimization
 
@@ -43,7 +44,10 @@ function create_expression(
         parameter_names=["p$i" for i in 1:(options.expression_options.max_parameters)],
         parameters=randn(
             T,
-            (options.expression_options.max_parameters, length(unique(dataset.extra.classes))),
+            (
+                options.expression_options.max_parameters,
+                length(unique(dataset.extra.classes)),
+            ),
         ),
     )
 end
@@ -112,7 +116,10 @@ end
 count_constants_for_optimization(ex::ParametricExpression) = count_constants(get_tree(ex))
 
 function mutate_constant(
-    ex::ParametricExpression{T}, temperature, options::Options, rng::AbstractRNG=default_rng()
+    ex::ParametricExpression{T},
+    temperature,
+    options::Options,
+    rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     if rand(rng, Bool)
         # Normal mutation of inner constant
@@ -120,7 +127,7 @@ function mutate_constant(
         return with_tree(ex, mutate_constant(tree, temperature, options, rng))
     else
         # Mutate parameters
-        parameter_index = rand(rng, 1:options.expression_options.max_parameters)
+        parameter_index = rand(rng, 1:(options.expression_options.max_parameters))
         # We mutate all the parameters at once
         factor = mutate_factor(T, temperature, options, rng)
         ex.metadata.parameters[parameter_index, :] .*= factor
@@ -129,6 +136,8 @@ function mutate_constant(
 end
 
 get_operators(::ParametricExpression, options::Options) = options.operators
-string_tree(tree::ParametricExpression, options::Options; kws...) = string_tree(tree, get_operators(tree, options); kws...)
+function string_tree(tree::ParametricExpression, options::Options; kws...)
+    return string_tree(tree, get_operators(tree, options); kws...)
+end
 
 end
