@@ -215,7 +215,8 @@ using .CoreModule:
     gamma,
     erf,
     erfc,
-    atanh_clip
+    atanh_clip,
+    create_expression
 using .UtilsModule: is_anonymous_function, recursive_merge, json3_write
 using .ComplexityModule: compute_complexity
 using .CheckConstraintsModule: check_constraints
@@ -644,14 +645,8 @@ function _create_workers(
 
     nout = length(datasets)
     example_dataset = first(datasets)
-    NT = typeof(
-        parse_expression(
-            zero(T);
-            operators=options.operators,
-            node_type=options.node_type,
-            expression_type=options.expression_type,
-        ),
-    )
+    example_ex = create_expression(zero(T), options, example_dataset)
+    NT = typeof(example_ex)
     PopType = Population{T,L,NT}
     HallOfFameType = HallOfFame{T,L,NT}
     WorkerOutputType = get_worker_output_type(
@@ -708,13 +703,6 @@ function _create_workers(
         for j in 1:nout
     ]
 
-    example_ex = parse_expression(
-        zero(T);
-        operators=options.operators,
-        node_type=options.node_type,
-        expression_type=options.expression_type,
-    )
-
     return SearchState{T,L,typeof(example_ex),WorkerOutputType,ChannelType}(;
         procs=procs,
         we_created_procs=we_created_procs,
@@ -742,7 +730,7 @@ function _initialize_search!(
     init_hall_of_fame = load_saved_hall_of_fame(saved_state)
     if init_hall_of_fame === nothing
         for j in 1:nout
-            state.halls_of_fame[j] = HallOfFame(options, T, L)
+            state.halls_of_fame[j] = HallOfFame(options, datasets[j])
         end
     else
         # Recompute losses for the hall of fame, in
@@ -794,7 +782,7 @@ function _initialize_search!(
                                 options=options,
                                 nfeatures=datasets[j].nfeatures,
                             ),
-                            HallOfFame(options, T, L),
+                            HallOfFame(options, datasets[j]),
                             RecordType(),
                             Float64(options.population_size),
                         )

@@ -2,6 +2,7 @@ module MutateModule
 
 using DynamicExpressions:
     AbstractExpression,
+    ParametricExpression,
     Node,
     with_tree,
     get_tree,
@@ -60,9 +61,12 @@ function condition_mutation_weights!(
         weights.swap_operands = 0.0
     end
 
-    #More constants => more likely to do constant mutation
-    n_constants = count_constants(member.tree)
-    weights.mutate_constant *= min(8, n_constants) / 8.0
+    if !(member.tree isa ParametricExpression)  # TODO: HACK
+        #More constants => more likely to do constant mutation
+        let n_constants = count_constants(member.tree)
+            weights.mutate_constant *= min(8, n_constants) / 8.0
+        end
+    end
     complexity = compute_complexity(member, options)
 
     if complexity >= curmaxsize

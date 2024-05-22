@@ -6,13 +6,18 @@ using DynamicExpressions:
     ParametricExpression,
     ParametricNode,
     constructorof,
-    parse_expression
+    parse_expression,
+    get_tree,
+    with_tree
 using Random: default_rng, AbstractRNG
 using StatsBase: StatsBase
-using ..CoreModule: Options, Dataset, DATA_TYPE
+using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
+using ..LossFunctionsModule: maybe_getindex
+using ..InterfaceDynamicExpressionsModule: eval_tree_array
 
 import ..CoreModule: create_expression
 import ..MutationFunctionsModule: make_random_leaf, crossover_trees
+import ..LossFunctionsModule: eval_tree_dispatch
 
 function create_expression(t, options::Options, dataset::Dataset{T,L}) where {T,L}
     return create_expression(t, options, dataset, options.node_type, options.expression_type)
@@ -30,6 +35,14 @@ function create_expression(t, options::Options, dataset::Dataset{T,L}, ::Type{N}
         parameters=randn(T, (options.expression_options.max_parameters, only(size(dataset.extra.classes))))
     )
 end
+function eval_tree_dispatch(tree::ParametricExpression{T}, dataset::Dataset{T}, options::Options, idx) where {T<:DATA_TYPE}
+    return eval_tree_array(
+        tree,
+        maybe_getindex(dataset.X, :, idx),
+        maybe_getindex(dataset.extra.classes, idx),
+        options.operators,
+    )
+end
 
 function make_random_leaf(
     nfeatures::Int, ::Type{T}, ::Type{N}, rng::AbstractRNG=default_rng(), options::Union{Options,Nothing}=nothing
@@ -41,9 +54,13 @@ function make_random_leaf(
         return ParametricNode(T; feature=rand(rng, 1:nfeatures))
     else
         tree = ParametricNode{T}()
+        tree.val = zero(T)
+        tree.degree = 0
+        tree.feature = 0
         tree.constant = false
         tree.is_parameter = true
         tree.parameter = rand(rng, UInt16(1):UInt16(options.expression_options.max_parameters))
+        return tree
     end
 end
 

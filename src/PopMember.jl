@@ -2,7 +2,7 @@ module PopMemberModule
 
 using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, copy_node, count_nodes, parse_expression
-using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
+using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE, create_expression
 import ..ComplexityModule: compute_complexity
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: score_func
@@ -95,12 +95,7 @@ function PopMember(
     parent::Int=-1,
     deterministic=nothing,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    ex = parse_expression(
-        tree;
-        operators=options.operators,
-        node_type=options.node_type,
-        expression_type=options.expression_type,
-    )
+    ex = create_expression(tree, options, dataset)
     set_complexity = complexity === nothing ? compute_complexity(ex, options) : complexity
     @assert set_complexity != -1
     score, loss = score_func(dataset, ex, options; complexity=set_complexity)

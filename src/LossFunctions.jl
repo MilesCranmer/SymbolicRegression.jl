@@ -41,6 +41,12 @@ end
     end
 end
 
+function eval_tree_dispatch(tree::AbstractExpression{T}, dataset::Dataset{T}, options::Options, idx) where {T<:DATA_TYPE}
+    return eval_tree_array(
+        tree, maybe_getindex(dataset.X, :, idx), options
+    )
+end
+
 # Evaluate the loss of a particular expression on the input dataset.
 function _eval_loss(
     tree::AbstractExpression{T},
@@ -49,9 +55,7 @@ function _eval_loss(
     regularization::Bool,
     idx,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    (prediction, completion) = eval_tree_array(
-        tree, maybe_getindex(dataset.X, :, idx), options
-    )
+    (prediction, completion) = eval_tree_dispatch(tree, dataset, options, idx)
     if !completion
         return L(Inf)
     end

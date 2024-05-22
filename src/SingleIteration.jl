@@ -9,7 +9,7 @@ using DynamicExpressions:
     combine_operators,
     parse_expression
 using ..UtilsModule: @threads_if
-using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
+using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: PopMember, generate_reference
 using ..PopulationModule: Population, finalize_scores, best_sub_pop
@@ -40,17 +40,12 @@ function s_r_cycle(
         min_temp = max_temp
     end
     all_temperatures = LinRange(max_temp, min_temp, ncycles)
-    best_examples_seen = HallOfFame(options, T, L)
+    best_examples_seen = HallOfFame(options, dataset)
     num_evals = 0.0
 
     # For evaluating on a fixed batch (for batching)
     idx = options.batching ? batch_sample(dataset, options) : Int[]
-    example_tree = parse_expression(
-        zero(T);
-        operators=options.operators,
-        node_type=options.node_type,
-        expression_type=options.expression_type,
-    )
+    example_tree = create_expression(zero(T), options, dataset)
     loss_cache = [(oid=example_tree, score=zero(L)) for member in pop.members]
     first_loop = true
 

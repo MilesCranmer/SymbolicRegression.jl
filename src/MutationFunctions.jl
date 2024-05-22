@@ -139,14 +139,15 @@ function append_random_op(
     end
 
     if makeNewBinOp
-        newnode = constructorof(typeof(tree))(
-            rand(rng, 1:(options.nbin)),
-            make_random_leaf(nfeatures, T, typeof(tree), rng, options),
-            make_random_leaf(nfeatures, T, typeof(tree), rng, options),
+        newnode = constructorof(typeof(tree))(;
+            op=rand(rng, 1:(options.nbin)),
+            l=make_random_leaf(nfeatures, T, typeof(tree), rng, options),
+            r=make_random_leaf(nfeatures, T, typeof(tree), rng, options),
         )
     else
-        newnode = constructorof(typeof(tree))(
-            rand(rng, 1:(options.nuna)), make_random_leaf(nfeatures, T, typeof(tree), rng, options)
+        newnode = constructorof(typeof(tree))(;
+            op=rand(rng, 1:(options.nuna)),
+            l=make_random_leaf(nfeatures, T, typeof(tree), rng, options)
         )
     end
 
@@ -179,9 +180,9 @@ function insert_random_op(
 
     if makeNewBinOp
         right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
-        newnode = constructorof(typeof(tree))(rand(rng, 1:(options.nbin)), left, right)
+        newnode = constructorof(typeof(tree))(; op=rand(rng, 1:(options.nbin)), l=left, r=right)
     else
-        newnode = constructorof(typeof(tree))(rand(rng, 1:(options.nuna)), left)
+        newnode = constructorof(typeof(tree))(; op=rand(rng, 1:(options.nuna)), l=left)
     end
     set_node!(node, newnode)
     return tree
@@ -211,9 +212,9 @@ function prepend_random_op(
 
     if makeNewBinOp
         right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
-        newnode = constructorof(typeof(tree))(rand(rng, 1:(options.nbin)), left, right)
+        newnode = constructorof(typeof(tree))(; op=rand(rng, 1:(options.nbin)), l=left, r=right)
     else
-        newnode = constructorof(typeof(tree))(rand(rng, 1:(options.nuna)), left)
+        newnode = constructorof(typeof(tree))(; op=rand(rng, 1:(options.nuna)), l=left)
     end
     set_node!(node, newnode)
     return node
