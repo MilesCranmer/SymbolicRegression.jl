@@ -1,7 +1,13 @@
 module SingleIterationModule
 
 using DynamicExpressions:
-    AbstractExpression, Node, constructorof, string_tree, simplify_tree!, combine_operators, parse_expression
+    AbstractExpression,
+    Node,
+    constructorof,
+    string_tree,
+    simplify_tree!,
+    combine_operators,
+    parse_expression
 using ..UtilsModule: @threads_if
 using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
@@ -40,12 +46,12 @@ function s_r_cycle(
     # For evaluating on a fixed batch (for batching)
     idx = options.batching ? batch_sample(dataset, options) : Int[]
     example_tree = parse_expression(
-        zero(T); operators=options.operators, node_type=options.node_type, expression_type=options.expression_type
+        zero(T);
+        operators=options.operators,
+        node_type=options.node_type,
+        expression_type=options.expression_type,
     )
-    loss_cache = [
-        (oid=example_tree, score=zero(L)) for
-        member in pop.members
-    ]
+    loss_cache = [(oid=example_tree, score=zero(L)) for member in pop.members]
     first_loop = true
 
     for temperature in all_temperatures

@@ -636,7 +636,14 @@ function _create_workers(
 
     nout = length(datasets)
     example_dataset = first(datasets)
-    NT = typeof(parse_expression(zero(T); operators=options.operators, node_type=options.node_type, expression_type=options.expression_type))
+    NT = typeof(
+        parse_expression(
+            zero(T);
+            operators=options.operators,
+            node_type=options.node_type,
+            expression_type=options.expression_type,
+        ),
+    )
     PopType = Population{T,L,NT}
     HallOfFameType = HallOfFame{T,L,NT}
     WorkerOutputType = get_worker_output_type(
@@ -697,12 +704,10 @@ function _create_workers(
         zero(T);
         operators=options.operators,
         node_type=options.node_type,
-        expression_type=options.expression_type
+        expression_type=options.expression_type,
     )
 
-    return SearchState{
-        T,L,typeof(example_ex),WorkerOutputType,ChannelType
-    }(;
+    return SearchState{T,L,typeof(example_ex),WorkerOutputType,ChannelType}(;
         procs=procs,
         we_created_procs=we_created_procs,
         worker_output=worker_output,

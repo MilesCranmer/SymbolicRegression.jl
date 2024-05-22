@@ -73,10 +73,7 @@ end
 
 """Randomly perturb a constant"""
 function mutate_constant(
-    ex::AbstractExpression{T},
-    temperature,
-    options::Options,
-    rng::AbstractRNG=default_rng(),
+    ex::AbstractExpression{T}, temperature, options::Options, rng::AbstractRNG=default_rng()
 ) where {T<:DATA_TYPE}
     tree = get_tree(ex)
     ex = with_tree(ex, mutate_constant(tree, temperature, options, rng))
@@ -333,7 +330,9 @@ function gen_random_tree_fixed_size(
     return tree
 end
 
-function crossover_trees(ex1::AbstractExpression{T}, ex2::AbstractExpression{T}, rng::AbstractRNG=default_rng()) where {T}
+function crossover_trees(
+    ex1::AbstractExpression{T}, ex2::AbstractExpression{T}, rng::AbstractRNG=default_rng()
+) where {T}
     tree1 = get_tree(ex1)
     tree2 = get_tree(ex2)
     out1, out2 = crossover_trees(tree1, tree2, rng)
