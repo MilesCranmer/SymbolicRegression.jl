@@ -5,7 +5,7 @@ using DynamicExpressions:
 using ..CoreModule: Options, ComplexityMapping
 
 function past_complexity_limit(
-    tree::AbstractExpression, options::Options{CT}, limit
+    tree::Union{AbstractExpression, AbstractExpressionNode}, options::Options{CT}, limit
 )::Bool where {CT}
     return compute_complexity(tree, options) > limit
 end
