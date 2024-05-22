@@ -45,17 +45,20 @@ end
 
 # Controls level of specialization we compile
 function operator_specialization end
-if VERSION >= v"1.10.0-DEV.0"
-    @eval operator_specialization(::Type{<:OperatorEnum}) = OperatorEnum
-else
-    @eval operator_specialization(O::Type{<:OperatorEnum}) = O
-end
+# if VERSION >= v"1.10.0-DEV.0"
+#     @eval operator_specialization(::Type{<:OperatorEnum}) = OperatorEnum
+# else
+    # @eval operator_specialization(O::Type{<:OperatorEnum}) = O
+# end
+operator_specialization(O::Type{<:OperatorEnum}) = O
+# TODO: HACK - turned this off temporarily
 
 struct Options{
     CT,
     OP<:AbstractOperatorEnum,
     N<:AbstractExpressionNode,
     E<:AbstractExpression,
+    EO<:NamedTuple,
     _turbo,
     _bumper,
     _return_state,
@@ -108,6 +111,7 @@ struct Options{
     loss_function::Union{Nothing,Function}
     node_type::Type{N}
     expression_type::Type{E}
+    expression_options::EO
     progress::Union{Bool,Nothing}
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::Optim.AbstractOptimizer
