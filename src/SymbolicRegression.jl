@@ -9,6 +9,9 @@ export Population,
     MutationWeights,
     Node,
     GraphNode,
+    ParametricNode,
+    Expression,
+    ParametricExpression,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
@@ -78,6 +81,9 @@ using Reexport
 using DynamicExpressions:
     Node,
     GraphNode,
+    ParametricNode,
+    Expression,
+    ParametricExpression,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
@@ -174,6 +180,8 @@ include("SingleIteration.jl")
 include("ProgressBars.jl")
 include("Migration.jl")
 include("SearchUtils.jl")
+
+include("InterfaceExpressions.jl")
 
 using .CoreModule:
     MAX_DEGREE,

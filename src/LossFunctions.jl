@@ -6,7 +6,7 @@ using DynamicExpressions: AbstractExpression, AbstractExpressionNode, Node, pars
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
 using ..InterfaceDynamicExpressionsModule: eval_tree_array
-using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
+using ..CoreModule: Options, Dataset, create_expression, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
 using ..DimensionalAnalysisModule: violates_dimensional_constraints
 
@@ -201,12 +201,7 @@ Update the baseline loss of the dataset using the loss function specified in `op
 function update_baseline_loss!(
     dataset::Dataset{T,L}, options::Options
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    example_tree = parse_expression(
-        zero(T);
-        operators=options.operators,
-        node_type=options.node_type,
-        expression_type=options.expression_type,
-    )
+    example_tree = create_expression(zero(T), options, dataset)
     # constructorof(options.node_type)(T; val=dataset.avg_y)
     # TODO: It could be that the loss function is not defined for this example type?
     baseline_loss = eval_loss(example_tree, dataset, options)

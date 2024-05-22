@@ -110,6 +110,8 @@ function mutate_constant(
     return tree
 end
 
+# TODO: Shouldn't we add a mutate_feature here?
+
 """Add a random unary/binary operation to the end of a tree"""
 function append_random_op(
     ex::AbstractExpression{T},
@@ -139,12 +141,12 @@ function append_random_op(
     if makeNewBinOp
         newnode = constructorof(typeof(tree))(
             rand(rng, 1:(options.nbin)),
-            make_random_leaf(nfeatures, T, typeof(tree), rng),
-            make_random_leaf(nfeatures, T, typeof(tree), rng),
+            make_random_leaf(nfeatures, T, typeof(tree), rng, options),
+            make_random_leaf(nfeatures, T, typeof(tree), rng, options),
         )
     else
         newnode = constructorof(typeof(tree))(
-            rand(rng, 1:(options.nuna)), make_random_leaf(nfeatures, T, typeof(tree), rng)
+            rand(rng, 1:(options.nuna)), make_random_leaf(nfeatures, T, typeof(tree), rng, options)
         )
     end
 
@@ -176,7 +178,7 @@ function insert_random_op(
     left = copy_node(node)
 
     if makeNewBinOp
-        right = make_random_leaf(nfeatures, T, typeof(tree), rng)
+        right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
         newnode = constructorof(typeof(tree))(rand(rng, 1:(options.nbin)), left, right)
     else
         newnode = constructorof(typeof(tree))(rand(rng, 1:(options.nuna)), left)
@@ -208,7 +210,7 @@ function prepend_random_op(
     left = copy_node(tree)
 
     if makeNewBinOp
-        right = make_random_leaf(nfeatures, T, typeof(tree), rng)
+        right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
         newnode = constructorof(typeof(tree))(rand(rng, 1:(options.nbin)), left, right)
     else
         newnode = constructorof(typeof(tree))(rand(rng, 1:(options.nuna)), left)
@@ -218,7 +220,7 @@ function prepend_random_op(
 end
 
 function make_random_leaf(
-    nfeatures::Int, ::Type{T}, ::Type{N}, rng::AbstractRNG=default_rng()
+    nfeatures::Int, ::Type{T}, ::Type{N}, rng::AbstractRNG=default_rng(), ::Union{Options,Nothing}=nothing
 ) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
     if rand(rng, Bool)
         return constructorof(N)(; val=randn(rng, T))
@@ -262,7 +264,7 @@ function delete_random_op!(
 
     if node.degree == 0
         # Replace with new constant
-        newnode = make_random_leaf(nfeatures, T, typeof(tree), rng)
+        newnode = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
         set_node!(node, newnode)
     elseif node.degree == 1
         # Join one of the children with the parent
@@ -316,7 +318,7 @@ function gen_random_tree_fixed_size(
     ::Type{T},
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
-    tree = make_random_leaf(nfeatures, T, options.node_type, rng)
+    tree = make_random_leaf(nfeatures, T, options.node_type, rng, options)
     cur_size = count_nodes(tree)
     while cur_size < node_count
         if cur_size == node_count - 1  # only unary operator allowed.

@@ -4,7 +4,7 @@ using DynamicExpressions:
     AbstractExpression, parse_expression, Node, constructorof, string_tree
 using DynamicExpressions: with_type_parameters
 using ..UtilsModule: split_string
-using ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu
+using ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: PopMember
 using ..LossFunctionsModule: eval_loss
@@ -40,20 +40,13 @@ has been instantiated or not.
 
 Arguments:
 - `options`: Options containing specification about deterministic.
-- `T`: Type of Nodes to use in the population. e.g., `Float64`.
-- `L`: Type of loss to use in the population. e.g., `Float64`.
+- `dataset`: Dataset containing the input data.
 """
 function HallOfFame(
-    options::Options, ::Type{T}, ::Type{L}
+    options::Options, dataset::Dataset{T,L}
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     actualMaxsize = options.maxsize + MAX_DEGREE
-    # NT = with_type_parameters(options.node_type, T)
-    base_tree = parse_expression(
-        one(T);
-        operators=options.operators,
-        node_type=options.node_type,
-        expression_type=options.expression_type,
-    )
+    base_tree = create_expression(zero(T), options, dataset)
 
     return HallOfFame{T,L,typeof(base_tree)}(
         [
