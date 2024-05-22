@@ -92,22 +92,23 @@ function mutate_constant(
     end
     node = rand(rng, NodeSampler(; tree, filter=t -> (t.degree == 0 && t.constant)))
 
+    node.val *= mutate_factor(T, temperature, options, rng)
+
+    return tree
+end
+
+function mutate_factor(::Type{T}, temperature, options, rng) where {T<:DATA_TYPE}
     bottom = 1//10
     maxChange = options.perturbation_factor * temperature + 1 + bottom
     factor = T(maxChange^rand(rng, T))
     makeConstBigger = rand(rng, Bool)
 
-    if makeConstBigger
-        node.val *= factor
-    else
-        node.val /= factor
-    end
+    factor = makeConstBigger ? factor : 1 / factor
 
     if rand(rng) > options.probability_negate_constant
-        node.val *= -1
+        factor *= -1
     end
-
-    return tree
+    return factor
 end
 
 # TODO: Shouldn't we add a mutate_feature here?
