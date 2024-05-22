@@ -16,6 +16,7 @@ using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 using ..LossFunctionsModule: maybe_getindex
 using ..InterfaceDynamicExpressionsModule: eval_tree_array
 
+import DynamicExpressions: get_operators, string_tree
 import ..CoreModule: create_expression
 import ..MutationFunctionsModule: make_random_leaf, crossover_trees, mutate_constant, mutate_factor
 import ..LossFunctionsModule: eval_tree_dispatch
@@ -126,5 +127,8 @@ function mutate_constant(
         return ex
     end
 end
+
+get_operators(::ParametricExpression, options::Options) = options.operators
+string_tree(tree::ParametricExpression, options::Options; kws...) = string_tree(tree, get_operators(tree, options); kws...)
 
 end
