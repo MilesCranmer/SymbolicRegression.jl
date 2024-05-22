@@ -2,7 +2,7 @@ module ConstantOptimizationModule
 
 using LineSearches: LineSearches
 using Optim: Optim
-using DynamicExpressions: Node, count_constants
+using DynamicExpressions: Node, count_constants, get_constants, set_constants!
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_loss, loss_to_score, batch_sample
@@ -47,16 +47,15 @@ function _optimize_constants(
     eval_fraction = options.batching ? (options.batch_size / dataset.n) : 1.0
     f(t) = eval_loss(t, dataset, options; regularization=false, idx=idx)::L
     baseline = f(tree)
+    x0, refs = get_constants(tree)
     result = Optim.optimize(f, tree, algorithm, optimizer_options)
     num_evals = result.f_calls * eval_fraction
     # Try other initial conditions:
     for _ in 1:(options.optimizer_nrestarts)
         tmptree = copy(tree)
-        foreach(tmptree) do node
-            if node.degree == 0 && node.constant
-                node.val = (node.val) * (T(1) + T(1//2) * randn(T))
-            end
-        end
+        eps = randn(T, size(x0)...)
+        xt = @. x0 * (T(1) + T(1//2) * eps)
+        set_constants!(tmptree, xt, refs)
         tmpresult = Optim.optimize(
             f, tmptree, algorithm, optimizer_options; make_copy=false
         )
