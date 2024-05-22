@@ -3,7 +3,7 @@ module InterfaceDynamicExpressionsModule
 using Printf: @sprintf
 using DynamicExpressions: DynamicExpressions
 using DynamicExpressions:
-    OperatorEnum, GenericOperatorEnum, AbstractExpression, Node, GraphNode
+    OperatorEnum, GenericOperatorEnum, AbstractExpression, AbstractExpressionNode, Node, GraphNode
 using DynamicExpressions.StringsModule: needs_brackets
 using DynamicQuantities: dimension, ustrip
 using ..CoreModule: Options
@@ -146,7 +146,7 @@ Convert an equation to a string.
     to print for each feature.
 """
 @inline function string_tree(
-    tree::AbstractExpression,
+    tree::Union{AbstractExpression,AbstractExpressionNode},
     options::Options;
     raw::Bool=true,
     X_sym_units=nothing,
