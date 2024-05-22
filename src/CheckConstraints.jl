@@ -78,6 +78,14 @@ function check_constraints(
     cursize::Union{Int,Nothing}=nothing,
 )::Bool
     tree = get_tree(ex)
+    return check_constraints(tree, options, maxsize, cursize)
+end
+function check_constraints(
+    tree::AbstractExpressionNode,
+    options::Options,
+    maxsize::Int,
+    cursize::Union{Int,Nothing}=nothing,
+)::Bool
     ((cursize === nothing) ? compute_complexity(tree, options) : cursize) > maxsize &&
         return false
     count_depth(tree) > options.maxdepth && return false
@@ -95,7 +103,8 @@ function check_constraints(
     return true
 end
 
-check_constraints(ex::AbstractExpression, options::Options)::Bool =
-    check_constraints(ex, options, options.maxsize)
+check_constraints(
+    ex::Union{AbstractExpression,AbstractExpressionNode}, options::Options
+)::Bool = check_constraints(ex, options, options.maxsize)
 
 end

@@ -2,7 +2,7 @@ module LossFunctionsModule
 
 using Random: MersenneTwister
 using StatsBase: StatsBase
-using DynamicExpressions: AbstractExpression, Node, parse_expression
+using DynamicExpressions: AbstractExpression, AbstractExpressionNode, Node, parse_expression
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
 using ..InterfaceDynamicExpressionsModule: eval_tree_array

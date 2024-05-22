@@ -389,6 +389,10 @@ function get_two_nodes_without_loop(tree::AbstractNode, rng::AbstractRNG; max_at
     return (tree, tree, true)
 end
 
+function form_random_connection!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
+    tree = get_tree(ex)
+    return with_tree(ex, form_random_connection!(tree, rng))
+end
 function form_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     if length(tree) < 5
         return tree
@@ -407,6 +411,11 @@ function form_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rn
         parent.r = new_child
     end
     return tree
+end
+
+function break_random_connection!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
+    tree = get_tree(ex)
+    return with_tree(ex, break_random_connection!(tree, rng))
 end
 function break_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     tree.degree == 0 && return tree

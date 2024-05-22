@@ -3,6 +3,7 @@ module MutateModule
 using DynamicExpressions:
     AbstractExpression,
     Node,
+    with_tree,
     get_tree,
     preserve_sharing,
     copy_node,
@@ -47,7 +48,7 @@ function condition_mutation_weights!(
         weights.swap_operands = 0.0
         weights.delete_node = 0.0
         weights.simplify = 0.0
-        if !member.tree.constant
+        if !tree.constant
             weights.optimize = 0.0
             weights.mutate_constant = 0.0
         end
@@ -186,7 +187,10 @@ function next_generation(
             # We select a random size, though the generated tree
             # may have fewer nodes than we request.
             tree_size_to_generate = rand(1:curmaxsize)
-            tree = gen_random_tree_fixed_size(tree_size_to_generate, options, nfeatures, T)
+            tree = with_tree(
+                tree,
+                gen_random_tree_fixed_size(tree_size_to_generate, options, nfeatures, T),
+            )
             @recorder tmp_recorder["type"] = "regenerate"
 
             is_success_always_possible = true
@@ -245,6 +249,10 @@ function next_generation(
         attempts += 1
     end
     #############################################
+    if !(tree isa AbstractExpression)
+        @error "Failed after $(mutation_choice)"
+        error()
+    end
 
     if !successful_mutation
         @recorder begin
