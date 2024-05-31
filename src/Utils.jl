@@ -180,7 +180,7 @@ function _save_kwargs(log_variable::Symbol, fdef::Expr)
         return true
     end
     return quote
-        $fdef
+        $(Base).@__doc__ $fdef
         const $log_variable = $kwargs
     end
 end
