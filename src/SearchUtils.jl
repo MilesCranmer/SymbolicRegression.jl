@@ -6,6 +6,7 @@ module SearchUtilsModule
 using Printf: @printf, @sprintf
 using Distributed
 using StatsBase: mean
+using DispatchDoctor: @unstable
 
 using DynamicExpressions: AbstractExpressionNode, string_tree
 using ..UtilsModule: subscriptify
@@ -37,7 +38,9 @@ Base.@kwdef struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE}
     verbosity::Int64
     progress::Bool
 end
-function Base.getproperty(roptions::RuntimeOptions{P,D,R}, name::Symbol) where {P,D,R}
+@unstable @inline function Base.getproperty(
+    roptions::RuntimeOptions{P,D,R}, name::Symbol
+) where {P,D,R}
     if name == :parallelism
         return P
     elseif name == :dim_out
