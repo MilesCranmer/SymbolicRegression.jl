@@ -93,7 +93,8 @@ const max_ops = 8192
 const vals = ntuple(Val, max_ops)
 
 """Return the bottom k elements of x, and their indices."""
-bottomk_fast(x, k) = _bottomk_dispatch(x, vals[k])
+bottomk_fast(x::AbstractVector{T}, k) where {T} =
+    _bottomk_dispatch(x, vals[k])::Tuple{Vector{T},Vector{Int}}
 
 function _bottomk_dispatch(x::AbstractVector{T}, ::Val{k}) where {T,k}
     if k == 1
