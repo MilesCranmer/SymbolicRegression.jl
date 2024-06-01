@@ -1,5 +1,6 @@
 using SymbolicRegression
 using Test
+using DispatchDoctor: allow_unstable
 
 @testset "Dataset construction" begin
     # Promotion of types:
@@ -9,6 +10,8 @@ using Test
 end
 
 @testset "With deprecated kwarg" begin
-    dataset = Dataset(randn(ComplexF32, 3, 32), randn(ComplexF32, 32); loss_type=Float64)
+    dataset = allow_unstable() do
+        Dataset(randn(ComplexF32, 3, 32), randn(ComplexF32, 32); loss_type=Float64)
+    end
     @test dataset isa Dataset{ComplexF32,Float64}
 end
