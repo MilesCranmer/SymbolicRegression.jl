@@ -247,7 +247,8 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
         @info "Importing SymbolicRegression on workers as well as extensions $(join(relevant_extensions, ',' * ' '))."
     end
     @everywhere procs Core.eval(Core.Main, $expr)
-    return verbosity > 0 && @info "Finished!"
+    verbosity > 0 && @info "Finished!"
+    return nothing
 end
 
 function test_module_on_workers(procs, options::Options, verbosity)
