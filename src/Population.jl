@@ -68,7 +68,7 @@ end
 
 Create random population and score them on the dataset.
 """
-function Population(
+@unstable function Population(
     X::AbstractMatrix{T},
     y::AbstractVector{T};
     population_size=nothing,
