@@ -17,6 +17,7 @@ on:
       - "src/**"
       - ".github/workflows/**"
       - "Project.toml"
+  workflow_dispatch:
 concurrency:
   # Skip intermediate builds: always.
   # Cancel intermediate builds: only if it is a pull request build.
