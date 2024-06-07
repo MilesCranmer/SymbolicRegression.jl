@@ -21,6 +21,7 @@ using SymbolicRegression:
 using Test
 using Random: MersenneTwister
 using Suppressor: @capture_err
+using LoopVectorization
 include("test_params.jl")
 
 @testset "Generic operator tests" begin

@@ -20,7 +20,7 @@ for T in (ComplexF16, ComplexF32, ComplexF64)
             elementwise_loss=(prediction, target) -> abs2(prediction - target),
         )
 
-        dataset = Dataset(X, y; loss_type=L)
+        dataset = Dataset(X, y, L)
         hof = if T == ComplexF16
             equation_search([dataset]; options=options, niterations=1_000_000_000)
         else

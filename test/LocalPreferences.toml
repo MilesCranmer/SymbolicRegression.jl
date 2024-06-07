@@ -1,0 +1,3 @@
+[SymbolicRegression]
+instability_check = "error"
+instability_check_codegen = "min"

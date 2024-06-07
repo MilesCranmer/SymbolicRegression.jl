@@ -1,5 +1,6 @@
 module OptionsModule
 
+using DispatchDoctor: @unstable
 using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
@@ -374,8 +375,7 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 # Arguments
 $(OPTION_DESCRIPTIONS)
 """
-function Options end
-@save_kwargs DEFAULT_OPTIONS function Options(;
+@unstable @save_kwargs DEFAULT_OPTIONS function Options(;
     binary_operators=[+, -, /, *],
     unary_operators=[],
     constraints=nothing,
