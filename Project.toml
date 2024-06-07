@@ -25,6 +25,7 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 
 [weakdeps]
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
@@ -37,8 +38,8 @@ SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 [compat]
 Compat = "^4.2"
 Dates = "1"
-Distributed = "1"
 DispatchDoctor = "0.4"
+Distributed = "1"
 DynamicExpressions = "0.16"
 DynamicQuantities = "0.10, 0.11, 0.12, 0.13"
 JSON3 = "1"

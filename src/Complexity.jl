@@ -1,5 +1,6 @@
 module ComplexityModule
 
+using TestItems: @testitem
 using DynamicExpressions: AbstractExpressionNode, count_nodes, tree_mapreduce
 using ..CoreModule: Options, ComplexityMapping
 
@@ -44,6 +45,20 @@ function _compute_complexity(
         break_sharing=break_sharing,
         f_on_shared=(result, is_shared) -> is_shared ? result : zero(CT),
     )
+end
+
+@testitem "complexity of variables" begin
+    using SymbolicRegression
+
+    options = Options(
+        binary_operators=[+, *],
+        unary_operators=[sin, cos],
+        complexity_of_variables=[1, 2, 3],
+        complexity_of_operators=[(+) => 5, (*) => 2]
+    )
+    x1, x2, x3 = [Node{Float64}(feature=i) for i=1:3]
+    tree = x1 + x2 * x3
+    @test compute_complexity(tree, options) == 1 + 5 + 2 + 2 + 3
 end
 
 end

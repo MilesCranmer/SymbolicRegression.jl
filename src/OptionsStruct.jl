@@ -83,10 +83,12 @@ function ComplexityMapping(
 
     # If not in dict, then just set it to 1.
     binop_complexities = T[
-        T(get(_complexity_of_operators, op, one(T))) for op in binary_operators
+        (haskey(_complexity_of_operators, op) ? _complexity_of_operators[op] : one(T)) #
+        for op in binary_operators
     ]
     unaop_complexities = T[
-        T(get(_complexity_of_operators, op, one(T))) for op in unary_operators
+        (haskey(_complexity_of_operators, op) ? _complexity_of_operators[op] : one(T)) #
+        for op in unary_operators
     ]
 
     variable_complexity = if complexity_of_variables !== nothing
