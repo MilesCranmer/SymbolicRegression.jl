@@ -376,8 +376,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 $(OPTION_DESCRIPTIONS)
 """
 @unstable @save_kwargs DEFAULT_OPTIONS function Options(;
-    binary_operators=[+, -, /, *],
-    unary_operators=[],
+    binary_operators=Function[+, -, /, *],
+    unary_operators=Function[],
     constraints=nothing,
     elementwise_loss::Union{Function,SupervisedLoss,Nothing}=nothing,
     loss_function::Union{Function,Nothing}=nothing,

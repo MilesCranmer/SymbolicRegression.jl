@@ -47,9 +47,7 @@ function ComplexityMapping(
     # If no customization provided, then we simply
     # turn off the complexity mapping
     use = false
-    return ComplexityMapping{Int,Int}(
-        use, zeros(Int, 0), zeros(Int, 0), 0, 0
-    )
+    return ComplexityMapping{Int,Int}(use, zeros(Int, 0), zeros(Int, 0), 0, 0)
 end
 function ComplexityMapping(
     complexity_of_operators,
@@ -58,11 +56,11 @@ function ComplexityMapping(
     binary_operators,
     unary_operators,
 )
-    if complexity_of_operators === nothing
-        complexity_of_operators = Dict()
+    _complexity_of_operators = if complexity_of_operators === nothing
+        Dict{Function,Int64}()
     else
         # Convert to dict:
-        complexity_of_operators = Dict(complexity_of_operators)
+        Dict(complexity_of_operators)
     end
 
     VAR_T = if (complexity_of_variables !== nothing)
@@ -79,29 +77,27 @@ function ComplexityMapping(
     else
         Int
     end
-    OP_T = promote_type(typeof.(values(complexity_of_operators))...)
+    OP_T = eltype(_complexity_of_operators).parameters[2]
 
     T = promote_type(VAR_T, CONST_T, OP_T)
 
     # If not in dict, then just set it to 1.
     binop_complexities = T[
-        (haskey(complexity_of_operators, op) ? complexity_of_operators[op] : 1) #
-        for op in binary_operators
+        T(get(_complexity_of_operators, op, one(T))) for op in binary_operators
     ]
     unaop_complexities = T[
-        (haskey(complexity_of_operators, op) ? complexity_of_operators[op] : 1) #
-        for op in unary_operators
+        T(get(_complexity_of_operators, op, one(T))) for op in unary_operators
     ]
 
     variable_complexity = if complexity_of_variables !== nothing
-        complexity_of_variables
+        map(T, complexity_of_variables)
     else
-        1
+        one(T)
     end
     constant_complexity = if complexity_of_constants !== nothing
-        complexity_of_constants
+        map(T, complexity_of_constants)
     else
-        1
+        one(T)
     end
 
     return ComplexityMapping(;
