@@ -36,6 +36,7 @@ export Population,
     set_node!,
     copy_node,
     node_to_symbolic,
+    node_type,
     symbolic_to_node,
     simplify_tree!,
     tree_mapreduce,
@@ -106,7 +107,8 @@ using DynamicExpressions:
     combine_operators,
     simplify_tree!,
     tree_mapreduce,
-    set_default_variable_names!
+    set_default_variable_names!,
+    node_type
 using DynamicExpressions: with_type_parameters
 @reexport using LossFunctions:
     MarginLoss,

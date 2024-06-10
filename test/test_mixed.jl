@@ -134,7 +134,7 @@ for i in 0:5
         @test length(dom) > 0
         best = dom[end]
         # Assert we created the correct type of trees:
-        @test typeof(best.tree) == Node{T}
+        @test node_type(typeof(best.tree)) == Node{T}
 
         # Test the score
         @test best.loss < maximum_residual
