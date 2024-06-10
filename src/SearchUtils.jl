@@ -470,6 +470,7 @@ function construct_datasets(
     y_variable_names,
     X_units,
     y_units,
+    extra,
     ::Type{L},
 ) where {L}
     nout = size(y, 1)
@@ -478,6 +479,7 @@ function construct_datasets(
             X,
             y[j, :],
             L;
+            index=j,
             weights=(weights === nothing ? weights : weights[j, :]),
             variable_names=variable_names,
             display_variable_names=display_variable_names,
@@ -498,6 +500,7 @@ function construct_datasets(
             end,
             X_units=X_units,
             y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
+            extra=extra,
         ) for j in 1:nout
     ]
 end

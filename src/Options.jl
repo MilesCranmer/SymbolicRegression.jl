@@ -3,7 +3,7 @@ module OptionsModule
 using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
-using DynamicExpressions: OperatorEnum, Node, Expression
+using DynamicExpressions: OperatorEnum, Node, Expression, default_node
 using Distributed: nworkers
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim

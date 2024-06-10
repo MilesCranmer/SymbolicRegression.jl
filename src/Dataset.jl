@@ -22,6 +22,8 @@ import ...deprecate_varmap
 
 - `X::AbstractMatrix{T}`: The input features, with shape `(nfeatures, n)`.
 - `y::AbstractVector{T}`: The desired output values, with shape `(n,)`.
+- `index::Int`: The index of the output feature corresponding to this
+    dataset, if any.
 - `n::Int`: The number of samples.
 - `nfeatures::Int`: The number of features.
 - `weighted::Bool`: Whether the dataset is non-uniformly weighted.
@@ -64,6 +66,7 @@ mutable struct Dataset{
 }
     @constfield X::AX
     @constfield y::AY
+    @constfield index::Int
     @constfield n::Int
     @constfield nfeatures::Int
     @constfield weighted::Bool
@@ -99,6 +102,7 @@ function Dataset(
     X::AbstractMatrix{T},
     y::Union{AbstractVector{T},Nothing}=nothing,
     loss_type::Type{L}=Nothing;
+    index::Int=1,
     weights::Union{AbstractVector{T},Nothing}=nothing,
     variable_names::Union{Array{String,1},Nothing}=nothing,
     display_variable_names=variable_names,
@@ -123,6 +127,7 @@ function Dataset(
             X,
             y,
             kws[:loss_type];
+            index,
             weights,
             variable_names,
             display_variable_names,
@@ -206,6 +211,7 @@ function Dataset(
     }(
         X,
         y,
+        index,
         n,
         nfeatures,
         weighted,

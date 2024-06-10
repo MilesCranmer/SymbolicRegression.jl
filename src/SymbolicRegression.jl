@@ -94,7 +94,7 @@ using DynamicExpressions:
     print_tree,
     count_nodes,
     get_constants,
-    set_constants,
+    set_constants!,
     index_constants,
     NodeIndex,
     eval_tree_array,
@@ -386,6 +386,7 @@ function equation_search(
     progress::Union{Bool,Nothing}=nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
+    extra::NamedTuple=NamedTuple(),
     v_dim_out::Val{DIM_OUT}=Val(nothing),
     # Deprecated:
     multithreaded=nothing,
@@ -413,6 +414,7 @@ function equation_search(
         y_variable_names,
         X_units,
         y_units,
+        extra,
         L,
     )
 
