@@ -23,32 +23,31 @@ import ..MutationFunctionsModule:
 import ..LossFunctionsModule: eval_tree_dispatch
 import ..ConstantOptimizationModule: count_constants_for_optimization
 
-function create_expression(t, options::Options, dataset::Dataset{T,L}) where {T,L}
-    return create_expression(
-        t, options, dataset, options.node_type, options.expression_type
-    )
+function create_expression(t::T, options::Options, dataset::Dataset{T,L}) where {T,L}
+    return create_expression(constructorof(options.node_type)(; val=t), options, dataset)
 end
-function create_expression(
-    t, options::Options, ::Dataset{T,L}, ::Type{N}, ::Type{E}
-) where {T,L,N<:AbstractExpressionNode,E<:AbstractExpression}
-    return parse_expression(t; operators=options.operators, node_type=N, expression_type=E)
-end
-function create_expression(
-    t, options::Options, dataset::Dataset{T,L}, ::Type{N}, ::Type{E}
-) where {T,L,N<:ParametricNode,E<:ParametricExpression}
-    return parse_expression(
+function create_expression(t::AbstractExpressionNode{T}, options::Options, dataset::Dataset{T,L}) where {T,L}
+    return constructorof(options.expression_type)(
         t;
         operators=options.operators,
-        node_type=N,
-        expression_type=E,
-        parameter_names=["p$i" for i in 1:(options.expression_options.max_parameters)],
-        parameters=randn(
-            T,
-            (
-                options.expression_options.max_parameters,
-                length(unique(dataset.extra.classes)),
-            ),
-        ),
+        variable_names=dataset.variable_names,
+        # TODO: Should not need to pass variable names here each time
+        extra_init_params(options.expression_type, options, dataset)...,
+    )
+end
+function extra_init_params(_, _, _)
+    return (;)
+end
+function extra_init_params(
+    ::Type{<:ParametricExpression}, options, dataset::Dataset{T,L}
+) where {T,L}
+    num_params = options.expression_options.max_parameters
+    num_classes = length(unique(dataset.extra.classes))
+    parameter_names = ["p$i" for i in 1:num_params]
+    parameters = randn(T, (num_params, num_classes))
+    return (;
+        parameter_names,
+        parameters,
     )
 end
 function eval_tree_dispatch(
