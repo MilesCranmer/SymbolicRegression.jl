@@ -247,10 +247,10 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
             return sum((prediction .- dataset.y) .^ 2) / dataset.n
         end
 
-- `node_type::Type{N}=Node`: The type of node to use for the search.
-    For example, `Node` or `GraphNode`.
 - `expression_type::Type{E}=Expression`: The type of expression to use.
     For example, `Expression`.
+- `node_type::Type{N}=default_node(Expression)`: The type of node to use for the search.
+    For example, `Node` or `GraphNode`. The default is computed by `default_node(expression_type)`.
 - `populations`: How many populations of equations to use.
 - `population_size`: How many equations in each population.
 - `ncycles_per_iteration`: How many generations to consider per iteration.
@@ -402,8 +402,8 @@ function Options end
     should_simplify::Union{Nothing,Bool}=nothing,
     should_optimize_constants::Bool=true,
     output_file::Union{Nothing,AbstractString}=nothing,
-    node_type::Type=Node,
     expression_type::Type=Expression,
+    node_type::Type=default_node(expression_type),
     expression_options::NamedTuple=NamedTuple(),
     populations::Integer=15,
     perturbation_factor::Real=0.076,
