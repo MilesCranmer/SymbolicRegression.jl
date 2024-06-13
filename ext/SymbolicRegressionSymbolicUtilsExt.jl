@@ -12,10 +12,14 @@ import SymbolicRegression: node_to_symbolic, symbolic_to_node
 
 Convert an expression to SymbolicUtils.jl form.
 """
-function node_to_symbolic(tree::AbstractExpression, options::Options; kws...)
+function node_to_symbolic(
+    tree::Union{AbstractExpressionNode,AbstractExpression}, options::Options; kws...
+)
     return node_to_symbolic(get_tree(tree), options.operators; kws...)
 end
-function node_to_symbolic(tree::AbstractExpression, m::AbstractSRRegressor; kws...)
+function node_to_symbolic(
+    tree::Union{AbstractExpressionNode,AbstractExpression}, m::AbstractSRRegressor; kws...
+)
     return node_to_symbolic(tree, get_options(m); kws...)
 end
 
@@ -33,7 +37,7 @@ end
 
 function Base.convert(
     ::Type{Symbolic},
-    tree::Union{AbstractExpression,AbstractExpressionNode},
+    tree::Union{AbstractExpressionNode,AbstractExpression},
     options::Options;
     kws...,
 )
@@ -41,7 +45,7 @@ function Base.convert(
 end
 function Base.convert(
     ::Type{Symbolic},
-    tree::Union{AbstractExpression,AbstractExpressionNode},
+    tree::Union{AbstractExpressionNode,AbstractExpression},
     m::AbstractSRRegressor;
     kws...,
 )
@@ -50,12 +54,12 @@ end
 
 function Base.convert(
     ::Type{N}, x::Union{Number,Symbolic}, options::Options; kws...
-) where {N<:Union{AbstractExpression,AbstractExpressionNode}}
+) where {N<:Union{AbstractExpressionNode,AbstractExpression}}
     return convert(N, x, options.operators; kws...)
 end
 function Base.convert(
     ::Type{N}, x::Union{Number,Symbolic}, m::AbstractSRRegressor; kws...
-) where {N<:Union{AbstractExpression,AbstractExpressionNode}}
+) where {N<:Union{AbstractExpressionNode,AbstractExpression}}
     return convert(N, x, get_options(m); kws...)
 end
 
