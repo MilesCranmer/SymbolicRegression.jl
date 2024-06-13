@@ -26,7 +26,9 @@ import ..ConstantOptimizationModule: count_constants_for_optimization
 function create_expression(t::T, options::Options, dataset::Dataset{T,L}) where {T,L}
     return create_expression(constructorof(options.node_type)(; val=t), options, dataset)
 end
-function create_expression(t::AbstractExpressionNode{T}, options::Options, dataset::Dataset{T,L}) where {T,L}
+function create_expression(
+    t::AbstractExpressionNode{T}, options::Options, dataset::Dataset{T,L}
+) where {T,L}
     return constructorof(options.expression_type)(
         t;
         operators=options.operators,
@@ -45,10 +47,7 @@ function extra_init_params(
     num_classes = length(unique(dataset.extra.classes))
     parameter_names = ["p$i" for i in 1:num_params]
     parameters = randn(T, (num_params, num_classes))
-    return (;
-        parameter_names,
-        parameters,
-    )
+    return (; parameter_names, parameters)
 end
 function eval_tree_dispatch(
     tree::ParametricExpression{T}, dataset::Dataset{T}, options::Options, idx

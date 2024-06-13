@@ -767,7 +767,7 @@ function _initialize_search!(
                 copy_pop = copy(saved_pop)
                 @sr_spawner(
                     begin
-                        (copy_pop, HallOfFame(options, T, L), RecordType(), 0.0)
+                        (copy_pop, HallOfFame(options, datasets[j]), RecordType(), 0.0)
                     end,
                     parallelism = ropt.parallelism,
                     worker_idx = worker_idx

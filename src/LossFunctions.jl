@@ -42,14 +42,17 @@ end
 end
 
 function eval_tree_dispatch(
-    tree::AbstractExpression{T}, dataset::Dataset{T}, options::Options, idx
+    tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
+    dataset::Dataset{T},
+    options::Options,
+    idx,
 ) where {T<:DATA_TYPE}
     return eval_tree_array(tree, maybe_getindex(dataset.X, :, idx), options)
 end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function _eval_loss(
-    tree::AbstractExpression{T},
+    tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
     dataset::Dataset{T,L},
     options::Options,
     regularization::Bool,
@@ -80,7 +83,11 @@ end
 
 # This evaluates function F:
 function evaluator(
-    f::F, tree::AbstractExpression{T}, dataset::Dataset{T,L}, options::Options, idx
+    f::F,
+    tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
+    dataset::Dataset{T,L},
+    options::Options,
+    idx,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE,F}
     if hasmethod(f, typeof((tree, dataset, options, idx)))
         # If user defines method that accepts batching indices:
@@ -99,7 +106,7 @@ end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function eval_loss(
-    tree::AbstractExpression{T},
+    tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
     dataset::Dataset{T,L},
     options::Options;
     regularization::Bool=true,
@@ -116,7 +123,7 @@ function eval_loss(
 end
 
 function eval_loss_batched(
-    tree::AbstractExpression{T},
+    tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
     dataset::Dataset{T,L},
     options::Options;
     regularization::Bool=true,
@@ -220,7 +227,9 @@ function update_baseline_loss!(
 end
 
 function dimensional_regularization(
-    tree::AbstractExpression{T}, dataset::Dataset{T,L}, options::Options
+    tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
+    dataset::Dataset{T,L},
+    options::Options,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if !violates_dimensional_constraints(tree, dataset, options)
         return zero(L)

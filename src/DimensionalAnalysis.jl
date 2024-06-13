@@ -180,12 +180,12 @@ function violates_dimensional_constraints_dispatch(
 end
 
 """
-    violates_dimensional_constraints(tree::AbstractExpression, dataset::Dataset, options::Options)
+    violates_dimensional_constraints(tree::AbstractExpressionNode, dataset::Dataset, options::Options)
 
 Checks whether an expression violates dimensional constraints.
 """
 function violates_dimensional_constraints(
-    tree::AbstractExpression, dataset::Dataset, options::Options
+    tree::AbstractExpressionNode, dataset::Dataset, options::Options
 )
     X = dataset.X
     return violates_dimensional_constraints(
@@ -193,7 +193,12 @@ function violates_dimensional_constraints(
     )
 end
 function violates_dimensional_constraints(
-    tree::AbstractExpression{T},
+    tree::AbstractExpression, dataset::Dataset, options::Options
+)
+    return violates_dimensional_constraints(get_tree(tree), dataset, options)
+end
+function violates_dimensional_constraints(
+    tree::AbstractExpressionNode{T},
     X_units::Union{AbstractVector{<:Quantity},Nothing},
     y_units::Union{Quantity,Nothing},
     x::AbstractVector{T},
@@ -204,7 +209,7 @@ function violates_dimensional_constraints(
     end
     allow_wildcards = !(options.dimensionless_constants_only)
     dimensional_output = violates_dimensional_constraints_dispatch(
-        get_tree(tree), X_units, x, options.operators, allow_wildcards
+        tree, X_units, x, options.operators, allow_wildcards
     )
     # ^ Eventually do this with map_treereduce. However, right now it seems
     # like we are passing around too many arguments, which slows things down.

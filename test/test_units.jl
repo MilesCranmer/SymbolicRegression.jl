@@ -1,4 +1,5 @@
 using SymbolicRegression
+using DynamicExpressions: get_tree
 using SymbolicRegression:
     square,
     cube,
@@ -152,11 +153,11 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
 
     # Check that every cos(...) which contains x1 also has complexity
     has_cos(tree) =
-        any(tree) do t
+        any(get_tree(tree)) do t
             t.degree == 1 && options.operators.unaops[t.op] == cos
         end
     valid_trees = [
-        !has_cos(member.tree) || any(member.tree) do t
+        !has_cos(member.tree) || any(get_tree(member.tree)) do t
             if (
                 t.degree == 1 &&
                 options.operators.unaops[t.op] == cos &&
@@ -225,7 +226,7 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
 
     # Solution should be x2 * x2
     dominating = calculate_pareto_frontier(hof)
-    best = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
+    best = get_tree(first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree)
 
     x2 = Node(Float64; feature=2)
 
@@ -245,10 +246,10 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
     dominating = calculate_pareto_frontier(hof)
     best = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
     @test compute_complexity(best, options2) == 6
-    @test any(best) do t
+    @test any(get_tree(best)) do t
         t.degree == 1 && options2.operators.unaops[t.op] == cbrt
     end
-    @test any(best) do t
+    @test any(get_tree(best)) do t
         t.degree == 1 && options2.operators.unaops[t.op] == safe_sqrt
     end
 
@@ -270,10 +271,10 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
             report = MLJ.report(mach)
             best_idx = findfirst(report.losses .< 1e-7)::Int
             @test report.complexities[best_idx] <= 6
-            @test any(report.equations[best_idx]) do t
+            @test any(get_tree(report.equations[best_idx])) do t
                 t.degree == 1 && t.op == 2  # cbrt
             end
-            @test any(report.equations[best_idx]) do t
+            @test any(get_tree(report.equations[best_idx])) do t
                 t.degree == 1 && t.op == 1  # safe_sqrt
             end
 

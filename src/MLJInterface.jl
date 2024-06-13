@@ -9,7 +9,9 @@ using DynamicExpressions:
     AbstractExpressionNode,
     AbstractExpression,
     Node,
-    Expression
+    Expression,
+    default_node,
+    get_tree
 using DynamicQuantities:
     QuantityArray,
     UnionAbstractQuantity,
