@@ -2,7 +2,8 @@ module LossFunctionsModule
 
 using Random: MersenneTwister
 using StatsBase: StatsBase
-using DynamicExpressions: AbstractExpression, AbstractExpressionNode, Node, parse_expression
+using DynamicExpressions:
+    AbstractExpression, AbstractExpressionNode, Node, parse_expression, get_tree
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
 using ..InterfaceDynamicExpressionsModule: eval_tree_array
@@ -83,11 +84,7 @@ end
 
 # This evaluates function F:
 function evaluator(
-    f::F,
-    tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
-    dataset::Dataset{T,L},
-    options::Options,
-    idx,
+    f::F, tree::AbstractExpressionNode{T}, dataset::Dataset{T,L}, options::Options, idx
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE,F}
     if hasmethod(f, typeof((tree, dataset, options, idx)))
         # If user defines method that accepts batching indices:
@@ -116,7 +113,7 @@ function eval_loss(
         _eval_loss(tree, dataset, options, regularization, idx)
     else
         f = options.loss_function::Function
-        evaluator(f, tree, dataset, options, idx)
+        evaluator(f, get_tree(tree), dataset, options, idx)
     end
 
     return loss_val
