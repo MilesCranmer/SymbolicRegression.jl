@@ -1,7 +1,7 @@
 module SymbolicRegressionSymbolicUtilsExt
 
 using SymbolicUtils: Symbolic
-using SymbolicRegression: AbstractExpression, Node, Options
+using SymbolicRegression: AbstractExpressionNode, AbstractExpression, Node, Options
 using SymbolicRegression.MLJInterfaceModule: AbstractSRRegressor, get_options
 using DynamicExpressions: get_tree
 
