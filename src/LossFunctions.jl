@@ -135,8 +135,7 @@ function batch_sample(dataset, options)
 end
 
 # Just so we can pass either PopMember or Node here:
-get_tree_from_member(t::AbstractExpressionNode) = t
-get_tree_from_member(t::AbstractExpression) = get_tree(t)
+get_tree_from_member(t::Union{AbstractExpression,AbstractExpressionNode}) = t
 get_tree_from_member(m) = m.tree
 # Beware: this is a circular dependency situation...
 # PopMember is using losses, but then we also want
