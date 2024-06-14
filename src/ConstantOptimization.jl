@@ -3,6 +3,7 @@ module ConstantOptimizationModule
 using LineSearches: LineSearches
 using Optim: Optim
 using DynamicExpressions: Expression, Node, count_constants, get_constants, set_constants!
+using Zygote: Zygote, withgradient
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_loss, loss_to_score, batch_sample
@@ -46,10 +47,29 @@ function _optimize_constants(
 )::Tuple{P,Float64} where {T,L,P<:PopMember{T,L}}
     tree = member.tree
     eval_fraction = options.batching ? (options.batch_size / dataset.n) : 1.0
-    f(t) = eval_loss(t, dataset, options; regularization=false, idx=idx)::L
+    f = let dataset = dataset, options = options, idx = idx
+        function (t)
+            return eval_loss(t, dataset, options; regularization=false, idx=idx)::L
+        end
+    end
+    function fg!(F, G, t)
+        (val, grad) = withgradient(f, t)
+        if G !== nothing &&
+            grad !== nothing &&
+            only(grad) !== nothing &&
+            only(grad).tree !== nothing
+            G .= only(grad).tree.gradient
+        end
+        return val
+    end
+    obj = if algorithm isa Optim.Newton
+        f
+    else
+        Optim.only_fg!(fg!)
+    end
     baseline = f(tree)
     x0, refs = get_constants(tree)
-    result = Optim.optimize(f, tree, algorithm, optimizer_options)
+    result = Optim.optimize(obj, tree, algorithm, optimizer_options)
     num_evals = result.f_calls * eval_fraction
     # Try other initial conditions:
     for _ in 1:(options.optimizer_nrestarts)
@@ -58,7 +78,7 @@ function _optimize_constants(
         xt = @. x0 * (T(1) + T(1//2) * eps)
         set_constants!(tmptree, xt, refs)
         tmpresult = Optim.optimize(
-            f, tmptree, algorithm, optimizer_options; make_copy=false
+            obj, tmptree, algorithm, optimizer_options; make_copy=false
         )
         num_evals += tmpresult.f_calls * eval_fraction
 
