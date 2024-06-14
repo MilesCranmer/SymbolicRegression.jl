@@ -81,6 +81,7 @@ function _optimize_constants(
             obj, tmptree, algorithm, optimizer_options; make_copy=false
         )
         num_evals += tmpresult.f_calls * eval_fraction
+        # TODO: Does this need to take into account h_calls?
 
         if tmpresult.minimum < result.minimum
             result = tmpresult
