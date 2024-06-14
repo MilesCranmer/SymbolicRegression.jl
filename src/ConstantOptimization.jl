@@ -62,7 +62,7 @@ function _optimize_constants(
         end
         return val
     end
-    obj = if algorithm isa Optim.Newton
+    obj = if algorithm isa Optim.Newton || options.autodiff_backend isa Val{:finite}
         f
     else
         Optim.only_fg!(fg!)

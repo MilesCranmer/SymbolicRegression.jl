@@ -320,6 +320,8 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     we refer to the documentation on `Optim.Options` from the `Optim.jl` package.
     Options can be provided here as `NamedTuple`, e.g. `(iterations=16,)`, as a
     `Dict`, e.g. Dict(:x_tol => 1.0e-32,), or as an `Optim.Options` instance.
+- `autodiff_backend`: The backend to use for differentiation.
+    Can be `:zygote` or `:finite`. Default is `:finite`.
 - `output_file`: What file to store equations to, as a backup.
 - `perturbation_factor`: When mutating a constant, either
     multiply or divide by (1+perturbation_factor)^(rand()+1).
@@ -437,6 +439,7 @@ function Options end
     optimizer_iterations::Union{Nothing,Integer}=nothing,
     optimizer_f_calls_limit::Union{Nothing,Integer}=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
+    autodiff_backend::Symbol=:finite,
     use_recorder::Bool=false,
     recorder_file::AbstractString="pysr_recorder.json",
     early_stop_condition::Union{Function,Real,Nothing}=nothing,
@@ -779,6 +782,7 @@ function Options end
         bumper,
         deprecated_return_state,
         typeof(tournament_selection_weights),
+        autodiff_backend,
     }(
         operators,
         bin_constraints,
@@ -834,6 +838,7 @@ function Options end
         optimizer_probability,
         optimizer_nrestarts,
         optimizer_options,
+        Val(autodiff_backend),
         recorder_file,
         tournament_selection_p,
         early_stop_condition,
