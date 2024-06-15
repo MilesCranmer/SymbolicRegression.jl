@@ -50,13 +50,13 @@ end
 @testitem "complexity of variables" begin
     using SymbolicRegression
 
-    options = Options(
+    options = Options(;
         binary_operators=[+, *],
         unary_operators=[sin, cos],
         complexity_of_variables=[1, 2, 3],
-        complexity_of_operators=[(+) => 5, (*) => 2]
+        complexity_of_operators=[(+) => 5, (*) => 2],
     )
-    x1, x2, x3 = [Node{Float64}(feature=i) for i=1:3]
+    x1, x2, x3 = [Node{Float64}(; feature=i) for i in 1:3]
     tree = x1 + x2 * x3
     @test compute_complexity(tree, options) == 1 + 5 + 2 + 2 + 3
 end

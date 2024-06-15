@@ -266,7 +266,8 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     Input this in the form of, e.g., [(^) => 3, sin => 2].
 - `complexity_of_constants`: What complexity should be assigned to use of a constant.
     By default, this is 1.
-- `complexity_of_variables`: What complexity should be assigned to each variable.
+- `complexity_of_variables`: What complexity should be assigned to use of a variable,
+    which can also be a vector indicating different per-variable complexity.
     By default, this is 1.
 - `alpha`: The probability of accepting an equation mutation
     during regularized evolution is given by exp(-delta_loss/(alpha * T)),

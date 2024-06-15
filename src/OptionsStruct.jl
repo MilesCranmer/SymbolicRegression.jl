@@ -7,17 +7,22 @@ using LossFunctions: SupervisedLoss
 
 import ..MutationWeightsModule: MutationWeights
 
-"""This struct defines how complexity is calculated."""
+"""
+This struct defines how complexity is calculated.
+
+# Fields
+- `use`: Shortcut indicating whether we use custom complexities,
+    or just use 1 for everything.
+- `binop_complexities`: Complexity of each binary operator.
+- `unaop_complexities`: Complexity of each unary operator.
+- `variable_complexity`: Complexity of using a variable.
+- `constant_complexity`: Complexity of using a constant.
+"""
 struct ComplexityMapping{T<:Real,VV<:Union{T,AbstractVector{T}}}
-    """Whether we use custom complexity, or just use 1 for everythign"""
     use::Bool
-    """Complexity of each binary operator."""
     binop_complexities::Vector{T}
-    """Complexity of each unary operator."""
     unaop_complexities::Vector{T}
-    """Complexity of using a variable."""
     variable_complexity::VV
-    """Complexity of using a constant."""
     constant_complexity::T
 end
 
