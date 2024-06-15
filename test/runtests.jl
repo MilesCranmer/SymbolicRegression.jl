@@ -102,7 +102,7 @@ end
     include("test_utils.jl")
 end
 
-@testitem "Test units" tags = [:unit] begin
+@testitem "Test units" tags = [:integration] begin
     include("test_units.jl")
 end
 
@@ -161,6 +161,7 @@ end
 @testitem "Aqua tests" tags = [:integration] begin
     include("test_aqua.jl")
 end
+
 @testitem "JET tests" tags = [:integration] begin
     include("test_jet.jl")
 end
