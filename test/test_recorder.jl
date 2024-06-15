@@ -1,7 +1,10 @@
 using SymbolicRegression
 using SymbolicRegression.UtilsModule: recursive_merge
 using JSON3
+include("test_params.jl")
 
+base_dir = mktempdir()
+recorder_file = joinpath(base_dir, "pysr_recorder.json")
 X = 2 .* randn(Float32, 2, 1000)
 y = 3 * cos.(X[2, :]) + X[1, :] .^ 2 .- 2
 
@@ -9,7 +12,7 @@ options = SymbolicRegression.Options(;
     binary_operators=(+, *, /, -),
     unary_operators=(cos,),
     use_recorder=true,
-    recorder_file="pysr_recorder.json",
+    recorder_file=recorder_file,
     crossover_probability=0.0,  # required for recording, as not set up to track crossovers.
     populations=2,
     population_size=100,
