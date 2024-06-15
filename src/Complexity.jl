@@ -37,7 +37,15 @@ function _compute_complexity(
     unaop_complexities = cmap.unaop_complexities
     binop_complexities = cmap.binop_complexities
     return tree_mapreduce(
-        t -> t.constant ? constant_complexity : variable_complexity[t.feature],
+        t -> if t.constant
+            constant_complexity
+        else
+            if variable_complexity isa AbstractVector
+                variable_complexity[t.feature]
+            else
+                variable_complexity
+            end
+        end,
         t -> t.degree == 1 ? unaop_complexities[t.op] : binop_complexities[t.op],
         +,
         tree,
@@ -59,6 +67,13 @@ end
     x1, x2, x3 = [Node{Float64}(; feature=i) for i in 1:3]
     tree = x1 + x2 * x3
     @test compute_complexity(tree, options) == 1 + 5 + 2 + 2 + 3
+    options = Options(;
+        binary_operators=[+, *],
+        unary_operators=[sin, cos],
+        complexity_of_variables=2,
+        complexity_of_operators=[(+) => 5, (*) => 2],
+    )
+    @test compute_complexity(tree, options) == 2 + 5 + 2 + 2 + 2
 end
 
 end
