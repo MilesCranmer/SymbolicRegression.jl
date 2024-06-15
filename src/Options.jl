@@ -718,7 +718,7 @@ $(OPTION_DESCRIPTIONS)
     @assert print_precision > 0
 
     options = Options{
-        eltype(complexity_mapping),
+        typeof(complexity_mapping),
         operator_specialization(typeof(operators)),
         node_type,
         turbo,

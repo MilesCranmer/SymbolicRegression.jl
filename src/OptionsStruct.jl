@@ -121,12 +121,18 @@ else
 end
 
 struct Options{
-    CT,OP<:AbstractOperatorEnum,N<:AbstractExpressionNode,_turbo,_bumper,_return_state,W
+    CM<:ComplexityMapping,
+    OP<:AbstractOperatorEnum,
+    N<:AbstractExpressionNode,
+    _turbo,
+    _bumper,
+    _return_state,
+    W,
 }
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
-    complexity_mapping::ComplexityMapping{CT}
+    complexity_mapping::CM
     tournament_selection_n::Int
     tournament_selection_p::Float32
     tournament_selection_weights::W
