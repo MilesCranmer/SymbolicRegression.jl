@@ -570,7 +570,7 @@ function equation_search(
     # Underscores here mean that we have mutated the variable
     return _equation_search(
         datasets,
-        RuntimeOptions{concurrency,dim_out,_return_state}(;
+        RuntimeOptions(;
             niterations=niterations,
             total_cycles=options.populations * niterations,
             numprocs=_numprocs,
@@ -580,6 +580,9 @@ function equation_search(
             runtests=runtests,
             verbosity=_verbosity,
             progress=_progress,
+            parallelism=Val(concurrency),
+            dim_out=Val(dim_out),
+            return_state=Val(_return_state),
         ),
         options,
         saved_state,

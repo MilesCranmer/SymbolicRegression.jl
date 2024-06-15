@@ -6,7 +6,7 @@ using MacroTools: splitdef, combinedef
 
 const pseudo_time = Ref(0)
 
-function get_birth_order(; deterministic=false)::Int
+function get_birth_order(; deterministic::Bool=false)::Int
     """deterministic gives a birth time with perfect resolution, but is not thread safe."""
     if deterministic
         global pseudo_time
