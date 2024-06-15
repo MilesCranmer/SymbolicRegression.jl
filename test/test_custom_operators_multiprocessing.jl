@@ -12,9 +12,11 @@ defs = quote
 end
 
 # This is needed as workers are initialized in `Core.Main`!
-Core.eval(Core.Main, defs)
 if (@__MODULE__) != Core.Main
+    Core.eval(Core.Main, defs)
     eval(:(using Main: _plus, _mult, _div, _min, _cos, _exp, early_stop, my_loss))
+else
+    eval(defs)
 end
 
 X = randn(Float32, 5, 100)
