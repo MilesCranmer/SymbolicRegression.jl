@@ -31,21 +31,21 @@ function _compute_complexity(
     tree::AbstractExpressionNode, options::Options{CT}; break_sharing=Val(false)
 )::CT where {CT}
     cmap = options.complexity_mapping
-    constant_complexity = cmap.constant_complexity
-    variable_complexity = cmap.variable_complexity
-    unaop_complexities = cmap.unaop_complexities
-    binop_complexities = cmap.binop_complexities
     return tree_mapreduce(
-        t -> if t.constant
-            constant_complexity
-        else
-            if variable_complexity isa AbstractVector
-                variable_complexity[t.feature]
+        let vc=cmap.variable_complexity, cc=cmap.constant_complexity
+            t -> if t.constant
+                cc
             else
-                variable_complexity
+                if vc isa AbstractVector
+                    vc[t.feature]
+                else
+                    vc
+                end
             end
         end,
-        t -> t.degree == 1 ? unaop_complexities[t.op] : binop_complexities[t.op],
+        let uc=cmap.unaop_complexities, bc=cmap.binop_complexities
+            t -> t.degree == 1 ? uc[t.op] : bc[t.op]
+        end,
         +,
         tree,
         CT;
