@@ -20,7 +20,9 @@ function compute_complexity(
     tree::AbstractExpressionNode, options::Options{CT}; break_sharing=Val(false)
 )::Int where {CT}
     if options.complexity_mapping.use
-        raw_complexity = _compute_complexity(tree, options; break_sharing)
+        raw_complexity = _compute_complexity(
+            tree, options.complexity_mapping; break_sharing
+        )
         return round(Int, raw_complexity)
     else
         return count_nodes(tree; break_sharing)
@@ -28,23 +30,18 @@ function compute_complexity(
 end
 
 function _compute_complexity(
-    tree::AbstractExpressionNode, options::Options{CT}; break_sharing=Val(false)
+    tree::AbstractExpressionNode, cmap::ComplexityMapping{CT}; break_sharing=Val(false)
 )::CT where {CT}
-    cmap = options.complexity_mapping
     return tree_mapreduce(
-        let vc=cmap.variable_complexity, cc=cmap.constant_complexity
-            t -> if t.constant
-                cc
+        let vc = cmap.variable_complexity, cc = cmap.constant_complexity
+            if vc isa AbstractVector
+                t -> t.constant ? cc : @inbounds(vc[t.feature])
             else
-                if vc isa AbstractVector
-                    vc[t.feature]
-                else
-                    vc
-                end
+                t -> t.constant ? cc : vc
             end
         end,
-        let uc=cmap.unaop_complexities, bc=cmap.binop_complexities
-            t -> t.degree == 1 ? uc[t.op] : bc[t.op]
+        let uc = cmap.unaop_complexities, bc = cmap.binop_complexities
+            t -> t.degree == 1 ? @inbounds(uc[t.op]) : @inbounds(bc[t.op])
         end,
         +,
         tree,
