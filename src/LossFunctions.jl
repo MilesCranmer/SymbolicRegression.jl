@@ -11,8 +11,8 @@ using ..ComplexityModule: compute_complexity
 using ..DimensionalAnalysisModule: violates_dimensional_constraints
 
 function _loss(
-    x::AbstractArray{T}, y::AbstractArray{T}, loss::Union{Function,SupervisedLoss}
-) where {T<:DATA_TYPE}
+    x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
+) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
     if loss isa SupervisedLoss
         return LossFunctions.mean(loss, x, y)
     else
@@ -22,11 +22,8 @@ function _loss(
 end
 
 function _weighted_loss(
-    x::AbstractArray{T},
-    y::AbstractArray{T},
-    w::AbstractArray{T},
-    loss::Union{Function,SupervisedLoss},
-) where {T<:DATA_TYPE}
+    x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::LT
+) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
     if loss isa SupervisedLoss
         return LossFunctions.sum(loss, x, y, w; normalize=true)
     else
