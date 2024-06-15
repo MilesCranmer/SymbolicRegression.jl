@@ -1,6 +1,6 @@
 using SymbolicRegression
 using SymbolicRegression: string_tree
-using Random
+using Random, Bumper, LoopVectorization
 include("test_params.jl")
 
 for i in 0:5
