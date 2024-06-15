@@ -15,6 +15,7 @@ def = quote
     end
 end
 
+# TODO: Required for workers as they assume the function is defined in the Main module
 if (@__MODULE__) != Core.Main
     Core.eval(Core.Main, def)
     eval(:(using Main: my_custom_loss))
