@@ -1,6 +1,6 @@
 using SymbolicRegression
-using Test
 using Random
+include("test_params.jl")
 
 get_base_type(::Type{<:Complex{BT}}) where {BT} = BT
 

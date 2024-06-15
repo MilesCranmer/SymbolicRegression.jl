@@ -1,6 +1,5 @@
 using SymbolicRegression
 using SymbolicRegression.UtilsModule: recursive_merge
-using Test
 using JSON3
 
 X = 2 .* randn(Float32, 2, 1000)

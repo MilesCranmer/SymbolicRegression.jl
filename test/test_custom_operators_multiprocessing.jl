@@ -1,5 +1,4 @@
 using SymbolicRegression
-using Test
 
 _plus(x, y) = x + y
 _mult(x, y) = x * y

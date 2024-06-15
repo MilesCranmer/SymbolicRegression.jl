@@ -2,7 +2,6 @@ using SymbolicRegression
 using Random
 using SymbolicRegression: eval_loss, score_func, Dataset
 using ForwardDiff
-using Test
 include("test_params.jl")
 
 x1 = 2.0

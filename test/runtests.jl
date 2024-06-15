@@ -1,26 +1,21 @@
-using SafeTestsets
-using Test
+using TestItems: @testitem
+using TestItemRunner: @run_package_tests
 
 ENV["SYMBOLIC_REGRESSION_TEST"] = "true"
-TEST_SUITE = get(ENV, "SYMBOLIC_REGRESSION_TEST_SUITE", "all")
-
-if TEST_SUITE in ("all", "integration")
-    @safetestset "Aqua tests" begin
-        include("test_aqua.jl")
-    end
+tags_to_run = let t = get(ENV, "SYMBOLIC_REGRESSION_TEST_SUITE", "unit,integration")
+    t = split(t, ",")
+    t = map(Symbol, t)
+    t
 end
 
-# Trigger extensions:
-using LoopVectorization, Bumper, Zygote
+include("unittest.jl")
+include("full.jl")
 
-if TEST_SUITE in ("all", "unit")
-    @safetestset "Unit tests" begin
-        include("unittest.jl")
-    end
+@testitem "Aqua tests" tags = [:integration] begin
+    include("test_aqua.jl")
+end
+@testitem "JET tests" tags = [:integration] begin
+    include("test_jet.jl")
 end
 
-if TEST_SUITE in ("all", "integration")
-    @eval @testset "End to end test" begin
-        include("full.jl")
-    end
-end
+@eval @run_package_tests filter = ti -> !isdisjoint(ti.tags, $tags_to_run)

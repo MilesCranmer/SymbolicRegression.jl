@@ -1,53 +1,47 @@
-using SymbolicRegression
-using Test
-using SafeTestsets
-using SymbolicRegression: string_tree
-using Random
-
-@safetestset "Test mixed settings." begin
+@testitem "Test mixed settings." tags = [:integration] begin
     include("test_mixed.jl")
 end
 
-@safetestset "Testing fast-cycle and custom variable names, with mutations" begin
+@testitem "Testing fast-cycle and custom variable names" tags = [:integration] begin
     include("test_fast_cycle.jl")
 end
 
-@safetestset "Testing whether we can stop based on clock time." begin
+@testitem "Testing whether we can stop based on clock time." tags = [:integration] begin
     include("test_stop_on_clock.jl")
 end
 
-@safetestset "Running README example." begin
+@testitem "Running README example." tags = [:integration] begin
     include("../example.jl")
 end
 
-@safetestset "Testing whether the recorder works." begin
+@testitem "Testing whether the recorder works." tags = [:integration] begin
     include("test_recorder.jl")
 end
 
-@safetestset "Testing whether deterministic mode works." begin
+@testitem "Testing whether deterministic mode works." tags = [:integration] begin
     include("test_deterministic.jl")
 end
 
-@safetestset "Testing whether early stop criteria works." begin
+@testitem "Testing whether early stop criteria works." tags = [:integration] begin
     include("test_early_stop.jl")
 end
 
-@safetestset "Test MLJ integration" begin
+@testitem "Test MLJ integration" tags = [:integration] begin
     include("test_mlj.jl")
 end
 
-@testset "Testing whether we can move operators to workers." begin
+@testitem "Testing whether we can move operators to workers." tags = [:integration] begin
     include("test_custom_operators_multiprocessing.jl")
 end
 
-@testset "Test whether the precompilation script works." begin
+@testitem "Test whether the precompilation script works." tags = [:integration] begin
     include("test_precompilation.jl")
 end
 
-@testset "Test whether custom objectives work." begin
+@testitem "Test whether custom objectives work." tags = [:integration] begin
     include("test_custom_objectives.jl")
 end
 
-@testset "Test abstract numbers" begin
+@testitem "Test abstract numbers" tags = [:integration] begin
     include("test_abstract_numbers.jl")
 end

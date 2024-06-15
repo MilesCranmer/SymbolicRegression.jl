@@ -1,5 +1,4 @@
 using SymbolicRegression
-using Test
 using SymbolicRegression: string_tree
 using Random
 include("test_params.jl")

@@ -1,104 +1,99 @@
-using SafeTestsets
-
-# Trigger extensions:
-using LoopVectorization
-
-@safetestset "Test custom operators and additional types" begin
+@testitem "Test custom operators and additional types" tags = [:unit] begin
     include("test_operators.jl")
 end
 
-@safetestset "Test tree construction and scoring" begin
+@testitem "Test tree construction and scoring" tags = [:unit] begin
     include("test_tree_construction.jl")
 end
 
-@safetestset "Test SymbolicUtils interface" begin
+@testitem "Test SymbolicUtils interface" tags = [:unit] begin
     include("test_symbolic_utils.jl")
 end
 
-@safetestset "Test constraints interface" begin
+@testitem "Test constraints interface" tags = [:unit] begin
     include("test_constraints.jl")
 end
 
-@safetestset "Test custom losses" begin
+@testitem "Test custom losses" tags = [:unit] begin
     include("test_losses.jl")
 end
 
-@safetestset "Test derivatives" begin
+@testitem "Test derivatives" tags = [:unit] begin
     include("test_derivatives.jl")
 end
 
-@safetestset "Test simplification" begin
+@testitem "Test simplification" tags = [:unit] begin
     include("test_simplification.jl")
 end
 
-@safetestset "Test printing" begin
+@testitem "Test printing" tags = [:unit] begin
     include("test_print.jl")
 end
 
-@safetestset "Test validity of expression evaluation" begin
+@testitem "Test validity of expression evaluation" tags = [:unit] begin
     include("test_evaluation.jl")
 end
 
-@safetestset "Test turbo mode with NaN" begin
+@testitem "Test turbo mode with NaN" tags = [:unit] begin
     include("test_turbo_nan.jl")
 end
 
-@safetestset "Test validity of integer expression evaluation" begin
+@testitem "Test validity of integer expression evaluation" tags = [:unit] begin
     include("test_integer_evaluation.jl")
 end
 
-@safetestset "Test tournament selection" begin
+@testitem "Test tournament selection" tags = [:unit] begin
     include("test_prob_pick_first.jl")
 end
 
-@safetestset "Test crossover mutation" begin
+@testitem "Test crossover mutation" tags = [:unit] begin
     include("test_crossover.jl")
 end
 
-@safetestset "Test NaN detection in evaluator" begin
+@testitem "Test NaN detection in evaluator" tags = [:unit] begin
     include("test_nan_detection.jl")
 end
 
-@safetestset "Test nested constraint checking" begin
+@testitem "Test nested constraint checking" tags = [:unit] begin
     include("test_nested_constraints.jl")
 end
 
-@safetestset "Test complexity evaluation" begin
+@testitem "Test complexity evaluation" tags = [:unit] begin
     include("test_complexity.jl")
 end
 
-@safetestset "Test options" begin
+@testitem "Test options" tags = [:unit] begin
     include("test_options.jl")
 end
 
-@safetestset "Test hash of tree" begin
+@testitem "Test hash of tree" tags = [:unit] begin
     include("test_hash.jl")
 end
 
-@safetestset "Test migration" begin
+@testitem "Test migration" tags = [:unit] begin
     include("test_migration.jl")
 end
 
-@safetestset "Test deprecated options" begin
+@testitem "Test deprecated options" tags = [:unit] begin
     include("test_deprecation.jl")
 end
 
-@safetestset "Test optimization mutation" begin
+@testitem "Test optimization mutation" tags = [:unit] begin
     include("test_optimizer_mutation.jl")
 end
 
-@safetestset "Test RunningSearchStatistics" begin
+@testitem "Test RunningSearchStatistics" tags = [:unit] begin
     include("test_search_statistics.jl")
 end
 
-@safetestset "Test utils" begin
+@testitem "Test utils" tags = [:unit] begin
     include("test_utils.jl")
 end
 
-@safetestset "Test units" begin
+@testitem "Test units" tags = [:unit] begin
     include("test_units.jl")
 end
 
-@safetestset "Dataset" begin
+@testitem "Dataset" tags = [:unit] begin
     include("test_dataset.jl")
 end

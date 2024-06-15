@@ -1,5 +1,4 @@
 using SymbolicRegression
-using Test
 using Random
 
 # Test that we can work with custom operators:
