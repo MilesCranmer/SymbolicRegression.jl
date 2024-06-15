@@ -36,11 +36,12 @@ function ComplexityMapping(;
     constant_complexity::T4,
 ) where {T1<:Real,T2<:Real,T3<:Real,T4<:Real}
     T = promote_type(T1, T2, T3, T4)
-    return ComplexityMapping{T,typeof(variable_complexity)}(
+    vc = map(T, variable_complexity)
+    return ComplexityMapping{T,typeof(vc)}(
         true,
         map(T, binop_complexities),
         map(T, unaop_complexities),
-        map(T, variable_complexity),
+        vc,
         T(constant_complexity),
     )
 end
