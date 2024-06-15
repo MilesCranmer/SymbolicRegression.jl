@@ -18,11 +18,11 @@ This struct defines how complexity is calculated.
 - `variable_complexity`: Complexity of using a variable.
 - `constant_complexity`: Complexity of using a constant.
 """
-struct ComplexityMapping{T<:Real,VV<:Union{T,AbstractVector{T}}}
+struct ComplexityMapping{T<:Real,VC<:Union{T,AbstractVector{T}}}
     use::Bool
     binop_complexities::Vector{T}
     unaop_complexities::Vector{T}
-    variable_complexity::VV
+    variable_complexity::VC
     constant_complexity::T
 end
 
