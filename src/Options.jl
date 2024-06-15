@@ -548,10 +548,16 @@ $(OPTION_DESCRIPTIONS)
         )
     end
 
+    is_testing = parse(Bool, get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false"))
+
     if output_file === nothing
         # "%Y-%m-%d_%H%M%S.%f"
         date_time_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS.sss")
         output_file = "hall_of_fame_" * date_time_str * ".csv"
+        if is_testing
+            tmpdir = mktempdir()
+            output_file = joinpath(tmpdir, output_file)
+        end
     end
 
     nuna = length(unary_operators)
