@@ -163,5 +163,6 @@ end
 end
 
 @testitem "JET tests" tags = [:integration, :jet] begin
-    include("test_jet.jl")
+    test_jet_file = joinpath((@__DIR__), "test_jet.jl")
+    run(`$(Base.julia_cmd()) --startup-file=no $test_jet_file`)
 end
