@@ -4,6 +4,7 @@ using TensorBoardLogger
 using Logging
 using MLJBase
 using Plots
+include("test_params.jl")
 
 mktempdir() do dir
     logger = TBLogger(dir, tb_overwrite; min_level=Logging.Info)

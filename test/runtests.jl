@@ -107,10 +107,6 @@ end
     include("test_utils.jl")
 end
 
-@testitem "Test logging" tags = [:unit] begin
-    include("test_logging.jl")
-end
-
 @testitem "Test units" tags = [:integration] begin
     include("test_units.jl")
 end
@@ -165,6 +161,10 @@ end
 
 @testitem "Test abstract numbers" tags = [:integration] begin
     include("test_abstract_numbers.jl")
+end
+
+@testitem "Test logging" tags = [:integration] begin
+    include("test_logging.jl")
 end
 
 @testitem "Aqua tests" tags = [:integration, :aqua] begin
