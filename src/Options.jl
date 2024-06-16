@@ -266,7 +266,8 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     Input this in the form of, e.g., [(^) => 3, sin => 2].
 - `complexity_of_constants`: What complexity should be assigned to use of a constant.
     By default, this is 1.
-- `complexity_of_variables`: What complexity should be assigned to each variable.
+- `complexity_of_variables`: What complexity should be assigned to use of a variable,
+    which can also be a vector indicating different per-variable complexity.
     By default, this is 1.
 - `alpha`: The probability of accepting an equation mutation
     during regularized evolution is given by exp(-delta_loss/(alpha * T)),
@@ -376,8 +377,8 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 $(OPTION_DESCRIPTIONS)
 """
 @unstable @save_kwargs DEFAULT_OPTIONS function Options(;
-    binary_operators=[+, -, /, *],
-    unary_operators=[],
+    binary_operators=Function[+, -, /, *],
+    unary_operators=Function[],
     constraints=nothing,
     elementwise_loss::Union{Function,SupervisedLoss,Nothing}=nothing,
     loss_function::Union{Function,Nothing}=nothing,
@@ -386,7 +387,7 @@ $(OPTION_DESCRIPTIONS)
     topn::Integer=12, #samples to return per population
     complexity_of_operators=nothing,
     complexity_of_constants::Union{Nothing,Real}=nothing,
-    complexity_of_variables::Union{Nothing,Real}=nothing,
+    complexity_of_variables::Union{Nothing,Real,AbstractVector}=nothing,
     parsimony::Real=0.0032,
     dimensional_constraint_penalty::Union{Nothing,Real}=nothing,
     dimensionless_constants_only::Bool=false,
@@ -639,62 +640,13 @@ $(OPTION_DESCRIPTIONS)
         una_constraints, bin_constraints, unary_operators, binary_operators, nuna, nbin
     )
 
-    # Define the complexities of everything.
-    use_complexity_mapping = (
-        complexity_of_constants !== nothing ||
-        complexity_of_variables !== nothing ||
-        complexity_of_operators !== nothing
+    complexity_mapping = ComplexityMapping(
+        complexity_of_operators,
+        complexity_of_variables,
+        complexity_of_constants,
+        binary_operators,
+        unary_operators,
     )
-    complexity_mapping = if use_complexity_mapping
-        if complexity_of_operators === nothing
-            complexity_of_operators = Dict()
-        else
-            # Convert to dict:
-            complexity_of_operators = Dict(complexity_of_operators)
-        end
-
-        # Get consistent type:
-        promoted_type = promote_type(
-            if (complexity_of_variables !== nothing)
-                typeof(complexity_of_variables)
-            else
-                Int
-            end,
-            if (complexity_of_constants !== nothing)
-                typeof(complexity_of_constants)
-            else
-                Int
-            end,
-            (x -> typeof(x)).(values(complexity_of_operators))...,
-        )
-
-        # If not in dict, then just set it to 1.
-        binop_complexities = promoted_type[
-            (haskey(complexity_of_operators, op) ? complexity_of_operators[op] : 1) #
-            for op in binary_operators
-        ]
-        unaop_complexities = promoted_type[
-            (haskey(complexity_of_operators, op) ? complexity_of_operators[op] : 1) #
-            for op in unary_operators
-        ]
-
-        variable_complexity = (
-            (complexity_of_variables !== nothing) ? complexity_of_variables : 1
-        )
-        constant_complexity = (
-            (complexity_of_constants !== nothing) ? complexity_of_constants : 1
-        )
-
-        ComplexityMapping(;
-            binop_complexities=binop_complexities,
-            unaop_complexities=unaop_complexities,
-            variable_complexity=variable_complexity,
-            constant_complexity=constant_complexity,
-        )
-    else
-        ComplexityMapping(false)
-    end
-    # Finish defining complexities
 
     if maxdepth === nothing
         maxdepth = maxsize
@@ -766,7 +718,7 @@ $(OPTION_DESCRIPTIONS)
     @assert print_precision > 0
 
     options = Options{
-        eltype(complexity_mapping),
+        typeof(complexity_mapping),
         operator_specialization(typeof(operators)),
         node_type,
         turbo,
