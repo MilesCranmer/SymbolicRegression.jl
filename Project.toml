@@ -22,7 +22,6 @@ PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 ProgressBars = "49802e3a-d2f1-5c88-81d8-b72133a6f568"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
@@ -30,10 +29,12 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [weakdeps]
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 
 [extensions]
 SymbolicRegressionJSON3Ext = "JSON3"
+SymbolicRegressionRecipesBaseExt = "RecipesBase"
 SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 
 [compat]
@@ -66,4 +67,5 @@ julia = "1.6"
 
 [extras]
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"

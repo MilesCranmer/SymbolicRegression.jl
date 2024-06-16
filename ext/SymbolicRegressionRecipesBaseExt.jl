@@ -1,11 +1,26 @@
-module PlotRecipesModule
+module SymbolicRegressionRecipesBaseExt
 
-using RecipesBase: @recipe, @series
+using RecipesBase: @recipe, @series, plot
 using DynamicExpressions: Node, string_tree
-using ..CoreModule: Options
-using ..HallOfFameModule: HallOfFame, format_hall_of_fame
-using ..MLJInterfaceModule: SRFitResult, SRRegressor
-using ..LoggingModule: convex_hull
+using SymbolicRegression.CoreModule: Options
+using SymbolicRegression.HallOfFameModule: HallOfFame, format_hall_of_fame
+using SymbolicRegression.MLJInterfaceModule: SRFitResult, SRRegressor
+using SymbolicRegression.LoggingModule: convex_hull
+
+import SymbolicRegression.LoggingModule: add_plot_to_log!
+
+function add_plot_to_log!(
+    log; trees, losses, complexities, options, variable_names, log_step, ropt
+)
+    if ropt.log_every_n.plots > 0 && log_step % ropt.log_every_n.plots == 0
+        log["plot"] = plot(
+            trees, losses, complexities, options; variable_names=variable_names
+        )
+    else
+        nothing
+    end
+    return nothing
+end
 
 function default_sr_plot end
 

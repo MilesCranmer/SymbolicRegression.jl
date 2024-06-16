@@ -10,6 +10,10 @@ using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: calculate_pareto_frontier
 using ..SearchUtilsModule: SearchState, RuntimeOptions
 
+function add_plot_to_log!(log; kws...)
+    return nothing
+end
+
 function default_logging_callback(
     logger::AbstractLogger;
     log_step::Integer,
@@ -76,18 +80,18 @@ function default_logging_callback(
                     ) for i_eqn in eachindex(complexities, losses, equations)
                 ])
             end
-            cur_out["plot"] =
-                if ropt.log_every_n.plots > 0 && log_step % ropt.log_every_n.plots == 0
-                    plot(
-                        trees,
-                        losses,
-                        complexities,
-                        options;
-                        variable_names=datasets[i].variable_names,
-                    )
-                else
-                    nothing
-                end
+
+            # Will get method created by RecipesBase extension
+            add_plot_to_log!(
+                cur_out;
+                trees,
+                losses,
+                complexities,
+                options,
+                datasets[i].variable_names,
+                log_step,
+                ropt,
+            )
 
             if nout == 1
                 d[] = cur_out
