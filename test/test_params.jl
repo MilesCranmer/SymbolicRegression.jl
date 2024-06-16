@@ -1,4 +1,5 @@
 using SymbolicRegression: L2DistLoss, MutationWeights
+using DynamicExpressions: set_default_variable_names!
 using Optim: Optim
 using LineSearches: LineSearches
 using Test: Test
@@ -69,3 +70,5 @@ const default_params = (
 test_info(_, x) = error("Test failed: $x")
 test_info(_, ::Test.Pass) = nothing
 test_info(f::F, ::Test.Fail) where {F} = f()
+
+set_default_variable_names!(["x$(i)" for i in 1:100])
