@@ -18,7 +18,6 @@ using SymbolicRegression:
     logical_or,
     logical_and,
     gamma
-using Test
 using Random: MersenneTwister
 using Suppressor: @capture_err
 using LoopVectorization

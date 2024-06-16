@@ -1,5 +1,4 @@
 using SymbolicRegression
-using Test
 using DispatchDoctor: allow_unstable
 
 @testset "Dataset construction" begin

@@ -47,20 +47,20 @@ tree_copy = convert(Node, eqn, options)
 # with custom operators, and unary operators:
 x1, x2, x3 = Node("x1"), Node("x2"), Node("x3")
 pow_abs2(x, y) = abs(x)^y
-custom_cos(x) = cos(x)^2
+custom_cos2(x) = cos(x)^2
 
 options = Options(;
-    binary_operators=(+, *, -, /, pow_abs2), unary_operators=(custom_cos, exp, sin)
+    binary_operators=(+, *, -, /, pow_abs2), unary_operators=(custom_cos2, exp, sin)
 )
 @extend_operators options
 tree = (
     ((x2 + x2) * ((-0.5982493 / pow_abs2(x1, x2)) / -0.54734415)) + (
         sin(
-            custom_cos(
+            custom_cos2(
                 sin(1.2926733 - 1.6606787) /
                 sin(((0.14577048 * x1) + ((0.111149654 + x1) - -0.8298334)) - -1.2071426),
-            ) * (custom_cos(x3 - 2.3201916) + ((x1 - (x1 * x2)) / x2)),
-        ) / (0.14854191 - ((custom_cos(x2) * -1.6047639) - 0.023943262))
+            ) * (custom_cos2(x3 - 2.3201916) + ((x1 - (x1 * x2)) / x2)),
+        ) / (0.14854191 - ((custom_cos2(x2) * -1.6047639) - 0.023943262))
     )
 )
 # We use `index_functions` to avoid converting the custom operators into the primitives.

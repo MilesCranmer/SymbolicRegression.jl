@@ -1,17 +1,26 @@
 using SymbolicRegression
-using Test
 include("test_params.jl")
 
-function my_custom_loss(
-    tree::AbstractExpressionNode{T}, dataset::Dataset{T}, options::Options
-) where {T}
-    # We multiply the tree by 2.0:
-    tree = Node(1, tree, Node(T; val=2.0))
-    out, completed = eval_tree_array(tree, dataset.X, options)
-    if !completed
-        return T(Inf)
+def = quote
+    function my_custom_loss(
+        tree::$(AbstractExpressionNode){T}, dataset::$(Dataset){T}, options::$(Options)
+    ) where {T}
+        # We multiply the tree by 2.0:
+        tree = $(Node)(1, tree, $(Node)(T; val=2.0))
+        out, completed = $(eval_tree_array)(tree, dataset.X, options)
+        if !completed
+            return T(Inf)
+        end
+        return sum(abs, out .- dataset.y)
     end
-    return sum(abs, out .- dataset.y)
+end
+
+# TODO: Required for workers as they assume the function is defined in the Main module
+if (@__MODULE__) != Core.Main
+    Core.eval(Core.Main, def)
+    eval(:(using Main: my_custom_loss))
+else
+    eval(def)
 end
 
 options = Options(;

@@ -129,10 +129,10 @@ end
 Evaluate an expression tree in a way that can be auto-differentiated.
 """
 function differentiable_eval_tree_array(
-    tree::AbstractExpressionNode, X::AbstractArray, options::Options; kws...
+    tree::AbstractExpressionNode, X::AbstractArray, options::Options
 )
     A = expected_array_type(X)
-    return differentiable_eval_tree_array(tree, X, options.operators; kws...)::Tuple{A,Bool}
+    return differentiable_eval_tree_array(tree, X, options.operators)::Tuple{A,Bool}
 end
 
 const WILDCARD_UNIT_STRING = "[?]"

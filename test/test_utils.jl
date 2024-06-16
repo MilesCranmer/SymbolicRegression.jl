@@ -2,7 +2,6 @@ using SymbolicRegression
 using SymbolicRegression.UtilsModule:
     findmin_fast, argmin_fast, bottomk_fast, is_anonymous_function
 using Random
-using Test
 
 function simple_bottomk(x, k)
     idx = sortperm(x)[1:k]
