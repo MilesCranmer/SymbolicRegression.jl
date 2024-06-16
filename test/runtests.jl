@@ -10,6 +10,11 @@ end
 
 @eval @run_package_tests filter = ti -> !isdisjoint(ti.tags, $tags_to_run)
 
+@testitem "JET tests" tags = [:integration, :jet] begin
+    test_jet_file = joinpath((@__DIR__), "test_jet.jl")
+    run(`$(Base.julia_cmd()) --startup-file=no $test_jet_file`)
+end
+
 @testitem "Test custom operators and additional types" tags = [:unit] begin
     include("test_operators.jl")
 end
@@ -160,9 +165,4 @@ end
 
 @testitem "Aqua tests" tags = [:integration, :aqua] begin
     include("test_aqua.jl")
-end
-
-@testitem "JET tests" tags = [:integration, :jet] begin
-    test_jet_file = joinpath((@__DIR__), "test_jet.jl")
-    run(`$(Base.julia_cmd()) --startup-file=no $test_jet_file`)
 end
