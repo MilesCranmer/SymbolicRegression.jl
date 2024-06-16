@@ -1,4 +1,4 @@
-using SymbolicRegression
+using SymbolicRegression, Zygote
 
 X = randn(Float32, 5, 100)
 classes = rand(1:3, 100)
@@ -18,6 +18,7 @@ options = SymbolicRegression.Options(;
     populations=20,
     expression_type=ParametricExpression,
     expression_options=(; max_parameters=2),
+    autodiff_backend=:zygote,
 )
 
 hall_of_fame = equation_search(

@@ -3,7 +3,6 @@ module ConstantOptimizationModule
 using LineSearches: LineSearches
 using Optim: Optim
 using DynamicExpressions: Expression, Node, count_constants, get_constants, set_constants!
-using Zygote: Zygote, withgradient
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_loss, loss_to_score, batch_sample
@@ -47,21 +46,8 @@ function _optimize_constants(
 )::Tuple{P,Float64} where {T,L,P<:PopMember{T,L}}
     tree = member.tree
     eval_fraction = options.batching ? (options.batch_size / dataset.n) : 1.0
-    f = let dataset = dataset, options = options, idx = idx
-        function (t)
-            return eval_loss(t, dataset, options; regularization=false, idx=idx)::L
-        end
-    end
-    function fg!(F, G, t)
-        (val, grad) = withgradient(f, t)
-        if G !== nothing &&
-            grad !== nothing &&
-            only(grad) !== nothing &&
-            only(grad).tree !== nothing
-            G .= only(grad).tree.gradient
-        end
-        return val
-    end
+    f = Evaluator(dataset, options, idx)
+    fg! = GradEvaluator(f)
     obj = if algorithm isa Optim.Newton || options.autodiff_backend isa Val{:finite}
         f
     else
@@ -100,5 +86,26 @@ function _optimize_constants(
 
     return member, num_evals
 end
+
+struct Evaluator{D<:Dataset,O<:Options,I} <: Function
+    dataset::D
+    options::O
+    idx::I
+end
+(e::Evaluator)(t) = eval_loss(t, e.dataset, e.options; regularization=false, idx=e.idx)
+struct GradEvaluator{F<:Evaluator} <: Function
+    f::F
+end
+function (g::GradEvaluator)(F, G, t)
+    (val, grad) = _withgradient(g.f, t)
+    if G !== nothing &&
+        grad !== nothing &&
+        only(grad) !== nothing &&
+        only(grad).tree !== nothing
+        G .= only(grad).tree.gradient
+    end
+    return val
+end
+_withgradient(args...) = error("Please load the Zygote.jl package.")
 
 end
