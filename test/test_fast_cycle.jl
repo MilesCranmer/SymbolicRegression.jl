@@ -1,5 +1,4 @@
 using SymbolicRegression
-using Test
 using Random
 include("test_params.jl")
 

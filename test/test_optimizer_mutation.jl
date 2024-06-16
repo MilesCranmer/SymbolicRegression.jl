@@ -4,7 +4,6 @@ using SymbolicRegression: Dataset, RunningSearchStatistics, RecordType
 using Optim: Optim
 using SymbolicRegression.MutateModule: next_generation
 using DynamicExpressions: get_constants
-using Test
 
 mutation_weights = (; optimize=1e30)  # We also test whether a named tuple works.
 options = Options(;

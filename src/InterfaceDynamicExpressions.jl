@@ -56,13 +56,14 @@ which speed up evaluation significantly.
 function eval_tree_array(
     tree::AbstractExpressionNode, X::AbstractArray, options::Options; kws...
 )
+    A = expected_array_type(X)
     return eval_tree_array(
         tree, X, options.operators; turbo=options.turbo, bumper=options.bumper, kws...
-    )::Tuple{expected_array_type(tree, X, options.operators),Bool}
+    )::Tuple{A,Bool}
 end
 
 # Improve type inference by telling Julia the expected array returned
-function expected_array_type(::AbstractExpressionNode, X::AbstractArray, ::OperatorEnum)
+function expected_array_type(X::AbstractArray)
     return typeof(similar(X, axes(X, 2)))
 end
 
@@ -89,7 +90,8 @@ respect to `x1`.
 function eval_diff_tree_array(
     tree::AbstractExpressionNode, X::AbstractArray, options::Options, direction::Int
 )
-    return eval_diff_tree_array(tree, X, options.operators, direction)
+    A = expected_array_type(X)
+    return eval_diff_tree_array(tree, X, options.operators, direction)::Tuple{A,A,Bool}
 end
 
 """
@@ -116,7 +118,9 @@ to every constant in the expression.
 function eval_grad_tree_array(
     tree::AbstractExpressionNode, X::AbstractArray, options::Options; kws...
 )
-    return eval_grad_tree_array(tree, X, options.operators; kws...)
+    A = expected_array_type(X)
+    M = typeof(X)  # TODO: This won't work with StaticArrays!
+    return eval_grad_tree_array(tree, X, options.operators; kws...)::Tuple{A,M,Bool}
 end
 
 """
@@ -125,9 +129,10 @@ end
 Evaluate an expression tree in a way that can be auto-differentiated.
 """
 function differentiable_eval_tree_array(
-    tree::AbstractExpressionNode, X::AbstractArray, options::Options; kws...
+    tree::AbstractExpressionNode, X::AbstractArray, options::Options
 )
-    return differentiable_eval_tree_array(tree, X, options.operators; kws...)
+    A = expected_array_type(X)
+    return differentiable_eval_tree_array(tree, X, options.operators)::Tuple{A,Bool}
 end
 
 const WILDCARD_UNIT_STRING = "[?]"

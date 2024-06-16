@@ -1,4 +1,3 @@
-using Test
 using SymbolicRegression
 using Optim: Optim
 
