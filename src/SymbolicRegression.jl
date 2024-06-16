@@ -1163,11 +1163,11 @@ end
     return (out_pop, best_seen, record, num_evals)
 end
 
-include("MLJInterface.jl")
-using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
-
-include("Printing.jl")
-include("PlotRecipes.jl")
+@stable default_mode = "disable" begin
+    include("MLJInterface.jl")
+    using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
+    include("Printing.jl")
+end
 
 function __init__()
     @require_extensions

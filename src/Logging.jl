@@ -3,7 +3,6 @@ module LoggingModule
 using Base: AbstractLogger
 using Logging: with_logger
 using DynamicExpressions: string_tree
-using RecipesBase: plot
 
 using ..CoreModule: Options, Dataset
 using ..ComplexityModule: compute_complexity
