@@ -69,6 +69,7 @@ export Population,
 using Distributed
 using Printf: @printf, @sprintf
 using PackageExtensionCompat: @require_extensions
+using Logging: AbstractLogger
 using Pkg: Pkg
 using TOML: parsefile
 using Random: seed!, shuffle!
@@ -173,6 +174,7 @@ using DispatchDoctor: @stable
     include("ProgressBars.jl")
     include("Migration.jl")
     include("SearchUtils.jl")
+    include("Logging.jl")
 end
 
 using .CoreModule:
@@ -258,6 +260,7 @@ using .SearchUtilsModule:
     save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!
+using .LoggingModule: default_logging_callback
 
 @stable default_mode = "disable" begin
     include("deprecates.jl")
@@ -376,6 +379,9 @@ function equation_search(
     return_state::Union{Bool,Nothing,Val}=nothing,
     loss_type::Type{L}=Nothing,
     verbosity::Union{Integer,Nothing}=nothing,
+    logger::Union{AbstractLogger,Nothing}=nothing,
+    logging_callback::Union{Function,Nothing}=nothing,
+    log_every_n::Union{Integer,NamedTuple}=1,
     progress::Union{Bool,Nothing}=nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
@@ -422,6 +428,9 @@ function equation_search(
         saved_state=saved_state,
         return_state=return_state,
         verbosity=verbosity,
+        logger=logger,
+        logging_callback=logging_callback,
+        log_every_n=log_every_n,
         progress=progress,
         v_dim_out=Val(DIM_OUT),
     )
@@ -459,6 +468,9 @@ function equation_search(
     saved_state=nothing,
     return_state::Union{Bool,Nothing,Val}=nothing,
     verbosity::Union{Int,Nothing}=nothing,
+    logger::Union{AbstractLogger,Nothing}=nothing,
+    logging_callback::Union{Function,Nothing}=nothing,
+    log_every_n::Union{Integer,NamedTuple}=1,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
 ) where {DIM_OUT,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
@@ -485,6 +497,11 @@ function equation_search(
         numprocs !== nothing &&
         error(
             "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
+        )
+    logging_callback !== nothing &&
+        logger !== nothing &&
+        error(
+            "You cannot set both `logging_callback` and `logger`. Instead, simply use your logger within the `logging_callback`.",
         )
 
     _return_state = if return_state isa Val
@@ -566,6 +583,16 @@ function equation_search(
     else
         ``
     end
+    _logging_callback = if logging_callback === nothing && logger !== nothing
+        (; kws...) -> default_logging_callback(logger; kws...)
+    else
+        logging_callback
+    end
+    _log_every_n = if log_every_n isa Integer
+        (; scalars=log_every_n, plots=0)
+    else
+        log_every_n
+    end
 
     # Underscores here mean that we have mutated the variable
     return _equation_search(
@@ -580,6 +607,8 @@ function equation_search(
             runtests=runtests,
             verbosity=_verbosity,
             progress=_progress,
+            logging_callback=_logging_callback,
+            log_every_n=_log_every_n,
             parallelism=Val(concurrency),
             dim_out=Val(dim_out),
             return_state=Val(_return_state),
@@ -847,6 +876,8 @@ function _main_search_loop!(
             1:sum_cycle_remaining; width=options.terminal_width
         )
     end
+
+    log_step = 0
     last_print_time = time()
     last_speed_recording_time = time()
     num_evals_last = sum(sum, state.num_evals)
@@ -1003,6 +1034,10 @@ function _main_search_loop!(
                     ropt.parallelism,
                 )
             end
+            if ropt.logging_callback !== nothing && log_step % ropt.log_every_n.scalars == 0
+                ropt.logging_callback(; log_step, state, datasets, ropt, options)
+            end
+            log_step += 1
         end
         sleep(1e-6)
 
@@ -1128,8 +1163,11 @@ end
     return (out_pop, best_seen, record, num_evals)
 end
 
-include("MLJInterface.jl")
-using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
+@stable default_mode = "disable" begin
+    include("MLJInterface.jl")
+    using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
+    include("Printing.jl")
+end
 
 function __init__()
     @require_extensions

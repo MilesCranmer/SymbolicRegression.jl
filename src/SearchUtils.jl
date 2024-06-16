@@ -27,7 +27,7 @@ rather than set within `Options`. This is to differentiate between
 parameters that relate to processing and the duration of the search,
 and parameters dealing with the search hyperparameters itself.
 """
-Base.@kwdef struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE}
+Base.@kwdef struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE,NT<:NamedTuple}
     niterations::Int64
     total_cycles::Int64
     numprocs::Int64
@@ -37,6 +37,8 @@ Base.@kwdef struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE}
     runtests::Bool
     verbosity::Int64
     progress::Bool
+    logging_callback::Union{Function,Nothing}
+    log_every_n::NT
     parallelism::Val{PARALLELISM}
     dim_out::Val{DIM_OUT}
     return_state::Val{RETURN_STATE}

@@ -163,6 +163,10 @@ end
     include("test_abstract_numbers.jl")
 end
 
+@testitem "Test logging" tags = [:integration] begin
+    include("test_logging.jl")
+end
+
 @testitem "Aqua tests" tags = [:integration, :aqua] begin
     include("test_aqua.jl")
 end
