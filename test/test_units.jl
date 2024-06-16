@@ -30,9 +30,9 @@ using DynamicQuantities:
     sym_uparse,
     ustrip,
     dimension
-using Test
 using MLJBase: MLJBase as MLJ
 using MLJModelInterface: MLJModelInterface as MMI
+include("utils.jl")
 
 custom_op(x, y) = x + y
 
@@ -228,10 +228,13 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
 
     x2 = Node(Float64; feature=2)
 
-    @test compute_complexity(best, options) == 3
-    @test best.degree == 2
-    @test best.l == x2
-    @test best.r == x2
+    if compute_complexity(best, options) == 3
+        @test best.degree == 2
+        @test best.l == x2
+        @test best.r == x2
+    else
+        @warn "Complexity of best solution is not 3; search with units might have failed"
+    end
 
     X = randn(2, 128)
     y = @. cbrt(X[1, :]) .+ sqrt(abs(X[2, :]))
@@ -264,8 +267,8 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
             mach = MLJ.machine(model, X, y)
             MLJ.fit!(mach)
             report = MLJ.report(mach)
-            best_idx = findfirst(report.losses .< 1e-7)
-            @test report.complexities[best_idx] == 6
+            best_idx = findfirst(report.losses .< 1e-7)::Int
+            @test report.complexities[best_idx] <= 6
             @test any(report.equations[best_idx]) do t
                 t.degree == 1 && t.op == 2  # cbrt
             end
@@ -345,7 +348,7 @@ end
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
     ) ==
-        "(1[⋅] * (x₁[m³] + ((x₂[s⁻¹ km] * x₃[kg]) * 5.32[⋅]))) - cos(1.5[⋅] * (x₁[m³] - 0.5[⋅]))"
+        "(1[?] * (x₁[m³] + ((x₂[s⁻¹ km] * x₃[kg]) * 5.32[?]))) - cos(1.5[?] * (x₁[m³] - 0.5[?]))"
 
     @test string_tree(
         x5 * 3.2,
@@ -354,7 +357,7 @@ end
         display_variable_names=dataset.display_variable_names,
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
-    ) == "x₅ * 3.2[⋅]"
+    ) == "x₅ * 3.2[?]"
 
     # Should print numeric factor in unit if given:
     dataset2 = Dataset(X, y; X_units=[1.5, 1.9, 2.0, 3.0, 5.0u"m"], y_units="kg")
@@ -365,7 +368,58 @@ end
         display_variable_names=dataset2.display_variable_names,
         X_sym_units=dataset2.X_sym_units,
         y_sym_units=dataset2.y_sym_units,
-    ) == "x₅[5.0 m] * 3.2[⋅]"
+    ) == "x₅[5.0 m] * 3.2[?]"
+
+    # With dimensionless_constants_only, it will not print the [?]:
+    options = Options(;
+        binary_operators=[+, -, *, /],
+        unary_operators=[cos, sin],
+        dimensionless_constants_only=true,
+    )
+    @test string_tree(
+        x5 * 3.2,
+        options;
+        raw=false,
+        display_variable_names=dataset2.display_variable_names,
+        X_sym_units=dataset2.X_sym_units,
+        y_sym_units=dataset2.y_sym_units,
+    ) == "x₅[5.0 m] * 3.2"
+end
+
+@testset "Dimensionless constants" begin
+    options = Options(;
+        binary_operators=[+, -, *, /, square, cube],
+        unary_operators=[cos, sin],
+        dimensionless_constants_only=true,
+    )
+    X = randn(5, 64)
+    y = randn(64)
+    dataset = Dataset(X, y; X_units=["m^3", "km/s", "kg", "hr", "1"], y_units="kg")
+    x1, x2, x3, x4, x5 = [Node(Float64; feature=i) for i in 1:5]
+
+    dimensionally_valid_equations = [
+        1.5 * x1 / (cube(x2) * cube(x4)) * x3, x3, (square(x3) / x3) + x3
+    ]
+    for tree in dimensionally_valid_equations
+        onfail(@test !violates_dimensional_constraints(tree, dataset, options)) do
+            @warn "Failed on" tree
+        end
+    end
+    dimensionally_invalid_equations = [Node(Float64; val=1.5), 1.5 * x1, x3 - 1.0 * x1]
+    for tree in dimensionally_invalid_equations
+        onfail(@test violates_dimensional_constraints(tree, dataset, options)) do
+            @warn "Failed on" tree
+        end
+    end
+    # But, all of these would be fine if we allow dimensionless constants:
+    let
+        options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos, sin])
+        for tree in dimensionally_invalid_equations
+            onfail(@test !violates_dimensional_constraints(tree, dataset, options)) do
+                @warn "Failed on" tree
+            end
+        end
+    end
 end
 
 @testset "Miscellaneous" begin

@@ -2,7 +2,6 @@ module DimensionalAnalysisModule
 
 using DynamicExpressions: AbstractExpressionNode
 using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, uparse, constructorof
-using Tricks: static_hasmethod
 
 using ..CoreModule: Options, Dataset
 using ..UtilsModule: safe_call
@@ -117,12 +116,18 @@ end
 
 # Define dimensionally-aware evaluation routine:
 @inline function deg0_eval(
-    x::AbstractVector{T}, x_units::Vector{Q}, t::AbstractExpressionNode{T}
+    x::AbstractVector{T},
+    x_units::Vector{Q},
+    t::AbstractExpressionNode{T},
+    allow_wildcards::Bool,
 ) where {T,R,Q<:AbstractQuantity{T,R}}
-    t.constant && return WildcardQuantity{Q}(Quantity(t.val, R), true, false)
-    return WildcardQuantity{Q}(
-        (@inbounds x[t.feature]) * (@inbounds x_units[t.feature]), false, false
-    )
+    if t.constant
+        return WildcardQuantity{Q}(Quantity(t.val, R), allow_wildcards, false)
+    else
+        return WildcardQuantity{Q}(
+            (@inbounds x[t.feature]) * (@inbounds x_units[t.feature]), false, false
+        )
+    end
 end
 @inline function deg1_eval(
     op::F, l::W
@@ -130,7 +135,7 @@ end
     l.violates && return l
     !isfinite(l) && return W(one(Q), false, true)
 
-    static_hasmethod(op, Tuple{W}) && @maybe_return_call(W, op, (l,))
+    hasmethod(op, Tuple{W}) && @maybe_return_call(W, op, (l,))
     l.wildcard && return W(Quantity(op(ustrip(l))::T), false, false)
     return W(one(Q), false, true)
 end
@@ -140,13 +145,9 @@ end
     l.violates && return l
     r.violates && return r
     (!isfinite(l) || !isfinite(r)) && return W(one(Q), false, true)
-    static_hasmethod(op, Tuple{W,W}) && @maybe_return_call(W, op, (l, r))
-    static_hasmethod(op, Tuple{T,W}) &&
-        l.wildcard &&
-        @maybe_return_call(W, op, (ustrip(l), r))
-    static_hasmethod(op, Tuple{W,T}) &&
-        r.wildcard &&
-        @maybe_return_call(W, op, (l, ustrip(r)))
+    hasmethod(op, Tuple{W,W}) && @maybe_return_call(W, op, (l, r))
+    hasmethod(op, Tuple{T,W}) && l.wildcard && @maybe_return_call(W, op, (ustrip(l), r))
+    hasmethod(op, Tuple{W,T}) && r.wildcard && @maybe_return_call(W, op, (l, ustrip(r)))
     l.wildcard &&
         r.wildcard &&
         return W(Quantity(op(ustrip(l), ustrip(r))::T), false, false)
@@ -154,16 +155,26 @@ end
 end
 
 function violates_dimensional_constraints_dispatch(
-    tree::AbstractExpressionNode{T}, x_units::Vector{Q}, x::AbstractVector{T}, operators
+    tree::AbstractExpressionNode{T},
+    x_units::Vector{Q},
+    x::AbstractVector{T},
+    operators,
+    allow_wildcards,
 ) where {T,Q<:AbstractQuantity{T}}
     if tree.degree == 0
-        return deg0_eval(x, x_units, tree)::WildcardQuantity{Q}
+        return deg0_eval(x, x_units, tree, allow_wildcards)::WildcardQuantity{Q}
     elseif tree.degree == 1
-        l = violates_dimensional_constraints_dispatch(tree.l, x_units, x, operators)
+        l = violates_dimensional_constraints_dispatch(
+            tree.l, x_units, x, operators, allow_wildcards
+        )
         return deg1_eval((@inbounds operators.unaops[tree.op]), l)::WildcardQuantity{Q}
     else
-        l = violates_dimensional_constraints_dispatch(tree.l, x_units, x, operators)
-        r = violates_dimensional_constraints_dispatch(tree.r, x_units, x, operators)
+        l = violates_dimensional_constraints_dispatch(
+            tree.l, x_units, x, operators, allow_wildcards
+        )
+        r = violates_dimensional_constraints_dispatch(
+            tree.r, x_units, x, operators, allow_wildcards
+        )
         return deg2_eval((@inbounds operators.binops[tree.op]), l, r)::WildcardQuantity{Q}
     end
 end
@@ -183,16 +194,14 @@ function violates_dimensional_constraints(
 end
 function violates_dimensional_constraints(
     tree::AbstractExpressionNode{T},
-    X_units::Union{AbstractVector{<:Quantity},Nothing},
+    X_units::AbstractVector{<:Quantity},
     y_units::Union{Quantity,Nothing},
     x::AbstractVector{T},
     options::Options,
 ) where {T}
-    if X_units === nothing && y_units === nothing
-        return false
-    end
+    allow_wildcards = !(options.dimensionless_constants_only)
     dimensional_output = violates_dimensional_constraints_dispatch(
-        tree, X_units, x, options.operators
+        tree, X_units, x, options.operators, allow_wildcards
     )
     # ^ Eventually do this with map_treereduce. However, right now it seems
     # like we are passing around too many arguments, which slows things down.
@@ -204,6 +213,16 @@ function violates_dimensional_constraints(
         )
     end
     return violates
+end
+function violates_dimensional_constraints(
+    ::AbstractExpressionNode{T}, ::Nothing, ::Quantity, ::AbstractVector{T}, ::Options
+) where {T}
+    return error("This should never happen. Please submit a bug report.")
+end
+function violates_dimensional_constraints(
+    ::AbstractExpressionNode{T}, ::Nothing, ::Nothing, ::AbstractVector{T}, ::Options
+) where {T}
+    return false
 end
 
 end

@@ -1,5 +1,4 @@
 using SymbolicRegression
-using Test
 using Random
 
 macro maybe_inferred(ex)

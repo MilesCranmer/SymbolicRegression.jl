@@ -2,6 +2,7 @@ module PopulationModule
 
 using StatsBase: StatsBase
 using Random: randperm
+using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpressionNode, Node, string_tree
 using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
@@ -67,31 +68,35 @@ end
 
 Create random population and score them on the dataset.
 """
-function Population(
+@unstable function Population(
     X::AbstractMatrix{T},
     y::AbstractVector{T};
     population_size=nothing,
     nlength::Int=3,
     options::Options,
     nfeatures::Int,
-    loss_type::Type=Nothing,
+    loss_type::Type{L}=Nothing,
     npop=nothing,
-) where {T<:DATA_TYPE}
+) where {T<:DATA_TYPE,L}
     @assert (population_size !== nothing) ⊻ (npop !== nothing)
     population_size = if npop === nothing
         population_size
     else
         npop
     end
-    dataset = Dataset(X, y; loss_type=loss_type)
+    dataset = Dataset(X, y, L)
     update_baseline_loss!(dataset, options)
     return Population(
         dataset; population_size=population_size, options=options, nfeatures=nfeatures
     )
 end
 
-function Base.copy(pop::P)::P where {P<:Population}
-    return Population([copy(pm) for pm in pop.members])
+function Base.copy(pop::P)::P where {T,L,N,P<:Population{T,L,N}}
+    copied_members = Vector{PopMember{T,L,N}}(undef, pop.n)
+    Threads.@threads for i in 1:(pop.n)
+        copied_members[i] = copy(pop.members[i])
+    end
+    return Population(copied_members)
 end
 
 # Sample random members of the population, and make a new one

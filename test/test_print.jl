@@ -1,4 +1,3 @@
-using Test
 using SymbolicRegression
 using SymbolicRegression.UtilsModule: split_string
 

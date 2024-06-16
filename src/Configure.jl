@@ -220,7 +220,13 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
 
     # Need to import any extension code, if loaded on head node
     relevant_extensions = [
-        :SymbolicUtils, :Bumper, :LoopVectorization, :Zygote, :CUDA, :Enzyme
+        :Bumper,
+        :CUDA,
+        :ClusterManagers,
+        :Enzyme,
+        :LoopVectorization,
+        :SymbolicUtils,
+        :Zygote,
     ]
     filter!(m -> String(m) ∈ loaded_modules_head_worker, relevant_extensions)
     # HACK TODO – this workaround is very fragile. Likely need to submit a bug report
@@ -240,8 +246,9 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
     else
         @info "Importing SymbolicRegression on workers as well as extensions $(join(relevant_extensions, ',' * ' '))."
     end
-    @everywhere procs Base.MainInclude.eval($expr)
-    return verbosity > 0 && @info "Finished!"
+    @everywhere procs Core.eval(Core.Main, $expr)
+    verbosity > 0 && @info "Finished!"
+    return nothing
 end
 
 function test_module_on_workers(procs, options::Options, verbosity)
@@ -318,15 +325,17 @@ function configure_workers(;
     end
 
     if we_created_procs
-        activate_env_on_workers(procs, project_path, options, verbosity)
+        if VERSION < v"1.9.0"
+            # On newer Julia; environment is activated automatically
+            activate_env_on_workers(procs, project_path, options, verbosity)
+        end
         import_module_on_workers(procs, file, options, verbosity)
     end
+
     move_functions_to_workers(procs, options, example_dataset, verbosity)
-    if runtests
-        test_module_on_workers(procs, options, verbosity)
-    end
 
     if runtests
+        test_module_on_workers(procs, options, verbosity)
         test_entire_pipeline(procs, example_dataset, options, verbosity)
     end
 

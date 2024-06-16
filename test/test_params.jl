@@ -3,10 +3,14 @@ using Optim: Optim
 using LineSearches: LineSearches
 using Test: Test
 
-maximum_residual = 1e-2
-custom_cos(x) = cos(x)
+ENV["SYMBOLIC_REGRESSION_IS_TESTING"] = "true"
 
-default_params = (
+const maximum_residual = 1e-2
+if !@isdefined(custom_cos) || !hasmethod(custom_cos, (String,))
+    @eval custom_cos(x) = cos(x)
+end
+
+const default_params = (
     binary_operators=(/, +, *),
     unary_operators=(exp, custom_cos),
     constraints=nothing,

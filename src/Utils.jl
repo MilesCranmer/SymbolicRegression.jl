@@ -6,7 +6,7 @@ using MacroTools: splitdef, combinedef
 
 const pseudo_time = Ref(0)
 
-function get_birth_order(; deterministic=false)::Int
+function get_birth_order(; deterministic::Bool=false)::Int
     """deterministic gives a birth time with perfect resolution, but is not thread safe."""
     if deterministic
         global pseudo_time
@@ -93,7 +93,8 @@ const max_ops = 8192
 const vals = ntuple(Val, max_ops)
 
 """Return the bottom k elements of x, and their indices."""
-bottomk_fast(x, k) = _bottomk_dispatch(x, vals[k])
+bottomk_fast(x::AbstractVector{T}, k) where {T} =
+    _bottomk_dispatch(x, vals[k])::Tuple{Vector{T},Vector{Int}}
 
 function _bottomk_dispatch(x::AbstractVector{T}, ::Val{k}) where {T,k}
     if k == 1
@@ -148,6 +149,16 @@ function poisson_sample(λ::T) where {T}
     return k - 1
 end
 
+macro threads_if(flag, ex)
+    return quote
+        if $flag
+            Threads.@threads $ex
+        else
+            $ex
+        end
+    end |> esc
+end
+
 """
     @save_kwargs variable function ... end
 
@@ -169,7 +180,7 @@ function _save_kwargs(log_variable::Symbol, fdef::Expr)
         return true
     end
     return quote
-        $fdef
+        $(Base).@__doc__ $fdef
         const $log_variable = $kwargs
     end
 end
