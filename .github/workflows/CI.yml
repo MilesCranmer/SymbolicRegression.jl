@@ -4,9 +4,13 @@ on:
   push:
     branches:
       - master
+    paths:
+      - '**'
   pull_request:
     branches:
       - master
+    paths:
+      - '**'
 concurrency:
   # Skip intermediate builds: always.
   # Cancel intermediate builds: only if it is a pull request build.
