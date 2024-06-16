@@ -131,6 +131,10 @@ end
     include("../example.jl")
 end
 
+@testitem "Running parameterized function example." tags = [:integration] begin
+    include("../examples/parameterized_function.jl")
+end
+
 @testitem "Testing whether the recorder works." tags = [:integration] begin
     include("test_recorder.jl")
 end
