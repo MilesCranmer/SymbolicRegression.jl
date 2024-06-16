@@ -589,7 +589,7 @@ function equation_search(
     )
 end
 
-@noinline function _equation_search(
+@stable default_mode = "disable" @noinline function _equation_search(
     datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
 ) where {D<:Dataset}
     _validate_options(datasets, ropt, options)
@@ -631,7 +631,7 @@ function _validate_options(
     end
     return nothing
 end
-function _create_workers(
+@stable default_mode = "disable" function _create_workers(
     datasets::Vector{D}, ropt::RuntimeOptions, options::Options
 ) where {T,L,D<:Dataset{T,L}}
     stdin_reader = watch_stream(stdin)
