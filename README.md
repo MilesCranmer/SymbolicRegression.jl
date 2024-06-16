@@ -18,7 +18,7 @@ a Python frontend.
 [Cite this software](https://arxiv.org/abs/2305.01582)
 
 </div>
-<!-- prettier-ignore-end >
+<!-- prettier-ignore-end -->
 
 **Contents**:
 
@@ -27,6 +27,7 @@ a Python frontend.
   - [Low-Level Interface](#low-level-interface)
 - [Constructing expressions](#constructing-expressions)
 - [Exporting to SymbolicUtils.jl](#exporting-to-symbolicutilsjl)
+- [Contributors ✨](#contributors-)
 - [Code structure](#code-structure)
 - [Search options](#search-options)
 
@@ -238,11 +239,7 @@ for member in dominating
 end
 ```
 
-<div align="center">
-
-### Contributors ✨
-
-</div>
+## Contributors ✨
 
 We are eager to welcome new contributors!
 If you have an idea for a new feature, don't hesitate to share it on the [issues](https://github.com/MilesCranmer/SymbolicRegression.jl/issues) page or [forums](https://github.com/MilesCranmer/PySR/discussions).
