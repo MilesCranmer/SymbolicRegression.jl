@@ -10,7 +10,7 @@ using SymbolicRegression.LoggingModule: convex_hull
 import SymbolicRegression.LoggingModule: add_plot_to_log!
 
 function add_plot_to_log!(
-    log; trees, losses, complexities, options, variable_names, log_step, ropt
+    log::Dict; trees, losses, complexities, options, variable_names, log_step, ropt
 )
     if ropt.log_every_n.plots > 0 && log_step % ropt.log_every_n.plots == 0
         log["plot"] = plot(
