@@ -1,5 +1,7 @@
 module PopMemberModule
 
+using DispatchDoctor: @unstable
+
 using DynamicExpressions: AbstractExpressionNode, copy_node, count_nodes
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 import ..ComplexityModule: compute_complexity
@@ -25,7 +27,7 @@ function Base.setproperty!(member::PopMember, field::Symbol, value)
     field == :tree && setfield!(member, :complexity, -1)
     return setfield!(member, field, value)
 end
-function Base.getproperty(member::PopMember, field::Symbol)
+@unstable @inline function Base.getproperty(member::PopMember, field::Symbol)
     field == :complexity && throw(
         error("Don't access `.complexity` directly. Use `compute_complexity` instead.")
     )

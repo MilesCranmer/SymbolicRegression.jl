@@ -1,6 +1,5 @@
 println("Testing crossover function.")
 using SymbolicRegression
-using Test
 using SymbolicRegression: crossover_trees
 include("test_params.jl")
 

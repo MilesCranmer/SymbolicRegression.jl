@@ -1,5 +1,4 @@
 using SymbolicRegression
-using Test
 
 # Deprecated kwargs should still work:
 options = Options(;
