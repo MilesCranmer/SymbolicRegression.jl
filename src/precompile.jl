@@ -85,7 +85,7 @@ function do_precompilation(::Val{mode}) where {mode}
                     return_state=false,
                     verbosity=0,
                 )
-                nout == 1 && calculate_pareto_frontier(hof)
+                nout == 1 && calculate_pareto_frontier(hof::HallOfFame)
             end
         end
     end

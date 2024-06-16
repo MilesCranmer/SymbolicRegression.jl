@@ -96,7 +96,7 @@ function logical_and(x, y)
 end
 
 # Deprecated operations:
-@deprecate pow safe_pow
-@deprecate pow_abs safe_pow
+@deprecate pow(x, y) safe_pow(x, y)
+@deprecate pow_abs(x, y) safe_pow(x, y)
 
 end

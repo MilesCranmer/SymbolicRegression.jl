@@ -1,5 +1,4 @@
 using SymbolicRegression
-using Test
 
 X = randn(Float32, 5, 100)
 y = 2 * cos.(X[4, :]) + X[1, :] .^ 2

@@ -1,5 +1,4 @@
 using SymbolicRegression
-using Test
 
 options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos, sin], maxsize=30)
 

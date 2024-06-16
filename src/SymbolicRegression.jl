@@ -163,27 +163,31 @@ function deprecate_varmap(variable_names, varMap, func_name)
     return variable_names
 end
 
-include("Utils.jl")
-include("InterfaceDynamicQuantities.jl")
-include("Core.jl")
-include("InterfaceDynamicExpressions.jl")
-include("Recorder.jl")
-include("Complexity.jl")
-include("DimensionalAnalysis.jl")
-include("CheckConstraints.jl")
-include("AdaptiveParsimony.jl")
-include("MutationFunctions.jl")
-include("LossFunctions.jl")
-include("PopMember.jl")
-include("ConstantOptimization.jl")
-include("Population.jl")
-include("HallOfFame.jl")
-include("Mutate.jl")
-include("RegularizedEvolution.jl")
-include("SingleIteration.jl")
-include("ProgressBars.jl")
-include("Migration.jl")
-include("SearchUtils.jl")
+using DispatchDoctor: @stable
+
+@stable default_mode = "disable" begin
+    include("Utils.jl")
+    include("InterfaceDynamicQuantities.jl")
+    include("Core.jl")
+    include("InterfaceDynamicExpressions.jl")
+    include("Recorder.jl")
+    include("Complexity.jl")
+    include("DimensionalAnalysis.jl")
+    include("CheckConstraints.jl")
+    include("AdaptiveParsimony.jl")
+    include("MutationFunctions.jl")
+    include("LossFunctions.jl")
+    include("PopMember.jl")
+    include("ConstantOptimization.jl")
+    include("Population.jl")
+    include("HallOfFame.jl")
+    include("Mutate.jl")
+    include("RegularizedEvolution.jl")
+    include("SingleIteration.jl")
+    include("ProgressBars.jl")
+    include("Migration.jl")
+    include("SearchUtils.jl")
+end
 
 include("InterfaceExpressions.jl")
 
@@ -272,8 +276,10 @@ using .SearchUtilsModule:
     get_cur_maxsize,
     update_hall_of_fame!
 
-include("deprecates.jl")
-include("Configure.jl")
+@stable default_mode = "disable" begin
+    include("deprecates.jl")
+    include("Configure.jl")
+end
 
 """
     equation_search(X, y[; kws...])
@@ -583,7 +589,7 @@ function equation_search(
     # Underscores here mean that we have mutated the variable
     return _equation_search(
         datasets,
-        RuntimeOptions{concurrency,dim_out,_return_state}(;
+        RuntimeOptions(;
             niterations=niterations,
             total_cycles=options.populations * niterations,
             numprocs=_numprocs,
@@ -593,13 +599,16 @@ function equation_search(
             runtests=runtests,
             verbosity=_verbosity,
             progress=_progress,
+            parallelism=Val(concurrency),
+            dim_out=Val(dim_out),
+            return_state=Val(_return_state),
         ),
         options,
         saved_state,
     )
 end
 
-@noinline function _equation_search(
+@stable default_mode = "disable" @noinline function _equation_search(
     datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
 ) where {D<:Dataset}
     _validate_options(datasets, ropt, options)
@@ -641,7 +650,7 @@ function _validate_options(
     end
     return nothing
 end
-function _create_workers(
+@stable default_mode = "disable" function _create_workers(
     datasets::Vector{D}, ropt::RuntimeOptions, options::Options
 ) where {T,L,D<:Dataset{T,L}}
     stdin_reader = watch_stream(stdin)
@@ -1094,7 +1103,7 @@ function _format_output(state::SearchState, ropt::RuntimeOptions)
     end
 end
 
-function _dispatch_s_r_cycle(
+@stable default_mode = "disable" function _dispatch_s_r_cycle(
     in_pop::Population{T,L,N},
     dataset::Dataset,
     options::Options;

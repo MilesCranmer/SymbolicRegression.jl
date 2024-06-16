@@ -11,35 +11,108 @@ using LossFunctions: SupervisedLoss
 
 import ..MutationWeightsModule: MutationWeights
 
-"""This struct defines how complexity is calculated."""
-struct ComplexityMapping{T<:Real}
-    use::Bool  # Whether we use custom complexity, or just use 1 for everythign.
-    binop_complexities::Vector{T}  # Complexity of each binary operator.
-    unaop_complexities::Vector{T}  # Complexity of each unary operator.
-    variable_complexity::T  # Complexity of using a variable.
-    constant_complexity::T  # Complexity of using a constant.
+"""
+This struct defines how complexity is calculated.
+
+# Fields
+- `use`: Shortcut indicating whether we use custom complexities,
+    or just use 1 for everything.
+- `binop_complexities`: Complexity of each binary operator.
+- `unaop_complexities`: Complexity of each unary operator.
+- `variable_complexity`: Complexity of using a variable.
+- `constant_complexity`: Complexity of using a constant.
+"""
+struct ComplexityMapping{T<:Real,VC<:Union{T,AbstractVector{T}}}
+    use::Bool
+    binop_complexities::Vector{T}
+    unaop_complexities::Vector{T}
+    variable_complexity::VC
+    constant_complexity::T
 end
 
 Base.eltype(::ComplexityMapping{T}) where {T} = T
-
-function ComplexityMapping(use::Bool)
-    return ComplexityMapping{Int}(use, zeros(Int, 0), zeros(Int, 0), 1, 1)
-end
 
 """Promote type when defining complexity mapping."""
 function ComplexityMapping(;
     binop_complexities::Vector{T1},
     unaop_complexities::Vector{T2},
-    variable_complexity::T3,
+    variable_complexity::Union{T3,AbstractVector{T3}},
     constant_complexity::T4,
 ) where {T1<:Real,T2<:Real,T3<:Real,T4<:Real}
-    promoted_T = promote_type(T1, T2, T3, T4)
-    return ComplexityMapping{promoted_T}(
+    T = promote_type(T1, T2, T3, T4)
+    vc = map(T, variable_complexity)
+    return ComplexityMapping{T,typeof(vc)}(
         true,
-        binop_complexities,
-        unaop_complexities,
-        variable_complexity,
-        constant_complexity,
+        map(T, binop_complexities),
+        map(T, unaop_complexities),
+        vc,
+        T(constant_complexity),
+    )
+end
+
+function ComplexityMapping(
+    ::Nothing, ::Nothing, ::Nothing, binary_operators, unary_operators
+)
+    # If no customization provided, then we simply
+    # turn off the complexity mapping
+    use = false
+    return ComplexityMapping{Int,Int}(use, zeros(Int, 0), zeros(Int, 0), 0, 0)
+end
+function ComplexityMapping(
+    complexity_of_operators,
+    complexity_of_variables,
+    complexity_of_constants,
+    binary_operators,
+    unary_operators,
+)
+    _complexity_of_operators = if complexity_of_operators === nothing
+        Dict{Function,Int64}()
+    else
+        # Convert to dict:
+        Dict(complexity_of_operators)
+    end
+
+    VAR_T = if (complexity_of_variables !== nothing)
+        if complexity_of_variables isa AbstractVector
+            eltype(complexity_of_variables)
+        else
+            typeof(complexity_of_variables)
+        end
+    else
+        Int
+    end
+    CONST_T = if (complexity_of_constants !== nothing)
+        typeof(complexity_of_constants)
+    else
+        Int
+    end
+    OP_T = eltype(_complexity_of_operators).parameters[2]
+
+    T = promote_type(VAR_T, CONST_T, OP_T)
+
+    # If not in dict, then just set it to 1.
+    binop_complexities = T[
+        (haskey(_complexity_of_operators, op) ? _complexity_of_operators[op] : one(T)) #
+        for op in binary_operators
+    ]
+    unaop_complexities = T[
+        (haskey(_complexity_of_operators, op) ? _complexity_of_operators[op] : one(T)) #
+        for op in unary_operators
+    ]
+
+    variable_complexity = if complexity_of_variables !== nothing
+        map(T, complexity_of_variables)
+    else
+        one(T)
+    end
+    constant_complexity = if complexity_of_constants !== nothing
+        map(T, complexity_of_constants)
+    else
+        one(T)
+    end
+
+    return ComplexityMapping(;
+        binop_complexities, unaop_complexities, variable_complexity, constant_complexity
     )
 end
 
@@ -54,7 +127,7 @@ operator_specialization(O::Type{<:OperatorEnum}) = O
 # TODO: HACK - turned this off temporarily
 
 struct Options{
-    CT,
+    CM<:ComplexityMapping,
     OP<:AbstractOperatorEnum,
     N<:AbstractExpressionNode,
     E<:AbstractExpression,
@@ -68,7 +141,7 @@ struct Options{
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
-    complexity_mapping::ComplexityMapping{CT}
+    complexity_mapping::CM
     tournament_selection_n::Int
     tournament_selection_p::Float32
     tournament_selection_weights::W

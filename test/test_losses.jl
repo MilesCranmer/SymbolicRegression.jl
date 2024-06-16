@@ -1,7 +1,6 @@
 using SymbolicRegression
 using SymbolicRegression: eval_loss
 using Random
-using Test
 include("test_params.jl")
 
 _loss = SymbolicRegression.LossFunctionsModule._loss

@@ -6,6 +6,7 @@ module SearchUtilsModule
 using Printf: @printf, @sprintf
 using Distributed
 using StatsBase: mean
+using DispatchDoctor: @unstable
 
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
@@ -36,8 +37,13 @@ Base.@kwdef struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE}
     runtests::Bool
     verbosity::Int64
     progress::Bool
+    parallelism::Val{PARALLELISM}
+    dim_out::Val{DIM_OUT}
+    return_state::Val{RETURN_STATE}
 end
-function Base.getproperty(roptions::RuntimeOptions{P,D,R}, name::Symbol) where {P,D,R}
+@unstable @inline function Base.getproperty(
+    roptions::RuntimeOptions{P,D,R}, name::Symbol
+) where {P,D,R}
     if name == :parallelism
         return P
     elseif name == :dim_out
@@ -105,8 +111,8 @@ macro sr_spawner(expr, kws...)
     @assert all(ex -> ex.head == :(=), kws)
     @assert any(ex -> ex.args[1] == :parallelism, kws)
     @assert any(ex -> ex.args[1] == :worker_idx, kws)
-    parallelism = kws[findfirst(ex -> ex.args[1] == :parallelism, kws)].args[2]
-    worker_idx = kws[findfirst(ex -> ex.args[1] == :worker_idx, kws)].args[2]
+    parallelism = kws[findfirst(ex -> ex.args[1] == :parallelism, kws)::Int].args[2]
+    worker_idx = kws[findfirst(ex -> ex.args[1] == :worker_idx, kws)::Int].args[2]
     return quote
         if $(parallelism) == :serial
             $(expr)

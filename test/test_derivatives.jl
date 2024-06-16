@@ -1,4 +1,3 @@
-using Test
 using SymbolicRegression
 using SymbolicRegression: eval_diff_tree_array, eval_grad_tree_array
 using Random

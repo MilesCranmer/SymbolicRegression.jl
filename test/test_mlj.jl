@@ -3,7 +3,6 @@ using SymbolicRegression:
     Node, SRRegressor, MultitargetSRRegressor, node_to_symbolic, symbolic_to_node
 using MLJTestInterface: MLJTestInterface as MTI
 using MLJBase: machine, fit!, report, predict
-using Test
 using SymbolicUtils: SymbolicUtils
 using Suppressor: @capture_err
 

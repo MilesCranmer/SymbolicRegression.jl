@@ -199,14 +199,11 @@ function violates_dimensional_constraints(
 end
 function violates_dimensional_constraints(
     tree::AbstractExpressionNode{T},
-    X_units::Union{AbstractVector{<:Quantity},Nothing},
+    X_units::AbstractVector{<:Quantity},
     y_units::Union{Quantity,Nothing},
     x::AbstractVector{T},
     options::Options,
 ) where {T}
-    if X_units === nothing && y_units === nothing
-        return false
-    end
     allow_wildcards = !(options.dimensionless_constants_only)
     dimensional_output = violates_dimensional_constraints_dispatch(
         tree, X_units, x, options.operators, allow_wildcards
@@ -221,6 +218,16 @@ function violates_dimensional_constraints(
         )
     end
     return violates
+end
+function violates_dimensional_constraints(
+    ::AbstractExpressionNode{T}, ::Nothing, ::Quantity, ::AbstractVector{T}, ::Options
+) where {T}
+    return error("This should never happen. Please submit a bug report.")
+end
+function violates_dimensional_constraints(
+    ::AbstractExpressionNode{T}, ::Nothing, ::Nothing, ::AbstractVector{T}, ::Options
+) where {T}
+    return false
 end
 
 end

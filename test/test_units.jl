@@ -31,7 +31,6 @@ using DynamicQuantities:
     sym_uparse,
     ustrip,
     dimension
-using Test
 using MLJBase: MLJBase as MLJ
 using MLJModelInterface: MLJModelInterface as MMI
 include("utils.jl")

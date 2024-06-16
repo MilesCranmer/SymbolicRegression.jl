@@ -3,20 +3,14 @@ name: CI
 on:
   push:
     branches:
-      - "*"
+      - master
     paths:
-      - "test/**"
-      - "src/**"
-      - ".github/workflows/**"
-      - "Project.toml"
+      - "**"
   pull_request:
     branches:
       - master
     paths:
-      - "test/**"
-      - "src/**"
-      - ".github/workflows/**"
-      - "Project.toml"
+      - "**"
 concurrency:
   # Skip intermediate builds: always.
   # Cancel intermediate builds: only if it is a pull request build.

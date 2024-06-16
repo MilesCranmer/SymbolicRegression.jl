@@ -5,8 +5,8 @@ using DynamicExpressions:
 using ..CoreModule: Options, ComplexityMapping
 
 function past_complexity_limit(
-    tree::Union{AbstractExpression,AbstractExpressionNode}, options::Options{CT}, limit
-)::Bool where {CT}
+    tree::Union{AbstractExpression,AbstractExpressionNode}, options::Options, limit
+)::Bool
     return compute_complexity(tree, options) > limit
 end
 
@@ -23,10 +23,12 @@ function compute_complexity(
     return compute_complexity(get_tree(tree), options; break_sharing)
 end
 function compute_complexity(
-    tree::AbstractExpressionNode, options::Options{CT}; break_sharing=Val(false)
-)::Int where {CT}
+    tree::AbstractExpressionNode, options::Options; break_sharing=Val(false)
+)::Int
     if options.complexity_mapping.use
-        raw_complexity = _compute_complexity(tree, options; break_sharing)
+        raw_complexity = _compute_complexity(
+            tree, options.complexity_mapping; break_sharing
+        )
         return round(Int, raw_complexity)
     else
         return count_nodes(tree; break_sharing)
@@ -34,16 +36,19 @@ function compute_complexity(
 end
 
 function _compute_complexity(
-    tree::AbstractExpressionNode, options::Options{CT}; break_sharing=Val(false)
+    tree::AbstractExpressionNode, cmap::ComplexityMapping{CT}; break_sharing=Val(false)
 )::CT where {CT}
-    cmap = options.complexity_mapping
-    constant_complexity = cmap.constant_complexity
-    variable_complexity = cmap.variable_complexity
-    unaop_complexities = cmap.unaop_complexities
-    binop_complexities = cmap.binop_complexities
     return tree_mapreduce(
-        t -> t.constant ? constant_complexity : variable_complexity,
-        t -> t.degree == 1 ? unaop_complexities[t.op] : binop_complexities[t.op],
+        let vc = cmap.variable_complexity, cc = cmap.constant_complexity
+            if vc isa AbstractVector
+                t -> t.constant ? cc : @inbounds(vc[t.feature])
+            else
+                t -> t.constant ? cc : vc
+            end
+        end,
+        let uc = cmap.unaop_complexities, bc = cmap.binop_complexities
+            t -> t.degree == 1 ? @inbounds(uc[t.op]) : @inbounds(bc[t.op])
+        end,
         +,
         tree,
         CT;

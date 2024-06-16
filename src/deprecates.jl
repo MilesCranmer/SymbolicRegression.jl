@@ -5,11 +5,11 @@ import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
 
 @deprecate(
     gen_random_tree(length::Int, options::Options, nfeatures::Int, t::Type),
-    gen_random_tree(length, options, nfeatures, t, Node)
+    gen_random_tree(length, options, nfeatures, t)
 )
 @deprecate(
     gen_random_tree_fixed_size(node_count::Int, options::Options, nfeatures::Int, t::Type),
-    gen_random_tree_fixed_size(node_count, options, nfeatures, t, Node)
+    gen_random_tree_fixed_size(node_count, options, nfeatures, t)
 )
 
 @deprecate(
