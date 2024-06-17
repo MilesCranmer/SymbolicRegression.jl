@@ -75,7 +75,7 @@ function _optimize_constants(
     end
 
     if result.minimum < baseline
-        member.tree = result.minimizer
+        member.tree = result.minimizer::typeof(member.tree)
         member.loss = eval_loss(member.tree, dataset, options; regularization=true, idx=idx)
         member.score = loss_to_score(
             member.loss, dataset.use_baseline, dataset.baseline_loss, member, options
