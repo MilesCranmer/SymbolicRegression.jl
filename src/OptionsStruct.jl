@@ -136,7 +136,7 @@ struct Options{
     _bumper,
     _return_state,
     W,
-    _autodiff_backend,
+    AD,
 }
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
@@ -192,7 +192,7 @@ struct Options{
     optimizer_probability::Float32
     optimizer_nrestarts::Int
     optimizer_options::Optim.Options
-    autodiff_backend::Val{_autodiff_backend}
+    autodiff_backend::AD
     recorder_file::String
     prob_pick_first::Float32
     early_stop_condition::Union{Function,Nothing}

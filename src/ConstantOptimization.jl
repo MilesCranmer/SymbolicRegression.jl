@@ -2,6 +2,7 @@ module ConstantOptimizationModule
 
 using LineSearches: LineSearches
 using Optim: Optim
+using DifferentiationInterface: value_and_gradient
 using DynamicExpressions: Expression, Node, count_constants, get_constants, set_constants!
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 using ..UtilsModule: get_birth_order
@@ -48,7 +49,7 @@ function _optimize_constants(
     eval_fraction = options.batching ? (options.batch_size / dataset.n) : 1.0
     f = Evaluator(dataset, options, idx)
     fg! = GradEvaluator(f)
-    obj = if algorithm isa Optim.Newton || options.autodiff_backend isa Val{:finite}
+    obj = if algorithm isa Optim.Newton || options.autodiff_backend === nothing
         f
     else
         Optim.only_fg!(fg!)
@@ -97,15 +98,11 @@ struct GradEvaluator{F<:Evaluator} <: Function
     f::F
 end
 function (g::GradEvaluator)(F, G, t)
-    (val, grad) = _withgradient(g.f, t)
-    if G !== nothing &&
-        grad !== nothing &&
-        only(grad) !== nothing &&
-        only(grad).tree !== nothing
-        G .= only(grad).tree.gradient
+    (val, grad) = value_and_gradient(g.f, g.f.options.autodiff_backend, t)
+    if G !== nothing && grad !== nothing && grad.tree !== nothing
+        G .= grad.tree.gradient
     end
     return val
 end
-_withgradient(args...) = error("Please load the Zygote.jl package.")
 
 end

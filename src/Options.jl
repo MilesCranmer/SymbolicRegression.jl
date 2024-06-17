@@ -5,6 +5,7 @@ using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
 using DynamicExpressions: OperatorEnum, Node, Expression, default_node
+using DifferentiationInterface: AbstractADType
 using Distributed: nworkers
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim
@@ -322,8 +323,10 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     we refer to the documentation on `Optim.Options` from the `Optim.jl` package.
     Options can be provided here as `NamedTuple`, e.g. `(iterations=16,)`, as a
     `Dict`, e.g. Dict(:x_tol => 1.0e-32,), or as an `Optim.Options` instance.
-- `autodiff_backend`: The backend to use for differentiation.
-    Can be `:zygote` or `:finite`. Default is `:finite`.
+- `autodiff_backend`: The backend to use for differentiation, which should be
+    an instance of `AbstractADType` (see `DifferentiationInterface.jl`).
+    Default is `nothing`, which means `Optim.jl` will estimate gradients (likely
+    with finite differences).
 - `output_file`: What file to store equations to, as a backup.
 - `perturbation_factor`: When mutating a constant, either
     multiply or divide by (1+perturbation_factor)^(rand()+1).
@@ -440,7 +443,7 @@ $(OPTION_DESCRIPTIONS)
     optimizer_iterations::Union{Nothing,Integer}=nothing,
     optimizer_f_calls_limit::Union{Nothing,Integer}=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
-    autodiff_backend::Symbol=:finite,
+    autodiff_backend::Union{AbstractADType,Nothing}=nothing,
     use_recorder::Bool=false,
     recorder_file::AbstractString="pysr_recorder.json",
     early_stop_condition::Union{Function,Real,Nothing}=nothing,
@@ -740,7 +743,7 @@ $(OPTION_DESCRIPTIONS)
         bumper,
         deprecated_return_state,
         typeof(tournament_selection_weights),
-        autodiff_backend,
+        typeof(autodiff_backend),
     }(
         operators,
         bin_constraints,
@@ -796,7 +799,7 @@ $(OPTION_DESCRIPTIONS)
         optimizer_probability,
         optimizer_nrestarts,
         optimizer_options,
-        Val(autodiff_backend),
+        autodiff_backend,
         recorder_file,
         tournament_selection_p,
         early_stop_condition,
