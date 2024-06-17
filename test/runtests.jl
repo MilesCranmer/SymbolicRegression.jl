@@ -128,10 +128,12 @@ end
 end
 
 @testitem "Running README example." tags = [:part1] begin
+    ENV["SYMBOLIC_REGRESSION_IS_TESTING"] = "true"
     include("../example.jl")
 end
 
 @testitem "Running parameterized function example." tags = [:part2] begin
+    ENV["SYMBOLIC_REGRESSION_IS_TESTING"] = "true"
     include("../examples/parameterized_function.jl")
 end
 
