@@ -3,7 +3,7 @@ module MLJInterfaceModule
 using Optim: Optim
 using LineSearches: LineSearches
 using MLJModelInterface: MLJModelInterface as MMI
-using DifferentiationInterface: AbstractADType
+using ADTypes: AbstractADType
 using DynamicExpressions:
     eval_tree_array,
     string_tree,

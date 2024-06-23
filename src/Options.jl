@@ -5,7 +5,7 @@ using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
 using DynamicExpressions: OperatorEnum, Node, Expression, default_node_type
-using DifferentiationInterface: AbstractADType
+using ADTypes: AbstractADType, ADTypes
 using Distributed: nworkers
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim
@@ -326,7 +326,10 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `autodiff_backend`: The backend to use for differentiation, which should be
     an instance of `AbstractADType` (see `DifferentiationInterface.jl`).
     Default is `nothing`, which means `Optim.jl` will estimate gradients (likely
-    with finite differences).
+    with finite differences). You can also pass a symbolic version of the backend
+    type, such as `:Zygote` for Zygote, `:Enzyme`, etc. Most backends will not
+    work, and many will never work due to incompatibilities, though support for some
+    is gradually being added.
 - `output_file`: What file to store equations to, as a backup.
 - `perturbation_factor`: When mutating a constant, either
     multiply or divide by (1+perturbation_factor)^(rand()+1).
@@ -443,7 +446,7 @@ $(OPTION_DESCRIPTIONS)
     optimizer_iterations::Union{Nothing,Integer}=nothing,
     optimizer_f_calls_limit::Union{Nothing,Integer}=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
-    autodiff_backend::Union{AbstractADType,Nothing}=nothing,
+    autodiff_backend::Union{AbstractADType,Symbol,Nothing}=nothing,
     use_recorder::Bool=false,
     recorder_file::AbstractString="pysr_recorder.json",
     early_stop_condition::Union{Function,Real,Nothing}=nothing,
@@ -733,6 +736,12 @@ $(OPTION_DESCRIPTIONS)
 
     @assert print_precision > 0
 
+    _autodiff_backend = if autodiff_backend isa Union{Nothing,AbstractADType}
+        autodiff_backend
+    else
+        ADTypes.Auto(autodiff_backend)
+    end
+
     options = Options{
         typeof(complexity_mapping),
         operator_specialization(typeof(operators)),
@@ -743,7 +752,7 @@ $(OPTION_DESCRIPTIONS)
         bumper,
         deprecated_return_state,
         typeof(tournament_selection_weights),
-        typeof(autodiff_backend),
+        typeof(_autodiff_backend),
     }(
         operators,
         bin_constraints,
@@ -799,7 +808,7 @@ $(OPTION_DESCRIPTIONS)
         optimizer_probability,
         optimizer_nrestarts,
         optimizer_options,
-        autodiff_backend,
+        _autodiff_backend,
         recorder_file,
         tournament_selection_p,
         early_stop_condition,

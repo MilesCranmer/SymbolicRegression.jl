@@ -1,6 +1,5 @@
 using SymbolicRegression
 using Zygote
-using DifferentiationInterface: AutoZygote
 
 X = randn(Float32, 5, 30)
 classes = rand(1:2, 30)
@@ -20,7 +19,7 @@ options = SymbolicRegression.Options(;
     populations=10,
     expression_type=ParametricExpression,
     expression_options=(; max_parameters=2),
-    autodiff_backend=AutoZygote(),
+    autodiff_backend=:Zygote,
 )
 
 hall_of_fame = equation_search(
