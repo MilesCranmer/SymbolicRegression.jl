@@ -38,10 +38,10 @@ function Base.show(io::IO, mime::MIME"text/plain", hof::HallOfFame{T,L,N}) where
             "undef", "false"
         end
         println(io, " "^4 * ".exists[$i] = $s_exists")
-        print(io, " "^4 * ".members[$i] = ")
+        print(io, " "^4 * ".members[$i] =")
         splitted = split(strip(s_member), '\n')
         if length(splitted) == 1
-            println(io, s_member)
+            println(io, " " * s_member)
         else
             println(io)
             foreach(line -> println(io, " "^8 * line), splitted)
