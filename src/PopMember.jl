@@ -2,7 +2,12 @@ module PopMemberModule
 
 using DispatchDoctor: @unstable
 using DynamicExpressions:
-    AbstractExpression, AbstractExpressionNode, copy_node, count_nodes, parse_expression
+    AbstractExpression,
+    AbstractExpressionNode,
+    copy_node,
+    count_nodes,
+    parse_expression,
+    string_tree
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE, create_expression
 import ..ComplexityModule: compute_complexity
 using ..UtilsModule: get_birth_order
@@ -33,13 +38,13 @@ end
     )
     return getfield(member, field)
 end
-function Base.show(io::IO, mime::MIME"text/plain", p::PopMember{T,L,N}) where {T,L,N}
-    shower(x) = sprint((io, e) -> show(io, mime, e), x)
-    println(io, "PopMember(")
-    println(io, " "^4, "tree = ", shower(p.tree))
-    println(io, " "^4, "loss = ", shower(p.loss))
-    println(io, " "^4, "score = ", shower(p.score))
-    println(io, ")")
+function Base.show(io::IO, p::PopMember{T,L,N}) where {T,L,N}
+    shower(x) = sprint(show, x)
+    print(io, "PopMember(")
+    print(io, "tree = (", string_tree(p.tree), "), ")
+    print(io, "loss = ", shower(p.loss), ", ")
+    print(io, "score = ", shower(p.score))
+    print(io, ")")
     return nothing
 end
 

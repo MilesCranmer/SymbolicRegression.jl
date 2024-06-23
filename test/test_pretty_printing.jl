@@ -15,8 +15,7 @@
     member.score = 1.0
     @test member isa PopMember{Float64,Float64,<:Expression{Float64,Node{Float64}}}
     s_member = shower(member)
-    @test s_member ==
-        "PopMember(\n    tree = (x ^ 2.0) + 1.5\n    loss = 16.25\n    score = 1.0\n)\n"
+    @test s_member == "PopMember(tree = ((x ^ 2.0) + 1.5), loss = 16.25, score = 1.0)"
 end
 
 @testitem "pretty print hall of fame" begin
@@ -53,12 +52,7 @@ end
     .exists[4] = false
     .members[4] = undef
     .exists[5] = true
-    .members[5] =
-        PopMember(
-            tree = (x ^ 2.0) + 1.5
-            loss = 16.25
-            score = 1.0
-        )
+    .members[5] = PopMember(tree = ((x ^ 2.0) + 1.5), loss = 16.25, score = 1.0)
     .exists[6] = false
     .members[6] = undef
     .exists[7] = false
