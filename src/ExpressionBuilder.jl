@@ -1,4 +1,4 @@
-module InterfaceParametricExpressionModule
+module ExpressionBuilderModule
 
 using DynamicExpressions:
     AbstractExpressionNode,
