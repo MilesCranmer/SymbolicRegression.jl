@@ -37,6 +37,9 @@ function create_expression(
         extra_init_params(options.expression_type, options, dataset)...,
     )
 end
+function create_expression(ex::AbstractExpression{T}, ::Options, ::Dataset{T,L}) where {T,L}
+    return ex
+end
 function extra_init_params(_, _, _)
     return (;)
 end

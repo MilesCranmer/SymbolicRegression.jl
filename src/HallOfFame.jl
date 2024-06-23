@@ -29,9 +29,29 @@ struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
     members::Array{PopMember{T,L,N},1}
     exists::Array{Bool,1} #Whether it has been set
 end
+function Base.show(io::IO, mime::MIME"text/plain", hof::HallOfFame{T,L,N}) where {T,L,N}
+    println(io, "HallOfFame{...}:")
+    for i in eachindex(hof.members, hof.exists)
+        s_member, s_exists = if hof.exists[i]
+            sprint((io, m) -> show(io, mime, m), hof.members[i]), "true"
+        else
+            "undef", "false"
+        end
+        println(io, " "^4 * ".exists[$i] = $s_exists")
+        print(io, " "^4 * ".members[$i] = ")
+        splitted = split(strip(s_member), '\n')
+        if length(splitted) == 1
+            println(io, s_member)
+        else
+            println(io)
+            foreach(line -> println(io, " "^8 * line), splitted)
+        end
+    end
+    return nothing
+end
 
 """
-    HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression}
+    HallOfFame(options::Options, dataset::Dataset{T,L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 
 Create empty HallOfFame. The HallOfFame stores a list
 of `PopMember` objects in `.members`, which is enumerated

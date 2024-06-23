@@ -169,6 +169,8 @@ end
     include("test_abstract_numbers.jl")
 end
 
+include("test_pretty_printing.jl")
+
 @testitem "Aqua tests" tags = [:part2, :aqua] begin
     include("test_aqua.jl")
 end

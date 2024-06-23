@@ -33,6 +33,15 @@ end
     )
     return getfield(member, field)
 end
+function Base.show(io::IO, mime::MIME"text/plain", p::PopMember{T,L,N}) where {T,L,N}
+    shower(x) = sprint((io, e) -> show(io, mime, e), x)
+    println(io, "PopMember(")
+    println(io, " "^4, "tree = ", shower(p.tree))
+    println(io, " "^4, "loss = ", shower(p.loss))
+    println(io, " "^4, "score = ", shower(p.score))
+    println(io, ")")
+    return nothing
+end
 
 generate_reference() = abs(rand(Int))
 
@@ -57,10 +66,17 @@ function PopMember(
     complexity::Union{Int,Nothing}=nothing;
     ref::Int=-1,
     parent::Int=-1,
-    deterministic=false,
+    deterministic=nothing,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if ref == -1
         ref = generate_reference()
+    end
+    if !(deterministic isa Bool)
+        throw(
+            ArgumentError(
+                "You must declare `deterministic` as `true` or `false`, it cannot be left undefined.",
+            ),
+        )
     end
     complexity = complexity === nothing ? -1 : complexity
     return PopMember{T,L,typeof(t)}(
@@ -75,8 +91,11 @@ function PopMember(
 end
 
 """
-    PopMember(dataset::Dataset{T,L},
-              t::AbstractExpression{T}, options::Options)
+    PopMember(
+        dataset::Dataset{T,L},
+        t::AbstractExpression{T},
+        options::Options
+    )
 
 Create a population member with a birth date at the current time.
 Automatically compute the score for this tree.
@@ -89,7 +108,7 @@ Automatically compute the score for this tree.
 """
 function PopMember(
     dataset::Dataset{T,L},
-    tree::AbstractExpressionNode{T},
+    tree::Union{AbstractExpressionNode{T},AbstractExpression{T}},
     options::Options,
     complexity::Union{Int,Nothing}=nothing;
     ref::Int=-1,
