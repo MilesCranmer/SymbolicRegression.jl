@@ -31,9 +31,8 @@ function create_expression(
 ) where {T,L}
     return constructorof(options.expression_type)(
         t;
-        operators=options.operators,
-        variable_names=dataset.variable_names,
-        # TODO: Should not need to pass variable names here each time
+        operators=nothing,
+        variable_names=nothing,
         extra_init_params(options.expression_type, options, dataset)...,
     )
 end
@@ -48,7 +47,7 @@ function extra_init_params(
 ) where {T,L}
     num_params = options.expression_options.max_parameters
     num_classes = length(unique(dataset.extra.classes))
-    parameter_names = ["p$i" for i in 1:num_params]
+    parameter_names = nothing
     parameters = randn(T, (num_params, num_classes))
     return (; parameter_names, parameters)
 end
