@@ -11,7 +11,7 @@ using DynamicExpressions:
     AbstractExpression,
     Node,
     Expression,
-    default_node,
+    default_node_type,
     get_tree
 using DynamicQuantities:
     QuantityArray,

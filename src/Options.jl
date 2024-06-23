@@ -4,7 +4,7 @@ using DispatchDoctor: @unstable
 using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
-using DynamicExpressions: OperatorEnum, Node, Expression, default_node
+using DynamicExpressions: OperatorEnum, Node, Expression, default_node_type
 using DifferentiationInterface: AbstractADType
 using Distributed: nworkers
 using LossFunctions: L2DistLoss, SupervisedLoss
@@ -251,8 +251,8 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 
 - `expression_type::Type{E}=Expression`: The type of expression to use.
     For example, `Expression`.
-- `node_type::Type{N}=default_node(Expression)`: The type of node to use for the search.
-    For example, `Node` or `GraphNode`. The default is computed by `default_node(expression_type)`.
+- `node_type::Type{N}=default_node_type(Expression)`: The type of node to use for the search.
+    For example, `Node` or `GraphNode`. The default is computed by `default_node_type(expression_type)`.
 - `populations`: How many populations of equations to use.
 - `population_size`: How many equations in each population.
 - `ncycles_per_iteration`: How many generations to consider per iteration.
@@ -409,7 +409,7 @@ $(OPTION_DESCRIPTIONS)
     should_optimize_constants::Bool=true,
     output_file::Union{Nothing,AbstractString}=nothing,
     expression_type::Type=Expression,
-    node_type::Type=default_node(expression_type),
+    node_type::Type=default_node_type(expression_type),
     expression_options::NamedTuple=NamedTuple(),
     populations::Integer=15,
     perturbation_factor::Real=0.076,
