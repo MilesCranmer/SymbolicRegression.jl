@@ -6,8 +6,8 @@ using DynamicExpressions:
     AbstractExpression,
     AbstractNode,
     NodeSampler,
-    get_tree,
-    with_tree,
+    get_contents,
+    with_contents,
     constructorof,
     copy_node,
     set_node!,
@@ -35,8 +35,8 @@ end
 
 """Swap operands in binary operator for ops like pow and divide"""
 function swap_operands(ex::AbstractExpression, rng::AbstractRNG=default_rng())
-    tree = get_tree(ex)
-    ex = with_tree(ex, swap_operands(tree, rng))
+    tree = get_contents(ex)
+    ex = with_contents(ex, swap_operands(tree, rng))
     return ex
 end
 function swap_operands(tree::AbstractNode, rng::AbstractRNG=default_rng())
@@ -52,8 +52,8 @@ end
 function mutate_operator(
     ex::AbstractExpression{T}, options::Options, rng::AbstractRNG=default_rng()
 ) where {T<:DATA_TYPE}
-    tree = get_tree(ex)
-    ex = with_tree(ex, mutate_operator(tree, options, rng))
+    tree = get_contents(ex)
+    ex = with_contents(ex, mutate_operator(tree, options, rng))
     return ex
 end
 function mutate_operator(
@@ -75,8 +75,8 @@ end
 function mutate_constant(
     ex::AbstractExpression{T}, temperature, options::Options, rng::AbstractRNG=default_rng()
 ) where {T<:DATA_TYPE}
-    tree = get_tree(ex)
-    ex = with_tree(ex, mutate_constant(tree, temperature, options, rng))
+    tree = get_contents(ex)
+    ex = with_contents(ex, mutate_constant(tree, temperature, options, rng))
     return ex
 end
 function mutate_constant(
@@ -121,8 +121,8 @@ function append_random_op(
     rng::AbstractRNG=default_rng();
     makeNewBinOp::Union{Bool,Nothing}=nothing,
 ) where {T<:DATA_TYPE}
-    tree = get_tree(ex)
-    ex = with_tree(ex, append_random_op(tree, options, nfeatures, rng; makeNewBinOp))
+    tree = get_contents(ex)
+    ex = with_contents(ex, append_random_op(tree, options, nfeatures, rng; makeNewBinOp))
     return ex
 end
 function append_random_op(
@@ -164,8 +164,8 @@ function insert_random_op(
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
-    tree = get_tree(ex)
-    ex = with_tree(ex, insert_random_op(tree, options, nfeatures, rng))
+    tree = get_contents(ex)
+    ex = with_contents(ex, insert_random_op(tree, options, nfeatures, rng))
     return ex
 end
 function insert_random_op(
@@ -198,8 +198,8 @@ function prepend_random_op(
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
-    tree = get_tree(ex)
-    ex = with_tree(ex, prepend_random_op(tree, options, nfeatures, rng))
+    tree = get_contents(ex)
+    ex = with_contents(ex, prepend_random_op(tree, options, nfeatures, rng))
     return ex
 end
 function prepend_random_op(
@@ -259,8 +259,8 @@ function delete_random_op!(
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
-    tree = get_tree(ex)
-    ex = with_tree(ex, delete_random_op!(tree, options, nfeatures, rng))
+    tree = get_contents(ex)
+    ex = with_contents(ex, delete_random_op!(tree, options, nfeatures, rng))
     return ex
 end
 function delete_random_op!(
@@ -345,11 +345,11 @@ end
 function crossover_trees(
     ex1::AbstractExpression{T}, ex2::AbstractExpression{T}, rng::AbstractRNG=default_rng()
 ) where {T}
-    tree1 = get_tree(ex1)
-    tree2 = get_tree(ex2)
+    tree1 = get_contents(ex1)
+    tree2 = get_contents(ex2)
     out1, out2 = crossover_trees(tree1, tree2, rng)
-    ex1 = with_tree(ex1, out1)
-    ex2 = with_tree(ex2, out2)
+    ex1 = with_contents(ex1, out1)
+    ex2 = with_contents(ex2, out2)
     return ex1, ex2
 end
 
@@ -402,8 +402,8 @@ function get_two_nodes_without_loop(tree::AbstractNode, rng::AbstractRNG; max_at
 end
 
 function form_random_connection!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
-    tree = get_tree(ex)
-    return with_tree(ex, form_random_connection!(tree, rng))
+    tree = get_contents(ex)
+    return with_contents(ex, form_random_connection!(tree, rng))
 end
 function form_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     if length(tree) < 5
@@ -426,8 +426,8 @@ function form_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rn
 end
 
 function break_random_connection!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
-    tree = get_tree(ex)
-    return with_tree(ex, break_random_connection!(tree, rng))
+    tree = get_contents(ex)
+    return with_contents(ex, break_random_connection!(tree, rng))
 end
 function break_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     tree.degree == 0 && return tree

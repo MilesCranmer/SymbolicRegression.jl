@@ -10,7 +10,8 @@ using DynamicExpressions:
     constructorof,
     parse_expression,
     get_tree,
-    with_tree,
+    get_contents,
+    with_contents,
     with_metadata,
     count_constants
 using Random: default_rng, AbstractRNG
@@ -197,11 +198,11 @@ end
 function crossover_trees(
     ex1::ParametricExpression{T}, ex2::AbstractExpression{T}, rng::AbstractRNG=default_rng()
 ) where {T}
-    tree1 = get_tree(ex1)
-    tree2 = get_tree(ex2)
+    tree1 = get_contents(ex1)
+    tree2 = get_contents(ex2)
     out1, out2 = crossover_trees(tree1, tree2, rng)
-    ex1 = with_tree(ex1, out1)
-    ex2 = with_tree(ex2, out2)
+    ex1 = with_contents(ex1, out1)
+    ex2 = with_contents(ex2, out2)
 
     # We also randomly share parameters
     nparams1 = size(ex1.metadata.parameters, 1)
@@ -229,8 +230,8 @@ function mutate_constant(
 ) where {T<:DATA_TYPE}
     if rand(rng, Bool)
         # Normal mutation of inner constant
-        tree = get_tree(ex)
-        return with_tree(ex, mutate_constant(tree, temperature, options, rng))
+        tree = get_contents(ex)
+        return with_contents(ex, mutate_constant(tree, temperature, options, rng))
     else
         # Mutate parameters
         parameter_index = rand(rng, 1:(options.expression_options.max_parameters))

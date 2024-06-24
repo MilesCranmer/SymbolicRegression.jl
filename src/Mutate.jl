@@ -4,7 +4,7 @@ using DynamicExpressions:
     AbstractExpression,
     ParametricExpression,
     Node,
-    with_tree,
+    with_contents,
     get_tree,
     preserve_sharing,
     copy_node,
@@ -191,7 +191,7 @@ function next_generation(
             # We select a random size, though the generated tree
             # may have fewer nodes than we request.
             tree_size_to_generate = rand(1:curmaxsize)
-            tree = with_tree(
+            tree = with_contents(
                 tree,
                 gen_random_tree_fixed_size(tree_size_to_generate, options, nfeatures, T),
             )
