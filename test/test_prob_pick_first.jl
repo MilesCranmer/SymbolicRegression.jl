@@ -28,7 +28,7 @@ for reverse in [false, true]
                 score = 1 - score
             end
             test_loss = 1.0f0  # (arbitrary for this test)
-            PopMember(ex, score, test_loss, options)
+            PopMember(ex, score, test_loss, options; deterministic=false)
         end for i in 1:n
     ]
 
