@@ -74,7 +74,7 @@ function extra_init_params(
     parameter_names = embed ? ["p$i" for i in 1:num_params] : nothing
     let parameters =
             parameters === nothing ? randn(T, (num_params, num_classes)) : parameters
-        return (; parameter_names, parameters)
+        return (; parameters, parameter_names)
     end
 end
 
