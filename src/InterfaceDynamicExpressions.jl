@@ -9,6 +9,7 @@ using DynamicExpressions:
     AbstractExpressionNode,
     Node,
     GraphNode,
+    get_tree,
     get_operators
 using DynamicExpressions.StringsModule: needs_brackets
 using DynamicQuantities: dimension, ustrip
@@ -108,8 +109,9 @@ function eval_diff_tree_array(
     direction::Int,
 )
     A = expected_array_type(X)
+    # TODO: Add `AbstractExpression` implementation in `Expression.jl`
     return eval_diff_tree_array(
-        tree, X, get_operators(tree, options), direction
+        get_tree(tree), X, get_operators(tree, options), direction
     )::Tuple{A,A,Bool}
 end
 
@@ -158,8 +160,9 @@ function differentiable_eval_tree_array(
     options::Options,
 )
     A = expected_array_type(X)
+    # TODO: Add `AbstractExpression` implementation in `Expression.jl`
     return differentiable_eval_tree_array(
-        tree, X, get_operators(tree, options)
+        get_tree(tree), X, get_operators(tree, options)
     )::Tuple{A,Bool}
 end
 
