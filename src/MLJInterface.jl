@@ -131,9 +131,19 @@ function MMI.update(
     m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
 )
     options = old_fitresult === nothing ? get_options(m) : old_fitresult.options
-    return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
+    return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, nothing)
 end
-function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
+function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, classes)
+    if isnothing(classes) && MMI.istable(X) && haskey(X, :classes)
+        if !(X isa NamedTuple)
+            error("Classes can only be specified with named tuples.")
+        end
+        new_X = Base.structdiff(X, (; X.classes))
+        new_classes = X.classes
+        return _update(
+            m, verbosity, old_fitresult, old_cache, new_X, y, w, options, new_classes
+        )
+    end
     # To speed up iterative fits, we cache the types:
     types = if old_fitresult === nothing
         (;
@@ -183,6 +193,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         X_units=X_units_clean,
         y_units=y_units_clean,
         verbosity=verbosity,
+        extra=isnothing(classes) ? (;) : (; classes),
         # Help out with inference:
         v_dim_out=isa(m, SRRegressor) ? Val(1) : Val(2),
     )
@@ -342,9 +353,20 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
 end
 
 function eval_tree_mlj(
-    tree::Expression, X_t, m::AbstractSRRegressor, ::Type{T}, fitresult, i, prototype
+    tree::Expression,
+    X_t,
+    classes,
+    m::AbstractSRRegressor,
+    ::Type{T},
+    fitresult,
+    i,
+    prototype,
 ) where {T}
-    out, completed = eval_tree_array(tree, X_t, fitresult.options)
+    out, completed = if isnothing(classes)
+        eval_tree_array(tree, X_t, fitresult.options)
+    else
+        eval_tree_array(tree, X_t, classes, fitresult.options)
+    end
     if completed
         return wrap_units(out, fitresult.y_units, i)
     else
@@ -352,13 +374,22 @@ function eval_tree_mlj(
     end
 end
 
-function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRRegressor}
+function MMI.predict(
+    m::M, fitresult, Xnew; idx=nothing, classes=nothing
+) where {M<:AbstractSRRegressor}
     if Xnew isa NamedTuple && (haskey(Xnew, :idx) || haskey(Xnew, :data))
         @assert(
             haskey(Xnew, :idx) && haskey(Xnew, :data) && length(keys(Xnew)) == 2,
             "If specifying an equation index during prediction, you must use a named tuple with keys `idx` and `data`."
         )
-        return MMI.predict(m, fitresult, Xnew.data; idx=Xnew.idx)
+        return MMI.predict(m, fitresult, Xnew.data; idx=Xnew.idx, classes)
+    end
+    if !isnothing(classes) && MMI.istable(Xnew) && haskey(Xnew, :classes)
+        if !(Xnew isa NamedTuple)
+            error("Classes can only be specified with named tuples.")
+        end
+        Xnew2 = Base.structdiff(Xnew, (; Xnew.classes))
+        return MMI.predict(m, fitresult, Xnew2; idx, Xnew.classes)
     end
 
     params = full_report(m, fitresult; v_with_strings=Val(false))
@@ -379,12 +410,12 @@ function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRReg
 
     if M <: SRRegressor
         return eval_tree_mlj(
-            params.equations[idx], Xnew_t, m, T, fitresult, nothing, prototype
+            params.equations[idx], Xnew_t, classes, m, T, fitresult, nothing, prototype
         )
     elseif M <: MultitargetSRRegressor
         outs = [
             eval_tree_mlj(
-                params.equations[i][idx[i]], Xnew_t, m, T, fitresult, i, prototype
+                params.equations[i][idx[i]], Xnew_t, classes, m, T, fitresult, i, prototype
             ) for i in eachindex(idx, params.equations)
         ]
         out_matrix = reduce(hcat, outs)
