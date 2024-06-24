@@ -1,4 +1,4 @@
-@testitem "pretty print member" begin
+@testitem "pretty print member" tags = [:part3] begin
     using SymbolicRegression
 
     options = Options(; binary_operators=[+, ^])
@@ -18,8 +18,9 @@
     @test s_member == "PopMember(tree = ((x ^ 2.0) + 1.5), loss = 16.25, score = 1.0)"
 end
 
-@testitem "pretty print hall of fame" begin
+@testitem "pretty print hall of fame" tags = [:part1] begin
     using SymbolicRegression
+    using SymbolicRegression: embed_metadata
     using SymbolicRegression.CoreModule: safe_pow
 
     options = Options(; binary_operators=[+, safe_pow], maxsize=7)
@@ -39,6 +40,7 @@ end
     @test member isa PopMember{Float64,Float64,<:Expression{Float64,Node{Float64}}}
 
     hof = HallOfFame(options, dataset)
+    hof = embed_metadata(hof, options, dataset)
     hof.members[5] = member
     hof.exists[5] = true
     s_hof = strip(shower(hof))
