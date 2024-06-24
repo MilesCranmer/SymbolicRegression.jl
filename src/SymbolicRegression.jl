@@ -608,7 +608,7 @@ function equation_search(
     )
 end
 
-@stable default_mode = "disable" @noinline function _equation_search(
+@noinline function _equation_search(
     datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
 ) where {D<:Dataset}
     _validate_options(datasets, ropt, options)
