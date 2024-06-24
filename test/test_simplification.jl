@@ -1,6 +1,7 @@
 include("test_params.jl")
 using SymbolicRegression, Test
 using SymbolicUtils: simplify, Symbolic
+using DynamicExpressions.OperatorEnumConstructionModule: empty_all_globals!
 using Random: MersenneTwister
 using Base: ≈
 
@@ -9,6 +10,8 @@ function Base.:≈(a::String, b::String)
     b = replace(b, r"\s+" => "")
     return a == b
 end
+
+empty_all_globals!()
 
 binary_operators = (+, -, /, *)
 
