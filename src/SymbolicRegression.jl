@@ -187,9 +187,8 @@ using DispatchDoctor: @stable
     include("ProgressBars.jl")
     include("Migration.jl")
     include("SearchUtils.jl")
+    include("ExpressionBuilder.jl")
 end
-
-include("InterfaceExpressions.jl")
 
 using .CoreModule:
     MAX_DEGREE,
@@ -275,6 +274,7 @@ using .SearchUtilsModule:
     save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!
+using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
     include("deprecates.jl")
@@ -617,7 +617,7 @@ end
     _warmup_search!(state, datasets, ropt, options)
     _main_search_loop!(state, datasets, ropt, options)
     _tear_down!(state, ropt, options)
-    return _format_output(state, ropt)
+    return _format_output(state, datasets, ropt, options)
 end
 
 function _validate_options(
@@ -751,7 +751,7 @@ function _initialize_search!(
         # Recompute losses for the hall of fame, in
         # case the dataset changed:
         for j in eachindex(init_hall_of_fame, datasets, state.halls_of_fame)
-            hof = init_hall_of_fame[j]
+            hof = strip_metadata(init_hall_of_fame[j], options, datasets[j])
             for member in hof.members[hof.exists]
                 score, result_loss = score_func(datasets[j], member, options)
                 member.score = score
@@ -768,14 +768,14 @@ function _initialize_search!(
         saved_pop = load_saved_population(saved_state; out=j, pop=i)
         new_pop =
             if saved_pop !== nothing && length(saved_pop.members) == options.population_size
-                saved_pop::Population{T,L,N}
+                _saved_pop = strip_metadata(saved_pop, options, datasets[j])
                 ## Update losses:
-                for member in saved_pop.members
+                for member in _saved_pop.members
                     score, result_loss = score_func(datasets[j], member, options)
                     member.score = score
                     member.loss = result_loss
                 end
-                copy_pop = copy(saved_pop)
+                copy_pop = copy(_saved_pop)
                 @sr_spawner(
                     begin
                         (copy_pop, HallOfFame(options, datasets[j]), RecordType(), 0.0)
@@ -1094,10 +1094,20 @@ function _tear_down!(state::SearchState, ropt::RuntimeOptions, options::Options)
     @recorder json3_write(state.record[], options.recorder_file)
     return nothing
 end
-function _format_output(state::SearchState, ropt::RuntimeOptions)
-    out_hof = (ropt.dim_out == 1 ? only(state.halls_of_fame) : state.halls_of_fame)
+function _format_output(
+    state::SearchState, datasets, ropt::RuntimeOptions, options::Options
+)
+    nout = length(datasets)
+    out_hof = if ropt.dim_out == 1
+        embed_metadata(only(state.halls_of_fame), options, only(datasets))
+    else
+        map(j -> embed_metadata(state.halls_of_fame[j], options, datasets[j]), 1:nout)
+    end
     if ropt.return_state
-        return (state.last_pops, out_hof)
+        return (
+            map(j -> embed_metadata(state.last_pops[j], options, datasets[j]), 1:nout),
+            out_hof,
+        )
     else
         return out_hof
     end

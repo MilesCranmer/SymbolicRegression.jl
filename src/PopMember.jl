@@ -67,7 +67,7 @@ function PopMember(
     t::AbstractExpression{T},
     score::L,
     loss::L,
-    options::Options,
+    options::Union{Options,Nothing}=nothing,
     complexity::Union{Int,Nothing}=nothing;
     ref::Int=-1,
     parent::Int=-1,

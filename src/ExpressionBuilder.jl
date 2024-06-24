@@ -3,18 +3,23 @@ module ExpressionBuilderModule
 using DynamicExpressions:
     AbstractExpressionNode,
     AbstractExpression,
+    Expression,
     ParametricExpression,
     ParametricNode,
     constructorof,
     parse_expression,
     get_tree,
     with_tree,
+    with_metadata,
     count_constants
 using Random: default_rng, AbstractRNG
 using StatsBase: StatsBase
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
+using ..HallOfFameModule: HallOfFame
 using ..LossFunctionsModule: maybe_getindex
 using ..InterfaceDynamicExpressionsModule: eval_tree_array
+using ..PopulationModule: Population
+using ..PopMemberModule: PopMember
 
 import DynamicExpressions: get_operators, string_tree
 import ..CoreModule: create_expression
@@ -23,34 +28,130 @@ import ..MutationFunctionsModule:
 import ..LossFunctionsModule: eval_tree_dispatch
 import ..ConstantOptimizationModule: count_constants_for_optimization
 
-function create_expression(t::T, options::Options, dataset::Dataset{T,L}) where {T,L}
-    return create_expression(constructorof(options.node_type)(; val=t), options, dataset)
-end
 function create_expression(
-    t::AbstractExpressionNode{T}, options::Options, dataset::Dataset{T,L}
-) where {T,L}
-    return constructorof(options.expression_type)(
-        t;
-        operators=nothing,
-        variable_names=nothing,
-        extra_init_params(options.expression_type, options, dataset)...,
+    t::T, options::Options, dataset::Dataset{T,L}, ::Val{embed}=Val(false)
+) where {T,L,embed}
+    return create_expression(
+        constructorof(options.node_type)(; val=t), options, dataset, Val(embed)
     )
 end
-function create_expression(ex::AbstractExpression{T}, ::Options, ::Dataset{T,L}) where {T,L}
+function create_expression(
+    t::AbstractExpressionNode{T},
+    options::Options,
+    dataset::Dataset{T,L},
+    ::Val{embed}=Val(false),
+) where {T,L,embed}
+    return constructorof(options.expression_type)(
+        t; init_params(options, dataset, Val(embed))...
+    )
+end
+function create_expression(
+    ex::AbstractExpression{T}, ::Options, ::Dataset{T,L}, ::Val{embed}=Val(false)
+) where {T,L,embed}
     return ex
 end
-function extra_init_params(_, _, _)
+function init_params(
+    options::Options, dataset::Dataset{T,L}, ::Val{embed}=Val(false); kws...
+) where {T,L,embed}
+    return (;
+        operators=embed ? options.operators : nothing,
+        variable_names=embed ? dataset.variable_names : nothing,
+        extra_init_params(options.expression_type, options, dataset, Val(embed); kws...)...,
+    )
+end
+function extra_init_params(args...; kws...)
     return (;)
 end
 function extra_init_params(
-    ::Type{<:ParametricExpression}, options, dataset::Dataset{T,L}
-) where {T,L}
+    ::Type{<:ParametricExpression},
+    options,
+    dataset::Dataset{T,L},
+    ::Val{embed};
+    parameters=nothing,
+) where {T,L,embed}
     num_params = options.expression_options.max_parameters
     num_classes = length(unique(dataset.extra.classes))
-    parameter_names = nothing
-    parameters = randn(T, (num_params, num_classes))
-    return (; parameter_names, parameters)
+    parameter_names = embed ? ["p$i" for i in 1:num_params] : nothing
+    let parameters =
+            parameters === nothing ? randn(T, (num_params, num_classes)) : parameters
+        return (; parameter_names, parameters)
+    end
 end
+
+function embed_metadata(
+    ex::AbstractExpression, options::Options, dataset::Dataset{T,L}
+) where {T,L}
+    return with_metadata(ex; init_params(options, dataset, Val(true))...)
+end
+function embed_metadata(
+    member::PopMember, options::Options, dataset::Dataset{T,L}
+) where {T,L}
+    return PopMember(
+        embed_metadata(member.tree, options, dataset),
+        member.score,
+        member.loss,
+        nothing;
+        member.ref,
+        member.parent,
+        deterministic=options.deterministic,
+    )
+end
+function embed_metadata(
+    pop::Population, options::Options, dataset::Dataset{T,L}
+) where {T,L}
+    return Population(map(member -> embed_metadata(member, options, dataset), pop.members))
+end
+function embed_metadata(
+    hof::HallOfFame, options::Options, dataset::Dataset{T,L}
+) where {T,L}
+    return HallOfFame(
+        map(member -> embed_metadata(member, options, dataset), hof.members), hof.exists
+    )
+end
+function embed_metadata(
+    vec::Vector{H}, options::Options, dataset::Dataset{T,L}
+) where {T,L,H<:Union{HallOfFame,Population,PopMember}}
+    return map(elem -> embed_metadata(elem, options, dataset), vec)
+end
+"""
+Strips all metadata except for top-level information.
+"""
+function strip_metadata(ex::Expression, options::Options, dataset::Dataset{T,L}) where {T,L}
+    return with_metadata(ex; init_params(options, dataset, Val(false))...)
+end
+function strip_metadata(
+    ex::ParametricExpression, options::Options, dataset::Dataset{T,L}
+) where {T,L}
+    return with_metadata(
+        ex; init_params(options, dataset, Val(false); ex.metadata.parameters)...
+    )
+end
+function strip_metadata(
+    member::PopMember, options::Options, dataset::Dataset{T,L}
+) where {T,L}
+    return PopMember(
+        strip_metadata(member.tree, options, dataset),
+        member.score,
+        member.loss,
+        nothing;
+        member.ref,
+        member.parent,
+        deterministic=options.deterministic,
+    )
+end
+function strip_metadata(
+    pop::Population, options::Options, dataset::Dataset{T,L}
+) where {T,L}
+    return Population(map(member -> strip_metadata(member, options, dataset), pop.members))
+end
+function strip_metadata(
+    hof::HallOfFame, options::Options, dataset::Dataset{T,L}
+) where {T,L}
+    return HallOfFame(
+        map(member -> strip_metadata(member, options, dataset), hof.members), hof.exists
+    )
+end
+
 function eval_tree_dispatch(
     tree::ParametricExpression{T}, dataset::Dataset{T}, options::Options, idx
 ) where {T<:DATA_TYPE}
