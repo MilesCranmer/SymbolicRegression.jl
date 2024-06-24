@@ -3,7 +3,7 @@ module SymbolicRegressionSymbolicUtilsExt
 using SymbolicUtils: Symbolic
 using SymbolicRegression: AbstractExpressionNode, AbstractExpression, Node, Options
 using SymbolicRegression.MLJInterfaceModule: AbstractSRRegressor, get_options
-using DynamicExpressions: get_tree
+using DynamicExpressions: get_tree, get_operators
 
 import SymbolicRegression: node_to_symbolic, symbolic_to_node
 
@@ -15,7 +15,7 @@ Convert an expression to SymbolicUtils.jl form.
 function node_to_symbolic(
     tree::Union{AbstractExpressionNode,AbstractExpression}, options::Options; kws...
 )
-    return node_to_symbolic(get_tree(tree), options.operators; kws...)
+    return node_to_symbolic(get_tree(tree), get_operators(tree, options); kws...)
 end
 function node_to_symbolic(
     tree::Union{AbstractExpressionNode,AbstractExpression}, m::AbstractSRRegressor; kws...
@@ -38,10 +38,10 @@ end
 function Base.convert(
     ::Type{Symbolic},
     tree::Union{AbstractExpressionNode,AbstractExpression},
-    options::Options;
+    options::Union{Options,Nothing}=nothing;
     kws...,
 )
-    return convert(Symbolic, get_tree(tree), options.operators; kws...)
+    return convert(Symbolic, get_tree(tree), get_operators(tree, options); kws...)
 end
 function Base.convert(
     ::Type{Symbolic},

@@ -242,9 +242,11 @@ function mutate_constant(
     end
 end
 
-@unstable get_operators(::ParametricExpression, options::Options) = options.operators
-function string_tree(tree::ParametricExpression, options::Options; kws...)
-    return string_tree(tree, get_operators(tree, options); kws...)
+@unstable function get_operators(ex::AbstractExpression, options::Options)
+    return get_operators(ex, options.operators)
+end
+@unstable function get_operators(ex::AbstractExpressionNode, options::Options)
+    return get_operators(ex, options.operators)
 end
 
 end
