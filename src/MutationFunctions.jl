@@ -343,8 +343,8 @@ function gen_random_tree_fixed_size(
 end
 
 function crossover_trees(
-    ex1::AbstractExpression{T}, ex2::AbstractExpression{T}, rng::AbstractRNG=default_rng()
-) where {T}
+    ex1::E, ex2::E, rng::AbstractRNG=default_rng()
+) where {T,E<:AbstractExpression{T}}
     tree1 = get_contents(ex1)
     tree2 = get_contents(ex2)
     out1, out2 = crossover_trees(tree1, tree2, rng)
@@ -355,10 +355,8 @@ end
 
 """Crossover between two expressions"""
 function crossover_trees(
-    tree1::AbstractExpressionNode{T},
-    tree2::AbstractExpressionNode{T},
-    rng::AbstractRNG=default_rng(),
-) where {T}
+    tree1::N, tree2::N, rng::AbstractRNG=default_rng()
+) where {T,N<:AbstractExpressionNode{T}}
     tree1 = copy_node(tree1)
     tree2 = copy_node(tree2)
 

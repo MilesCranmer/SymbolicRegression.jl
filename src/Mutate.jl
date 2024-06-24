@@ -374,7 +374,7 @@ end
 """Generate a generation via crossover of two members."""
 function crossover_generation(
     member1::P, member2::P, dataset::D, curmaxsize::Int, options::Options
-)::Tuple{P,P,Bool,Float64} where {T,L,D<:Dataset{T,L},P<:PopMember{T,L}}
+)::Tuple{P,P,Bool,Float64} where {T,L,D<:Dataset{T,L},N,P<:PopMember{T,L,N}}
     tree1 = member1.tree
     tree2 = member2.tree
     crossover_accepted = false
@@ -427,7 +427,7 @@ function crossover_generation(
         afterSize1;
         parent=member1.ref,
         deterministic=options.deterministic,
-    )
+    )::P
     baby2 = PopMember(
         child_tree2,
         afterScore2,
@@ -436,7 +436,7 @@ function crossover_generation(
         afterSize2;
         parent=member2.ref,
         deterministic=options.deterministic,
-    )
+    )::P
 
     crossover_accepted = true
     return baby1, baby2, crossover_accepted, num_evals
