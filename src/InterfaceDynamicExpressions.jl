@@ -3,6 +3,7 @@ module InterfaceDynamicExpressionsModule
 using Printf: @sprintf
 using DynamicExpressions: DynamicExpressions
 using DynamicExpressions:
+    AbstractOperatorEnum,
     OperatorEnum,
     GenericOperatorEnum,
     AbstractExpression,
@@ -356,5 +357,8 @@ function DynamicExpressions.EvaluationHelpersModule._grad_evaluator(
         tree, X, get_operators(tree, options); turbo=options.turbo, kws...
     )
 end
+
+combine_operators(tree::AbstractExpressionNode, ::AbstractOperatorEnum) = tree
+# TODO: Move this definition to DynamicExpressions.jl
 
 end

@@ -165,9 +165,7 @@ function next_generation(
         elseif mutation_choice == :simplify
             @assert options.should_simplify
             simplify_tree!(tree, options.operators)
-            if tree isa Node
-                tree = combine_operators(tree, options.operators)
-            end
+            tree = combine_operators(tree, options.operators)
             @recorder tmp_recorder["type"] = "partial_simplify"
             mutation_accepted = true
             return (
