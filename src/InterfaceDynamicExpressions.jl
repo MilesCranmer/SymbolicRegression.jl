@@ -77,6 +77,24 @@ function eval_tree_array(
         kws...,
     )::Tuple{A,Bool}
 end
+function eval_tree_array(
+    tree::Union{AbstractExpressionNode,AbstractExpression},
+    X::AbstractMatrix,
+    classes::AbstractVector{<:Integer},
+    options::Options;
+    kws...,
+)
+    A = expected_array_type(X)
+    return eval_tree_array(
+        tree,
+        X,
+        classes,
+        get_operators(tree, options);
+        turbo=options.turbo,
+        bumper=options.bumper,
+        kws...,
+    )::Tuple{A,Bool}
+end
 
 # Improve type inference by telling Julia the expected array returned
 function expected_array_type(X::AbstractArray)

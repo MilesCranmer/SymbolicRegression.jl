@@ -353,7 +353,7 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
 end
 
 function eval_tree_mlj(
-    tree::Expression,
+    tree::AbstractExpression,
     X_t,
     classes,
     m::AbstractSRRegressor,
@@ -384,7 +384,7 @@ function MMI.predict(
         )
         return MMI.predict(m, fitresult, Xnew.data; idx=Xnew.idx, classes)
     end
-    if !isnothing(classes) && MMI.istable(Xnew) && haskey(Xnew, :classes)
+    if isnothing(classes) && MMI.istable(Xnew) && haskey(Xnew, :classes)
         if !(Xnew isa NamedTuple)
             error("Classes can only be specified with named tuples.")
         end
