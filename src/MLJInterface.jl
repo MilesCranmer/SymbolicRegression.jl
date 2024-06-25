@@ -474,10 +474,16 @@ MMI.metadata_pkg(
     is_wrapper=false,
 )
 
+const input_scitype = Union{
+    MMI.Table(MMI.Continuous),
+    AbstractMatrix{<:MMI.Continuous},
+    MMI.Table(MMI.Continuous, MMI.Count),
+}
+
 # TODO: Allow for Count data, and coerce it into Continuous as needed.
 MMI.metadata_model(
     SRRegressor;
-    input_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    input_scitype,
     target_scitype=AbstractVector{<:MMI.Continuous},
     supports_weights=true,
     reports_feature_importances=false,
@@ -486,7 +492,7 @@ MMI.metadata_model(
 )
 MMI.metadata_model(
     MultitargetSRRegressor;
-    input_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    input_scitype,
     target_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
     supports_weights=true,
     reports_feature_importances=false,
