@@ -13,13 +13,14 @@ using DynamicExpressions:
     get_contents,
     with_contents,
     with_metadata,
-    count_constants
+    count_constants,
+    eval_tree_array
 using Random: default_rng, AbstractRNG
 using StatsBase: StatsBase
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 using ..HallOfFameModule: HallOfFame
 using ..LossFunctionsModule: maybe_getindex
-using ..InterfaceDynamicExpressionsModule: eval_tree_array, expected_array_type
+using ..InterfaceDynamicExpressionsModule: expected_array_type
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
 

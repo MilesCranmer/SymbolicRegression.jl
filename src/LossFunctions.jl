@@ -3,10 +3,15 @@ module LossFunctionsModule
 using Random: MersenneTwister
 using StatsBase: StatsBase
 using DynamicExpressions:
-    AbstractExpression, AbstractExpressionNode, Node, parse_expression, get_tree
+    AbstractExpression,
+    AbstractExpressionNode,
+    Node,
+    parse_expression,
+    get_tree,
+    eval_tree_array
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
-using ..InterfaceDynamicExpressionsModule: eval_tree_array, expected_array_type
+using ..InterfaceDynamicExpressionsModule: expected_array_type
 using ..CoreModule: Options, Dataset, create_expression, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
 using ..DimensionalAnalysisModule: violates_dimensional_constraints
