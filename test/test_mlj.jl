@@ -1,22 +1,7 @@
-using SymbolicRegression: SymbolicRegression
-using SymbolicRegression:
-    Node, SRRegressor, MultitargetSRRegressor, node_to_symbolic, symbolic_to_node
-using MLJTestInterface: MLJTestInterface as MTI
-using MLJBase: machine, fit!, report, predict
-using SymbolicUtils: SymbolicUtils
-using Suppressor: @capture_err
+@testitem "Generic interface tests" begin
+    using SymbolicRegression
+    using MLJTestInterface: MLJTestInterface as MTI
 
-macro quiet(ex)
-    return quote
-        redirect_stderr(devnull) do
-            $ex
-        end
-    end |> esc
-end
-
-stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
-
-@testset "Generic interface tests" begin
     failures, summary = MTI.test(
         [SRRegressor], MTI.make_regression()...; mod=@__MODULE__, verbosity=0, throw=true
     )
@@ -32,86 +17,99 @@ stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
     @test isempty(failures)
 end
 
-@testset "Variable names" begin
-    @testset "Single outputs" begin
-        X = (a=rand(32), b=rand(32))
-        y = X.a .^ 2.1
-        # We also make sure the deprecated npop and npopulations still work:
-        model = SRRegressor(; niterations=10, npop=33, npopulations=15, stop_kws...)
-        mach = machine(model, X, y)
-        fit!(mach)
-        rep = report(mach)
-        @test occursin("a", rep.equation_strings[rep.best_idx])
-        ypred_good = predict(mach, X)
-        @test sum(abs2, predict(mach, X) .- y) / length(y) < 1e-5
+@testitem "Variable names - single outputs" begin
+    using SymbolicRegression
+    using SymbolicRegression: Node
+    using MLJBase
+    using SymbolicUtils
 
-        @testset "Check that we can choose the equation" begin
-            ypred_same = predict(mach, (data=X, idx=rep.best_idx))
-            @test ypred_good == ypred_same
+    stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
 
-            ypred_bad = predict(mach, (data=X, idx=1))
-            @test ypred_good != ypred_bad
-        end
+    X = (a=rand(32), b=rand(32))
+    y = X.a .^ 2.1
+    # We also make sure the deprecated npop and npopulations still work:
+    model = SRRegressor(; niterations=10, npop=33, npopulations=15, stop_kws...)
+    mach = machine(model, X, y)
+    fit!(mach)
+    rep = report(mach)
+    @test occursin("a", rep.equation_strings[rep.best_idx])
+    ypred_good = predict(mach, X)
+    @test sum(abs2, predict(mach, X) .- y) / length(y) < 1e-5
 
-        @testset "Smoke test SymbolicUtils" begin
-            eqn = node_to_symbolic(rep.equations[rep.best_idx], model)
-            n = symbolic_to_node(eqn, model)
-            eqn2 = convert(SymbolicUtils.Symbolic, n, model)
-            n2 = convert(Node, eqn2, model)
-        end
-    end
+    # Check that we can choose the equation
+    ypred_same = predict(mach, (data=X, idx=rep.best_idx))
+    @test ypred_good == ypred_same
 
-    @testset "Multiple outputs" begin
-        X = (a=rand(32), b=rand(32))
-        y = X.a .^ 2.1
-        model = MultitargetSRRegressor(; niterations=10, stop_kws...)
-        mach = machine(model, X, reduce(hcat, [reshape(y, :, 1) for i in 1:3]))
-        fit!(mach)
-        rep = report(mach)
-        @test all(
-            eq -> occursin("a", eq), [rep.equation_strings[i][rep.best_idx[i]] for i in 1:3]
-        )
-        ypred_good = predict(mach, X)
+    ypred_bad = predict(mach, (data=X, idx=1))
+    @test ypred_good != ypred_bad
 
-        @testset "Test that we can choose the equation" begin
-            ypred_same = predict(mach, (data=X, idx=rep.best_idx))
-            @test ypred_good == ypred_same
-
-            ypred_bad = predict(mach, (data=X, idx=[1, 1, 1]))
-            @test ypred_good != ypred_bad
-
-            ypred_mixed = predict(mach, (data=X, idx=[rep.best_idx[1], 1, rep.best_idx[3]]))
-            @test ypred_mixed == hcat(ypred_good[:, 1], ypred_bad[:, 2], ypred_good[:, 3])
-
-            @test_throws AssertionError predict(mach, (data=X,))
-            VERSION >= v"1.8" &&
-                @test_throws "If specifying an equation index during" predict(
-                    mach, (data=X,)
-                )
-            VERSION >= v"1.8" &&
-                @test_throws "If specifying an equation index during" predict(
-                    mach, (X=X, idx=1)
-                )
-        end
-    end
-
-    @testset "Named outputs" begin
-        X = (b1=randn(32), b2=randn(32))
-        Y = (c1=X.b1 .* X.b2, c2=X.b1 .+ X.b2)
-        w = ones(32)
-        model = MultitargetSRRegressor(; niterations=10, stop_kws...)
-        mach = machine(model, X, Y, w)
-        fit!(mach)
-        test_outs = predict(mach, X)
-        @test isempty(setdiff((:c1, :c2), keys(test_outs)))
-        @test_throws AssertionError predict(mach, (a1=randn(32), b2=randn(32)))
-        VERSION >= v"1.8" && @test_throws "Variable names do not match fitted" predict(
-            mach, (b1=randn(32), a2=randn(32))
-        )
-    end
+    # Smoke test SymbolicUtils
+    eqn = node_to_symbolic(rep.equations[rep.best_idx], model)
+    n = symbolic_to_node(eqn, model)
+    eqn2 = convert(SymbolicUtils.Symbolic, n, model)
+    n2 = convert(Node, eqn2, model)
 end
 
-@testset "Good predictions" begin
+@testitem "Variable names - multiple outputs" begin
+    using SymbolicRegression
+    using MLJBase
+
+    stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
+
+    X = (a=rand(32), b=rand(32))
+    y = X.a .^ 2.1
+    model = MultitargetSRRegressor(; niterations=10, stop_kws...)
+    mach = machine(model, X, reduce(hcat, [reshape(y, :, 1) for i in 1:3]))
+    fit!(mach)
+    rep = report(mach)
+    @test all(
+        eq -> occursin("a", eq), [rep.equation_strings[i][rep.best_idx[i]] for i in 1:3]
+    )
+    ypred_good = predict(mach, X)
+
+    # Test that we can choose the equation
+    ypred_same = predict(mach, (data=X, idx=rep.best_idx))
+    @test ypred_good == ypred_same
+
+    ypred_bad = predict(mach, (data=X, idx=[1, 1, 1]))
+    @test ypred_good != ypred_bad
+
+    ypred_mixed = predict(mach, (data=X, idx=[rep.best_idx[1], 1, rep.best_idx[3]]))
+    @test ypred_mixed == hcat(ypred_good[:, 1], ypred_bad[:, 2], ypred_good[:, 3])
+
+    @test_throws AssertionError predict(mach, (data=X,))
+    VERSION >= v"1.8" &&
+        @test_throws "If specifying an equation index during" predict(mach, (data=X,))
+    VERSION >= v"1.8" &&
+        @test_throws "If specifying an equation index during" predict(mach, (X=X, idx=1))
+end
+
+@testitem "Variable names - named outputs" begin
+    using SymbolicRegression
+    using MLJBase
+
+    stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
+
+    X = (b1=randn(32), b2=randn(32))
+    Y = (c1=X.b1 .* X.b2, c2=X.b1 .+ X.b2)
+    w = ones(32)
+    model = MultitargetSRRegressor(; niterations=10, stop_kws...)
+    mach = machine(model, X, Y, w)
+    fit!(mach)
+    test_outs = predict(mach, X)
+    @test isempty(setdiff((:c1, :c2), keys(test_outs)))
+    @test_throws AssertionError predict(mach, (a1=randn(32), b2=randn(32)))
+    VERSION >= v"1.8" && @test_throws "Variable names do not match fitted" predict(
+        mach, (b1=randn(32), a2=randn(32))
+    )
+end
+
+@testitem "Good predictions" begin
+    using SymbolicRegression
+    using MLJBase
+
+    stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
+
     X = randn(100, 3)
     Y = X
     model = MultitargetSRRegressor(; niterations=10, stop_kws...)
@@ -120,7 +118,12 @@ end
     @test sum(abs2, predict(mach, X) .- Y) / length(X) < 1e-6
 end
 
-@testset "Helpful errors" begin
+@testitem "Helpful errors" begin
+    using SymbolicRegression
+    using MLJBase
+
+    include("test_params.jl")
+
     model = MultitargetSRRegressor()
     mach = machine(model, randn(32, 3), randn(32); scitype_check_level=0)
     @test_throws AssertionError @quiet(fit!(mach))
@@ -138,7 +141,11 @@ end
     @test_throws ErrorException @quiet(fit!(mach; verbosity=0))
 end
 
-@testset "Unfinished search" begin
+@testitem "Unfinished search" begin
+    using SymbolicRegression
+    using MLJBase
+    using Suppressor
+
     model = SRRegressor(; timeout_in_seconds=1e-10)
     mach = machine(model, randn(32, 3), randn(32))
     fit!(mach)

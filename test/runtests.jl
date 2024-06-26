@@ -144,9 +144,7 @@ end
     include("test_early_stop.jl")
 end
 
-@testitem "Test MLJ integration" tags = [:part3] begin
-    include("test_mlj.jl")
-end
+include("test_mlj.jl")
 
 @testitem "Testing whether we can move operators to workers." tags = [:part1] begin
     include("test_custom_operators_multiprocessing.jl")

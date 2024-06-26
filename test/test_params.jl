@@ -69,3 +69,11 @@ const default_params = (
 test_info(_, x) = error("Test failed: $x")
 test_info(_, ::Test.Pass) = nothing
 test_info(f::F, ::Test.Fail) where {F} = f()
+
+macro quiet(ex)
+    return quote
+        redirect_stderr(devnull) do
+            $ex
+        end
+    end |> esc
+end
