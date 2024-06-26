@@ -5,9 +5,6 @@ using Random, Bumper, LoopVectorization
 include("test_params.jl")
 
 function test_mixed(i, batching::Bool, weighted::Bool, parallelism)
-    batching = i in (0, 1)
-    weighted = i in (0, 2)
-
     progress = false
     warmup_maxsize_by = 0.0f0
     optimizer_algorithm = "NelderMead"
