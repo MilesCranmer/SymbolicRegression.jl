@@ -315,10 +315,10 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `optimizer_probability`: Probability of performing optimization of constants at
     the end of a given iteration.
 - `optimizer_iterations`: How many optimization iterations to perform. This gets
-   passed to `Optim.Options` as `iterations`. The default is 8.
+    passed to `Optim.Options` as `iterations`. The default is 8.
 - `optimizer_f_calls_limit`: How many function calls to allow during optimization.
     This gets passed to `Optim.Options` as `f_calls_limit`. The default is
-    `0` which means no limit.
+    `10_000`.
 - `optimizer_options`: General options for the constant optimization. For details
     we refer to the documentation on `Optim.Options` from the `Optim.jl` package.
     Options can be provided here as `NamedTuple`, e.g. `(iterations=16,)`, as a
@@ -705,7 +705,7 @@ $(OPTION_DESCRIPTIONS)
     if !isa(optimizer_options, Optim.Options)
         optimizer_iterations = isnothing(optimizer_iterations) ? 8 : optimizer_iterations
         optimizer_f_calls_limit = if isnothing(optimizer_f_calls_limit)
-            0
+            10_000
         else
             optimizer_f_calls_limit
         end
