@@ -8,7 +8,6 @@ function test_mixed(i, batching::Bool, weighted::Bool, parallelism)
     batching = i in (0, 1)
     weighted = i in (0, 2)
 
-    numprocs = 2
     progress = false
     warmup_maxsize_by = 0.0f0
     optimizer_algorithm = "NelderMead"
@@ -23,7 +22,6 @@ function test_mixed(i, batching::Bool, weighted::Bool, parallelism)
     T = Float32
 
     if i == 0
-        numprocs = nothing #Try serial computation here.
         progress = true #Also try the progress bar.
         warmup_maxsize_by = 0.5f0 #Smaller maxsize at first, build up slowly
         optimizer_algorithm = "BFGS"
@@ -32,7 +30,6 @@ function test_mixed(i, batching::Bool, weighted::Bool, parallelism)
         multi = true
         use_frequency = true
     elseif i == 3
-        numprocs = nothing
         crossover_probability = 0.02f0
         use_frequency_in_tournament = true
         bumper = true
@@ -46,6 +43,8 @@ function test_mixed(i, batching::Bool, weighted::Bool, parallelism)
         T = Float64
         turbo = true
     end
+
+    numprocs = parallelism == :multiprocessing ? 2 : nothing
 
     options = if i == 5
         SymbolicRegression.Options(;

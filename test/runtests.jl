@@ -110,9 +110,7 @@ end
     include("test_dataset.jl")
 end
 
-@testitem "Test mixed settings." tags = [:part1] begin
-    include("test_mixed.jl")
-end
+include("test_mixed.jl")
 
 @testitem "Testing fast-cycle and custom variable names" tags = [:part2] begin
     include("test_fast_cycle.jl")
