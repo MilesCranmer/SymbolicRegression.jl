@@ -15,7 +15,7 @@ y = [
 ]
 
 model = SRRegressor(;
-    niterations=40,
+    niterations=10,
     binary_operators=[+, *, /, -],
     unary_operators=[cos, exp],
     populations=10,
