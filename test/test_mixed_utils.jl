@@ -4,7 +4,7 @@ using Random, Bumper, LoopVectorization
 
 include("test_params.jl")
 
-function test_mixed(i, batching::Bool, weighted::Bool)
+function test_mixed(i, batching::Bool, weighted::Bool, parallelism)
     batching = i in (0, 1)
     weighted = i in (0, 2)
 
@@ -14,7 +14,6 @@ function test_mixed(i, batching::Bool, weighted::Bool)
     optimizer_algorithm = "NelderMead"
     multi = false
     tournament_selection_p = 1.0
-    parallelism = :multiprocessing
     crossover_probability = 0.0f0
     skip_mutation_failures = false
     use_frequency = false
@@ -25,7 +24,6 @@ function test_mixed(i, batching::Bool, weighted::Bool)
 
     if i == 0
         numprocs = nothing #Try serial computation here.
-        parallelism = :serial
         progress = true #Also try the progress bar.
         warmup_maxsize_by = 0.5f0 #Smaller maxsize at first, build up slowly
         optimizer_algorithm = "BFGS"
@@ -33,9 +31,7 @@ function test_mixed(i, batching::Bool, weighted::Bool)
     elseif i == 1
         multi = true
         use_frequency = true
-        parallelism = "multiprocessing"
     elseif i == 3
-        parallelism = :multithreading
         numprocs = nothing
         crossover_probability = 0.02f0
         use_frequency_in_tournament = true
