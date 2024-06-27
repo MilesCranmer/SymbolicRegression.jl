@@ -30,13 +30,12 @@ mach = machine(model, X, y)
 
 fit!(mach)
 idx1 = lastindex(report(mach).equations)
-ypred1 = predict(mach, (data=X, idx=idx1))
+loss1 = last(report(mach).losses)
 
 # Should keep all parameters
 fit!(mach)
 idx2 = lastindex(report(mach).equations)
-ypred2 = predict(mach, (data=X, idx=idx2))
+loss2 = last(report(mach).losses)
 
 # Should get better:
-@test sum(i -> abs2(ypred1[i] - y[i]), eachindex(y)) >=
-    sum(i -> abs2(ypred2[i] - y[i]), eachindex(y))
+@assert loss1 >= loss2
