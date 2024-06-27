@@ -66,3 +66,33 @@ end
 
     @test s_hof == true_s
 end
+
+@testitem "pretty print expression" tags = [:part2] begin
+    using SymbolicRegression
+    using Suppressor: @capture_out
+
+    options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos])
+    ex = @parse_expression(
+        cos(x) + y * y, operators = options.operators, variable_names = [:x, :y]
+    )
+
+    s = sprint((io, ex) -> print_tree(io, ex, options), ex)
+    @test strip(s) == "cos(x) + (y * y)"
+
+    s2 = @capture_out begin
+        print_tree(ex, options)
+    end
+    @test strip(s2) == "cos(x) + (y * y)"
+
+    # Updating options won't change printout, UNLESS
+    # we pass the options.
+    options = Options(; binary_operators=[/, *, -, +], unary_operators=[sin])
+
+    s3 = @capture_out begin
+        print_tree(ex)
+    end
+    @test strip(s3) == "cos(x) + (y * y)"
+
+    s4 = sprint((io, ex) -> print_tree(io, ex, options), ex)
+    @test strip(s4) == "sin(x) / (y - y)"
+end
