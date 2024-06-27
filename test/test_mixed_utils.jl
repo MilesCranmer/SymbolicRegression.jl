@@ -68,6 +68,7 @@ function test_mixed(i, batching::Bool, weighted::Bool, parallelism)
             use_frequency_in_tournament=use_frequency_in_tournament,
             turbo=turbo,
             bumper=bumper,
+            early_stop_condition=1e-6,
         )
     end
 
