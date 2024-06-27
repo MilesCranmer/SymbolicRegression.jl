@@ -1,5 +1,6 @@
 module InterfaceDynamicQuantitiesModule
 
+using DispatchDoctor: @unstable
 using DynamicQuantities:
     UnionAbstractQuantity,
     AbstractDimensions,
@@ -70,7 +71,7 @@ end
 Recursively finds the dimension type from an array, or,
 if no quantity is found, returns the default type.
 """
-function get_dimensions_type(A::AbstractArray, default::Type{D}) where {D}
+@unstable function get_dimensions_type(A::AbstractArray, default::Type{D}) where {D}
     i = findfirst(a -> isa(a, UnionAbstractQuantity), A)
     if i === nothing
         return D

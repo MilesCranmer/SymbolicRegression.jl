@@ -215,15 +215,18 @@ fit!(mach)
 ```
 
 You can observe that all expressions with a loss under
-our penalty are dimensionally consistent! (The `"[⋅]"` indicates free units in a constant,
+our penalty are dimensionally consistent! (The `"[?]"` indicates free units in a constant,
 which can cancel out other units in the expression.) For example,
 
 ```julia
-"y[m s⁻² kg] = (M[kg] * 2.6353e-22[⋅])"
+"y[m s⁻² kg] = (M[kg] * 2.6353e-22[?])"
 ```
 
 would indicate that the expression is dimensionally consistent, with
 a constant `"2.6353e-22[m s⁻²]"`.
+
+Note that you can also search for dimensionless units by settings
+`dimensionless_constants_only` to `true`.
 
 ## 7. Additional features
 

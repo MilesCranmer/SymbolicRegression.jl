@@ -6,6 +6,7 @@ module SearchUtilsModule
 using Printf: @printf, @sprintf
 using Distributed
 using StatsBase: mean
+using DispatchDoctor: @unstable
 
 using DynamicExpressions: AbstractExpressionNode, string_tree
 using ..UtilsModule: subscriptify
@@ -36,8 +37,13 @@ Base.@kwdef struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE}
     runtests::Bool
     verbosity::Int64
     progress::Bool
+    parallelism::Val{PARALLELISM}
+    dim_out::Val{DIM_OUT}
+    return_state::Val{RETURN_STATE}
 end
-function Base.getproperty(roptions::RuntimeOptions{P,D,R}, name::Symbol) where {P,D,R}
+@unstable @inline function Base.getproperty(
+    roptions::RuntimeOptions{P,D,R}, name::Symbol
+) where {P,D,R}
     if name == :parallelism
         return P
     elseif name == :dim_out
@@ -105,8 +111,8 @@ macro sr_spawner(expr, kws...)
     @assert all(ex -> ex.head == :(=), kws)
     @assert any(ex -> ex.args[1] == :parallelism, kws)
     @assert any(ex -> ex.args[1] == :worker_idx, kws)
-    parallelism = kws[findfirst(ex -> ex.args[1] == :parallelism, kws)].args[2]
-    worker_idx = kws[findfirst(ex -> ex.args[1] == :worker_idx, kws)].args[2]
+    parallelism = kws[findfirst(ex -> ex.args[1] == :parallelism, kws)::Int].args[2]
+    worker_idx = kws[findfirst(ex -> ex.args[1] == :worker_idx, kws)::Int].args[2]
     return quote
         if $(parallelism) == :serial
             $(expr)
@@ -181,32 +187,28 @@ function check_for_user_quit(reader::StdinReader)::Bool
     return false
 end
 
-function check_for_loss_threshold(hallOfFame, options::Options)::Bool
-    options.early_stop_condition === nothing && return false
+function check_for_loss_threshold(halls_of_fame, options::Options)::Bool
+    return _check_for_loss_threshold(halls_of_fame, options.early_stop_condition, options)
+end
 
-    # Check if all nout are below stopping condition.
-    for hof in hallOfFame
-        stop_conditions = [
-            exists &&
-            options.early_stop_condition(member.loss, compute_complexity(member, options))
-            for (exists, member) in zip(hof.exists, hof.members)
-        ]
-        if any(stop_conditions)
-            # This means some expressions hit the stop condition.
-        else
-            return false
+function _check_for_loss_threshold(_, ::Nothing, ::Options)
+    return false
+end
+function _check_for_loss_threshold(halls_of_fame, f::F, options::Options) where {F}
+    return all(halls_of_fame) do hof
+        any(hof.members[hof.exists]) do member
+            f(member.loss, compute_complexity(member, options))::Bool
         end
     end
-    return true
 end
 
 function check_for_timeout(start_time::Float64, options::Options)::Bool
     return options.timeout_in_seconds !== nothing &&
-           time() - start_time > options.timeout_in_seconds
+           time() - start_time > options.timeout_in_seconds::Float64
 end
 
 function check_max_evals(num_evals, options::Options)::Bool
-    return options.max_evals !== nothing && options.max_evals <= sum(sum, num_evals)
+    return options.max_evals !== nothing && options.max_evals::Int <= sum(sum, num_evals)
 end
 
 const TIME_TYPE = Float64

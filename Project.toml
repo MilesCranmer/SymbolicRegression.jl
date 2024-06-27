@@ -1,11 +1,12 @@
 name = "SymbolicRegression"
 uuid = "8254be44-1295-4e6a-a16d-46603ac705cb"
 authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
-version = "0.24.2"
+version = "0.24.5"
 
 [deps]
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+DispatchDoctor = "8d63f2c5-f18a-4cf2-ba9d-b3f60fc568c8"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 DynamicExpressions = "a40a106e-89c9-4ca8-8020-a735e8728b6b"
 DynamicQuantities = "06fc5a27-2a28-4c7c-a15d-362465fb6821"
@@ -24,7 +25,6 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
-Tricks = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
 
 [weakdeps]
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
@@ -37,13 +37,14 @@ SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 [compat]
 Compat = "^4.2"
 Dates = "1"
+DispatchDoctor = "0.4"
 Distributed = "1"
 DynamicExpressions = "0.16"
-DynamicQuantities = "0.10, 0.11, 0.12, 0.13"
+DynamicQuantities = "0.10, 0.11, 0.12, 0.13, 0.14"
 JSON3 = "1"
 LineSearches = "7"
 LossFunctions = "0.10, 0.11"
-MLJModelInterface = "~1.5, ~1.6, ~1.7, ~1.8, ~1.9"
+MLJModelInterface = "~1.5, ~1.6, ~1.7, ~1.8, ~1.9, ~1.10"
 MacroTools = "0.4, 0.5"
 Optim = "~1.8, ~1.9"
 PackageExtensionCompat = "1"
@@ -57,7 +58,6 @@ SpecialFunctions = "0.10.1, 1, 2"
 StatsBase = "0.33, 0.34"
 SymbolicUtils = "0.19, ^1.0.5"
 TOML = "1"
-Tricks = "0.1"
 julia = "1.6"
 
 [extras]
