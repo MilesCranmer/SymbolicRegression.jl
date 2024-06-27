@@ -27,4 +27,12 @@ model = SRRegressor(;
 
 mach = machine(model, X, y)
 fit!(mach)
-ypred = predict(mach, X)
+ypred1 = predict(mach, X)
+
+# Should keep all parameters
+fit!(mach)
+ypred2 = predict(mach, X)
+
+# Should get better:
+@test sum(i -> abs2(ypred1[i] - y[i]), eachindex(y)) >=
+    sum(i -> abs2(ypred2[i] - y[i]), eachindex(y))
