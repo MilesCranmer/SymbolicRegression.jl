@@ -1,4 +1,4 @@
-@testitem "Generic interface tests" begin
+@testitem "Generic interface tests" tags = [:part1] begin
     using SymbolicRegression
     using MLJTestInterface: MLJTestInterface as MTI
 
@@ -17,7 +17,7 @@
     @test isempty(failures)
 end
 
-@testitem "Variable names - single outputs" begin
+@testitem "Variable names - single outputs" tags = [:part3] begin
     using SymbolicRegression
     using SymbolicRegression: Node
     using MLJBase
@@ -50,7 +50,7 @@ end
     n2 = convert(Node, eqn2, model)
 end
 
-@testitem "Variable names - multiple outputs" begin
+@testitem "Variable names - multiple outputs" tags = [:part1] begin
     using SymbolicRegression
     using MLJBase
 
@@ -84,7 +84,7 @@ end
         @test_throws "If specifying an equation index during" predict(mach, (X=X, idx=1))
 end
 
-@testitem "Variable names - named outputs" begin
+@testitem "Variable names - named outputs" tags = [:part1] begin
     using SymbolicRegression
     using MLJBase
 
@@ -104,7 +104,7 @@ end
     )
 end
 
-@testitem "Good predictions" begin
+@testitem "Good predictions" tags = [:part1] begin
     using SymbolicRegression
     using MLJBase
 
@@ -118,7 +118,7 @@ end
     @test sum(abs2, predict(mach, X) .- Y) / length(X) < 1e-6
 end
 
-@testitem "Helpful errors" begin
+@testitem "Helpful errors" tags = [:part3] begin
     using SymbolicRegression
     using MLJBase
 
@@ -141,7 +141,7 @@ end
     @test_throws ErrorException @quiet(fit!(mach; verbosity=0))
 end
 
-@testitem "Unfinished search" begin
+@testitem "Unfinished search" tags = [:part3] begin
     using SymbolicRegression
     using MLJBase
     using Suppressor
