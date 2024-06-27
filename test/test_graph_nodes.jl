@@ -89,3 +89,45 @@ end
     ])
     # Either it breaks the connection or not
 end
+
+@testitem "GraphNode form connection mutation" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression.MutationFunctionsModule: form_random_connection!
+    using Random: MersenneTwister
+
+    options = Options(;
+        binary_operators=[+, -, *, /],
+        unary_operators=[cos, sin],
+        maxsize=30,
+        node_type=GraphNode,
+    )
+
+    x1, x2 = [GraphNode{Float64}(; feature=i) for i in 1:2]
+
+    tree = cos(x1 * x2 + 1.5)
+    ex = Expression(tree; operators=options.operators, variable_names=["x1", "x2"])
+    rng = MersenneTwister(0)
+    expressions = [copy(ex) for _ in 1:3_000]
+    expressions = [form_random_connection!(ex, rng) for ex in expressions]
+    strings = [strip(sprint(print_tree, ex)) for ex in expressions]
+    strings = sort(unique(strings); by=length)
+
+    # All possible connections that can be made
+    @test Set(strings) == Set([
+        "cos(x1)",
+        "cos(x2)",
+        "cos(1.5)",
+        "cos(x1 * x2)",
+        "cos(x2 + 1.5)",
+        "cos(x1 + 1.5)",
+        "cos(1.5 + {1.5})",
+        "cos((x1 * x2) + 1.5)",
+        "cos((x1 * x2) + {x2})",
+        "cos((x1 * x2) + {x1})",
+        "cos((x2 * {x2}) + 1.5)",
+        "cos((x1 * {x1}) + 1.5)",
+        "cos((x1 * 1.5) + {1.5})",
+        "cos((1.5 * x2) + {1.5})",
+        "cos((x1 * x2) + {(x1 * x2)})",
+    ])
+end
