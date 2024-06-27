@@ -23,6 +23,7 @@ model = SRRegressor(;
     expression_options=(; max_parameters=2),
     autodiff_backend=:Zygote,
     parallelism=:multithreading,
+    early_stop_condition=1e-6,
 )
 
 mach = machine(model, X, y)
