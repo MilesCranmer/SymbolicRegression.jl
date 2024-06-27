@@ -16,6 +16,11 @@
     @test member isa PopMember{Float64,Float64,<:Expression{Float64,Node{Float64}}}
     s_member = shower(member)
     @test s_member == "PopMember(tree = ((x ^ 2.0) + 1.5), loss = 16.25, score = 1.0)"
+
+    # New options shouldn't change this
+    options = Options(; binary_operators=[-, /])
+    s_member = shower(member)
+    @test s_member == "PopMember(tree = ((x ^ 2.0) + 1.5), loss = 16.25, score = 1.0)"
 end
 
 @testitem "pretty print hall of fame" tags = [:part1] begin
