@@ -307,17 +307,6 @@ function DE.print_tree(
 end
 
 """
-    convert(::Type{<:AbstractExpressionNode{T}}, tree::AbstractExpressionNode, options::Options; kws...) where {T}
-
-Convert an equation to a different base type `T`.
-"""
-function Base.convert(
-    ::Type{N}, tree::Union{AbstractExpression,AbstractExpressionNode}, options::Options
-) where {T,N<:AbstractExpressionNode{T}}
-    return convert(N, tree, DE.get_operators(tree, options))
-end
-
-"""
     @extend_operators options
 
 Extends all operators defined in this options object to work on the
