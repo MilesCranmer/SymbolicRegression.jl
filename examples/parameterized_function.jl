@@ -2,6 +2,7 @@ using SymbolicRegression
 using Random: MersenneTwister
 using Zygote
 using MLJBase: machine, fit!, predict, report
+using Test
 
 rng = MersenneTwister(0)
 X = NamedTuple{(:x1, :x2, :x3, :x4, :x5)}(ntuple(_ -> randn(rng, Float32, 30), Val(5)))
@@ -30,12 +31,14 @@ mach = machine(model, X, y)
 
 fit!(mach)
 idx1 = lastindex(report(mach).equations)
-loss1 = last(report(mach).losses)
+ypred1 = predict(mach, X)
+loss1 = sum(i -> abs(ypred1[i] - y[i]), eachindex(y))
 
 # Should keep all parameters
 fit!(mach)
 idx2 = lastindex(report(mach).equations)
-loss2 = last(report(mach).losses)
+ypred2 = predict(mach, X)
+loss2 = sum(i -> abs(ypred2[i] - y[i]), eachindex(y))
 
 # Should get better:
-@assert loss1 >= loss2
+@test loss1 >= loss2

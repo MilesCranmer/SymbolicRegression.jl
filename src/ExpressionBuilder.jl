@@ -11,6 +11,7 @@ using DynamicExpressions:
     parse_expression,
     get_tree,
     get_contents,
+    get_metadata,
     with_contents,
     with_metadata,
     count_constants,
@@ -45,7 +46,7 @@ end
     ::Val{embed}=Val(false),
 ) where {T,L,embed}
     return constructorof(options.expression_type)(
-        t; init_params(options, dataset, Val(embed))...
+        t; init_params(options, dataset, nothing, Val(embed))...
     )
 end
 function create_expression(
@@ -54,38 +55,45 @@ function create_expression(
     return ex
 end
 @unstable function init_params(
-    options::Options, dataset::Dataset{T,L}, ::Val{embed}=Val(false); kws...
+    options::Options,
+    dataset::Dataset{T,L},
+    prototype::Union{Nothing,AbstractExpression},
+    ::Val{embed},
 ) where {T,L,embed}
     return (;
         operators=embed ? options.operators : nothing,
         variable_names=embed ? dataset.variable_names : nothing,
-        extra_init_params(options.expression_type, options, dataset, Val(embed); kws...)...,
+        extra_init_params(
+            options.expression_type, prototype, options, dataset, Val(embed)
+        )...,
     )
 end
-function extra_init_params(args...; kws...)
+function extra_init_params(args...)
     return (;)
 end
 function extra_init_params(
     ::Type{<:ParametricExpression},
+    prototype::Union{Nothing,ParametricExpression},
     options,
     dataset::Dataset{T,L},
-    ::Val{embed};
-    parameters=nothing,
+    ::Val{embed},
 ) where {T,L,embed}
     num_params = options.expression_options.max_parameters
     num_classes = length(unique(dataset.extra.classes))
     parameter_names = embed ? ["p$i" for i in 1:num_params] : nothing
-    let parameters =
-            parameters === nothing ? randn(T, (num_params, num_classes)) : parameters
-        return (; parameters, parameter_names)
+    _parameters = if prototype === nothing
+        randn(T, (num_params, num_classes))
+    else
+        copy(get_metadata(prototype).parameters)
     end
+    return (; parameters=_parameters, parameter_names)
 end
 
 @unstable begin
     function embed_metadata(
         ex::AbstractExpression, options::Options, dataset::Dataset{T,L}
     ) where {T,L}
-        return with_metadata(ex; init_params(options, dataset, Val(true))...)
+        return with_metadata(ex; init_params(options, dataset, ex, Val(true))...)
     end
     function embed_metadata(
         member::PopMember, options::Options, dataset::Dataset{T,L}
@@ -123,14 +131,12 @@ end
 
 """Strips all metadata except for top-level information"""
 function strip_metadata(ex::Expression, options::Options, dataset::Dataset{T,L}) where {T,L}
-    return with_metadata(ex; init_params(options, dataset, Val(false))...)
+    return with_metadata(ex; init_params(options, dataset, ex, Val(false))...)
 end
 function strip_metadata(
     ex::ParametricExpression, options::Options, dataset::Dataset{T,L}
 ) where {T,L}
-    return with_metadata(
-        ex; init_params(options, dataset, Val(false); ex.metadata.parameters)...
-    )
+    return with_metadata(ex; init_params(options, dataset, ex, Val(false))...)
 end
 function strip_metadata(
     member::PopMember, options::Options, dataset::Dataset{T,L}
