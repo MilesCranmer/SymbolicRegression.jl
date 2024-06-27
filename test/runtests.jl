@@ -18,6 +18,8 @@ end
     include("test_tree_construction.jl")
 end
 
+include("test_graph_nodes.jl")
+
 @testitem "Test SymbolicUtils interface" tags = [:part1] begin
     include("test_symbolic_utils.jl")
 end
