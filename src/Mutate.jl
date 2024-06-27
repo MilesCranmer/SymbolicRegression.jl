@@ -168,6 +168,7 @@ function next_generation(
             tree = combine_operators(tree, options.operators)
             @recorder tmp_recorder["type"] = "partial_simplify"
             mutation_accepted = true
+            is_success_always_possible = true
             return (
                 PopMember(
                     tree,
@@ -180,11 +181,8 @@ function next_generation(
                 mutation_accepted,
                 num_evals,
             )
-
-            is_success_always_possible = true
             # Simplification shouldn't hurt complexity; unless some non-symmetric constraint
             # to commutative operator...
-
         elseif mutation_choice == :randomize
             # We select a random size, though the generated tree
             # may have fewer nodes than we request.
@@ -210,9 +208,8 @@ function next_generation(
             num_evals += new_num_evals
             @recorder tmp_recorder["type"] = "optimize"
             mutation_accepted = true
-            return (cur_member, mutation_accepted, num_evals)
-
             is_success_always_possible = true
+            return (cur_member, mutation_accepted, num_evals)
         elseif mutation_choice == :do_nothing
             @recorder begin
                 tmp_recorder["type"] = "identity"
@@ -220,6 +217,7 @@ function next_generation(
                 tmp_recorder["reason"] = "identity"
             end
             mutation_accepted = true
+            is_success_always_possible = true
             return (
                 PopMember(
                     tree,
