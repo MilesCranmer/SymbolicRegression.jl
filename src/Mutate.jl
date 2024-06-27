@@ -249,10 +249,7 @@ function next_generation(
         attempts += 1
     end
     #############################################
-    if !(tree isa AbstractExpression)
-        @error "Failed after $(mutation_choice)"
-        error()
-    end
+    tree::AbstractExpression
 
     if !successful_mutation
         @recorder begin
