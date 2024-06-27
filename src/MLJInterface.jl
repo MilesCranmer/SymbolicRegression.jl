@@ -377,19 +377,22 @@ end
 function MMI.predict(
     m::M, fitresult, Xnew; idx=nothing, classes=nothing
 ) where {M<:AbstractSRRegressor}
+    return _predict(m, fitresult, Xnew, idx, classes)
+end
+function _predict(m::M, fitresult, Xnew, idx, classes) where {M<:AbstractSRRegressor}
     if Xnew isa NamedTuple && (haskey(Xnew, :idx) || haskey(Xnew, :data))
         @assert(
             haskey(Xnew, :idx) && haskey(Xnew, :data) && length(keys(Xnew)) == 2,
             "If specifying an equation index during prediction, you must use a named tuple with keys `idx` and `data`."
         )
-        return MMI.predict(m, fitresult, Xnew.data; idx=Xnew.idx, classes)
+        return _predict(m, fitresult, Xnew.data, Xnew.idx, classes)
     end
     if isnothing(classes) && MMI.istable(Xnew) && haskey(Xnew, :classes)
         if !(Xnew isa NamedTuple)
             error("Classes can only be specified with named tuples.")
         end
         Xnew2 = Base.structdiff(Xnew, (; Xnew.classes))
-        return MMI.predict(m, fitresult, Xnew2; idx, Xnew.classes)
+        return _predict(m, fitresult, Xnew2, idx, Xnew.classes)
     end
 
     params = full_report(m, fitresult; v_with_strings=Val(false))
