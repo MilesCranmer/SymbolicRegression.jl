@@ -45,6 +45,9 @@ export Population,
     gen_random_tree,
     gen_random_tree_fixed_size,
     @extend_operators,
+    get_tree,
+    get_contents,
+    get_metadata,
 
     #Operators
     plus,
@@ -110,7 +113,10 @@ using DynamicExpressions:
     simplify_tree!,
     tree_mapreduce,
     set_default_variable_names!,
-    node_type
+    node_type,
+    get_tree,
+    get_contents,
+    get_metadata
 using DynamicExpressions: with_type_parameters
 @reexport using LossFunctions:
     MarginLoss,

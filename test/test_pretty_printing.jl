@@ -79,20 +79,28 @@ end
     s = sprint((io, ex) -> print_tree(io, ex, options), ex)
     @test strip(s) == "cos(x) + (y * y)"
 
-    s2 = @capture_out begin
+    s = @capture_out begin
         print_tree(ex, options)
     end
-    @test strip(s2) == "cos(x) + (y * y)"
+    @test strip(s) == "cos(x) + (y * y)"
+
+    # Works with the tree itself too
+    s = @capture_out begin
+        print_tree(get_tree(ex), options)
+    end
+    @test strip(s) == "cos(x1) + (x2 * x2)"
+    s = sprint((io, ex) -> print_tree(io, ex, options), get_tree(ex))
+    @test strip(s) == "cos(x1) + (x2 * x2)"
 
     # Updating options won't change printout, UNLESS
     # we pass the options.
     options = Options(; binary_operators=[/, *, -, +], unary_operators=[sin])
 
-    s3 = @capture_out begin
+    s = @capture_out begin
         print_tree(ex)
     end
-    @test strip(s3) == "cos(x) + (y * y)"
+    @test strip(s) == "cos(x) + (y * y)"
 
-    s4 = sprint((io, ex) -> print_tree(io, ex, options), ex)
-    @test strip(s4) == "sin(x) / (y - y)"
+    s = sprint((io, ex) -> print_tree(io, ex, options), ex)
+    @test strip(s) == "sin(x) / (y - y)"
 end
