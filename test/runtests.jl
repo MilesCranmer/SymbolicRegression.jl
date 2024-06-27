@@ -33,6 +33,7 @@ end
 @testitem "Test derivatives" tags = [:part2] begin
     include("test_derivatives.jl")
 end
+include("test_expression_derivatives.jl")
 
 @testitem "Test simplification" tags = [:part3] begin
     include("test_simplification.jl")
