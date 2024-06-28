@@ -229,7 +229,8 @@ Regular sleep has issues: https://discourse.julialang.org/t/julia-seems-an-order
 function systemsleep(dt::Number)
     task = Threads.@spawn Libc.systemsleep(dt)
     yield()
-    return fetch(task)
+    fetch(task)
+    return nothing
 end
 
 end
