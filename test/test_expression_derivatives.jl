@@ -100,11 +100,9 @@ end
     (val, grad) = value_and_gradient(f, options.autodiff_backend, ex)
 
     @test val isa Float64
-    @show typeof(grad)
-
-    # TODO: This is currently broken –
-    # @test grad isa Vector{Float64}
-    # @test val isa Float64
-    # @test typeof(grad.tree) <: DynamicExpressions.ChainRulesModule.NodeTangent{Float64, Node{Float64}, Vector{Float64}}
-    # @test typeof(grad.tree.gradient) <: Vector{Float64}
+    @test grad isa NamedTuple
+    @test grad.tree isa DynamicExpressions.ChainRulesModule.NodeTangent{
+        Float64,ParametricNode{Float64},Vector{Float64}
+    }
+    @test grad.metadata._data.parameters isa Matrix{Float64}
 end
