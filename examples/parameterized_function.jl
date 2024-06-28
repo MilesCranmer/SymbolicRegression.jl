@@ -42,3 +42,4 @@ loss2 = sum(i -> abs(ypred2[i] - y[i]), eachindex(y))
 
 # Should get better:
 @test loss1 >= loss2
+
