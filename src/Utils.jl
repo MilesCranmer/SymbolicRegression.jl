@@ -222,14 +222,12 @@ end
 
 json3_write(args...) = error("Please load the JSON3.jl package.")
 
-const USE_SYSTEMSLEEP = Threads.nthreads() > 1
-
 """
 A version of `sleep` that is not limited to 1e-3 seconds.
 Regular sleep has issues: https://discourse.julialang.org/t/julia-seems-an-order-of-magnitude-slower-than-python-when-printing-to-the-terminal-because-of-issue-with-sleep/78151/44
 """
 function systemsleep(dt::Number)
-    !USE_SYSTEMSLEEP && return sleep(dt)
+    Threads.nthreads() == 1 && return (sleep(dt); nothing)
     task = Threads.@spawn Libc.systemsleep(dt)
     yield()
     fetch(task)
