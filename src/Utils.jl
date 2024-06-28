@@ -222,4 +222,14 @@ end
 
 json3_write(args...) = error("Please load the JSON3.jl package.")
 
+"""
+A version of `sleep` that is not limited to 1e-3 seconds.
+Regular sleep has issues: https://discourse.julialang.org/t/julia-seems-an-order-of-magnitude-slower-than-python-when-printing-to-the-terminal-because-of-issue-with-sleep/78151/44
+"""
+function systemsleep(dt::Number)
+    task = Threads.@spawn Libc.systemsleep(dt)
+    yield()
+    return fetch(task)
+end
+
 end

@@ -208,7 +208,7 @@ using .CoreModule:
     erf,
     erfc,
     atanh_clip
-using .UtilsModule: is_anonymous_function, recursive_merge, json3_write
+using .UtilsModule: is_anonymous_function, recursive_merge, json3_write, systemsleep
 using .ComplexityModule: compute_complexity
 using .CheckConstraintsModule: check_constraints
 using .AdaptiveParsimonyModule:
@@ -1004,13 +1004,7 @@ function _main_search_loop!(
                 )
             end
         end
-        let
-            t = Threads.@spawn Libc.systemsleep(1e-6)
-            yield()
-            fetch(t)
-        end
-        # Regular sleep has issues:
-        # https://discourse.julialang.org/t/julia-seems-an-order-of-magnitude-slower-than-python-when-printing-to-the-terminal-because-of-issue-with-sleep/78151/44
+        systemsleep(1e-6)
 
         ################################################################
         ## Search statistics
