@@ -112,9 +112,7 @@ function optimize_and_simplify_population(
         if options.should_simplify
             tree = pop.members[j].tree
             tree = simplify_tree!(tree, options.operators)
-            if tree isa Node
-                tree = combine_operators(tree, options.operators)
-            end
+            tree = combine_operators(tree, options.operators)
             pop.members[j].tree = tree
         end
         if options.should_optimize_constants && do_optimization[j]
