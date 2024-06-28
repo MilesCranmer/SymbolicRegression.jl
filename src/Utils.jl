@@ -226,13 +226,12 @@ json3_write(args...) = error("Please load the JSON3.jl package.")
 A version of `sleep` that is not limited to 1e-3 seconds.
 Regular sleep has issues: https://discourse.julialang.org/t/julia-seems-an-order-of-magnitude-slower-than-python-when-printing-to-the-terminal-because-of-issue-with-sleep/78151/44
 """
-function systemsleep(seconds::Real)
-    if Sys.iswindows()
-        sleep(seconds)
-        return nothing
+function systemsleep(s::Real)
+    if Sys.iswindows() || Threads.nthreads() == 1
+        sleep(s)
+    else
+        fetch(Threads.@spawn(Libc.systemsleep(s)))
     end
-    microseconds = round(Int, 1e6 * seconds)
-    @threadcall(:usleep, Int, (Int,), microseconds)
     return nothing
 end
 
