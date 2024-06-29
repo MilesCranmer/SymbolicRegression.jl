@@ -227,7 +227,9 @@ function crossover_trees(
     return ex1, ex2
 end
 
-count_constants_for_optimization(ex::ParametricExpression) = count_constants(get_tree(ex))
+function count_constants_for_optimization(ex::ParametricExpression)
+    return count_constants(get_tree(ex)) + length(ex.metadata.parameters)
+end
 
 function mutate_constant(
     ex::ParametricExpression{T},

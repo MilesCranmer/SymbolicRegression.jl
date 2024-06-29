@@ -3,7 +3,14 @@ module ConstantOptimizationModule
 using LineSearches: LineSearches
 using Optim: Optim
 using DifferentiationInterface: value_and_gradient
-using DynamicExpressions: Expression, Node, count_constants, get_constants, set_constants!
+using DynamicExpressions:
+    AbstractExpression,
+    Expression,
+    Node,
+    count_constants,
+    get_constants,
+    set_constants!,
+    extract_gradient
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_loss, loss_to_score, batch_sample
@@ -40,6 +47,8 @@ function dispatch_optimize_constants(
         idx,
     )
 end
+
+"""How many constants will be optimized."""
 count_constants_for_optimization(ex::Expression) = count_constants(ex)
 
 function _optimize_constants(
@@ -47,26 +56,23 @@ function _optimize_constants(
 )::Tuple{P,Float64} where {T,L,P<:PopMember{T,L}}
     tree = member.tree
     eval_fraction = options.batching ? (options.batch_size / dataset.n) : 1.0
-    f = Evaluator(dataset, options, idx)
+    x0, refs = get_constants(tree)
+    @assert count_constants_for_optimization(tree) == length(x0)
+    f = Evaluator(tree, refs, dataset, options, idx)
     fg! = GradEvaluator(f)
     obj = if algorithm isa Optim.Newton || options.autodiff_backend === nothing
         f
     else
         Optim.only_fg!(fg!)
     end
-    baseline = f(tree)
-    x0, refs = get_constants(tree)
-    result = Optim.optimize(obj, tree, algorithm, optimizer_options)
+    baseline = f(x0)
+    result = Optim.optimize(obj, x0, algorithm, optimizer_options)
     num_evals = result.f_calls * eval_fraction
     # Try other initial conditions:
     for _ in 1:(options.optimizer_nrestarts)
-        tmptree = copy(tree)
         eps = randn(T, size(x0)...)
         xt = @. x0 * (T(1) + T(1//2) * eps)
-        set_constants!(tmptree, xt, refs)
-        tmpresult = Optim.optimize(
-            obj, tmptree, algorithm, optimizer_options; make_copy=false
-        )
+        tmpresult = Optim.optimize(obj, xt, algorithm, optimizer_options)
         num_evals += tmpresult.f_calls * eval_fraction
         # TODO: Does this need to take into account h_calls?
 
@@ -76,31 +82,41 @@ function _optimize_constants(
     end
 
     if result.minimum < baseline
-        member.tree = result.minimizer::typeof(member.tree)
-        member.loss = eval_loss(member.tree, dataset, options; regularization=true, idx=idx)
+        member.tree = tree
+        member.loss = f(result.minimizer; regularization=true)
         member.score = loss_to_score(
             member.loss, dataset.use_baseline, dataset.baseline_loss, member, options
         )
         member.birth = get_birth_order(; deterministic=options.deterministic)
         num_evals += eval_fraction
+    else
+        set_constants!(member.tree, x0, refs)
     end
 
     return member, num_evals
 end
 
-struct Evaluator{D<:Dataset,O<:Options,I} <: Function
+struct Evaluator{N<:AbstractExpression,R,D<:Dataset,O<:Options,I} <: Function
+    tree::N
+    refs::R
     dataset::D
     options::O
     idx::I
 end
-(e::Evaluator)(t) = eval_loss(t, e.dataset, e.options; regularization=false, idx=e.idx)
+function (e::Evaluator)(x::AbstractVector; regularization=false)
+    set_constants!(e.tree, x, e.refs)
+    return eval_loss(e.tree, e.dataset, e.options; regularization, e.idx)
+end
 struct GradEvaluator{F<:Evaluator} <: Function
     f::F
 end
-function (g::GradEvaluator)(F, G, t)
-    (val, grad) = value_and_gradient(g.f, g.f.options.autodiff_backend, t)
-    if G !== nothing && grad !== nothing && grad.tree !== nothing
-        G .= grad.tree.gradient
+function (g::GradEvaluator)(_, G, x::AbstractVector)
+    set_constants!(g.f.tree, x, g.f.refs)
+    (val, grad) = value_and_gradient(g.f.options.autodiff_backend, g.f.tree) do tree
+        eval_loss(tree, g.f.dataset, g.f.options; regularization=false, idx=g.f.idx)
+    end
+    if G !== nothing && grad !== nothing
+        G .= extract_gradient(grad, g.f.tree)
     end
     return val
 end
