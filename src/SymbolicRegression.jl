@@ -208,7 +208,7 @@ using .CoreModule:
     erf,
     erfc,
     atanh_clip
-using .UtilsModule: is_anonymous_function, recursive_merge, json3_write, systemsleep
+using .UtilsModule: is_anonymous_function, recursive_merge, json3_write
 using .ComplexityModule: compute_complexity
 using .CheckConstraintsModule: check_constraints
 using .AdaptiveParsimonyModule:
@@ -1004,7 +1004,7 @@ function _main_search_loop!(
                 )
             end
         end
-        systemsleep(1e-6)
+        yield()
 
         ################################################################
         ## Search statistics
