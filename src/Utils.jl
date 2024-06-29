@@ -230,7 +230,16 @@ function systemsleep(s::Real)
     if Sys.iswindows() || Threads.nthreads() == 1
         sleep(s)
     else
-        fetch(Threads.@spawn(Libc.systemsleep(s)))
+        # Since we put this on a thread, we might need to adjust
+        # to the actual start time
+        start = time()
+        task = Threads.@spawn let
+            adjusted_s = s - (time() - start)
+            if adjusted_s > 0
+                Libc.systemsleep(adjusted_s)
+            end
+        end
+        fetch(task)
     end
     return nothing
 end
