@@ -268,8 +268,7 @@ using .SearchUtilsModule:
     check_for_timeout,
     check_max_evals,
     ResourceMonitor,
-    start_work_monitor!,
-    stop_work_monitor!,
+    record_channel_state!,
     estimate_work_fraction,
     update_progress_bar!,
     print_search_state,
@@ -887,10 +886,11 @@ function _main_search_loop!(
     end
     kappa = 0
     resource_monitor = ResourceMonitor(;
-        absolute_start_time=time(),
         # Storing n times as many monitoring intervals as populations seems like it will
         # help get accurate resource estimates:
-        num_intervals_to_store=options.populations * 100 * nout,
+        max_recordings=options.populations * 100 * nout,
+        start_reporting_at=options.populations * 3 * nout,
+        window_size=options.populations * 2 * nout,
     )
     while sum(state.cycles_remaining) > 0
         kappa += 1
@@ -914,11 +914,12 @@ function _main_search_loop!(
         else
             true
         end
+        record_channel_state!(resource_monitor, population_ready)
+
         # Don't start more if this output has finished its cycles:
         # TODO - this might skip extra cycles?
         population_ready &= (state.cycles_remaining[j] > 0)
         if population_ready
-            start_work_monitor!(resource_monitor)
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record, cur_num_evals) = if ropt.parallelism in
                 (
@@ -1013,7 +1014,6 @@ function _main_search_loop!(
             state.cur_maxsizes[j] = get_cur_maxsize(;
                 options, ropt.total_cycles, cycles_remaining=state.cycles_remaining[j]
             )
-            stop_work_monitor!(resource_monitor)
             move_window!(state.all_running_search_statistics[j])
             if ropt.progress
                 head_node_occupation = estimate_work_fraction(resource_monitor)

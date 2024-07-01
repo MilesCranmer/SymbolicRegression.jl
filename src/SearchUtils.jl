@@ -211,61 +211,33 @@ function check_max_evals(num_evals, options::Options)::Bool
     return options.max_evals !== nothing && options.max_evals::Int <= sum(sum, num_evals)
 end
 
-const TIME_TYPE = Float64
+"""
+This struct is used to monitor resources.
 
-"""This struct is used to monitor resources."""
+Whenever we check a channel, we record if it was empty or not.
+This gives us a measure for how much of a bottleneck there is
+at the head worker.
+"""
 Base.@kwdef mutable struct ResourceMonitor
-    """The time the search started."""
-    absolute_start_time::TIME_TYPE = time()
-    """The time the head worker started doing work."""
-    start_work::TIME_TYPE = Inf
-    """The time the head worker finished doing work."""
-    stop_work::TIME_TYPE = Inf
-
-    num_starts::UInt = 0
-    num_stops::UInt = 0
-    work_intervals::Vector{TIME_TYPE} = TIME_TYPE[]
-    rest_intervals::Vector{TIME_TYPE} = TIME_TYPE[]
-
-    """Number of intervals to store."""
-    num_intervals_to_store::Int
+    population_ready::Vector{Bool} = Bool[]
+    max_recordings::Int
+    start_reporting_at::Int
+    window_size::Int
 end
 
-function start_work_monitor!(monitor::ResourceMonitor)
-    monitor.start_work = time()
-    monitor.num_starts += 1
-    if monitor.num_stops > 0
-        push!(monitor.rest_intervals, monitor.start_work - monitor.stop_work)
-        if length(monitor.rest_intervals) > monitor.num_intervals_to_store
-            popfirst!(monitor.rest_intervals)
-        end
-    end
-    return nothing
-end
-
-function stop_work_monitor!(monitor::ResourceMonitor)
-    monitor.stop_work = time()
-    push!(monitor.work_intervals, monitor.stop_work - monitor.start_work)
-    monitor.num_stops += 1
-    @assert monitor.num_stops == monitor.num_starts
-    if length(monitor.work_intervals) > monitor.num_intervals_to_store
-        popfirst!(monitor.work_intervals)
+function record_channel_state!(monitor::ResourceMonitor, state)
+    push!(monitor.population_ready, state)
+    if length(monitor.population_ready) > monitor.max_recordings
+        popfirst!(monitor.population_ready)
     end
     return nothing
 end
 
 function estimate_work_fraction(monitor::ResourceMonitor)::Float64
-    if monitor.num_stops <= 1
+    if length(monitor.population_ready) <= monitor.start_reporting_at
         return 0.0  # Can't estimate from only one interval, due to JIT.
     end
-    work_intervals = monitor.work_intervals
-    rest_intervals = monitor.rest_intervals
-    # Trim 1st, in case we are still in the first interval.
-    if monitor.num_stops <= monitor.num_intervals_to_store + 1
-        work_intervals = work_intervals[2:end]
-        rest_intervals = rest_intervals[2:end]
-    end
-    return mean(work_intervals) / (mean(work_intervals) + mean(rest_intervals))
+    return mean(monitor.population_ready[(end - (monitor.window_size - 1)):end])
 end
 
 function get_load_string(; head_node_occupation::Float64, parallelism=:serial)
