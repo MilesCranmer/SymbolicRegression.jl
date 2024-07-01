@@ -1028,7 +1028,7 @@ function _main_search_loop!(
                 )
             end
         end
-        sleep(1e-6)
+        yield()
 
         ################################################################
         ## Search statistics
