@@ -115,7 +115,8 @@ struct GradEvaluator{F<:Evaluator,AD<:Union{Nothing,AbstractADType},EX} <: Funct
 end
 GradEvaluator(f::F, backend::AD) where {F,AD} = GradEvaluator(f, backend, nothing)
 
-function (g::GradEvaluator{<:Any,<:Any})(_, G, x::AbstractVector)
+function (g::GradEvaluator{<:Any,AD})(_, G, x::AbstractVector) where {AD}
+    AD isa AutoEnzyme && error("Please load the `Enzyme.jl` package.")
     set_constants!(g.f.tree, x, g.f.refs)
     (val, grad) = value_and_gradient(g.backend, g.f.tree) do tree
         eval_loss(tree, g.f.dataset, g.f.options; regularization=false, idx=g.f.idx)
@@ -124,9 +125,6 @@ function (g::GradEvaluator{<:Any,<:Any})(_, G, x::AbstractVector)
         G .= extract_gradient(grad, g.f.tree)
     end
     return val
-end
-function (g::GradEvaluator{<:Any,<:AutoEnzyme})(args...)
-    return error("Please load the `Enzyme.jl` package.")
 end
 
 end
