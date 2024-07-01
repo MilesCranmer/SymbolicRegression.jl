@@ -15,16 +15,18 @@ y = [
     i in eachindex(X.classes)
 ]
 
+stop_at = Ref(1e-6)
+
 model = SRRegressor(;
-    niterations=10,
+    niterations=100,
     binary_operators=[+, *, /, -],
     unary_operators=[cos, exp],
-    populations=10,
+    populations=30,
     expression_type=ParametricExpression,
     expression_options=(; max_parameters=2),
     autodiff_backend=:Zygote,
     parallelism=:multithreading,
-    early_stop_condition=1e-6,
+    early_stop_condition=(loss, _) -> loss < stop_at[],
 )
 
 mach = machine(model, X, y)
@@ -35,6 +37,7 @@ ypred1 = predict(mach, (data=X, idx=idx1))
 loss1 = sum(i -> abs(ypred1[i] - y[i]), eachindex(y))
 
 # Should keep all parameters
+stop_at[] = 1e-7
 fit!(mach)
 idx2 = lastindex(report(mach).equations)
 ypred2 = predict(mach, (data=X, idx=idx2))
