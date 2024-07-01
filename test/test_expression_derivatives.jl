@@ -72,8 +72,9 @@ end
         Evaluator, GradEvaluator, optimize_constants
     using DynamicExpressions
     using Zygote: Zygote
+    using Enzyme: Enzyme
     using Random: MersenneTwister
-    using DifferentiationInterface: value_and_gradient, AutoZygote
+    using DifferentiationInterface: value_and_gradient, AutoZygote, AutoEnzyme
 
     rng = MersenneTwister(0)
     X = rand(rng, 2, 32)
@@ -109,14 +110,21 @@ end
         extra_metadata = (parameter_names=["p1"], parameters=init_params)
     )
 
-    x0, refs = get_constants(ex)
-    f = Evaluator(ex, refs, dataset, options, nothing)
-    fg! = GradEvaluator(f, options.autodiff_backend)
+    function test_backend(ex, @nospecialize(backend))
+        x0, refs = get_constants(ex)
+        G = zero(x0)
 
-    @test f(x0) ≈ true_val
+        f = Evaluator(ex, refs, dataset, options, nothing)
+        fg! = GradEvaluator(f, backend)
 
-    G = zero(x0)
-    val = fg!(nothing, G, x0)
-    @test val ≈ true_val
-    @test G ≈ vcat(true_d_constants[:], true_d_params[:])
+        @test f(x0) ≈ true_val
+
+        val = fg!(nothing, G, x0)
+        @test val ≈ true_val
+        @test G ≈ vcat(true_d_constants[:], true_d_params[:])
+    end
+
+    for backend in (AutoZygote(), AutoEnzyme())
+        test_backend(ex, backend)
+    end
 end

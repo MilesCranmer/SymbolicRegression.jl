@@ -18,7 +18,9 @@ import SymbolicRegression.ConstantOptimizationModule: GradEvaluator
 function GradEvaluator(f::F, backend::AE) where {F,AE<:AutoEnzyme}
     storage_tree = copy(f.tree)
     _, storage_refs = get_constants(storage_tree)
-    return GradEvaluator(f, backend, (; storage_tree, storage_refs))
+    storage_dataset = deepcopy(f.dataset)
+    # TODO: It is super inefficient to deepcopy; how can we skip this
+    return GradEvaluator(f, backend, (; storage_tree, storage_refs, storage_dataset))
 end
 
 function evaluator(tree, dataset, options, idx, output)
@@ -29,15 +31,16 @@ end
 function (g::GradEvaluator{<:Any,<:AutoEnzyme})(_, G, x::AbstractVector{T}) where {T}
     set_constants!(g.f.tree, x, g.f.refs)
     set_constants!(g.extra.storage_tree, zero(x), g.extra.storage_refs)
+    fill!(g.extra.storage_dataset, 0)
 
-    output = fill(zero(T), 1)
-    doutput = fill(one(T), 1)
+    output = [zero(T)]
+    doutput = [one(T)]
 
     autodiff(
         Reverse,
         evaluator,
         Duplicated(g.f.tree, g.extra.storage_tree),
-        Const(g.f.dataset),
+        Duplicated(g.f.dataset, g.extra.storage_dataset),
         Const(g.f.options),
         Const(g.f.idx),
         Duplicated(output, doutput),
