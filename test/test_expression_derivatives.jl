@@ -72,9 +72,11 @@ end
         Evaluator, GradEvaluator, optimize_constants
     using DynamicExpressions
     using Zygote: Zygote
-    using Enzyme: Enzyme
     using Random: MersenneTwister
     using DifferentiationInterface: value_and_gradient, AutoZygote, AutoEnzyme
+    @static if VERSION >= v"1.10.0"
+        using Enzyme: Enzyme
+    end
 
     rng = MersenneTwister(0)
     X = rand(rng, 2, 32)
@@ -124,7 +126,8 @@ end
         @test G ≈ vcat(true_d_constants[:], true_d_params[:])
     end
 
-    for backend in (AutoZygote(), AutoEnzyme())
-        test_backend(ex, backend)
+    test_backend(ex, AutoZygote())
+    @static if VERSION >= v"1.10.0"
+        test_backend(ex, AutoEnzyme())
     end
 end
