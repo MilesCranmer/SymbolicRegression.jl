@@ -83,6 +83,37 @@ mutable struct Dataset{
     @constfield X_sym_units::XUS
     @constfield y_sym_units::YUS
 end
+function Base.zero(d::Dataset)
+    return Dataset(
+        zero(d.X),
+        zero(d.y),
+        d.index,
+        d.n,
+        d.nfeatures,
+        d.weighted,
+        zero(d.weights),
+        NamedTuple{keys(d.extra)}(map(zero, values(d.extra))...),
+        zero(d.avg_y),
+        d.use_baseline,
+        zero(d.baseline_loss),
+        d.variable_names,
+        d.display_variable_names,
+        d.y_variable_name,
+        d.X_units,
+        d.y_units,
+        d.X_sym_units,
+        d.y_sym_units,
+    )
+end
+function Base.fill!(d::Dataset, val)
+    fill!(d.X, val)
+    fill!(d.y, val)
+    fill!(d.weights, val)
+    foreach(v -> fill!(v, val), values(d.extra))
+    d.avg_y = zero(d.avg_y)
+    d.baseline_loss = zero(d.baseline_loss)
+    return d
+end
 
 """
     Dataset(X::AbstractMatrix{T},

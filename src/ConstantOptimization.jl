@@ -2,6 +2,7 @@ module ConstantOptimizationModule
 
 using LineSearches: LineSearches
 using Optim: Optim
+using ADTypes: AbstractADType, AutoEnzyme
 using DifferentiationInterface: value_and_gradient
 using DynamicExpressions:
     AbstractExpression,
@@ -59,7 +60,7 @@ function _optimize_constants(
     x0, refs = get_constants(tree)
     @assert count_constants_for_optimization(tree) == length(x0)
     f = Evaluator(tree, refs, dataset, options, idx)
-    fg! = GradEvaluator(f)
+    fg! = GradEvaluator(f, options.autodiff_backend)
     obj = if algorithm isa Optim.Newton || options.autodiff_backend === nothing
         f
     else
@@ -107,18 +108,25 @@ function (e::Evaluator)(x::AbstractVector; regularization=false)
     set_constants!(e.tree, x, e.refs)
     return eval_loss(e.tree, e.dataset, e.options; regularization, e.idx)
 end
-struct GradEvaluator{F<:Evaluator} <: Function
+struct GradEvaluator{F<:Evaluator,AD<:Union{Nothing,AbstractADType},EX} <: Function
     f::F
+    backend::AD
+    extra::EX
 end
-function (g::GradEvaluator)(_, G, x::AbstractVector)
+GradEvaluator(f::F, backend::AD) where {F,AD} = GradEvaluator(f, backend, nothing)
+
+function (g::GradEvaluator{<:Any,<:Any})(_, G, x::AbstractVector)
     set_constants!(g.f.tree, x, g.f.refs)
-    (val, grad) = value_and_gradient(g.f.options.autodiff_backend, g.f.tree) do tree
+    (val, grad) = value_and_gradient(g.backend, g.f.tree) do tree
         eval_loss(tree, g.f.dataset, g.f.options; regularization=false, idx=g.f.idx)
     end
     if G !== nothing && grad !== nothing
         G .= extract_gradient(grad, g.f.tree)
     end
     return val
+end
+function (g::GradEvaluator{<:Any,<:AutoEnzyme})(args...)
+    return error("Please load the `Enzyme.jl` package.")
 end
 
 end
