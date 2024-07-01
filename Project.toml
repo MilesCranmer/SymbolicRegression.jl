@@ -68,5 +68,6 @@ TOML = "1"
 julia = "1.6"
 
 [extras]
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
