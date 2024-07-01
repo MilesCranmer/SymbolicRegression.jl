@@ -19,22 +19,18 @@ using ..DimensionalAnalysisModule: violates_dimensional_constraints
 function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
 ) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
-    if loss isa SupervisedLoss
-        return LossFunctions.mean(loss, x, y)
-    else
-        l(i) = loss(x[i], y[i])
-        return LossFunctions.mean(l, eachindex(x))
-    end
+    return sum(@. loss(x, y)) / length(x)
 end
 
 function _weighted_loss(
     x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::LT
 ) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
-    if loss isa SupervisedLoss
-        return LossFunctions.sum(loss, x, y, w; normalize=true)
+    # TODO: This is less efficient because we maintain compatibility with Enzyme
+    # Would be nice to avoid this.
+    if LT <: SupervisedLoss
+        return sum(@. loss(x, y) * w) / sum(w)
     else
-        l(i) = loss(x[i], y[i], w[i])
-        return sum(l, eachindex(x)) / sum(w)
+        return sum(@. loss(x, y, w)) / sum(w)
     end
 end
 
