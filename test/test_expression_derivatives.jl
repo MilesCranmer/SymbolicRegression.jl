@@ -52,20 +52,18 @@ end
         unary_operators=[cos], binary_operators=[+, *, -], autodiff_backend=:Zygote
     )
 
-    f = Evaluator(dataset, options, nothing)
-    fg! = GradEvaluator(f)
-
     ex = @parse_expression(
         x * x - cos(2.5 * y), operators = options.operators, variable_names = [:x, :y]
     )
-    @test f(ex) isa Float64
+    f = Evaluator(ex, last(get_constants(ex)), dataset, options, nothing)
+    fg! = GradEvaluator(f, options.autodiff_backend)
 
-    (val, grad) = value_and_gradient(f, options.autodiff_backend, ex)
-    @test val isa Float64
-    @test typeof(grad.tree) <: DynamicExpressions.ChainRulesModule.NodeTangent{
-        Float64,Node{Float64},Vector{Float64}
-    }
-    @test typeof(grad.tree.gradient) <: Vector{Float64}
+    @test f(first(get_constants(ex))) isa Float64
+
+    x = first(get_constants(ex))
+    G = zero(x)
+    fg!(nothing, G, x)
+    @test G[] != 0
 end
 
 @testitem "Test derivatives of parametric expression during optimization" tags = [:part1] begin
@@ -113,13 +111,12 @@ end
 
     x0, refs = get_constants(ex)
     f = Evaluator(ex, refs, dataset, options, nothing)
-    fg! = GradEvaluator(f)
+    fg! = GradEvaluator(f, options.autodiff_backend)
 
     @test f(x0) ≈ true_val
 
-    (val, G) = let G = Array{Float64}(undef, length(x0))
-        (fg!(nothing, G, x0), G)
-    end
+    G = zero(x0)
+    val = fg!(nothing, G, x0)
     @test val ≈ true_val
     @test G ≈ vcat(true_d_constants[:], true_d_params[:])
 end
