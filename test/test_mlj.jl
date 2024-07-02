@@ -1,6 +1,7 @@
 @testitem "Generic interface tests" tags = [:part1] begin
     using SymbolicRegression
     using MLJTestInterface: MLJTestInterface as MTI
+    include("test_params.jl")
 
     failures, summary = MTI.test(
         [SRRegressor], MTI.make_regression()...; mod=@__MODULE__, verbosity=0, throw=true
@@ -22,6 +23,8 @@ end
     using SymbolicRegression: Node
     using MLJBase
     using SymbolicUtils
+
+    include("test_params.jl")
 
     stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
@@ -53,6 +56,8 @@ end
 @testitem "Variable names - multiple outputs" tags = [:part1] begin
     using SymbolicRegression
     using MLJBase
+
+    include("test_params.jl")
 
     stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
@@ -88,6 +93,8 @@ end
     using SymbolicRegression
     using MLJBase
 
+    include("test_params.jl")
+
     stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
     X = (b1=randn(32), b2=randn(32))
@@ -107,6 +114,8 @@ end
 @testitem "Good predictions" tags = [:part1] begin
     using SymbolicRegression
     using MLJBase
+
+    include("test_params.jl")
 
     stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
