@@ -359,7 +359,4 @@ function DE.EvaluationHelpersModule._grad_evaluator(
     )
 end
 
-combine_operators(tree::AbstractExpressionNode, ::AbstractOperatorEnum) = tree
-# TODO: Move this definition to DynamicExpressions.jl
-
 end
