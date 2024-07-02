@@ -38,7 +38,7 @@ function (g::GradEvaluator{<:Any,<:AutoEnzyme})(_, G, x::AbstractVector{T}) wher
     output = [zero(T)]
     doutput = [one(T)]
 
-    with_stacksize(20_000_000) do
+    with_stacksize(32 * 1024 * 1024) do
         autodiff(
             Reverse,
             evaluator,
