@@ -2,7 +2,11 @@ module OptionsStructModule
 
 using Optim: Optim
 using DynamicExpressions:
-    AbstractOperatorEnum, AbstractExpressionNode, OperatorEnum, GenericOperatorEnum
+    AbstractOperatorEnum,
+    AbstractExpressionNode,
+    AbstractExpression,
+    OperatorEnum,
+    GenericOperatorEnum
 using LossFunctions: SupervisedLoss
 
 import ..MutationWeightsModule: MutationWeights
@@ -119,15 +123,19 @@ if VERSION >= v"1.10.0-DEV.0"
 else
     @eval operator_specialization(O::Type{<:OperatorEnum}) = O
 end
+# TODO: HACK - turned this off temporarily
 
 struct Options{
     CM<:ComplexityMapping,
     OP<:AbstractOperatorEnum,
     N<:AbstractExpressionNode,
+    E<:AbstractExpression,
+    EO<:NamedTuple,
     _turbo,
     _bumper,
     _return_state,
     W,
+    AD,
 }
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
@@ -175,12 +183,15 @@ struct Options{
     elementwise_loss::Union{SupervisedLoss,Function}
     loss_function::Union{Nothing,Function}
     node_type::Type{N}
+    expression_type::Type{E}
+    expression_options::EO
     progress::Union{Bool,Nothing}
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::Optim.AbstractOptimizer
     optimizer_probability::Float32
     optimizer_nrestarts::Int
     optimizer_options::Optim.Options
+    autodiff_backend::AD
     recorder_file::String
     prob_pick_first::Float32
     early_stop_condition::Union{Function,Nothing}

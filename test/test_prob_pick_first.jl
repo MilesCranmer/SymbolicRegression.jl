@@ -1,6 +1,7 @@
 println("Testing whether tournament_selection_p works.")
 using SymbolicRegression
-using DynamicExpressions.EquationModule: with_type_parameters
+using DynamicExpressions: with_type_parameters, @parse_expression
+using Test
 include("test_params.jl")
 
 n = 10
@@ -15,19 +16,21 @@ options = Options(;
 
 for reverse in [false, true]
     T = Float32
-    NT = with_type_parameters(options.node_type, T)
-    members = PopMember{T,T,NT}[]
 
     # Generate members with scores from 0 to 1:
-    for i in 1:n
-        tree = Node("x1") * 3.2f0
-        score = Float32(i - 1) / (n - 1)
-        if reverse
-            score = 1 - score
-        end
-        test_loss = 1.0f0  # (arbitrary for this test)
-        push!(members, PopMember(tree, score, test_loss, options))
-    end
+    members = [
+        let
+            ex = @parse_expression(
+                x1 * 3.2, operators = options.operators, variable_names = [:x1],
+            )
+            score = Float32(i - 1) / (n - 1)
+            if reverse
+                score = 1 - score
+            end
+            test_loss = 1.0f0  # (arbitrary for this test)
+            PopMember(ex, score, test_loss, options; deterministic=false)
+        end for i in 1:n
+    ]
 
     pop = Population(members)
 

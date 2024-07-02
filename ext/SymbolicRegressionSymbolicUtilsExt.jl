@@ -1,8 +1,9 @@
 module SymbolicRegressionSymbolicUtilsExt
 
 using SymbolicUtils: Symbolic
-using SymbolicRegression: AbstractExpressionNode, Node, Options
+using SymbolicRegression: AbstractExpressionNode, AbstractExpression, Node, Options
 using SymbolicRegression.MLJInterfaceModule: AbstractSRRegressor, get_options
+using DynamicExpressions: get_tree, get_operators
 
 import SymbolicRegression: node_to_symbolic, symbolic_to_node
 
@@ -11,10 +12,14 @@ import SymbolicRegression: node_to_symbolic, symbolic_to_node
 
 Convert an expression to SymbolicUtils.jl form.
 """
-function node_to_symbolic(tree::AbstractExpressionNode, options::Options; kws...)
-    return node_to_symbolic(tree, options.operators; kws...)
+function node_to_symbolic(
+    tree::Union{AbstractExpressionNode,AbstractExpression}, options::Options; kws...
+)
+    return node_to_symbolic(get_tree(tree), get_operators(tree, options); kws...)
 end
-function node_to_symbolic(tree::AbstractExpressionNode, m::AbstractSRRegressor; kws...)
+function node_to_symbolic(
+    tree::Union{AbstractExpressionNode,AbstractExpression}, m::AbstractSRRegressor; kws...
+)
     return node_to_symbolic(tree, get_options(m); kws...)
 end
 
@@ -31,24 +36,30 @@ function symbolic_to_node(eqn::Symbolic, m::AbstractSRRegressor; kws...)
 end
 
 function Base.convert(
-    ::Type{Symbolic}, tree::AbstractExpressionNode, options::Options; kws...
+    ::Type{Symbolic},
+    tree::Union{AbstractExpressionNode,AbstractExpression},
+    options::Union{Options,Nothing}=nothing;
+    kws...,
 )
-    return convert(Symbolic, tree, options.operators; kws...)
+    return convert(Symbolic, get_tree(tree), get_operators(tree, options); kws...)
 end
 function Base.convert(
-    ::Type{Symbolic}, tree::AbstractExpressionNode, m::AbstractSRRegressor; kws...
+    ::Type{Symbolic},
+    tree::Union{AbstractExpressionNode,AbstractExpression},
+    m::AbstractSRRegressor;
+    kws...,
 )
     return convert(Symbolic, tree, get_options(m); kws...)
 end
 
 function Base.convert(
     ::Type{N}, x::Union{Number,Symbolic}, options::Options; kws...
-) where {N<:AbstractExpressionNode}
+) where {N<:Union{AbstractExpressionNode,AbstractExpression}}
     return convert(N, x, options.operators; kws...)
 end
 function Base.convert(
     ::Type{N}, x::Union{Number,Symbolic}, m::AbstractSRRegressor; kws...
-) where {N<:AbstractExpressionNode}
+) where {N<:Union{AbstractExpressionNode,AbstractExpression}}
     return convert(N, x, get_options(m); kws...)
 end
 

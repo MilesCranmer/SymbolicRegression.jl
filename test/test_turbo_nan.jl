@@ -1,4 +1,5 @@
 using SymbolicRegression
+using LoopVectorization
 
 bad_op(x::T) where {T} = (x >= 0) ? x : T(0)
 
