@@ -66,7 +66,7 @@ end
     @test G[] != 0
 end
 
-@testitem "Test derivatives of parametric expression during optimization" tags = [:part1] begin
+@testitem "Test derivatives of parametric expression during optimization" tags = [:part3] begin
     using SymbolicRegression
     using SymbolicRegression.ConstantOptimizationModule:
         Evaluator, GradEvaluator, optimize_constants
