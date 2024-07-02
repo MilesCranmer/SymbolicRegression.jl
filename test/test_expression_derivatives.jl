@@ -74,7 +74,8 @@ end
     using Zygote: Zygote
     using Random: MersenneTwister
     using DifferentiationInterface: value_and_gradient, AutoZygote, AutoEnzyme
-    @static if VERSION >= v"1.10.0"
+    enzyme_compatible = VERSION >= v"1.10.0" && VERSION < v"1.11.0-DEV.0"
+    @static if enzyme_compatible
         using Enzyme: Enzyme
     end
 
@@ -127,7 +128,7 @@ end
     end
 
     test_backend(ex, AutoZygote())
-    @static if VERSION >= v"1.10.0"
+    @static if enzyme_compatible
         test_backend(ex, AutoEnzyme())
     end
 end
