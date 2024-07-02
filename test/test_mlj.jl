@@ -23,7 +23,7 @@ end
     using MLJBase
     using SymbolicUtils
 
-    stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
+    stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
     X = (a=rand(32), b=rand(32))
     y = X.a .^ 2.1
@@ -54,7 +54,7 @@ end
     using SymbolicRegression
     using MLJBase
 
-    stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
+    stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
     X = (a=rand(32), b=rand(32))
     y = X.a .^ 2.1
@@ -88,7 +88,7 @@ end
     using SymbolicRegression
     using MLJBase
 
-    stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
+    stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
     X = (b1=randn(32), b2=randn(32))
     Y = (c1=X.b1 .* X.b2, c2=X.b1 .+ X.b2)
@@ -108,7 +108,7 @@ end
     using SymbolicRegression
     using MLJBase
 
-    stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-7)
+    stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
     X = randn(100, 3)
     Y = X
