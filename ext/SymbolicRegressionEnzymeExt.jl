@@ -28,6 +28,8 @@ function evaluator(tree, dataset, options, idx, output)
     return nothing
 end
 
+with_stacksize(f::F, n) where {F} = fetch(schedule(Task(f, n)))
+
 function (g::GradEvaluator{<:Any,<:AutoEnzyme})(_, G, x::AbstractVector{T}) where {T}
     set_constants!(g.f.tree, x, g.f.refs)
     set_constants!(g.extra.storage_tree, zero(x), g.extra.storage_refs)
@@ -36,16 +38,17 @@ function (g::GradEvaluator{<:Any,<:AutoEnzyme})(_, G, x::AbstractVector{T}) wher
     output = [zero(T)]
     doutput = [one(T)]
 
-    autodiff(
-        Reverse,
-        evaluator,
-        Duplicated(g.f.tree, g.extra.storage_tree),
-        Duplicated(g.f.dataset, g.extra.storage_dataset),
-        Const(g.f.options),
-        Const(g.f.idx),
-        Duplicated(output, doutput),
-    )
-    # ^ The seed value of 1.0 propagates from `doutput` to `g.extra.storage_tree`
+    with_stacksize(20_000_000) do
+        autodiff(
+            Reverse,
+            evaluator,
+            Duplicated(g.f.tree, g.extra.storage_tree),
+            Duplicated(g.f.dataset, g.extra.storage_dataset),
+            Const(g.f.options),
+            Const(g.f.idx),
+            Duplicated(output, doutput),
+        )
+    end
 
     if G !== nothing
         # TODO: This is redundant since we already have the references.
