@@ -297,6 +297,31 @@ end
 
 # end
 
+@testitem "Test we can recover a known basis" begin
+    using SymbolicRegression
+    using SymbolicRegression: find_sparse_linear_expression
+    # using SymbolicRegression.SparseLinearExpansionModule: find_sparse_linear_expression
+    using Random: MersenneTwister
+
+    rng = MersenneTwister(0)
+    options = Options(; binary_operators=[+, -, *, /], unary_operators=[sin, cos])
+    xs = map(1:3) do i
+        Expression(
+            Node{Float64}(; feature=i);
+            operators=options.operators,
+            variable_names=["x1", "x2", "x3"],
+        )
+    end
+    X = randn(rng, 3, 128)
+    y = @. 1.0 * X[1, :] + 2.0 * X[2, :] + 3.0 * X[3, :]
+    dataset = Dataset(X, y)
+
+    coeffs, basis = find_sparse_linear_expression(
+        rng, xs[1], dataset, options; predefined_basis=xs, max_final_basis_size=3
+    )
+    @test isapprox(coeffs, [1.0, 2.0, 3.0]; atol=1e-4)
+end
+
 @testitem "Bad expressions should be masked" begin
     using SymbolicRegression
     using SymbolicRegression: find_sparse_linear_expression
