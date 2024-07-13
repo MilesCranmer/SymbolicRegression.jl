@@ -235,14 +235,18 @@ function find_sparse_linear_expression(
     end
     y_scale = std(dataset.y)
 
-    A                                   # (n_rows, n_basis)
-    mask                                # (n_basis,)
-    normalized_y = dataset.y ./ y_scale # (n_rows,)
+    A
+    # ^(n_rows, n_basis)
+    mask
+    # ^(n_basis,)
+    normalized_y = dataset.y ./ y_scale
+    # ^(n_rows,)
 
     coeffs = similar(A, axes(A, 2))
 
     # Make all basis functions have comparable standard deviation
     A_scales = normalize_bases!(A, mask)
+    # ^(n_basis,)
 
     # Then, detect and mask duplicate basis functions
     mask_out_duplicate_bases!(mask, A)
