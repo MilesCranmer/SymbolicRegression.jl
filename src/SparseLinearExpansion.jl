@@ -71,16 +71,12 @@ end
 end
 
 function solve_linear_system(
-    A::AbstractMatrix{T}, y::AbstractVector{T}, regularization::Union{Real,Nothing}=nothing
+    A::AbstractMatrix{T}, y::AbstractVector{T}, regularization::Real
 ) where {T}
-    if regularization === nothing
-        return A \ y
-    else
-        n = size(A, 2)  # number of features
-        ATA = A'A
-        ATy = A'y
-        return (ATA + regularization * I(n)) \ ATy
-    end
+    n = size(A, 2)  # number of features
+    ATA = A'A
+    ATy = A'y
+    return (ATA + regularization * I(n)) \ ATy
 end
 
 @testitem "Test linear solver" begin
@@ -90,19 +86,14 @@ end
 
     A = [1.0 2.0; 3.0 4.0]
     y = [1.0; 2.0]
-    x = solve_linear_system(A, y)
+    x = solve_linear_system(A, y, 0.0)
     @test A * x ≈ y
 
     # Non-square matrix:
     A = [1.0 2.0; 3.0 4.0; 5.0 6.0]
     y = [1.0; 2.0; 3.0]
-    x = solve_linear_system(A, y)
-    @test A * x ≈ y
-
-    A = [1.0 2.0; 3.0 4.0]
-    y = [1.0; 2.0]
     x = solve_linear_system(A, y, 0.0)
-    @test A * x ≈ y  # 0.0 regularization should be the same as no regularization
+    @test A * x ≈ y
 
     A = [i == j ? 1.0f0 : 0.0f0 for i in 1:10, j in 1:10]
     y = ones(Float32, 10)
@@ -116,6 +107,28 @@ end
     x = solve_linear_system(A, y, 1.0)
     @test all(xi -> xi == 0.5, x[1:5])
     @test all(xi -> xi == 0.0, x[6:10])
+
+    # Test singular matrix with regularization
+    A = zeros(5, 5)
+    y = ones(5)
+    x = solve_linear_system(A, y, 1e-6)
+    @test all(xi -> xi == 0.0, x)
+end
+
+function normalize_bases!(A::AbstractMatrix, mask::AbstractVector{Bool})
+    A_scales = std(A; dims=1)
+    for i_basis in eachindex(axes(A, 2), A_scales, mask)
+        if !mask[i_basis]
+            continue
+        end
+        s = A_scales[i_basis]
+        if iszero(s)
+            mask[i_basis] = false
+        else
+            A[:, i_basis] ./= s
+        end
+    end
+    return A_scales
 end
 
 function mask_out_duplicate_bases!(
@@ -131,6 +144,54 @@ function mask_out_duplicate_bases!(
             basis_hashes[basis_hash] = true
         end
     end
+end
+
+@testitem "Test masking of duplicate bases" begin
+    using SymbolicRegression: mask_out_duplicate_bases!, normalize_bases!
+    # using SymbolicRegression.SparseLinearExpansionModule: mask_out_duplicate_bases!, normalize_bases!
+
+    # No duplicates
+    x = [
+        1.0 2.0 3.0
+        4.0 5.0 6.0
+    ]
+    mask = trues(3)
+    mask_out_duplicate_bases!(mask, x)
+    @test mask == trues(3)
+
+    # One duplicate
+    x = [
+        1.0 1.0 3.0
+        1.0 1.0 6.0
+    ]
+    mask = trues(3)
+    mask_out_duplicate_bases!(mask, x)
+    @test mask == [true, false, true]
+
+    # Linear combinations are NOT detected.
+    # (Should be rescaled to stdev BEFORE entering)
+    x = [
+        1.0 2.0 4.0 6.0
+        -1.0 -2.0 -4.0 6.0
+    ]
+    mask = trues(4)
+    mask_out_duplicate_bases!(mask, x)
+    @test mask == trues(4)
+
+    # Now, we will re-scale things, which
+    # will cause duplicates to be detected:
+    x_scales = normalize_bases!(x, mask)
+    @test mask == [true, true, true, false]  # 0 stdev causes masking
+
+    # Test scales explicitly:
+    @test first(x_scales) ≈ sqrt(2)
+    @test last(x_scales) == 0
+
+    # Finally, masking with this will now detect
+    # the linear re-scalings:
+    mask = trues(4)
+    mask_out_duplicate_bases!(mask, x)
+    @test mask == [true, false, false, true]
 end
 
 """Sparse solver available for L2DistLoss"""
@@ -180,26 +241,15 @@ function find_sparse_linear_expression(
 
     coeffs = similar(A, axes(A, 2))
 
-    # Detect duplicate basis functions
-    mask_out_duplicate_bases!(mask, A)
-
     # Make all basis functions have comparable standard deviation
-    A_scales = std(A; dims=1)
-    for i_basis in eachindex(axes(A, 2), A_scales, mask)
-        if !mask[i_basis]
-            continue
-        end
-        s = A_scales[i_basis]
-        if iszero(s)
-            mask[i_basis] = false
-        else
-            A[:, i_basis] ./= s
-        end
-    end
+    A_scales = normalize_bases!(A, mask)
+
+    # Then, detect and mask duplicate basis functions
+    mask_out_duplicate_bases!(mask, A)
     # TODO: Account for all-zero mask
 
     coeffs[mask] .= solve_linear_system(A[:, mask], normalized_y, l2_regularization)  # Initialize based on least squares
-    # TODO: Account for singular matrices
+    # TODO: Account for singular matrices, if they are even possible
 
     # Now, we do iterative pruning of the coefficients, sort of like STLSQ,
     # but with pruning schedule similar to neural network pruning
