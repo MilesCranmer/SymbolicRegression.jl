@@ -24,6 +24,7 @@ function make_random_basis(
         num_nodes = rand(rng, min_num_nodes:max_num_nodes)
         local new_tree
         attempt = 0
+        @assert dataset.nfeatures > 0
         while attempt < 1000  # TODO: Surely there's a better way to do this
             new_tree = gen_random_tree_fixed_size(
                 num_nodes, options, dataset.nfeatures, T, rng
