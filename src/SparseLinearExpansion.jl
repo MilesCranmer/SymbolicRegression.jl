@@ -51,6 +51,7 @@ end
 
 @testitem "Test linear expansion assertions" begin
     using SymbolicRegression: assert_can_use_sparse_linear_expression
+    # using SymbolicRegression.SparseLinearExpansionModule: assert_can_use_sparse_linear_expression
     using SymbolicRegression: L2DistLoss
 
     @test_throws AssertionError assert_can_use_sparse_linear_expression(
@@ -84,10 +85,17 @@ end
 
 @testitem "Test linear solver" begin
     using SymbolicRegression: solve_linear_system
+    # using SymbolicRegression.SparseLinearExpansionModule: solve_linear_system
     using LinearAlgebra: I
 
     A = [1.0 2.0; 3.0 4.0]
     y = [1.0; 2.0]
+    x = solve_linear_system(A, y)
+    @test A * x ≈ y
+
+    # Non-square matrix:
+    A = [1.0 2.0; 3.0 4.0; 5.0 6.0]
+    y = [1.0; 2.0; 3.0]
     x = solve_linear_system(A, y)
     @test A * x ≈ y
 
@@ -101,6 +109,13 @@ end
     x = solve_linear_system(A, y, 1.0f0)
     @test x isa Vector{Float32}
     @test all(xi -> xi == 0.5, x)  # With regularization, pushes x towards 0
+
+    # Same as non-square
+    A = [i == j ? 1.0 : 0.0 for i in 1:5, j in 1:10]
+    y = ones(Float64, 5)
+    x = solve_linear_system(A, y, 1.0)
+    @test all(xi -> xi == 0.5, x[1:5])
+    @test all(xi -> xi == 0.0, x[6:10])
 end
 
 function mask_out_duplicate_bases!(
