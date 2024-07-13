@@ -104,7 +104,7 @@ end
     x = solve_linear_system(A, y, 0.0)
     @test A * x ≈ y  # 0.0 regularization should be the same as no regularization
 
-    A = 1.0f0 * I(10)
+    A = [i == j ? 1.0f0 : 0.0f0 for i in 1:10, j in 1:10]
     y = ones(Float32, 10)
     x = solve_linear_system(A, y, 1.0f0)
     @test x isa Vector{Float32}
