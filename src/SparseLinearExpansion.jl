@@ -6,6 +6,7 @@ using LossFunctions: L2DistLoss
 using Random: AbstractRNG, default_rng
 using StatsBase: std, percentile
 using LinearAlgebra: I
+using TestItems: @testitem
 
 # using ..CoreModule: Options, Dataset
 # using ..PopMemberModule: PopMember
@@ -48,6 +49,26 @@ function assert_can_use_sparse_linear_expression(options::Options)
     return nothing
 end
 
+@testitem "Test linear expansion assertions" begin
+    using SymbolicRegression: assert_can_use_sparse_linear_expression
+    using SymbolicRegression: L2DistLoss
+
+    @test_throws AssertionError assert_can_use_sparse_linear_expression(
+        Options(; binary_operators=[-, /])
+    )
+    @test_throws AssertionError assert_can_use_sparse_linear_expression(
+        Options(; binary_operators=[*, /])
+    )
+    @test_throws AssertionError assert_can_use_sparse_linear_expression(
+        Options(; elementwise_loss=L1DistLoss())
+    )
+    @test_throws AssertionError assert_can_use_sparse_linear_expression(
+        Options(; loss_function=(args...,) -> 1.0)
+    )
+
+    assert_can_use_sparse_linear_expression(Options(; elementwise_loss=L2DistLoss()))
+end
+
 function solve_linear_system(
     A::AbstractMatrix{T}, y::AbstractVector{T}, regularization::Union{Real,Nothing}=nothing
 ) where {T}
@@ -59,6 +80,27 @@ function solve_linear_system(
         ATy = A'y
         return (ATA + regularization * I(n)) \ ATy
     end
+end
+
+@testitem "Test linear solver" begin
+    using SymbolicRegression: solve_linear_system
+    using LinearAlgebra: I
+
+    A = [1.0 2.0; 3.0 4.0]
+    y = [1.0; 2.0]
+    x = solve_linear_system(A, y)
+    @test A * x ≈ y
+
+    A = [1.0 2.0; 3.0 4.0]
+    y = [1.0; 2.0]
+    x = solve_linear_system(A, y, 0.0)
+    @test A * x ≈ y  # 0.0 regularization should be the same as no regularization
+
+    A = 1.0f0 * I(10)
+    y = ones(Float32, 10)
+    x = solve_linear_system(A, y, 1.0f0)
+    @test x isa Vector{Float32}
+    @test all(xi -> xi == 0.5, x)  # With regularization, pushes x towards 0
 end
 
 function mask_out_duplicate_bases!(
@@ -185,8 +227,6 @@ function find_sparse_linear_expression(
 end
 
 # end
-
-using TestItems: @testitem
 
 @testitem "Smoke test linear expansion" begin
     using SymbolicRegression
