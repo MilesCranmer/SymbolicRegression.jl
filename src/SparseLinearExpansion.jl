@@ -5,7 +5,6 @@ using DynamicExpressions: AbstractExpression, with_contents, eval_tree_array
 using LossFunctions: L2DistLoss
 using Random: AbstractRNG, default_rng
 using StatsBase: std, percentile
-using LinearAlgebra: I
 
 using ..CoreModule: Options, Dataset
 using ..PopMemberModule: PopMember
@@ -51,10 +50,12 @@ end
 function solve_linear_system(
     A::AbstractMatrix{T}, y::AbstractVector{T}, regularization::Real
 ) where {T}
-    n = size(A, 2)  # number of features
     ATA = A'A
     ATy = A'y
-    return (ATA + regularization * I(n)) \ ATy
+    @inbounds for i in eachindex(axes(ATA, 1), axes(ATA, 2))
+        ATA[i, i] += regularization
+    end
+    return ATA \ ATy
 end
 
 function normalize_bases!(A::AbstractMatrix, mask::AbstractVector{Bool})
