@@ -97,6 +97,8 @@ end
     include("test_optimizer_mutation.jl")
 end
 
+include("test_sparse_expansion_mutations.jl")
+
 @testitem "Test RunningSearchStatistics" tags = [:part3] begin
     include("test_search_statistics.jl")
 end
