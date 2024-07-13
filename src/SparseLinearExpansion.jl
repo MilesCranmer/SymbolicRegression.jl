@@ -297,6 +297,35 @@ end
 
 # end
 
+@testitem "Bad expressions should be masked" begin
+    using SymbolicRegression
+    using SymbolicRegression: find_sparse_linear_expression
+    # using SymbolicRegression.SparseLinearExpansionModule: find_sparse_linear_expression
+    using Random: MersenneTwister
+
+    options = Options(; binary_operators=[+, -, *, /], unary_operators=[sin, cos])
+
+    x1 = Expression(
+        Node{Float64}(; feature=1);
+        operators=options.operators,
+        variable_names=["x1", "x2", "x3", "x4", "x5"],
+    )
+    ex_div_0 = Expression(
+        Node(; op=4, l=Node{Float64}(; feature=1), r=Node{Float64}(; val=0.0));
+        operators=options.operators,
+        variable_names=["x1", "x2", "x3", "x4", "x5"],
+    )
+    rng = MersenneTwister(0)
+    X = randn(rng, 5, 32)
+    y = randn(rng, 32)
+    dataset = Dataset(X, y)
+
+    coeffs, basis = find_sparse_linear_expression(
+        rng, x1, dataset, options; predefined_basis=[x1, ex_div_0]
+    )
+    @test length(coeffs) == 1
+    @test only(basis) == x1
+end
 @testitem "Smoke test linear expansion" begin
     using SymbolicRegression
     using SymbolicRegression: find_sparse_linear_expression
