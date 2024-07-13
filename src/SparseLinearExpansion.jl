@@ -5,15 +5,20 @@ using DynamicExpressions: AbstractExpression, with_contents, eval_tree_array
 using LossFunctions: L2DistLoss
 using Random: AbstractRNG, default_rng
 using StatsBase: std, percentile
+using LinearAlgebra: I
 
 using ..CoreModule: Options, Dataset
 using ..PopMemberModule: PopMember
 using ..MutationFunctionsModule: gen_random_tree_fixed_size
 
 function make_random_basis(
-    rng::AbstractRNG, prototype::AbstractExpression, dataset::Dataset{T,L}, options::Options
+    rng::AbstractRNG,
+    prototype::AbstractExpression,
+    dataset::Dataset{T,L},
+    options::Options,
+    basis_size::Int,
 ) where {T,L}
-    basis_functions = [copy(prototype) for _ in 1:128]  # TODO: Make this a parameter
+    basis_functions = [copy(prototype) for _ in 1:basis_size]  # TODO: Make this a parameter
     for i in eachindex(basis_functions)
         num_nodes = rand(rng, 1:5)  # TODO: Make this a parameter
         local new_tree
@@ -41,16 +46,32 @@ function assert_can_use_sparse_linear_expression(options::Options)
     return nothing
 end
 
+function solve_linear_system(
+    A::AbstractMatrix{T}, y::AbstractVector{T}, regularization::Union{Real,Nothing}=nothing
+) where {T}
+    if regularization === nothing
+        return A \ y
+    else
+        n = size(A, 2)  # number of features
+        ATA = A'A
+        ATy = A'y
+        return (ATA + regularization * I(n)) \ ATy
+    end
+end
+
 """Sparse solver available for L2DistLoss"""
 function find_sparse_linear_expression(
     rng::AbstractRNG,
     prototype::AbstractExpression,
     dataset::Dataset{T,L},
-    options::Options,
-    desired_final_basis_size=rand(rng, 5:20),  # TODO: Make this a parameter
+    options::Options;
+    init_basis_size=10_000,
+    max_final_basis_size=rand(rng, 3:20),  # TODO: Make this a parameter
+    trim_n_percent_per_iter=50,
+    max_iters=10,
 ) where {T,L}
     assert_can_use_sparse_linear_expression(options)
-    basis = make_random_basis(rng, prototype, dataset, options)
+    basis = make_random_basis(rng, prototype, dataset, options, init_basis_size)
 
     (A, mask) = let
         A_and_complete = map(
@@ -80,26 +101,29 @@ function find_sparse_linear_expression(
     end
     # TODO: Account for all-zero mask
 
-    coeffs[mask] .= A[:, mask] \ y  # Initialize based on least squares
+    l2_regularization = std(y)^2 * 1e-6 # TODO: Make this a parameter
+    coeffs[mask] .= solve_linear_system(A[:, mask], y, l2_regularization)  # Initialize based on least squares
     # TODO: Account for singular matrices
 
     # Now, we do iterative pruning of the coefficients, sort of like STLSQ,
     # but with pruning schedule similar to neural network pruning
-    max_iters = 10
     n_remaining = sum(mask)
     for _ in 1:max_iters
         max_prune_percentage = min(
-            50, 100 * (n_remaining - desired_final_basis_size) / n_remaining
+            trim_n_percent_per_iter,
+            100 * (n_remaining - max_final_basis_size) / n_remaining,
         )
         if max_prune_percentage <= 0
             break
         end
         threshold = percentile(abs.(coeffs[mask]), max_prune_percentage)
+        largest_coeffs = sort(abs.(coeffs[mask]); rev=true)[1:max_final_basis_size]
+        @show threshold largest_coeffs
         # ^ Each time, we trim the smallest 50% of coefficients
         @. mask = mask & (abs(coeffs) > threshold)
-        coeffs[mask] .= A[:, mask] \ y
+        coeffs[mask] .= solve_linear_system(A[:, mask], y)
         n_remaining = sum(mask)
-        if n_remaining <= desired_final_basis_size
+        if n_remaining <= max_final_basis_size
             break
         end
     end
@@ -110,11 +134,9 @@ function find_sparse_linear_expression(
     return coeffs[mask], basis[mask]
 end
 function find_sparse_linear_expression(
-    prototype::AbstractExpression, dataset::Dataset, options::Options, args...
+    prototype::AbstractExpression, dataset::Dataset, options::Options; kws...
 )
-    return find_sparse_linear_expression(
-        default_rng(), prototype, dataset, options, args...
-    )
+    return find_sparse_linear_expression(default_rng(), prototype, dataset, options; kws...)
 end
 
 end
@@ -138,8 +160,10 @@ using TestItems: @testitem
         variable_names=["x1", "x2", "x3", "x4", "x5"],
     )
 
-    coeffs, basis = find_sparse_linear_expression(rng, ex, dataset, options, 5)
-    # for i in eachindex(basis, coeffs)
-    #     @info "basis and coeffs" basis[i] coeffs[i]
-    # end
+    coeffs, basis = find_sparse_linear_expression(
+        rng, ex, dataset, options; init_basis_size=100, max_final_basis_size=5
+    )
+    for i in eachindex(basis, coeffs)
+        @info "basis and coeffs" basis[i] coeffs[i]
+    end
 end
