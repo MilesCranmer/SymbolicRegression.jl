@@ -16,11 +16,13 @@ function make_random_basis(
     prototype::AbstractExpression,
     dataset::Dataset{T,L},
     options::Options,
-    basis_size::Int,
+    basis_size::Int;
+    min_num_nodes=1,
+    max_num_nodes=5,
 ) where {T,L}
     basis_functions = [copy(prototype) for _ in 1:basis_size]  # TODO: Make this a parameter
     for i in eachindex(basis_functions)
-        num_nodes = rand(rng, 1:5)  # TODO: Make this a parameter
+        num_nodes = rand(rng, min_num_nodes:max_num_nodes)
         local new_tree
         attempt = 0
         while attempt < 1000  # TODO: Surely there's a better way to do this
@@ -59,19 +61,50 @@ function solve_linear_system(
     end
 end
 
+function mask_out_duplicate_bases!(
+    mask::AbstractVector{Bool}, A::AbstractMatrix{T}
+) where {T}
+    basis_hashes = sizehint!(Dict{UInt,Bool}(), size(A, 2))
+    for (i_basis, A_col) in enumerate(eachcol(A))
+        basis_hash = hash(A_col)
+        if haskey(basis_hashes, basis_hash)
+            # There was already an identical basis function, so we mask this one
+            mask[i_basis] = false
+        else
+            basis_hashes[basis_hash] = true
+        end
+    end
+end
+
 """Sparse solver available for L2DistLoss"""
 function find_sparse_linear_expression(
     rng::AbstractRNG,
     prototype::AbstractExpression,
     dataset::Dataset{T,L},
     options::Options;
-    init_basis_size=10_000,
+    init_basis_size=128,
     max_final_basis_size=rand(rng, 3:20),  # TODO: Make this a parameter
     trim_n_percent_per_iter=50,
     max_iters=10,
+    l2_regularization=1e-6,
+    predefined_basis=nothing,
+    min_num_nodes=1,
+    max_num_nodes=5,
 ) where {T,L}
     assert_can_use_sparse_linear_expression(options)
-    basis = make_random_basis(rng, prototype, dataset, options, init_basis_size)
+    basis = if predefined_basis === nothing
+        make_random_basis(
+            rng,
+            prototype,
+            dataset,
+            options,
+            init_basis_size;
+            min_num_nodes=min_num_nodes,
+            max_num_nodes=max_num_nodes,
+        )
+    else
+        predefined_basis
+    end
 
     (A, mask) = let
         A_and_complete = map(
@@ -82,17 +115,24 @@ function find_sparse_linear_expression(
         )
         stack(map(first, A_and_complete)), map(last, A_and_complete)
     end
-    A::AbstractMatrix{T}
-    A             # (n_rows, n_basis)
-    mask          # (n_basis,)
-    y = dataset.y # (n_rows,)
+    y_scale = std(dataset.y)
+
+    A                                   # (n_rows, n_basis)
+    mask                                # (n_basis,)
+    normalized_y = dataset.y ./ y_scale # (n_rows,)
 
     coeffs = similar(A, axes(A, 2))
 
+    # Detect duplicate basis functions
+    mask_out_duplicate_bases!(mask, A)
+
     # Make all basis functions have comparable standard deviation
-    scales = std(A; dims=1)
-    for i_basis in eachindex(axes(A, 2), scales, mask)
-        s = scales[i_basis]
+    A_scales = std(A; dims=1)
+    for i_basis in eachindex(axes(A, 2), A_scales, mask)
+        if !mask[i_basis]
+            continue
+        end
+        s = A_scales[i_basis]
         if iszero(s)
             mask[i_basis] = false
         else
@@ -101,8 +141,7 @@ function find_sparse_linear_expression(
     end
     # TODO: Account for all-zero mask
 
-    l2_regularization = std(y)^2 * 1e-6 # TODO: Make this a parameter
-    coeffs[mask] .= solve_linear_system(A[:, mask], y, l2_regularization)  # Initialize based on least squares
+    coeffs[mask] .= solve_linear_system(A[:, mask], normalized_y, l2_regularization)  # Initialize based on least squares
     # TODO: Account for singular matrices
 
     # Now, we do iterative pruning of the coefficients, sort of like STLSQ,
@@ -117,19 +156,25 @@ function find_sparse_linear_expression(
             break
         end
         threshold = percentile(abs.(coeffs[mask]), max_prune_percentage)
-        largest_coeffs = sort(abs.(coeffs[mask]); rev=true)[1:max_final_basis_size]
-        @show threshold largest_coeffs
         # ^ Each time, we trim the smallest 50% of coefficients
         @. mask = mask & (abs(coeffs) > threshold)
-        coeffs[mask] .= solve_linear_system(A[:, mask], y)
+        coeffs[mask] .= solve_linear_system(A[:, mask], normalized_y, l2_regularization)
         n_remaining = sum(mask)
         if n_remaining <= max_final_basis_size
             break
         end
     end
 
+    # normalized_y ~ A * coeffs
+    ## Therefore, to fix `coeffs` for regular `y`, we need to move
+    ## the scale of `A` and `normalized_y` into `coeffs`.
+    ## Since `A` is on the same side, we simply multiply it.
+    ## Since `normalized_y` is on the other side, we divide it.
+
     # Update coeffs based on initial normalization
-    coeffs[mask] .*= scales[mask]
+    coeffs[mask] ./= A_scales[mask]
+    # Update coeffs based on y normalization
+    coeffs[mask] .*= y_scale
 
     return coeffs[mask], basis[mask]
 end
@@ -143,27 +188,34 @@ end
 
 using TestItems: @testitem
 
-@testitem "Test random basis" begin
+@testitem "Smoke test linear expansion" begin
     using SymbolicRegression
     using SymbolicRegression.SparseLinearExpansionModule: find_sparse_linear_expression
     using Random: MersenneTwister
 
     options = Options(; binary_operators=[+, -, *, /], unary_operators=[sin, cos])
     rng = MersenneTwister(0)
-    X = randn(rng, 5, 32)
+    X = randn(rng, 5, 1024)
     y = @. 1.5 * X[1, :] * X[2, :] + 2.0 * X[3, :] * X[4, :] + 3.0 * X[5, :]
     dataset = Dataset(X, y)
 
-    ex = Expression(
+    prototype_ex = Expression(
         Node{Float64}(; val=1.0);
         operators=options.operators,
         variable_names=["x1", "x2", "x3", "x4", "x5"],
     )
-
     coeffs, basis = find_sparse_linear_expression(
-        rng, ex, dataset, options; init_basis_size=100, max_final_basis_size=5
+        rng, prototype_ex, dataset, options; max_final_basis_size=5
     )
-    for i in eachindex(basis, coeffs)
-        @info "basis and coeffs" basis[i] coeffs[i]
-    end
+    @test length(coeffs) == 5
+    @test length(basis) == 5
+    @test eltype(coeffs) == Float64
+    @test eltype(basis) == typeof(prototype_ex)
+
+    y_pred = sum(
+        i -> coeffs[i] .* first(eval_tree_array(basis[i], X, options)), eachindex(coeffs)
+    )
+    pred_loss = sum(abs2, y_pred .- dataset.y)
+    baseline_loss = sum(abs2, dataset.y)
+    @test pred_loss < baseline_loss
 end
