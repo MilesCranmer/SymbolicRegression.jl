@@ -1,5 +1,5 @@
 """This module defines a mutation which solves for a sparse linear expansion at some node."""
-module SparseLinearExpansionModule
+# module SparseLinearExpansionModule
 
 using DynamicExpressions: AbstractExpression, with_contents, eval_tree_array
 using LossFunctions: L2DistLoss
@@ -7,9 +7,9 @@ using Random: AbstractRNG, default_rng
 using StatsBase: std, percentile
 using LinearAlgebra: I
 
-using ..CoreModule: Options, Dataset
-using ..PopMemberModule: PopMember
-using ..MutationFunctionsModule: gen_random_tree_fixed_size
+# using ..CoreModule: Options, Dataset
+# using ..PopMemberModule: PopMember
+# using ..MutationFunctionsModule: gen_random_tree_fixed_size
 
 function make_random_basis(
     rng::AbstractRNG,
@@ -184,13 +184,14 @@ function find_sparse_linear_expression(
     return find_sparse_linear_expression(default_rng(), prototype, dataset, options; kws...)
 end
 
-end
+# end
 
 using TestItems: @testitem
 
 @testitem "Smoke test linear expansion" begin
     using SymbolicRegression
-    using SymbolicRegression.SparseLinearExpansionModule: find_sparse_linear_expression
+    using SymbolicRegression: find_sparse_linear_expression
+    # using SymbolicRegression.SparseLinearExpansionModule: find_sparse_linear_expression
     using Random: MersenneTwister
 
     options = Options(; binary_operators=[+, -, *, /], unary_operators=[sin, cos])
