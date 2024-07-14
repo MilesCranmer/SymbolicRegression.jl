@@ -99,6 +99,7 @@ end
 
 include("test_sparse_expansion_mutations.jl")
 include("test_inverse_functions.jl")
+include("test_inverse_evaluation.jl")
 
 @testitem "Test RunningSearchStatistics" tags = [:part3] begin
     include("test_search_statistics.jl")
