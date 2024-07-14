@@ -251,6 +251,7 @@ using .MutationFunctionsModule:
 using .InterfaceDynamicExpressionsModule: @extend_operators
 using .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
 using .PopMemberModule: PopMember, reset_birth!
+using .EvaluateInverseModule: eval_inverse_tree_array
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 using .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
