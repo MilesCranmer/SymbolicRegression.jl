@@ -185,6 +185,7 @@ using DispatchDoctor: @stable
     include("LossFunctions.jl")
     include("PopMember.jl")
     include("ConstantOptimization.jl")
+    include("InverseFunctions.jl")
     include("SparseLinearExpansion.jl")
     include("Population.jl")
     include("HallOfFame.jl")
