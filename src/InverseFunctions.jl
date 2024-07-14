@@ -33,9 +33,6 @@ function _no_inverse(f)
     return error("Inverse of $(f) not yet implemented. Please extend `$(approx_inverse)`.")
 end
 
-# Fix1 and Fix2 are treated separately
-approx_inverse(f::Union{Base.Fix1,Base.Fix2}) = _no_inverse(f)
-
 #! format: off
 
 ###########################################################################
@@ -50,8 +47,7 @@ approx_inverse(::typeof(acos)) = cos
 approx_inverse(::typeof(tan)) = atan
 approx_inverse(::typeof(atan)) = tan
 
-approx_inverse(::typeof(sinh)) = asinh
-approx_inverse(::typeof(asinh)) = sinh
+# sinh already implemented
 
 approx_inverse(::typeof(cosh)) = safe_acosh
 approx_inverse(::typeof(safe_acosh)) = cosh
@@ -78,8 +74,8 @@ exp1m(x) = exp(x) - one(x)
 approx_inverse(::typeof(safe_log1p)) = exp1m
 approx_inverse(::typeof(exp1m)) = safe_log1p
 
+# `inv` already implemented
 approx_inverse(::typeof(neg)) = neg
-approx_inverse(::typeof(inv)) = inv
 approx_inverse(::typeof(relu)) = relu
 approx_inverse(::typeof(abs)) = abs
 ###########################################################################
@@ -88,25 +84,8 @@ approx_inverse(::typeof(abs)) = abs
 ## Binary operators #######################################################
 ###########################################################################
 
-# (f.x + _) => (_ - f.x)
-approx_inverse(f::Base.Fix1{typeof(+)}) = Base.Fix2(-, f.x)
-# (_ + f.x) => (_ - f.x)
-approx_inverse(f::Base.Fix2{typeof(+)}) = Base.Fix2(-, f.x)
-
-# (f.x * _) => (_ / f.x)
-approx_inverse(f::Base.Fix1{typeof(*)}) = Base.Fix2(/, f.x)
-# (_ * f.x) => (_ / f.x)
-approx_inverse(f::Base.Fix2{typeof(*)}) = Base.Fix2(/, f.x)
-
-# (f.x - _) => (f.x - _)
-approx_inverse(f::Base.Fix1{typeof(-)}) = f
-# (_ - f.x) => (_ + f.x)
-approx_inverse(f::Base.Fix2{typeof(-)}) = Base.Fix2(+, f.x)
-
-# (f.x / _) => (f.x / _)
-approx_inverse(f::Base.Fix1{typeof(/)}) = f
-# (_ / f.x) => (_ * f.x)
-approx_inverse(f::Base.Fix2{typeof(/)}) = Base.Fix2(*, f.x)
+# Note that Fix{N,<:Union{typeof(+),typeof(*),typeof(-),typeof(/)}}
+# is already implemented.
 
 # (f.x ^ _) => log(f.x, _)
 approx_inverse(f::Base.Fix1{typeof(safe_pow)}) = Base.Fix1(safe_log, f.x)
