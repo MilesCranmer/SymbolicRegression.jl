@@ -14,7 +14,10 @@ function gamma(x::T)::T where {T<:DATA_TYPE}
 end
 gamma(x) = SpecialFunctions.gamma(x)
 
-atanh_clip(x) = atanh(mod(x + oneunit(x), oneunit(x) + oneunit(x)) - oneunit(x)) * one(x)
+atanh_clip(x) = atanh(x)
+function atanh_clip(x::Real)
+    return atanh(mod(x + oneunit(x), oneunit(x) + oneunit(x)) - oneunit(x)) * one(x)
+end
 # == atanh((x + 1) % 2 - 1)
 
 # Implicitly defined:
@@ -91,8 +94,11 @@ end
 function cond(x, y)
     return (x > zero(x)) * y
 end
-function relu(x)
+function relu(x::Real)
     return (x > zero(x)) * x
+end
+function relu(x::Complex)
+    return complex(relu(real(x)), relu(imag(x)))
 end
 function logical_or(x, y)
     return ((x > zero(x)) | (y > zero(y))) * one(x)

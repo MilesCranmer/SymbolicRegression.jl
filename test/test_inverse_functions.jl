@@ -5,9 +5,6 @@
 
     include("test_params.jl")
 
-    rng = MersenneTwister(0)
-    x = rand(rng, 64)
-
     #! format: off
     unary_ops = [
         sin, asin, cos, acos, tan, atan, sinh, asinh,
@@ -18,15 +15,20 @@
     ]
     #! format: on
 
-    for f in unary_ops
-        x̂ = map(ComposedFunction(approx_inverse(f), f), x)
-        @test x̂ ≈ x || (@info f; false)
-    end
+    for T in [ComplexF64, Float64]
+        rng = MersenneTwister(0)
+        x = rand(rng, T, 64)
+        for f in unary_ops
+            T == ComplexF64 && f in (cbrt, cube, abs) && continue  # Missing/Unavailable
+            x̂ = map(ComposedFunction(approx_inverse(f), f), x)
+            @test x̂ ≈ x || (@info f; false)
+        end
 
-    x_above_1 = x .+ 1
-    for f in [safe_acosh]
-        x̂ = map(ComposedFunction(approx_inverse(f), f), x_above_1)
-        @test x̂ ≈ x_above_1 || (@info f; false)
+        x_above_1 = x .+ 1
+        for f in [safe_acosh]
+            x̂ = map(ComposedFunction(approx_inverse(f), f), x_above_1)
+            @test x̂ ≈ x_above_1 || (@info f; false)
+        end
     end
 end
 
@@ -36,20 +38,24 @@ end
     using Random: MersenneTwister
 
     rng = MersenneTwister(0)
-    x = rand(rng, 64)
 
     binary_ops = [+, -, *, /, safe_pow, safe_log]
-    constants = [0.5, 1.5, 2.5]
 
-    for f in binary_ops
-        for c in constants
+    for T in [ComplexF64, Float64]
+        x = rand(rng, T, 64)
+        constants = map(T, [0.5, 1.5, 2.5])
+        for f in binary_ops, c in constants
+            if f == safe_pow && abs(c) > 1.0
+                continue  # Due to branch cuts, can't compare effectively
+            end
+
             f_fix1 = Base.Fix1(f, c)
             x̂ = map(ComposedFunction(approx_inverse(f_fix1), f_fix1), x)
-            @test x̂ ≈ x
+            @test x̂ ≈ x || (@info f_fix1 x̂ x; false)
 
             f_fix2 = Base.Fix2(f, c)
             x̂ = map(ComposedFunction(approx_inverse(f_fix2), f_fix2), x)
-            @test x̂ ≈ x
+            @test x̂ ≈ x || (@info f_fix2 x̂ x; false)
         end
     end
 end
