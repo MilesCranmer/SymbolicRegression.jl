@@ -7,7 +7,7 @@
 
     #! format: off
     unary_ops = [
-        sin, asin, cos, acos, tan, atan, sinh, asinh,
+        sin, safe_asin, cos, safe_acos, tan, atan, sinh, asinh,
         cosh, tanh, atanh_clip, square, safe_sqrt,
         cube, cbrt, exp, safe_log, safe_log2, exp2,
         safe_log10, exp10, safe_log1p,

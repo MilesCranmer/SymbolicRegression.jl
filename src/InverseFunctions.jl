@@ -5,8 +5,9 @@ using InverseFunctions: inverse as _inverse, NoInverse
 #! format: off
 using ..CoreModule:
     square, cube, safe_pow, safe_log, safe_log2,
-    safe_log10, safe_log1p, safe_sqrt, safe_acosh, neg, greater, cond,
-    relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip
+    safe_log10, safe_log1p, safe_sqrt, safe_acosh, safe_acos,
+    safe_asin, neg, greater, cond, relu, logical_or,
+    logical_and, gamma, erf, erfc, atanh_clip
 #! format: on
 
 """
@@ -33,16 +34,14 @@ function _no_inverse(f)
     return error("Inverse of $(f) not yet implemented. Please extend `$(approx_inverse)`.")
 end
 
-#! format: off
-
 ###########################################################################
 ## Unary operators ########################################################
 ###########################################################################
-approx_inverse(::typeof(sin)) = asin
-approx_inverse(::typeof(asin)) = sin
+approx_inverse(::typeof(sin)) = safe_asin
+approx_inverse(::typeof(safe_asin)) = sin
 
-approx_inverse(::typeof(cos)) = acos
-approx_inverse(::typeof(acos)) = cos
+approx_inverse(::typeof(cos)) = safe_acos
+approx_inverse(::typeof(safe_acos)) = cos
 
 approx_inverse(::typeof(tan)) = atan
 approx_inverse(::typeof(atan)) = tan
@@ -97,7 +96,5 @@ approx_inverse(f::Base.Fix1{typeof(safe_log)}) = Base.Fix1(safe_pow, f.x)
 # log(_, f.x) => f.x ^ (1/_)
 approx_inverse(f::Base.Fix2{typeof(safe_log)}) = Base.Fix1(safe_pow, f.x) ∘ inv
 ###########################################################################
-
-#! format: on
 
 end

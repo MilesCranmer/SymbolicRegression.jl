@@ -29,6 +29,8 @@ using .OperatorsModule:
     safe_log10,
     safe_log1p,
     safe_sqrt,
+    safe_acos,
+    safe_asin,
     safe_acosh,
     neg,
     greater,

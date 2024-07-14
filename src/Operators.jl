@@ -58,6 +58,14 @@ function safe_log1p(x::T)::T where {T<:AbstractFloat}
     x <= -oneunit(x) && return T(NaN)
     return log1p(x)
 end
+function safe_acos(x::T)::T where {T<:AbstractFloat}
+    abs(x) > oneunit(x) && return T(NaN)
+    return acos(x)
+end
+function safe_asin(x::T)::T where {T<:AbstractFloat}
+    abs(x) > oneunit(x) && return T(NaN)
+    return asin(x)
+end
 function safe_acosh(x::T)::T where {T<:AbstractFloat}
     x < oneunit(x) && return T(NaN)
     return acosh(x)
@@ -82,6 +90,8 @@ safe_log(base, x) = log(base, x)
 safe_log2(x) = log2(x)
 safe_log10(x) = log10(x)
 safe_log1p(x) = log1p(x)
+safe_acos(x) = acos(x)
+safe_asin(x) = asin(x)
 safe_acosh(x) = acosh(x)
 safe_sqrt(x) = sqrt(x)
 

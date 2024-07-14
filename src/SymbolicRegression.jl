@@ -61,6 +61,8 @@ export Population,
     safe_log2,
     safe_log10,
     safe_log1p,
+    safe_acos,
+    safe_asin,
     safe_acosh,
     safe_sqrt,
     neg,
@@ -186,6 +188,7 @@ using DispatchDoctor: @stable
     include("PopMember.jl")
     include("ConstantOptimization.jl")
     include("InverseFunctions.jl")
+    include("EvaluateInverse.jl")
     include("SparseLinearExpansion.jl")
     include("Population.jl")
     include("HallOfFame.jl")
@@ -220,6 +223,8 @@ using .CoreModule:
     safe_log10,
     safe_log1p,
     safe_sqrt,
+    safe_acos,
+    safe_asin,
     safe_acosh,
     neg,
     greater,

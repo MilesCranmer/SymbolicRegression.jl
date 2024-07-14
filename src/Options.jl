@@ -24,6 +24,8 @@ using ..OperatorsModule:
     safe_log2,
     safe_log1p,
     safe_sqrt,
+    safe_acos,
+    safe_asin,
     safe_acosh,
     atanh_clip
 using ..MutationWeightsModule: MutationWeights, mutations
@@ -130,6 +132,10 @@ function unaopmap(op::F) where {F}
         return safe_acosh
     elseif op == atanh
         return atanh_clip
+    elseif op == acos
+        return safe_acos
+    elseif op == asin
+        return safe_asin
     end
     return op
 end
