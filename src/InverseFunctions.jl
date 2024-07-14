@@ -112,6 +112,11 @@ approx_inverse(f::Base.Fix2{typeof(/)}) = Base.Fix2(*, f.x)
 approx_inverse(f::Base.Fix1{typeof(safe_pow)}) = Base.Fix1(safe_log, f.x)
 # (_ ^ f.x) => _ ^ (1/f.x)
 approx_inverse(f::Base.Fix2{typeof(safe_pow)}) = Base.Fix2(safe_pow, inv(f.x))
+
+# log(f.x, _) => f.x ^ _
+approx_inverse(f::Base.Fix1{typeof(safe_log)}) = Base.Fix1(safe_pow, f.x)
+# log(_, f.x) => f.x ^ (1/_)
+approx_inverse(f::Base.Fix2{typeof(safe_log)}) = Base.Fix1(safe_pow, f.x) ∘ inv
 ###########################################################################
 
 #! format: on

@@ -109,6 +109,8 @@ end
 function inverse_binopmap(op::F) where {F}
     if op == safe_pow
         return ^
+    elseif op == log
+        return safe_log
     end
     return op
 end

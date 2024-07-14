@@ -38,7 +38,7 @@ end
     rng = MersenneTwister(0)
     x = rand(rng, 64)
 
-    binary_ops = [+, -, *, /, safe_pow]
+    binary_ops = [+, -, *, /, safe_pow, safe_log]
     constants = [0.5, 1.5, 2.5]
 
     for f in binary_ops
