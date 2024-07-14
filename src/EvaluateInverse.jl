@@ -22,8 +22,12 @@ using ..InverseFunctionsModule: approx_inverse
 # 3. Nodes which have no dependence on `n` are simply evaluated normally.
 
 """
-Inverse the tree at some `node` given some
-expected
+Inverse the tree evaluation at some `node_to_invert_at` in the `tree`,
+given some output of the `tree`, `y` and feature values `X`.
+
+For example, inverting `y = cos(x) * 2.1` with `x` as
+`node_to_invert_at` would return an evaluation of the
+tree `acos(y / 2.1)`.
 """
 function eval_inverse_tree_array(
     tree::N,
