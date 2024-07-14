@@ -10,6 +10,8 @@
     (y_for_x1, complete) = eval_inverse_tree_array(x1, X, options.operators, x1, y)
     @test complete
     @show y_for_x1 ≈ y
+
+    @inferred eval_inverse_tree_array(x1, X, options.operators, x1, y)
 end
 
 @testitem "Inversion with operators" begin
