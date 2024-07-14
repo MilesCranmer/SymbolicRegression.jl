@@ -36,6 +36,8 @@ end
 # Fix1 and Fix2 are treated separately
 approx_inverse(f::Union{Base.Fix1,Base.Fix2}) = _no_inverse(f)
 
+#! format: off
+
 ###########################################################################
 ## Unary operators ########################################################
 ###########################################################################
@@ -77,16 +79,41 @@ approx_inverse(::typeof(safe_log1p)) = exp1m
 approx_inverse(::typeof(exp1m)) = safe_log1p
 
 approx_inverse(::typeof(neg)) = neg
-
+approx_inverse(::typeof(inv)) = inv
 approx_inverse(::typeof(relu)) = relu
-
 approx_inverse(::typeof(abs)) = abs
 ###########################################################################
 
 ###########################################################################
 ## Binary operators #######################################################
 ###########################################################################
-approx_inverse(f::Base.Fix1{typeof(+)}) = Base.Fix2(-, f.x)
+
+# (f.x + _) => (_ - f.x)
+approx_inverse(f::Base.Fix1{typeof(+)}) = Base.Fix1(-, f.x)
+# (_ + f.x) => (_ - f.x)
+approx_inverse(f::Base.Fix2{typeof(+)}) = Base.Fix1(-, f.x)
+
+# (f.x * _) => (_ / f.x)
+approx_inverse(f::Base.Fix1{typeof(*)}) = Base.Fix2(/, f.x)
+# (_ * f.x) => (_ / f.x)
+approx_inverse(f::Base.Fix2{typeof(*)}) = Base.Fix2(/, f.x)
+
+# (f.x - _) => (f.x - _)
+approx_inverse(f::Base.Fix1{typeof(-)}) = f
+# (_ - f.x) => (_ + f.x)
+approx_inverse(f::Base.Fix2{typeof(-)}) = Base.Fix2(+, f.x)
+
+# (f.x / _) => (f.x / _)
+approx_inverse(f::Base.Fix1{typeof(/)}) = f
+# (_ / f.x) => (_ * f.x)
+approx_inverse(f::Base.Fix2{typeof(/)}) = Base.Fix2(*, f.x)
+
+# (f.x ^ _) => log(f.x, _)
+approx_inverse(f::Base.Fix1{typeof(safe_pow)}) = Base.Fix1(safe_log, f.x)
+# (_ ^ f.x) => _ ^ (1/f.x)
+approx_inverse(f::Base.Fix2{typeof(safe_pow)}) = Base.Fix2(safe_pow, inv(f.x))
 ###########################################################################
+
+#! format: on
 
 end
