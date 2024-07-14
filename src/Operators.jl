@@ -75,6 +75,7 @@ mult(x, y) = x * y
 # Generics (for SIMD)
 safe_pow(x, y) = x^y
 safe_log(x) = log(x)
+safe_log(base, x) = log(base, x)
 safe_log2(x) = log2(x)
 safe_log10(x) = log10(x)
 safe_log1p(x) = log1p(x)
