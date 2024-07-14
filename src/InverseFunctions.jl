@@ -89,9 +89,9 @@ approx_inverse(::typeof(abs)) = abs
 ###########################################################################
 
 # (f.x + _) => (_ - f.x)
-approx_inverse(f::Base.Fix1{typeof(+)}) = Base.Fix1(-, f.x)
+approx_inverse(f::Base.Fix1{typeof(+)}) = Base.Fix2(-, f.x)
 # (_ + f.x) => (_ - f.x)
-approx_inverse(f::Base.Fix2{typeof(+)}) = Base.Fix1(-, f.x)
+approx_inverse(f::Base.Fix2{typeof(+)}) = Base.Fix2(-, f.x)
 
 # (f.x * _) => (_ / f.x)
 approx_inverse(f::Base.Fix1{typeof(*)}) = Base.Fix2(/, f.x)
