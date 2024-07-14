@@ -38,6 +38,11 @@ function safe_log(x::T)::T where {T<:AbstractFloat}
     x <= zero(x) && return T(NaN)
     return log(x)
 end
+function safe_log(base::T, x::T)::T where {T<:AbstractFloat}
+    base <= zero(base) && return T(NaN)
+    x <= zero(x) && return T(NaN)
+    return log(base, x)
+end
 function safe_log2(x::T)::T where {T<:AbstractFloat}
     x <= zero(x) && return T(NaN)
     return log2(x)
