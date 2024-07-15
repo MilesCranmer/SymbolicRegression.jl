@@ -12,7 +12,7 @@ using DynamicExpressions:
     get_constants,
     set_constants!,
     extract_gradient
-using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
+using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE, specialized_options
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_loss, loss_to_score, batch_sample
 using ..PopMemberModule: PopMember
@@ -36,13 +36,20 @@ function dispatch_optimize_constants(
     if nconst == 1 && !(T <: Complex)
         algorithm = Optim.Newton(; linesearch=LineSearches.BackTracking())
         return _optimize_constants(
-            dataset, member, options, algorithm, options.optimizer_options, idx
+            dataset,
+            member,
+            specialized_options(options),
+            algorithm,
+            options.optimizer_options,
+            idx,
         )
     end
     return _optimize_constants(
         dataset,
         member,
-        options,
+        specialized_options(options),
+        # We use specialized options here due to Enzyme being
+        # more particular about dynamic dispatch
         options.optimizer_algorithm,
         options.optimizer_options,
         idx,
