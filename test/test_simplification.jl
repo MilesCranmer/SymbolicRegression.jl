@@ -2,8 +2,10 @@ include("test_params.jl")
 using SymbolicRegression, Test
 using SymbolicUtils: simplify, Symbolic
 using DynamicExpressions.OperatorEnumConstructionModule: empty_all_globals!
-using Random: MersenneTwister
-using Base: ≈
+#! format: off
+using Base: ≈; using Random: MersenneTwister
+#! format: on
+# ^ Can't end line with ≈ due to JuliaSyntax.jl bug
 
 function Base.:≈(a::String, b::String)
     a = replace(a, r"\s+" => "")

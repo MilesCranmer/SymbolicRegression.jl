@@ -19,9 +19,9 @@
 
         sum(i -> x[i] * x[i] - cos(2.5 * y[i]), eachindex(x))
     end
-    δŷ = ex'(X)
+    δy_hat = ex'(X)
 
-    @test δy ≈ δŷ
+    @test δy ≈ δy_hat
 
     options2 = Options(; unary_operators=[sin], binary_operators=[+, *, -])
     (δy2,) = Zygote.gradient(X) do X
@@ -30,9 +30,9 @@
 
         sum(i -> (x[i] + x[i]) * sin(2.5 + y[i]), eachindex(x))
     end
-    δy2̂ = ex'(X, options2)
+    δy2_hat = ex'(X, options2)
 
-    @test δy2 ≈ δy2̂
+    @test δy2 ≈ δy2_hat
 end
 
 @testitem "Test derivatives during optimization" tags = [:part1] begin
