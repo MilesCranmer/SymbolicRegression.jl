@@ -129,11 +129,26 @@ end
 function init_dummy_pops(
     npops::Int, datasets::Vector{D}, options::Options
 ) where {T,L,D<:Dataset{T,L}}
+    prototype = Population(
+        first(datasets);
+        population_size=1,
+        options=options,
+        nfeatures=first(datasets).nfeatures,
+    )
+    # ^ Due to occasional inference issue, we manually specify the return type
     return [
-        [
-            Population(d; population_size=1, options=options, nfeatures=d.nfeatures) for
-            _ in 1:npops
-        ] for d in datasets
+        typeof(prototype)[
+            if (i == 1 && j == 1)
+                prototype
+            else
+                Population(
+                    datasets[j];
+                    population_size=1,
+                    options=options,
+                    nfeatures=datasets[j].nfeatures,
+                )
+            end for i in 1:npops
+        ] for j in 1:length(datasets)
     ]
 end
 
