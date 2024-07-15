@@ -69,7 +69,7 @@ end
 @testitem "Test derivatives of parametric expression during optimization" tags = [:part3] begin
     using SymbolicRegression
     using SymbolicRegression.ConstantOptimizationModule:
-        Evaluator, GradEvaluator, optimize_constants
+        Evaluator, GradEvaluator, optimize_constants, specialized_options
     using DynamicExpressions
     using Zygote: Zygote
     using Random: MersenneTwister
@@ -117,7 +117,7 @@ end
         x0, refs = get_constants(ex)
         G = zero(x0)
 
-        f = Evaluator(ex, refs, dataset, options, nothing)
+        f = Evaluator(ex, refs, dataset, specialized_options(options), nothing)
         fg! = GradEvaluator(f, backend)
 
         @test f(x0) ≈ true_val
