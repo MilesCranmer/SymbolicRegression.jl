@@ -4,7 +4,8 @@ using DispatchDoctor: @unstable
 using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
-using DynamicExpressions: OperatorEnum, Node
+using DynamicExpressions: OperatorEnum, Node, Expression, default_node_type
+using ADTypes: AbstractADType, ADTypes
 using Distributed: nworkers
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim
@@ -248,8 +249,10 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
             return sum((prediction .- dataset.y) .^ 2) / dataset.n
         end
 
-- `node_type::Type{N}=Node`: The type of node to use for the search.
-    For example, `Node` or `GraphNode`.
+- `expression_type::Type{E}=Expression`: The type of expression to use.
+    For example, `Expression`.
+- `node_type::Type{N}=default_node_type(Expression)`: The type of node to use for the search.
+    For example, `Node` or `GraphNode`. The default is computed by `default_node_type(expression_type)`.
 - `populations`: How many populations of equations to use.
 - `population_size`: How many equations in each population.
 - `ncycles_per_iteration`: How many generations to consider per iteration.
@@ -312,14 +315,21 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `optimizer_probability`: Probability of performing optimization of constants at
     the end of a given iteration.
 - `optimizer_iterations`: How many optimization iterations to perform. This gets
-   passed to `Optim.Options` as `iterations`. The default is 8.
+    passed to `Optim.Options` as `iterations`. The default is 8.
 - `optimizer_f_calls_limit`: How many function calls to allow during optimization.
     This gets passed to `Optim.Options` as `f_calls_limit`. The default is
-    `0` which means no limit.
+    `10_000`.
 - `optimizer_options`: General options for the constant optimization. For details
     we refer to the documentation on `Optim.Options` from the `Optim.jl` package.
     Options can be provided here as `NamedTuple`, e.g. `(iterations=16,)`, as a
     `Dict`, e.g. Dict(:x_tol => 1.0e-32,), or as an `Optim.Options` instance.
+- `autodiff_backend`: The backend to use for differentiation, which should be
+    an instance of `AbstractADType` (see `DifferentiationInterface.jl`).
+    Default is `nothing`, which means `Optim.jl` will estimate gradients (likely
+    with finite differences). You can also pass a symbolic version of the backend
+    type, such as `:Zygote` for Zygote, `:Enzyme`, etc. Most backends will not
+    work, and many will never work due to incompatibilities, though support for some
+    is gradually being added.
 - `output_file`: What file to store equations to, as a backup.
 - `perturbation_factor`: When mutating a constant, either
     multiply or divide by (1+perturbation_factor)^(rand()+1).
@@ -401,7 +411,9 @@ $(OPTION_DESCRIPTIONS)
     should_simplify::Union{Nothing,Bool}=nothing,
     should_optimize_constants::Bool=true,
     output_file::Union{Nothing,AbstractString}=nothing,
-    node_type::Type=Node,
+    expression_type::Type=Expression,
+    node_type::Type=default_node_type(expression_type),
+    expression_options::NamedTuple=NamedTuple(),
     populations::Integer=15,
     perturbation_factor::Real=0.076,
     annealing::Bool=false,
@@ -434,6 +446,7 @@ $(OPTION_DESCRIPTIONS)
     optimizer_iterations::Union{Nothing,Integer}=nothing,
     optimizer_f_calls_limit::Union{Nothing,Integer}=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
+    autodiff_backend::Union{AbstractADType,Symbol,Nothing}=nothing,
     use_recorder::Bool=false,
     recorder_file::AbstractString="pysr_recorder.json",
     early_stop_condition::Union{Function,Real,Nothing}=nothing,
@@ -692,7 +705,7 @@ $(OPTION_DESCRIPTIONS)
     if !isa(optimizer_options, Optim.Options)
         optimizer_iterations = isnothing(optimizer_iterations) ? 8 : optimizer_iterations
         optimizer_f_calls_limit = if isnothing(optimizer_f_calls_limit)
-            0
+            10_000
         else
             optimizer_f_calls_limit
         end
@@ -723,14 +736,23 @@ $(OPTION_DESCRIPTIONS)
 
     @assert print_precision > 0
 
+    _autodiff_backend = if autodiff_backend isa Union{Nothing,AbstractADType}
+        autodiff_backend
+    else
+        ADTypes.Auto(autodiff_backend)
+    end
+
     options = Options{
         typeof(complexity_mapping),
         operator_specialization(typeof(operators)),
         node_type,
+        expression_type,
+        typeof(expression_options),
         turbo,
         bumper,
         deprecated_return_state,
         typeof(tournament_selection_weights),
+        typeof(_autodiff_backend),
     }(
         operators,
         bin_constraints,
@@ -778,12 +800,15 @@ $(OPTION_DESCRIPTIONS)
         elementwise_loss,
         loss_function,
         node_type,
+        expression_type,
+        expression_options,
         progress,
         terminal_width,
         optimizer_algorithm,
         optimizer_probability,
         optimizer_nrestarts,
         optimizer_options,
+        _autodiff_backend,
         recorder_file,
         tournament_selection_p,
         early_stop_condition,

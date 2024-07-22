@@ -1,8 +1,11 @@
 module MutateModule
 
 using DynamicExpressions:
-    AbstractExpressionNode,
+    AbstractExpression,
+    ParametricExpression,
     Node,
+    with_contents,
+    get_tree,
     preserve_sharing,
     copy_node,
     count_nodes,
@@ -34,32 +37,36 @@ using ..RecorderModule: @recorder
 function condition_mutation_weights!(
     weights::MutationWeights, member::PopMember, options::Options, curmaxsize::Int
 )
+    tree = get_tree(member.tree)
     if !preserve_sharing(typeof(member.tree))
         weights.form_connection = 0.0
         weights.break_connection = 0.0
     end
-    if member.tree.degree == 0
+    if tree.degree == 0
         # If equation is too small, don't delete operators
         # or simplify
         weights.mutate_operator = 0.0
         weights.swap_operands = 0.0
         weights.delete_node = 0.0
         weights.simplify = 0.0
-        if !member.tree.constant
+        if !tree.constant
             weights.optimize = 0.0
             weights.mutate_constant = 0.0
         end
         return nothing
     end
 
-    if !any(node -> node.degree == 2, member.tree)
+    if !any(node -> node.degree == 2, tree)
         # swap is implemented only for binary ops
         weights.swap_operands = 0.0
     end
 
-    #More constants => more likely to do constant mutation
-    n_constants = count_constants(member.tree)
-    weights.mutate_constant *= min(8, n_constants) / 8.0
+    if !(member.tree isa ParametricExpression)  # TODO: HACK
+        #More constants => more likely to do constant mutation
+        let n_constants = count_constants(member.tree)
+            weights.mutate_constant *= min(8, n_constants) / 8.0
+        end
+    end
     complexity = compute_complexity(member, options)
 
     if complexity >= curmaxsize
@@ -87,7 +94,7 @@ function next_generation(
     tmp_recorder::RecordType,
 )::Tuple{
     P,Bool,Float64
-} where {T,L,D<:Dataset{T,L},N<:AbstractExpressionNode{T},P<:PopMember{T,L,N}}
+} where {T,L,D<:Dataset{T,L},N<:AbstractExpression{T},P<:PopMember{T,L,N}}
     parent_ref = member.ref
     mutation_accepted = false
     num_evals = 0.0
@@ -158,11 +165,10 @@ function next_generation(
         elseif mutation_choice == :simplify
             @assert options.should_simplify
             simplify_tree!(tree, options.operators)
-            if tree isa Node
-                tree = combine_operators(tree, options.operators)
-            end
+            tree = combine_operators(tree, options.operators)
             @recorder tmp_recorder["type"] = "partial_simplify"
             mutation_accepted = true
+            is_success_always_possible = true
             return (
                 PopMember(
                     tree,
@@ -175,16 +181,16 @@ function next_generation(
                 mutation_accepted,
                 num_evals,
             )
-
-            is_success_always_possible = true
             # Simplification shouldn't hurt complexity; unless some non-symmetric constraint
             # to commutative operator...
-
         elseif mutation_choice == :randomize
             # We select a random size, though the generated tree
             # may have fewer nodes than we request.
             tree_size_to_generate = rand(1:curmaxsize)
-            tree = gen_random_tree_fixed_size(tree_size_to_generate, options, nfeatures, T)
+            tree = with_contents(
+                tree,
+                gen_random_tree_fixed_size(tree_size_to_generate, options, nfeatures, T),
+            )
             @recorder tmp_recorder["type"] = "regenerate"
 
             is_success_always_possible = true
@@ -202,9 +208,8 @@ function next_generation(
             num_evals += new_num_evals
             @recorder tmp_recorder["type"] = "optimize"
             mutation_accepted = true
-            return (cur_member, mutation_accepted, num_evals)
-
             is_success_always_possible = true
+            return (cur_member, mutation_accepted, num_evals)
         elseif mutation_choice == :do_nothing
             @recorder begin
                 tmp_recorder["type"] = "identity"
@@ -212,6 +217,7 @@ function next_generation(
                 tmp_recorder["reason"] = "identity"
             end
             mutation_accepted = true
+            is_success_always_possible = true
             return (
                 PopMember(
                     tree,
@@ -243,6 +249,7 @@ function next_generation(
         attempts += 1
     end
     #############################################
+    tree::AbstractExpression
 
     if !successful_mutation
         @recorder begin
@@ -360,7 +367,7 @@ end
 """Generate a generation via crossover of two members."""
 function crossover_generation(
     member1::P, member2::P, dataset::D, curmaxsize::Int, options::Options
-)::Tuple{P,P,Bool,Float64} where {T,L,D<:Dataset{T,L},P<:PopMember{T,L}}
+)::Tuple{P,P,Bool,Float64} where {T,L,D<:Dataset{T,L},N,P<:PopMember{T,L,N}}
     tree1 = member1.tree
     tree2 = member2.tree
     crossover_accepted = false
@@ -413,7 +420,7 @@ function crossover_generation(
         afterSize1;
         parent=member1.ref,
         deterministic=options.deterministic,
-    )
+    )::P
     baby2 = PopMember(
         child_tree2,
         afterScore2,
@@ -422,7 +429,7 @@ function crossover_generation(
         afterSize2;
         parent=member2.ref,
         deterministic=options.deterministic,
-    )
+    )::P
 
     crossover_accepted = true
     return baby1, baby2, crossover_accepted, num_evals

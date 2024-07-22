@@ -1,14 +1,15 @@
 module SingleIterationModule
 
 using DynamicExpressions:
-    AbstractExpressionNode,
+    AbstractExpression,
     Node,
     constructorof,
     string_tree,
     simplify_tree!,
-    combine_operators
+    combine_operators,
+    parse_expression
 using ..UtilsModule: @threads_if
-using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
+using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: PopMember, generate_reference
 using ..PopulationModule: Population, finalize_scores, best_sub_pop
@@ -32,22 +33,20 @@ function s_r_cycle(
     record::RecordType,
 )::Tuple{
     P,HallOfFame{T,L,N},Float64
-} where {T,L,D<:Dataset{T,L},N<:AbstractExpressionNode{T},P<:Population{T,L,N}}
+} where {T,L,D<:Dataset{T,L},N<:AbstractExpression{T},P<:Population{T,L,N}}
     max_temp = 1.0
     min_temp = 0.0
     if !options.annealing
         min_temp = max_temp
     end
     all_temperatures = LinRange(max_temp, min_temp, ncycles)
-    best_examples_seen = HallOfFame(options, T, L)
+    best_examples_seen = HallOfFame(options, dataset)
     num_evals = 0.0
 
     # For evaluating on a fixed batch (for batching)
     idx = options.batching ? batch_sample(dataset, options) : Int[]
-    loss_cache = [
-        (oid=constructorof(typeof(member.tree))(T; val=zero(T)), score=zero(L)) for
-        member in pop.members
-    ]
+    example_tree = create_expression(zero(T), options, dataset)
+    loss_cache = [(oid=example_tree, score=zero(L)) for member in pop.members]
     first_loop = true
 
     for temperature in all_temperatures
@@ -113,9 +112,7 @@ function optimize_and_simplify_population(
         if options.should_simplify
             tree = pop.members[j].tree
             tree = simplify_tree!(tree, options.operators)
-            if tree isa Node
-                tree = combine_operators(tree, options.operators)
-            end
+            tree = combine_operators(tree, options.operators)
             pop.members[j].tree = tree
         end
         if options.should_optimize_constants && do_optimization[j]

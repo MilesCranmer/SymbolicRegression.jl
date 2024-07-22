@@ -1,9 +1,11 @@
 module HallOfFameModule
 
-using DynamicExpressions: AbstractExpressionNode, Node, constructorof, string_tree
-using DynamicExpressions.EquationModule: with_type_parameters
+using DynamicExpressions:
+    AbstractExpression, parse_expression, Node, constructorof, string_tree
+using DynamicExpressions: with_type_parameters
 using ..UtilsModule: split_string
-using ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu
+using ..CoreModule:
+    MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: PopMember
 using ..LossFunctionsModule: eval_loss
@@ -23,13 +25,33 @@ have been set, you can run `.members[exists]`.
     These are ordered by complexity, with `.members[1]` the member with complexity 1.
 - `exists::Array{Bool,1}`: Whether the member at the given complexity has been set.
 """
-struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}}
+struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
     members::Array{PopMember{T,L,N},1}
     exists::Array{Bool,1} #Whether it has been set
 end
+function Base.show(io::IO, mime::MIME"text/plain", hof::HallOfFame{T,L,N}) where {T,L,N}
+    println(io, "HallOfFame{...}:")
+    for i in eachindex(hof.members, hof.exists)
+        s_member, s_exists = if hof.exists[i]
+            sprint((io, m) -> show(io, mime, m), hof.members[i]), "true"
+        else
+            "undef", "false"
+        end
+        println(io, " "^4 * ".exists[$i] = $s_exists")
+        print(io, " "^4 * ".members[$i] =")
+        splitted = split(strip(s_member), '\n')
+        if length(splitted) == 1
+            println(io, " " * s_member)
+        else
+            println(io)
+            foreach(line -> println(io, " "^8 * line), splitted)
+        end
+    end
+    return nothing
+end
 
 """
-    HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode}
+    HallOfFame(options::Options, dataset::Dataset{T,L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 
 Create empty HallOfFame. The HallOfFame stores a list
 of `PopMember` objects in `.members`, which is enumerated
@@ -39,18 +61,18 @@ has been instantiated or not.
 
 Arguments:
 - `options`: Options containing specification about deterministic.
-- `T`: Type of Nodes to use in the population. e.g., `Float64`.
-- `L`: Type of loss to use in the population. e.g., `Float64`.
+- `dataset`: Dataset containing the input data.
 """
 function HallOfFame(
-    options::Options, ::Type{T}, ::Type{L}
+    options::Options, dataset::Dataset{T,L}
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     actualMaxsize = options.maxsize + MAX_DEGREE
-    NT = with_type_parameters(options.node_type, T)
-    return HallOfFame{T,L,NT}(
+    base_tree = create_expression(zero(T), options, dataset)
+
+    return HallOfFame{T,L,typeof(base_tree)}(
         [
             PopMember(
-                constructorof(options.node_type)(T; val=convert(T, 1)),
+                copy(base_tree),
                 L(0),
                 L(Inf),
                 options;

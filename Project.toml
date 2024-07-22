@@ -1,11 +1,13 @@
 name = "SymbolicRegression"
 uuid = "8254be44-1295-4e6a-a16d-46603ac705cb"
 authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
-version = "0.24.5"
+version = "0.25.0"
 
 [deps]
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
 DispatchDoctor = "8d63f2c5-f18a-4cf2-ba9d-b3f60fc568c8"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 DynamicExpressions = "a40a106e-89c9-4ca8-8020-a735e8728b6b"
@@ -27,20 +29,25 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [weakdeps]
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 
 [extensions]
+SymbolicRegressionEnzymeExt = "Enzyme"
 SymbolicRegressionJSON3Ext = "JSON3"
 SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 
 [compat]
+ADTypes = "~1.4"
 Compat = "^4.2"
 Dates = "1"
+DifferentiationInterface = "0.5"
 DispatchDoctor = "0.4"
 Distributed = "1"
-DynamicExpressions = "0.16"
+DynamicExpressions = "0.18.5"
 DynamicQuantities = "0.10, 0.11, 0.12, 0.13, 0.14"
+Enzyme = "0.12"
 JSON3 = "1"
 LineSearches = "7"
 LossFunctions = "0.10, 0.11"
@@ -56,10 +63,11 @@ Random = "1"
 Reexport = "1"
 SpecialFunctions = "0.10.1, 1, 2"
 StatsBase = "0.33, 0.34"
-SymbolicUtils = "0.19, ^1.0.5"
+SymbolicUtils = "0.19, ^1.0.5, 2"
 TOML = "1"
 julia = "1.6"
 
 [extras]
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
