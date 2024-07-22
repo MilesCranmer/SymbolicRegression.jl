@@ -36,6 +36,15 @@ end
         tree, X, options.operators, base_tree, y
     )
     @test y_for_base_tree ≈ true_inverse_for_base_tree
+
+    # Another example:
+    base_tree2 = Node{Float64}(; val=1.0)
+    tree2 = x1 * x1 * base_tree2 + x2
+    true_inverse_for_base_tree2 = @. (y - X[2, :]) / X[1, :] / X[1, :]
+    (y_for_base_tree2, complete) = eval_inverse_tree_array(
+        tree2, X, options.operators, base_tree2, y
+    )
+    @test y_for_base_tree2 ≈ true_inverse_for_base_tree2
 end
 
 @testitem "Inversion with invalid values" begin

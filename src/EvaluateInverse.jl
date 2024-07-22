@@ -148,7 +148,7 @@ function deg1_invert!(y::AbstractVector, op::F) where {F}
     return nothing
 end
 inverter_right(op::F) where {F} = (l, r) -> approx_inverse(Base.Fix1(op, l))(r)
-inverter_left(op::F) where {F} = (l, r) -> approx_inverse(Base.Fix2(op, r))(l)
+inverter_left(op::F) where {F} = (l, r) -> approx_inverse(Base.Fix2(op, l))(r)
 function deg2_invert_right!(y::AbstractVector, l::AbstractVector, op_inv::F) where {F}
     @inbounds @simd for i in eachindex(y, l)
         y[i] = op_inv(l[i], y[i])
