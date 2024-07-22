@@ -4,9 +4,11 @@ using DispatchDoctor: @unstable
 using DynamicQuantities:
     UnionAbstractQuantity,
     AbstractDimensions,
+    AbstractSymbolicDimensions,
     Dimensions,
     SymbolicDimensions,
     Quantity,
+    with_type_parameters,
     dimension,
     uparse,
     sym_uparse,
@@ -33,8 +35,15 @@ function get_units(::Type{T}, ::Type{D}, x::AbstractString, f::Function) where {
     isempty(x) && return one(Quantity{T,D})
     return convert(Quantity{T,D}, f(x))
 end
-function get_units(::Type{T}, ::Type{D}, x::Quantity, ::Function) where {T,D}
+function get_units(
+    ::Type{T}, ::Type{D}, x::Quantity{<:Any,<:AbstractSymbolicDimensions}, ::Function
+) where {T,D}
     return convert(Quantity{T,D}, x)
+end
+function get_units(
+    ::Type{T}, ::Type{D}, x::Quantity{<:Any,<:AbstractDimensions}, ::Function
+) where {T,D}
+    return convert(with_type_parameters(Quantity, T, dim_type(typeof(x))), x)
 end
 function get_units(::Type{T}, ::Type{D}, x::AbstractDimensions, ::Function) where {T,D}
     return convert(Quantity{T,D}, Quantity(one(T), x))
