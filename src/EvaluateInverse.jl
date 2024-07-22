@@ -62,7 +62,7 @@ function _eval_inverse_tree_array(
     if tree.degree == 1
         op = operators.unaops[tree.op]
         # Inverse this operator into `y`
-        eval_inverse_deg1!(y, op)
+        deg1_invert!(y, op)
         is_bad_array(y) && return ResultOk(y, false)
         return _eval_inverse_tree_array(
             tree.l, X, operators, node_to_invert_at, y, eval_kws
@@ -74,7 +74,7 @@ function _eval_inverse_tree_array(
             # so that we can use it in the inverse
             (result_l, complete_l) = eval_tree_array(tree.l, X, operators; eval_kws...)
             !complete_l && return ResultOk(result_l, complete_l)
-            eval_inverse_deg2_right!(y, result_l, op)
+            deg2_invert_right!(y, result_l, op)
             is_bad_array(y) && return ResultOk(y, false)
             return _eval_inverse_tree_array(
                 tree.r, X, operators, node_to_invert_at, y, eval_kws
@@ -82,7 +82,7 @@ function _eval_inverse_tree_array(
         else  # any(===(node_to_invert_at), tree.l)
             (result_r, complete_r) = eval_tree_array(tree.r, X, operators; eval_kws...)
             !complete_r && return ResultOk(result_r, complete_r)
-            eval_inverse_deg2_left!(y, result_r, op)
+            deg2_invert_left!(y, result_r, op)
             is_bad_array(y) && return ResultOk(y, false)
             return _eval_inverse_tree_array(
                 tree.l, X, operators, node_to_invert_at, y, eval_kws
@@ -91,7 +91,7 @@ function _eval_inverse_tree_array(
     end
 end
 
-function eval_inverse_deg1!(y::AbstractVector, op::F) where {F}
+function deg1_invert!(y::AbstractVector, op::F) where {F}
     op_inv = approx_inverse(op)
     @inbounds @simd for i in eachindex(y)
         y[i] = op_inv(y[i])
@@ -99,14 +99,14 @@ function eval_inverse_deg1!(y::AbstractVector, op::F) where {F}
     # TODO: Need to account for non-ok evaluations
     return y
 end
-function eval_inverse_deg2_right!(y::AbstractVector, l::AbstractVector, op::F) where {F}
+function deg2_invert_right!(y::AbstractVector, l::AbstractVector, op::F) where {F}
     @inbounds @simd for i in eachindex(y, l)
         y[i] = approx_inverse(Base.Fix1(op, l[i]))(y[i])
     end
     # TODO: Need to account for non-ok evaluations
     return y
 end
-function eval_inverse_deg2_left!(y::AbstractVector, r::AbstractVector, op::F) where {F}
+function deg2_invert_left!(y::AbstractVector, r::AbstractVector, op::F) where {F}
     @inbounds @simd for i in eachindex(y, r)
         y[i] = approx_inverse(Base.Fix2(op, r[i]))(y[i])
     end
