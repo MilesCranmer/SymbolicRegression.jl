@@ -32,6 +32,7 @@ using ..MutationFunctionsModule:
     form_random_connection!,
     break_random_connection!
 using ..ConstantOptimizationModule: optimize_constants
+using ..SparseLinearExpansionModule: random_sparse_linear_expansion!
 using ..RecorderModule: @recorder
 
 function condition_mutation_weights!(
@@ -210,6 +211,15 @@ function next_generation(
             mutation_accepted = true
             is_success_always_possible = true
             return (cur_member, mutation_accepted, num_evals)
+        elseif mutation_choice == :nested_linear_solve
+            tree = random_sparse_linear_expansion!(tree, dataset, options)
+            @recorder tmp_recorder["type"] = "nested_linear_solve"
+            num_evals += 1
+            # TODO: Not sure how to count this more accurately
+            # TODO: Might also want to incorporate batching here?
+            options.batching &&
+                @warn "Nested linear solve is not currently batched" maxlog = 1
+            is_success_always_possible = true
         elseif mutation_choice == :do_nothing
             @recorder begin
                 tmp_recorder["type"] = "identity"

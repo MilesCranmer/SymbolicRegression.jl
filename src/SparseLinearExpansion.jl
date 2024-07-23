@@ -118,6 +118,7 @@ function find_sparse_linear_expression(
     trim_n_percent_per_iter=50,
     max_iters=10,
     l2_regularization=1e-6,
+    pinv_kws=(;),
     predefined_basis::Union{AbstractVector,Nothing}=nothing,
     min_num_nodes=1,
     max_num_nodes=5,
@@ -167,7 +168,9 @@ function find_sparse_linear_expression(
     mask_out_duplicate_bases!(mask, A)
     # TODO: Account for all-zero mask
 
-    coeffs[mask] .= solve_linear_system(A[:, mask], normalized_y, l2_regularization)  # Initialize based on least squares
+    coeffs[mask] .= solve_linear_system(
+        A[:, mask], normalized_y, l2_regularization; pinv_kws
+    )  # Initialize based on least squares
     # TODO: Account for singular matrices, if they are even possible
 
     # Now, we do iterative pruning of the coefficients, sort of like STLSQ,
@@ -184,7 +187,9 @@ function find_sparse_linear_expression(
         threshold = percentile(abs.(coeffs[mask]), max_prune_percentage)
         # ^ Each time, we trim the smallest 50% of coefficients
         @. mask = mask & (abs(coeffs) > threshold)
-        coeffs[mask] .= solve_linear_system(A[:, mask], normalized_y, l2_regularization)
+        coeffs[mask] .= solve_linear_system(
+            A[:, mask], normalized_y, l2_regularization; pinv_kws
+        )
         n_remaining = sum(mask)
         if n_remaining <= max_final_basis_size
             break
@@ -267,6 +272,29 @@ function sparse_linear_expansion!(
     return sparse_linear_expansion!(
         default_rng(), tree, dataset, options, expand_at; solver_kws
     )
+end
+
+"""Take a random node, and do a sparse linear solve with a random basis."""
+function random_sparse_linear_expansion!(
+    ex::AbstractExpression,
+    dataset::Dataset,
+    options::Options,
+    rng::AbstractRNG=default_rng(),
+)
+    tree = get_contents(ex)
+    return with_contents(ex, random_sparse_linear_expansion!(tree, dataset, options, rng))
+end
+function random_sparse_linear_expansion!(
+    tree::AbstractExpressionNode,
+    dataset::Dataset,
+    options::Options,
+    rng::AbstractRNG=default_rng(),
+)
+    expand_at = rand(rng, NodeSampler(; tree))
+    # TODO: We currently ignore failures:
+    new_tree, _ = sparse_linear_expansion!(tree, dataset, options, expand_at)
+    # TODO: Unpack solver_kws from options
+    return new_tree
 end
 
 end

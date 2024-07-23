@@ -18,14 +18,17 @@ will be normalized to sum to 1.0 after initialization.
 - `randomize::Float64`: How often to create a random tree.
 - `do_nothing::Float64`: How often to do nothing.
 - `optimize::Float64`: How often to optimize the constants in the tree, as a mutation.
-   Note that this is different from `optimizer_probability`, which is
-   performed at the end of an iteration for all individuals.
+    Note that this is different from `optimizer_probability`, which is
+    performed at the end of an iteration for all individuals.
+- `nested_linear_solve::Float64`: How often to perform a sparse linear expansion,
+    which finds an optimal linear combination of random basis functions by inverting
+    the tree at a given node.
 - `form_connection::Float64`: **Only used for `GraphNode`, not regular `Node`**.
-   Otherwise, this will automatically be set to 0.0. How often to form a
-   connection between two nodes.
+    Otherwise, this will automatically be set to 0.0. How often to form a
+    connection between two nodes.
 - `break_connection::Float64`: **Only used for `GraphNode`, not regular `Node`**.
-   Otherwise, this will automatically be set to 0.0. How often to break a
-   connection between two nodes.
+    Otherwise, this will automatically be set to 0.0. How often to break a
+    connection between two nodes.
 """
 Base.@kwdef mutable struct MutationWeights
     mutate_constant::Float64 = 0.048
@@ -38,6 +41,7 @@ Base.@kwdef mutable struct MutationWeights
     randomize::Float64 = 0.00023
     do_nothing::Float64 = 0.21
     optimize::Float64 = 0.0
+    nested_linear_solve::Float64 = 0.0
     form_connection::Float64 = 0.5
     break_connection::Float64 = 0.1
 end
