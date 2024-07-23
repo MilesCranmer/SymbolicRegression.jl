@@ -89,18 +89,13 @@ end
     rng = MersenneTwister(0)
     options = Options(; binary_operators=[+, -, *, /], unary_operators=[sin, cos])
     xs = map(1:3) do i
-        Expression(
-            Node{Float64}(; feature=i);
-            operators=options.operators,
-            variable_names=["x1", "x2", "x3"],
-        )
+        Node{Float64}(; feature=i)
     end
     X = randn(rng, 3, 128)
     y = @. 1.0 * X[1, :] + 2.0 * X[2, :] + 3.0 * X[3, :]
-    dataset = Dataset(X, y)
 
     coeffs, basis = find_sparse_linear_expression(
-        rng, xs[1], dataset, options; predefined_basis=xs, max_final_basis_size=3
+        rng, X, y, options, Node; predefined_basis=xs, max_final_basis_size=3
     )
     @test isapprox(coeffs, [1.0, 2.0, 3.0]; atol=1e-4)
 end
@@ -112,23 +107,14 @@ end
 
     options = Options(; binary_operators=[+, -, *, /], unary_operators=[sin, cos])
 
-    x1 = Expression(
-        Node{Float64}(; feature=1);
-        operators=options.operators,
-        variable_names=["x1", "x2", "x3", "x4", "x5"],
-    )
-    ex_div_0 = Expression(
-        Node(; op=4, l=Node{Float64}(; feature=1), r=Node{Float64}(; val=0.0));
-        operators=options.operators,
-        variable_names=["x1", "x2", "x3", "x4", "x5"],
-    )
+    x1 = Node{Float64}(; feature=1)
+    ex_div_0 = Node(; op=4, l=Node{Float64}(; feature=1), r=Node{Float64}(; val=0.0))
     rng = MersenneTwister(0)
     X = randn(rng, 5, 32)
     y = randn(rng, 32)
-    dataset = Dataset(X, y)
 
     coeffs, basis = find_sparse_linear_expression(
-        rng, x1, dataset, options; predefined_basis=[x1, ex_div_0]
+        rng, X, y, options, typeof(x1); predefined_basis=[x1, ex_div_0]
     )
     @test length(coeffs) == 1
     @test only(basis) == x1
@@ -143,26 +129,20 @@ end
     rng = MersenneTwister(0)
     X = randn(rng, 5, 1024)
     y = @. 1.5 * X[1, :] * X[2, :] + 2.0 * X[3, :] * X[4, :] + 3.0 * X[5, :]
-    dataset = Dataset(X, y)
 
-    prototype_ex = Expression(
-        Node{Float64}(; val=1.0);
-        operators=options.operators,
-        variable_names=["x1", "x2", "x3", "x4", "x5"],
-    )
     coeffs, basis = find_sparse_linear_expression(
-        rng, prototype_ex, dataset, options; max_final_basis_size=5
+        rng, X, y, options, Node; max_final_basis_size=5
     )
     @test length(coeffs) == 5
     @test length(basis) == 5
     @test eltype(coeffs) == Float64
-    @test eltype(basis) == typeof(prototype_ex)
+    @test eltype(basis) <: Node{eltype(X)}
 
     y_pred = sum(
         i -> coeffs[i] .* first(eval_tree_array(basis[i], X, options)), eachindex(coeffs)
     )
-    pred_loss = sum(abs2, y_pred .- dataset.y)
-    baseline_loss = sum(abs2, dataset.y)
+    pred_loss = sum(abs2, y_pred .- y)
+    baseline_loss = sum(abs2, y)
     @test pred_loss < baseline_loss
 end
 

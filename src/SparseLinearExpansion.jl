@@ -1,7 +1,8 @@
 """This module defines a mutation which solves for a sparse linear expansion at some node."""
 module SparseLinearExpansionModule
 
-using DynamicExpressions: AbstractExpression, with_contents, eval_tree_array
+using DynamicExpressions:
+    AbstractExpressionNode, with_type_parameters, eval_tree_array, set_node!, constructorof
 using LossFunctions: L2DistLoss
 using Random: AbstractRNG, default_rng
 using StatsBase: std, percentile
@@ -9,33 +10,32 @@ using StatsBase: std, percentile
 using ..CoreModule: Options, Dataset
 using ..PopMemberModule: PopMember
 using ..MutationFunctionsModule: gen_random_tree_fixed_size
+using ..EvaluateInverseModule: eval_inverse_tree_array
 
 function make_random_basis(
     rng::AbstractRNG,
-    prototype::AbstractExpression,
-    dataset::Dataset{T,L},
+    nfeatures::Integer,
+    ::Type{T},
     options::Options,
+    ::Type{N},
     basis_size::Int;
     min_num_nodes=1,
     max_num_nodes=5,
-) where {T,L}
-    basis_functions = [copy(prototype) for _ in 1:basis_size]  # TODO: Make this a parameter
+) where {T,N<:AbstractExpressionNode}
+    basis_functions = Vector{with_type_parameters(N, T)}(undef, basis_size)
     for i in eachindex(basis_functions)
         num_nodes = rand(rng, min_num_nodes:max_num_nodes)
-        local new_tree
         attempt = 0
-        @assert dataset.nfeatures > 0
+        @assert nfeatures > 0
         while attempt < 1000  # TODO: Surely there's a better way to do this
-            new_tree = gen_random_tree_fixed_size(
-                num_nodes, options, dataset.nfeatures, T, rng
-            )
+            new_tree = gen_random_tree_fixed_size(num_nodes, options, nfeatures, T, rng)
             if any(node -> node.degree == 0 && !node.constant, new_tree)
+                basis_functions[i] = new_tree
                 break
             end
             attempt += 1
         end
         attempt == 1000 && error("Failed to find a valid basis function")
-        basis_functions[i] = with_contents(basis_functions[i], new_tree)
     end
     return basis_functions
 end
@@ -93,9 +93,10 @@ end
 """Sparse solver available for L2DistLoss"""
 function find_sparse_linear_expression(
     rng::AbstractRNG,
-    prototype::AbstractExpression,
-    dataset::Dataset{T,L},
-    options::Options;
+    X::AbstractMatrix{T},
+    y::AbstractVector{T},
+    options::Options,
+    ::Type{N};
     init_basis_size=128,
     max_final_basis_size=rand(rng, 3:20),  # TODO: Make this a parameter
     trim_n_percent_per_iter=50,
@@ -104,14 +105,16 @@ function find_sparse_linear_expression(
     predefined_basis=nothing,
     min_num_nodes=1,
     max_num_nodes=5,
-) where {T,L}
+) where {T,N<:AbstractExpressionNode}
     assert_can_use_sparse_linear_expression(options)
+    nfeatures = size(X, 1)
     basis = if predefined_basis === nothing
         make_random_basis(
             rng,
-            prototype,
-            dataset,
+            nfeatures,
+            T,
             options,
+            N,
             init_basis_size;
             min_num_nodes=min_num_nodes,
             max_num_nodes=max_num_nodes,
@@ -122,20 +125,20 @@ function find_sparse_linear_expression(
 
     (A, mask) = let
         A_and_complete = map(
-            let X = dataset.X
+            let X = X
                 b -> eval_tree_array(b, X, options)
             end,
             basis,
         )
         stack(map(first, A_and_complete)), map(last, A_and_complete)
     end
-    y_scale = std(dataset.y)
+    y_scale = std(y)
 
     A
     # ^(n_rows, n_basis)
     mask
     # ^(n_basis,)
-    normalized_y = dataset.y ./ y_scale
+    normalized_y = y ./ y_scale
     # ^(n_rows,)
 
     coeffs = similar(A, axes(A, 2))
@@ -179,9 +182,11 @@ function find_sparse_linear_expression(
     return coeffs[mask], basis[mask]
 end
 function find_sparse_linear_expression(
-    prototype::AbstractExpression, dataset::Dataset, options::Options; kws...
-)
-    return find_sparse_linear_expression(default_rng(), prototype, dataset, options; kws...)
+    X::AbstractMatrix{T}, y::AbstractVector{T}, options::Options, ::Type{N}; kws...
+) where {T,N<:AbstractExpressionNode}
+    return find_sparse_linear_expression(default_rng(), X, y, options, N; kws...)
+end
+
 end
 
 end
