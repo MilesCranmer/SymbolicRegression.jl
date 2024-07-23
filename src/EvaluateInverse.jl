@@ -42,7 +42,7 @@ function eval_inverse_tree_array(
     result = _eval_inverse_tree_array(
         tree, X, operators, node_to_invert_at, copy(y), (; eval_kws...)
     )
-    return (result.x, result.ok)
+    return (result.x, result.ok && !is_bad_array(result.x))
 end
 @generated function _eval_inverse_tree_array(
     tree::N,

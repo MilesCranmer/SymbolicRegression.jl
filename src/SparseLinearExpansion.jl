@@ -223,6 +223,7 @@ function reduce_coeffs_with_basis(
     n = length(coeffs)
 
     if n == 0
+        # TODO: Investigate why we are hitting 0 coefficients ever
         return constructorof(N)(; val=zero(T))
     elseif n == 1
         l = constructorof(N)(; val=only(coeffs))
