@@ -90,6 +90,10 @@ function mask_out_duplicate_bases!(
     end
 end
 
+# TODO: We should allow for some elements to be NaN - just set those to 1.0.
+# Since this is to be treated as a random mutation, it's not a big deal if
+# the final result is imperfect!
+
 """Sparse solver available for L2DistLoss"""
 function find_sparse_linear_expression(
     rng::AbstractRNG,
