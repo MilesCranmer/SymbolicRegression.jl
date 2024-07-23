@@ -146,7 +146,7 @@ end
     @test pred_loss < baseline_loss
 end
 
-@testitem "Linear expansion to node" tags = [:part3] begin
+@testitem "Reduce coefficients with basis to tree" tags = [:part3] begin
     using SymbolicRegression
     using SymbolicRegression.SparseLinearExpansionModule: reduce_coeffs_with_basis
     options = Options(; binary_operators=[+, -, *, /], unary_operators=[sin, cos])
@@ -157,13 +157,16 @@ end
     x2 = Node{Float64}(; feature=2)
     x3 = Node{Float64}(; feature=3)
 
-    bases = [x1, x2 * 3.0, x3 - x1]
-    coeffs = [1.0, 2.0, 3.0]
+    bases = [x1, x2 * 3.0, x3 - x1, x2 / x3]
+    coeffs = [1.0, 2.0, 3.0, 4.0]
     tree = reduce_coeffs_with_basis(coeffs, bases, mul, add)
-    @show tree
+
+    @test tree ==
+        ((1.0 * x1) + (2.0 * (x2 * 3.0))) + ((3.0 * (x3 - x1)) + (4.0 * (x2 / x3)))
 end
 
 @testitem "Linear expansion to node" tags = [:part3] begin
+    using DynamicExpressions: get_constants
     using SymbolicRegression
     using SymbolicRegression.SparseLinearExpansionModule: sparse_linear_expansion!
 
@@ -172,11 +175,25 @@ end
     y = @. 1.5 * X[1, :] * X[2, :] + 2.0 * X[3, :] * X[4, :] + 3.0 * X[5, :] + 1.5
     dataset = Dataset(X, y)
 
-    x0 = Node{Float64}(; feature=1)
-    tree = x0 + 1.5
-    expand_at = x0
+    (x1, x2, x3, x4, x5) = (Node{Float64}(; feature=i) for i in 1:5)
 
-    tree = sparse_linear_expansion!(tree, dataset, options, expand_at)
+    tree = x1 + 1.5
+    expand_at = x1
+
+    tree, flag = sparse_linear_expansion!(
+        tree,
+        dataset,
+        options,
+        expand_at;
+        solver_kws=(;
+            predefined_basis=[x1 * x2, x3 * x4, x5, x1, x2, x3], max_final_basis_size=3
+        ),
+    )
+    @test flag
+    @test typeof(tree) === typeof(x1)
+
+    # Test for the exact basis we should find:
+    @show sort(first(get_constants(tree))) ≈ [1.5, 1.5, 2.0, 3.0]
 end
 
 @testitem "Test linear expansion assertions" tags = [:part3] begin

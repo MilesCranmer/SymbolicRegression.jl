@@ -102,7 +102,7 @@ function find_sparse_linear_expression(
     trim_n_percent_per_iter=50,
     max_iters=10,
     l2_regularization=1e-6,
-    predefined_basis=nothing,
+    predefined_basis::Union{AbstractVector,Nothing}=nothing,
     min_num_nodes=1,
     max_num_nodes=5,
 ) where {T,N<:AbstractExpressionNode}
@@ -120,7 +120,7 @@ function find_sparse_linear_expression(
             max_num_nodes=max_num_nodes,
         )
     else
-        predefined_basis
+        map(copy, predefined_basis)
     end
 
     (A, mask) = let
@@ -224,12 +224,13 @@ function sparse_linear_expansion!(
     tree::N,
     dataset::Dataset,
     options::Options,
-    expand_at::N,
-    solver_kws=NamedTuple(),
+    expand_at::N;
+    solver_kws::NamedTuple=(;),
 ) where {N<:AbstractExpressionNode}
     X = dataset.X
     y = dataset.y
-    y_at_node = eval_inverse_tree_array(tree, X, options.operators, expand_at, y)
+    y_at_node, complete = eval_inverse_tree_array(tree, X, options.operators, expand_at, y)
+    !complete && return tree, false
     coeffs, basis = find_sparse_linear_expression(
         rng, X, y_at_node, options, N; solver_kws...
     )
@@ -237,18 +238,18 @@ function sparse_linear_expansion!(
     add = findfirst(==(+), options.operators.binops)::Int
 
     new_tree = reduce_coeffs_with_basis(coeffs, basis, mul, add)
-    set_node!(tree, expand_at, new_tree)
-    return tree
+    set_node!(expand_at, new_tree)
+    return tree, true
 end
 function sparse_linear_expansion!(
     tree::AbstractExpressionNode,
     dataset::Dataset,
     options::Options,
-    expand_at::AbstractExpressionNode,
-    solver_kws=NamedTuple(),
+    expand_at::AbstractExpressionNode;
+    solver_kws::NamedTuple=(;),
 )
     return sparse_linear_expansion!(
-        default_rng(), tree, dataset, options, expand_at, solver_kws
+        default_rng(), tree, dataset, options, expand_at; solver_kws
     )
 end
 
