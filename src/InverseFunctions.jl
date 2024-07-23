@@ -86,6 +86,11 @@ approx_inverse(::typeof(abs)) = abs
 # Note that Fix{N,<:Union{typeof(+),typeof(*),typeof(-),typeof(/)}}
 # is already implemented.
 
+# However, the `InverseFunctions` ones throw a domain error,
+# so we choose to re-implement them.
+approx_inverse(f::Base.Fix1{typeof(*)}) = Base.Fix1(\, f.x)
+approx_inverse(f::Base.Fix2{typeof(*)}) = Base.Fix2(/, f.x)
+
 # (f.x ^ _) => log(f.x, _)
 approx_inverse(f::Base.Fix1{typeof(safe_pow)}) = Base.Fix1(safe_log, f.x)
 # (_ ^ f.x) => _ ^ (1/f.x)
