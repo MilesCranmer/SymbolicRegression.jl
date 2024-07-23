@@ -2,10 +2,19 @@
 module SparseLinearExpansionModule
 
 using DynamicExpressions:
-    AbstractExpressionNode, with_type_parameters, eval_tree_array, set_node!, constructorof
+    AbstractExpressionNode,
+    AbstractExpression,
+    NodeSampler,
+    get_contents,
+    with_contents,
+    with_type_parameters,
+    eval_tree_array,
+    set_node!,
+    constructorof
 using LossFunctions: L2DistLoss
 using Random: AbstractRNG, default_rng
 using StatsBase: std, percentile
+using LinearAlgebra: qr, pinv
 
 using ..CoreModule: Options, Dataset
 using ..PopMemberModule: PopMember
@@ -49,14 +58,17 @@ function assert_can_use_sparse_linear_expression(options::Options)
 end
 
 function solve_linear_system(
-    A::AbstractMatrix{T}, y::AbstractVector{T}, regularization::Real
+    A::AbstractMatrix{T},
+    y::AbstractVector{T},
+    regularization::Real;
+    pinv_kws::NamedTuple=(;),
 ) where {T}
     ATA = A'A
     ATy = A'y
     @inbounds for i in eachindex(axes(ATA, 1), axes(ATA, 2))
         ATA[i, i] += regularization
     end
-    return ATA \ ATy
+    return pinv(ATA; pinv_kws...) * ATy
 end
 
 function normalize_bases!(A::AbstractMatrix, mask::AbstractVector{Bool})
