@@ -244,11 +244,11 @@ function sparse_linear_expansion!(
     tree::AbstractExpressionNode,
     dataset::Dataset,
     options::Options,
-    expand_at::AbstractExpressionNode;
-    kws...,
+    expand_at::AbstractExpressionNode,
+    solver_kws=NamedTuple(),
 )
     return sparse_linear_expansion!(
-        default_rng(), tree, dataset, options, expand_at; kws...
+        default_rng(), tree, dataset, options, expand_at, solver_kws
     )
 end
 
