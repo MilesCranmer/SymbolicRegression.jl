@@ -11,6 +11,7 @@ using DynamicExpressions:
     eval_tree_array,
     set_node!,
     constructorof
+using DynamicExpressions.UtilsModule: is_bad_array
 using LossFunctions: L2DistLoss
 using Random: AbstractRNG, default_rng
 using StatsBase: std, percentile
@@ -257,6 +258,7 @@ function sparse_linear_expansion!(
     coeffs, basis = find_sparse_linear_expression(
         rng, X, y_at_node, options, N; solver_kws...
     )
+    is_bad_array(coeffs) && return tree, false
     mul = findfirst(==(*), options.operators.binops)::Int
     add = findfirst(==(+), options.operators.binops)::Int
 
