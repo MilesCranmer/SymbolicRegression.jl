@@ -221,9 +221,10 @@ function reduce_coeffs_with_basis(
     # Create a new tree from the basis functions,
     # preferring width rather than depth.
     n = length(coeffs)
-    n >= 1 || throw(ArgumentError("coeffs must have at least one element"))
 
-    if n == 1
+    if n == 0
+        return constructorof(N)(; val=zero(T))
+    elseif n == 1
         l = constructorof(N)(; val=only(coeffs))
         r = only(basis)
         return constructorof(N)(; op=mul, l=l, r=r)
@@ -279,20 +280,24 @@ function random_sparse_linear_expansion!(
     ex::AbstractExpression,
     dataset::Dataset,
     options::Options,
-    rng::AbstractRNG=default_rng(),
+    rng::AbstractRNG=default_rng();
+    solver_kws::NamedTuple=(;),
 )
     tree = get_contents(ex)
-    return with_contents(ex, random_sparse_linear_expansion!(tree, dataset, options, rng))
+    return with_contents(
+        ex, random_sparse_linear_expansion!(tree, dataset, options, rng; solver_kws)
+    )
 end
 function random_sparse_linear_expansion!(
     tree::AbstractExpressionNode,
     dataset::Dataset,
     options::Options,
-    rng::AbstractRNG=default_rng(),
+    rng::AbstractRNG=default_rng();
+    solver_kws::NamedTuple=(;),
 )
     expand_at = rand(rng, NodeSampler(; tree))
     # TODO: We currently ignore failures:
-    new_tree, _ = sparse_linear_expansion!(tree, dataset, options, expand_at)
+    new_tree, _ = sparse_linear_expansion!(tree, dataset, options, expand_at; solver_kws)
     # TODO: Unpack solver_kws from options
     return new_tree
 end
