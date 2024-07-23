@@ -281,11 +281,11 @@ end
 """Take a random node, and do a sparse linear solve with a random basis."""
 function random_sparse_linear_expansion!(
     ex::AbstractExpression,
-    dataset::Dataset,
+    dataset::Dataset{T},
     options::Options,
     rng::AbstractRNG=default_rng();
     solver_kws::NamedTuple=(;),
-)
+) where {T}
     tree = get_contents(ex)
     return with_contents(
         ex, random_sparse_linear_expansion!(tree, dataset, options, rng; solver_kws)
@@ -293,15 +293,32 @@ function random_sparse_linear_expansion!(
 end
 function random_sparse_linear_expansion!(
     tree::AbstractExpressionNode,
-    dataset::Dataset,
+    dataset::Dataset{T},
     options::Options,
     rng::AbstractRNG=default_rng();
     solver_kws::NamedTuple=(;),
-)
+) where {T}
     expand_at = rand(rng, NodeSampler(; tree))
+
+    atol = 0.0
+    rtol = let
+        n = dataset.n
+        ϵ = eps(T)
+        fudge_factor = 100
+        # ^ Allow for some rounding error, since it's just a mutation
+        n * ϵ * fudge_factor
+    end
+
     # TODO: We currently ignore failures:
-    new_tree, _ = sparse_linear_expansion!(tree, dataset, options, expand_at; solver_kws)
+    new_tree, _ = sparse_linear_expansion!(
+        tree,
+        dataset,
+        options,
+        expand_at;
+        solver_kws=(; pinv_kws=(; atol, rtol), solver_kws...),
+    )
     # TODO: Unpack solver_kws from options
+    # TODO: Confirm this is actually correct... And we don't need to like inverse this or anything.
     return new_tree
 end
 
