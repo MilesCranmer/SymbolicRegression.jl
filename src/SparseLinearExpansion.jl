@@ -187,6 +187,69 @@ function find_sparse_linear_expression(
     return find_sparse_linear_expression(default_rng(), X, y, options, N; kws...)
 end
 
+"""
+    reduce_coeffs_with_basis(coeffs::AbstractVector, basis::AbstractVector{<:AbstractExpressionNode}, mul::Integer, add::Integer)
+
+Reduce a vector of coefficients and basis functions to a single tree,
+assuming permutation invariance of +. This reduced tree prefers width over depth,
+and attempts to have a balanced tree.
+"""
+function reduce_coeffs_with_basis(
+    coeffs::AbstractVector{T}, basis::AbstractVector{N}, mul::Integer, add::Integer
+) where {T,N<:AbstractExpressionNode}
+    # Create a new tree from the basis functions,
+    # preferring width rather than depth.
+    n = length(coeffs)
+    n >= 1 || throw(ArgumentError("coeffs must have at least one element"))
+
+    if n == 1
+        l = constructorof(N)(; val=only(coeffs))
+        r = only(basis)
+        return constructorof(N)(; op=mul, l=l, r=r)
+    else
+        split_point = n ÷ 2
+        l = reduce_coeffs_with_basis(coeffs[1:split_point], basis[1:split_point], mul, add)
+        r = reduce_coeffs_with_basis(
+            coeffs[(split_point + 1):end], basis[(split_point + 1):end], mul, add
+        )
+        return constructorof(N)(; op=add, l=l, r=r)
+    end
+end
+
+"""
+Expand a given node according to the inverse-computed optimal sparse linear expansion.
+"""
+function sparse_linear_expansion!(
+    rng::AbstractRNG,
+    tree::N,
+    dataset::Dataset,
+    options::Options,
+    expand_at::N,
+    solver_kws=NamedTuple(),
+) where {N<:AbstractExpressionNode}
+    X = dataset.X
+    y = dataset.y
+    y_at_node = eval_inverse_tree_array(tree, X, options.operators, expand_at, y)
+    coeffs, basis = find_sparse_linear_expression(
+        rng, X, y_at_node, options, N; solver_kws...
+    )
+    mul = findfirst(==(*), options.operators.binops)::Int
+    add = findfirst(==(+), options.operators.binops)::Int
+
+    new_tree = reduce_coeffs_with_basis(coeffs, basis, mul, add)
+    set_node!(tree, expand_at, new_tree)
+    return tree
+end
+function sparse_linear_expansion!(
+    tree::AbstractExpressionNode,
+    dataset::Dataset,
+    options::Options,
+    expand_at::AbstractExpressionNode;
+    kws...,
+)
+    return sparse_linear_expansion!(
+        default_rng(), tree, dataset, options, expand_at; kws...
+    )
 end
 
 end
