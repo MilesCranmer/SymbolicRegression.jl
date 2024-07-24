@@ -192,7 +192,7 @@ function find_sparse_linear_expression(
             A[:, mask], normalized_y, l2_regularization; pinv_kws
         )
         n_remaining = sum(mask)
-        if n_remaining <= max_final_basis_size
+        if n_remaining <= max_final_basis_size || is_bad_array(coeffs[mask])
             break
         end
     end
