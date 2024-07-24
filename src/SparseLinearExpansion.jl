@@ -299,6 +299,7 @@ function random_sparse_linear_expansion!(
     solver_kws::NamedTuple=(;),
 ) where {T}
     expand_at = rand(rng, NodeSampler(; tree))
+    # TODO: Consider weighting by inverse depth
 
     atol = 0.0
     rtol = let
