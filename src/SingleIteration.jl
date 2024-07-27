@@ -1,5 +1,6 @@
 module SingleIterationModule
 
+using ADTypes: AutoEnzyme
 using DynamicExpressions:
     AbstractExpression,
     Node,
@@ -108,7 +109,10 @@ function optimize_and_simplify_population(
 )::Tuple{P,Float64} where {T,L,D<:Dataset{T,L},P<:Population{T,L}}
     array_num_evals = zeros(Float64, pop.n)
     do_optimization = rand(pop.n) .< options.optimizer_probability
-    @threads_if !(options.deterministic) for j in 1:(pop.n)
+    # Note: we have to turn off this threading loop due to Enzyme, since we need
+    # to manually allocate a new task with a larger stack for Enzyme.
+    should_thread = !(options.deterministic) && !(isa(options.autodiff_backend, AutoEnzyme))
+    @threads_if should_thread for j in 1:(pop.n)
         if options.should_simplify
             tree = pop.members[j].tree
             tree = simplify_tree!(tree, options.operators)
