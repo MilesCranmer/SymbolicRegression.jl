@@ -3,7 +3,7 @@ using SymbolicRegression: SymbolicRegression
 using SymbolicRegression: Dataset, RunningSearchStatistics, RecordType
 using Optim: Optim
 using SymbolicRegression.MutateModule: next_generation
-using DynamicExpressions: get_constants
+using DynamicExpressions: get_scalar_constants
 
 mutation_weights = (; optimize=1e30)  # We also test whether a named tuple works.
 options = Options(;
@@ -35,7 +35,7 @@ new_member, _, _ = next_generation(
     tmp_recorder=RecordType(),
 )
 
-resultant_constants, refs = get_constants(new_member.tree)
+resultant_constants, refs = get_scalar_constants(new_member.tree)
 for k in [0.0, 0.2, 0.5, 1.0]
     @test sin(resultant_constants[1] * k + resultant_constants[2]) ≈ sin(2.1 * k + 0.8) atol =
         1e-3

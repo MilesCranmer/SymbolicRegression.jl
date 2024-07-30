@@ -4,8 +4,8 @@ using SymbolicRegression.LossFunctionsModule: eval_loss
 using DynamicExpressions:
     AbstractExpression,
     AbstractExpressionNode,
-    get_constants,
-    set_constants!,
+    get_scalar_constants,
+    set_scalar_constants!,
     extract_gradient,
     with_contents,
     get_contents
@@ -17,7 +17,7 @@ import SymbolicRegression.ConstantOptimizationModule: GradEvaluator
 # We prepare a copy of the tree and all arrays
 function GradEvaluator(f::F, backend::AE) where {F,AE<:AutoEnzyme}
     storage_tree = copy(f.tree)
-    _, storage_refs = get_constants(storage_tree)
+    _, storage_refs = get_scalar_constants(storage_tree)
     storage_dataset = deepcopy(f.dataset)
     # TODO: It is super inefficient to deepcopy; how can we skip this
     return GradEvaluator(f, backend, (; storage_tree, storage_refs, storage_dataset))
@@ -31,8 +31,8 @@ end
 with_stacksize(f::F, n) where {F} = fetch(schedule(Task(f, n)))
 
 function (g::GradEvaluator{<:Any,<:AutoEnzyme})(_, G, x::AbstractVector{T}) where {T}
-    set_constants!(g.f.tree, x, g.f.refs)
-    set_constants!(g.extra.storage_tree, zero(x), g.extra.storage_refs)
+    set_scalar_constants!(g.f.tree, x, g.f.refs)
+    set_scalar_constants!(g.extra.storage_tree, zero(x), g.extra.storage_refs)
     fill!(g.extra.storage_dataset, 0)
 
     output = [zero(T)]
@@ -53,7 +53,7 @@ function (g::GradEvaluator{<:Any,<:AutoEnzyme})(_, G, x::AbstractVector{T}) wher
     if G !== nothing
         # TODO: This is redundant since we already have the references.
         # Should just be able to extract from the references directly.
-        G .= first(get_constants(g.extra.storage_tree))
+        G .= first(get_scalar_constants(g.extra.storage_tree))
     end
     return output[]
 end

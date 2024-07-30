@@ -122,7 +122,7 @@ end
 
 println("Testing NodeIndex.")
 
-using SymbolicRegression: get_constants, NodeIndex, index_constants
+using SymbolicRegression: get_scalar_constants, NodeIndex, index_constants
 
 options = Options(;
     binary_operators=(+, *, -, /, pow_abs2), unary_operators=(custom_cos, exp, sin)
@@ -144,6 +144,6 @@ function check_tree(
     end
 end
 
-@test check_tree(tree, index_constants(tree), first(get_constants(tree)))
+@test check_tree(tree, index_constants(tree), first(get_scalar_constants(tree)))
 
 println("Done.")

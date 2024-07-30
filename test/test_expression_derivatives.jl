@@ -55,12 +55,12 @@ end
     ex = @parse_expression(
         x * x - cos(2.5 * y), operators = options.operators, variable_names = [:x, :y]
     )
-    f = Evaluator(ex, last(get_constants(ex)), dataset, options, nothing)
+    f = Evaluator(ex, last(get_scalar_constants(ex)), dataset, options, nothing)
     fg! = GradEvaluator(f, options.autodiff_backend)
 
-    @test f(first(get_constants(ex))) isa Float64
+    @test f(first(get_scalar_constants(ex))) isa Float64
 
-    x = first(get_constants(ex))
+    x = first(get_scalar_constants(ex))
     G = zero(x)
     fg!(nothing, G, x)
     @test G[] != 0
@@ -114,7 +114,7 @@ end
     )
 
     function test_backend(ex, @nospecialize(backend))
-        x0, refs = get_constants(ex)
+        x0, refs = get_scalar_constants(ex)
         G = zero(x0)
 
         f = Evaluator(ex, refs, dataset, specialized_options(options), nothing)
