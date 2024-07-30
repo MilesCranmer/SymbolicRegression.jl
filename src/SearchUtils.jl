@@ -4,7 +4,7 @@ This includes: process management, stdin reading, checking for early stops."""
 module SearchUtilsModule
 
 using Printf: @printf, @sprintf
-using Distributed
+using Distributed: Distributed, @spawnat, Future, procs
 using StatsBase: mean
 using DispatchDoctor: @unstable
 
@@ -14,10 +14,9 @@ using ..CoreModule: Dataset, Options, MAX_DEGREE, RecordType
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
-using ..HallOfFameModule:
-    HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
+using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
 using ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
-using ..AdaptiveParsimonyModule: update_frequencies!, RunningSearchStatistics
+using ..AdaptiveParsimonyModule: RunningSearchStatistics
 
 """
     RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}

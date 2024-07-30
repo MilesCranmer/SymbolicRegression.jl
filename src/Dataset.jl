@@ -1,13 +1,6 @@
 module DatasetModule
 
-using DynamicQuantities:
-    AbstractDimensions,
-    Dimensions,
-    SymbolicDimensions,
-    Quantity,
-    uparse,
-    sym_uparse,
-    DEFAULT_DIM_BASE_TYPE
+using DynamicQuantities: Quantity
 
 using ..UtilsModule: subscriptify, get_base_type, @constfield
 using ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE

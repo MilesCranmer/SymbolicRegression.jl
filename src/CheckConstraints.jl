@@ -2,7 +2,6 @@ module CheckConstraintsModule
 
 using DynamicExpressions:
     AbstractExpressionNode, AbstractExpression, get_tree, count_depth, tree_mapreduce
-using ..UtilsModule: vals
 using ..CoreModule: Options
 using ..ComplexityModule: compute_complexity, past_complexity_limit
 

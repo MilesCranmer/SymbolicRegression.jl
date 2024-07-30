@@ -1,19 +1,12 @@
 module SingleIterationModule
 
 using ADTypes: AutoEnzyme
-using DynamicExpressions:
-    AbstractExpression,
-    Node,
-    constructorof,
-    string_tree,
-    simplify_tree!,
-    combine_operators,
-    parse_expression
+using DynamicExpressions: AbstractExpression, string_tree, simplify_tree!, combine_operators
 using ..UtilsModule: @threads_if
-using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE, create_expression
+using ..CoreModule: Options, Dataset, RecordType, create_expression
 using ..ComplexityModule: compute_complexity
-using ..PopMemberModule: PopMember, generate_reference
-using ..PopulationModule: Population, finalize_scores, best_sub_pop
+using ..PopMemberModule: generate_reference
+using ..PopulationModule: Population, finalize_scores
 using ..HallOfFameModule: HallOfFame
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..RegularizedEvolutionModule: reg_evol_cycle

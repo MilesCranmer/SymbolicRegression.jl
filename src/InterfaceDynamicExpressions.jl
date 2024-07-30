@@ -3,7 +3,6 @@ module InterfaceDynamicExpressionsModule
 using Printf: @sprintf
 using DynamicExpressions:
     DynamicExpressions as DE,
-    AbstractOperatorEnum,
     OperatorEnum,
     GenericOperatorEnum,
     AbstractExpression,

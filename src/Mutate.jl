@@ -3,17 +3,14 @@ module MutateModule
 using DynamicExpressions:
     AbstractExpression,
     ParametricExpression,
-    Node,
     with_contents,
     get_tree,
     preserve_sharing,
     copy_node,
-    count_nodes,
-    count_constants,
+    count_scalar_constants,
     simplify_tree!,
     combine_operators
-using ..CoreModule:
-    Options, MutationWeights, Dataset, RecordType, sample_mutation, DATA_TYPE, LOSS_TYPE
+using ..CoreModule: Options, MutationWeights, Dataset, RecordType, sample_mutation
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: score_func, score_func_batched
 using ..CheckConstraintsModule: check_constraints
@@ -63,7 +60,7 @@ function condition_mutation_weights!(
 
     if !(member.tree isa ParametricExpression)  # TODO: HACK
         #More constants => more likely to do constant mutation
-        let n_constants = count_constants(member.tree)
+        let n_constants = count_scalar_constants(member.tree)
             weights.mutate_constant *= min(8, n_constants) / 8.0
         end
     end

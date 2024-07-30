@@ -8,7 +8,6 @@ using DynamicExpressions:
     ParametricExpression,
     ParametricNode,
     constructorof,
-    parse_expression,
     get_tree,
     get_contents,
     get_metadata,
@@ -18,14 +17,14 @@ using DynamicExpressions:
     eval_tree_array
 using Random: default_rng, AbstractRNG
 using StatsBase: StatsBase
-using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
+using ..CoreModule: Options, Dataset, DATA_TYPE
 using ..HallOfFameModule: HallOfFame
 using ..LossFunctionsModule: maybe_getindex
 using ..InterfaceDynamicExpressionsModule: expected_array_type
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
 
-import DynamicExpressions: get_operators, string_tree
+import DynamicExpressions: get_operators
 import ..CoreModule: create_expression
 import ..MutationFunctionsModule:
     make_random_leaf, crossover_trees, mutate_constant, mutate_factor

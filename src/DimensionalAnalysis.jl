@@ -1,7 +1,7 @@
 module DimensionalAnalysisModule
 
 using DynamicExpressions: AbstractExpression, AbstractExpressionNode, get_tree
-using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, uparse, constructorof
+using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, constructorof
 
 using ..CoreModule: Options, Dataset
 using ..UtilsModule: safe_call

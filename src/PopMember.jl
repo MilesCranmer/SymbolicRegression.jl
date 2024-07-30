@@ -1,13 +1,7 @@
 module PopMemberModule
 
 using DispatchDoctor: @unstable
-using DynamicExpressions:
-    AbstractExpression,
-    AbstractExpressionNode,
-    copy_node,
-    count_nodes,
-    parse_expression,
-    string_tree
+using DynamicExpressions: AbstractExpression, AbstractExpressionNode, string_tree
 using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE, create_expression
 import ..ComplexityModule: compute_complexity
 using ..UtilsModule: get_birth_order

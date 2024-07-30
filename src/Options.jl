@@ -4,9 +4,8 @@ using DispatchDoctor: @unstable
 using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
-using DynamicExpressions: OperatorEnum, Node, Expression, default_node_type
+using DynamicExpressions: OperatorEnum, Expression, default_node_type
 using ADTypes: AbstractADType, ADTypes
-using Distributed: nworkers
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim
 using LineSearches: LineSearches

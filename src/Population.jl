@@ -1,9 +1,8 @@
 module PopulationModule
 
 using StatsBase: StatsBase
-using Random: randperm
 using DispatchDoctor: @unstable
-using DynamicExpressions: AbstractExpression, Node, string_tree
+using DynamicExpressions: AbstractExpression, string_tree
 using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: score_func, update_baseline_loss!

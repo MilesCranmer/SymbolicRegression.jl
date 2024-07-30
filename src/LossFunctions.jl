@@ -1,14 +1,8 @@
 module LossFunctionsModule
 
-using Random: MersenneTwister
 using StatsBase: StatsBase
 using DynamicExpressions:
-    AbstractExpression,
-    AbstractExpressionNode,
-    Node,
-    parse_expression,
-    get_tree,
-    eval_tree_array
+    AbstractExpression, AbstractExpressionNode, get_tree, eval_tree_array
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
 using ..InterfaceDynamicExpressionsModule: expected_array_type
@@ -31,7 +25,7 @@ function _weighted_loss(
     x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::LT
 ) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
     if loss isa SupervisedLoss
-        return LossFunctions.sum(loss, x, y, w; normalize=true)
+        return sum(loss, x, y, w; normalize=true)
     else
         l(i) = loss(x[i], y[i], w[i])
         return sum(l, eachindex(x)) / sum(w)

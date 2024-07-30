@@ -1,14 +1,11 @@
 module HallOfFameModule
 
-using DynamicExpressions:
-    AbstractExpression, parse_expression, Node, constructorof, string_tree
-using DynamicExpressions: with_type_parameters
+using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: split_string
 using ..CoreModule:
     MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: PopMember
-using ..LossFunctionsModule: eval_loss
 using ..InterfaceDynamicExpressionsModule: format_dimensions, WILDCARD_UNIT_STRING
 using Printf: @sprintf
 

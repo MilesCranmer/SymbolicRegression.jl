@@ -3,11 +3,7 @@ module OptionsStructModule
 using DispatchDoctor: @unstable
 using Optim: Optim
 using DynamicExpressions:
-    AbstractOperatorEnum,
-    AbstractExpressionNode,
-    AbstractExpression,
-    OperatorEnum,
-    GenericOperatorEnum
+    AbstractOperatorEnum, AbstractExpressionNode, AbstractExpression, OperatorEnum
 using LossFunctions: SupervisedLoss
 
 import ..MutationWeightsModule: MutationWeights
