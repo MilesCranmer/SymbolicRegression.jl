@@ -68,7 +68,7 @@ function _eval_loss(
         _weighted_loss(
             prediction,
             maybe_getindex(dataset.y, idx),
-            copy(maybe_getindex(dataset.weights, idx)),
+            maybe_getindex(dataset.weights, idx),
             options.elementwise_loss,
         )
     else
