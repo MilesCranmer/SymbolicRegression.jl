@@ -1,5 +1,6 @@
 module OperatorsModule
 
+using DynamicExpressions: DynamicExpressions as DE
 using SpecialFunctions: SpecialFunctions
 using DynamicQuantities: UnionAbstractQuantity
 using SpecialFunctions: erf, erfc
@@ -94,6 +95,15 @@ end
 function logical_and(x, y)
     return ((x > zero(x)) & (y > zero(y))) * one(x)
 end
+
+# Strings
+DE.get_op_name(::typeof(safe_pow)) = "^"
+DE.get_op_name(::typeof(safe_log)) = "log"
+DE.get_op_name(::typeof(safe_log2)) = "log2"
+DE.get_op_name(::typeof(safe_log10)) = "log10"
+DE.get_op_name(::typeof(safe_log1p)) = "log1p"
+DE.get_op_name(::typeof(safe_acosh)) = "acosh"
+DE.get_op_name(::typeof(safe_sqrt)) = "sqrt"
 
 # Deprecated operations:
 @deprecate pow(x, y) safe_pow(x, y)
