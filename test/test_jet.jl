@@ -16,7 +16,12 @@ Pkg.add(["JET", "Preferences"]; io=devnull)
 
 using Preferences
 cd(dir)
-Preferences.set_preferences!("SymbolicRegression", "instability_check" => "disable")
+Preferences.set_preferences!(
+    "SymbolicRegression", "instability_check" => "disable"; force=true
+)
+Preferences.set_preferences!(
+    "DynamicExpressions", "instability_check" => "disable"; force=true
+)
 
 using SymbolicRegression
 using JET

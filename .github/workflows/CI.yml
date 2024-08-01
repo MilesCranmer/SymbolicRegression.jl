@@ -78,6 +78,8 @@ jobs:
         env:
           SYMBOLIC_REGRESSION_TEST_SUITE: ${{ matrix.test }}
         run: |
+          # HACK
+          rm -rf ~/.julia/artifacts
           julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
           julia --color=yes --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
           julia --color=yes coverage.jl
