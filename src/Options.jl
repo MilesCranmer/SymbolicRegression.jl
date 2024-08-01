@@ -722,15 +722,6 @@ $(OPTION_DESCRIPTIONS)
         @warn "Optimizer warnings are turned on. This might result in a lot of warnings being printed from NaNs, as these are common during symbolic regression"
     end
 
-    ## Create tournament weights:
-    tournament_selection_weights =
-        let n = tournament_selection_n, p = tournament_selection_p
-            k = collect(0:(n - 1))
-            prob_each = p * ((1 - p) .^ k)
-
-            StatsBase.Weights(prob_each, sum(prob_each))
-        end
-
     set_mutation_weights = create_mutation_weights(mutation_weights)
 
     @assert print_precision > 0
@@ -750,7 +741,6 @@ $(OPTION_DESCRIPTIONS)
         turbo,
         bumper,
         deprecated_return_state,
-        typeof(tournament_selection_weights),
         typeof(_autodiff_backend),
     }(
         operators,
@@ -759,7 +749,6 @@ $(OPTION_DESCRIPTIONS)
         complexity_mapping,
         tournament_selection_n,
         tournament_selection_p,
-        tournament_selection_weights,
         parsimony,
         dimensional_constraint_penalty,
         dimensionless_constants_only,

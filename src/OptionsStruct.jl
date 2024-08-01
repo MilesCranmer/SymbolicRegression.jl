@@ -130,7 +130,6 @@ struct Options{
     _turbo,
     _bumper,
     _return_state,
-    W,
     AD,
 }
     operators::OP
@@ -139,7 +138,6 @@ struct Options{
     complexity_mapping::CM
     tournament_selection_n::Int
     tournament_selection_p::Float32
-    tournament_selection_weights::W
     parsimony::Float32
     dimensional_constraint_penalty::Union{Float32,Nothing}
     dimensionless_constants_only::Bool

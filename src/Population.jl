@@ -146,7 +146,7 @@ function _best_of_sample(
         argmin_fast(scores)
     else
         # First, decide what place we take (usually 1st place wins):
-        tournament_winner = StatsBase.sample(options.tournament_selection_weights)
+        tournament_winner = StatsBase.sample(get_tournament_selection_weights(options))
         # Then, find the member that won that place, given
         # their fitness:
         if tournament_winner == 1
@@ -156,6 +156,35 @@ function _best_of_sample(
         end
     end
     return members[chosen_idx]
+end
+
+const CACHED_WEIGHTS =
+    let init_k = collect(0:5),
+        init_prob_each = 0.5f0 * (1 - 0.5f0) .^ init_k,
+        test_weights = StatsBase.Weights(init_prob_each, sum(init_prob_each))
+
+        (;
+            x=sizehint!(Dict{Tuple{Int,Float32},typeof(test_weights)}(), 1),
+            lock=Threads.SpinLock(),
+        )
+    end
+
+function get_tournament_selection_weights(@nospecialize(options::Options))
+    lock(CACHED_WEIGHTS.lock)
+    try
+        n = options.tournament_selection_n
+        p = options.tournament_selection_p
+        # Weirdly, computing the weights for the tournament becomes quite expensive,
+        # so it's good to cache it.
+        return get!(CACHED_WEIGHTS.x, (n, p)) do
+            k = collect(0:(n - 1))
+            prob_each = p * ((1 - p) .^ k)
+
+            return StatsBase.Weights(prob_each, sum(prob_each))
+        end
+    finally
+        unlock(CACHED_WEIGHTS.lock)
+    end
 end
 
 function finalize_scores(
