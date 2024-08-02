@@ -169,7 +169,7 @@ const CACHED_WEIGHTS =
         )
     end
 
-function get_tournament_selection_weights(@nospecialize(options::Options))
+@unstable function get_tournament_selection_weights(@nospecialize(options::Options))
     lock(CACHED_WEIGHTS.lock)
     try
         n = options.tournament_selection_n
