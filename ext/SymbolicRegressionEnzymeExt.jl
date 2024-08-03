@@ -10,11 +10,11 @@ using DynamicExpressions:
     with_contents,
     get_contents
 using ADTypes: AutoEnzyme
-using Enzyme: Enzyme, autodiff, Reverse, Active, Const, Duplicated
+using Enzyme: EnzymeRules, autodiff, Reverse, Active, Const, Duplicated
 
 import SymbolicRegression.ConstantOptimizationModule: GradEvaluator
 
-Enzyme.inactive(::typeof(dimensional_regularization), ::Vararg) = nothing
+EnzymeRules.inactive(::typeof(dimensional_regularization), ::Vararg) = nothing
 
 # We prepare a copy of the tree and all arrays
 function GradEvaluator(f::F, backend::AE) where {F,AE<:AutoEnzyme}
