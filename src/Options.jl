@@ -31,25 +31,25 @@ using ..OptionsStructModule: ComplexityMapping, operator_specialization
 using ..UtilsModule: max_ops, @save_kwargs, @ignore
 
 """Build constraints on operator-level complexity from a user-passed dict."""
-function build_constraints(
-    una_constraints, bin_constraints, unary_operators, binary_operators, nuna, nbin
-)::Tuple{Array{Int,1},Array{Tuple{Int,Int},1}}
+function build_constraints(;
+    una_constraints, bin_constraints, unary_operators, binary_operators
+)::Tuple{Vector{Int},Vector{Tuple{Int,Int}}}
     # Expect format ((*)=>(-1, 3)), etc.
     # TODO: Need to disable simplification if (*, -, +, /) are constrained?
     #  Or, just quit simplification is constraints violated.
 
-    is_bin_constraints_already_done = typeof(bin_constraints) <: Array{Tuple{Int,Int},1}
-    is_una_constraints_already_done = typeof(una_constraints) <: Array{Int,1}
+    is_bin_constraints_already_done = bin_constraints isa Vector{Tuple{Int,Int}}
+    is_una_constraints_already_done = una_constraints isa Vector{Int}
 
-    if typeof(bin_constraints) <: Array && !is_bin_constraints_already_done
+    if bin_constraints isa Array && !is_bin_constraints_already_done
         bin_constraints = Dict(bin_constraints)
     end
-    if typeof(una_constraints) <: Array && !is_una_constraints_already_done
+    if una_constraints isa Array && !is_una_constraints_already_done
         una_constraints = Dict(una_constraints)
     end
 
     if una_constraints === nothing
-        una_constraints = [-1 for i in 1:nuna]
+        una_constraints = [-1 for _ in eachindex(unary_operators)]
     elseif !is_una_constraints_already_done
         una_constraints::Dict
         _una_constraints = Int[]
@@ -65,7 +65,7 @@ function build_constraints(
         una_constraints = _una_constraints
     end
     if bin_constraints === nothing
-        bin_constraints = [(-1, -1) for i in 1:nbin]
+        bin_constraints = [(-1, -1) for _ in eachindex(binary_operators)]
     elseif !is_bin_constraints_already_done
         bin_constraints::Dict
         _bin_constraints = Tuple{Int,Int}[]
@@ -82,6 +82,60 @@ function build_constraints(
     end
 
     return una_constraints, bin_constraints
+end
+
+function build_nested_constraints(; binary_operators, unary_operators, nested_constraints)
+    nested_constraints === nothing && return nested_constraints
+    # Check that intersection of binary operators and unary operators is empty:
+    for op in binary_operators
+        if op ∈ unary_operators
+            error(
+                "Operator $(op) is both a binary and unary operator. " *
+                "You can't use nested constraints.",
+            )
+        end
+    end
+
+    # Convert to dict:
+    if !(typeof(nested_constraints) <: Dict)
+        # Convert to dict:
+        nested_constraints = Dict(
+            [cons[1] => Dict(cons[2]...) for cons in nested_constraints]...
+        )
+    end
+    for (op, nested_constraint) in nested_constraints
+        if !(op ∈ binary_operators || op ∈ unary_operators)
+            error("Operator $(op) is not in the operator set.")
+        end
+        for (nested_op, max_nesting) in nested_constraint
+            if !(nested_op ∈ binary_operators || nested_op ∈ unary_operators)
+                error("Operator $(nested_op) is not in the operator set.")
+            end
+            @assert nested_op ∈ binary_operators || nested_op ∈ unary_operators
+            @assert max_nesting >= -1 && typeof(max_nesting) <: Int
+        end
+    end
+
+    # Lastly, we clean it up into a dict of (degree,op_idx) => max_nesting.
+    return [
+        let (degree, idx) = if op ∈ binary_operators
+                2, findfirst(isequal(op), binary_operators)::Int
+            else
+                1, findfirst(isequal(op), unary_operators)::Int
+            end,
+            new_max_nesting_dict = [
+                let (nested_degree, nested_idx) = if nested_op ∈ binary_operators
+                        2, findfirst(isequal(nested_op), binary_operators)::Int
+                    else
+                        1, findfirst(isequal(nested_op), unary_operators)::Int
+                    end
+                    (nested_degree, nested_idx, max_nesting)
+                end for (nested_op, max_nesting) in nested_constraint
+            ]
+
+            (degree, idx, new_max_nesting_dict)
+        end for (op, nested_constraint) in nested_constraints
+    ]
 end
 
 function binopmap(op::F) where {F}
@@ -571,69 +625,15 @@ $(OPTION_DESCRIPTIONS)
         end
     end
 
-    nuna = length(unary_operators)
-    nbin = length(binary_operators)
     @assert maxsize > 3
     @assert warmup_maxsize_by >= 0.0f0
-    @assert nuna <= max_ops && nbin <= max_ops
+    @assert length(unary_operators) <= max_ops
+    @assert length(binary_operators) <= max_ops
 
     # Make sure nested_constraints contains functions within our operator set:
-    if nested_constraints !== nothing
-        # Check that intersection of binary operators and unary operators is empty:
-        for op in binary_operators
-            if op ∈ unary_operators
-                error(
-                    "Operator $(op) is both a binary and unary operator. " *
-                    "You can't use nested constraints.",
-                )
-            end
-        end
-
-        # Convert to dict:
-        if !(typeof(nested_constraints) <: Dict)
-            # Convert to dict:
-            nested_constraints = Dict(
-                [cons[1] => Dict(cons[2]...) for cons in nested_constraints]...
-            )
-        end
-        for (op, nested_constraint) in nested_constraints
-            if !(op ∈ binary_operators || op ∈ unary_operators)
-                error("Operator $(op) is not in the operator set.")
-            end
-            for (nested_op, max_nesting) in nested_constraint
-                if !(nested_op ∈ binary_operators || nested_op ∈ unary_operators)
-                    error("Operator $(nested_op) is not in the operator set.")
-                end
-                @assert nested_op ∈ binary_operators || nested_op ∈ unary_operators
-                @assert max_nesting >= -1 && typeof(max_nesting) <: Int
-            end
-        end
-
-        # Lastly, we clean it up into a dict of (degree,op_idx) => max_nesting.
-        new_nested_constraints = []
-        # Dict()
-        for (op, nested_constraint) in nested_constraints
-            (degree, idx) = if op ∈ binary_operators
-                2, findfirst(isequal(op), binary_operators)
-            else
-                1, findfirst(isequal(op), unary_operators)
-            end
-            new_max_nesting_dict = []
-            # Dict()
-            for (nested_op, max_nesting) in nested_constraint
-                (nested_degree, nested_idx) = if nested_op ∈ binary_operators
-                    2, findfirst(isequal(nested_op), binary_operators)
-                else
-                    1, findfirst(isequal(nested_op), unary_operators)
-                end
-                # new_max_nesting_dict[(nested_degree, nested_idx)] = max_nesting
-                push!(new_max_nesting_dict, (nested_degree, nested_idx, max_nesting))
-            end
-            # new_nested_constraints[(degree, idx)] = new_max_nesting_dict
-            push!(new_nested_constraints, (degree, idx, new_max_nesting_dict))
-        end
-        nested_constraints = new_nested_constraints
-    end
+    _nested_constraints = build_nested_constraints(;
+        binary_operators, unary_operators, nested_constraints
+    )
 
     if typeof(constraints) <: Tuple
         constraints = collect(constraints)
@@ -652,8 +652,8 @@ $(OPTION_DESCRIPTIONS)
         una_constraints = constraints
     end
 
-    una_constraints, bin_constraints = build_constraints(
-        una_constraints, bin_constraints, unary_operators, binary_operators, nuna, nbin
+    _una_constraints, _bin_constraints = build_constraints(;
+        una_constraints, bin_constraints, unary_operators, binary_operators
     )
 
     complexity_mapping = ComplexityMapping(
@@ -742,8 +742,8 @@ $(OPTION_DESCRIPTIONS)
         typeof(_autodiff_backend),
     }(
         operators,
-        bin_constraints,
-        una_constraints,
+        _bin_constraints,
+        _una_constraints,
         complexity_mapping,
         tournament_selection_n,
         tournament_selection_p,
@@ -780,8 +780,8 @@ $(OPTION_DESCRIPTIONS)
         print_precision,
         save_to_file,
         probability_negate_constant,
-        nuna,
-        nbin,
+        length(unary_operators),
+        length(binary_operators),
         seed,
         elementwise_loss,
         loss_function,
@@ -802,7 +802,7 @@ $(OPTION_DESCRIPTIONS)
         timeout_in_seconds,
         max_evals,
         skip_mutation_failures,
-        nested_constraints,
+        _nested_constraints,
         deterministic,
         define_helper_functions,
         use_recorder,
