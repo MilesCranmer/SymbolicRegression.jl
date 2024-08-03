@@ -36,15 +36,6 @@ jobs:
         os:
           - ubuntu-latest
         include:
-          - os: ubuntu-latest
-            julia-version: "1"
-            test: "enzyme"
-          - os: macOS-latest
-            julia-version: "1"
-            test: "enzyme"
-          - os: windows-latest
-            julia-version: "1"
-            test: "enzyme"
           - os: windows-latest
             julia-version: "1"
             test: "part1"

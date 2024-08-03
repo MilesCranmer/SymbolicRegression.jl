@@ -66,28 +66,7 @@ end
     @test G[] != 0
 end
 
-@testitem "Test parametric expression with other backends" tags = [:part3, :enzyme] begin
-    # We *only* run Enzyme tests if the suite is explicitly asked for.
-    # Otherwise we skip it.
-    enzyme_compatible = occursin("enzyme", get(ENV, "SYMBOLIC_REGRESSION_TEST_SUITE", ""))
-
-    if enzyme_compatible
-        @eval begin
-            using Preferences
-
-            # Disable DispatchDoctor due to Enzyme requiring
-            # whole input to be known
-            set_preferences!(
-                "DynamicExpressions", "instability_check" => "disable"; force=true
-            )
-            set_preferences!(
-                "SymbolicRegression", "instability_check" => "disable"; force=true
-            )
-
-            using Enzyme: Enzyme
-        end
-    end
-
+@testitem "Test derivatives of parametric expression during optimization" tags = [:part3] begin
     using SymbolicRegression
     using SymbolicRegression.ConstantOptimizationModule:
         Evaluator, GradEvaluator, optimize_constants, specialized_options
@@ -95,6 +74,10 @@ end
     using Zygote: Zygote
     using Random: MersenneTwister
     using DifferentiationInterface: value_and_gradient, AutoZygote, AutoEnzyme
+    enzyme_compatible = VERSION >= v"1.10.0" && VERSION < v"1.11.0-DEV.0"
+    @static if enzyme_compatible
+        using Enzyme: Enzyme
+    end
 
     rng = MersenneTwister(0)
     X = rand(rng, 2, 32)
@@ -145,7 +128,7 @@ end
     end
 
     test_backend(ex, AutoZygote())
-    if enzyme_compatible
+    @static if enzyme_compatible
         test_backend(ex, AutoEnzyme())
     end
 end
