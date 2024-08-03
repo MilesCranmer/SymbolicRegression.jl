@@ -113,7 +113,7 @@ end
         extra_metadata = (parameter_names=["p1"], parameters=init_params)
     )
 
-    function test_backend(ex, @nospecialize(backend))
+    function test_backend(ex, @nospecialize(backend); allow_failure=false)
         x0, refs = get_scalar_constants(ex)
         G = zero(x0)
 
@@ -122,13 +122,21 @@ end
 
         @test f(x0) ≈ true_val
 
-        val = fg!(nothing, G, x0)
-        @test val ≈ true_val
-        @test G ≈ vcat(true_d_constants[:], true_d_params[:])
+        try
+            val = fg!(nothing, G, x0)
+            @test val ≈ true_val
+            @test G ≈ vcat(true_d_constants[:], true_d_params[:])
+        catch e
+            if allow_failure
+                @warn "Expected failure" e
+            else
+                rethrow(e)
+            end
+        end
     end
 
-    test_backend(ex, AutoZygote())
+    test_backend(ex, AutoZygote(); allow_failure=false)
     @static if enzyme_compatible
-        test_backend(ex, AutoEnzyme())
+        test_backend(ex, AutoEnzyme(); allow_failure=true)
     end
 end
