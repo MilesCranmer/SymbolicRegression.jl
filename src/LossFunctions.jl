@@ -5,8 +5,6 @@ using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, get_tree, eval_tree_array
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
-using ChainRulesCore: @opt_out
-using DispatchDoctor: @unstable
 using ..InterfaceDynamicExpressionsModule: expected_array_type
 using ..CoreModule: Options, Dataset, create_expression, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
@@ -238,12 +236,5 @@ function dimensional_regularization(
         return L(options.dimensional_constraint_penalty::Float32)
     end
 end
-
-@unstable @opt_out rrule(
-    ::typeof(dimensional_regularization),
-    tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
-    dataset::Dataset{T,L},
-    options::Options,
-) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 
 end
