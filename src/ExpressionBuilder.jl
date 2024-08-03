@@ -59,6 +59,7 @@ end
     prototype::Union{Nothing,AbstractExpression},
     ::Val{embed},
 ) where {T,L,embed}
+    consistency_checks(options, prototype)
     return (;
         operators=embed ? options.operators : nothing,
         variable_names=embed ? dataset.variable_names : nothing,
@@ -67,16 +68,22 @@ end
         )...,
     )
 end
-function extra_init_params(args...)
+function extra_init_params(
+    ::Type{E},
+    prototype::Union{Nothing,AbstractExpression},
+    options::Options,
+    dataset::Dataset{T},
+    ::Val{embed},
+) where {T,embed,E<:AbstractExpression}
     return (;)
 end
 function extra_init_params(
-    ::Type{<:ParametricExpression},
+    ::Type{E},
     prototype::Union{Nothing,ParametricExpression},
-    options,
-    dataset::Dataset{T,L},
+    options::Options,
+    dataset::Dataset{T},
     ::Val{embed},
-) where {T,L,embed}
+) where {T,embed,E<:ParametricExpression}
     num_params = options.expression_options.max_parameters
     num_classes = length(unique(dataset.extra.classes))
     parameter_names = embed ? ["p$i" for i in 1:num_params] : nothing
@@ -86,6 +93,29 @@ function extra_init_params(
         copy(get_metadata(prototype).parameters)
     end
     return (; parameters=_parameters, parameter_names)
+end
+
+consistency_checks(::Options, prototype::Nothing) = nothing
+function consistency_checks(options::Options, prototype)
+    if prototype === nothing
+        return nothing
+    end
+    @assert(
+        prototype isa options.expression_type,
+        "Need prototype to be of type $(options.expression_type), but got $(prototype)::$(typeof(prototype))"
+    )
+    if prototype isa ParametricExpression
+        if prototype.metadata.parameter_names !== nothing
+            @assert(
+                length(prototype.metadata.parameter_names) ==
+                    options.expression_options.max_parameters,
+                "Mismatch between options.expression_options.max_parameters=$(options.expression_options.max_parameters) and prototype.metadata.parameter_names=$(prototype.metadata.parameter_names)"
+            )
+        end
+        @assert size(prototype.metadata.parameters, 1) ==
+            options.expression_options.max_parameters
+    end
+    return nothing
 end
 
 @unstable begin
