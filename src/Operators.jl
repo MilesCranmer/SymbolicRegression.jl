@@ -6,6 +6,7 @@ using DynamicQuantities: UnionAbstractQuantity
 using SpecialFunctions: erf, erfc
 using Base: @deprecate
 using ..ProgramConstantsModule: DATA_TYPE
+using ...UtilsModule: @ignore
 #TODO - actually add these operators to the module!
 
 # TODO: Should this be limited to AbstractFloat instead?
@@ -108,5 +109,9 @@ DE.get_op_name(::typeof(safe_sqrt)) = "sqrt"
 # Deprecated operations:
 @deprecate pow(x, y) safe_pow(x, y)
 @deprecate pow_abs(x, y) safe_pow(x, y)
+
+# For static analysis tools:
+@ignore pow(x, y) = safe_pow(x, y)
+@ignore pow_abs(x, y) = safe_pow(x, y)
 
 end

@@ -28,14 +28,9 @@ using ..OperatorsModule:
 using ..MutationWeightsModule: MutationWeights, mutations
 import ..OptionsStructModule: Options
 using ..OptionsStructModule: ComplexityMapping, operator_specialization
-using ..UtilsModule: max_ops, @save_kwargs
+using ..UtilsModule: max_ops, @save_kwargs, @ignore
 
-"""
-         build_constraints(una_constraints, bin_constraints,
-                           unary_operators, binary_operators)
-
-Build constraints on operator-level complexity from a user-passed dict.
-"""
+"""Build constraints on operator-level complexity from a user-passed dict."""
 function build_constraints(
     una_constraints, bin_constraints, unary_operators, binary_operators, nuna, nbin
 )::Tuple{Array{Int,1},Array{Tuple{Int,Int},1}}
@@ -176,6 +171,9 @@ const deprecated_options_mapping = Base.ImmutableDict(
     :ns => :tournament_selection_n,
     :loss => :elementwise_loss,
 )
+
+# For static analysis tools:
+@ignore const DEFAULT_OPTIONS = ()
 
 const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators (functions) to use.
     Each operator should be defined for two input scalars,

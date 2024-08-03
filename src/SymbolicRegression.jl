@@ -232,7 +232,7 @@ using .CoreModule:
     erfc,
     atanh_clip,
     create_expression
-using .UtilsModule: is_anonymous_function, recursive_merge, json3_write
+using .UtilsModule: is_anonymous_function, recursive_merge, json3_write, @ignore
 using .ComplexityModule: compute_complexity
 using .CheckConstraintsModule: check_constraints
 using .AdaptiveParsimonyModule:
@@ -1171,7 +1171,6 @@ function __init__()
     @require_extensions
 end
 
-macro ignore(args...) end
 # Hack to get static analysis to work from within tests:
 @ignore include("../test/runtests.jl")
 

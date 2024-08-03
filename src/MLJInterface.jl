@@ -29,11 +29,19 @@ using ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
 using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
-using ..UtilsModule: subscriptify
+using ..UtilsModule: subscriptify, @ignore
 
 import ..equation_search
 
 abstract type AbstractSRRegressor <: MMI.Deterministic end
+
+# For static analysis tools:
+@ignore mutable struct SRRegressor <: AbstractSRRegressor
+    selection_method::Function
+end
+@ignore mutable struct MultitargetSRRegressor <: AbstractSRRegressor
+    selection_method::Function
+end
 
 # TODO: To reduce code re-use, we could forward these defaults from
 #       `equation_search`, similar to what we do for `Options`.
@@ -581,11 +589,11 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
     # Operations
 
     - `predict(mach, Xnew)`: Return predictions of the target given features `Xnew`, which
-      should have same scitype as `X` above. The expression used for prediction is defined
-      by the `selection_method` function, which can be seen by viewing `report(mach).best_idx`.
+        should have same scitype as `X` above. The expression used for prediction is defined
+        by the `selection_method` function, which can be seen by viewing `report(mach).best_idx`.
     - `predict(mach, (data=Xnew, idx=i))`: Return predictions of the target given features
-      `Xnew`, which should have same scitype as `X` above. By passing a named tuple with keys
-      `data` and `idx`, you are able to specify the equation you wish to evaluate in `idx`.
+        `Xnew`, which should have same scitype as `X` above. By passing a named tuple with keys
+        `data` and `idx`, you are able to specify the equation you wish to evaluate in `idx`.
 
     $(bottom_matter)
     """

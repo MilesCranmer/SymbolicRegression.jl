@@ -318,7 +318,7 @@ defined.
 macro extend_operators(options)
     operators = :($(options).operators)
     type_requirements = Options
-    @gensym alias_operators
+    alias_operators = gensym("alias_operators")
     return quote
         if !isa($(options), $type_requirements)
             error("You must pass an options type to `@extend_operators`.")

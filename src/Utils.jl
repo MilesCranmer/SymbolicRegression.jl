@@ -4,6 +4,8 @@ module UtilsModule
 using Printf: @printf
 using MacroTools: splitdef
 
+macro ignore(args...) end
+
 const pseudo_time = Ref(0)
 
 function get_birth_order(; deterministic::Bool=false)::Int
