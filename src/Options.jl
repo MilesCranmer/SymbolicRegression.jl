@@ -38,50 +38,40 @@ function build_constraints(;
     # TODO: Need to disable simplification if (*, -, +, /) are constrained?
     #  Or, just quit simplification is constraints violated.
 
-    is_bin_constraints_already_done = bin_constraints isa Vector{Tuple{Int,Int}}
     is_una_constraints_already_done = una_constraints isa Vector{Int}
-
-    if bin_constraints isa Array && !is_bin_constraints_already_done
-        bin_constraints = Dict(bin_constraints)
+    _una_constraints1 = if una_constraints isa Array && !is_una_constraints_already_done
+        Dict(una_constraints)
+    else
+        una_constraints
     end
-    if una_constraints isa Array && !is_una_constraints_already_done
-        una_constraints = Dict(una_constraints)
-    end
-
-    if una_constraints === nothing
-        una_constraints = [-1 for _ in eachindex(unary_operators)]
+    _una_constraints2 = if _una_constraints1 === nothing
+        fill(-1, length(unary_operators))
     elseif !is_una_constraints_already_done
-        una_constraints::Dict
-        _una_constraints = Int[]
-        for (i, op) in enumerate(unary_operators)
-            did_user_declare_constraints = haskey(una_constraints, op)
-            if did_user_declare_constraints
-                constraint::Int = una_constraints[op]
-                push!(_una_constraints, constraint)
-            else
-                push!(_una_constraints, -1)
-            end
-        end
-        una_constraints = _una_constraints
-    end
-    if bin_constraints === nothing
-        bin_constraints = [(-1, -1) for _ in eachindex(binary_operators)]
-    elseif !is_bin_constraints_already_done
-        bin_constraints::Dict
-        _bin_constraints = Tuple{Int,Int}[]
-        for (i, op) in enumerate(binary_operators)
-            did_user_declare_constraints = haskey(bin_constraints, op)
-            if did_user_declare_constraints
-                constraint::Tuple{Int,Int} = bin_constraints[op]
-                push!(_bin_constraints, constraint)
-            else
-                push!(_bin_constraints, (-1, -1))
-            end
-        end
-        bin_constraints = _bin_constraints
+        [
+            haskey(_una_constraints1, op) ? _una_constraints1[op]::Int : -1 for
+            op in unary_operators
+        ]
     end
 
-    return una_constraints, bin_constraints
+    is_bin_constraints_already_done = bin_constraints isa Vector{Tuple{Int,Int}}
+    _bin_constraints1 = if bin_constraints isa Array && !is_bin_constraints_already_done
+        Dict(bin_constraints)
+    else
+        bin_constraints
+    end
+    _bin_constraints2 = if _bin_constraints1 === nothing
+        fill((-1, -1), length(binary_operators))
+    elseif !is_bin_constraints_already_done
+        [
+            if haskey(_bin_constraints1, op)
+                _bin_constraints1[op]::Tuple{Int,Int}
+            else
+                (-1, -1)
+            end for op in binary_operators
+        ]
+    end
+
+    return _una_constraints2, _bin_constraints2
 end
 
 function build_nested_constraints(; binary_operators, unary_operators, nested_constraints)
@@ -97,13 +87,15 @@ function build_nested_constraints(; binary_operators, unary_operators, nested_co
     end
 
     # Convert to dict:
-    if !(typeof(nested_constraints) <: Dict)
+    _nested_constraints = if nested_constraints isa Dict
+        nested_constraints
+    else
         # Convert to dict:
         nested_constraints = Dict(
             [cons[1] => Dict(cons[2]...) for cons in nested_constraints]...
         )
-    end
-    for (op, nested_constraint) in nested_constraints
+    end::Dict{Function,Dict{Function,Int}}
+    for (op, nested_constraint) in _nested_constraints
         if !(op ∈ binary_operators || op ∈ unary_operators)
             error("Operator $(op) is not in the operator set.")
         end
@@ -134,7 +126,7 @@ function build_nested_constraints(; binary_operators, unary_operators, nested_co
             ]
 
             (degree, idx, new_max_nesting_dict)
-        end for (op, nested_constraint) in nested_constraints
+        end for (op, nested_constraint) in _nested_constraints
     ]
 end
 
