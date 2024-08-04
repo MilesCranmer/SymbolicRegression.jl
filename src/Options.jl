@@ -31,8 +31,11 @@ using ..OptionsStructModule: ComplexityMapping, operator_specialization
 using ..UtilsModule: max_ops, @save_kwargs, @ignore
 
 """Build constraints on operator-level complexity from a user-passed dict."""
-function build_constraints(;
-    una_constraints, bin_constraints, unary_operators, binary_operators
+@unstable function build_constraints(;
+    una_constraints,
+    bin_constraints,
+    @nospecialize(unary_operators),
+    @nospecialize(binary_operators)
 )::Tuple{Vector{Int},Vector{Tuple{Int,Int}}}
     # Expect format ((*)=>(-1, 3)), etc.
     # TODO: Need to disable simplification if (*, -, +, /) are constrained?
@@ -74,7 +77,9 @@ function build_constraints(;
     return _una_constraints2, _bin_constraints2
 end
 
-function build_nested_constraints(; binary_operators, unary_operators, nested_constraints)
+@unstable function build_nested_constraints(;
+    @nospecialize(binary_operators), @nospecialize(unary_operators), nested_constraints
+)
     nested_constraints === nothing && return nested_constraints
     # Check that intersection of binary operators and unary operators is empty:
     for op in binary_operators
