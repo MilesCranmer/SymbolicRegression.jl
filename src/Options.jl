@@ -99,7 +99,7 @@ end
         nested_constraints = Dict(
             [cons[1] => Dict(cons[2]...) for cons in nested_constraints]...
         )
-    end::Dict{Function,Dict{Function,Int}}
+    end
     for (op, nested_constraint) in _nested_constraints
         if !(op ∈ binary_operators || op ∈ unary_operators)
             error("Operator $(op) is not in the operator set.")
