@@ -2,7 +2,9 @@
 module UtilsModule
 
 using Printf: @printf
-using MacroTools: splitdef, combinedef
+using MacroTools: splitdef
+
+macro ignore(args...) end
 
 const pseudo_time = Ref(0)
 

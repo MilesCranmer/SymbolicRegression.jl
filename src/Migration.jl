@@ -1,7 +1,7 @@
 module MigrationModule
 
 using StatsBase: StatsBase
-using ..CoreModule: Options, DATA_TYPE, LOSS_TYPE
+using ..CoreModule: Options
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember, reset_birth!
 using ..UtilsModule: poisson_sample

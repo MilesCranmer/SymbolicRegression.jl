@@ -1,9 +1,12 @@
 module ComplexityModule
 
-using DynamicExpressions: AbstractExpressionNode, count_nodes, tree_mapreduce
+using DynamicExpressions:
+    AbstractExpression, AbstractExpressionNode, get_tree, count_nodes, tree_mapreduce
 using ..CoreModule: Options, ComplexityMapping
 
-function past_complexity_limit(tree::AbstractExpressionNode, options::Options, limit)::Bool
+function past_complexity_limit(
+    tree::Union{AbstractExpression,AbstractExpressionNode}, options::Options, limit
+)::Bool
     return compute_complexity(tree, options) > limit
 end
 
@@ -14,6 +17,11 @@ By default, this is the number of nodes in a tree.
 However, it could use the custom settings in options.complexity_mapping
 if these are defined.
 """
+function compute_complexity(
+    tree::AbstractExpression, options::Options; break_sharing=Val(false)
+)
+    return compute_complexity(get_tree(tree), options; break_sharing)
+end
 function compute_complexity(
     tree::AbstractExpressionNode, options::Options; break_sharing=Val(false)
 )::Int

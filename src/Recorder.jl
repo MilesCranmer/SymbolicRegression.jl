@@ -1,6 +1,6 @@
 module RecorderModule
 
-using ..CoreModule: RecordType, Options
+using ..CoreModule: RecordType
 
 "Assumes that `options` holds the user options::Options"
 macro recorder(ex)
