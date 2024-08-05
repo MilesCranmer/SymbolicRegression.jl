@@ -13,7 +13,7 @@ using DynamicExpressions:
     get_metadata,
     with_contents,
     with_metadata,
-    count_constants,
+    count_scalar_constants,
     eval_tree_array
 using Random: default_rng, AbstractRNG
 using StatsBase: StatsBase
@@ -257,7 +257,7 @@ function crossover_trees(
 end
 
 function count_constants_for_optimization(ex::ParametricExpression)
-    return count_constants(get_tree(ex)) + length(ex.metadata.parameters)
+    return count_scalar_constants(get_tree(ex)) + length(ex.metadata.parameters)
 end
 
 function mutate_constant(
