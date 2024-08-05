@@ -23,12 +23,14 @@ end
     using SymbolicRegression: Node
     using MLJBase
     using SymbolicUtils
+    using Random: MersenneTwister
 
     include("test_params.jl")
 
     stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
-    X = (a=rand(32), b=rand(32))
+    rng = MersenneTwister(0)
+    X = (a=rand(rng, 32), b=rand(rng, 32))
     y = X.a .^ 2.1
     # We also make sure the deprecated npop and npopulations still work:
     model = SRRegressor(; niterations=10, npop=33, npopulations=15, stop_kws...)
@@ -56,12 +58,14 @@ end
 @testitem "Variable names - multiple outputs" tags = [:part1] begin
     using SymbolicRegression
     using MLJBase
+    using Random: MersenneTwister
 
     include("test_params.jl")
 
     stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
-    X = (a=rand(32), b=rand(32))
+    rng = MersenneTwister(0)
+    X = (a=rand(rng, 32), b=rand(rng, 32))
     y = X.a .^ 2.1
     model = MultitargetSRRegressor(; niterations=10, stop_kws...)
     mach = machine(model, X, reduce(hcat, [reshape(y, :, 1) for i in 1:3]))
@@ -92,12 +96,14 @@ end
 @testitem "Variable names - named outputs" tags = [:part1] begin
     using SymbolicRegression
     using MLJBase
+    using Random: MersenneTwister
 
     include("test_params.jl")
 
     stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
-    X = (b1=randn(32), b2=randn(32))
+    rng = MersenneTwister(0)
+    X = (b1=randn(rng, 32), b2=randn(rng, 32))
     Y = (c1=X.b1 .* X.b2, c2=X.b1 .+ X.b2)
     w = ones(32)
     model = MultitargetSRRegressor(; niterations=10, stop_kws...)
@@ -114,12 +120,14 @@ end
 @testitem "Good predictions" tags = [:part1] begin
     using SymbolicRegression
     using MLJBase
+    using Random: MersenneTwister
 
     include("test_params.jl")
 
     stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
-    X = randn(100, 3)
+    rng = MersenneTwister(0)
+    X = randn(rng, 100, 3)
     Y = X
     model = MultitargetSRRegressor(; niterations=10, stop_kws...)
     mach = machine(model, X, Y)
@@ -130,23 +138,27 @@ end
 @testitem "Helpful errors" tags = [:part3] begin
     using SymbolicRegression
     using MLJBase
+    using Random: MersenneTwister
 
     include("test_params.jl")
 
     model = MultitargetSRRegressor()
-    mach = machine(model, randn(32, 3), randn(32); scitype_check_level=0)
+    rng = MersenneTwister(0)
+    mach = machine(model, randn(rng, 32, 3), randn(rng, 32); scitype_check_level=0)
     @test_throws AssertionError @quiet(fit!(mach))
     VERSION >= v"1.8" &&
         @test_throws "For single-output regression, please" @quiet(fit!(mach))
 
     model = SRRegressor()
-    mach = machine(model, randn(32, 3), randn(32, 2); scitype_check_level=0)
+    rng = MersenneTwister(0)
+    mach = machine(model, randn(rng, 32, 3), randn(rng, 32, 2); scitype_check_level=0)
     @test_throws AssertionError @quiet(fit!(mach))
     VERSION >= v"1.8" &&
         @test_throws "For multi-output regression, please" @quiet(fit!(mach))
 
     model = SRRegressor(; verbosity=0)
-    mach = machine(model, randn(32, 3), randn(32))
+    rng = MersenneTwister(0)
+    mach = machine(model, randn(rng, 32, 3), randn(rng, 32))
     @test_throws ErrorException @quiet(fit!(mach; verbosity=0))
 end
 
@@ -154,9 +166,11 @@ end
     using SymbolicRegression
     using MLJBase
     using Suppressor
+    using Random: MersenneTwister
 
     model = SRRegressor(; timeout_in_seconds=1e-10)
-    mach = machine(model, randn(32, 3), randn(32))
+    rng = MersenneTwister(0)
+    mach = machine(model, randn(rng, 32, 3), randn(rng, 32))
     fit!(mach)
     # Ensure that the hall of fame is empty:
     _, hof = mach.fitresult.state
@@ -173,7 +187,8 @@ end
     @test occursin("Evaluation failed either due to", msg)
 
     model = MultitargetSRRegressor(; timeout_in_seconds=1e-10)
-    mach = machine(model, randn(32, 3), randn(32, 3))
+    rng = MersenneTwister(0)
+    mach = machine(model, randn(rng, 32, 3), randn(rng, 32, 3))
     fit!(mach)
     # Ensure that the hall of fame is empty:
     _, hofs = mach.fitresult.state
