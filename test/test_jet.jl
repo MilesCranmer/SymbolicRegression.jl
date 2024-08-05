@@ -11,7 +11,7 @@ using Pkg
 @info "Creating environment..."
 Pkg.activate(dir; io=devnull)
 Pkg.develop(; path=dirname(@__DIR__), io=devnull)
-Pkg.add(["JET", "Preferences"]; io=devnull)
+Pkg.add(["JET", "Preferences", "DynamicExpressions"]; io=devnull)
 @info "Done!"
 
 using Preferences
