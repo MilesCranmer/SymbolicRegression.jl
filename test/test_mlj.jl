@@ -33,7 +33,7 @@ end
     X = (a=rand(rng, 32), b=rand(rng, 32))
     y = X.a .^ 2.1
     # We also make sure the deprecated npop and npopulations still work:
-    model = SRRegressor(; niterations=10, npop=33, npopulations=15, stop_kws...)
+    model = SRRegressor(; niterations=10, npop=1000, npopulations=15, stop_kws...)
     mach = machine(model, X, y)
     fit!(mach)
     rep = report(mach)
