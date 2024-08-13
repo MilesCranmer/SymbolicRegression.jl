@@ -224,4 +224,45 @@ end
 
 json3_write(args...) = error("Please load the JSON3.jl package.")
 
+"""
+    PerThreadCache{T}
+
+A cache that is efficient for multithreaded code, and works
+by having a separate cache for each thread. This allows
+us to avoid repeated locking. We only need to lock the cache
+when resizing to the number of threads.
+"""
+struct PerThreadCache{T}
+    x::Vector{T}
+    num_threads::Ref{Int}
+    lock::Threads.SpinLock
+
+    PerThreadCache{T}() where {T} = new(Vector{T}(undef, 1), Ref(1), Threads.SpinLock())
+end
+
+function _get_thread_cache(cache::PerThreadCache{T}) where {T}
+    if cache.num_threads[] < Threads.nthreads()
+        Base.@lock cache.lock begin
+            # The reason we have this extra `.len[]` parameter is to avoid
+            # a race condition between a thread resizing the array concurrent
+            # to the check above. Basically we want to make sure the array is
+            # always big enough by the time we get to using it. Since `.len[]`
+            # is set last, we can safely use the array.
+            if cache.num_threads[] < Threads.nthreads()
+                resize!(cache.x, Threads.nthreads())
+                cache.num_threads[] = Threads.nthreads()
+            end
+        end
+    end
+    threadid = Threads.threadid()
+    if !isassigned(cache.x, threadid)
+        cache.x[threadid] = eltype(cache.x)()
+    end
+    return cache.x[threadid]
+end
+function Base.get!(f::F, cache::PerThreadCache, key) where {F<:Function}
+    thread_cache = _get_thread_cache(cache)
+    return get!(f, thread_cache, key)
+end
+
 end

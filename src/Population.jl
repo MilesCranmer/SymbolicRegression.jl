@@ -9,7 +9,7 @@ using ..LossFunctionsModule: score_func, update_baseline_loss!
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..MutationFunctionsModule: gen_random_tree
 using ..PopMemberModule: PopMember
-using ..UtilsModule: bottomk_fast, argmin_fast
+using ..UtilsModule: bottomk_fast, argmin_fast, PerThreadCache
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
 struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
@@ -163,27 +163,18 @@ const CACHED_WEIGHTS =
         init_prob_each = 0.5f0 * (1 - 0.5f0) .^ init_k,
         test_weights = StatsBase.Weights(init_prob_each, sum(init_prob_each))
 
-        (;
-            x=sizehint!(Dict{Tuple{Int,Float32},typeof(test_weights)}(), 1),
-            lock=Threads.SpinLock(),
-        )
+        PerThreadCache{Dict{Tuple{Int,Float32},typeof(test_weights)}}()
     end
 
 @unstable function get_tournament_selection_weights(@nospecialize(options::Options))
-    lock(CACHED_WEIGHTS.lock)
-    try
-        n = options.tournament_selection_n
-        p = options.tournament_selection_p
-        # Weirdly, computing the weights for the tournament becomes quite expensive,
-        # so it's good to cache it.
-        return get!(CACHED_WEIGHTS.x, (n, p)) do
-            k = collect(0:(n - 1))
-            prob_each = p * ((1 - p) .^ k)
+    n = options.tournament_selection_n
+    p = options.tournament_selection_p
+    # Computing the weights for the tournament becomes quite expensive,
+    return get!(CACHED_WEIGHTS, (n, p)) do
+        k = collect(0:(n - 1))
+        prob_each = p * ((1 - p) .^ k)
 
-            return StatsBase.Weights(prob_each, sum(prob_each))
-        end
-    finally
-        unlock(CACHED_WEIGHTS.lock)
+        return StatsBase.Weights(prob_each, sum(prob_each))
     end
 end
 
