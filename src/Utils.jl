@@ -192,36 +192,6 @@ macro constfield(ex)
     return esc(VERSION < v"1.8.0" ? ex : Expr(:const, ex))
 end
 
-# https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
-# Faster way to catch method errors:
-@enum IsGood::Int8 begin
-    Good
-    Bad
-    Undefined
-end
-const SafeFunctions = Dict{Type,IsGood}()
-const SafeFunctionsLock = Threads.SpinLock()
-
-function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
-    status = get(SafeFunctions, Tuple{F,T}, Undefined)
-    status == Good && return (f(x...)::D, true)
-    status == Bad && return (default, false)
-    return lock(SafeFunctionsLock) do
-        output = try
-            (f(x...)::D, true)
-        catch e
-            !isa(e, MethodError) && rethrow(e)
-            (default, false)
-        end
-        if output[2]
-            SafeFunctions[Tuple{F,T}] = Good
-        else
-            SafeFunctions[Tuple{F,T}] = Bad
-        end
-        return output
-    end
-end
-
 json3_write(args...) = error("Please load the JSON3.jl package.")
 
 """
@@ -263,6 +233,35 @@ end
 function Base.get!(f::F, cache::PerThreadCache, key) where {F<:Function}
     thread_cache = _get_thread_cache(cache)
     return get!(f, thread_cache, key)
+end
+
+# https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
+# Faster way to catch method errors:
+@enum IsGood::Int8 begin
+    Good
+    Bad
+    Undefined
+end
+const SafeFunctions = PerThreadCache{Dict{Type,IsGood}}()
+
+function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
+    thread_cache = _get_thread_cache(SafeFunctions)
+    status = get(thread_cache, Tuple{F,T}, Undefined)
+    status == Good && return (f(x...)::D, true)
+    status == Bad && return (default, false)
+
+    output = try
+        (f(x...)::D, true)
+    catch e
+        !isa(e, MethodError) && rethrow(e)
+        (default, false)
+    end
+    if output[2]
+        thread_cache[Tuple{F,T}] = Good
+    else
+        thread_cache[Tuple{F,T}] = Bad
+    end
+    return output
 end
 
 end
