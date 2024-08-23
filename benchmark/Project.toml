@@ -3,5 +3,12 @@ BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 Bumper = "8ce10254-0962-460f-a3d8-1f77fea1446e"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+DynamicExpressions = "a40a106e-89c9-4ca8-8020-a735e8728b6b"
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+
+[preferences.DynamicExpressions]
+instability_check = "disable"
+
+[preferences.SymbolicRegression]
+instability_check = "disable"
