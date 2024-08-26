@@ -39,7 +39,7 @@ SymbolicRegressionJSON3Ext = "JSON3"
 SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 
 [compat]
-ADTypes = "~1.4"
+ADTypes = "^1.4.0"
 Compat = "^4.2"
 Dates = "1"
 DifferentiationInterface = "0.5"
