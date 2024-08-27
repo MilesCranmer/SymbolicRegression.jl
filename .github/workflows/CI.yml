@@ -72,6 +72,8 @@ jobs:
           version: ${{ matrix.julia-version }}
       - name: "Cache dependencies"
         uses: julia-actions/cache@v2
+        with:
+          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};os=${{ matrix.os }};julia=${{ matrix.julia-version }};project=${{ hashFiles('**/Project.toml') }}
       - name: "Build package"
         uses: julia-actions/julia-buildpkg@v1
       - name: "Run tests"
