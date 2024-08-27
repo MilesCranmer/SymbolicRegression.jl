@@ -1176,6 +1176,9 @@ end
 # Hack to get static analysis to work from within tests:
 @ignore include("../test/runtests.jl")
 
+# TODO: Hack to force ConstructionBase version
+using ConstructionBase: ConstructionBase as _
+
 include("precompile.jl")
 redirect_stdout(devnull) do
     redirect_stderr(devnull) do
