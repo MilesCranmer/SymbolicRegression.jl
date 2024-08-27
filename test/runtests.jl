@@ -8,7 +8,7 @@ tags_to_run = let t = get(ENV, "SYMBOLIC_REGRESSION_TEST_SUITE", "part1,part2,pa
     t
 end
 
-@eval @run_package_tests filter = ti -> !isdisjoint(ti.tags, $tags_to_run)
+@eval @run_package_tests filter = ti -> !isdisjoint(ti.tags, $tags_to_run) verbose = true
 
 @testitem "Test custom operators and additional types" tags = [:part2] begin
     include("test_operators.jl")
