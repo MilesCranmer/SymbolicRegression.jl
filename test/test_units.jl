@@ -100,9 +100,6 @@
     end
 end
 
-options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos])
-@extend_operators options
-
 @testitem "Search with dimensional constraints" tags = [:part3] begin
     using SymbolicRegression
     using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
