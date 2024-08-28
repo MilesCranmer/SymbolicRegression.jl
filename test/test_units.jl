@@ -33,6 +33,7 @@ using DynamicQuantities:
     dimension
 using MLJBase: MLJBase as MLJ
 using MLJModelInterface: MLJModelInterface as MMI
+using Random: MersenneTwister
 include("utils.jl")
 
 custom_op(x, y) = x + y
@@ -135,7 +136,8 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
 @extend_operators options
 
 @testset "Search with dimensional constraints" begin
-    X = rand(1, 128) .* 10
+    rng = MersenneTwister(0)
+    X = rand(rng, 1, 128) .* 20
     y = @. cos(X[1, :]) + X[1, :]
     dataset = Dataset(X, y; X_units=["kg"], y_units="1")
 
