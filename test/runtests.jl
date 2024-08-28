@@ -10,6 +10,7 @@ end
 
 @eval @run_package_tests filter = ti -> !isdisjoint(ti.tags, $tags_to_run) verbose = true
 
+# TODO: This is a very slow test
 @testitem "Test custom operators and additional types" tags = [:part2] begin
     include("test_operators.jl")
 end
@@ -65,6 +66,7 @@ end
     include("test_crossover.jl")
 end
 
+# TODO: This is another very slow test
 @testitem "Test NaN detection in evaluator" tags = [:part1] begin
     include("test_nan_detection.jl")
 end
@@ -126,6 +128,7 @@ end
     include("../example.jl")
 end
 
+# TODO: This is the slowest test.
 @testitem "Running parameterized function example." tags = [:part2] begin
     ENV["SYMBOLIC_REGRESSION_IS_TESTING"] = "true"
     include("../examples/parameterized_function.jl")
