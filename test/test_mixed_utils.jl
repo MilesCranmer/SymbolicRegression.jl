@@ -48,6 +48,7 @@ function test_mixed(i, batching::Bool, weighted::Bool, parallelism)
             unary_operators=(cos,),
             batching=batching,
             parsimony=0.0f0, # Required for scoring
+            early_stop_condition=1e-6,
         )
     else
         SymbolicRegression.Options(;
