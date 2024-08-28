@@ -105,9 +105,7 @@ end
     include("test_utils.jl")
 end
 
-@testitem "Test units" tags = [:part2] begin
-    include("test_units.jl")
-end
+include("test_units.jl")
 
 @testitem "Dataset" tags = [:part3] begin
     include("test_dataset.jl")
