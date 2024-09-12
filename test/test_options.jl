@@ -1,4 +1,4 @@
-using LaSR
+using LibraryAugmentedSymbolicRegression
 using Optim: Optim
 
 # testing types

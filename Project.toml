@@ -1,4 +1,4 @@
-name = "LaSR"
+name = "LibraryAugmentedSymbolicRegression"
 uuid = "158930c3-947c-4174-974b-74b39e64a28f"
 authors = ["AryaGrayeli <arya.grayeli@gmail.com>", "AtharvaSehgal <atharva.sehgal@gmail.com>", "MilesCranmer <miles.cranmer@gmail.com>"]
 version = "0.0.1"

@@ -1,4 +1,4 @@
-using LaSR
+using LibraryAugmentedSymbolicRegression
 using Random
 using Distributed: rmprocs
 include("test_params.jl")

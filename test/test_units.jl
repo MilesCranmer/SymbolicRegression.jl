@@ -1,7 +1,7 @@
 @testitem "Dimensional analysis" tags = [:part3] begin
-    using LaSR
-    using LaSR.InterfaceDynamicQuantitiesModule: get_units
-    using LaSR.DimensionalAnalysisModule: violates_dimensional_constraints
+    using LibraryAugmentedSymbolicRegression
+    using LibraryAugmentedSymbolicRegression.InterfaceDynamicQuantitiesModule: get_units
+    using LibraryAugmentedSymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
     using DynamicQuantities
     using DynamicQuantities: DEFAULT_DIM_BASE_TYPE
 
@@ -101,8 +101,8 @@
 end
 
 @testitem "Search with dimensional constraints" tags = [:part3] begin
-    using LaSR
-    using LaSR.DimensionalAnalysisModule: violates_dimensional_constraints
+    using LibraryAugmentedSymbolicRegression
+    using LibraryAugmentedSymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
     using Random: MersenneTwister
 
     rng = MersenneTwister(0)
@@ -148,7 +148,7 @@ end
 end
 
 @testitem "Operator compatibility" tags = [:part3] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
     using DynamicQuantities
 
     ## square cube plus sub mult greater cond relu logical_or logical_and safe_pow atanh_clip
@@ -191,7 +191,7 @@ end
 end
 
 @testitem "Search with dimensional constraints on output" tags = [:part3] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
     using MLJBase: MLJBase as MLJ
     using DynamicQuantities
     using Random: MersenneTwister
@@ -317,7 +317,7 @@ end
 end
 
 @testitem "Should error on mismatched units" tags = [:part3] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
     using DynamicQuantities
 
     X = randn(11, 50)
@@ -327,7 +327,7 @@ end
 end
 
 @testitem "Should print units" tags = [:part3] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
     using DynamicQuantities
 
     X = randn(5, 64)
@@ -391,8 +391,8 @@ end
 end
 
 @testitem "Dimensionless constants" tags = [:part3] begin
-    using LaSR
-    using LaSR.DimensionalAnalysisModule: violates_dimensional_constraints
+    using LibraryAugmentedSymbolicRegression
+    using LibraryAugmentedSymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
     using DynamicQuantities
 
     include("utils.jl")
@@ -433,11 +433,11 @@ end
 end
 
 @testitem "Miscellaneous tests of unit interface" tags = [:part3] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
     using DynamicQuantities
-    using LaSR.DimensionalAnalysisModule: @maybe_return_call, WildcardQuantity
-    using LaSR.MLJInterfaceModule: unwrap_units_single
-    using LaSR.InterfaceDynamicQuantitiesModule: get_dimensions_type
+    using LibraryAugmentedSymbolicRegression.DimensionalAnalysisModule: @maybe_return_call, WildcardQuantity
+    using LibraryAugmentedSymbolicRegression.MLJInterfaceModule: unwrap_units_single
+    using LibraryAugmentedSymbolicRegression.InterfaceDynamicQuantitiesModule: get_dimensions_type
     using MLJModelInterface: MLJModelInterface as MMI
 
     function test_return_call(op::Function, w...)

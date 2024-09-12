@@ -1,5 +1,5 @@
 @testitem "Generic interface tests" tags = [:part1] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
     using MLJTestInterface: MLJTestInterface as MTI
     include("test_params.jl")
 
@@ -19,8 +19,8 @@
 end
 
 @testitem "Variable names - single outputs" tags = [:part3] begin
-    using LaSR
-    using LaSR: Node
+    using LibraryAugmentedSymbolicRegression
+    using LibraryAugmentedSymbolicRegression: Node
     using MLJBase
     using SymbolicUtils
     using Random: MersenneTwister
@@ -56,7 +56,7 @@ end
 end
 
 @testitem "Variable names - multiple outputs" tags = [:part1] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
     using MLJBase
     using Random: MersenneTwister
 
@@ -94,7 +94,7 @@ end
 end
 
 @testitem "Variable names - named outputs" tags = [:part1] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
     using MLJBase
     using Random: MersenneTwister
 
@@ -118,7 +118,7 @@ end
 end
 
 @testitem "Good predictions" tags = [:part1] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
     using MLJBase
     using Random: MersenneTwister
 
@@ -136,7 +136,7 @@ end
 end
 
 @testitem "Helpful errors" tags = [:part3] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
     using MLJBase
     using Random: MersenneTwister
 
@@ -163,7 +163,7 @@ end
 end
 
 @testitem "Unfinished search" tags = [:part3] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
     using MLJBase
     using Suppressor
     using Random: MersenneTwister
@@ -176,7 +176,7 @@ end
     _, hof = mach.fitresult.state
     hof.exists .= false
     # Recompute the report:
-    mach.report[:fit] = LaSR.MLJInterfaceModule.full_report(
+    mach.report[:fit] = LibraryAugmentedSymbolicRegression.MLJInterfaceModule.full_report(
         model, mach.fitresult
     )
     @test report(mach).best_idx == 0
@@ -195,7 +195,7 @@ end
     foreach(hofs) do hof
         hof.exists .= false
     end
-    mach.report[:fit] = LaSR.MLJInterfaceModule.full_report(
+    mach.report[:fit] = LibraryAugmentedSymbolicRegression.MLJInterfaceModule.full_report(
         model, mach.fitresult
     )
     @test report(mach).best_idx == [0, 0, 0]

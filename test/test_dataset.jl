@@ -1,4 +1,4 @@
-using LaSR
+using LibraryAugmentedSymbolicRegression
 using DispatchDoctor: allow_unstable
 
 @testset "Dataset construction" begin

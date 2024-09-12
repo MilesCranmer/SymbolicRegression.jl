@@ -1,4 +1,4 @@
-using LaSR
+using LibraryAugmentedSymbolicRegression
 
 # Deprecated kwargs should still work:
 options = Options(;

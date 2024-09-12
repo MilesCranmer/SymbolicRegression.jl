@@ -1,11 +1,11 @@
 module LaSRSymbolicUtilsExt
 
 using SymbolicUtils: Symbolic
-using LaSR: AbstractExpressionNode, AbstractExpression, Node, Options
-using LaSR.MLJInterfaceModule: AbstractSRRegressor, get_options
+using LibraryAugmentedSymbolicRegression: AbstractExpressionNode, AbstractExpression, Node, Options
+using LibraryAugmentedSymbolicRegression.MLJInterfaceModule: AbstractSRRegressor, get_options
 using DynamicExpressions: get_tree, get_operators
 
-import LaSR: node_to_symbolic, symbolic_to_node
+import LibraryAugmentedSymbolicRegression: node_to_symbolic, symbolic_to_node
 
 """
     node_to_symbolic(tree::AbstractExpressionNode, options::Options; kws...)
@@ -26,7 +26,7 @@ end
 """
     symbolic_to_node(eqn::Symbolic, options::Options; kws...)
 
-Convert a SymbolicUtils.jl expression to LaSR.jl's `Node` type.
+Convert a SymbolicUtils.jl expression to LibraryAugmentedSymbolicRegression.jl's `Node` type.
 """
 function symbolic_to_node(eqn::Symbolic, options::Options; kws...)
     return symbolic_to_node(eqn, options.operators; kws...)

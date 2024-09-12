@@ -1,5 +1,5 @@
 using SymbolicUtils
-using LaSR
+using LibraryAugmentedSymbolicRegression
 include("test_params.jl")
 
 _inv(x) = 1 / x

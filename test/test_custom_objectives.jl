@@ -1,4 +1,4 @@
-using LaSR
+using LibraryAugmentedSymbolicRegression
 include("test_params.jl")
 
 def = quote

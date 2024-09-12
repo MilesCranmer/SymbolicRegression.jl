@@ -1,3 +1,3 @@
-using LaSR
+using LibraryAugmentedSymbolicRegression
 
-LaSR.do_precompilation(Val(:compile))
+LibraryAugmentedSymbolicRegression.do_precompilation(Val(:compile))

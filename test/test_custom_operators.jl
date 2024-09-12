@@ -1,4 +1,4 @@
-using LaSR
+using LibraryAugmentedSymbolicRegression
 using Random
 
 # Test that we can work with custom operators:
@@ -25,7 +25,7 @@ X = randn(MersenneTwister(0), Float32, 2, 10);
 # Now, test that we can work with operators defined in modules
 module A
 
-using LaSR
+using LibraryAugmentedSymbolicRegression
 using Random
 
 function my_func_a(x::T, y::T) where {T<:Real}

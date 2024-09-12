@@ -1,5 +1,5 @@
-using LaSR
-using LaSR.UtilsModule:
+using LibraryAugmentedSymbolicRegression
+using LibraryAugmentedSymbolicRegression.UtilsModule:
     findmin_fast, argmin_fast, bottomk_fast, is_anonymous_function
 using Random
 

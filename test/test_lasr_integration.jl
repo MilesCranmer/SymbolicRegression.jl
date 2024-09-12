@@ -1,4 +1,4 @@
-using LaSR: LLMOptions, Options
+using LibraryAugmentedSymbolicRegression: LLMOptions, Options
 
 # test that we can partially specify LLMOptions
 op1 = LLMOptions(active=false)

@@ -1,9 +1,9 @@
 println("Testing crossover function.")
-using LaSR
-using LaSR: crossover_trees
+using LibraryAugmentedSymbolicRegression
+using LibraryAugmentedSymbolicRegression: crossover_trees
 include("test_params.jl")
 
-options = LaSR.Options(;
+options = LibraryAugmentedSymbolicRegression.Options(;
     default_params...,
     binary_operators=(+, *, /, -),
     unary_operators=(cos, exp),

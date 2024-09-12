@@ -1,8 +1,8 @@
-using LaSR
-using LaSR: LaSR
-using LaSR: Dataset, RunningSearchStatistics, RecordType
+using LibraryAugmentedSymbolicRegression
+using LibraryAugmentedSymbolicRegression: LibraryAugmentedSymbolicRegression
+using LibraryAugmentedSymbolicRegression: Dataset, RunningSearchStatistics, RecordType
 using Optim: Optim
-using LaSR.MutateModule: next_generation
+using LibraryAugmentedSymbolicRegression.MutateModule: next_generation
 using DynamicExpressions: get_scalar_constants
 
 mutation_weights = (; optimize=1e30)  # We also test whether a named tuple works.

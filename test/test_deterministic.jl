@@ -1,10 +1,10 @@
-using LaSR
+using LibraryAugmentedSymbolicRegression
 using Random
 
 X = 2 .* randn(MersenneTwister(0), Float32, 2, 1000)
 y = 3 * cos.(X[2, :]) + X[1, :] .^ 2 .- 2
 
-options = LaSR.Options(;
+options = LibraryAugmentedSymbolicRegression.Options(;
     binary_operators=(+, *, /, -),
     unary_operators=(cos,),
     crossover_probability=0.0,  # required for recording, as not set up to track crossovers.
