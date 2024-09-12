@@ -1,3 +1,3 @@
-using SymbolicRegression
+using LaSR
 
-SymbolicRegression.do_precompilation(Val(:compile))
+LaSR.do_precompilation(Val(:compile))

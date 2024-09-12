@@ -2,6 +2,6 @@
 instability_check = "error"
 instability_check_codegen = "min"
 
-[SymbolicRegression]
+[LaSR]
 instability_check = "error"
 instability_check_codegen = "min"

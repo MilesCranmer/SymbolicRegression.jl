@@ -1,0 +1,20 @@
+Good Expression 1: {{gexpr1}}
+Good Expression 2: {{gexpr2}}
+Good Expression 3: {{gexpr3}}
+Good Expression 4: {{gexpr4}}
+Good Expression 5: {{gexpr5}}
+
+Bad Expression 1: {{bexpr1}}
+Bad Expression 2: {{bexpr2}}
+Bad Expression 3: {{bexpr3}}
+Bad Expression 4: {{bexpr4}}
+Bad Expression 5: {{bexpr5}}
+
+Propose {{N}} hypotheses that would be appropriate given the expressions. Provide short commentary for each of your decisions. Do not talk about topics related to the simplicity or complexity of the expressions. I want ideas that are unique and interesting enough to amaze the world's best mathematicians. End with a JSON list that enumerates the proposed hypotheses following this format:
+```json
+["hyp1",
+ "hyp2",
+ ...
+ "hyp{{N}}"
+]
+```

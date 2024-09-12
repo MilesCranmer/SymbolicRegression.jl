@@ -1,5 +1,5 @@
-using SymbolicRegression
-using SymbolicRegression:
+using LaSR
+using LaSR:
     plus,
     sub,
     mult,
@@ -79,7 +79,7 @@ end
         ],
     )
     for T in types_to_test
-        @test_nowarn SymbolicRegression.assert_operators_well_defined(T, options)
+        @test_nowarn LaSR.assert_operators_well_defined(T, options)
     end
 end
 
@@ -90,17 +90,17 @@ end
         unary_operators=[square, cube, log, log2, log10, log1p, sqrt, acosh, neg],
     )
     for T in types_to_test
-        @test_nowarn SymbolicRegression.assert_operators_well_defined(T, options)
+        @test_nowarn LaSR.assert_operators_well_defined(T, options)
     end
 end
 
 @testset "Test incompatibilities are caught" begin
     options = Options(; binary_operators=[greater])
-    @test_throws ErrorException SymbolicRegression.assert_operators_well_defined(
+    @test_throws ErrorException LaSR.assert_operators_well_defined(
         ComplexF64, options
     )
     VERSION >= v"1.8" &&
-        @test_throws "complex plane" SymbolicRegression.assert_operators_well_defined(
+        @test_throws "complex plane" LaSR.assert_operators_well_defined(
             ComplexF64, options
         )
 end
@@ -108,14 +108,14 @@ end
 @testset "Operators which return the wrong type should fail" begin
     my_bad_op(x) = 1.0f0
     options = Options(; binary_operators=[], unary_operators=[my_bad_op])
-    @test_throws ErrorException SymbolicRegression.assert_operators_well_defined(
+    @test_throws ErrorException LaSR.assert_operators_well_defined(
         Float64, options
     )
     VERSION >= v"1.8" &&
-        @test_throws "returned an output of type" SymbolicRegression.assert_operators_well_defined(
+        @test_throws "returned an output of type" LaSR.assert_operators_well_defined(
             Float64, options
         )
-    @test_nowarn SymbolicRegression.assert_operators_well_defined(Float32, options)
+    @test_nowarn LaSR.assert_operators_well_defined(Float32, options)
 end
 
 @testset "Turbo mode should be the same" begin

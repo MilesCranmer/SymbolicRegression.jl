@@ -1,5 +1,5 @@
 println("Testing custom complexities.")
-using SymbolicRegression, Test
+using LaSR, Test
 
 x1, x2, x3 = Node("x1"), Node("x2"), Node("x3")
 

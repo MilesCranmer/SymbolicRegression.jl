@@ -1,5 +1,5 @@
-using SymbolicRegression
-using SymbolicRegression.UtilsModule: split_string
+using LaSR
+using LaSR.UtilsModule: split_string
 
 include("test_params.jl")
 

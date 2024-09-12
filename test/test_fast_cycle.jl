@@ -1,8 +1,8 @@
-using SymbolicRegression
+using LaSR
 using Random
 include("test_params.jl")
 
-options = SymbolicRegression.Options(;
+options = LaSR.Options(;
     default_params...,
     binary_operators=(+, *),
     unary_operators=(cos,),
@@ -46,7 +46,7 @@ print_tree(best.tree, options)
 println("Testing whether state saving works with changed loss function.")
 previous_loss = best.loss
 new_loss(x, y) = sum(abs2, x - y) * 0.1
-options = SymbolicRegression.Options(;
+options = LaSR.Options(;
     default_params...,
     binary_operators=(+, *),
     unary_operators=(cos,),

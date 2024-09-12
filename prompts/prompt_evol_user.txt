@@ -1,0 +1,14 @@
+Idea 1: {{idea1}}
+Idea 2: {{idea2}}
+Idea 3: {{idea3}}
+Idea 4: {{idea4}}
+Idea 5: {{idea5}}
+
+Propose {{N}} hypotheses that would be appropriate given the ideas. Provide short commentary for each of your decisions. Do not talk about topics related to the simplicity or complexity of the expressions. I want ideas that are unique and interesting enough to amaze the world's best mathematicians. End with a JSON list that enumerates the proposed hypotheses following this format:
+```json
+["hyp1",
+ "hyp2",
+ ...
+ "hyp{{N}}"
+]
+```

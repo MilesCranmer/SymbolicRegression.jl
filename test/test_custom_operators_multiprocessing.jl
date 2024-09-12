@@ -1,4 +1,4 @@
-using SymbolicRegression
+using LaSR
 
 defs = quote
     _plus(x, y) = x + y
@@ -22,7 +22,7 @@ end
 X = randn(Float32, 5, 100)
 y = _mult.(2, _cos.(X[4, :])) + _mult.(X[1, :], X[1, :])
 
-options = SymbolicRegression.Options(;
+options = LaSR.Options(;
     binary_operators=(_plus, _mult, _div, _min),
     unary_operators=(_cos, _exp),
     populations=20,

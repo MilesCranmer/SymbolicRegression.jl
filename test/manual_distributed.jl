@@ -12,12 +12,12 @@ project_path = splitdir(Pkg.project().path)[1]
         end,
     )
 end
-@everywhere using SymbolicRegression
+@everywhere using LaSR
 @everywhere _inv(x::Float32)::Float32 = 1.0f0 / x
 X = rand(Float32, 5, 100) .+ 1
 y = 1.2f0 .+ 2 ./ X[3, :]
 
-options = SymbolicRegression.Options(;
+options = LaSR.Options(;
     default_params..., binary_operators=(+, *), unary_operators=(_inv,), populations=8
 )
 hallOfFame = equation_search(

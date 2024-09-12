@@ -1,0 +1,21 @@
+Input:
+Good Expression 1: {{gexpr1}}
+Good Expression 2: {{gexpr2}}
+Good Expression 3: {{gexpr3}}
+Good Expression 4: {{gexpr4}}
+Good Expression 5: {{gexpr5}}
+
+Bad Expression 1: {{bexpr1}}
+Bad Expression 2: {{bexpr2}}
+Bad Expression 3: {{bexpr3}}
+Bad Expression 4: {{bexpr4}}
+Bad Expression 5: {{bexpr5}}
+
+Comment on the patterns and trends of each equations and end with a JSON list that enumerates the ideas following this format:
+```json
+["Idea1",
+ "Idea2",
+ ...
+ "IdeaN"
+]
+```

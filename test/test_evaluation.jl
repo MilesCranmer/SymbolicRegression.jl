@@ -1,4 +1,4 @@
-using SymbolicRegression
+using LaSR
 using Random
 include("test_params.jl")
 

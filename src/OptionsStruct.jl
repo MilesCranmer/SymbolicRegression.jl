@@ -1,11 +1,13 @@
 module OptionsStructModule
 
+using DispatchDoctor: @unstable
 using Optim: Optim
 using DynamicExpressions:
-    AbstractOperatorEnum, AbstractExpressionNode, OperatorEnum, GenericOperatorEnum
+    AbstractOperatorEnum, AbstractExpressionNode, AbstractExpression, OperatorEnum
 using LossFunctions: SupervisedLoss
 
 import ..MutationWeightsModule: MutationWeights
+import ..LLMOptionsModule: LLMOptions
 
 """
 This struct defines how complexity is calculated.
@@ -124,10 +126,12 @@ struct Options{
     CM<:ComplexityMapping,
     OP<:AbstractOperatorEnum,
     N<:AbstractExpressionNode,
+    E<:AbstractExpression,
+    EO<:NamedTuple,
     _turbo,
     _bumper,
     _return_state,
-    W,
+    AD,
 }
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
@@ -135,7 +139,6 @@ struct Options{
     complexity_mapping::CM
     tournament_selection_n::Int
     tournament_selection_p::Float32
-    tournament_selection_weights::W
     parsimony::Float32
     dimensional_constraint_penalty::Union{Float32,Nothing}
     dimensionless_constants_only::Bool
@@ -155,6 +158,7 @@ struct Options{
     batching::Bool
     batch_size::Int
     mutation_weights::MutationWeights
+    llm_options::LLMOptions
     crossover_probability::Float32
     warmup_maxsize_by::Float32
     use_frequency::Bool
@@ -175,12 +179,15 @@ struct Options{
     elementwise_loss::Union{SupervisedLoss,Function}
     loss_function::Union{Nothing,Function}
     node_type::Type{N}
+    expression_type::Type{E}
+    expression_options::EO
     progress::Union{Bool,Nothing}
     terminal_width::Union{Int,Nothing}
     optimizer_algorithm::Optim.AbstractOptimizer
     optimizer_probability::Float32
     optimizer_nrestarts::Int
     optimizer_options::Optim.Options
+    autodiff_backend::AD
     recorder_file::String
     prob_pick_first::Float32
     early_stop_condition::Union{Function,Nothing}
@@ -204,7 +211,7 @@ function Base.print(io::IO, options::Options)
         *
         join(
             [
-                if fieldname in (:optimizer_options, :mutation_weights)
+                if fieldname in (:optimizer_options, :mutation_weights, :llm_options)
                     "$(fieldname)=..."
                 else
                     "$(fieldname)=$(getfield(options, fieldname))"
@@ -217,5 +224,20 @@ function Base.print(io::IO, options::Options)
     )
 end
 Base.show(io::IO, ::MIME"text/plain", options::Options) = Base.print(io, options)
+
+@unstable function specialized_options(options::Options)
+    return _specialized_options(options)
+end
+@generated function _specialized_options(options::O) where {O<:Options}
+    # Return an options struct with concrete operators
+    type_parameters = O.parameters
+    fields = Any[:(getfield(options, $(QuoteNode(k)))) for k in fieldnames(O)]
+    quote
+        operators = getfield(options, :operators)
+        Options{$(type_parameters[1]),typeof(operators),$(type_parameters[3:end]...)}(
+            $(fields...)
+        )
+    end
+end
 
 end

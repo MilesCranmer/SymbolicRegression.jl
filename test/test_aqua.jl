@@ -1,6 +1,6 @@
-using SymbolicRegression
+using LaSR
 using Aqua
 
-Aqua.test_all(SymbolicRegression; ambiguities=false)
+Aqua.test_all(LaSR; ambiguities=false)
 
-VERSION >= v"1.9" && Aqua.test_ambiguities(SymbolicRegression)
+VERSION >= v"1.9" && Aqua.test_ambiguities(LaSR)

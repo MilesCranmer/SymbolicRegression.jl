@@ -1,23 +1,22 @@
-"""Functions to help with the main loop of SymbolicRegression.jl.
+"""Functions to help with the main loop of LaSR.jl.
 
 This includes: process management, stdin reading, checking for early stops."""
 module SearchUtilsModule
 
 using Printf: @printf, @sprintf
-using Distributed
+using Distributed: Distributed, @spawnat, Future, procs
 using StatsBase: mean
 using DispatchDoctor: @unstable
 
-using DynamicExpressions: AbstractExpressionNode, string_tree
+using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
 using ..CoreModule: Dataset, Options, MAX_DEGREE, RecordType
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
-using ..HallOfFameModule:
-    HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
+using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
 using ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
-using ..AdaptiveParsimonyModule: update_frequencies!, RunningSearchStatistics
+using ..AdaptiveParsimonyModule: RunningSearchStatistics
 
 """
     RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}
@@ -129,11 +128,26 @@ end
 function init_dummy_pops(
     npops::Int, datasets::Vector{D}, options::Options
 ) where {T,L,D<:Dataset{T,L}}
+    prototype = Population(
+        first(datasets);
+        population_size=1,
+        options=options,
+        nfeatures=first(datasets).nfeatures,
+    )
+    # ^ Due to occasional inference issue, we manually specify the return type
     return [
-        [
-            Population(d; population_size=1, options=options, nfeatures=d.nfeatures) for
-            _ in 1:npops
-        ] for d in datasets
+        typeof(prototype)[
+            if (i == 1 && j == 1)
+                prototype
+            else
+                Population(
+                    datasets[j];
+                    population_size=1,
+                    options=options,
+                    nfeatures=datasets[j].nfeatures,
+                )
+            end for i in 1:npops
+        ] for j in 1:length(datasets)
     ]
 end
 
@@ -211,76 +225,52 @@ function check_max_evals(num_evals, options::Options)::Bool
     return options.max_evals !== nothing && options.max_evals::Int <= sum(sum, num_evals)
 end
 
-const TIME_TYPE = Float64
+"""
+This struct is used to monitor resources.
 
-"""This struct is used to monitor resources."""
+Whenever we check a channel, we record if it was empty or not.
+This gives us a measure for how much of a bottleneck there is
+at the head worker.
+"""
 Base.@kwdef mutable struct ResourceMonitor
-    """The time the search started."""
-    absolute_start_time::TIME_TYPE = time()
-    """The time the head worker started doing work."""
-    start_work::TIME_TYPE = Inf
-    """The time the head worker finished doing work."""
-    stop_work::TIME_TYPE = Inf
-
-    num_starts::UInt = 0
-    num_stops::UInt = 0
-    work_intervals::Vector{TIME_TYPE} = TIME_TYPE[]
-    rest_intervals::Vector{TIME_TYPE} = TIME_TYPE[]
-
-    """Number of intervals to store."""
-    num_intervals_to_store::Int
+    population_ready::Vector{Bool} = Bool[]
+    max_recordings::Int
+    start_reporting_at::Int
+    window_size::Int
 end
 
-function start_work_monitor!(monitor::ResourceMonitor)
-    monitor.start_work = time()
-    monitor.num_starts += 1
-    if monitor.num_stops > 0
-        push!(monitor.rest_intervals, monitor.start_work - monitor.stop_work)
-        if length(monitor.rest_intervals) > monitor.num_intervals_to_store
-            popfirst!(monitor.rest_intervals)
-        end
-    end
-    return nothing
-end
-
-function stop_work_monitor!(monitor::ResourceMonitor)
-    monitor.stop_work = time()
-    push!(monitor.work_intervals, monitor.stop_work - monitor.start_work)
-    monitor.num_stops += 1
-    @assert monitor.num_stops == monitor.num_starts
-    if length(monitor.work_intervals) > monitor.num_intervals_to_store
-        popfirst!(monitor.work_intervals)
+function record_channel_state!(monitor::ResourceMonitor, state)
+    push!(monitor.population_ready, state)
+    if length(monitor.population_ready) > monitor.max_recordings
+        popfirst!(monitor.population_ready)
     end
     return nothing
 end
 
 function estimate_work_fraction(monitor::ResourceMonitor)::Float64
-    if monitor.num_stops <= 1
+    if length(monitor.population_ready) <= monitor.start_reporting_at
         return 0.0  # Can't estimate from only one interval, due to JIT.
     end
-    work_intervals = monitor.work_intervals
-    rest_intervals = monitor.rest_intervals
-    # Trim 1st, in case we are still in the first interval.
-    if monitor.num_stops <= monitor.num_intervals_to_store + 1
-        work_intervals = work_intervals[2:end]
-        rest_intervals = rest_intervals[2:end]
-    end
-    return mean(work_intervals) / (mean(work_intervals) + mean(rest_intervals))
+    return mean(monitor.population_ready[(end - (monitor.window_size - 1)):end])
 end
 
 function get_load_string(; head_node_occupation::Float64, parallelism=:serial)
-    parallelism == :serial && return ""
-    out = @sprintf("Head worker occupation: %.1f%%", head_node_occupation * 100)
-
-    raise_usage_warning = head_node_occupation > 0.4
-    if raise_usage_warning
-        out *= "."
-        out *= " This is high, and will prevent efficient resource usage."
-        out *= " Increase `ncycles_per_iteration` to reduce load on head worker."
+    if parallelism == :serial || head_node_occupation == 0.0
+        return ""
     end
+    return ""
+    ## TODO: Debug why populations are always ready
+    # out = @sprintf("Head worker occupation: %.1f%%", head_node_occupation * 100)
 
-    out *= "\n"
-    return out
+    # raise_usage_warning = head_node_occupation > 0.4
+    # if raise_usage_warning
+    #     out *= "."
+    #     out *= " This is high, and will prevent efficient resource usage."
+    #     out *= " Increase `ncycles_per_iteration` to reduce load on head worker."
+    # end
+
+    # out *= "\n"
+    # return out
 end
 
 function update_progress_bar!(
@@ -386,9 +376,7 @@ The state of a search, including the populations, worker outputs, tasks, and
 channels. This is used to manage the search and keep track of runtime variables
 in a single struct.
 """
-Base.@kwdef struct SearchState{
-    T,L,N<:AbstractExpressionNode{T},WorkerOutputType,ChannelType
-}
+Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,ChannelType}
     procs::Vector{Int}
     we_created_procs::Bool
     worker_output::Vector{Vector{WorkerOutputType}}
@@ -478,6 +466,7 @@ function construct_datasets(
     y_variable_names,
     X_units,
     y_units,
+    extra,
     ::Type{L},
 ) where {L}
     nout = size(y, 1)
@@ -486,6 +475,7 @@ function construct_datasets(
             X,
             y[j, :],
             L;
+            index=j,
             weights=(weights === nothing ? weights : weights[j, :]),
             variable_names=variable_names,
             display_variable_names=display_variable_names,
@@ -506,6 +496,7 @@ function construct_datasets(
             end,
             X_units=X_units,
             y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
+            extra=extra,
         ) for j in 1:nout
     ]
 end

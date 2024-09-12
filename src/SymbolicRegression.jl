@@ -1,4 +1,4 @@
-module SymbolicRegression
+module LaSR
 
 # Types
 export Population,
@@ -7,12 +7,19 @@ export Population,
     Options,
     Dataset,
     MutationWeights,
+    LLMWeights,
+    LLMOptions,
     Node,
     GraphNode,
+    ParametricNode,
+    Expression,
+    ParametricExpression,
+    StructuredExpression,
     NodeSampler,
+    AbstractExpression,
     AbstractExpressionNode,
-    SRRegressor,
-    MultitargetSRRegressor,
+    LaSRRegressor,
+    MultitargetLaSRRegressor,
     LOSS_TYPE,
     DATA_TYPE,
 
@@ -22,6 +29,8 @@ export Population,
     calculate_pareto_frontier,
     count_nodes,
     compute_complexity,
+    @parse_expression,
+    parse_expression,
     print_tree,
     string_tree,
     eval_tree_array,
@@ -31,6 +40,7 @@ export Population,
     set_node!,
     copy_node,
     node_to_symbolic,
+    node_type,
     symbolic_to_node,
     simplify_tree!,
     tree_mapreduce,
@@ -38,6 +48,9 @@ export Population,
     gen_random_tree,
     gen_random_tree_fixed_size,
     @extend_operators,
+    get_tree,
+    get_contents,
+    get_metadata,
 
     #Operators
     plus,
@@ -76,15 +89,24 @@ using Reexport
 using DynamicExpressions:
     Node,
     GraphNode,
+    ParametricNode,
+    Expression,
+    ParametricExpression,
+    StructuredExpression,
     NodeSampler,
+    AbstractExpression,
     AbstractExpressionNode,
+    @parse_expression,
+    parse_expression,
     copy_node,
     set_node!,
     string_tree,
     print_tree,
     count_nodes,
     get_constants,
-    set_constants,
+    get_scalar_constants,
+    set_constants!,
+    set_scalar_constants!,
     index_constants,
     NodeIndex,
     eval_tree_array,
@@ -96,8 +118,12 @@ using DynamicExpressions:
     combine_operators,
     simplify_tree!,
     tree_mapreduce,
-    set_default_variable_names!
-using DynamicExpressions.EquationModule: with_type_parameters
+    set_default_variable_names!,
+    node_type,
+    get_tree,
+    get_contents,
+    get_metadata
+using DynamicExpressions: with_type_parameters
 @reexport using LossFunctions:
     MarginLoss,
     DistanceLoss,
@@ -162,6 +188,7 @@ using DispatchDoctor: @stable
     include("CheckConstraints.jl")
     include("AdaptiveParsimony.jl")
     include("MutationFunctions.jl")
+    include("LLMFunctions.jl")
     include("LossFunctions.jl")
     include("PopMember.jl")
     include("ConstantOptimization.jl")
@@ -173,6 +200,7 @@ using DispatchDoctor: @stable
     include("ProgressBars.jl")
     include("Migration.jl")
     include("SearchUtils.jl")
+    include("ExpressionBuilder.jl")
 end
 
 using .CoreModule:
@@ -185,6 +213,8 @@ using .CoreModule:
     Dataset,
     Options,
     MutationWeights,
+    LLMOptions,
+    LLMWeights,
     plus,
     sub,
     mult,
@@ -207,8 +237,9 @@ using .CoreModule:
     gamma,
     erf,
     erfc,
-    atanh_clip
-using .UtilsModule: is_anonymous_function, recursive_merge, json3_write
+    atanh_clip,
+    create_expression
+using .UtilsModule: is_anonymous_function, recursive_merge, json3_write, @ignore
 using .ComplexityModule: compute_complexity
 using .CheckConstraintsModule: check_constraints
 using .AdaptiveParsimonyModule:
@@ -219,6 +250,8 @@ using .MutationFunctionsModule:
     random_node,
     random_node_and_parent,
     crossover_trees
+using .LLMFunctionsModule: update_idea_database
+
 using .InterfaceDynamicExpressionsModule: @extend_operators
 using .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
 using .PopMemberModule: PopMember, reset_birth!
@@ -246,8 +279,7 @@ using .SearchUtilsModule:
     check_for_timeout,
     check_max_evals,
     ResourceMonitor,
-    start_work_monitor!,
-    stop_work_monitor!,
+    record_channel_state!,
     estimate_work_fraction,
     update_progress_bar!,
     print_search_state,
@@ -258,6 +290,7 @@ using .SearchUtilsModule:
     save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!
+using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
     include("deprecates.jl")
@@ -269,7 +302,7 @@ end
 
 Perform a distributed equation search for functions `f_i` which
 describe the mapping `f_i(X[:, j]) ≈ y[i, j]`. Options are
-configured using SymbolicRegression.Options(...),
+configured using LaSR.Options(...),
 which should be passed as a keyword argument to options.
 One can turn off parallelism with `numprocs=0`,
 which is useful for debugging and profiling.
@@ -379,6 +412,7 @@ function equation_search(
     progress::Union{Bool,Nothing}=nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
+    extra::NamedTuple=NamedTuple(),
     v_dim_out::Val{DIM_OUT}=Val(nothing),
     # Deprecated:
     multithreaded=nothing,
@@ -406,6 +440,7 @@ function equation_search(
         y_variable_names,
         X_units,
         y_units,
+        extra,
         L,
     )
 
@@ -589,16 +624,19 @@ function equation_search(
     )
 end
 
-@stable default_mode = "disable" @noinline function _equation_search(
+@noinline function _equation_search(
     datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
 ) where {D<:Dataset}
+    # PROMPT EVOLUTION
+    idea_database_all = [Vector{String}() for j in 1:length(datasets)]
+
     _validate_options(datasets, ropt, options)
     state = _create_workers(datasets, ropt, options)
-    _initialize_search!(state, datasets, ropt, options, saved_state)
-    _warmup_search!(state, datasets, ropt, options)
-    _main_search_loop!(state, datasets, ropt, options)
+    _initialize_search!(state, datasets, ropt, options, saved_state, idea_database_all)
+    _warmup_search!(state, datasets, ropt, options, idea_database_all)
+    _main_search_loop!(state, datasets, ropt, options, idea_database_all)
     _tear_down!(state, ropt, options)
-    return _format_output(state, ropt)
+    return _format_output(state, datasets, ropt, options)
 end
 
 function _validate_options(
@@ -641,7 +679,8 @@ end
 
     nout = length(datasets)
     example_dataset = first(datasets)
-    NT = with_type_parameters(options.node_type, T)
+    example_ex = create_expression(zero(T), options, example_dataset)
+    NT = typeof(example_ex)
     PopType = Population{T,L,NT}
     HallOfFameType = HallOfFame{T,L,NT}
     WorkerOutputType = get_worker_output_type(
@@ -698,9 +737,7 @@ end
         for j in 1:nout
     ]
 
-    return SearchState{
-        T,L,with_type_parameters(options.node_type, T),WorkerOutputType,ChannelType
-    }(;
+    return SearchState{T,L,typeof(example_ex),WorkerOutputType,ChannelType}(;
         procs=procs,
         we_created_procs=we_created_procs,
         worker_output=worker_output,
@@ -720,20 +757,25 @@ end
     )
 end
 function _initialize_search!(
-    state::SearchState{T,L,N}, datasets, ropt::RuntimeOptions, options::Options, saved_state
+    state::SearchState{T,L,N},
+    datasets,
+    ropt::RuntimeOptions,
+    options::Options,
+    saved_state,
+    idea_database_all,
 ) where {T,L,N}
     nout = length(datasets)
 
     init_hall_of_fame = load_saved_hall_of_fame(saved_state)
     if init_hall_of_fame === nothing
         for j in 1:nout
-            state.halls_of_fame[j] = HallOfFame(options, T, L)
+            state.halls_of_fame[j] = HallOfFame(options, datasets[j])
         end
     else
         # Recompute losses for the hall of fame, in
         # case the dataset changed:
         for j in eachindex(init_hall_of_fame, datasets, state.halls_of_fame)
-            hof = init_hall_of_fame[j]
+            hof = strip_metadata(init_hall_of_fame[j], options, datasets[j])
             for member in hof.members[hof.exists]
                 score, result_loss = score_func(datasets[j], member, options)
                 member.score = score
@@ -750,17 +792,17 @@ function _initialize_search!(
         saved_pop = load_saved_population(saved_state; out=j, pop=i)
         new_pop =
             if saved_pop !== nothing && length(saved_pop.members) == options.population_size
-                saved_pop::Population{T,L,N}
+                _saved_pop = strip_metadata(saved_pop, options, datasets[j])
                 ## Update losses:
-                for member in saved_pop.members
+                for member in _saved_pop.members
                     score, result_loss = score_func(datasets[j], member, options)
                     member.score = score
                     member.loss = result_loss
                 end
-                copy_pop = copy(saved_pop)
+                copy_pop = copy(_saved_pop)
                 @sr_spawner(
                     begin
-                        (copy_pop, HallOfFame(options, T, L), RecordType(), 0.0)
+                        (copy_pop, HallOfFame(options, datasets[j]), RecordType(), 0.0)
                     end,
                     parallelism = ropt.parallelism,
                     worker_idx = worker_idx
@@ -778,8 +820,9 @@ function _initialize_search!(
                                 nlength=3,
                                 options=options,
                                 nfeatures=datasets[j].nfeatures,
+                                idea_database=idea_database_all[j],
                             ),
-                            HallOfFame(options, T, L),
+                            HallOfFame(options, datasets[j]),
                             RecordType(),
                             Float64(options.population_size),
                         )
@@ -794,7 +837,11 @@ function _initialize_search!(
     return nothing
 end
 function _warmup_search!(
-    state::SearchState{T,L,N}, datasets, ropt::RuntimeOptions, options::Options
+    state::SearchState{T,L,N},
+    datasets,
+    ropt::RuntimeOptions,
+    options::Options,
+    idea_database_all,
 ) where {T,L,N}
     nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
@@ -825,6 +872,7 @@ function _warmup_search!(
                     ropt.verbosity,
                     cur_maxsize,
                     running_search_statistics=c_rss,
+                    idea_database=idea_database_all[j],
                 )::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N}}
             end,
             parallelism = ropt.parallelism,
@@ -835,7 +883,11 @@ function _warmup_search!(
     return nothing
 end
 function _main_search_loop!(
-    state::SearchState{T,L,N}, datasets, ropt::RuntimeOptions, options::Options
+    state::SearchState{T,L,N},
+    datasets,
+    ropt::RuntimeOptions,
+    options::Options,
+    idea_database_all,
 ) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
@@ -863,11 +915,19 @@ function _main_search_loop!(
     end
     kappa = 0
     resource_monitor = ResourceMonitor(;
-        absolute_start_time=time(),
         # Storing n times as many monitoring intervals as populations seems like it will
         # help get accurate resource estimates:
-        num_intervals_to_store=options.populations * 100 * nout,
+        max_recordings=options.populations * 100 * nout,
+        start_reporting_at=options.populations * 3 * nout,
+        window_size=options.populations * 2 * nout,
     )
+    n_iterations = 0
+    if options.llm_options.active
+        open(options.llm_options.llm_recorder_dir * "n_iterations.txt", "a") do file
+            write(file, "- " * string(div(n_iterations, options.populations)) * "\n")
+        end
+    end
+    worst_members = Vector{PopMember}()
     while sum(state.cycles_remaining) > 0
         kappa += 1
         if kappa > options.populations * nout
@@ -875,6 +935,7 @@ function _main_search_loop!(
         end
         # nout, populations:
         j, i = state.task_order[kappa]
+        idea_database = idea_database_all[j]
 
         # Check if error on population:
         if ropt.parallelism in (:multiprocessing, :multithreading)
@@ -890,11 +951,16 @@ function _main_search_loop!(
         else
             true
         end
+        record_channel_state!(resource_monitor, population_ready)
+
         # Don't start more if this output has finished its cycles:
         # TODO - this might skip extra cycles?
         population_ready &= (state.cycles_remaining[j] > 0)
         if population_ready
-            start_work_monitor!(resource_monitor)
+            if n_iterations % options.populations == 0
+                worst_members = Vector{PopMember}()
+            end
+            n_iterations += 1
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record, cur_num_evals) = if ropt.parallelism in
                 (
@@ -913,9 +979,16 @@ function _main_search_loop!(
             dataset = datasets[j]
             cur_maxsize = state.cur_maxsizes[j]
 
+            worst_member = nothing
             for member in cur_pop.members
+                if worst_member == nothing || worst_member.loss < member.loss
+                    worst_member = member
+                end
                 size = compute_complexity(member, options)
                 update_frequencies!(state.all_running_search_statistics[j]; size)
+            end
+            if worst_member != nothing && worst_member.loss > 100 # if the worst of population is good then thats still good to keep
+                push!(worst_members, worst_member)
             end
             #! format: off
             update_hall_of_fame!(state.halls_of_fame[j], cur_pop.members, options)
@@ -924,6 +997,11 @@ function _main_search_loop!(
 
             # Dominating pareto curve - must be better than all simpler equations
             dominating = calculate_pareto_frontier(state.halls_of_fame[j])
+            if options.llm_options.active &&
+                options.llm_options.prompt_evol &&
+                (n_iterations % options.populations == 0)
+                update_idea_database(idea_database, dominating, worst_members, options)
+            end
 
             if options.save_to_file
                 save_to_file(dominating, nout, j, dataset, options)
@@ -975,6 +1053,8 @@ function _main_search_loop!(
                         ropt.verbosity,
                         cur_maxsize,
                         running_search_statistics=c_rss,
+                        dominating=dominating,
+                        idea_database=idea_database,
                     )
                 end,
                 parallelism = ropt.parallelism,
@@ -989,7 +1069,6 @@ function _main_search_loop!(
             state.cur_maxsizes[j] = get_cur_maxsize(;
                 options, ropt.total_cycles, cycles_remaining=state.cycles_remaining[j]
             )
-            stop_work_monitor!(resource_monitor)
             move_window!(state.all_running_search_statistics[j])
             if ropt.progress
                 head_node_occupation = estimate_work_fraction(resource_monitor)
@@ -1060,6 +1139,11 @@ function _main_search_loop!(
         end
         ################################################################
     end
+    if options.llm_options.active
+        open(options.llm_options.llm_recorder_dir * "n_iterations.txt", "a") do file
+            write(file, "- " * string(div(n_iterations, options.populations)) * "\n")
+        end
+    end
     return nothing
 end
 function _tear_down!(state::SearchState, ropt::RuntimeOptions, options::Options)
@@ -1076,10 +1160,20 @@ function _tear_down!(state::SearchState, ropt::RuntimeOptions, options::Options)
     @recorder json3_write(state.record[], options.recorder_file)
     return nothing
 end
-function _format_output(state::SearchState, ropt::RuntimeOptions)
-    out_hof = (ropt.dim_out == 1 ? only(state.halls_of_fame) : state.halls_of_fame)
+function _format_output(
+    state::SearchState, datasets, ropt::RuntimeOptions, options::Options
+)
+    nout = length(datasets)
+    out_hof = if ropt.dim_out == 1
+        embed_metadata(only(state.halls_of_fame), options, only(datasets))
+    else
+        map(j -> embed_metadata(state.halls_of_fame[j], options, datasets[j]), 1:nout)
+    end
     if ropt.return_state
-        return (state.last_pops, out_hof)
+        return (
+            map(j -> embed_metadata(state.last_pops[j], options, datasets[j]), 1:nout),
+            out_hof,
+        )
     else
         return out_hof
     end
@@ -1095,6 +1189,8 @@ end
     verbosity,
     cur_maxsize::Int,
     running_search_statistics,
+    dominating=nothing,
+    idea_database=nothing,
 ) where {T,L,N}
     record = RecordType()
     @recorder record["out$(out)_pop$(pop)"] = RecordType(
@@ -1111,6 +1207,8 @@ end
         verbosity=verbosity,
         options=options,
         record=record,
+        dominating=dominating,
+        idea_database=idea_database,
     )
     num_evals += evals_from_cycle
     out_pop, evals_from_optimize = optimize_and_simplify_population(
@@ -1129,15 +1227,17 @@ end
 end
 
 include("MLJInterface.jl")
-using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
+using .MLJInterfaceModule: LaSRRegressor, MultitargetLaSRRegressor
 
 function __init__()
     @require_extensions
 end
 
-macro ignore(args...) end
 # Hack to get static analysis to work from within tests:
 @ignore include("../test/runtests.jl")
+
+# TODO: Hack to force ConstructionBase version
+using ConstructionBase: ConstructionBase as _
 
 include("precompile.jl")
 redirect_stdout(devnull) do

@@ -1,0 +1,12 @@
+Suggestion 1: {{assump1}}
+Suggestion 2: {{assump2}}
+Suggestion 3: {{assump3}}
+
+Propose {{N}} expressions that would be appropriate given the suggestions. Provide short commentary for each of your decisions. End with a JSON list that enumerates the proposed expressions following this format:
+```json
+["expr1",
+ "expr2",
+ ...
+ "expr{{N}}"
+]
+```

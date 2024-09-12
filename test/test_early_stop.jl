@@ -1,11 +1,11 @@
-using SymbolicRegression
+using LaSR
 
 X = randn(Float32, 5, 100)
 y = 2 * cos.(X[4, :]) + X[1, :] .^ 2
 
 early_stop(loss, c) = ((loss <= 1e-10) && (c <= 10))
 
-options = SymbolicRegression.Options(;
+options = LaSR.Options(;
     binary_operators=(+, *, /, -),
     unary_operators=(cos, exp),
     populations=20,

@@ -1,6 +1,6 @@
-using SymbolicRegression
+using LaSR
 using Random
-using SymbolicRegression: eval_loss, score_func, Dataset
+using LaSR: eval_loss, score_func, Dataset
 using ForwardDiff
 include("test_params.jl")
 

@@ -3,7 +3,16 @@ module MLJInterfaceModule
 using Optim: Optim
 using LineSearches: LineSearches
 using MLJModelInterface: MLJModelInterface as MMI
-using DynamicExpressions: eval_tree_array, string_tree, AbstractExpressionNode, Node
+using ADTypes: AbstractADType
+using DynamicExpressions:
+    eval_tree_array,
+    string_tree,
+    AbstractExpressionNode,
+    AbstractExpression,
+    Node,
+    Expression,
+    default_node_type,
+    get_tree
 using DynamicQuantities:
     QuantityArray,
     UnionAbstractQuantity,
@@ -16,20 +25,28 @@ using DynamicQuantities:
 using LossFunctions: SupervisedLoss
 using Compat: allequal, stack
 using ..InterfaceDynamicQuantitiesModule: get_dimensions_type
-using ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
+using ..CoreModule: Options, Dataset, MutationWeights, LLMOptions, LOSS_TYPE
 using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
-using ..UtilsModule: subscriptify
+using ..UtilsModule: subscriptify, @ignore
 
 import ..equation_search
 
 abstract type AbstractSRRegressor <: MMI.Deterministic end
 
+# For static analysis tools:
+@ignore mutable struct LaSRRegressor <: AbstractSRRegressor
+    selection_method::Function
+end
+@ignore mutable struct MultitargetLaSRRegressor <: AbstractSRRegressor
+    selection_method::Function
+end
+
 # TODO: To reduce code re-use, we could forward these defaults from
 #       `equation_search`, similar to what we do for `Options`.
 
-"""Generate an `SRRegressor` struct containing all the fields in `Options`."""
+"""Generate an `LaSRRegressor` struct containing all the fields in `Options`."""
 function modelexpr(model_name::Symbol)
     struct_def = :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L} <:
                                  AbstractSRRegressor
@@ -82,8 +99,8 @@ end
 """Get an equivalent `Options()` object for a particular regressor."""
 function get_options(::AbstractSRRegressor) end
 
-eval(modelexpr(:SRRegressor))
-eval(modelexpr(:MultitargetSRRegressor))
+eval(modelexpr(:LaSRRegressor))
+eval(modelexpr(:MultitargetLaSRRegressor))
 
 # Cleaning already taken care of by `Options` and `equation_search`
 function full_report(
@@ -122,11 +139,27 @@ function MMI.update(
     m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
 )
     options = old_fitresult === nothing ? get_options(m) : old_fitresult.options
-    return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
+    return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, nothing)
 end
-function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
+function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, classes)
+    if isnothing(classes) && MMI.istable(X) && haskey(X, :classes)
+        if !(X isa NamedTuple)
+            error("Classes can only be specified with named tuples.")
+        end
+        new_X = Base.structdiff(X, (; X.classes))
+        new_classes = X.classes
+        return _update(
+            m, verbosity, old_fitresult, old_cache, new_X, y, w, options, new_classes
+        )
+    end
+    if !isnothing(old_fitresult)
+        @assert(
+            old_fitresult.has_classes == !isnothing(classes),
+            "If the first fit used classes, the second fit must also use classes."
+        )
+    end
     # To speed up iterative fits, we cache the types:
-    types = if old_fitresult === nothing
+    types = if isnothing(old_fitresult)
         (;
             T=Any,
             X_t=Any,
@@ -149,7 +182,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
     )
     X_units_clean::types.X_units_clean = clean_units(X_units)
     y_units_clean::types.y_units_clean = clean_units(y_units)
-    w_t::types.w_t = if w !== nothing && isa(m, MultitargetSRRegressor)
+    w_t::types.w_t = if w !== nothing && isa(m, MultitargetLaSRRegressor)
         @assert(isa(w, AbstractVector) && ndims(w) == 1, "Unexpected input for `w`.")
         repeat(w', size(y_t, 1))
     else
@@ -174,16 +207,18 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         X_units=X_units_clean,
         y_units=y_units_clean,
         verbosity=verbosity,
+        extra=isnothing(classes) ? (;) : (; classes),
         # Help out with inference:
-        v_dim_out=isa(m, SRRegressor) ? Val(1) : Val(2),
+        v_dim_out=isa(m, LaSRRegressor) ? Val(1) : Val(2),
     )
     fitresult = (;
         state=search_state,
-        num_targets=isa(m, SRRegressor) ? 1 : size(y_t, 1),
+        num_targets=isa(m, LaSRRegressor) ? 1 : size(y_t, 1),
         options=options,
         variable_names=variable_names,
         y_variable_names=y_variable_names,
         y_is_table=MMI.istable(y),
+        has_classes=!isnothing(classes),
         X_units=X_units_clean,
         y_units=y_units_clean,
         types=(
@@ -228,10 +263,10 @@ function get_matrix_and_info(X, ::Type{D}) where {D}
     return Xm_t_strip, colnames, X_units
 end
 
-function format_input_for(::SRRegressor, y, ::Type{D}) where {D}
+function format_input_for(::LaSRRegressor, y, ::Type{D}) where {D}
     @assert(
         !(MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1)),
-        "For multi-output regression, please use `MultitargetSRRegressor`."
+        "For multi-output regression, please use `MultitargetLaSRRegressor`."
     )
     y_t = vec(y)
     colnames = nothing
@@ -239,10 +274,10 @@ function format_input_for(::SRRegressor, y, ::Type{D}) where {D}
     y_t_strip, y_units = unwrap_units_single(y_t, D_promoted)
     return y_t_strip, colnames, y_units
 end
-function format_input_for(::MultitargetSRRegressor, y, ::Type{D}) where {D}
+function format_input_for(::MultitargetLaSRRegressor, y, ::Type{D}) where {D}
     @assert(
         MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1),
-        "For single-output regression, please use `SRRegressor`."
+        "For single-output regression, please use `LaSRRegressor`."
     )
     return get_matrix_and_info(y, D)
 end
@@ -277,13 +312,13 @@ wrap_units(v, ::Nothing, ::Nothing) = v
 wrap_units(v, y_units, i::Integer) = (yi -> Quantity(yi, y_units[i])).(v)
 wrap_units(v, y_units, ::Nothing) = (yi -> Quantity(yi, y_units)).(v)
 
-function prediction_fallback(::Type{T}, ::SRRegressor, Xnew_t, fitresult, _) where {T}
+function prediction_fallback(::Type{T}, ::LaSRRegressor, Xnew_t, fitresult, _) where {T}
     prediction_warn()
     out = fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T))
     return wrap_units(out, fitresult.y_units, nothing)
 end
 function prediction_fallback(
-    ::Type{T}, ::MultitargetSRRegressor, Xnew_t, fitresult, prototype
+    ::Type{T}, ::MultitargetLaSRRegressor, Xnew_t, fitresult, prototype
 ) where {T}
     prediction_warn()
     out_cols = [
@@ -333,9 +368,20 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
 end
 
 function eval_tree_mlj(
-    tree::Node, X_t, m::AbstractSRRegressor, ::Type{T}, fitresult, i, prototype
+    tree::AbstractExpression,
+    X_t,
+    classes,
+    m::AbstractSRRegressor,
+    ::Type{T},
+    fitresult,
+    i,
+    prototype,
 ) where {T}
-    out, completed = eval_tree_array(tree, X_t, fitresult.options)
+    out, completed = if isnothing(classes)
+        eval_tree_array(tree, X_t, fitresult.options)
+    else
+        eval_tree_array(tree, X_t, classes, fitresult.options)
+    end
     if completed
         return wrap_units(out, fitresult.y_units, i)
     else
@@ -343,13 +389,32 @@ function eval_tree_mlj(
     end
 end
 
-function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRRegressor}
+function MMI.predict(
+    m::M, fitresult, Xnew; idx=nothing, classes=nothing
+) where {M<:AbstractSRRegressor}
+    return _predict(m, fitresult, Xnew, idx, classes)
+end
+function _predict(m::M, fitresult, Xnew, idx, classes) where {M<:AbstractSRRegressor}
     if Xnew isa NamedTuple && (haskey(Xnew, :idx) || haskey(Xnew, :data))
         @assert(
             haskey(Xnew, :idx) && haskey(Xnew, :data) && length(keys(Xnew)) == 2,
             "If specifying an equation index during prediction, you must use a named tuple with keys `idx` and `data`."
         )
-        return MMI.predict(m, fitresult, Xnew.data; idx=Xnew.idx)
+        return _predict(m, fitresult, Xnew.data, Xnew.idx, classes)
+    end
+    if isnothing(classes) && MMI.istable(Xnew) && haskey(Xnew, :classes)
+        if !(Xnew isa NamedTuple)
+            error("Classes can only be specified with named tuples.")
+        end
+        Xnew2 = Base.structdiff(Xnew, (; Xnew.classes))
+        return _predict(m, fitresult, Xnew2, idx, Xnew.classes)
+    end
+
+    if fitresult.has_classes
+        @assert(
+            !isnothing(classes),
+            "Classes must be specified if the model was fit with classes."
+        )
     end
 
     params = full_report(m, fitresult; v_with_strings=Val(false))
@@ -368,14 +433,14 @@ function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRReg
 
     idx = idx === nothing ? params.best_idx : idx
 
-    if M <: SRRegressor
+    if M <: LaSRRegressor
         return eval_tree_mlj(
-            params.equations[idx], Xnew_t, m, T, fitresult, nothing, prototype
+            params.equations[idx], Xnew_t, classes, m, T, fitresult, nothing, prototype
         )
-    elseif M <: MultitargetSRRegressor
+    elseif M <: MultitargetLaSRRegressor
         outs = [
             eval_tree_mlj(
-                params.equations[i][idx[i]], Xnew_t, m, T, fitresult, i, prototype
+                params.equations[i][idx[i]], Xnew_t, classes, m, T, fitresult, i, prototype
             ) for i in eachindex(idx, params.equations)
         ]
         out_matrix = reduce(hcat, outs)
@@ -387,10 +452,10 @@ function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRReg
     end
 end
 
-function get_equation_strings_for(::SRRegressor, trees, options, variable_names)
+function get_equation_strings_for(::LaSRRegressor, trees, options, variable_names)
     return (t -> string_tree(t, options; variable_names=variable_names)).(trees)
 end
-function get_equation_strings_for(::MultitargetSRRegressor, trees, options, variable_names)
+function get_equation_strings_for(::MultitargetLaSRRegressor, trees, options, variable_names)
     return [
         (t -> string_tree(t, options; variable_names=variable_names)).(ts) for ts in trees
     ]
@@ -407,14 +472,14 @@ function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<
     ])
 end
 
-function dispatch_selection_for(m::SRRegressor, trees, losses, scores, complexities)::Int
+function dispatch_selection_for(m::LaSRRegressor, trees, losses, scores, complexities)::Int
     length(trees) == 0 && return 0
     return m.selection_method(;
         trees=trees, losses=losses, scores=scores, complexities=complexities
     )
 end
 function dispatch_selection_for(
-    m::MultitargetSRRegressor, trees, losses, scores, complexities
+    m::MultitargetLaSRRegressor, trees, losses, scores, complexities
 )
     any(t -> length(t) == 0, trees) && return fill(0, length(trees))
     return [
@@ -426,31 +491,37 @@ end
 
 MMI.metadata_pkg(
     AbstractSRRegressor;
-    name="SymbolicRegression",
+    name="LaSR",
     uuid="8254be44-1295-4e6a-a16d-46603ac705cb",
-    url="https://github.com/MilesCranmer/SymbolicRegression.jl",
+    url="https://github.com/MilesCranmer/LaSR.jl",
     julia=true,
     license="Apache-2.0",
     is_wrapper=false,
 )
 
+const input_scitype = Union{
+    MMI.Table(MMI.Continuous),
+    AbstractMatrix{<:MMI.Continuous},
+    MMI.Table(MMI.Continuous, MMI.Count),
+}
+
 # TODO: Allow for Count data, and coerce it into Continuous as needed.
 MMI.metadata_model(
-    SRRegressor;
-    input_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    LaSRRegressor;
+    input_scitype,
     target_scitype=AbstractVector{<:MMI.Continuous},
     supports_weights=true,
     reports_feature_importances=false,
-    load_path="SymbolicRegression.MLJInterfaceModule.SRRegressor",
+    load_path="LaSR.MLJInterfaceModule.LaSRRegressor",
     human_name="Symbolic Regression via Evolutionary Search",
 )
 MMI.metadata_model(
-    MultitargetSRRegressor;
-    input_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    MultitargetLaSRRegressor;
+    input_scitype,
     target_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
     supports_weights=true,
     reports_feature_importances=false,
-    load_path="SymbolicRegression.MLJInterfaceModule.MultitargetSRRegressor",
+    load_path="LaSR.MLJInterfaceModule.MultitargetLaSRRegressor",
     human_name="Multi-Target Symbolic Regression via Evolutionary Search",
 )
 
@@ -503,7 +574,7 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
         type will automatically be set to `L`.
     - `selection_method::Function`: Function to selection expression from
         the Pareto frontier for use in `predict`.
-        See `SymbolicRegression.MLJInterfaceModule.choose_best` for an example.
+        See `LaSR.MLJInterfaceModule.choose_best` for an example.
         This function should return a single integer specifying
         the index of the expression to use. By default, this maximizes
         the score (a pound-for-pound rating) of expressions reaching the threshold
@@ -518,11 +589,11 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
     # Operations
 
     - `predict(mach, Xnew)`: Return predictions of the target given features `Xnew`, which
-      should have same scitype as `X` above. The expression used for prediction is defined
-      by the `selection_method` function, which can be seen by viewing `report(mach).best_idx`.
+        should have same scitype as `X` above. The expression used for prediction is defined
+        by the `selection_method` function, which can be seen by viewing `report(mach).best_idx`.
     - `predict(mach, (data=Xnew, idx=i))`: Return predictions of the target given features
-      `Xnew`, which should have same scitype as `X` above. By passing a named tuple with keys
-      `data` and `idx`, you are able to specify the equation you wish to evaluate in `idx`.
+        `Xnew`, which should have same scitype as `X` above. By passing a named tuple with keys
+        `data` and `idx`, you are able to specify the equation you wish to evaluate in `idx`.
 
     $(bottom_matter)
     """
@@ -544,10 +615,10 @@ end
 #https://arxiv.org/abs/2305.01582
 eval(
     tag_with_docstring(
-        :SRRegressor,
+        :LaSRRegressor,
         replace(
             """
-    Single-target Symbolic Regression regressor (`SRRegressor`) searches
+    Single-target Symbolic Regression regressor (`LaSRRegressor`) searches
     for symbolic expressions that predict a single target variable from
     a set of input variables. All data is assumed to be `Continuous`.
     The search is performed using an evolutionary algorithm.
@@ -632,9 +703,9 @@ eval(
 
     ```julia
     using MLJ
-    SRRegressor = @load SRRegressor pkg=SymbolicRegression
+    LaSRRegressor = @load LaSRRegressor pkg=LaSR
     X, y = @load_boston
-    model = SRRegressor(binary_operators=[+, -, *], unary_operators=[exp], niterations=100)
+    model = LaSRRegressor(binary_operators=[+, -, *], unary_operators=[exp], niterations=100)
     mach = machine(model, X, y)
     fit!(mach)
     y_hat = predict(mach, X)
@@ -648,11 +719,11 @@ eval(
     ```julia
     using MLJ
     using DynamicQuantities
-    SRegressor = @load SRRegressor pkg=SymbolicRegression
+    SRegressor = @load LaSRRegressor pkg=LaSR
 
     X = (; x1=rand(32) .* us"km/h", x2=rand(32) .* us"km")
     y = @. X.x2 / X.x1 + 0.5us"h"
-    model = SRRegressor(binary_operators=[+, -, *, /])
+    model = LaSRRegressor(binary_operators=[+, -, *, /])
     mach = machine(model, X, y)
     fit!(mach)
     y_hat = predict(mach, X)
@@ -661,7 +732,7 @@ eval(
     println("Equation used:", r.equation_strings[r.best_idx])
     ```
 
-    See also [`MultitargetSRRegressor`](@ref).
+    See also [`MultitargetLaSRRegressor`](@ref).
     """,
             r"^    " => "",
         ),
@@ -669,10 +740,10 @@ eval(
 )
 eval(
     tag_with_docstring(
-        :MultitargetSRRegressor,
+        :MultitargetLaSRRegressor,
         replace(
             """
-    Multi-target Symbolic Regression regressor (`MultitargetSRRegressor`)
+    Multi-target Symbolic Regression regressor (`MultitargetLaSRRegressor`)
     conducts several searches for expressions that predict each target variable
     from a set of input variables. All data is assumed to be `Continuous`.
     The search is performed using an evolutionary algorithm.
@@ -759,10 +830,10 @@ eval(
 
     ```julia
     using MLJ
-    MultitargetSRRegressor = @load MultitargetSRRegressor pkg=SymbolicRegression
+    MultitargetLaSRRegressor = @load MultitargetLaSRRegressor pkg=LaSR
     X = (a=rand(100), b=rand(100), c=rand(100))
     Y = (y1=(@. cos(X.c) * 2.1 - 0.9), y2=(@. X.a * X.b + X.c))
-    model = MultitargetSRRegressor(binary_operators=[+, -, *], unary_operators=[exp], niterations=100)
+    model = MultitargetLaSRRegressor(binary_operators=[+, -, *], unary_operators=[exp], niterations=100)
     mach = machine(model, X, Y)
     fit!(mach)
     y_hat = predict(mach, X)
@@ -773,7 +844,7 @@ eval(
     end
     ```
 
-    See also [`SRRegressor`](@ref).
+    See also [`LaSRRegressor`](@ref).
     """,
             r"^    " => "",
         ),

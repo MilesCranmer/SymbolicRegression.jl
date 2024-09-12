@@ -1,4 +1,4 @@
-using SymbolicRegression
+using LaSR
 include("test_params.jl")
 
 def = quote

@@ -1,9 +1,9 @@
 using BenchmarkTools
-using SymbolicRegression, BenchmarkTools, Random
-using SymbolicRegression.AdaptiveParsimonyModule: RunningSearchStatistics
-using SymbolicRegression.PopulationModule: best_of_sample
-using SymbolicRegression.ConstantOptimizationModule: optimize_constants
-using SymbolicRegression.CheckConstraintsModule: check_constraints
+using LaSR, BenchmarkTools, Random
+using LaSR.AdaptiveParsimonyModule: RunningSearchStatistics
+using LaSR.PopulationModule: best_of_sample
+using LaSR.ConstantOptimizationModule: optimize_constants
+using LaSR.CheckConstraintsModule: check_constraints
 using Bumper, LoopVectorization
 
 function create_search_benchmark()

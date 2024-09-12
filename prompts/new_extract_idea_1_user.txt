@@ -1,0 +1,19 @@
+Good Expression 1: x0 * x2^(3/2)
+Good Expression 2: x0 * (x8 * x10)^(-1)
+Good Expression 3: x2^2 * (x0 / x3)
+Good Expression 4: (x2 * x0) * x8^(1/2)
+Good Expression 5: x2 * (x0 * x10^3)
+Bad Expression 1: x2 * (x0 - (log(x8 * x10) / x3))
+Bad Expression 2: x2 * (log(x3) + (x0 - sqrt(x8)))
+Bad Expression 3: (x0 - (sqrt(x8) / x3)) * x2
+Bad Expression 4: x2 * (x0 - sin(log(x8)))
+Bad Expression 5: x2 * (x0 - log(x8))
+
+Comment on the patterns and trends of each equations and end with a JSON list that enumerates the ideas following this format:
+```json
+["Idea1",
+ "Idea2",
+ ...
+ "IdeaN"
+]
+```

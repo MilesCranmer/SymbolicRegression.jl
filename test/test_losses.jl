@@ -1,10 +1,10 @@
-using SymbolicRegression
-using SymbolicRegression: eval_loss
+using LaSR
+using LaSR: eval_loss
 using Random
 include("test_params.jl")
 
-_loss = SymbolicRegression.LossFunctionsModule._loss
-_weighted_loss = SymbolicRegression.LossFunctionsModule._weighted_loss
+_loss = LaSR.LossFunctionsModule._loss
+_weighted_loss = LaSR.LossFunctionsModule._weighted_loss
 
 customloss(x, y) = abs(x - y)^2.5
 customloss(x, y, w) = w * (abs(x - y)^2.5)

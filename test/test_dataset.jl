@@ -1,4 +1,4 @@
-using SymbolicRegression
+using LaSR
 using DispatchDoctor: allow_unstable
 
 @testset "Dataset construction" begin

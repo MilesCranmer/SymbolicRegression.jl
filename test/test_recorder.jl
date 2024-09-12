@@ -1,5 +1,5 @@
-using SymbolicRegression
-using SymbolicRegression.UtilsModule: recursive_merge
+using LaSR
+using LaSR.UtilsModule: recursive_merge
 using JSON3
 include("test_params.jl")
 
@@ -8,7 +8,7 @@ recorder_file = joinpath(base_dir, "pysr_recorder.json")
 X = 2 .* randn(Float32, 2, 1000)
 y = 3 * cos.(X[2, :]) + X[1, :] .^ 2 .- 2
 
-options = SymbolicRegression.Options(;
+options = LaSR.Options(;
     binary_operators=(+, *, /, -),
     unary_operators=(cos,),
     use_recorder=true,

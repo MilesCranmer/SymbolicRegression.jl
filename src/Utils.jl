@@ -2,7 +2,9 @@
 module UtilsModule
 
 using Printf: @printf
-using MacroTools: splitdef, combinedef
+using MacroTools: splitdef
+
+macro ignore(args...) end
 
 const pseudo_time = Ref(0)
 
@@ -190,6 +192,49 @@ macro constfield(ex)
     return esc(VERSION < v"1.8.0" ? ex : Expr(:const, ex))
 end
 
+json3_write(args...) = error("Please load the JSON3.jl package.")
+
+"""
+    PerThreadCache{T}
+
+A cache that is efficient for multithreaded code, and works
+by having a separate cache for each thread. This allows
+us to avoid repeated locking. We only need to lock the cache
+when resizing to the number of threads.
+"""
+struct PerThreadCache{T}
+    x::Vector{T}
+    num_threads::Ref{Int}
+    lock::Threads.SpinLock
+
+    PerThreadCache{T}() where {T} = new(Vector{T}(undef, 1), Ref(1), Threads.SpinLock())
+end
+
+function _get_thread_cache(cache::PerThreadCache{T}) where {T}
+    if cache.num_threads[] < Threads.nthreads()
+        Base.@lock cache.lock begin
+            # The reason we have this extra `.len[]` parameter is to avoid
+            # a race condition between a thread resizing the array concurrent
+            # to the check above. Basically we want to make sure the array is
+            # always big enough by the time we get to using it. Since `.len[]`
+            # is set last, we can safely use the array.
+            if cache.num_threads[] < Threads.nthreads()
+                resize!(cache.x, Threads.nthreads())
+                cache.num_threads[] = Threads.nthreads()
+            end
+        end
+    end
+    threadid = Threads.threadid()
+    if !isassigned(cache.x, threadid)
+        cache.x[threadid] = eltype(cache.x)()
+    end
+    return cache.x[threadid]
+end
+function Base.get!(f::F, cache::PerThreadCache, key) where {F<:Function}
+    thread_cache = _get_thread_cache(cache)
+    return get!(f, thread_cache, key)
+end
+
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
 # Faster way to catch method errors:
 @enum IsGood::Int8 begin
@@ -197,29 +242,26 @@ end
     Bad
     Undefined
 end
-const SafeFunctions = Dict{Type,IsGood}()
-const SafeFunctionsLock = Threads.SpinLock()
+const SafeFunctions = PerThreadCache{Dict{Type,IsGood}}()
 
 function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
-    status = get(SafeFunctions, Tuple{F,T}, Undefined)
+    thread_cache = _get_thread_cache(SafeFunctions)
+    status = get(thread_cache, Tuple{F,T}, Undefined)
     status == Good && return (f(x...)::D, true)
     status == Bad && return (default, false)
-    return lock(SafeFunctionsLock) do
-        output = try
-            (f(x...)::D, true)
-        catch e
-            !isa(e, MethodError) && rethrow(e)
-            (default, false)
-        end
-        if output[2]
-            SafeFunctions[Tuple{F,T}] = Good
-        else
-            SafeFunctions[Tuple{F,T}] = Bad
-        end
-        return output
-    end
-end
 
-json3_write(args...) = error("Please load the JSON3.jl package.")
+    output = try
+        (f(x...)::D, true)
+    catch e
+        !isa(e, MethodError) && rethrow(e)
+        (default, false)
+    end
+    if output[2]
+        thread_cache[Tuple{F,T}] = Good
+    else
+        thread_cache[Tuple{F,T}] = Bad
+    end
+    return output
+end
 
 end

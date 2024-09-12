@@ -1,7 +1,7 @@
 module DimensionalAnalysisModule
 
-using DynamicExpressions: AbstractExpressionNode
-using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, uparse, constructorof
+using DynamicExpressions: AbstractExpression, AbstractExpressionNode, get_tree
+using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, constructorof
 
 using ..CoreModule: Options, Dataset
 using ..UtilsModule: safe_call
@@ -191,6 +191,11 @@ function violates_dimensional_constraints(
     return violates_dimensional_constraints(
         tree, dataset.X_units, dataset.y_units, (@view X[:, 1]), options
     )
+end
+function violates_dimensional_constraints(
+    tree::AbstractExpression, dataset::Dataset, options::Options
+)
+    return violates_dimensional_constraints(get_tree(tree), dataset, options)
 end
 function violates_dimensional_constraints(
     tree::AbstractExpressionNode{T},

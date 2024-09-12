@@ -20,3 +20,4 @@ docs/src/index.md
 *.code-workspace
 .vscode
 **/*.json
+LocalPreferences.toml

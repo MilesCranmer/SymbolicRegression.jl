@@ -1,4 +1,7 @@
-using SymbolicRegression
+using LaSR
+using LaSR: strip_metadata
+using DynamicExpressions: get_tree
+using Test
 using Random: seed!
 
 seed!(0)
@@ -10,14 +13,20 @@ options = Options();
 population1 = Population(
     X, y; population_size=100, options=options, nfeatures=5, nlength=10
 )
+dataset = Dataset(X, y)
 
 tree = Node(1, Node(; val=1.0), Node(; feature=2) * 3.2)
 
 @test !(hash(tree) in [hash(p.tree) for p in population1.members])
 
-SymbolicRegression.MigrationModule.migrate!(
-    [PopMember(tree, 0.0, Inf, options)] => population1, options; frac=0.5
+ex = @parse_expression($tree, operators = options.operators, variable_names = [:x1, :x2],)
+ex = strip_metadata(ex, options, dataset)
+
+LaSR.MigrationModule.migrate!(
+    [PopMember(ex, 0.0, Inf, options; deterministic=false)] => population1,
+    options;
+    frac=0.5,
 )
 
 # Now we see that the tree is in the population:
-@test tree in [p.tree for p in population1.members]
+@test tree in [get_tree(p.tree) for p in population1.members]

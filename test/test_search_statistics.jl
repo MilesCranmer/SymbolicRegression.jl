@@ -1,5 +1,5 @@
-using SymbolicRegression
-using SymbolicRegression.AdaptiveParsimonyModule:
+using LaSR
+using LaSR.AdaptiveParsimonyModule:
     RunningSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
 using Random
 

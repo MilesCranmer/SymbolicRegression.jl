@@ -64,7 +64,7 @@ function test_option_configuration(
         if is_anonymous_function(op)
             throw(
                 AssertionError(
-                    "Anonymous functions can't be used as operators for SymbolicRegression.jl",
+                    "Anonymous functions can't be used as operators for LaSR.jl",
                 ),
             )
         end
@@ -206,15 +206,15 @@ end
 function import_module_on_workers(procs, filename::String, options::Options, verbosity)
     loaded_modules_head_worker = [k.name for (k, _) in Base.loaded_modules]
 
-    included_as_local = "SymbolicRegression" ∉ loaded_modules_head_worker
+    included_as_local = "LaSR" ∉ loaded_modules_head_worker
     expr = if included_as_local
         quote
             include($filename)
-            using .SymbolicRegression
+            using .LaSR
         end
     else
         quote
-            using SymbolicRegression
+            using LaSR
         end
     end
 
@@ -242,9 +242,9 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
     end
 
     verbosity > 0 && if isempty(relevant_extensions)
-        @info "Importing SymbolicRegression on workers."
+        @info "Importing LaSR on workers."
     else
-        @info "Importing SymbolicRegression on workers as well as extensions $(join(relevant_extensions, ',' * ' '))."
+        @info "Importing LaSR on workers as well as extensions $(join(relevant_extensions, ',' * ' '))."
     end
     @everywhere procs Core.eval(Core.Main, $expr)
     verbosity > 0 && @info "Finished!"
@@ -257,7 +257,7 @@ function test_module_on_workers(procs, options::Options, verbosity)
     for proc in procs
         push!(
             futures,
-            @spawnat proc SymbolicRegression.gen_random_tree(3, options, 5, TEST_TYPE)
+            @spawnat proc LaSR.gen_random_tree(3, options, 5, TEST_TYPE)
         )
     end
     for future in futures

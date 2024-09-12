@@ -1,13 +1,13 @@
 using Documenter
 using SymbolicUtils
-using SymbolicRegression
-using SymbolicRegression: Dataset, update_baseline_loss!
+using LaSR
+using LaSR: Dataset, update_baseline_loss!
 
 DocMeta.setdocmeta!(
-    SymbolicRegression, :DocTestSetup, :(using LossFunctions); recursive=true
+    LaSR, :DocTestSetup, :(using LossFunctions); recursive=true
 )
 DocMeta.setdocmeta!(
-    SymbolicRegression, :DocTestSetup, :(using DynamicExpressions); recursive=true
+    LaSR, :DocTestSetup, :(using DynamicExpressions); recursive=true
 )
 
 readme = open(dirname(@__FILE__) * "/../README.md") do io
@@ -20,17 +20,17 @@ readme = replace(readme, r"<!--.*?-->" => s"")
 # Then, we remove any line with "<div" on it:
 readme = replace(readme, r"<[/]?div.*" => s"")
 
-# We delete the https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0,
+# We delete the https://github.com/MilesCranmer/LaSR.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0,
 # and replace it with a video:
 readme = replace(
     readme,
-    r"https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0" =>
+    r"https://github.com/MilesCranmer/LaSR.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0" =>
         (
             """
             ```@raw html
             <div align="center">
             <video width="800" height="600" controls>
-            <source src="https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0" type="video/mp4">
+            <source src="https://github.com/MilesCranmer/LaSR.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0" type="video/mp4">
             </video>
             </div>
             ```
@@ -81,13 +81,13 @@ open(dirname(@__FILE__) * "/src/index.md", "w") do io
 end
 
 makedocs(;
-    sitename="SymbolicRegression.jl",
+    sitename="LaSR.jl",
     authors="Miles Cranmer",
     doctest=true,
     strict=:doctest,
     clean=true,
     format=Documenter.HTML(;
-        canonical="https://astroautomata.com/SymbolicRegression.jl/stable"
+        canonical="https://astroautomata.com/LaSR.jl/stable"
     ),
     pages=[
         "Contents" => "index_base.md",
@@ -129,4 +129,4 @@ open("docs/build/losses/index.html", "w") do io
     write(io, string(html))
 end
 
-deploydocs(; repo="github.com/MilesCranmer/SymbolicRegression.jl.git")
+deploydocs(; repo="github.com/MilesCranmer/LaSR.jl.git")

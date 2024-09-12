@@ -1,5 +1,5 @@
 using BenchmarkTools
-using SymbolicRegression
+using LaSR
 
 nfeatures = 3
 X = randn(nfeatures, 200)

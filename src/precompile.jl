@@ -41,7 +41,7 @@ function do_precompilation(::Val{mode}) where {mode}
             X = randn(T, 3, N)
             y = start ? randn(T, N) : randn(T, nout, N)
             @maybe_compile_workload mode begin
-                options = SymbolicRegression.Options(;
+                options = LaSR.Options(;
                     binary_operators=[+, *, /, -, ^],
                     unary_operators=[sin, cos, exp, log, sqrt, abs],
                     populations=3,
