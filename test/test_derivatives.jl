@@ -1,5 +1,5 @@
-using LaSR
-using LaSR: eval_diff_tree_array, eval_grad_tree_array
+using LibraryAugmentedSymbolicRegression
+using LibraryAugmentedSymbolicRegression: eval_diff_tree_array, eval_grad_tree_array
 using Random
 using Zygote
 using LinearAlgebra
@@ -122,7 +122,7 @@ end
 
 println("Testing NodeIndex.")
 
-using LaSR: get_scalar_constants, NodeIndex, index_constants
+using LibraryAugmentedSymbolicRegression: get_scalar_constants, NodeIndex, index_constants
 
 options = Options(;
     binary_operators=(+, *, -, /, pow_abs2), unary_operators=(custom_cos, exp, sin)

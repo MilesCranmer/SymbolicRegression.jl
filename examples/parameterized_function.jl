@@ -1,4 +1,4 @@
-using LaSR
+using LibraryAugmentedSymbolicRegression
 using Random: MersenneTwister
 using Zygote
 using MLJBase: machine, fit!, predict, report

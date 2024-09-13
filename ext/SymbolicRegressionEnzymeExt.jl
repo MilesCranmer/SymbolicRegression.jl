@@ -1,6 +1,6 @@
 module LaSREnzymeExt
 
-using LaSR.LossFunctionsModule: eval_loss
+using LibraryAugmentedSymbolicRegression.LossFunctionsModule: eval_loss
 using DynamicExpressions:
     AbstractExpression,
     AbstractExpressionNode,
@@ -12,7 +12,7 @@ using DynamicExpressions:
 using ADTypes: AutoEnzyme
 using Enzyme: autodiff, Reverse, Active, Const, Duplicated
 
-import LaSR.ConstantOptimizationModule: GradEvaluator
+import LibraryAugmentedSymbolicRegression.ConstantOptimizationModule: GradEvaluator
 
 # We prepare a copy of the tree and all arrays
 function GradEvaluator(f::F, backend::AE) where {F,AE<:AutoEnzyme}

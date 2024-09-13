@@ -1,5 +1,5 @@
 println("Testing NaN detection.")
-using LaSR
+using LibraryAugmentedSymbolicRegression
 using LoopVectorization
 
 for T in [Float16, Float32, Float64], turbo in [true, false]

@@ -1,4 +1,4 @@
-using LaSR
+using LibraryAugmentedSymbolicRegression
 using Random
 include("test_params.jl")
 
@@ -12,7 +12,7 @@ for T in (ComplexF16, ComplexF32, ComplexF64)
 
         early_stop(loss::L, c) where {L} = ((loss <= L(1e-2)) && (c <= 15))
 
-        options = LaSR.Options(;
+        options = LibraryAugmentedSymbolicRegression.Options(;
             binary_operators=[+, *, -, /],
             unary_operators=[cos],
             populations=20,

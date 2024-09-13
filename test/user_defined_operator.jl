@@ -1,11 +1,11 @@
-using LaSR, Test
+using LibraryAugmentedSymbolicRegression, Test
 include("test_params.jl")
 
 _inv(x::Float32)::Float32 = 1.0f0 / x
 X = rand(Float32, 5, 100) .+ 1
 y = 1.2f0 .+ 2 ./ X[3, :]
 
-options = LaSR.Options(;
+options = LibraryAugmentedSymbolicRegression.Options(;
     default_params..., binary_operators=(+, *), unary_operators=(_inv,), populations=8
 )
 hallOfFame = equation_search(

@@ -1,9 +1,9 @@
 using BenchmarkTools
-using LaSR, BenchmarkTools, Random
-using LaSR.AdaptiveParsimonyModule: RunningSearchStatistics
-using LaSR.PopulationModule: best_of_sample
-using LaSR.ConstantOptimizationModule: optimize_constants
-using LaSR.CheckConstraintsModule: check_constraints
+using LibraryAugmentedSymbolicRegression, BenchmarkTools, Random
+using LibraryAugmentedSymbolicRegression.AdaptiveParsimonyModule: RunningSearchStatistics
+using LibraryAugmentedSymbolicRegression.PopulationModule: best_of_sample
+using LibraryAugmentedSymbolicRegression.ConstantOptimizationModule: optimize_constants
+using LibraryAugmentedSymbolicRegression.CheckConstraintsModule: check_constraints
 using Bumper, LoopVectorization
 
 function create_search_benchmark()

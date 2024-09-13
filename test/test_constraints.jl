@@ -1,6 +1,6 @@
 using DynamicExpressions: count_depth
-using LaSR
-using LaSR: check_constraints
+using LibraryAugmentedSymbolicRegression
+using LibraryAugmentedSymbolicRegression: check_constraints
 include("test_params.jl")
 
 _inv(x) = 1 / x

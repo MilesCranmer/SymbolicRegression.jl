@@ -1,5 +1,5 @@
 @testitem "GraphNode evaluation" tags = [:part1] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
 
     options = Options(;
         binary_operators=[+, -, *, /], unary_operators=[cos, sin], maxsize=30
@@ -21,7 +21,7 @@
 end
 
 @testitem "GraphNode complexity" tags = [:part1] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
 
     options = Options(;
         binary_operators=[+, -, *, /], unary_operators=[cos, sin], maxsize=30
@@ -36,7 +36,7 @@ end
 end
 
 @testitem "GraphNode population" tags = [:part1] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
 
     options = Options(;
         binary_operators=[+, -, *, /],
@@ -58,8 +58,8 @@ end
 end
 
 @testitem "GraphNode break connection mutation" tags = [:part1] begin
-    using LaSR
-    using LaSR.MutationFunctionsModule: break_random_connection!
+    using LibraryAugmentedSymbolicRegression
+    using LibraryAugmentedSymbolicRegression.MutationFunctionsModule: break_random_connection!
     using Random: MersenneTwister
 
     options = Options(;
@@ -91,8 +91,8 @@ end
 end
 
 @testitem "GraphNode form connection mutation" tags = [:part1] begin
-    using LaSR
-    using LaSR.MutationFunctionsModule: form_random_connection!
+    using LibraryAugmentedSymbolicRegression
+    using LibraryAugmentedSymbolicRegression.MutationFunctionsModule: form_random_connection!
     using Random: MersenneTwister
 
     options = Options(;

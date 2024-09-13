@@ -1,5 +1,5 @@
 @testitem "pretty print member" tags = [:part3] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
 
     options = Options(; binary_operators=[+, ^])
 
@@ -24,9 +24,9 @@
 end
 
 @testitem "pretty print hall of fame" tags = [:part1] begin
-    using LaSR
-    using LaSR: embed_metadata
-    using LaSR.CoreModule: safe_pow
+    using LibraryAugmentedSymbolicRegression
+    using LibraryAugmentedSymbolicRegression: embed_metadata
+    using LibraryAugmentedSymbolicRegression.CoreModule: safe_pow
 
     options = Options(; binary_operators=[+, safe_pow], maxsize=7)
 
@@ -73,7 +73,7 @@ end
 end
 
 @testitem "pretty print expression" tags = [:part2] begin
-    using LaSR
+    using LibraryAugmentedSymbolicRegression
     using Suppressor: @capture_out
 
     options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos])

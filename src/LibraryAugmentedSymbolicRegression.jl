@@ -1,4 +1,4 @@
-module LaSR
+module LibraryAugmentedSymbolicRegression
 
 # Types
 export Population,
@@ -302,7 +302,7 @@ end
 
 Perform a distributed equation search for functions `f_i` which
 describe the mapping `f_i(X[:, j]) ≈ y[i, j]`. Options are
-configured using LaSR.Options(...),
+configured using LibraryAugmentedSymbolicRegression.Options(...),
 which should be passed as a keyword argument to options.
 One can turn off parallelism with `numprocs=0`,
 which is useful for debugging and profiling.

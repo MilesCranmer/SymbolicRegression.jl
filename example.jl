@@ -1,9 +1,9 @@
-using LaSR
+using LibraryAugmentedSymbolicRegression
 
 X = randn(Float32, 5, 100)
 y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
 
-options = LaSR.Options(;
+options = LibraryAugmentedSymbolicRegression.Options(;
     binary_operators=[+, *, /, -], unary_operators=[cos, exp], populations=20
 )
 

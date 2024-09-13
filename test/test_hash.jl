@@ -1,4 +1,4 @@
-using LaSR
+using LibraryAugmentedSymbolicRegression
 
 options = Options(; binary_operators=(+, *, ^, /, greater), unary_operators=(cos,))
 @extend_operators options

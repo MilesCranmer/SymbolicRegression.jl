@@ -491,9 +491,9 @@ end
 
 MMI.metadata_pkg(
     AbstractSRRegressor;
-    name="LaSR",
+    name="LibraryAugmentedSymbolicRegression",
     uuid="8254be44-1295-4e6a-a16d-46603ac705cb",
-    url="https://github.com/MilesCranmer/LaSR.jl",
+    url="https://github.com/MilesCranmer/LibraryAugmentedSymbolicRegression.jl",
     julia=true,
     license="Apache-2.0",
     is_wrapper=false,
@@ -512,7 +512,7 @@ MMI.metadata_model(
     target_scitype=AbstractVector{<:MMI.Continuous},
     supports_weights=true,
     reports_feature_importances=false,
-    load_path="LaSR.MLJInterfaceModule.LaSRRegressor",
+    load_path="LibraryAugmentedSymbolicRegression.MLJInterfaceModule.LaSRRegressor",
     human_name="Symbolic Regression via Evolutionary Search",
 )
 MMI.metadata_model(
@@ -521,7 +521,7 @@ MMI.metadata_model(
     target_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
     supports_weights=true,
     reports_feature_importances=false,
-    load_path="LaSR.MLJInterfaceModule.MultitargetLaSRRegressor",
+    load_path="LibraryAugmentedSymbolicRegression.MLJInterfaceModule.MultitargetLaSRRegressor",
     human_name="Multi-Target Symbolic Regression via Evolutionary Search",
 )
 
@@ -574,7 +574,7 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
         type will automatically be set to `L`.
     - `selection_method::Function`: Function to selection expression from
         the Pareto frontier for use in `predict`.
-        See `LaSR.MLJInterfaceModule.choose_best` for an example.
+        See `LibraryAugmentedSymbolicRegression.MLJInterfaceModule.choose_best` for an example.
         This function should return a single integer specifying
         the index of the expression to use. By default, this maximizes
         the score (a pound-for-pound rating) of expressions reaching the threshold
@@ -703,7 +703,7 @@ eval(
 
     ```julia
     using MLJ
-    LaSRRegressor = @load LaSRRegressor pkg=LaSR
+    LaSRRegressor = @load LaSRRegressor pkg=LibraryAugmentedSymbolicRegression
     X, y = @load_boston
     model = LaSRRegressor(binary_operators=[+, -, *], unary_operators=[exp], niterations=100)
     mach = machine(model, X, y)
@@ -719,7 +719,7 @@ eval(
     ```julia
     using MLJ
     using DynamicQuantities
-    SRegressor = @load LaSRRegressor pkg=LaSR
+    SRegressor = @load LaSRRegressor pkg=LibraryAugmentedSymbolicRegression
 
     X = (; x1=rand(32) .* us"km/h", x2=rand(32) .* us"km")
     y = @. X.x2 / X.x1 + 0.5us"h"
@@ -830,7 +830,7 @@ eval(
 
     ```julia
     using MLJ
-    MultitargetLaSRRegressor = @load MultitargetLaSRRegressor pkg=LaSR
+    MultitargetLaSRRegressor = @load MultitargetLaSRRegressor pkg=LibraryAugmentedSymbolicRegression
     X = (a=rand(100), b=rand(100), c=rand(100))
     Y = (y1=(@. cos(X.c) * 2.1 - 0.9), y2=(@. X.a * X.b + X.c))
     model = MultitargetLaSRRegressor(binary_operators=[+, -, *], unary_operators=[exp], niterations=100)

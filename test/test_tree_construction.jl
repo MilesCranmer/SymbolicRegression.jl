@@ -1,6 +1,6 @@
-using LaSR
+using LibraryAugmentedSymbolicRegression
 using Random
-using LaSR: eval_loss, score_func, Dataset
+using LibraryAugmentedSymbolicRegression: eval_loss, score_func, Dataset
 using ForwardDiff
 include("test_params.jl")
 

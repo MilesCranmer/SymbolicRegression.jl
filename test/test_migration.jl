@@ -1,5 +1,5 @@
-using LaSR
-using LaSR: strip_metadata
+using LibraryAugmentedSymbolicRegression
+using LibraryAugmentedSymbolicRegression: strip_metadata
 using DynamicExpressions: get_tree
 using Test
 using Random: seed!
@@ -22,7 +22,7 @@ tree = Node(1, Node(; val=1.0), Node(; feature=2) * 3.2)
 ex = @parse_expression($tree, operators = options.operators, variable_names = [:x1, :x2],)
 ex = strip_metadata(ex, options, dataset)
 
-LaSR.MigrationModule.migrate!(
+LibraryAugmentedSymbolicRegression.MigrationModule.migrate!(
     [PopMember(ex, 0.0, Inf, options; deterministic=false)] => population1,
     options;
     frac=0.5,

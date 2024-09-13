@@ -1,5 +1,5 @@
-using LaSR
-using LaSR.AdaptiveParsimonyModule:
+using LibraryAugmentedSymbolicRegression
+using LibraryAugmentedSymbolicRegression.AdaptiveParsimonyModule:
     RunningSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
 using Random
 

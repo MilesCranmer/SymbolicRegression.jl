@@ -1,7 +1,7 @@
 # This file tests particular functionality of ExpressionBuilderModule
 @testitem "ParametricExpression" tags = [:part3] begin
-    using LaSR
-    using LaSR.ExpressionBuilderModule:
+    using LibraryAugmentedSymbolicRegression
+    using LibraryAugmentedSymbolicRegression.ExpressionBuilderModule:
         strip_metadata, embed_metadata, init_params
 
     options = Options()
