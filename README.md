@@ -1,7 +1,7 @@
 <!-- prettier-ignore-start -->
 <div align="center">
 
-LaSR.jl accelerates the search for symbolic expressions using language guidance.
+LaSR.jl accelerates the search for symbolic expressions using library learning.
 
 | Latest release | Website | Forums | Paper |
 | :---: | :---: | :---: | :---: |
@@ -31,7 +31,7 @@ Install in Julia with:
 
 ```julia
 using Pkg
-Pkg.add("LaSR")
+Pkg.add("LibraryAugmentedSymbolicRegression")
 ```
 
 LaSR uses the same interface as [SymbolicRegression.jl](https://github.com/MilesCranmer/SymbolicRegression.jl). The easiest way to use LaSR.jl
@@ -39,7 +39,7 @@ is with [MLJ](https://github.com/alan-turing-institute/MLJ.jl).
 Let's see an example:
 
 ```julia
-import LaSR: LaSRRegressor, LLMOptions
+import LibraryAugmentedSymbolicRegression: LaSRRegressor, LLMOptions
 import MLJ: machine, fit!, predict, report
 
 # Dataset with two named features:
