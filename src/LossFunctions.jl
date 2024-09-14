@@ -2,7 +2,7 @@ module LossFunctionsModule
 
 using Random: MersenneTwister
 using StatsBase: StatsBase
-using DynamicExpressions: AbstractExpressionNode, Node, constructorof
+using DynamicExpressions: Node
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
 using ..InterfaceDynamicExpressionsModule: eval_tree_array
@@ -13,7 +13,7 @@ using ..DimensionalAnalysisModule: violates_dimensional_constraints
 function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
 ) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
-    if loss isa SupervisedLoss
+    if LT <: SupervisedLoss
         return LossFunctions.mean(loss, x, y)
     else
         l(i) = loss(x[i], y[i])
@@ -24,7 +24,7 @@ end
 function _weighted_loss(
     x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::LT
 ) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
-    if loss isa SupervisedLoss
+    if LT <: SupervisedLoss
         return LossFunctions.sum(loss, x, y, w; normalize=true)
     else
         l(i) = loss(x[i], y[i], w[i])
@@ -43,17 +43,35 @@ end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function _eval_loss(
-    tree::AbstractExpressionNode{T},
-    dataset::Dataset{T,L},
-    options::Options,
-    regularization::Bool,
-    idx,
+    tree::Node{T}, 
+    dataset::Dataset{T,L}, 
+    options::Options, 
+    regularization::Bool;
+    partition=nothing,
+    idx=nothing, 
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
+
     (prediction, completion) = eval_tree_array(
         tree, maybe_getindex(dataset.X, :, idx), options
     )
     if !completion
         return L(Inf)
+    end
+
+    if options.allocation
+        @assert partition !== nothing
+        if options.eval_probability
+            for i in 1:length(partition)-1
+                partition_function = sum(prediction[partition[i]+1:partition[i+1]])
+                prediction[partition[i]+1:partition[i+1]] = prediction[partition[i]+1:partition[i+1]] / partition_function
+            end
+        else
+            for i in 1:length(partition)-1
+                partition_function = sum(prediction[partition[i]+1:partition[i+1]])
+                total_out_flow = sum(dataset.y[idx[partition[i]+1:partition[i+1]]]) 
+                prediction[partition[i]+1:partition[i+1]] = prediction[partition[i]+1:partition[i+1]] / partition_function * total_out_flow
+            end
+        end
     end
 
     loss_val = if dataset.weighted
@@ -76,7 +94,7 @@ end
 
 # This evaluates function F:
 function evaluator(
-    f::F, tree::AbstractExpressionNode{T}, dataset::Dataset{T,L}, options::Options, idx
+    f::F, tree::Node{T}, dataset::Dataset{T,L}, options::Options, idx
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE,F}
     if hasmethod(f, typeof((tree, dataset, options, idx)))
         # If user defines method that accepts batching indices:
@@ -95,24 +113,38 @@ end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function eval_loss(
-    tree::AbstractExpressionNode{T},
+    tree::Node{T},
     dataset::Dataset{T,L},
     options::Options;
     regularization::Bool=true,
-    idx=nothing,
+    idx = nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    loss_val = if options.loss_function === nothing
-        _eval_loss(tree, dataset, options, regularization, idx)
+    if options.allocation
+        id_origins = idx === nothing ? collect(1:options.num_places) : idx
+        id_data = Vector{Int}()
+        partition = Vector{Int}()
+        push!(partition, 0)
+        for id_origin in id_origins
+            id_data_ori = (options.ori_sep[id_origin]+1) : options.ori_sep[id_origin+1]
+            append!(id_data, id_data_ori)
+            push!(partition, length(id_data))
+        end
     else
-        f = options.loss_function::Function
-        evaluator(f, tree, dataset, options, idx)
+        id_data = idx
+        partition = nothing
     end
 
+    loss_val = if options.loss_function === nothing
+        _eval_loss(tree, dataset, options, regularization, partition = partition, idx = id_data)
+    else
+        f = options.loss_function::Function # zwy: here :: is an assertion of type
+        evaluator(f, tree, dataset, options, id_data) # zwy: not modify this condition
+    end
     return loss_val
 end
 
 function eval_loss_batched(
-    tree::AbstractExpressionNode{T},
+    tree::Node{T},
     dataset::Dataset{T,L},
     options::Options;
     regularization::Bool=true,
@@ -123,11 +155,16 @@ function eval_loss_batched(
 end
 
 function batch_sample(dataset, options)
-    return StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)::Vector{Int}
+    if options.allocation
+        batch = StatsBase.sample(1:(options.num_places), options.batch_size; replace=true)::Vector{Int}
+    else
+        batch = StatsBase.sample(1:(dataset.n), options.batch_size; replace=true)::Vector{Int}
+    end 
+    return batch
 end
 
 # Just so we can pass either PopMember or Node here:
-get_tree(t::AbstractExpressionNode) = t
+get_tree(t::Node) = t
 get_tree(m) = m.tree
 # Beware: this is a circular dependency situation...
 # PopMember is using losses, but then we also want
@@ -161,6 +198,7 @@ end
 function score_func(
     dataset::Dataset{T,L}, member, options::Options; complexity::Union{Int,Nothing}=nothing
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
+
     result_loss = eval_loss(get_tree(member), dataset, options)
     score = loss_to_score(
         result_loss,
@@ -193,6 +231,7 @@ function score_func_batched(
     return score, result_loss
 end
 
+
 """
     update_baseline_loss!(dataset::Dataset{T,L}, options::Options) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 
@@ -201,21 +240,20 @@ Update the baseline loss of the dataset using the loss function specified in `op
 function update_baseline_loss!(
     dataset::Dataset{T,L}, options::Options
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    example_tree = constructorof(options.node_type)(T; val=dataset.avg_y)
-    # TODO: It could be that the loss function is not defined for this example type?
+    example_tree = Node(T; val=dataset.avg_y) # zwy: T is data type, avg_y is a attribute
     baseline_loss = eval_loss(example_tree, dataset, options)
     if isfinite(baseline_loss)
         dataset.baseline_loss = baseline_loss
         dataset.use_baseline = true
     else
-        dataset.baseline_loss = one(L)
+        dataset.baseline_loss = one(L) # zwy: one(L) 会返回L数据类型下的1，作为常数.
         dataset.use_baseline = false
     end
     return nothing
 end
 
 function dimensional_regularization(
-    tree::AbstractExpressionNode{T}, dataset::Dataset{T,L}, options::Options
+    tree::Node{T}, dataset::Dataset{T,L}, options::Options
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if !violates_dimensional_constraints(tree, dataset, options)
         return zero(L)

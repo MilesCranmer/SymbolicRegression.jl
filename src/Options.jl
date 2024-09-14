@@ -1,14 +1,11 @@
 module OptionsModule
 
-using DispatchDoctor: @unstable
 using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
-using DynamicExpressions: OperatorEnum, Node
+using DynamicExpressions: OperatorEnum, Node, string_tree
 using Distributed: nworkers
 using LossFunctions: L2DistLoss, SupervisedLoss
-using Optim: Optim
-using LineSearches: LineSearches
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
@@ -25,9 +22,8 @@ using ..OperatorsModule:
     safe_sqrt,
     safe_acosh,
     atanh_clip
-using ..MutationWeightsModule: MutationWeights, mutations
 import ..OptionsStructModule: Options
-using ..OptionsStructModule: ComplexityMapping, operator_specialization
+using ..OptionsStructModule: ComplexityMapping, MutationWeights, mutations
 using ..UtilsModule: max_ops, @save_kwargs
 
 """
@@ -149,10 +145,7 @@ function inverse_unaopmap(op::F) where {F}
     return op
 end
 
-create_mutation_weights(w::MutationWeights) = w
-create_mutation_weights(w::NamedTuple) = MutationWeights(; w...)
-
-const deprecated_options_mapping = Base.ImmutableDict(
+const deprecated_options_mapping = NamedTuple([
     :mutationWeights => :mutation_weights,
     :hofMigration => :hof_migration,
     :shouldOptimizeConstants => :should_optimize_constants,
@@ -172,10 +165,9 @@ const deprecated_options_mapping = Base.ImmutableDict(
     :earlyStopCondition => :early_stop_condition,
     :stateReturn => :deprecated_return_state,
     :return_state => :deprecated_return_state,
-    :enable_autodiff => :deprecated_enable_autodiff,
     :ns => :tournament_selection_n,
     :loss => :elementwise_loss,
-)
+])
 
 const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators (functions) to use.
     Each operator should be defined for two input scalars,
@@ -228,7 +220,7 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
             - `SigmoidLoss()`,
             - `DWDMarginLoss(q)`.
 - `loss_function`: Alternatively, you may redefine the loss used
-    as any function of `tree::AbstractExpressionNode{T}`, `dataset::Dataset{T}`,
+    as any function of `tree::Node{T}`, `dataset::Dataset{T}`,
     and `options::Options`, so long as you output a non-negative
     scalar of type `T`. This is useful if you want to use a loss
     that takes into account derivatives, or correlations across
@@ -248,8 +240,6 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
             return sum((prediction .- dataset.y) .^ 2) / dataset.n
         end
 
-- `node_type::Type{N}=Node`: The type of node to use for the search.
-    For example, `Node` or `GraphNode`.
 - `populations`: How many populations of equations to use.
 - `population_size`: How many equations in each population.
 - `ncycles_per_iteration`: How many generations to consider per iteration.
@@ -266,8 +256,7 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     Input this in the form of, e.g., [(^) => 3, sin => 2].
 - `complexity_of_constants`: What complexity should be assigned to use of a constant.
     By default, this is 1.
-- `complexity_of_variables`: What complexity should be assigned to use of a variable,
-    which can also be a vector indicating different per-variable complexity.
+- `complexity_of_variables`: What complexity should be assigned to each variable.
     By default, this is 1.
 - `alpha`: The probability of accepting an equation mutation
     during regularized evolution is given by exp(-delta_loss/(alpha * T)),
@@ -279,8 +268,6 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     punished.
 - `dimensional_constraint_penalty`: An additive factor if the dimensional
     constraint is violated.
-- `dimensionless_constants_only`: Whether to only allow dimensionless
-    constants.
 - `use_frequency`: Whether to use a parsimony that adapts to the
     relative proportion of equations at each complexity; this will
     ensure that there are a balanced number of equations considered
@@ -293,7 +280,6 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `turbo`: Whether to use `LoopVectorization.@turbo` to evaluate expressions.
     This can be significantly faster, but is only compatible with certain
     operators. *Experimental!*
-- `bumper`: Whether to use Bumper.jl for faster evaluation. *Experimental!*
 - `migration`: Whether to migrate equations between processes.
 - `hof_migration`: Whether to migrate equations from the hall of fame
     to processes.
@@ -305,17 +291,10 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     pass a custom objective, this will be set to `false`.
 - `should_optimize_constants`: Whether to use an optimization algorithm
     to periodically optimize constants in equations.
-- `optimizer_algorithm`: Select algorithm to use for optimizing constants. Default
-    is `Optim.BFGS(linesearch=LineSearches.BackTracking())`.
 - `optimizer_nrestarts`: How many different random starting positions to consider
     for optimization of constants.
-- `optimizer_probability`: Probability of performing optimization of constants at
-    the end of a given iteration.
-- `optimizer_iterations`: How many optimization iterations to perform. This gets
-   passed to `Optim.Options` as `iterations`. The default is 8.
-- `optimizer_f_calls_limit`: How many function calls to allow during optimization.
-    This gets passed to `Optim.Options` as `f_calls_limit`. The default is
-    `0` which means no limit.
+- `optimizer_algorithm`: Select algorithm to use for optimizing constants. Default
+    is "BFGS", but "NelderMead" is also supported.
 - `optimizer_options`: General options for the constant optimization. For details
     we refer to the documentation on `Optim.Options` from the `Optim.jl` package.
     Options can be provided here as `NamedTuple`, e.g. `(iterations=16,)`, as a
@@ -351,6 +330,8 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `max_evals`: Int (or Nothing) - the maximum number of evaluations of expressions to perform.
 - `skip_mutation_failures`: Whether to simply skip over mutations that fail or are rejected, rather than to replace the mutated
     expression with the original expression and proceed normally.
+- `enable_autodiff`: Whether to enable automatic differentiation functionality. This is turned off by default.
+    If turned on, this will be turned off if one of the operators does not have well-defined gradients.
 - `nested_constraints`: Specifies how many times a combination of operators can be nested. For example,
     `[sin => [cos => 0], cos => [cos => 2]]` specifies that `cos` may never appear within a `sin`,
     but `sin` can be nested with itself an unlimited number of times. The second term specifies that `cos`
@@ -376,9 +357,10 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 # Arguments
 $(OPTION_DESCRIPTIONS)
 """
-@unstable @save_kwargs DEFAULT_OPTIONS function Options(;
-    binary_operators=Function[+, -, /, *],
-    unary_operators=Function[],
+function Options end
+@save_kwargs DEFAULT_OPTIONS function Options(;
+    binary_operators=[+, -, /, *],
+    unary_operators=[],
     constraints=nothing,
     elementwise_loss::Union{Function,SupervisedLoss,Nothing}=nothing,
     loss_function::Union{Function,Nothing}=nothing,
@@ -387,26 +369,28 @@ $(OPTION_DESCRIPTIONS)
     topn::Integer=12, #samples to return per population
     complexity_of_operators=nothing,
     complexity_of_constants::Union{Nothing,Real}=nothing,
-    complexity_of_variables::Union{Nothing,Real,AbstractVector}=nothing,
+    complexity_of_variables::Union{Nothing,Real}=nothing,
     parsimony::Real=0.0032,
     dimensional_constraint_penalty::Union{Nothing,Real}=nothing,
-    dimensionless_constants_only::Bool=false,
     alpha::Real=0.100000,
     maxsize::Integer=20,
     maxdepth::Union{Nothing,Integer}=nothing,
     turbo::Bool=false,
-    bumper::Bool=false,
     migration::Bool=true,
     hof_migration::Bool=true,
     should_simplify::Union{Nothing,Bool}=nothing,
     should_optimize_constants::Bool=true,
     output_file::Union{Nothing,AbstractString}=nothing,
-    node_type::Type=Node,
     populations::Integer=15,
     perturbation_factor::Real=0.076,
     annealing::Bool=false,
     batching::Bool=false,
     batch_size::Integer=50,
+    allocation::Bool=false,
+    eval_probability::Bool=false,
+    adjmatrix::Union{Nothing, Array{Float64,2}}=nothing,
+    ori_sep::Union{Nothing, Array{Int}}=nothing,
+    optimize_hof::Bool=false,
     mutation_weights::Union{MutationWeights,AbstractVector,NamedTuple}=MutationWeights(),
     crossover_probability::Real=0.066,
     warmup_maxsize_by::Real=0.0,
@@ -426,20 +410,18 @@ $(OPTION_DESCRIPTIONS)
     una_constraints=nothing,
     progress::Union{Bool,Nothing}=nothing,
     terminal_width::Union{Nothing,Integer}=nothing,
-    optimizer_algorithm::Union{AbstractString,Optim.AbstractOptimizer}=Optim.BFGS(;
-        linesearch=LineSearches.BackTracking()
-    ),
+    optimizer_algorithm::AbstractString="BFGS",
     optimizer_nrestarts::Integer=2,
     optimizer_probability::Real=0.14,
     optimizer_iterations::Union{Nothing,Integer}=nothing,
-    optimizer_f_calls_limit::Union{Nothing,Integer}=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
-    use_recorder::Bool=false,
+    val_recorder::Val{use_recorder}=Val(false),
     recorder_file::AbstractString="pysr_recorder.json",
     early_stop_condition::Union{Function,Real,Nothing}=nothing,
     timeout_in_seconds::Union{Nothing,Real}=nothing,
     max_evals::Union{Nothing,Integer}=nothing,
     skip_mutation_failures::Bool=true,
+    enable_autodiff::Bool=false,
     nested_constraints=nothing,
     deterministic::Bool=false,
     # Not search options; just construction options:
@@ -450,16 +432,12 @@ $(OPTION_DESCRIPTIONS)
     npopulations::Union{Nothing,Integer}=nothing,
     npop::Union{Nothing,Integer}=nothing,
     kws...,
-)
+) where {use_recorder}
     for k in keys(kws)
         !haskey(deprecated_options_mapping, k) && error("Unknown keyword argument: $k")
         new_key = deprecated_options_mapping[k]
         if startswith(string(new_key), "deprecated_")
             Base.depwarn("The keyword argument `$(k)` is deprecated.", :Options)
-            if string(new_key) != "deprecated_return_state"
-                # This one we actually want to use
-                continue
-            end
         else
             Base.depwarn(
                 "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.",
@@ -486,7 +464,6 @@ $(OPTION_DESCRIPTIONS)
         k == :earlyStopCondition && (early_stop_condition = kws[k]; true) && continue
         k == :return_state && (deprecated_return_state = kws[k]; true) && continue
         k == :stateReturn && (deprecated_return_state = kws[k]; true) && continue
-        k == :enable_autodiff && continue
         k == :ns && (tournament_selection_n = kws[k]; true) && continue
         k == :loss && (elementwise_loss = kws[k]; true) && continue
         if k == :mutationWeights
@@ -519,17 +496,6 @@ $(OPTION_DESCRIPTIONS)
         Base.depwarn("`npopulations` is deprecated. Use `populations` instead.", :Options)
         populations = npopulations
     end
-    if optimizer_algorithm isa AbstractString
-        Base.depwarn(
-            "The `optimizer_algorithm` argument should be an `AbstractOptimizer`, not a string.",
-            :Options,
-        )
-        optimizer_algorithm = if optimizer_algorithm == "NelderMead"
-            Optim.NelderMead(; linesearch=LineSearches.BackTracking())
-        else
-            Optim.BFGS(; linesearch=LineSearches.BackTracking())
-        end
-    end
 
     if elementwise_loss === nothing
         elementwise_loss = L2DistLoss()
@@ -549,16 +515,10 @@ $(OPTION_DESCRIPTIONS)
         )
     end
 
-    is_testing = parse(Bool, get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false"))
-
     if output_file === nothing
         # "%Y-%m-%d_%H%M%S.%f"
         date_time_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS.sss")
         output_file = "hall_of_fame_" * date_time_str * ".csv"
-        if is_testing
-            tmpdir = mktempdir()
-            output_file = joinpath(tmpdir, output_file)
-        end
     end
 
     nuna = length(unary_operators)
@@ -646,13 +606,62 @@ $(OPTION_DESCRIPTIONS)
         una_constraints, bin_constraints, unary_operators, binary_operators, nuna, nbin
     )
 
-    complexity_mapping = ComplexityMapping(
-        complexity_of_operators,
-        complexity_of_variables,
-        complexity_of_constants,
-        binary_operators,
-        unary_operators,
+    # Define the complexities of everything.
+    use_complexity_mapping = (
+        complexity_of_constants !== nothing ||
+        complexity_of_variables !== nothing ||
+        complexity_of_operators !== nothing
     )
+    complexity_mapping = if use_complexity_mapping
+        if complexity_of_operators === nothing
+            complexity_of_operators = Dict()
+        else
+            # Convert to dict:
+            complexity_of_operators = Dict(complexity_of_operators)
+        end
+
+        # Get consistent type:
+        promoted_type = promote_type(
+            if (complexity_of_variables !== nothing)
+                typeof(complexity_of_variables)
+            else
+                Int
+            end,
+            if (complexity_of_constants !== nothing)
+                typeof(complexity_of_constants)
+            else
+                Int
+            end,
+            (x -> typeof(x)).(values(complexity_of_operators))...,
+        )
+
+        # If not in dict, then just set it to 1.
+        binop_complexities = promoted_type[
+            (haskey(complexity_of_operators, op) ? complexity_of_operators[op] : 1) #
+            for op in binary_operators
+        ]
+        unaop_complexities = promoted_type[
+            (haskey(complexity_of_operators, op) ? complexity_of_operators[op] : 1) #
+            for op in unary_operators
+        ]
+
+        variable_complexity = (
+            (complexity_of_variables !== nothing) ? complexity_of_variables : 1
+        )
+        constant_complexity = (
+            (complexity_of_constants !== nothing) ? complexity_of_constants : 1
+        )
+
+        ComplexityMapping(;
+            binop_complexities=binop_complexities,
+            unaop_complexities=unaop_complexities,
+            variable_complexity=variable_complexity,
+            constant_complexity=constant_complexity,
+        )
+    else
+        ComplexityMapping(false)
+    end
+    # Finish defining complexities
 
     if maxdepth === nothing
         maxdepth = maxsize
@@ -665,6 +674,7 @@ $(OPTION_DESCRIPTIONS)
         OperatorEnum(;
             binary_operators=binary_operators,
             unary_operators=unary_operators,
+            enable_autodiff=false,  # Not needed; we just want the constructors
             define_helper_functions=true,
             empty_old_operators=true,
         )
@@ -676,6 +686,7 @@ $(OPTION_DESCRIPTIONS)
     operators = OperatorEnum(;
         binary_operators=binary_operators,
         unary_operators=unary_operators,
+        enable_autodiff=enable_autodiff,
         define_helper_functions=define_helper_functions,
         empty_old_operators=false,
     )
@@ -689,28 +700,24 @@ $(OPTION_DESCRIPTIONS)
     end
 
     # Parse optimizer options
+    default_optimizer_iterations = 8
     if !isa(optimizer_options, Optim.Options)
-        optimizer_iterations = isnothing(optimizer_iterations) ? 8 : optimizer_iterations
-        optimizer_f_calls_limit = if isnothing(optimizer_f_calls_limit)
-            0
-        else
-            optimizer_f_calls_limit
+        if isnothing(optimizer_iterations)
+            optimizer_iterations = default_optimizer_iterations
         end
-        extra_kws = hasfield(Optim.Options, :show_warnings) ? (; show_warnings=false) : ()
-        optimizer_options = Optim.Options(;
-            iterations=optimizer_iterations,
-            f_calls_limit=optimizer_f_calls_limit,
-            extra_kws...,
-            (isnothing(optimizer_options) ? () : optimizer_options)...,
-        )
-    else
-        @assert optimizer_iterations === nothing && optimizer_f_calls_limit === nothing
-    end
-    if hasfield(Optim.Options, :show_warnings) && optimizer_options.show_warnings
-        @warn "Optimizer warnings are turned on. This might result in a lot of warnings being printed from NaNs, as these are common during symbolic regression"
+        if isnothing(optimizer_options)
+            optimizer_options = Optim.Options(; iterations=optimizer_iterations)
+        else
+            if haskey(optimizer_options, :iterations)
+                optimizer_iterations = optimizer_options[:iterations]
+            end
+            optimizer_options = Optim.Options(;
+                optimizer_options..., iterations=optimizer_iterations
+            )
+        end
     end
 
-    ## Create tournament weights:
+    ## Create tournament weights:6
     tournament_selection_weights =
         let n = tournament_selection_n, p = tournament_selection_p
             k = collect(0:(n - 1))
@@ -719,17 +726,42 @@ $(OPTION_DESCRIPTIONS)
             StatsBase.Weights(prob_each, sum(prob_each))
         end
 
-    set_mutation_weights = create_mutation_weights(mutation_weights)
+    # Create mutation weights:
+    set_mutation_weights = if typeof(mutation_weights) <: NamedTuple
+        MutationWeights(; mutation_weights...)
+    else
+        mutation_weights
+    end
 
     @assert print_precision > 0
 
+    # Allocation mode requires ori_sep
+    if allocation  
+        if ori_sep !== nothing
+            num_places = size(ori_sep, 1) 
+            pushfirst!(ori_sep, 0)
+        else
+            @assert adjmat !== nothing
+            @assert size(adjmatrix, 1) == size(adjmatrix, 2)
+            num_places = size(adjmatrix, 1)
+            ori_sep = Vector{Int}()
+            push!(ori_sep, 0)
+            flow_count = 0
+            for id_origin in 1:n_places
+                id_dest = findall(adjmatrix[id_origin, :] .> 0)
+                flow_count += length(id_dest)
+                push!(partition, flow_count)
+            end
+        end
+    else
+        num_places = -1
+    end
+
     options = Options{
-        typeof(complexity_mapping),
-        operator_specialization(typeof(operators)),
-        node_type,
-        turbo,
-        bumper,
-        deprecated_return_state,
+        eltype(complexity_mapping),
+        typeof(operators),
+        use_recorder,
+        typeof(optimizer_options),
         typeof(tournament_selection_weights),
     }(
         operators,
@@ -741,12 +773,10 @@ $(OPTION_DESCRIPTIONS)
         tournament_selection_weights,
         parsimony,
         dimensional_constraint_penalty,
-        dimensionless_constants_only,
         alpha,
         maxsize,
         maxdepth,
-        Val(turbo),
-        Val(bumper),
+        turbo,
         migration,
         hof_migration,
         should_simplify,
@@ -757,6 +787,11 @@ $(OPTION_DESCRIPTIONS)
         annealing,
         batching,
         batch_size,
+        allocation,
+        eval_probability,
+        ori_sep,
+        num_places,
+        optimize_hof,
         set_mutation_weights,
         crossover_probability,
         warmup_maxsize_by,
@@ -777,7 +812,6 @@ $(OPTION_DESCRIPTIONS)
         seed,
         elementwise_loss,
         loss_function,
-        node_type,
         progress,
         terminal_width,
         optimizer_algorithm,
@@ -787,14 +821,13 @@ $(OPTION_DESCRIPTIONS)
         recorder_file,
         tournament_selection_p,
         early_stop_condition,
-        Val(deprecated_return_state),
+        deprecated_return_state,
         timeout_in_seconds,
         max_evals,
         skip_mutation_failures,
         nested_constraints,
         deterministic,
         define_helper_functions,
-        use_recorder,
     )
 
     return options

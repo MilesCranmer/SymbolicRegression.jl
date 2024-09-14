@@ -1,149 +1,154 @@
 module OptionsStructModule
 
 using Optim: Optim
-using DynamicExpressions:
-    AbstractOperatorEnum, AbstractExpressionNode, OperatorEnum, GenericOperatorEnum
+using StatsBase: StatsBase
+using DynamicExpressions: AbstractOperatorEnum
 using LossFunctions: SupervisedLoss
 
-import ..MutationWeightsModule: MutationWeights
+mutable struct MutationWeights
+    mutate_constant::Float64
+    mutate_operator::Float64
+    swap_operands::Float64
+    add_node::Float64
+    insert_node::Float64
+    delete_node::Float64
+    simplify::Float64
+    randomize::Float64
+    do_nothing::Float64
+    optimize::Float64
+end
+
+const mutations = [fieldnames(MutationWeights)...]
 
 """
-This struct defines how complexity is calculated.
+    MutationWeights(;kws...)
 
-# Fields
-- `use`: Shortcut indicating whether we use custom complexities,
-    or just use 1 for everything.
-- `binop_complexities`: Complexity of each binary operator.
-- `unaop_complexities`: Complexity of each unary operator.
-- `variable_complexity`: Complexity of using a variable.
-- `constant_complexity`: Complexity of using a constant.
+This defines how often different mutations occur. These weightings
+will be normalized to sum to 1.0 after initialization.
+# Arguments
+- `mutate_constant::Float64`: How often to mutate a constant.
+- `mutate_operator::Float64`: How often to mutate an operator.
+- `swap_operands::Float64`: How often to swap operands in binary operators.
+- `add_node::Float64`: How often to append a node to the tree.
+- `insert_node::Float64`: How often to insert a node into the tree.
+- `delete_node::Float64`: How often to delete a node from the tree.
+- `simplify::Float64`: How often to simplify the tree.
+- `randomize::Float64`: How often to create a random tree.
+- `do_nothing::Float64`: How often to do nothing.
+- `optimize::Float64`: How often to optimize the constants in the tree, as a mutation.
+  Note that this is different from `optimizer_probability`, which is
+  performed at the end of an iteration for all individuals.
 """
-struct ComplexityMapping{T<:Real,VC<:Union{T,AbstractVector{T}}}
-    use::Bool
-    binop_complexities::Vector{T}
-    unaop_complexities::Vector{T}
-    variable_complexity::VC
-    constant_complexity::T
+function MutationWeights(;
+    mutate_constant=0.048,
+    mutate_operator=0.47,
+    swap_operands=0.0,
+    add_node=0.79,
+    insert_node=5.1,
+    delete_node=1.7,
+    simplify=0.0020,
+    randomize=0.00023,
+    do_nothing=0.21,
+    optimize=0.0,
+)
+    return MutationWeights(
+        mutate_constant,
+        mutate_operator,
+        swap_operands,
+        add_node,
+        insert_node,
+        delete_node,
+        simplify,
+        randomize,
+        do_nothing,
+        optimize,
+    )
+end
+
+"""Convert MutationWeights to a vector."""
+function Base.convert(::Type{Vector}, w::MutationWeights)::Vector{Float64}
+    return [
+        w.mutate_constant,
+        w.mutate_operator,
+        w.swap_operands,
+        w.add_node,
+        w.insert_node,
+        w.delete_node,
+        w.simplify,
+        w.randomize,
+        w.do_nothing,
+        w.optimize,
+    ]
+end
+
+"""Copy MutationWeights."""
+function Base.copy(weights::MutationWeights)
+    return MutationWeights(
+        weights.mutate_constant,
+        weights.mutate_operator,
+        weights.swap_operands,
+        weights.add_node,
+        weights.insert_node,
+        weights.delete_node,
+        weights.simplify,
+        weights.randomize,
+        weights.do_nothing,
+        weights.optimize,
+    )
+end
+
+"""Sample a mutation, given the weightings."""
+function sample_mutation(weightings::MutationWeights)
+    weights = convert(Vector, weightings)
+    return StatsBase.sample(mutations, StatsBase.Weights(weights))
+end
+
+"""This struct defines how complexity is calculated."""
+struct ComplexityMapping{T<:Real}
+    use::Bool  # Whether we use custom complexity, or just use 1 for everythign.
+    binop_complexities::Vector{T}  # Complexity of each binary operator.
+    unaop_complexities::Vector{T}  # Complexity of each unary operator.
+    variable_complexity::T  # Complexity of using a variable.
+    constant_complexity::T  # Complexity of using a constant.
 end
 
 Base.eltype(::ComplexityMapping{T}) where {T} = T
+
+function ComplexityMapping(use::Bool)
+    return ComplexityMapping{Int}(use, zeros(Int, 0), zeros(Int, 0), 1, 1)
+end
 
 """Promote type when defining complexity mapping."""
 function ComplexityMapping(;
     binop_complexities::Vector{T1},
     unaop_complexities::Vector{T2},
-    variable_complexity::Union{T3,AbstractVector{T3}},
+    variable_complexity::T3,
     constant_complexity::T4,
 ) where {T1<:Real,T2<:Real,T3<:Real,T4<:Real}
-    T = promote_type(T1, T2, T3, T4)
-    vc = map(T, variable_complexity)
-    return ComplexityMapping{T,typeof(vc)}(
+    promoted_T = promote_type(T1, T2, T3, T4)
+    return ComplexityMapping{promoted_T}(
         true,
-        map(T, binop_complexities),
-        map(T, unaop_complexities),
-        vc,
-        T(constant_complexity),
+        binop_complexities,
+        unaop_complexities,
+        variable_complexity,
+        constant_complexity,
     )
 end
 
-function ComplexityMapping(
-    ::Nothing, ::Nothing, ::Nothing, binary_operators, unary_operators
-)
-    # If no customization provided, then we simply
-    # turn off the complexity mapping
-    use = false
-    return ComplexityMapping{Int,Int}(use, zeros(Int, 0), zeros(Int, 0), 0, 0)
-end
-function ComplexityMapping(
-    complexity_of_operators,
-    complexity_of_variables,
-    complexity_of_constants,
-    binary_operators,
-    unary_operators,
-)
-    _complexity_of_operators = if complexity_of_operators === nothing
-        Dict{Function,Int64}()
-    else
-        # Convert to dict:
-        Dict(complexity_of_operators)
-    end
-
-    VAR_T = if (complexity_of_variables !== nothing)
-        if complexity_of_variables isa AbstractVector
-            eltype(complexity_of_variables)
-        else
-            typeof(complexity_of_variables)
-        end
-    else
-        Int
-    end
-    CONST_T = if (complexity_of_constants !== nothing)
-        typeof(complexity_of_constants)
-    else
-        Int
-    end
-    OP_T = eltype(_complexity_of_operators).parameters[2]
-
-    T = promote_type(VAR_T, CONST_T, OP_T)
-
-    # If not in dict, then just set it to 1.
-    binop_complexities = T[
-        (haskey(_complexity_of_operators, op) ? _complexity_of_operators[op] : one(T)) #
-        for op in binary_operators
-    ]
-    unaop_complexities = T[
-        (haskey(_complexity_of_operators, op) ? _complexity_of_operators[op] : one(T)) #
-        for op in unary_operators
-    ]
-
-    variable_complexity = if complexity_of_variables !== nothing
-        map(T, complexity_of_variables)
-    else
-        one(T)
-    end
-    constant_complexity = if complexity_of_constants !== nothing
-        map(T, complexity_of_constants)
-    else
-        one(T)
-    end
-
-    return ComplexityMapping(;
-        binop_complexities, unaop_complexities, variable_complexity, constant_complexity
-    )
-end
-
-# Controls level of specialization we compile
-function operator_specialization end
-if VERSION >= v"1.10.0-DEV.0"
-    @eval operator_specialization(::Type{<:OperatorEnum}) = OperatorEnum
-else
-    @eval operator_specialization(O::Type{<:OperatorEnum}) = O
-end
-
-struct Options{
-    CM<:ComplexityMapping,
-    OP<:AbstractOperatorEnum,
-    N<:AbstractExpressionNode,
-    _turbo,
-    _bumper,
-    _return_state,
-    W,
-}
+struct Options{CT,OP<:AbstractOperatorEnum,use_recorder,OPT<:Optim.Options,W}
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
-    complexity_mapping::CM
+    complexity_mapping::ComplexityMapping{CT}
     tournament_selection_n::Int
     tournament_selection_p::Float32
     tournament_selection_weights::W
     parsimony::Float32
     dimensional_constraint_penalty::Union{Float32,Nothing}
-    dimensionless_constants_only::Bool
     alpha::Float32
     maxsize::Int
     maxdepth::Int
-    turbo::Val{_turbo}
-    bumper::Val{_bumper}
+    turbo::Bool
     migration::Bool
     hof_migration::Bool
     should_simplify::Bool
@@ -154,6 +159,11 @@ struct Options{
     annealing::Bool
     batching::Bool
     batch_size::Int
+    allocation::Bool
+    eval_probability::Bool
+    ori_sep::Union{Array{Int},Nothing}
+    num_places::Union{Int,Nothing}
+    optimize_hof::Bool
     mutation_weights::MutationWeights
     crossover_probability::Float32
     warmup_maxsize_by::Float32
@@ -174,24 +184,23 @@ struct Options{
     seed::Union{Int,Nothing}
     elementwise_loss::Union{SupervisedLoss,Function}
     loss_function::Union{Nothing,Function}
-    node_type::Type{N}
     progress::Union{Bool,Nothing}
     terminal_width::Union{Int,Nothing}
-    optimizer_algorithm::Optim.AbstractOptimizer
+    optimizer_algorithm::String
     optimizer_probability::Float32
     optimizer_nrestarts::Int
-    optimizer_options::Optim.Options
+    optimizer_options::OPT
     recorder_file::String
     prob_pick_first::Float32
     early_stop_condition::Union{Function,Nothing}
-    return_state::Val{_return_state}
+    return_state::Union{Bool,Nothing}
     timeout_in_seconds::Union{Float64,Nothing}
     max_evals::Union{Int,Nothing}
     skip_mutation_failures::Bool
     nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
     deterministic::Bool
     define_helper_functions::Bool
-    use_recorder::Bool
+    
 end
 
 function Base.print(io::IO, options::Options)
