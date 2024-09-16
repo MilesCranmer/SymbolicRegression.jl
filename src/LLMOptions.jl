@@ -46,6 +46,7 @@ this module serves as the entry point to define new options for the LLM inferenc
 - `llm_recorder_dir::String`: File to save LLM logs to. Useful for debugging.
 - `llm_context::AbstractString`: Context string for LLM.
 - `var_order::Union{Dict,Nothing}`: Variable order for LLM. (default: nothing)
+- `idea_threshold::UInt32`: Number of concepts to keep track of. (default: 30)
 """
 Base.@kwdef mutable struct LLMOptions
     active::Bool = false
