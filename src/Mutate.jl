@@ -58,12 +58,8 @@ function condition_mutation_weights!(
         weights.swap_operands = 0.0
     end
 
-    if !(member.tree isa ParametricExpression)  # TODO: HACK
-        #More constants => more likely to do constant mutation
-        let n_constants = count_scalar_constants(member.tree)
-            weights.mutate_constant *= min(8, n_constants) / 8.0
-        end
-    end
+    condition_mutate_constant!(typeof(tree), weights, member, options, curmaxsize)
+
     complexity = compute_complexity(member, options)
 
     if complexity >= curmaxsize
@@ -76,6 +72,28 @@ function condition_mutation_weights!(
         weights.simplify = 0.0
     end
 
+    return nothing
+end
+
+"""
+Use this to supply extra conditioning for an expression type.
+"""
+function condition_mutate_constant!(
+    ::Type{<:AbstractExpression},
+    weights::MutationWeights,
+    member::PopMember,
+    options::Options,
+    curmaxsize::Int,
+    _...,
+)
+    n_constants = count_scalar_constants(member.tree)
+    weights.mutate_constant *= min(8, n_constants) / 8.0
+
+    return nothing
+end
+function condition_mutate_constant!(::Type{<:ParametricExpression}, _...)
+    # Avoid modifying the mutate_constant weight, since
+    # otherwise we would be mutating constants all the time!
     return nothing
 end
 
