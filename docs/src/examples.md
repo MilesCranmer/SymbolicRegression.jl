@@ -131,7 +131,7 @@ we can see that the output types are `Float32`:
 r = report(mach)
 best = r.equations[r.best_idx]
 println(typeof(best))
-# Node{Float32}
+# Expression{Float32}
 ```
 
 We can also use `Complex` numbers (ignore the warning
@@ -228,7 +228,93 @@ a constant `"2.6353e-22[m s⁻²]"`.
 Note that you can also search for dimensionless units by settings
 `dimensionless_constants_only` to `true`.
 
-## 7. Additional features
+## 7. Working with Expressions
+
+Expressions in `SymbolicRegression.jl` are represented using the `Expression` type, which combines the raw `Node` type with an `OperatorEnum`. This allows for more flexible and powerful expression manipulation and evaluation.
+
+Here's an example:
+
+```julia
+using SymbolicRegression
+
+# Define options with operators
+options = Options(; binary_operators=[+, -, *], unary_operators=[cos])
+
+# Create expression nodes
+operators = options.operators
+variable_names = ["x1", "x2"]
+x1 = Expression(Node{Float64}(feature=1); operators, variable_names)
+x2 = Expression(Node{Float64}(feature=2); operators, variable_names)
+
+# Construct an expression using the operators from options
+expr = x1 * cos(x2 - 3.2)
+
+# Evaluate the expression directly
+X = rand(Float64, 2, 100)
+output = expr(X)
+```
+
+This `Expression` type, contains both the structure
+and the operators used in the expression. These are what
+are returned by the search. The raw `Node` type (which is
+what used to be output directly) is accessible with
+
+```julia
+get_contents(expr)
+```
+
+## 8. Parametric Expressions
+
+Parametric expressions allow the algorithm to optimize parameters within the expressions during the search process. This is useful for finding expressions that not only fit the data but also have tunable parameters.
+
+To use this, the data needs to have information on which class
+each row belongs to --- this class information will be used to
+select the parameters when evaluating each expression.
+
+For example:
+
+```julia
+using SymbolicRegression
+using MLJ
+
+# Define the dataset
+X = NamedTuple{(:x1, :x2)}(ntuple(_ -> randn(Float32, 30), Val(2)))
+X = (; X..., classes=rand(1:2, 30))
+p1 = [0.0f0, 3.2f0]
+p2 = [1.5f0, 0.5f0]
+
+y = [
+    2 * cos(X.x1[i] + p1[X.classes[i]]) + X.x2[i]^2 - p2[X.classes[i]] for
+    i in eachindex(X.classes)
+]
+
+# Define the model with parametric expressions
+model = SRRegressor(
+    niterations=100,
+    binary_operators=[+, *, /, -],
+    unary_operators=[cos],
+    expression_type=ParametricExpression,
+    expression_options=(; max_parameters=2),
+    parallelism=:multithreading
+)
+
+# Train the model
+mach = machine(model, X, y)
+fit!(mach)
+
+# View the best expression
+report(mach)
+```
+
+The final equations will contain parameters that were optimized during training:
+
+```julia
+typeof(report(mach).equations[end])
+```
+
+This example demonstrates how to set up a symbolic regression model that searches for expressions with parameters, optimizing both the structure and the parameters of the expressions based on the provided class information.
+
+## 9. Additional features
 
 For the many other features available in SymbolicRegression.jl,
 check out the API page for `Options`. You might also find it useful
