@@ -49,6 +49,14 @@ Expression
 
 These types allow you to define and manipulate expressions with a clear separation between the structure and the operators used.
 
+## Structured Expressions
+
+Structured expressions allow you to define expressions with a predefined structure that exists outside the regular `AbstractExpressionNode` objects.
+
+```@docs
+StructuredExpression
+```
+
 ## Parametric Expressions
 
 Parametric expressions are a type of expression that includes parameters which can be optimized during the search.
