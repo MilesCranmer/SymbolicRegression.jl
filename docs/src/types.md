@@ -49,14 +49,6 @@ Expression
 
 These types allow you to define and manipulate expressions with a clear separation between the structure and the operators used.
 
-## Structured Expressions
-
-Structured expressions allow you to define expressions with a predefined structure that exists outside the regular `AbstractExpressionNode` objects.
-
-```@docs
-StructuredExpression
-```
-
 ## Parametric Expressions
 
 Parametric expressions are a type of expression that includes parameters which can be optimized during the search.
@@ -67,6 +59,24 @@ ParametricNode
 ```
 
 These types allow you to define expressions with parameters that can be tuned to fit the data better. You can specify the maximum number of parameters using the `expression_options` argument in `SRRegressor`.
+
+## Custom Expressions
+
+You can create your own expression types by defining a new type that extends `AbstractExpression`.
+
+```@docs
+AbstractExpression
+```
+
+The interface is fairly flexible, and permits you define specific functional forms,
+extra parameters, etc. See the documentation of DynamicExpressions.jl for more details on what
+methods you need to implement. Then, for SymbolicRegression.jl, you would
+pass `expression_type` to the `Options` constructor, as well as any
+`expression_options` you need (as a `NamedTuple`).
+
+If needed, you may need to overload `SymbolicRegression.ExpressionBuilder.extra_init_params` in
+case your expression needs additional parameters. See the method for `ParametricExpression`
+as an example.
 
 ## Population
 

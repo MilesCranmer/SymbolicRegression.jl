@@ -75,7 +75,7 @@ function extra_init_params(
     dataset::Dataset{T},
     ::Val{embed},
 ) where {T,embed,E<:AbstractExpression}
-    return (;)
+    return (; options.expression_options...)
 end
 function extra_init_params(
     ::Type{E},
