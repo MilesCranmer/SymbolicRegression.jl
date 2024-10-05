@@ -76,7 +76,7 @@ function condition_mutation_weights!(
 end
 
 """
-Use this to supply extra conditioning for an expression type.
+Use this to modify how `mutate_constant` changes for an expression type.
 """
 function condition_mutate_constant!(
     ::Type{<:AbstractExpression},
