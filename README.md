@@ -155,36 +155,35 @@ We can get the expressions with:
 trees = [member.tree for member in dominating]
 ```
 
-Each of these equations is a `Node{T}` type for some constant type `T` (like `Float32`).
+Each of these equations is an `Expression{T}` type for some constant type `T` (like `Float32`).
 
-You can evaluate a given tree with:
+These expression objects are callable – you can simply pass in data:
 
 ```julia
-import SymbolicRegression: eval_tree_array
-
 tree = trees[end]
-output, did_succeed = eval_tree_array(tree, X, options)
+output = tree(X)
 ```
 
-The `output` array will contain the result of the tree at each of the 100 rows.
-This `did_succeed` flag detects whether an evaluation was successful, or whether
-encountered any NaNs or Infs during calculation (such as, e.g., `sqrt(-1)`).
 
 ## Constructing expressions
 
-Expressions are represented as the `Node` type which is developed
+Expressions are represented under-the-hood as the `Node` type which is developed
 in the [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl/) package.
+The `Expression` type wraps this and includes metadata about operators and variable names.
 
 You can manipulate and construct expressions directly. For example:
 
 ```julia
-import SymbolicRegression: Options, Node, eval_tree_array
+using SymbolicRegression: Options, Expression, Node
 
 options = Options(;
-    binary_operators=[+, -, *, ^, /], unary_operators=[cos, exp, sin]
+    binary_operators=[+, -, *, /], unary_operators=[cos, exp, sin]
 )
-x1, x2, x3 = [Node(; feature=i) for i=1:3]
-tree = cos(x1 - 3.2 * x2) - x1^3.2
+operators = options.operators
+variable_names = ["x1", "x2", "x3"]
+x1, x2, x3 = [Expression(Node(Float64; feature=i); operators, variable_names) for i=1:3]
+
+tree = cos(x1 - 3.2 * x2) - x1 * x1
 ```
 
 This tree has `Float64` constants, so the type of the entire tree
@@ -193,15 +192,27 @@ will be promoted to `Node{Float64}`.
 We can convert all constants (recursively) to `Float32`:
 
 ```julia
-float32_tree = convert(Node{Float32}, tree)
+float32_tree = convert(Expression{Float32}, tree)
 ```
 
 We can then evaluate this tree on a dataset:
 
 ```julia
 X = rand(Float32, 3, 100)
-output, did_succeed = eval_tree_array(tree, X, options)
+
+tree(X)
 ```
+
+This callable format is the easy-to-use version which will
+automatically set all values to NaN if there were any
+Inf or NaN during evaluation. You can call the raw evaluation
+method with `eval_tree_array`:
+
+```julia
+output, did_succeed = eval_tree_array(tree, X)
+```
+
+where `did_succeed` explicitly declares whether the evaluation was successful.
 
 ## Exporting to SymbolicUtils.jl
 
