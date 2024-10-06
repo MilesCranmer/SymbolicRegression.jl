@@ -11,6 +11,7 @@ will be normalized to sum to 1.0 after initialization.
 - `mutate_constant::Float64`: How often to mutate a constant.
 - `mutate_operator::Float64`: How often to mutate an operator.
 - `swap_operands::Float64`: How often to swap the operands of a binary operator.
+- `rotate_tree::Float64`: How often to perform a tree rotation at a random node.
 - `add_node::Float64`: How often to append a node to the tree.
 - `insert_node::Float64`: How often to insert a node into the tree.
 - `delete_node::Float64`: How often to delete a node from the tree.
@@ -26,12 +27,12 @@ will be normalized to sum to 1.0 after initialization.
 - `break_connection::Float64`: **Only used for `GraphNode`, not regular `Node`**.
     Otherwise, this will automatically be set to 0.0. How often to break a
     connection between two nodes.
-- `rotate_tree::Float64`: How often to rotate the tree.
 """
 Base.@kwdef mutable struct MutationWeights
     mutate_constant::Float64 = 0.048
     mutate_operator::Float64 = 0.47
     swap_operands::Float64 = 0.1
+    rotate_tree::Float64 = 0.3
     add_node::Float64 = 0.79
     insert_node::Float64 = 5.1
     delete_node::Float64 = 1.7
@@ -41,7 +42,6 @@ Base.@kwdef mutable struct MutationWeights
     optimize::Float64 = 0.0
     form_connection::Float64 = 0.5
     break_connection::Float64 = 0.1
-    rotate_tree::Float64 = 0.0
 end
 
 const mutations = fieldnames(MutationWeights)
