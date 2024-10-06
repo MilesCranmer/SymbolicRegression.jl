@@ -34,14 +34,14 @@ mach = machine(model, X, y)
 fit!(mach)
 idx1 = lastindex(report(mach).equations)
 ypred1 = predict(mach, (data=X, idx=idx1))
-loss1 = sum(i -> abs(ypred1[i] - y[i]), eachindex(y))
+loss1 = sum(i -> abs2(ypred1[i] - y[i]), eachindex(y))
 
 # Should keep all parameters
 stop_at[] = 1e-5
 fit!(mach)
 idx2 = lastindex(report(mach).equations)
 ypred2 = predict(mach, (data=X, idx=idx2))
-loss2 = sum(i -> abs(ypred2[i] - y[i]), eachindex(y))
+loss2 = sum(i -> abs2(ypred2[i] - y[i]), eachindex(y))
 
 # Should get better:
 @test loss1 >= loss2
