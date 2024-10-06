@@ -77,7 +77,7 @@ function s_r_cycle(
                 member.score
             end
             # TODO: Note that this per-population hall of fame only uses the batched
-            #       loss, and is therefore innaccurate. Therefore, some expressions
+            #       loss, and is therefore inaccurate. Therefore, some expressions
             #       may be loss if a very small batch size is used.
             # - Could have different batch size for different things (smaller for constant opt)
             # - Could just recompute losses here (expensive)

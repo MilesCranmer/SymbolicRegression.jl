@@ -647,7 +647,7 @@ eval(
         for units) will trigger dimensional analysis to be used.
 
     - `w` is the observation weights which can either be `nothing` (default) or an
-      `AbstractVector` whoose element scitype is `Count` or `Continuous`.
+      `AbstractVector` whose element scitype is `Count` or `Continuous`.
 
     Train the machine using `fit!(mach)`, inspect the discovered expressions with
     `report(mach)`, and predict on new data with `predict(mach, Xnew)`.
@@ -771,7 +771,7 @@ eval(
       `y` (use `DynamicQuantities` for units) will trigger dimensional analysis to be used.
 
     - `w` is the observation weights which can either be `nothing` (default) or an
-      `AbstractVector` whoose element scitype is `Count` or `Continuous`. The same
+      `AbstractVector` whose element scitype is `Count` or `Continuous`. The same
       weights are used for all targets.
 
     Train the machine using `fit!(mach)`, inspect the discovered expressions with
