@@ -66,6 +66,8 @@ end
     include("test_crossover.jl")
 end
 
+include("test_rotation.jl")
+
 # TODO: This is another very slow test
 @testitem "Test NaN detection in evaluator" tags = [:part1] begin
     include("test_nan_detection.jl")
