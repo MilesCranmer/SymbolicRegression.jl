@@ -439,7 +439,7 @@ function break_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_r
 end
 
 function is_valid_rotation_node(node::AbstractNode)
-    return node.degree == 2 && ((node.l.degree == 2) || (node.r.degree == 2))
+    return (node.degree > 0 && node.l.degree > 0) || (node.degree == 2 && node.r.degree > 0)
 end
 
 function randomly_rotate_tree!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
@@ -447,106 +447,101 @@ function randomly_rotate_tree!(ex::AbstractExpression, rng::AbstractRNG=default_
     rotated_tree = randomly_rotate_tree!(tree, rng)
     return with_contents(ex, rotated_tree)
 end
-
 function randomly_rotate_tree!(tree::AbstractNode, rng::AbstractRNG=default_rng())
+    num_rotation_nodes = count(is_valid_rotation_node, tree)
+
     # Return the tree if no valid nodes are found
-    if !any(is_valid_rotation_node, tree)
+    if num_rotation_nodes == 0
         return tree
     end
 
-    # Find a parent node with degree 2 and a child with degree 2
-    parent = rand(rng, NodeSampler(; tree, filter=is_valid_rotation_node))
+    root_is_valid_rotation_node = is_valid_rotation_node(tree)
 
-    # Randomly choose rotation direction
-    right_rotation_valid = parent.l.degree == 2
-    left_rotation_valid = parent.r.degree == 2
+    # Now, we decide if we want to rotate at the root, or at a random node
+    rotate_at_root = root_is_valid_rotation_node && rand(rng) < 1.0 / num_rotation_nodes
 
-    right_rotation = right_rotation_valid && (!left_rotation_valid || rand(rng, Bool))
+    subtree_parent = if rotate_at_root
+        tree
+    else
+        rand(
+            rng,
+            NodeSampler(;
+                tree,
+                filter=t -> (
+                    (t.degree > 0 && is_valid_rotation_node(t.l)) ||
+                    (t.degree == 2 && is_valid_rotation_node(t.r))
+                ),
+            ),
+        )
+    end
+
+    subtree_side = if rotate_at_root
+        :n
+    elseif subtree_parent.degree == 1
+        :l
+    else
+        if is_valid_rotation_node(subtree_parent.l) &&
+            (!is_valid_rotation_node(subtree_parent.r) || rand(rng, Bool))
+            :l
+        else
+            :r
+        end
+    end
+
+    subtree_root = if rotate_at_root
+        tree
+    elseif subtree_side == :l
+        subtree_parent.l
+    else
+        subtree_parent.r
+    end
 
     # Perform the rotation
     # (reference: https://web.archive.org/web/20230326202118/https://upload.wikimedia.org/wikipedia/commons/1/15/Tree_Rotations.gif)
+    right_rotation_valid = subtree_root.l.degree > 0
+    left_rotation_valid = subtree_root.degree == 2 && subtree_root.r.degree > 0
+
+    right_rotation = right_rotation_valid && (!left_rotation_valid || rand(rng, Bool))
     if right_rotation
-        node_5 = parent
-        node_3 = parent.l
-        node_4 = node_3.r
+        node_5 = subtree_root
+        node_3 = leftmost(node_5)
+        node_4 = rightmost(node_3)
 
-        node_5.l = node_4
-        node_3.r = node_5
-
-        if node_5 === tree
-            # No parent to node_5, so we can just
-            # rearrange connections and be done
+        set_leftmost!(node_5, node_4)
+        set_rightmost!(node_3, node_5)
+        if rotate_at_root
             return node_3  # new root
+        elseif subtree_side == :l
+            subtree_parent.l = node_3
         else
-            # Need to attach to any parent of `node_5`, since `node_5`
-            # was not the root node
-            # TODO: This doesn't feel very robust. For us to work around this
-            # in a clean way, we would need a sampler that returns the parent,
-            # OR have a separate sampling step for root nodes and sampling the parent
-            # node. Currently I feel that the way implemented currently is probably faster,
-            # but need testing.
-            attach_to_parents!(tree, node_5, node_3)
-            return tree
+            subtree_parent.r = node_3
         end
     else  # left rotation
-        node_3 = parent
-        node_5 = parent.r
-        node_4 = node_5.l
+        node_3 = subtree_root
+        node_5 = rightmost(node_3)
+        node_4 = leftmost(node_5)
 
-        node_3.r = node_4
-        node_5.l = node_3
-
-        if node_3 === tree
-            # No parent to node_3, so we can just
-            # rearrange connections and be done
+        set_rightmost!(node_3, node_4)
+        set_leftmost!(node_5, node_3)
+        if rotate_at_root
             return node_5  # new root
+        elseif subtree_side == :l
+            subtree_parent.l = node_5
         else
-            # Need to attach to any parent of `node_3`, since `node_3`
-            # was not the root node
-            attach_to_parents!(tree, node_3, node_5)
-            return tree
+            subtree_parent.r = node_5
         end
     end
+
+    return tree
 end
 
-"""
-Find a node with `oldchild` as a child, put `newchild` there instead,
-skipping any node matching `newchild` (to avoid loops)
-
-Note that this function assumes there will only be a single match in the tree,
-after which it will exit.
-"""
-function attach_to_parents!(tree::N, oldchild::N, newchild::N) where {N<:AbstractNode}
-    attached = any(Fix{2}(Fix{3}(attach_to_parents_closure, newchild), oldchild), tree)
-    #! format: off
-    attached || throw(ArgumentError("Failed to attach node to any parent in $tree. Please file a bug report if this is unexpected."))
-    #! format: on
-    return nothing
-end
-function attach_to_parents_closure(t::N, oldchild::N, newchild::N) where {N<:AbstractNode}
-    if t === newchild
-        # Avoid loops
-        false
-    elseif t.degree == 0
-        false
-    elseif t.degree == 1
-        if t.l === oldchild
-            t.l = newchild
-            true
-        else
-            false
-        end
-    else  # t.degree == 2
-        if t.l === oldchild
-            t.l = newchild
-            true
-        elseif t.r === oldchild
-            t.r = newchild
-            true
-        else
-            false
-        end
-    end
-end
+#! format: off
+# These functions provide an easier way to work with unary nodes, by
+# simply letting `.r` fall back to `.l` if the node is a unary operator.
+leftmost(node::AbstractNode) = node.l
+rightmost(node::AbstractNode) = node.degree == 1 ? node.l : node.r
+set_leftmost!(node::AbstractNode, l::AbstractNode) = (node.l = l)
+set_rightmost!(node::AbstractNode, r::AbstractNode) = node.degree == 1 ? (node.l = r) : (node.r = r)
+#! format: on
 
 end
