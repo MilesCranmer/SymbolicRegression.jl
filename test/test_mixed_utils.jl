@@ -17,6 +17,7 @@ function test_mixed(i, batching::Bool, weighted::Bool, parallelism)
     turbo = false
     bumper = false
     T = Float32
+    Random.seed!(0)
 
     if i == 0
         progress = true #Also try the progress bar.
