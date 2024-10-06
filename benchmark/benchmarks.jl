@@ -138,22 +138,27 @@ function create_utils_benchmark()
         s
     end
 
-    suite["randomly_rotate_tree_x10"] = @benchmarkable(
-        foreach(trees) do tree
-            randomly_rotate_tree!(tree, $options)
-        end,
-        setup = (
-            T = Float64;
-            nfeatures = 3;
-            trees = [
-                gen_random_tree_fixed_size(20, $options, nfeatures, T) for i in 1:($ntrees)
-            ]
+    if isdefined(SymbolicRegression.MutationFunctionsModule, :randomly_rotate_tree!)
+        suite["randomly_rotate_tree_x10"] = @benchmarkable(
+            foreach(trees) do tree
+                SymbolicRegression.MutationFunctionsModule.randomly_rotate_tree!(tree)
+            end,
+            setup = (
+                T = Float64;
+                nfeatures = 3;
+                trees = [
+                    gen_random_tree_fixed_size(20, $options, nfeatures, T) for
+                    i in 1:($ntrees)
+                ]
+            )
         )
-    )
+    end
 
     suite["insert_random_op_x10"] = @benchmarkable(
         foreach(trees) do tree
-            insert_random_op(tree, $options, nfeatures)
+            SymbolicRegression.MutationFunctionsModule.insert_random_op(
+                tree, $options, nfeatures
+            )
         end,
         setup = (
             T = Float64;
