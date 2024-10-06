@@ -58,7 +58,7 @@ function condition_mutation_weights!(
         weights.swap_operands = 0.0
     end
 
-    condition_mutate_constant!(typeof(tree), weights, member, options, curmaxsize)
+    condition_mutate_constant!(typeof(member.tree), weights, member, options, curmaxsize)
 
     complexity = compute_complexity(member, options)
 
@@ -84,14 +84,19 @@ function condition_mutate_constant!(
     member::PopMember,
     options::Options,
     curmaxsize::Int,
-    args...,
 )
     n_constants = count_scalar_constants(member.tree)
     weights.mutate_constant *= min(8, n_constants) / 8.0
 
     return nothing
 end
-function condition_mutate_constant!(::Type{<:ParametricExpression}, args...)
+function condition_mutate_constant!(
+    ::Type{<:ParametricExpression},
+    weights::MutationWeights,
+    member::PopMember,
+    options::Options,
+    curmaxsize::Int,
+)
     # Avoid modifying the mutate_constant weight, since
     # otherwise we would be mutating constants all the time!
     return nothing
