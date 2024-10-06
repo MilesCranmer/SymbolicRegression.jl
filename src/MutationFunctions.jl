@@ -438,4 +438,110 @@ function break_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_r
     return tree
 end
 
+function is_valid_rotation_node(node::AbstractNode)
+    return (node.degree > 0 && node.l.degree > 0) || (node.degree == 2 && node.r.degree > 0)
+end
+
+function randomly_rotate_tree!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
+    tree = get_contents(ex)
+    rotated_tree = randomly_rotate_tree!(tree, rng)
+    return with_contents(ex, rotated_tree)
+end
+function randomly_rotate_tree!(tree::AbstractNode, rng::AbstractRNG=default_rng())
+    num_rotation_nodes = count(is_valid_rotation_node, tree)
+
+    # Return the tree if no valid nodes are found
+    if num_rotation_nodes == 0
+        return tree
+    end
+
+    root_is_valid_rotation_node = is_valid_rotation_node(tree)
+
+    # Now, we decide if we want to rotate at the root, or at a random node
+    rotate_at_root = root_is_valid_rotation_node && rand(rng) < 1.0 / num_rotation_nodes
+
+    subtree_parent = if rotate_at_root
+        tree
+    else
+        rand(
+            rng,
+            NodeSampler(;
+                tree,
+                filter=t -> (
+                    (t.degree > 0 && is_valid_rotation_node(t.l)) ||
+                    (t.degree == 2 && is_valid_rotation_node(t.r))
+                ),
+            ),
+        )
+    end
+
+    subtree_side = if rotate_at_root
+        :n
+    elseif subtree_parent.degree == 1
+        :l
+    else
+        if is_valid_rotation_node(subtree_parent.l) &&
+            (!is_valid_rotation_node(subtree_parent.r) || rand(rng, Bool))
+            :l
+        else
+            :r
+        end
+    end
+
+    subtree_root = if rotate_at_root
+        tree
+    elseif subtree_side == :l
+        subtree_parent.l
+    else
+        subtree_parent.r
+    end
+
+    # Perform the rotation
+    # (reference: https://web.archive.org/web/20230326202118/https://upload.wikimedia.org/wikipedia/commons/1/15/Tree_Rotations.gif)
+    right_rotation_valid = subtree_root.l.degree > 0
+    left_rotation_valid = subtree_root.degree == 2 && subtree_root.r.degree > 0
+
+    right_rotation = right_rotation_valid && (!left_rotation_valid || rand(rng, Bool))
+    if right_rotation
+        node_5 = subtree_root
+        node_3 = leftmost(node_5)
+        node_4 = rightmost(node_3)
+
+        set_leftmost!(node_5, node_4)
+        set_rightmost!(node_3, node_5)
+        if rotate_at_root
+            return node_3  # new root
+        elseif subtree_side == :l
+            subtree_parent.l = node_3
+        else
+            subtree_parent.r = node_3
+        end
+    else  # left rotation
+        node_3 = subtree_root
+        node_5 = rightmost(node_3)
+        node_4 = leftmost(node_5)
+
+        set_rightmost!(node_3, node_4)
+        set_leftmost!(node_5, node_3)
+        if rotate_at_root
+            return node_5  # new root
+        elseif subtree_side == :l
+            subtree_parent.l = node_5
+        else
+            subtree_parent.r = node_5
+        end
+    end
+
+    return tree
+end
+
+#! format: off
+# These functions provide an easier way to work with unary nodes, by
+# simply letting `.r` fall back to `.l` if the node is a unary operator.
+leftmost(node::AbstractNode) = node.l
+rightmost(node::AbstractNode) = node.degree == 1 ? node.l : node.r
+set_leftmost!(node::AbstractNode, l::AbstractNode) = (node.l = l)
+set_rightmost!(node::AbstractNode, r::AbstractNode) = node.degree == 1 ? (node.l = r) : (node.r = r)
+#! format: on
+
 end
