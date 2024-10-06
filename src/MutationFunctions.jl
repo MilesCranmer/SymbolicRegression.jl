@@ -480,6 +480,11 @@ function randomly_rotate_tree!(tree::AbstractNode, rng::AbstractRNG=default_rng(
         else
             # Need to attach to any parent of `node_5`, since `node_5`
             # was not the root node
+            # TODO: This doesn't feel very robust. For us to work around this
+            # in a clean way, we would need a sampler that returns the parent,
+            # OR have a separate sampling step for root nodes and sampling the parent
+            # node. Currently I feel that the way implemented currently is probably faster,
+            # but need testing.
             attach_to_parents!(tree, node_5, node_3)
             return tree
         end
