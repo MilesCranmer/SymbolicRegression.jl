@@ -41,7 +41,7 @@ SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 
 [compat]
 ADTypes = "^1.4.0"
-Compat = "^4.2"
+Compat = "^4.16"
 ConstructionBase = "<1.5.7"
 Dates = "1"
 DifferentiationInterface = "0.5"

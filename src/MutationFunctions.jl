@@ -14,7 +14,7 @@ using DynamicExpressions:
     count_nodes,
     has_constants,
     has_operators
-using Compat: Returns, @inline
+using Compat: Returns, @inline, Fix
 using ..CoreModule: Options, DATA_TYPE
 
 """
@@ -436,6 +436,112 @@ function break_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_r
         parent.r = copy(parent.r)
     end
     return tree
+end
+
+function is_valid_rotation_node(node::AbstractNode)
+    return node.degree == 2 && ((node.l.degree == 2) || (node.r.degree == 2))
+end
+
+function randomly_rotate_tree!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
+    tree = get_contents(ex)
+    rotated_tree = randomly_rotate_tree!(tree, rng)
+    return with_contents(ex, rotated_tree)
+end
+
+function randomly_rotate_tree!(tree::AbstractNode, rng::AbstractRNG=default_rng())
+    # Return the tree if no valid nodes are found
+    if !any(is_valid_rotation_node, tree)
+        return tree
+    end
+
+    # Find a parent node with degree 2 and a child with degree 2
+    parent = rand(rng, NodeSampler(; tree, filter=is_valid_rotation_node))
+
+    # Randomly choose rotation direction
+    right_rotation_valid = parent.l.degree == 2
+    left_rotation_valid = parent.r.degree == 2
+
+    right_rotation = right_rotation_valid && (!left_rotation_valid || rand(rng, Bool))
+
+    # Perform the rotation
+    # (reference: https://web.archive.org/web/20230326202118/https://upload.wikimedia.org/wikipedia/commons/1/15/Tree_Rotations.gif)
+    if right_rotation
+        node_5 = parent
+        node_3 = parent.l
+        node_4 = node_3.r
+
+        node_5.l = node_4
+        node_3.r = node_5
+
+        if node_5 === tree
+            # No parent to node_5, so we can just
+            # rearrange connections and be done
+            return node_3  # new root
+        else
+            # Need to attach to any parent of `node_5`, since `node_5`
+            # was not the root node
+            attach_to_parents!(tree, node_5, node_3)
+            return tree
+        end
+    else  # left rotation
+        node_3 = parent
+        node_5 = parent.r
+        node_4 = node_5.l
+
+        node_3.r = node_4
+        node_5.l = node_3
+
+        if node_3 === tree
+            # No parent to node_3, so we can just
+            # rearrange connections and be done
+            return node_5  # new root
+        else
+            # Need to attach to any parent of `node_3`, since `node_3`
+            # was not the root node
+            attach_to_parents!(tree, node_3, node_5)
+            return tree
+        end
+    end
+end
+
+"""
+Find a node with `oldchild` as a child, put `newchild` there instead,
+skipping any node matching `newchild` (to avoid loops)
+
+Note that this function assumes there will only be a single match in the tree,
+after which it will exit.
+"""
+function attach_to_parents!(tree::N, oldchild::N, newchild::N) where {N<:AbstractNode}
+    attached = any(Fix{2}(Fix{3}(attach_to_parents_closure, newchild), oldchild), tree)
+    #! format: off
+    !attached || throw(ArgumentError("Failed to attach node to any parent in $tree. Please file a bug report if this is unexpected."))
+    #! format: on
+    return nothing
+end
+function attach_to_parents_closure(t::N, oldchild::N, newchild::N) where {N<:AbstractNode}
+    if t === newchild
+        # Avoid loops
+        false
+    elseif t.degree == 0
+        false
+    elseif t.degree == 1
+        if t.l === oldchild
+            t.l = newchild
+            true
+        else
+            false
+        end
+    else  # t.degree == 2
+        if t.l === oldchild
+            t.l = newchild
+            true
+        elseif t.r === oldchild
+            t.r = newchild
+            true
+        else
+            false
+        end
+    end
 end
 
 end

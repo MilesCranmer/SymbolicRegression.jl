@@ -27,7 +27,8 @@ using ..MutationFunctionsModule:
     delete_random_op!,
     crossover_trees,
     form_random_connection!,
-    break_random_connection!
+    break_random_connection!,
+    randomly_rotate_tree!
 using ..ConstantOptimizationModule: optimize_constants
 using ..RecorderModule: @recorder
 
@@ -258,6 +259,10 @@ function next_generation(
         elseif mutation_choice == :break_connection
             tree = break_random_connection!(tree)
             @recorder tmp_recorder["type"] = "break_connection"
+            is_success_always_possible = true
+        elseif mutation_choice == :rotate_tree
+            tree = randomly_rotate_tree!(tree)
+            @recorder tmp_recorder["type"] = "rotate_tree"
             is_success_always_possible = true
         else
             error("Unknown mutation choice: $mutation_choice")
