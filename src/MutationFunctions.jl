@@ -233,7 +233,7 @@ function make_random_leaf(
     ::Union{Options,Nothing}=nothing,
 ) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
     if rand(rng, Bool)
-        return constructorof(N)(; val=randn(rng, T))
+        return constructorof(N)(T; val=randn(rng, T))
     else
         return constructorof(N)(T; feature=rand(rng, 1:nfeatures))
     end
