@@ -138,6 +138,19 @@ function create_utils_benchmark()
         s
     end
 
+    suite["randomly_rotate_tree_x10"] = @benchmarkable(
+        foreach(trees) do tree
+            randomly_rotate_tree!(tree, $options)
+        end,
+        setup = (
+            T = Float64;
+            nfeatures = 3;
+            trees = [
+                gen_random_tree_fixed_size(20, $options, nfeatures, T) for i in 1:($ntrees)
+            ]
+        )
+    )
+
     ntrees = 10
     options = Options(;
         unary_operators=[sin, cos],
