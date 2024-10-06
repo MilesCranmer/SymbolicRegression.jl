@@ -29,7 +29,7 @@ end
 function get_units(_, _, ::Nothing, ::Function)
     return nothing
 end
-function get_units(::Type{T}, ::Type{D}, x::AbstractString, f::Function) where {T,D}
+function get_units(::Type{T}, ::Type{D}, x::AbstractString, f::F) where {T,D,F<:Function}
     isempty(x) && return one(Quantity{T,D})
     return convert(Quantity{T,D}, f(x))
 end
@@ -42,7 +42,7 @@ end
 function get_units(::Type{T}, ::Type{D}, x::Real, ::Function) where {T,D}
     return Quantity(convert(T, x), D)::Quantity{T,D}
 end
-function get_units(::Type{T}, ::Type{D}, x::AbstractVector, f::Function) where {T,D}
+function get_units(::Type{T}, ::Type{D}, x::AbstractVector, f::F) where {T,D,F<:Function}
     return Quantity{T,D}[get_units(T, D, xi, f) for xi in x]
 end
 # TODO: Allow for AbstractQuantity output here

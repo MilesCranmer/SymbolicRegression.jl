@@ -2,7 +2,6 @@ module RegularizedEvolutionModule
 
 using DynamicExpressions: string_tree
 using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
-using ..PopMemberModule: PopMember
 using ..PopulationModule: Population, best_of_sample
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..MutateModule: next_generation, crossover_generation

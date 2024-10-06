@@ -3,19 +3,10 @@
 ## Equations
 
 Equations are specified as binary trees with the `Node` type, defined
-as follows:
+as follows.
 
 ```@docs
-Node{T<:DATA_TYPE}
-```
-
-There are a variety of constructors for `Node` objects, including:
-
-```@docs
-Node(; val::DATA_TYPE=nothing, feature::Integer=nothing)
-Node(op::Int, l::Node)
-Node(op::Int, l::Node, r::Node)
-Node(var_string::String)
+Node
 ```
 
 When you create an `Options` object, the operators
@@ -39,7 +30,7 @@ convert(::Type{Node{T1}}, tree::Node{T2}) where {T1, T2}
 You can set a `tree` (in-place) with `set_node!`:
 
 ```@docs
-set_node!(tree::Node{T}, new_tree::Node{T}) where {T}
+set_node!
 ```
 
 You can create a copy of a node with `copy_node`:
@@ -47,6 +38,45 @@ You can create a copy of a node with `copy_node`:
 ```@docs
 copy_node(tree::Node)
 ```
+
+## Expressions
+
+Expressions are represented using the `Expression` type, which combines the raw `Node` type with an `OperatorEnum`.
+
+```@docs
+Expression
+```
+
+These types allow you to define and manipulate expressions with a clear separation between the structure and the operators used.
+
+## Parametric Expressions
+
+Parametric expressions are a type of expression that includes parameters which can be optimized during the search.
+
+```@docs
+ParametricExpression
+ParametricNode
+```
+
+These types allow you to define expressions with parameters that can be tuned to fit the data better. You can specify the maximum number of parameters using the `expression_options` argument in `SRRegressor`.
+
+## Custom Expressions
+
+You can create your own expression types by defining a new type that extends `AbstractExpression`.
+
+```@docs
+AbstractExpression
+```
+
+The interface is fairly flexible, and permits you define specific functional forms,
+extra parameters, etc. See the documentation of DynamicExpressions.jl for more details on what
+methods you need to implement. Then, for SymbolicRegression.jl, you would
+pass `expression_type` to the `Options` constructor, as well as any
+`expression_options` you need (as a `NamedTuple`).
+
+If needed, you may need to overload `SymbolicRegression.ExpressionBuilder.extra_init_params` in
+case your expression needs additional parameters. See the method for `ParametricExpression`
+as an example.
 
 ## Population
 
@@ -68,21 +98,11 @@ PopMember
 
 ```@docs
 HallOfFame
-HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 ```
 
 ## Dataset
 
 ```@docs
 Dataset
-Dataset(X::AbstractMatrix{T}, y::Union{AbstractVector{T},Nothing}=nothing;
-        weights::Union{AbstractVector{T}, Nothing}=nothing,
-        variable_names::Union{Array{String, 1}, Nothing}=nothing,
-        y_variable_name::Union{String,Nothing}=nothing,
-        extra::NamedTuple=NamedTuple(),
-        loss_type::Type=Nothing,
-        X_units::Union{AbstractVector, Nothing}=nothing,
-        y_units=nothing,
-) where {T<:DATA_TYPE}
 update_baseline_loss!
 ```

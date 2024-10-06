@@ -4,8 +4,8 @@ using DispatchDoctor: @unstable
 using Optim: Optim
 using Dates: Dates
 using StatsBase: StatsBase
-using DynamicExpressions: OperatorEnum, Node
-using Distributed: nworkers
+using DynamicExpressions: OperatorEnum, Expression, default_node_type
+using ADTypes: AbstractADType, ADTypes
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim
 using LineSearches: LineSearches
@@ -28,65 +28,115 @@ using ..OperatorsModule:
 using ..MutationWeightsModule: MutationWeights, mutations
 import ..OptionsStructModule: Options
 using ..OptionsStructModule: ComplexityMapping, operator_specialization
-using ..UtilsModule: max_ops, @save_kwargs
+using ..UtilsModule: max_ops, @save_kwargs, @ignore
 
-"""
-         build_constraints(una_constraints, bin_constraints,
-                           unary_operators, binary_operators)
-
-Build constraints on operator-level complexity from a user-passed dict.
-"""
-function build_constraints(
-    una_constraints, bin_constraints, unary_operators, binary_operators, nuna, nbin
-)::Tuple{Array{Int,1},Array{Tuple{Int,Int},1}}
+"""Build constraints on operator-level complexity from a user-passed dict."""
+@unstable function build_constraints(;
+    una_constraints,
+    bin_constraints,
+    @nospecialize(unary_operators),
+    @nospecialize(binary_operators)
+)::Tuple{Vector{Int},Vector{Tuple{Int,Int}}}
     # Expect format ((*)=>(-1, 3)), etc.
     # TODO: Need to disable simplification if (*, -, +, /) are constrained?
     #  Or, just quit simplification is constraints violated.
 
-    is_bin_constraints_already_done = typeof(bin_constraints) <: Array{Tuple{Int,Int},1}
-    is_una_constraints_already_done = typeof(una_constraints) <: Array{Int,1}
-
-    if typeof(bin_constraints) <: Array && !is_bin_constraints_already_done
-        bin_constraints = Dict(bin_constraints)
+    is_una_constraints_already_done = una_constraints isa Vector{Int}
+    _una_constraints1 = if una_constraints isa Array && !is_una_constraints_already_done
+        Dict(una_constraints)
+    else
+        una_constraints
     end
-    if typeof(una_constraints) <: Array && !is_una_constraints_already_done
-        una_constraints = Dict(una_constraints)
-    end
-
-    if una_constraints === nothing
-        una_constraints = [-1 for i in 1:nuna]
+    _una_constraints2 = if _una_constraints1 === nothing
+        fill(-1, length(unary_operators))
     elseif !is_una_constraints_already_done
-        una_constraints::Dict
-        _una_constraints = Int[]
-        for (i, op) in enumerate(unary_operators)
-            did_user_declare_constraints = haskey(una_constraints, op)
-            if did_user_declare_constraints
-                constraint::Int = una_constraints[op]
-                push!(_una_constraints, constraint)
-            else
-                push!(_una_constraints, -1)
-            end
-        end
-        una_constraints = _una_constraints
-    end
-    if bin_constraints === nothing
-        bin_constraints = [(-1, -1) for i in 1:nbin]
-    elseif !is_bin_constraints_already_done
-        bin_constraints::Dict
-        _bin_constraints = Tuple{Int,Int}[]
-        for (i, op) in enumerate(binary_operators)
-            did_user_declare_constraints = haskey(bin_constraints, op)
-            if did_user_declare_constraints
-                constraint::Tuple{Int,Int} = bin_constraints[op]
-                push!(_bin_constraints, constraint)
-            else
-                push!(_bin_constraints, (-1, -1))
-            end
-        end
-        bin_constraints = _bin_constraints
+        [
+            haskey(_una_constraints1, op) ? _una_constraints1[op]::Int : -1 for
+            op in unary_operators
+        ]
+    else
+        _una_constraints1
     end
 
-    return una_constraints, bin_constraints
+    is_bin_constraints_already_done = bin_constraints isa Vector{Tuple{Int,Int}}
+    _bin_constraints1 = if bin_constraints isa Array && !is_bin_constraints_already_done
+        Dict(bin_constraints)
+    else
+        bin_constraints
+    end
+    _bin_constraints2 = if _bin_constraints1 === nothing
+        fill((-1, -1), length(binary_operators))
+    elseif !is_bin_constraints_already_done
+        [
+            if haskey(_bin_constraints1, op)
+                _bin_constraints1[op]::Tuple{Int,Int}
+            else
+                (-1, -1)
+            end for op in binary_operators
+        ]
+    else
+        _bin_constraints1
+    end
+
+    return _una_constraints2, _bin_constraints2
+end
+
+@unstable function build_nested_constraints(;
+    @nospecialize(binary_operators), @nospecialize(unary_operators), nested_constraints
+)
+    nested_constraints === nothing && return nested_constraints
+    # Check that intersection of binary operators and unary operators is empty:
+    for op in binary_operators
+        if op ∈ unary_operators
+            error(
+                "Operator $(op) is both a binary and unary operator. " *
+                "You can't use nested constraints.",
+            )
+        end
+    end
+
+    # Convert to dict:
+    _nested_constraints = if nested_constraints isa Dict
+        nested_constraints
+    else
+        # Convert to dict:
+        nested_constraints = Dict(
+            [cons[1] => Dict(cons[2]...) for cons in nested_constraints]...
+        )
+    end
+    for (op, nested_constraint) in _nested_constraints
+        if !(op ∈ binary_operators || op ∈ unary_operators)
+            error("Operator $(op) is not in the operator set.")
+        end
+        for (nested_op, max_nesting) in nested_constraint
+            if !(nested_op ∈ binary_operators || nested_op ∈ unary_operators)
+                error("Operator $(nested_op) is not in the operator set.")
+            end
+            @assert nested_op ∈ binary_operators || nested_op ∈ unary_operators
+            @assert max_nesting >= -1 && typeof(max_nesting) <: Int
+        end
+    end
+
+    # Lastly, we clean it up into a dict of (degree,op_idx) => max_nesting.
+    return [
+        let (degree, idx) = if op ∈ binary_operators
+                2, findfirst(isequal(op), binary_operators)::Int
+            else
+                1, findfirst(isequal(op), unary_operators)::Int
+            end,
+            new_max_nesting_dict = [
+                let (nested_degree, nested_idx) = if nested_op ∈ binary_operators
+                        2, findfirst(isequal(nested_op), binary_operators)::Int
+                    else
+                        1, findfirst(isequal(nested_op), unary_operators)::Int
+                    end
+                    (nested_degree, nested_idx, max_nesting)
+                end for (nested_op, max_nesting) in nested_constraint
+            ]
+
+            (degree, idx, new_max_nesting_dict)
+        end for (op, nested_constraint) in _nested_constraints
+    ]
 end
 
 function binopmap(op::F) where {F}
@@ -177,6 +227,9 @@ const deprecated_options_mapping = Base.ImmutableDict(
     :loss => :elementwise_loss,
 )
 
+# For static analysis tools:
+@ignore const DEFAULT_OPTIONS = ()
+
 const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators (functions) to use.
     Each operator should be defined for two input scalars,
     and one output scalar. All operators
@@ -248,8 +301,10 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
             return sum((prediction .- dataset.y) .^ 2) / dataset.n
         end
 
-- `node_type::Type{N}=Node`: The type of node to use for the search.
-    For example, `Node` or `GraphNode`.
+- `expression_type::Type{E}=Expression`: The type of expression to use.
+    For example, `Expression`.
+- `node_type::Type{N}=default_node_type(Expression)`: The type of node to use for the search.
+    For example, `Node` or `GraphNode`. The default is computed by `default_node_type(expression_type)`.
 - `populations`: How many populations of equations to use.
 - `population_size`: How many equations in each population.
 - `ncycles_per_iteration`: How many generations to consider per iteration.
@@ -312,14 +367,21 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `optimizer_probability`: Probability of performing optimization of constants at
     the end of a given iteration.
 - `optimizer_iterations`: How many optimization iterations to perform. This gets
-   passed to `Optim.Options` as `iterations`. The default is 8.
+    passed to `Optim.Options` as `iterations`. The default is 8.
 - `optimizer_f_calls_limit`: How many function calls to allow during optimization.
     This gets passed to `Optim.Options` as `f_calls_limit`. The default is
-    `0` which means no limit.
+    `10_000`.
 - `optimizer_options`: General options for the constant optimization. For details
     we refer to the documentation on `Optim.Options` from the `Optim.jl` package.
     Options can be provided here as `NamedTuple`, e.g. `(iterations=16,)`, as a
     `Dict`, e.g. Dict(:x_tol => 1.0e-32,), or as an `Optim.Options` instance.
+- `autodiff_backend`: The backend to use for differentiation, which should be
+    an instance of `AbstractADType` (see `DifferentiationInterface.jl`).
+    Default is `nothing`, which means `Optim.jl` will estimate gradients (likely
+    with finite differences). You can also pass a symbolic version of the backend
+    type, such as `:Zygote` for Zygote, `:Enzyme`, etc. Most backends will not
+    work, and many will never work due to incompatibilities, though support for some
+    is gradually being added.
 - `output_file`: What file to store equations to, as a backup.
 - `perturbation_factor`: When mutating a constant, either
     multiply or divide by (1+perturbation_factor)^(rand()+1).
@@ -401,7 +463,9 @@ $(OPTION_DESCRIPTIONS)
     should_simplify::Union{Nothing,Bool}=nothing,
     should_optimize_constants::Bool=true,
     output_file::Union{Nothing,AbstractString}=nothing,
-    node_type::Type=Node,
+    expression_type::Type=Expression,
+    node_type::Type=default_node_type(expression_type),
+    expression_options::NamedTuple=NamedTuple(),
     populations::Integer=15,
     perturbation_factor::Real=0.076,
     annealing::Bool=false,
@@ -434,6 +498,7 @@ $(OPTION_DESCRIPTIONS)
     optimizer_iterations::Union{Nothing,Integer}=nothing,
     optimizer_f_calls_limit::Union{Nothing,Integer}=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
+    autodiff_backend::Union{AbstractADType,Symbol,Nothing}=nothing,
     use_recorder::Bool=false,
     recorder_file::AbstractString="pysr_recorder.json",
     early_stop_condition::Union{Function,Real,Nothing}=nothing,
@@ -561,69 +626,15 @@ $(OPTION_DESCRIPTIONS)
         end
     end
 
-    nuna = length(unary_operators)
-    nbin = length(binary_operators)
     @assert maxsize > 3
     @assert warmup_maxsize_by >= 0.0f0
-    @assert nuna <= max_ops && nbin <= max_ops
+    @assert length(unary_operators) <= max_ops
+    @assert length(binary_operators) <= max_ops
 
     # Make sure nested_constraints contains functions within our operator set:
-    if nested_constraints !== nothing
-        # Check that intersection of binary operators and unary operators is empty:
-        for op in binary_operators
-            if op ∈ unary_operators
-                error(
-                    "Operator $(op) is both a binary and unary operator. " *
-                    "You can't use nested constraints.",
-                )
-            end
-        end
-
-        # Convert to dict:
-        if !(typeof(nested_constraints) <: Dict)
-            # Convert to dict:
-            nested_constraints = Dict(
-                [cons[1] => Dict(cons[2]...) for cons in nested_constraints]...
-            )
-        end
-        for (op, nested_constraint) in nested_constraints
-            if !(op ∈ binary_operators || op ∈ unary_operators)
-                error("Operator $(op) is not in the operator set.")
-            end
-            for (nested_op, max_nesting) in nested_constraint
-                if !(nested_op ∈ binary_operators || nested_op ∈ unary_operators)
-                    error("Operator $(nested_op) is not in the operator set.")
-                end
-                @assert nested_op ∈ binary_operators || nested_op ∈ unary_operators
-                @assert max_nesting >= -1 && typeof(max_nesting) <: Int
-            end
-        end
-
-        # Lastly, we clean it up into a dict of (degree,op_idx) => max_nesting.
-        new_nested_constraints = []
-        # Dict()
-        for (op, nested_constraint) in nested_constraints
-            (degree, idx) = if op ∈ binary_operators
-                2, findfirst(isequal(op), binary_operators)
-            else
-                1, findfirst(isequal(op), unary_operators)
-            end
-            new_max_nesting_dict = []
-            # Dict()
-            for (nested_op, max_nesting) in nested_constraint
-                (nested_degree, nested_idx) = if nested_op ∈ binary_operators
-                    2, findfirst(isequal(nested_op), binary_operators)
-                else
-                    1, findfirst(isequal(nested_op), unary_operators)
-                end
-                # new_max_nesting_dict[(nested_degree, nested_idx)] = max_nesting
-                push!(new_max_nesting_dict, (nested_degree, nested_idx, max_nesting))
-            end
-            # new_nested_constraints[(degree, idx)] = new_max_nesting_dict
-            push!(new_nested_constraints, (degree, idx, new_max_nesting_dict))
-        end
-        nested_constraints = new_nested_constraints
-    end
+    _nested_constraints = build_nested_constraints(;
+        binary_operators, unary_operators, nested_constraints
+    )
 
     if typeof(constraints) <: Tuple
         constraints = collect(constraints)
@@ -642,8 +653,8 @@ $(OPTION_DESCRIPTIONS)
         una_constraints = constraints
     end
 
-    una_constraints, bin_constraints = build_constraints(
-        una_constraints, bin_constraints, unary_operators, binary_operators, nuna, nbin
+    _una_constraints, _bin_constraints = build_constraints(;
+        una_constraints, bin_constraints, unary_operators, binary_operators
     )
 
     complexity_mapping = ComplexityMapping(
@@ -692,7 +703,7 @@ $(OPTION_DESCRIPTIONS)
     if !isa(optimizer_options, Optim.Options)
         optimizer_iterations = isnothing(optimizer_iterations) ? 8 : optimizer_iterations
         optimizer_f_calls_limit = if isnothing(optimizer_f_calls_limit)
-            0
+            10_000
         else
             optimizer_f_calls_limit
         end
@@ -710,35 +721,33 @@ $(OPTION_DESCRIPTIONS)
         @warn "Optimizer warnings are turned on. This might result in a lot of warnings being printed from NaNs, as these are common during symbolic regression"
     end
 
-    ## Create tournament weights:
-    tournament_selection_weights =
-        let n = tournament_selection_n, p = tournament_selection_p
-            k = collect(0:(n - 1))
-            prob_each = p * ((1 - p) .^ k)
-
-            StatsBase.Weights(prob_each, sum(prob_each))
-        end
-
     set_mutation_weights = create_mutation_weights(mutation_weights)
 
     @assert print_precision > 0
+
+    _autodiff_backend = if autodiff_backend isa Union{Nothing,AbstractADType}
+        autodiff_backend
+    else
+        ADTypes.Auto(autodiff_backend)
+    end
 
     options = Options{
         typeof(complexity_mapping),
         operator_specialization(typeof(operators)),
         node_type,
+        expression_type,
+        typeof(expression_options),
         turbo,
         bumper,
         deprecated_return_state,
-        typeof(tournament_selection_weights),
+        typeof(_autodiff_backend),
     }(
         operators,
-        bin_constraints,
-        una_constraints,
+        _bin_constraints,
+        _una_constraints,
         complexity_mapping,
         tournament_selection_n,
         tournament_selection_p,
-        tournament_selection_weights,
         parsimony,
         dimensional_constraint_penalty,
         dimensionless_constants_only,
@@ -772,18 +781,21 @@ $(OPTION_DESCRIPTIONS)
         print_precision,
         save_to_file,
         probability_negate_constant,
-        nuna,
-        nbin,
+        length(unary_operators),
+        length(binary_operators),
         seed,
         elementwise_loss,
         loss_function,
         node_type,
+        expression_type,
+        expression_options,
         progress,
         terminal_width,
         optimizer_algorithm,
         optimizer_probability,
         optimizer_nrestarts,
         optimizer_options,
+        _autodiff_backend,
         recorder_file,
         tournament_selection_p,
         early_stop_condition,
@@ -791,7 +803,7 @@ $(OPTION_DESCRIPTIONS)
         timeout_in_seconds,
         max_evals,
         skip_mutation_failures,
-        nested_constraints,
+        _nested_constraints,
         deterministic,
         define_helper_functions,
         use_recorder,

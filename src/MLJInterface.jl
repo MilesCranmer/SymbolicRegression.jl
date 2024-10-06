@@ -3,7 +3,16 @@ module MLJInterfaceModule
 using Optim: Optim
 using LineSearches: LineSearches
 using MLJModelInterface: MLJModelInterface as MMI
-using DynamicExpressions: eval_tree_array, string_tree, AbstractExpressionNode, Node
+using ADTypes: AbstractADType
+using DynamicExpressions:
+    eval_tree_array,
+    string_tree,
+    AbstractExpressionNode,
+    AbstractExpression,
+    Node,
+    Expression,
+    default_node_type,
+    get_tree
 using DynamicQuantities:
     QuantityArray,
     UnionAbstractQuantity,
@@ -20,11 +29,19 @@ using ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
 using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
-using ..UtilsModule: subscriptify
+using ..UtilsModule: subscriptify, @ignore
 
 import ..equation_search
 
 abstract type AbstractSRRegressor <: MMI.Deterministic end
+
+# For static analysis tools:
+@ignore mutable struct SRRegressor <: AbstractSRRegressor
+    selection_method::Function
+end
+@ignore mutable struct MultitargetSRRegressor <: AbstractSRRegressor
+    selection_method::Function
+end
 
 # TODO: To reduce code re-use, we could forward these defaults from
 #       `equation_search`, similar to what we do for `Options`.
@@ -122,11 +139,27 @@ function MMI.update(
     m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
 )
     options = old_fitresult === nothing ? get_options(m) : old_fitresult.options
-    return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
+    return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, nothing)
 end
-function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
+function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, classes)
+    if isnothing(classes) && MMI.istable(X) && haskey(X, :classes)
+        if !(X isa NamedTuple)
+            error("Classes can only be specified with named tuples.")
+        end
+        new_X = Base.structdiff(X, (; X.classes))
+        new_classes = X.classes
+        return _update(
+            m, verbosity, old_fitresult, old_cache, new_X, y, w, options, new_classes
+        )
+    end
+    if !isnothing(old_fitresult)
+        @assert(
+            old_fitresult.has_classes == !isnothing(classes),
+            "If the first fit used classes, the second fit must also use classes."
+        )
+    end
     # To speed up iterative fits, we cache the types:
-    types = if old_fitresult === nothing
+    types = if isnothing(old_fitresult)
         (;
             T=Any,
             X_t=Any,
@@ -174,6 +207,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         X_units=X_units_clean,
         y_units=y_units_clean,
         verbosity=verbosity,
+        extra=isnothing(classes) ? (;) : (; classes),
         # Help out with inference:
         v_dim_out=isa(m, SRRegressor) ? Val(1) : Val(2),
     )
@@ -184,6 +218,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options)
         variable_names=variable_names,
         y_variable_names=y_variable_names,
         y_is_table=MMI.istable(y),
+        has_classes=!isnothing(classes),
         X_units=X_units_clean,
         y_units=y_units_clean,
         types=(
@@ -333,9 +368,20 @@ function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
 end
 
 function eval_tree_mlj(
-    tree::Node, X_t, m::AbstractSRRegressor, ::Type{T}, fitresult, i, prototype
+    tree::AbstractExpression,
+    X_t,
+    classes,
+    m::AbstractSRRegressor,
+    ::Type{T},
+    fitresult,
+    i,
+    prototype,
 ) where {T}
-    out, completed = eval_tree_array(tree, X_t, fitresult.options)
+    out, completed = if isnothing(classes)
+        eval_tree_array(tree, X_t, fitresult.options)
+    else
+        eval_tree_array(tree, X_t, classes, fitresult.options)
+    end
     if completed
         return wrap_units(out, fitresult.y_units, i)
     else
@@ -343,13 +389,32 @@ function eval_tree_mlj(
     end
 end
 
-function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRRegressor}
+function MMI.predict(
+    m::M, fitresult, Xnew; idx=nothing, classes=nothing
+) where {M<:AbstractSRRegressor}
+    return _predict(m, fitresult, Xnew, idx, classes)
+end
+function _predict(m::M, fitresult, Xnew, idx, classes) where {M<:AbstractSRRegressor}
     if Xnew isa NamedTuple && (haskey(Xnew, :idx) || haskey(Xnew, :data))
         @assert(
             haskey(Xnew, :idx) && haskey(Xnew, :data) && length(keys(Xnew)) == 2,
             "If specifying an equation index during prediction, you must use a named tuple with keys `idx` and `data`."
         )
-        return MMI.predict(m, fitresult, Xnew.data; idx=Xnew.idx)
+        return _predict(m, fitresult, Xnew.data, Xnew.idx, classes)
+    end
+    if isnothing(classes) && MMI.istable(Xnew) && haskey(Xnew, :classes)
+        if !(Xnew isa NamedTuple)
+            error("Classes can only be specified with named tuples.")
+        end
+        Xnew2 = Base.structdiff(Xnew, (; Xnew.classes))
+        return _predict(m, fitresult, Xnew2, idx, Xnew.classes)
+    end
+
+    if fitresult.has_classes
+        @assert(
+            !isnothing(classes),
+            "Classes must be specified if the model was fit with classes."
+        )
     end
 
     params = full_report(m, fitresult; v_with_strings=Val(false))
@@ -370,12 +435,12 @@ function MMI.predict(m::M, fitresult, Xnew; idx=nothing) where {M<:AbstractSRReg
 
     if M <: SRRegressor
         return eval_tree_mlj(
-            params.equations[idx], Xnew_t, m, T, fitresult, nothing, prototype
+            params.equations[idx], Xnew_t, classes, m, T, fitresult, nothing, prototype
         )
     elseif M <: MultitargetSRRegressor
         outs = [
             eval_tree_mlj(
-                params.equations[i][idx[i]], Xnew_t, m, T, fitresult, i, prototype
+                params.equations[i][idx[i]], Xnew_t, classes, m, T, fitresult, i, prototype
             ) for i in eachindex(idx, params.equations)
         ]
         out_matrix = reduce(hcat, outs)
@@ -434,10 +499,16 @@ MMI.metadata_pkg(
     is_wrapper=false,
 )
 
+const input_scitype = Union{
+    MMI.Table(MMI.Continuous),
+    AbstractMatrix{<:MMI.Continuous},
+    MMI.Table(MMI.Continuous, MMI.Count),
+}
+
 # TODO: Allow for Count data, and coerce it into Continuous as needed.
 MMI.metadata_model(
     SRRegressor;
-    input_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    input_scitype,
     target_scitype=AbstractVector{<:MMI.Continuous},
     supports_weights=true,
     reports_feature_importances=false,
@@ -446,7 +517,7 @@ MMI.metadata_model(
 )
 MMI.metadata_model(
     MultitargetSRRegressor;
-    input_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    input_scitype,
     target_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
     supports_weights=true,
     reports_feature_importances=false,
@@ -518,11 +589,11 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
     # Operations
 
     - `predict(mach, Xnew)`: Return predictions of the target given features `Xnew`, which
-      should have same scitype as `X` above. The expression used for prediction is defined
-      by the `selection_method` function, which can be seen by viewing `report(mach).best_idx`.
+        should have same scitype as `X` above. The expression used for prediction is defined
+        by the `selection_method` function, which can be seen by viewing `report(mach).best_idx`.
     - `predict(mach, (data=Xnew, idx=i))`: Return predictions of the target given features
-      `Xnew`, which should have same scitype as `X` above. By passing a named tuple with keys
-      `data` and `idx`, you are able to specify the equation you wish to evaluate in `idx`.
+        `Xnew`, which should have same scitype as `X` above. By passing a named tuple with keys
+        `data` and `idx`, you are able to specify the equation you wish to evaluate in `idx`.
 
     $(bottom_matter)
     """

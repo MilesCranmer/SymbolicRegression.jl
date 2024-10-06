@@ -1,10 +1,12 @@
 module OperatorsModule
 
+using DynamicExpressions: DynamicExpressions as DE
 using SpecialFunctions: SpecialFunctions
 using DynamicQuantities: UnionAbstractQuantity
 using SpecialFunctions: erf, erfc
 using Base: @deprecate
 using ..ProgramConstantsModule: DATA_TYPE
+using ...UtilsModule: @ignore
 #TODO - actually add these operators to the module!
 
 # TODO: Should this be limited to AbstractFloat instead?
@@ -95,8 +97,21 @@ function logical_and(x, y)
     return ((x > zero(x)) & (y > zero(y))) * one(x)
 end
 
+# Strings
+DE.get_op_name(::typeof(safe_pow)) = "^"
+DE.get_op_name(::typeof(safe_log)) = "log"
+DE.get_op_name(::typeof(safe_log2)) = "log2"
+DE.get_op_name(::typeof(safe_log10)) = "log10"
+DE.get_op_name(::typeof(safe_log1p)) = "log1p"
+DE.get_op_name(::typeof(safe_acosh)) = "acosh"
+DE.get_op_name(::typeof(safe_sqrt)) = "sqrt"
+
 # Deprecated operations:
 @deprecate pow(x, y) safe_pow(x, y)
 @deprecate pow_abs(x, y) safe_pow(x, y)
+
+# For static analysis tools:
+@ignore pow(x, y) = safe_pow(x, y)
+@ignore pow_abs(x, y) = safe_pow(x, y)
 
 end

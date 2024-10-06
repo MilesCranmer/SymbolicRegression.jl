@@ -26,8 +26,9 @@ jobs:
       fail-fast: false
       matrix:
         test:
-          - "unit"
-          - "integration"
+          - "part1"
+          - "part2"
+          - "part3"
         julia-version:
           - "1.6"
           - "1.8"
@@ -37,22 +38,31 @@ jobs:
         include:
           - os: windows-latest
             julia-version: "1"
-            test: "unit"
+            test: "part1"
           - os: windows-latest
             julia-version: "1"
-            test: "integration"
+            test: "part2"
+          - os: windows-latest
+            julia-version: "1"
+            test: "part3"
           - os: macOS-latest
             julia-version: "1"
-            test: "unit"
+            test: "part1"
           - os: macOS-latest
             julia-version: "1"
-            test: "integration"
+            test: "part2"
+          - os: macOS-latest
+            julia-version: "1"
+            test: "part3"
           - os: ubuntu-latest
             julia-version: "~1.11.0-0"
-            test: "unit"
+            test: "part1"
           - os: ubuntu-latest
             julia-version: "~1.11.0-0"
-            test: "integration"
+            test: "part2"
+          - os: ubuntu-latest
+            julia-version: "~1.11.0-0"
+            test: "part3"
 
     steps:
       - uses: actions/checkout@v4
@@ -62,6 +72,8 @@ jobs:
           version: ${{ matrix.julia-version }}
       - name: "Cache dependencies"
         uses: julia-actions/cache@v2
+        with:
+          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};os=${{ matrix.os }};julia=${{ matrix.julia-version }};project=${{ hashFiles('**/Project.toml') }}
       - name: "Build package"
         uses: julia-actions/julia-buildpkg@v1
       - name: "Run tests"

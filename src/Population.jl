@@ -1,19 +1,18 @@
 module PopulationModule
 
 using StatsBase: StatsBase
-using Random: randperm
 using DispatchDoctor: @unstable
-using DynamicExpressions: AbstractExpressionNode, Node, string_tree
+using DynamicExpressions: AbstractExpression, string_tree
 using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: score_func, update_baseline_loss!
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..MutationFunctionsModule: gen_random_tree
 using ..PopMemberModule: PopMember
-using ..UtilsModule: bottomk_fast, argmin_fast
+using ..UtilsModule: bottomk_fast, argmin_fast, PerThreadCache
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
-struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}}
+struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
     members::Array{PopMember{T,L,N},1}
     n::Int
 end
@@ -147,7 +146,7 @@ function _best_of_sample(
         argmin_fast(scores)
     else
         # First, decide what place we take (usually 1st place wins):
-        tournament_winner = StatsBase.sample(options.tournament_selection_weights)
+        tournament_winner = StatsBase.sample(get_tournament_selection_weights(options))
         # Then, find the member that won that place, given
         # their fitness:
         if tournament_winner == 1
@@ -157,6 +156,26 @@ function _best_of_sample(
         end
     end
     return members[chosen_idx]
+end
+
+const CACHED_WEIGHTS =
+    let init_k = collect(0:5),
+        init_prob_each = 0.5f0 * (1 - 0.5f0) .^ init_k,
+        test_weights = StatsBase.Weights(init_prob_each, sum(init_prob_each))
+
+        PerThreadCache{Dict{Tuple{Int,Float32},typeof(test_weights)}}()
+    end
+
+@unstable function get_tournament_selection_weights(@nospecialize(options::Options))
+    n = options.tournament_selection_n
+    p = options.tournament_selection_p
+    # Computing the weights for the tournament becomes quite expensive,
+    return get!(CACHED_WEIGHTS, (n, p)) do
+        k = collect(0:(n - 1))
+        prob_each = p * ((1 - p) .^ k)
+
+        return StatsBase.Weights(prob_each, sum(prob_each))
+    end
 end
 
 function finalize_scores(
