@@ -514,7 +514,7 @@ after which it will exit.
 function attach_to_parents!(tree::N, oldchild::N, newchild::N) where {N<:AbstractNode}
     attached = any(Fix{2}(Fix{3}(attach_to_parents_closure, newchild), oldchild), tree)
     #! format: off
-    !attached || throw(ArgumentError("Failed to attach node to any parent in $tree. Please file a bug report if this is unexpected."))
+    attached || throw(ArgumentError("Failed to attach node to any parent in $tree. Please file a bug report if this is unexpected."))
     #! format: on
     return nothing
 end
