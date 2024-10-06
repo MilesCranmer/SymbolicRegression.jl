@@ -14,7 +14,7 @@ using DynamicExpressions:
     count_nodes,
     has_constants,
     has_operators
-using Compat: Returns, @inline, Fix
+using Compat: Returns, @inline
 using ..CoreModule: Options, DATA_TYPE
 
 """
