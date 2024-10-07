@@ -55,7 +55,7 @@ tree = cos(x1 - 3.2 * x2) - x1 * x1</code></pre><p>This tree has <code>Float64</
 
 tree(X)</code></pre><p>This callable format is the easy-to-use version which will automatically set all values to NaN if there were any Inf or NaN during evaluation. You can call the raw evaluation method with <code>eval_tree_array</code>:</p><pre><code class="language-julia hljs">output, did_succeed = eval_tree_array(tree, X)</code></pre><p>where <code>did_succeed</code> explicitly declares whether the evaluation was successful.</p><h2 id="Exporting-to-SymbolicUtils.jl"><a class="docs-heading-anchor" href="#Exporting-to-SymbolicUtils.jl">Exporting to SymbolicUtils.jl</a><a id="Exporting-to-SymbolicUtils.jl-1"></a><a class="docs-heading-anchor-permalink" href="#Exporting-to-SymbolicUtils.jl" title="Permalink"></a></h2><p>We can view the equations in the dominating Pareto frontier with:</p><pre><code class="language-julia hljs">dominating = calculate_pareto_frontier(hall_of_fame)</code></pre><p>We can convert the best equation to <a href="https://github.com/JuliaSymbolics/SymbolicUtils.jl">SymbolicUtils.jl</a> with the following function:</p><pre><code class="language-julia hljs">import SymbolicRegression: node_to_symbolic
 
-eqn = node_to_symbolic(dominating[end].tree, options)
+eqn = node_to_symbolic(dominating[end].tree)
 println(simplify(eqn*5 + 3))</code></pre><p>We can also print out the full pareto frontier like so:</p><pre><code class="language-julia hljs">import SymbolicRegression: compute_complexity, string_tree
 
 println(&quot;Complexity\tMSE\tEquation&quot;)
@@ -149,6 +149,7 @@ stateDiagram-v2
     AdaptiveParsimony --> Mutate
     AdaptiveParsimony --> Population
     AdaptiveParsimony --> RegularizedEvolution
+    AdaptiveParsimony --> SearchUtils
     AdaptiveParsimony --> SingleIteration
     AdaptiveParsimony --> SymbolicRegression
     CheckConstraints --> Mutate
@@ -156,20 +157,27 @@ stateDiagram-v2
     Complexity --> CheckConstraints
     Complexity --> HallOfFame
     Complexity --> LossFunctions
+    Complexity --> MLJInterface
     Complexity --> Mutate
+    Complexity --> PopMember
     Complexity --> Population
     Complexity --> SearchUtils
     Complexity --> SingleIteration
     Complexity --> SymbolicRegression
+    ConstantOptimization --> ExpressionBuilder
     ConstantOptimization --> Mutate
     ConstantOptimization --> SingleIteration
     Core --> AdaptiveParsimony
     Core --> CheckConstraints
     Core --> Complexity
     Core --> ConstantOptimization
+    Core --> DimensionalAnalysis
+    Core --> ExpressionBuilder
+    Core --> ExpressionBuilder
     Core --> HallOfFame
     Core --> InterfaceDynamicExpressions
     Core --> LossFunctions
+    Core --> MLJInterface
     Core --> Migration
     Core --> Mutate
     Core --> MutationFunctions
@@ -181,35 +189,55 @@ stateDiagram-v2
     Core --> SingleIteration
     Core --> SymbolicRegression
     Dataset --> Core
+    DimensionalAnalysis --> LossFunctions
+    ExpressionBuilder --> SymbolicRegression
+    HallOfFame --> ExpressionBuilder
+    HallOfFame --> MLJInterface
     HallOfFame --> SearchUtils
     HallOfFame --> SingleIteration
     HallOfFame --> SymbolicRegression
+    HallOfFame --> deprecates
+    InterfaceDynamicExpressions --> ExpressionBuilder
+    InterfaceDynamicExpressions --> HallOfFame
     InterfaceDynamicExpressions --> LossFunctions
     InterfaceDynamicExpressions --> SymbolicRegression
+    InterfaceDynamicQuantities --> Dataset
+    InterfaceDynamicQuantities --> MLJInterface
     LossFunctions --> ConstantOptimization
-    LossFunctions --> HallOfFame
+    LossFunctions --> ExpressionBuilder
+    LossFunctions --> ExpressionBuilder
     LossFunctions --> Mutate
     LossFunctions --> PopMember
     LossFunctions --> Population
+    LossFunctions --> SingleIteration
     LossFunctions --> SymbolicRegression
+    MLJInterface --> SymbolicRegression
     Migration --> SymbolicRegression
     Mutate --> RegularizedEvolution
+    MutationFunctions --> ExpressionBuilder
     MutationFunctions --> Mutate
     MutationFunctions --> Population
     MutationFunctions --> SymbolicRegression
+    MutationFunctions --> deprecates
+    MutationWeights --> Core
+    MutationWeights --> Options
+    MutationWeights --> OptionsStruct
     Operators --> Core
     Operators --> Options
     Options --> Core
     OptionsStruct --> Core
     OptionsStruct --> Options
+    OptionsStruct --> Options
     PopMember --> ConstantOptimization
+    PopMember --> ExpressionBuilder
     PopMember --> HallOfFame
     PopMember --> Migration
     PopMember --> Mutate
     PopMember --> Population
-    PopMember --> RegularizedEvolution
+    PopMember --> SearchUtils
     PopMember --> SingleIteration
     PopMember --> SymbolicRegression
+    Population --> ExpressionBuilder
     Population --> Migration
     Population --> RegularizedEvolution
     Population --> SearchUtils
@@ -217,6 +245,7 @@ stateDiagram-v2
     Population --> SymbolicRegression
     ProgramConstants --> Core
     ProgramConstants --> Dataset
+    ProgramConstants --> Operators
     ProgressBars --> SearchUtils
     ProgressBars --> SymbolicRegression
     Recorder --> Mutate
@@ -226,17 +255,26 @@ stateDiagram-v2
     RegularizedEvolution --> SingleIteration
     SearchUtils --> SymbolicRegression
     SingleIteration --> SymbolicRegression
-    Utils --> CheckConstraints
     Utils --> ConstantOptimization
+    Utils --> Dataset
+    Utils --> DimensionalAnalysis
+    Utils --> HallOfFame
+    Utils --> InterfaceDynamicExpressions
+    Utils --> MLJInterface
+    Utils --> Migration
+    Utils --> Operators
     Utils --> Options
     Utils --> PopMember
+    Utils --> Population
+    Utils --> RegularizedEvolution
+    Utils --> SearchUtils
     Utils --> SingleIteration
     Utils --> SymbolicRegression
 
 </div><p>Bash command to generate dependency structure from <code>src</code> directory (requires <code>vim-stream</code>):</p><pre><code class="language-bash hljs">echo &#39;stateDiagram-v2&#39;
 IFS=$&#39;\n&#39;
 for f in *.jl; do
-    for line in $(cat $f | grep -e &#39;import \.\.&#39; -e &#39;import \.&#39;); do
+    for line in $(cat $f | grep -e &#39;import \.\.&#39; -e &#39;import \.&#39; -e &#39;using \.&#39; -e &#39;using \.\.&#39;); do
         echo $(echo $line | vims -s &#39;dwf:d$&#39; -t &#39;%s/^\.*//g&#39; &#39;%s/Module//g&#39;) $(basename &quot;$f&quot; .jl);
     done;
-done | vims -l &#39;f a--&gt; &#39; | sort</code></pre><h2 id="Search-options"><a class="docs-heading-anchor" href="#Search-options">Search options</a><a id="Search-options-1"></a><a class="docs-heading-anchor-permalink" href="#Search-options" title="Permalink"></a></h2><p>See https://astroautomata.com/SymbolicRegression.jl/stable/api/#Options</p><h1 id="Contents"><a class="docs-heading-anchor" href="#Contents">Contents</a><a id="Contents-1"></a><a class="docs-heading-anchor-permalink" href="#Contents" title="Permalink"></a></h1><ul><li><a href="examples/#Toy-Examples-with-Code">Toy Examples with Code</a></li><li class="no-marker"><ul><li><a href="examples/#.-Simple-search">1. Simple search</a></li><li><a href="examples/#.-Custom-operator">2. Custom operator</a></li><li><a href="examples/#.-Multiple-outputs">3. Multiple outputs</a></li><li><a href="examples/#.-Plotting-an-expression">4. Plotting an expression</a></li><li><a href="examples/#.-Other-types">5. Other types</a></li><li><a href="examples/#.-Dimensional-constraints">6. Dimensional constraints</a></li><li><a href="examples/#.-Working-with-Expressions">7. Working with Expressions</a></li><li><a href="examples/#.-Parametric-Expressions">8. Parametric Expressions</a></li><li><a href="examples/#.-Additional-features">9. Additional features</a></li></ul></li><li><a href="api/#API">API</a></li><li class="no-marker"><ul><li><a href="api/#MLJ-interface">MLJ interface</a></li><li><a href="api/#equation_search">equation_search</a></li><li><a href="api/#Options">Options</a></li><li><a href="api/#Printing">Printing</a></li><li><a href="api/#Evaluation">Evaluation</a></li><li><a href="api/#Derivatives">Derivatives</a></li><li><a href="api/#SymbolicUtils.jl-interface">SymbolicUtils.jl interface</a></li><li><a href="api/#Pareto-frontier">Pareto frontier</a></li></ul></li><li><a href="types/#Types">Types</a></li><li class="no-marker"><ul><li><a href="types/#Equations">Equations</a></li><li><a href="types/#Expressions">Expressions</a></li><li><a href="types/#Parametric-Expressions">Parametric Expressions</a></li><li><a href="types/#Custom-Expressions">Custom Expressions</a></li><li><a href="types/#Population">Population</a></li><li><a href="types/#Population-members">Population members</a></li><li><a href="types/#Hall-of-Fame">Hall of Fame</a></li><li><a href="types/#Dataset">Dataset</a></li></ul></li><li><a href="losses/#Losses">Losses</a></li><li class="no-marker"><ul><li><a href="losses/#Regression">Regression</a></li><li><a href="losses/#Classification">Classification</a></li></ul></li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="index_base/">« Contents</a><a class="docs-footer-nextpage" href="examples/">Examples »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Sunday 6 October 2024 22:20">Sunday 6 October 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+done | vims -l &#39;f a--&gt; &#39; | sort</code></pre><h2 id="Search-options"><a class="docs-heading-anchor" href="#Search-options">Search options</a><a id="Search-options-1"></a><a class="docs-heading-anchor-permalink" href="#Search-options" title="Permalink"></a></h2><p>See https://astroautomata.com/SymbolicRegression.jl/stable/api/#Options</p><h1 id="Contents"><a class="docs-heading-anchor" href="#Contents">Contents</a><a id="Contents-1"></a><a class="docs-heading-anchor-permalink" href="#Contents" title="Permalink"></a></h1><ul><li><a href="examples/#Toy-Examples-with-Code">Toy Examples with Code</a></li><li class="no-marker"><ul><li><a href="examples/#.-Simple-search">1. Simple search</a></li><li><a href="examples/#.-Custom-operator">2. Custom operator</a></li><li><a href="examples/#.-Multiple-outputs">3. Multiple outputs</a></li><li><a href="examples/#.-Plotting-an-expression">4. Plotting an expression</a></li><li><a href="examples/#.-Other-types">5. Other types</a></li><li><a href="examples/#.-Dimensional-constraints">6. Dimensional constraints</a></li><li><a href="examples/#.-Working-with-Expressions">7. Working with Expressions</a></li><li><a href="examples/#.-Parametric-Expressions">8. Parametric Expressions</a></li><li><a href="examples/#.-Additional-features">9. Additional features</a></li></ul></li><li><a href="api/#API">API</a></li><li class="no-marker"><ul><li><a href="api/#MLJ-interface">MLJ interface</a></li><li><a href="api/#equation_search">equation_search</a></li><li><a href="api/#Options">Options</a></li><li><a href="api/#Printing">Printing</a></li><li><a href="api/#Evaluation">Evaluation</a></li><li><a href="api/#Derivatives">Derivatives</a></li><li><a href="api/#SymbolicUtils.jl-interface">SymbolicUtils.jl interface</a></li><li><a href="api/#Pareto-frontier">Pareto frontier</a></li></ul></li><li><a href="types/#Types">Types</a></li><li class="no-marker"><ul><li><a href="types/#Equations">Equations</a></li><li><a href="types/#Expressions">Expressions</a></li><li><a href="types/#Parametric-Expressions">Parametric Expressions</a></li><li><a href="types/#Custom-Expressions">Custom Expressions</a></li><li><a href="types/#Population">Population</a></li><li><a href="types/#Population-members">Population members</a></li><li><a href="types/#Hall-of-Fame">Hall of Fame</a></li><li><a href="types/#Dataset">Dataset</a></li></ul></li><li><a href="losses/#Losses">Losses</a></li><li class="no-marker"><ul><li><a href="losses/#Regression">Regression</a></li><li><a href="losses/#Classification">Classification</a></li></ul></li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="index_base/">« Contents</a><a class="docs-footer-nextpage" href="examples/">Examples »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Monday 7 October 2024 19:14">Monday 7 October 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
