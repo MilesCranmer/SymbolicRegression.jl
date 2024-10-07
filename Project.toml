@@ -46,12 +46,10 @@ ConstructionBase = "<1.5.7"
 Dates = "1"
 DifferentiationInterface = "0.5"
 DispatchDoctor = "0.4"
-# Note that the <0.0.1 bound is required for old julia compat (which does
-# not have stdlib packages available in [compat])
 Distributed = "<0.0.1, 1"
 DynamicExpressions = "1"
 DynamicQuantities = "1"
-Enzyme = "0.12"
+Enzyme = "0.12, 0.13"
 JSON3 = "1"
 LineSearches = "7"
 LossFunctions = "0.10, 0.11"
