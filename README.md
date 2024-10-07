@@ -230,7 +230,7 @@ with the following function:
 ```julia
 import SymbolicRegression: node_to_symbolic
 
-eqn = node_to_symbolic(dominating[end].tree, options)
+eqn = node_to_symbolic(dominating[end].tree)
 println(simplify(eqn*5 + 3))
 ```
 
