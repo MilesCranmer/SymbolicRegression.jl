@@ -358,6 +358,7 @@ stateDiagram-v2
     AdaptiveParsimony --> Mutate
     AdaptiveParsimony --> Population
     AdaptiveParsimony --> RegularizedEvolution
+    AdaptiveParsimony --> SearchUtils
     AdaptiveParsimony --> SingleIteration
     AdaptiveParsimony --> SymbolicRegression
     CheckConstraints --> Mutate
@@ -365,20 +366,27 @@ stateDiagram-v2
     Complexity --> CheckConstraints
     Complexity --> HallOfFame
     Complexity --> LossFunctions
+    Complexity --> MLJInterface
     Complexity --> Mutate
+    Complexity --> PopMember
     Complexity --> Population
     Complexity --> SearchUtils
     Complexity --> SingleIteration
     Complexity --> SymbolicRegression
+    ConstantOptimization --> ExpressionBuilder
     ConstantOptimization --> Mutate
     ConstantOptimization --> SingleIteration
     Core --> AdaptiveParsimony
     Core --> CheckConstraints
     Core --> Complexity
     Core --> ConstantOptimization
+    Core --> DimensionalAnalysis
+    Core --> ExpressionBuilder
+    Core --> ExpressionBuilder
     Core --> HallOfFame
     Core --> InterfaceDynamicExpressions
     Core --> LossFunctions
+    Core --> MLJInterface
     Core --> Migration
     Core --> Mutate
     Core --> MutationFunctions
@@ -390,35 +398,55 @@ stateDiagram-v2
     Core --> SingleIteration
     Core --> SymbolicRegression
     Dataset --> Core
+    DimensionalAnalysis --> LossFunctions
+    ExpressionBuilder --> SymbolicRegression
+    HallOfFame --> ExpressionBuilder
+    HallOfFame --> MLJInterface
     HallOfFame --> SearchUtils
     HallOfFame --> SingleIteration
     HallOfFame --> SymbolicRegression
+    HallOfFame --> deprecates
+    InterfaceDynamicExpressions --> ExpressionBuilder
+    InterfaceDynamicExpressions --> HallOfFame
     InterfaceDynamicExpressions --> LossFunctions
     InterfaceDynamicExpressions --> SymbolicRegression
+    InterfaceDynamicQuantities --> Dataset
+    InterfaceDynamicQuantities --> MLJInterface
     LossFunctions --> ConstantOptimization
-    LossFunctions --> HallOfFame
+    LossFunctions --> ExpressionBuilder
+    LossFunctions --> ExpressionBuilder
     LossFunctions --> Mutate
     LossFunctions --> PopMember
     LossFunctions --> Population
+    LossFunctions --> SingleIteration
     LossFunctions --> SymbolicRegression
+    MLJInterface --> SymbolicRegression
     Migration --> SymbolicRegression
     Mutate --> RegularizedEvolution
+    MutationFunctions --> ExpressionBuilder
     MutationFunctions --> Mutate
     MutationFunctions --> Population
     MutationFunctions --> SymbolicRegression
+    MutationFunctions --> deprecates
+    MutationWeights --> Core
+    MutationWeights --> Options
+    MutationWeights --> OptionsStruct
     Operators --> Core
     Operators --> Options
     Options --> Core
     OptionsStruct --> Core
     OptionsStruct --> Options
+    OptionsStruct --> Options
     PopMember --> ConstantOptimization
+    PopMember --> ExpressionBuilder
     PopMember --> HallOfFame
     PopMember --> Migration
     PopMember --> Mutate
     PopMember --> Population
-    PopMember --> RegularizedEvolution
+    PopMember --> SearchUtils
     PopMember --> SingleIteration
     PopMember --> SymbolicRegression
+    Population --> ExpressionBuilder
     Population --> Migration
     Population --> RegularizedEvolution
     Population --> SearchUtils
@@ -426,6 +454,7 @@ stateDiagram-v2
     Population --> SymbolicRegression
     ProgramConstants --> Core
     ProgramConstants --> Dataset
+    ProgramConstants --> Operators
     ProgressBars --> SearchUtils
     ProgressBars --> SymbolicRegression
     Recorder --> Mutate
@@ -435,10 +464,19 @@ stateDiagram-v2
     RegularizedEvolution --> SingleIteration
     SearchUtils --> SymbolicRegression
     SingleIteration --> SymbolicRegression
-    Utils --> CheckConstraints
     Utils --> ConstantOptimization
+    Utils --> Dataset
+    Utils --> DimensionalAnalysis
+    Utils --> HallOfFame
+    Utils --> InterfaceDynamicExpressions
+    Utils --> MLJInterface
+    Utils --> Migration
+    Utils --> Operators
     Utils --> Options
     Utils --> PopMember
+    Utils --> Population
+    Utils --> RegularizedEvolution
+    Utils --> SearchUtils
     Utils --> SingleIteration
     Utils --> SymbolicRegression
 ```
@@ -449,7 +487,7 @@ Bash command to generate dependency structure from `src` directory (requires `vi
 echo 'stateDiagram-v2'
 IFS=$'\n'
 for f in *.jl; do
-    for line in $(cat $f | grep -e 'import \.\.' -e 'import \.'); do
+    for line in $(cat $f | grep -e 'import \.\.' -e 'import \.' -e 'using \.' -e 'using \.\.'); do
         echo $(echo $line | vims -s 'dwf:d$' -t '%s/^\.*//g' '%s/Module//g') $(basename "$f" .jl);
     done;
 done | vims -l 'f a--> ' | sort
