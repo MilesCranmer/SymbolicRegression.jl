@@ -42,12 +42,10 @@ SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 [compat]
 ADTypes = "^1.4.0"
 Compat = "^4.2"
-ConstructionBase = "<1.5.7"
+ConstructionBase = "<1.5.7, 1"
 Dates = "1"
 DifferentiationInterface = "0.5"
 DispatchDoctor = "0.4"
-# Note that the <0.0.1 bound is required for old julia compat (which does
-# not have stdlib packages available in [compat])
 Distributed = "<0.0.1, 1"
 DynamicExpressions = "1"
 DynamicQuantities = "1"
