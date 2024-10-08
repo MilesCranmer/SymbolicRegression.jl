@@ -4,14 +4,14 @@ ci:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
   - repo: https://github.com/domluna/JuliaFormatter.jl
-    rev: v1.0.56
+    rev: v1.0.61
     hooks:
       - id: julia-formatter
   - repo: https://github.com/pre-commit/mirrors-prettier
