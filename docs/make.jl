@@ -40,14 +40,8 @@ readme = replace(
 
 # We prepend the `<table>` with a ```@raw html
 # and append the `</table>` with a ```:
-readme = replace(
-    readme,
-    r"<table>" => s"```@raw html\n<table>",
-)
-readme = replace(
-    readme,
-    r"</table>" => s"</table>\n```",
-)
+readme = replace(readme, r"<table>" => s"```@raw html\n<table>")
+readme = replace(readme, r"</table>" => s"</table>\n```")
 
 # Then, we surround ```mermaid\n...\n``` snippets
 # with ```@raw html\n<div class="mermaid">\n...\n</div>```:
@@ -96,6 +90,7 @@ makedocs(;
         "API" => "api.md",
         "Losses" => "losses.md",
         "Types" => "types.md",
+        "Customization" => "customization.md",
     ],
 )
 
