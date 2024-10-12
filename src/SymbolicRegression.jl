@@ -161,7 +161,9 @@ RuntimeOptions,
 AbstractMutationWeights,
 mutate!,
 condition_mutation_weights!,
-MutationResult
+MutationResult,
+AbstractSearchState,
+SearchState
 # ^ We can add new functions here based on requests from users.
 # However, I don't want to add many functions without knowing what
 # users will actually want to overload.
@@ -275,6 +277,7 @@ using .ProgressBarsModule: WrappedProgressBar
 using .RecorderModule: @recorder, find_iteration_from_record
 using .MigrationModule: migrate!
 using .SearchUtilsModule:
+    AbstractSearchState,
     SearchState,
     AbstractRuntimeOptions,
     RuntimeOptions,
@@ -642,7 +645,7 @@ end
     )
 end
 function _initialize_search!(
-    state::SearchState{T,L,N},
+    state::AbstractSearchState{T,L,N},
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
@@ -720,7 +723,7 @@ function _initialize_search!(
     return nothing
 end
 function _warmup_search!(
-    state::SearchState{T,L,N},
+    state::AbstractSearchState{T,L,N},
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
@@ -764,7 +767,7 @@ function _warmup_search!(
     return nothing
 end
 function _main_search_loop!(
-    state::SearchState{T,L,N},
+    state::AbstractSearchState{T,L,N},
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
@@ -998,7 +1001,7 @@ function _main_search_loop!(
     return nothing
 end
 function _tear_down!(
-    state::SearchState, ropt::AbstractRuntimeOptions, options::AbstractOptions
+    state::AbstractSearchState, ropt::AbstractRuntimeOptions, options::AbstractOptions
 )
     close_reader!(state.stdin_reader)
     # Safely close all processes or threads
@@ -1014,7 +1017,10 @@ function _tear_down!(
     return nothing
 end
 function _format_output(
-    state::SearchState, datasets, ropt::AbstractRuntimeOptions, options::AbstractOptions
+    state::AbstractSearchState,
+    datasets,
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
 )
     nout = length(datasets)
     out_hof = if ropt.dim_out == 1

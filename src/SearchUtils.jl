@@ -505,14 +505,17 @@ function load_saved_population(saved_state; out::Int, pop::Int)
 end
 load_saved_population(::Nothing; kws...) = nothing
 
-"""
-    SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelType}
+abstract type AbstractSearchState{T,L,N<:AbstractExpression{T}} end
 
-The state of a search, including the populations, worker outputs, tasks, and
+"""
+    SearchState{T,L,N,WorkerOutputType,ChannelType}
+
+The state of the search, including the populations, worker outputs, tasks, and
 channels. This is used to manage the search and keep track of runtime variables
 in a single struct.
 """
-Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,ChannelType}
+Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,ChannelType} <:
+                   AbstractSearchState{T,L,N}
     procs::Vector{Int}
     we_created_procs::Bool
     worker_output::Vector{Vector{WorkerOutputType}}
