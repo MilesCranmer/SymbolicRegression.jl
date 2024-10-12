@@ -18,10 +18,26 @@ using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
 using ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 
+"""
+    AbstractRuntimeOptions
+
+An abstract type representing runtime configuration parameters for the symbolic regression algorithm.
+
+`AbstractRuntimeOptions` is used by `equation_search` to control runtime aspects such
+as parallelism and iteration limits. By subtyping `AbstractRuntimeOptions`, advanced users
+can customize runtime behaviors by passing it to `equation_search`.
+
+# See Also
+
+- [`RuntimeOptions`](@ref): Default implementation used by `equation_search`.
+- [`equation_search`](@ref): Main function to perform symbolic regression.
+- [`AbstractOptions`](@ref): See how to extend abstract types for customizing options.
+
+"""
 abstract type AbstractRuntimeOptions end
 
 """
-    RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}
+    RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE} <: AbstractRuntimeOptions
 
 Parameters for a search that are passed to `equation_search` directly,
 rather than set within `Options`. This is to differentiate between
@@ -505,10 +521,28 @@ function load_saved_population(saved_state; out::Int, pop::Int)
 end
 load_saved_population(::Nothing; kws...) = nothing
 
+"""
+    AbstractSearchState{T,L,N}
+
+An abstract type encapsulating the internal state of the search process during symbolic regression.
+
+`AbstractSearchState` instances hold information like populations and progress metrics,
+used internally by `equation_search`. Subtyping `AbstractSearchState` allows
+customization of search state management.
+
+Look through the source of `equation_search` to see how this is used.
+
+# See Also
+
+- [`SearchState`](@ref): Default implementation of `AbstractSearchState`.
+- [`equation_search`](@ref): Function where `AbstractSearchState` is utilized.
+- [`AbstractOptions`](@ref): See how to extend abstract types for customizing options.
+
+"""
 abstract type AbstractSearchState{T,L,N<:AbstractExpression{T}} end
 
 """
-    SearchState{T,L,N,WorkerOutputType,ChannelType}
+    SearchState{T,L,N,WorkerOutputType,ChannelType} <: AbstractSearchState{T,L,N}
 
 The state of the search, including the populations, worker outputs, tasks, and
 channels. This is used to manage the search and keep track of runtime variables

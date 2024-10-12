@@ -429,7 +429,7 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 """
 
 """
-    Options(;kws...)
+    Options(;kws...) <: AbstractOptions
 
 Construct options for `equation_search` and other functions.
 The current arguments have been tuned using the median values from
