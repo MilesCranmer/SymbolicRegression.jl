@@ -96,6 +96,7 @@ using DynamicExpressions:
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
+    ExpressionInterface,
     @parse_expression,
     parse_expression,
     @declare_expression_operator,

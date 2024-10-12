@@ -30,8 +30,8 @@ can customize runtime behaviors by passing it to `equation_search`.
 # See Also
 
 - [`RuntimeOptions`](@ref): Default implementation used by `equation_search`.
-- [`equation_search`](@ref): Main function to perform symbolic regression.
-- [`AbstractOptions`](@ref): See how to extend abstract types for customizing options.
+- [`equation_search`](@ref SymbolicRegression.equation_search): Main function to perform symbolic regression.
+- [`AbstractOptions`](@ref SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions): See how to extend abstract types for customizing options.
 
 """
 abstract type AbstractRuntimeOptions end
@@ -535,8 +535,8 @@ Look through the source of `equation_search` to see how this is used.
 # See Also
 
 - [`SearchState`](@ref): Default implementation of `AbstractSearchState`.
-- [`equation_search`](@ref): Function where `AbstractSearchState` is utilized.
-- [`AbstractOptions`](@ref): See how to extend abstract types for customizing options.
+- [`equation_search`](@ref SymbolicRegression.equation_search): Function where `AbstractSearchState` is utilized.
+- [`AbstractOptions`](@ref SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions): See how to extend abstract types for customizing options.
 
 """
 abstract type AbstractSearchState{T,L,N<:AbstractExpression{T}} end

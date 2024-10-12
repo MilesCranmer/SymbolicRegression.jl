@@ -23,8 +23,8 @@ You can define custom mutation operators by defining a new method on
 `mutate!`, as well as subtyping `AbstractMutationWeights`:
 
 ```@docs
-AbstractMutationWeights
 mutate!
+AbstractMutationWeights
 condition_mutation_weights!
 sample_mutation
 MutationResult
@@ -36,6 +36,7 @@ You can create your own expression types by defining a new type that extends `Ab
 
 ```@docs
 AbstractExpression
+ExpressionInterface
 ```
 
 The interface is fairly flexible, and permits you define specific functional forms,

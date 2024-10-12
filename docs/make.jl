@@ -1,7 +1,21 @@
 using Documenter
 using SymbolicUtils
 using SymbolicRegression
-using SymbolicRegression: Dataset, update_baseline_loss!
+using SymbolicRegression:
+    AbstractExpression,
+    ExpressionInterface,
+    Dataset,
+    update_baseline_loss!,
+    AbstractMutationWeights,
+    AbstractOptions,
+    mutate!,
+    condition_mutation_weights!,
+    sample_mutation,
+    MutationResult,
+    AbstractRuntimeOptions,
+    AbstractSearchState,
+    @extend_operators
+using DynamicExpressions
 
 DocMeta.setdocmeta!(
     SymbolicRegression, :DocTestSetup, :(using LossFunctions); recursive=true

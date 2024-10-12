@@ -62,8 +62,8 @@ To integrate your custom mutations into the mutation process, ensure that the mu
 
 - [`MutationWeights`](@ref): A concrete implementation of `AbstractMutationWeights` that defines default mutation weightings.
 - [`sample_mutation`](@ref): Function to sample a mutation based on current mutation weights.
-- [`mutate!`](@ref): Function to apply a mutation to an expression tree.
-- [`AbstractOptions`](@ref): See how to extend abstract types for customizing options.
+- [`mutate!`](@ref SymbolicRegression.MutateModule.mutate!): Function to apply a mutation to an expression tree.
+- [`AbstractOptions`](@ref SymbolicRegression.OptionsStruct.AbstractOptions): See how to extend abstract types for customizing options.
 """
 abstract type AbstractMutationWeights end
 
@@ -97,7 +97,7 @@ will be normalized to sum to 1.0 after initialization.
 
 # See Also
 
-- [`AbstractMutationWeights`](@ref): Use to define custom mutation weight types.
+- [`AbstractMutationWeights`](@ref SymbolicRegression.CoreModule.MutationWeightsModule.AbstractMutationWeights): Use to define custom mutation weight types.
 """
 Base.@kwdef mutable struct MutationWeights <: AbstractMutationWeights
     mutate_constant::Float64 = 0.048
