@@ -1,12 +1,18 @@
 using SymbolicRegression
 using SymbolicRegression.UtilsModule: split_string
+using DynamicExpressions: DynamicExpressions as DE
 
 include("test_params.jl")
 
 ## Test Base.print
 options = Options(;
-    default_params..., binary_operators=(+, *, /, -), unary_operators=(cos, sin)
+    default_params...,
+    binary_operators=(+, *, /, -),
+    unary_operators=(cos, sin),
+    populations=1,
 )
+
+@test DE.OperatorEnumConstructionModule.LATEST_OPERATORS[].unaops == (cos, sin)
 
 f = (x1, x2, x3) -> (sin(cos(sin(cos(x1) * x3) * 3.0) * -0.5) + 2.0) * 5.0
 
@@ -25,6 +31,8 @@ equation_search(
     niterations=0,
     parallelism=:multithreading,
 )
+
+@test DE.OperatorEnumConstructionModule.LATEST_OPERATORS[].unaops == (cos, sin)
 
 s = repr(tree)
 true_s = "(sin(cos(sin(cos(v1) * v3) * 3.0) * -0.5) + 2.0) * 5.0"

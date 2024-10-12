@@ -2,6 +2,8 @@ module MutationWeightsModule
 
 using StatsBase: StatsBase
 
+abstract type AbstractMutationWeights end
+
 """
     MutationWeights(;kws...)
 
@@ -28,7 +30,7 @@ will be normalized to sum to 1.0 after initialization.
     Otherwise, this will automatically be set to 0.0. How often to break a
     connection between two nodes.
 """
-Base.@kwdef mutable struct MutationWeights
+Base.@kwdef mutable struct MutationWeights <: AbstractMutationWeights
     mutate_constant::Float64 = 0.048
     mutate_operator::Float64 = 0.47
     swap_operands::Float64 = 0.1

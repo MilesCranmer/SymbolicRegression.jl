@@ -10,7 +10,8 @@ using DynamicExpressions:
     count_scalar_constants,
     simplify_tree!,
     combine_operators
-using ..CoreModule: Options, MutationWeights, Dataset, RecordType, sample_mutation
+using ..CoreModule:
+    AbstractOptions, AbstractMutationWeights, Dataset, RecordType, sample_mutation
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: score_func, score_func_batched
 using ..CheckConstraintsModule: check_constraints
@@ -33,7 +34,10 @@ using ..ConstantOptimizationModule: optimize_constants
 using ..RecorderModule: @recorder
 
 function condition_mutation_weights!(
-    weights::MutationWeights, member::PopMember, options::Options, curmaxsize::Int
+    weights::AbstractMutationWeights,
+    member::PopMember,
+    options::AbstractOptions,
+    curmaxsize::Int,
 )
     tree = get_tree(member.tree)
     if !preserve_sharing(typeof(member.tree))
@@ -81,9 +85,9 @@ Use this to modify how `mutate_constant` changes for an expression type.
 """
 function condition_mutate_constant!(
     ::Type{<:AbstractExpression},
-    weights::MutationWeights,
+    weights::AbstractMutationWeights,
     member::PopMember,
-    options::Options,
+    options::AbstractOptions,
     curmaxsize::Int,
 )
     n_constants = count_scalar_constants(member.tree)
@@ -93,9 +97,9 @@ function condition_mutate_constant!(
 end
 function condition_mutate_constant!(
     ::Type{<:ParametricExpression},
-    weights::MutationWeights,
+    weights::AbstractMutationWeights,
     member::PopMember,
-    options::Options,
+    options::AbstractOptions,
     curmaxsize::Int,
 )
     # Avoid modifying the mutate_constant weight, since
@@ -111,7 +115,7 @@ function next_generation(
     temperature,
     curmaxsize::Int,
     running_search_statistics::RunningSearchStatistics,
-    options::Options;
+    options::AbstractOptions;
     tmp_recorder::RecordType,
 )::Tuple{
     P,Bool,Float64
@@ -391,7 +395,7 @@ end
 
 """Generate a generation via crossover of two members."""
 function crossover_generation(
-    member1::P, member2::P, dataset::D, curmaxsize::Int, options::Options
+    member1::P, member2::P, dataset::D, curmaxsize::Int, options::AbstractOptions
 )::Tuple{P,P,Bool,Float64} where {T,L,D<:Dataset{T,L},N,P<:PopMember{T,L,N}}
     tree1 = member1.tree
     tree2 = member2.tree

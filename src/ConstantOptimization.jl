@@ -11,13 +11,13 @@ using DynamicExpressions:
     get_scalar_constants,
     set_scalar_constants!,
     extract_gradient
-using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE, specialized_options
+using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, specialized_options
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_loss, loss_to_score, batch_sample
 using ..PopMemberModule: PopMember
 
 function optimize_constants(
-    dataset::Dataset{T,L}, member::P, options::Options
+    dataset::Dataset{T,L}, member::P, options::AbstractOptions
 )::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
     if options.batching
         dispatch_optimize_constants(
@@ -28,7 +28,7 @@ function optimize_constants(
     end
 end
 function dispatch_optimize_constants(
-    dataset::Dataset{T,L}, member::P, options::Options, idx
+    dataset::Dataset{T,L}, member::P, options::AbstractOptions, idx
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
     nconst = count_constants_for_optimization(member.tree)
     nconst == 0 && return (member, 0.0)
@@ -103,7 +103,7 @@ function _optimize_constants(
     return member, num_evals
 end
 
-struct Evaluator{N<:AbstractExpression,R,D<:Dataset,O<:Options,I} <: Function
+struct Evaluator{N<:AbstractExpression,R,D<:Dataset,O<:AbstractOptions,I} <: Function
     tree::N
     refs::R
     dataset::D

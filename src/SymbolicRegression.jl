@@ -30,6 +30,7 @@ export Population,
     compute_complexity,
     @parse_expression,
     parse_expression,
+    @declare_expression_operator,
     print_tree,
     string_tree,
     eval_tree_array,
@@ -97,6 +98,7 @@ using DynamicExpressions:
     AbstractExpressionNode,
     @parse_expression,
     parse_expression,
+    @declare_expression_operator,
     copy_node,
     set_node!,
     string_tree,
@@ -151,6 +153,11 @@ using DynamicExpressions: with_type_parameters
     LogitDistLoss,
     QuantileLoss,
     LogCoshLoss
+using Compat: @compat
+
+@compat public AbstractOptions,
+AbstractRuntimeOptions, RuntimeOptions,
+AbstractMutationWeights
 
 # https://discourse.julialang.org/t/how-to-find-out-the-version-of-a-package-from-its-module/37755/15
 const PACKAGE_VERSION = try
@@ -210,7 +217,9 @@ using .CoreModule:
     LOSS_TYPE,
     RecordType,
     Dataset,
+    AbstractOptions,
     Options,
+    AbstractMutationWeights,
     MutationWeights,
     plus,
     sub,
@@ -259,6 +268,7 @@ using .RecorderModule: @recorder, find_iteration_from_record
 using .MigrationModule: migrate!
 using .SearchUtilsModule:
     SearchState,
+    AbstractRuntimeOptions,
     RuntimeOptions,
     WorkerAssignments,
     DefaultWorkerOutputType,
@@ -312,7 +322,7 @@ which is useful for debugging and profiling.
     More iterations will improve the results.
 - `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
     weight the loss for each `y` by this value (same shape as `y`).
-- `options::Options=Options()`: The options for the search, such as
+- `options::AbstractOptions=Options()`: The options for the search, such as
     which operators to use, evolution hyperparameters, etc.
 - `variable_names::Union{Vector{String}, Nothing}=nothing`: The names
     of each feature in `X`, which will be used during printing of equations.
@@ -390,7 +400,7 @@ function equation_search(
     y::AbstractMatrix{T};
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
-    options::Options=Options(),
+    options::AbstractOptions=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
     display_variable_names::Union{AbstractVector{String},Nothing}=variable_names,
     y_variable_names::Union{String,AbstractVector{String},Nothing}=nothing,
@@ -478,149 +488,23 @@ end
 
 function equation_search(
     datasets::Vector{D};
-    niterations::Int=10,
-    options::Options=Options(),
-    parallelism=:multithreading,
-    numprocs::Union{Int,Nothing}=nothing,
-    procs::Union{Vector{Int},Nothing}=nothing,
-    addprocs_function::Union{Function,Nothing}=nothing,
-    heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
-    runtests::Bool=true,
+    options::AbstractOptions=Options(),
     saved_state=nothing,
-    return_state::Union{Bool,Nothing,Val}=nothing,
-    verbosity::Union{Int,Nothing}=nothing,
-    progress::Union{Bool,Nothing}=nothing,
-    v_dim_out::Val{DIM_OUT}=Val(nothing),
-) where {DIM_OUT,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
-    concurrency = if parallelism in (:multithreading, "multithreading")
-        :multithreading
-    elseif parallelism in (:multiprocessing, "multiprocessing")
-        :multiprocessing
-    elseif parallelism in (:serial, "serial")
-        :serial
+    runtime_options::Union{AbstractRuntimeOptions,Nothing}=nothing,
+    runtime_options_kws...,
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
+    runtime_options = if runtime_options === nothing
+        RuntimeOptions(; options, nout=length(datasets), runtime_options_kws...)
     else
-        error(
-            "Invalid parallelism mode: $parallelism. " *
-            "You must choose one of :multithreading, :multiprocessing, or :serial.",
-        )
-        :serial
-    end
-    not_distributed = concurrency in (:multithreading, :serial)
-    not_distributed &&
-        procs !== nothing &&
-        error(
-            "`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
-        )
-    not_distributed &&
-        numprocs !== nothing &&
-        error(
-            "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
-        )
-
-    _return_state = if return_state isa Val
-        first(typeof(return_state).parameters)
-    else
-        if options.return_state === Val(nothing)
-            return_state === nothing ? false : return_state
-        else
-            @assert(
-                return_state === nothing,
-                "You cannot set `return_state` in both the `Options` and in the passed arguments."
-            )
-            first(typeof(options.return_state).parameters)
-        end
-    end
-
-    dim_out = if DIM_OUT === nothing
-        length(datasets) > 1 ? 2 : 1
-    else
-        DIM_OUT
-    end
-    _numprocs::Int = if numprocs === nothing
-        if procs === nothing
-            4
-        else
-            length(procs)
-        end
-    else
-        if procs === nothing
-            numprocs
-        else
-            @assert length(procs) == numprocs
-            numprocs
-        end
-    end
-
-    _verbosity = if verbosity === nothing && options.verbosity === nothing
-        1
-    elseif verbosity === nothing && options.verbosity !== nothing
-        options.verbosity
-    elseif verbosity !== nothing && options.verbosity === nothing
-        verbosity
-    else
-        error(
-            "You cannot set `verbosity` in both the search parameters `Options` and the call to `equation_search`.",
-        )
-        1
-    end
-    _progress::Bool = if progress === nothing && options.progress === nothing
-        (_verbosity > 0) && length(datasets) == 1
-    elseif progress === nothing && options.progress !== nothing
-        options.progress
-    elseif progress !== nothing && options.progress === nothing
-        progress
-    else
-        error(
-            "You cannot set `progress` in both the search parameters `Options` and the call to `equation_search`.",
-        )
-        false
-    end
-
-    _addprocs_function = addprocs_function === nothing ? addprocs : addprocs_function
-
-    exeflags = if VERSION >= v"1.9" && concurrency == :multiprocessing
-        heap_size_hint_in_megabytes = floor(
-            Int, (
-                if heap_size_hint_in_bytes === nothing
-                    (Sys.free_memory() / _numprocs)
-                else
-                    heap_size_hint_in_bytes
-                end
-            ) / 1024^2
-        )
-        _verbosity > 0 &&
-            heap_size_hint_in_bytes === nothing &&
-            @info "Automatically setting `--heap-size-hint=$(heap_size_hint_in_megabytes)M` on each Julia process. You can configure this with the `heap_size_hint_in_bytes` parameter."
-
-        `--heap-size=$(heap_size_hint_in_megabytes)M`
-    else
-        ``
+        runtime_options
     end
 
     # Underscores here mean that we have mutated the variable
-    return _equation_search(
-        datasets,
-        RuntimeOptions(;
-            niterations=niterations,
-            total_cycles=options.populations * niterations,
-            numprocs=_numprocs,
-            init_procs=procs,
-            addprocs_function=_addprocs_function,
-            exeflags=exeflags,
-            runtests=runtests,
-            verbosity=_verbosity,
-            progress=_progress,
-            parallelism=Val(concurrency),
-            dim_out=Val(dim_out),
-            return_state=Val(_return_state),
-        ),
-        options,
-        saved_state,
-    )
+    return _equation_search(datasets, runtime_options, options, saved_state)
 end
 
 @noinline function _equation_search(
-    datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
+    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions, saved_state
 ) where {D<:Dataset}
     _validate_options(datasets, ropt, options)
     state = _create_workers(datasets, ropt, options)
@@ -632,7 +516,7 @@ end
 end
 
 function _validate_options(
-    datasets::Vector{D}, ropt::RuntimeOptions, options::Options
+    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions
 ) where {T,L,D<:Dataset{T,L}}
     example_dataset = first(datasets)
     nout = length(datasets)
@@ -662,7 +546,7 @@ function _validate_options(
     return nothing
 end
 @stable default_mode = "disable" function _create_workers(
-    datasets::Vector{D}, ropt::RuntimeOptions, options::Options
+    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions
 ) where {T,L,D<:Dataset{T,L}}
     stdin_reader = watch_stream(stdin)
 
@@ -723,10 +607,11 @@ end
 
     halls_of_fame = Vector{HallOfFameType}(undef, nout)
 
-    cycles_remaining = [ropt.total_cycles for j in 1:nout]
+    total_cycles = ropt.niterations * options.populations
+    cycles_remaining = [total_cycles for j in 1:nout]
     cur_maxsizes = [
-        get_cur_maxsize(; options, ropt.total_cycles, cycles_remaining=cycles_remaining[j])
-        for j in 1:nout
+        get_cur_maxsize(; options, total_cycles, cycles_remaining=cycles_remaining[j]) for
+        j in 1:nout
     ]
 
     return SearchState{T,L,typeof(example_ex),WorkerOutputType,ChannelType}(;
@@ -749,7 +634,11 @@ end
     )
 end
 function _initialize_search!(
-    state::SearchState{T,L,N}, datasets, ropt::RuntimeOptions, options::Options, saved_state
+    state::SearchState{T,L,N},
+    datasets,
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+    saved_state,
 ) where {T,L,N}
     nout = length(datasets)
 
@@ -823,7 +712,10 @@ function _initialize_search!(
     return nothing
 end
 function _warmup_search!(
-    state::SearchState{T,L,N}, datasets, ropt::RuntimeOptions, options::Options
+    state::SearchState{T,L,N},
+    datasets,
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
 ) where {T,L,N}
     nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
@@ -864,7 +756,10 @@ function _warmup_search!(
     return nothing
 end
 function _main_search_loop!(
-    state::SearchState{T,L,N}, datasets, ropt::RuntimeOptions, options::Options
+    state::SearchState{T,L,N},
+    datasets,
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
 ) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
@@ -1017,8 +912,9 @@ function _main_search_loop!(
                 )
             end
 
+            total_cycles = ropt.niterations * options.populations
             state.cur_maxsizes[j] = get_cur_maxsize(;
-                options, ropt.total_cycles, cycles_remaining=state.cycles_remaining[j]
+                options, total_cycles, cycles_remaining=state.cycles_remaining[j]
             )
             move_window!(state.all_running_search_statistics[j])
             if ropt.progress
@@ -1062,12 +958,13 @@ function _main_search_loop!(
 
                 # Dominating pareto curve - must be better than all simpler equations
                 head_node_occupation = estimate_work_fraction(resource_monitor)
+                total_cycles = ropt.niterations * options.populations
                 print_search_state(
                     state.halls_of_fame,
                     datasets;
                     options,
                     equation_speed,
-                    ropt.total_cycles,
+                    total_cycles,
                     state.cycles_remaining,
                     head_node_occupation,
                     parallelism=ropt.parallelism,
@@ -1092,7 +989,9 @@ function _main_search_loop!(
     end
     return nothing
 end
-function _tear_down!(state::SearchState, ropt::RuntimeOptions, options::Options)
+function _tear_down!(
+    state::SearchState, ropt::AbstractRuntimeOptions, options::AbstractOptions
+)
     close_reader!(state.stdin_reader)
     # Safely close all processes or threads
     if ropt.parallelism == :multiprocessing
@@ -1107,7 +1006,7 @@ function _tear_down!(state::SearchState, ropt::RuntimeOptions, options::Options)
     return nothing
 end
 function _format_output(
-    state::SearchState, datasets, ropt::RuntimeOptions, options::Options
+    state::SearchState, datasets, ropt::AbstractRuntimeOptions, options::AbstractOptions
 )
     nout = length(datasets)
     out_hof = if ropt.dim_out == 1
@@ -1128,7 +1027,7 @@ end
 @stable default_mode = "disable" function _dispatch_s_r_cycle(
     in_pop::Population{T,L,N},
     dataset::Dataset,
-    options::Options;
+    options::AbstractOptions;
     pop::Int,
     out::Int,
     iteration::Int,
@@ -1184,7 +1083,7 @@ using ConstructionBase: ConstructionBase as _
 include("precompile.jl")
 redirect_stdout(devnull) do
     redirect_stderr(devnull) do
-        do_precompilation(Val(:precompile))
+        # do_precompilation(Val(:precompile))
     end
 end
 

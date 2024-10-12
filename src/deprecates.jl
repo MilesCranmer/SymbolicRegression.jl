@@ -4,11 +4,13 @@ import .HallOfFameModule: calculate_pareto_frontier
 import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
 
 @deprecate(
-    gen_random_tree(length::Int, options::Options, nfeatures::Int, t::Type),
+    gen_random_tree(length::Int, options::AbstractOptions, nfeatures::Int, t::Type),
     gen_random_tree(length, options, nfeatures, t)
 )
 @deprecate(
-    gen_random_tree_fixed_size(node_count::Int, options::Options, nfeatures::Int, t::Type),
+    gen_random_tree_fixed_size(
+        node_count::Int, options::AbstractOptions, nfeatures::Int, t::Type
+    ),
     gen_random_tree_fixed_size(node_count, options, nfeatures, t)
 )
 
@@ -40,7 +42,7 @@ import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
         niterations::Int=10,
         weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
         variable_names::Union{Vector{String},Nothing}=nothing,
-        options::Options=Options(),
+        options::AbstractOptions=Options(),
         parallelism=:multithreading,
         numprocs::Union{Int,Nothing}=nothing,
         procs::Union{Vector{Int},Nothing}=nothing,
@@ -75,7 +77,7 @@ import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
     EquationSearch(
         datasets::Vector{D};
         niterations::Int=10,
-        options::Options=Options(),
+        options::AbstractOptions=Options(),
         parallelism=:multithreading,
         numprocs::Union{Int,Nothing}=nothing,
         procs::Union{Vector{Int},Nothing}=nothing,

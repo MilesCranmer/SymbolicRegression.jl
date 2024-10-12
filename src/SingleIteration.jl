@@ -3,7 +3,7 @@ module SingleIterationModule
 using ADTypes: AutoEnzyme
 using DynamicExpressions: AbstractExpression, string_tree, simplify_tree!, combine_operators
 using ..UtilsModule: @threads_if
-using ..CoreModule: Options, Dataset, RecordType, create_expression
+using ..CoreModule: AbstractOptions, Dataset, RecordType, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: generate_reference
 using ..PopulationModule: Population, finalize_scores
@@ -23,7 +23,7 @@ function s_r_cycle(
     curmaxsize::Int,
     running_search_statistics::RunningSearchStatistics;
     verbosity::Int=0,
-    options::Options,
+    options::AbstractOptions,
     record::RecordType,
 )::Tuple{
     P,HallOfFame{T,L,N},Float64
@@ -98,7 +98,7 @@ function s_r_cycle(
 end
 
 function optimize_and_simplify_population(
-    dataset::D, pop::P, options::Options, curmaxsize::Int, record::RecordType
+    dataset::D, pop::P, options::AbstractOptions, curmaxsize::Int, record::RecordType
 )::Tuple{P,Float64} where {T,L,D<:Dataset{T,L},P<:Population{T,L}}
     array_num_evals = zeros(Float64, pop.n)
     do_optimization = rand(pop.n) .< options.optimizer_probability

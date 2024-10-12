@@ -29,7 +29,7 @@ end
 
 const TEST_INPUTS = collect(range(-100, 100; length=99))
 
-function assert_operators_well_defined(T, options::Options)
+function assert_operators_well_defined(T, options::AbstractOptions)
     test_input = if T <: Complex
         (x -> convert(T, x)).(TEST_INPUTS .+ TEST_INPUTS .* im)
     else
@@ -45,7 +45,7 @@ end
 
 # Check for errors before they happen
 function test_option_configuration(
-    parallelism, datasets::Vector{D}, options::Options, verbosity
+    parallelism, datasets::Vector{D}, options::AbstractOptions, verbosity
 ) where {T,D<:Dataset{T}}
     if options.deterministic && parallelism != :serial
         error("Determinism is only guaranteed for serial mode.")
@@ -84,7 +84,7 @@ end
 
 # Check for errors before they happen
 function test_dataset_configuration(
-    dataset::Dataset{T}, options::Options, verbosity
+    dataset::Dataset{T}, options::AbstractOptions, verbosity
 ) where {T<:DATA_TYPE}
     n = dataset.n
     if n != size(dataset.X, 2) ||
@@ -113,7 +113,7 @@ end
 
 """ Move custom operators and loss functions to workers, if undefined """
 function move_functions_to_workers(
-    procs, options::Options, dataset::Dataset{T}, verbosity
+    procs, options::AbstractOptions, dataset::Dataset{T}, verbosity
 ) where {T}
     # All the types of functions we need to move to workers:
     function_sets = (
@@ -168,7 +168,7 @@ function move_functions_to_workers(
     end
 end
 
-function copy_definition_to_workers(op, procs, options::Options, verbosity)
+function copy_definition_to_workers(op, procs, options::AbstractOptions, verbosity)
     name = nameof(op)
     verbosity > 0 && @info "Copying definition of $op to workers..."
     src_ms = methods(op).ms
@@ -191,7 +191,9 @@ function test_function_on_workers(example_inputs, op, procs)
     end
 end
 
-function activate_env_on_workers(procs, project_path::String, options::Options, verbosity)
+function activate_env_on_workers(
+    procs, project_path::String, options::AbstractOptions, verbosity
+)
     verbosity > 0 && @info "Activating environment on workers."
     @everywhere procs begin
         Base.MainInclude.eval(
@@ -203,7 +205,9 @@ function activate_env_on_workers(procs, project_path::String, options::Options, 
     end
 end
 
-function import_module_on_workers(procs, filename::String, options::Options, verbosity)
+function import_module_on_workers(
+    procs, filename::String, options::AbstractOptions, verbosity
+)
     loaded_modules_head_worker = [k.name for (k, _) in Base.loaded_modules]
 
     included_as_local = "SymbolicRegression" ∉ loaded_modules_head_worker
@@ -251,7 +255,7 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
     return nothing
 end
 
-function test_module_on_workers(procs, options::Options, verbosity)
+function test_module_on_workers(procs, options::AbstractOptions, verbosity)
     verbosity > 0 && @info "Testing module on workers..."
     futures = []
     for proc in procs
@@ -268,7 +272,7 @@ function test_module_on_workers(procs, options::Options, verbosity)
 end
 
 function test_entire_pipeline(
-    procs, dataset::Dataset{T}, options::Options, verbosity
+    procs, dataset::Dataset{T}, options::AbstractOptions, verbosity
 ) where {T<:DATA_TYPE}
     futures = []
     verbosity > 0 && @info "Testing entire pipeline on workers..."
@@ -310,7 +314,7 @@ function configure_workers(;
     procs::Union{Vector{Int},Nothing},
     numprocs::Int,
     addprocs_function::Function,
-    options::Options,
+    options::AbstractOptions,
     project_path,
     file,
     exeflags::Cmd,

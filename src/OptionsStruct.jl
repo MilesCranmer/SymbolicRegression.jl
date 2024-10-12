@@ -6,7 +6,7 @@ using DynamicExpressions:
     AbstractOperatorEnum, AbstractExpressionNode, AbstractExpression, OperatorEnum
 using LossFunctions: SupervisedLoss
 
-import ..MutationWeightsModule: MutationWeights
+import ..MutationWeightsModule: AbstractMutationWeights
 
 """
 This struct defines how complexity is calculated.
@@ -121,17 +121,20 @@ else
     @eval operator_specialization(O::Type{<:OperatorEnum}) = O
 end
 
+abstract type AbstractOptions end
+
 struct Options{
     CM<:ComplexityMapping,
     OP<:AbstractOperatorEnum,
     N<:AbstractExpressionNode,
     E<:AbstractExpression,
     EO<:NamedTuple,
+    MW<:AbstractMutationWeights,
     _turbo,
     _bumper,
     _return_state,
     AD,
-}
+} <: AbstractOptions
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
     una_constraints::Vector{Int}
@@ -156,7 +159,7 @@ struct Options{
     annealing::Bool
     batching::Bool
     batch_size::Int
-    mutation_weights::MutationWeights
+    mutation_weights::MW
     crossover_probability::Float32
     warmup_maxsize_by::Float32
     use_frequency::Bool
@@ -223,6 +226,7 @@ function Base.print(io::IO, options::Options)
 end
 Base.show(io::IO, ::MIME"text/plain", options::Options) = Base.print(io, options)
 
+specialized_options(options::AbstractOptions) = options
 @unstable function specialized_options(options::Options)
     return _specialized_options(options)
 end
