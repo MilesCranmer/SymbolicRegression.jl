@@ -4,17 +4,6 @@ import .HallOfFameModule: calculate_pareto_frontier
 import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
 
 @deprecate(
-    gen_random_tree(length::Int, options::AbstractOptions, nfeatures::Int, t::Type),
-    gen_random_tree(length, options, nfeatures, t)
-)
-@deprecate(
-    gen_random_tree_fixed_size(
-        node_count::Int, options::AbstractOptions, nfeatures::Int, t::Type
-    ),
-    gen_random_tree_fixed_size(node_count, options, nfeatures, t)
-)
-
-@deprecate(
     calculate_pareto_frontier(X, y, hallOfFame, options; weights=nothing, varMap=nothing),
     calculate_pareto_frontier(hallOfFame)
 )

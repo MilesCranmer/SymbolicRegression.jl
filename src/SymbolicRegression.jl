@@ -156,8 +156,15 @@ using DynamicExpressions: with_type_parameters
 using Compat: @compat
 
 @compat public AbstractOptions,
-AbstractRuntimeOptions, RuntimeOptions,
-AbstractMutationWeights
+AbstractRuntimeOptions,
+RuntimeOptions,
+AbstractMutationWeights,
+mutate!,
+condition_mutation_weights!,
+MutationResult
+# ^ We can add new functions here based on requests from users.
+# However, I don't want to add many functions without knowing what
+# users will actually want to overload.
 
 # https://discourse.julialang.org/t/how-to-find-out-the-version-of-a-package-from-its-module/37755/15
 const PACKAGE_VERSION = try
@@ -262,6 +269,7 @@ using .PopMemberModule: PopMember, reset_birth!
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 using .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
+using .MutateModule: mutate!, condition_mutation_weights!, MutationResult
 using .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
 using .ProgressBarsModule: WrappedProgressBar
 using .RecorderModule: @recorder, find_iteration_from_record
