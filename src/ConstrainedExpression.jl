@@ -27,6 +27,7 @@ using ..InterfaceDynamicExpressionsModule: expected_array_type
 using ..MutationFunctionsModule: MutationFunctionsModule as MF
 using ..ExpressionBuilderModule: ExpressionBuilderModule as EB
 using ..CheckConstraintsModule: CheckConstraintsModule as CC
+using ..ComplexityModule: ComplexityModule
 using ..LossFunctionsModule: LossFunctionsModule as LF
 
 struct ConstrainedExpression{
@@ -36,6 +37,7 @@ struct ConstrainedExpression{
     E<:Expression{T,N},  # TODO: Generalize this
     TS<:NamedTuple{<:Any,<:NTuple{<:Any,E}},
     C<:NamedTuple{<:Any,<:NTuple{<:Any,Vector{Int}}},  # The constraints
+    # TODO: No need for this to be a parametric type
     D<:@NamedTuple{
         structure::F, operators::O, variable_names::V, variable_mapping::C
     } where {O,V},
@@ -121,6 +123,17 @@ end
 function EB.sort_params(params::NamedTuple, ::Type{<:ConstrainedExpression})
     return (;
         params.structure, params.operators, params.variable_names, params.variable_mapping
+    )
+end
+
+function ComplexityModule.compute_complexity(
+    tree::ConstrainedExpression, options::AbstractOptions; break_sharing=Val(false)
+)
+    # Rather than including the complexity of the combined tree,
+    # we only sum the complexity of each inner expression, which will be smaller.
+    return sum(
+        ex -> ComplexityModule.compute_complexity(ex, options; break_sharing),
+        values(get_contents(tree)),
     )
 end
 
