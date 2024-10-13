@@ -12,16 +12,22 @@ using DynamicExpressions:
     Metadata,
     get_contents,
     with_contents,
+    get_metadata,
     get_operators,
     get_variable_names,
-    node_type
+    get_tree,
+    node_type,
+    eval_tree_array
 using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
 
 using ..CoreModule: AbstractOptions, Dataset, CoreModule as CM
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
+using ..InterfaceDynamicExpressionsModule: expected_array_type
 using ..MutationFunctionsModule: MutationFunctionsModule as MF
 using ..ExpressionBuilderModule: ExpressionBuilderModule as EB
+using ..CheckConstraintsModule: CheckConstraintsModule as CC
+using ..LossFunctionsModule: LossFunctionsModule as LF
 
 struct ConstrainedExpression{
     T,
@@ -102,6 +108,28 @@ function EB.create_expression(
     )
 end
 
+# function LF.eval_tree_dispatch(
+#     tree::ConstrainedExpression, dataset::Dataset, options::AbstractOptions, idx
+# )
+#     raw_contents = get_contents(tree)
+
+#     # Raw numerical results of each inner expression:
+#     outs = map(
+#         ex -> LF.eval_tree_dispatch(ex, dataset, options, idx),
+#         values(raw_contents)
+#     )
+
+#     # Check for any invalid evaluations
+#     if !all(last, outs)
+#         # TODO: Would be nice to return early
+#         return first(outs), false
+#     end
+
+#     # Combine them using the structure function:
+#     results = NamedTuple{keys(raw_contents)}(map(first, outs))
+#     return get_metadata(tree).structure(results), true
+# end
+
 """
 We need full specialization for constrained expressions, as they rely on subexpressions being combined.
 """
@@ -165,6 +193,42 @@ end
 
 function CO.count_constants_for_optimization(ex::ConstrainedExpression)
     return sum(CO.count_constants_for_optimization, values(get_contents(ex)))
+end
+
+function CC.check_constraints(
+    ex::ConstrainedExpression,
+    options::AbstractOptions,
+    maxsize::Int,
+    cursize::Union{Int,Nothing}=nothing,
+)::Bool
+    raw_contents = get_contents(ex)
+    variable_mapping = get_metadata(ex).variable_mapping
+
+    # First, we check the variable constraints at the top level:
+    has_invalid_variables = any(keys(raw_contents)) do key
+        tree = raw_contents[key]
+        allowed_variables = variable_mapping[key]
+        contains_other_features_than(tree, allowed_variables)
+    end
+    if has_invalid_variables
+        return false
+    end
+
+    # Then, we check other constraints for inner expressions:
+    if any(t -> !CC.check_constraints(t, options, maxsize, cursize), values(raw_contents))
+        return false
+    end
+
+    # Then, we check the constraints for the combined tree:
+    return CC.check_constraints(get_tree(ex), options, maxsize, cursize)
+end
+function contains_other_features_than(tree::AbstractExpression, features)
+    return contains_other_features_than(get_tree(tree), features)
+end
+function contains_other_features_than(tree::AbstractExpressionNode, features)
+    any(tree) do node
+        node.degree == 0 && !node.constant && node.feature ∉ features
+    end
 end
 
 # TODO: Add custom behavior to adjust what feature nodes can be generated

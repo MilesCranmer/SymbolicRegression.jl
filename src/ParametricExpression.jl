@@ -61,8 +61,8 @@ function EB.consistency_checks(options::AbstractOptions, prototype::ParametricEx
 end
 
 function LF.eval_tree_dispatch(
-    tree::ParametricExpression{T}, dataset::Dataset{T}, options::AbstractOptions, idx
-) where {T<:DATA_TYPE}
+    tree::ParametricExpression, dataset::Dataset, options::AbstractOptions, idx
+)
     A = expected_array_type(dataset.X)
     return eval_tree_array(
         tree,

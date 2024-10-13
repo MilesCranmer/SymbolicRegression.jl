@@ -41,14 +41,15 @@ end
     end
 end
 
-function eval_tree_dispatch(
-    tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
-    dataset::Dataset{T},
-    options::AbstractOptions,
-    idx,
-) where {T<:DATA_TYPE}
-    A = expected_array_type(dataset.X)
-    return eval_tree_array(tree, maybe_getindex(dataset.X, :, idx), options)::Tuple{A,Bool}
+for N in (:AbstractExpression, :AbstractExpressionNode)
+    @eval function eval_tree_dispatch(
+        tree::$N, dataset::Dataset, options::AbstractOptions, idx
+    )
+        A = expected_array_type(dataset.X)
+        return eval_tree_array(
+            tree, maybe_getindex(dataset.X, :, idx), options
+        )::Tuple{A,Bool}
+    end
 end
 
 # Evaluate the loss of a particular expression on the input dataset.

@@ -69,7 +69,7 @@ function flag_illegal_nests(tree::AbstractExpressionNode, options::AbstractOptio
     return false
 end
 
-"""Check if user-passed constraints are violated or not"""
+"""Check if user-passed constraints are satisfied. Returns false otherwise."""
 function check_constraints(
     ex::AbstractExpression,
     options::AbstractOptions,
