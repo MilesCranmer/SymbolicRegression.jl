@@ -258,6 +258,7 @@ function contains_other_features_than(tree::AbstractExpressionNode, features)
 end
 
 # TODO: Add custom behavior to adjust what feature nodes can be generated
+# TODO: Add custom printing
 # TODO: Better versions:
 #  - Allow evaluation to call structure function - in which case the structure would simply combine the results.
 #  - Maybe we want to do similar for string output as well. That way, the operators provided don't really matter.
