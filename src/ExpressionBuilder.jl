@@ -78,13 +78,18 @@ end
     ::Val{embed},
 ) where {T,L,embed}
     consistency_checks(options, prototype)
-    return (;
+    raw_params = (;
         operators=embed ? options.operators : nothing,
         variable_names=embed ? dataset.variable_names : nothing,
         extra_init_params(
             options.expression_type, prototype, options, dataset, Val(embed)
         )...,
     )
+    sorted_params = sort_params(raw_params, options.expression_type)
+    return sorted_params
+end
+function sort_params(raw_params::NamedTuple, ::Type{<:AbstractExpression})
+    return raw_params
 end
 function extra_init_params(
     ::Type{E},

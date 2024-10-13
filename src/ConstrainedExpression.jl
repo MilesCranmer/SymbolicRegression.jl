@@ -108,6 +108,11 @@ function EB.create_expression(
         EB.init_params(options, dataset, nothing, Val(embed))...,
     )
 end
+function sort_params(params::NamedTuple, ::Type{<:ConstrainedExpression})
+    return (;
+        params.structure, params.operators, params.variable_names, params.variable_mapping
+    )
+end
 
 function LF.eval_tree_dispatch(
     tree::ConstrainedExpression, dataset::Dataset, options::AbstractOptions, idx
@@ -120,7 +125,7 @@ function LF.eval_tree_dispatch(
     # Check for any invalid evaluations
     if !all(last, outs)
         # TODO: Would be nice to return early
-        return first(outs), false
+        return first(first(outs)), false
     end
 
     # Combine them using the structure function:
