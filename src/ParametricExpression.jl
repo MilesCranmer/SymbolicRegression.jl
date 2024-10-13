@@ -1,6 +1,8 @@
+"""
+Note that ParametricExpression is defined within DynamicExpressions.jl,
+this file just adds custom behavior for SymbolicRegression.jl, where needed.
+"""
 module ParametricExpressionModule
-## Note that ParametricExpression is defined within DynamicExpressions.jl,
-## this file just adds custom behavior for SymbolicRegression.jl, where needed
 
 using DynamicExpressions:
     AbstractExpression,
@@ -10,6 +12,7 @@ using DynamicExpressions:
     with_metadata,
     get_contents,
     with_contents,
+    get_tree,
     eval_tree_array
 using StatsBase: StatsBase
 using Random: default_rng, AbstractRNG

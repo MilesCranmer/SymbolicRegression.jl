@@ -1,3 +1,7 @@
+"""
+This module provides functions for creating, initializing, and manipulating
+`<:AbstractExpression` instances and their metadata within the SymbolicRegression.jl framework.
+"""
 module ExpressionBuilderModule
 
 using DispatchDoctor: @unstable
@@ -29,6 +33,16 @@ import ..CoreModule: create_expression
         t, options, dataset, options.node_type, options.expression_type, Val(embed)
     )
 end
+@unstable function create_expression(
+    t::AbstractExpressionNode{T},
+    options::AbstractOptions,
+    dataset::Dataset{T,L},
+    ::Val{embed}=Val(false),
+) where {T,L,embed}
+    return create_expression(
+        t, options, dataset, options.node_type, options.expression_type, Val(embed)
+    )
+end
 function create_expression(
     ex::AbstractExpression{T},
     options::AbstractOptions,
@@ -42,9 +56,9 @@ end
     options::AbstractOptions,
     dataset::Dataset{T,L},
     ::Type{N},
-    ::Type{<:AbstractExpression},
+    ::Type{E},
     ::Val{embed}=Val(false),
-) where {T,L,embed,N<:AbstractExpressionNode}
+) where {T,L,embed,N<:AbstractExpressionNode,E<:AbstractExpression}
     return create_expression(constructorof(N)(; val=t), options, dataset, N, E, Val(embed))
 end
 @unstable function create_expression(
