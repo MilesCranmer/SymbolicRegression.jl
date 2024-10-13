@@ -108,7 +108,7 @@ function EB.create_expression(
         EB.init_params(options, dataset, nothing, Val(embed))...,
     )
 end
-function sort_params(params::NamedTuple, ::Type{<:ConstrainedExpression})
+function EB.sort_params(params::NamedTuple, ::Type{<:ConstrainedExpression})
     return (;
         params.structure, params.operators, params.variable_names, params.variable_mapping
     )
