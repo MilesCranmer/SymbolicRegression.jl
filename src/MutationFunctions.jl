@@ -9,7 +9,6 @@ using DynamicExpressions:
     get_contents,
     with_contents,
     constructorof,
-    copy_node,
     set_node!,
     count_nodes,
     has_constants,
@@ -212,7 +211,7 @@ function insert_random_op(
     node = rand(rng, NodeSampler(; tree))
     choice = rand(rng)
     makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
-    left = copy_node(node)
+    left = copy(node)
 
     if makeNewBinOp
         right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
@@ -248,7 +247,7 @@ function prepend_random_op(
     node = tree
     choice = rand(rng)
     makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
-    left = copy_node(tree)
+    left = copy(tree)
 
     if makeNewBinOp
         right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
@@ -424,23 +423,23 @@ end
 function crossover_trees(
     tree1::N, tree2::N, rng::AbstractRNG=default_rng()
 ) where {T,N<:AbstractExpressionNode{T}}
-    tree1 = copy_node(tree1)
-    tree2 = copy_node(tree2)
+    tree1 = copy(tree1)
+    tree2 = copy(tree2)
 
     node1, parent1, side1 = random_node_and_parent(tree1, rng)
     node2, parent2, side2 = random_node_and_parent(tree2, rng)
 
-    node1 = copy_node(node1)
+    node1 = copy(node1)
 
     if side1 == 'l'
-        parent1.l = copy_node(node2)
+        parent1.l = copy(node2)
         # tree1 now contains this.
     elseif side1 == 'r'
-        parent1.r = copy_node(node2)
+        parent1.r = copy(node2)
         # tree1 now contains this.
     else # 'n'
         # This means that there is no parent2.
-        tree1 = copy_node(node2)
+        tree1 = copy(node2)
     end
 
     if side2 == 'l'

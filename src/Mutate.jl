@@ -6,7 +6,6 @@ using DynamicExpressions:
     with_contents,
     get_tree,
     preserve_sharing,
-    copy_node,
     count_scalar_constants,
     simplify_tree!,
     combine_operators
@@ -206,7 +205,7 @@ function next_generation(
     #############################################
     local tree
     while (!successful_mutation) && attempts < max_attempts
-        tree = copy_node(member.tree)
+        tree = copy(member.tree)
 
         # TODO: This uses dynamic dispatch. But it doesn't seem that bad
         # in terms of performance. Still should investigate in more detail.
@@ -253,7 +252,7 @@ function next_generation(
         mutation_accepted = false
         return (
             PopMember(
-                copy_node(member.tree),
+                copy(member.tree),
                 beforeScore,
                 beforeLoss,
                 options,
@@ -282,7 +281,7 @@ function next_generation(
         mutation_accepted = false
         return (
             PopMember(
-                copy_node(member.tree),
+                copy(member.tree),
                 beforeScore,
                 beforeLoss,
                 options,
@@ -324,7 +323,7 @@ function next_generation(
         mutation_accepted = false
         return (
             PopMember(
-                copy_node(member.tree),
+                copy(member.tree),
                 beforeScore,
                 beforeLoss,
                 options,
