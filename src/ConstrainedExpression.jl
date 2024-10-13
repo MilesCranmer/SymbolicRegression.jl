@@ -108,6 +108,16 @@ function EB.create_expression(
         EB.init_params(options, dataset, nothing, Val(embed))...,
     )
 end
+function EB.extra_init_params(
+    ::Type{E},
+    prototype::Union{Nothing,AbstractExpression},
+    options::AbstractOptions,
+    dataset::Dataset{T},
+    ::Val{embed},
+) where {T,embed,E<:ConstrainedExpression}
+    # We also need to include the operators here to be consistent with `create_expression`.
+    return (; options.operators, options.expression_options...)
+end
 function EB.sort_params(params::NamedTuple, ::Type{<:ConstrainedExpression})
     return (;
         params.structure, params.operators, params.variable_names, params.variable_mapping
