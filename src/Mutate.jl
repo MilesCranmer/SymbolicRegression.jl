@@ -209,10 +209,10 @@ function next_generation(
 
         # TODO: This uses dynamic dispatch. But it doesn't seem that bad
         # in terms of performance. Still should investigate in more detail.
-        mutation_result = mutate!(
+        mutation_result = _dispatch_mutations!(
             tree,
             member,
-            Val(mutation_choice),
+            mutation_choice,
             options.mutation_weights,
             options;
             recorder=tmp_recorder,
@@ -352,6 +352,29 @@ function next_generation(
             ),
             mutation_accepted,
             num_evals,
+        )
+    end
+end
+
+@generated function _dispatch_mutations!(
+    tree::AbstractExpression,
+    member::PopMember,
+    mutation_choice::Symbol,
+    weights::W,
+    options::AbstractOptions;
+    kws...,
+) where {W<:AbstractMutationWeights}
+    mutation_choices = fieldnames(W)
+    quote
+        Base.Cartesian.@nif(
+            $(length(mutation_choices)),
+            i -> mutation_choice == $(mutation_choices)[i],
+            i -> begin
+                @assert mutation_choice == $(mutation_choices)[i]
+                mutate!(
+                    tree, member, Val($(mutation_choices)[i]), weights, options; kws...
+                )
+            end,
         )
     end
 end
