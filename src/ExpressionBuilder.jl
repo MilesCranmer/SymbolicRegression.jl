@@ -85,8 +85,7 @@ end
             options.expression_type, prototype, options, dataset, Val(embed)
         )...,
     )
-    sorted_params = sort_params(raw_params, options.expression_type)
-    return sorted_params
+    return sort_params(raw_params, options.expression_type)
 end
 function sort_params(raw_params::NamedTuple, ::Type{<:AbstractExpression})
     return raw_params
