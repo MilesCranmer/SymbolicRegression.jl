@@ -87,10 +87,8 @@ end
     @test ypred_mixed == hcat(ypred_good[:, 1], ypred_bad[:, 2], ypred_good[:, 3])
 
     @test_throws AssertionError predict(mach, (data=X,))
-    VERSION >= v"1.8" &&
-        @test_throws "If specifying an equation index during" predict(mach, (data=X,))
-    VERSION >= v"1.8" &&
-        @test_throws "If specifying an equation index during" predict(mach, (X=X, idx=1))
+    @test_throws "If specifying an equation index during" predict(mach, (data=X,))
+    @test_throws "If specifying an equation index during" predict(mach, (X=X, idx=1))
 end
 
 @testitem "Variable names - named outputs" tags = [:part1] begin
@@ -112,7 +110,7 @@ end
     test_outs = predict(mach, X)
     @test isempty(setdiff((:c1, :c2), keys(test_outs)))
     @test_throws AssertionError predict(mach, (a1=randn(32), b2=randn(32)))
-    VERSION >= v"1.8" && @test_throws "Variable names do not match fitted" predict(
+    @test_throws "Variable names do not match fitted" predict(
         mach, (b1=randn(32), a2=randn(32))
     )
 end
@@ -146,15 +144,13 @@ end
     rng = MersenneTwister(0)
     mach = machine(model, randn(rng, 32, 3), randn(rng, 32); scitype_check_level=0)
     @test_throws AssertionError @quiet(fit!(mach))
-    VERSION >= v"1.8" &&
-        @test_throws "For single-output regression, please" @quiet(fit!(mach))
+    @test_throws "For single-output regression, please" @quiet(fit!(mach))
 
     model = SRRegressor()
     rng = MersenneTwister(0)
     mach = machine(model, randn(rng, 32, 3), randn(rng, 32, 2); scitype_check_level=0)
     @test_throws AssertionError @quiet(fit!(mach))
-    VERSION >= v"1.8" &&
-        @test_throws "For multi-output regression, please" @quiet(fit!(mach))
+    @test_throws "For multi-output regression, please" @quiet(fit!(mach))
 
     model = SRRegressor(; verbosity=0)
     rng = MersenneTwister(0)
