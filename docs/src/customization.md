@@ -49,6 +49,11 @@ If needed, you may need to overload `SymbolicRegression.ExpressionBuilder.extra_
 case your expression needs additional parameters. See the method for `ParametricExpression`
 as an example.
 
+You can look at the files `src/ParametricExpression.jl` and `src/ConstrainedExpression.jl`
+for more examples of custom expression types, though note that `ParametricExpression` itself
+is defined in DynamicExpressions.jl, while that file just overloads some methods for
+SymbolicRegression.jl.
+
 ## Other Customizations
 
 Other internal abstract types include the following:

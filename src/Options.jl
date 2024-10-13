@@ -510,11 +510,13 @@ $(OPTION_DESCRIPTIONS)
     # Not search options; just construction options:
     define_helper_functions::Bool=true,
     deprecated_return_state=nothing,
-    # Deprecated args:
+    #########################################
+    # Deprecated args: ######################
     fast_cycle::Bool=false,
     npopulations::Union{Nothing,Integer}=nothing,
     npop::Union{Nothing,Integer}=nothing,
     kws...,
+    #########################################
 )
     for k in keys(kws)
         !haskey(deprecated_options_mapping, k) && error("Unknown keyword argument: $k")
@@ -733,7 +735,7 @@ $(OPTION_DESCRIPTIONS)
 
     options = Options{
         typeof(complexity_mapping),
-        operator_specialization(typeof(operators)),
+        operator_specialization(typeof(operators), expression_type),
         node_type,
         expression_type,
         typeof(expression_options),

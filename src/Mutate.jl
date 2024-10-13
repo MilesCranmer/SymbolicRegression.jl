@@ -29,7 +29,8 @@ using ..MutationFunctionsModule:
     crossover_trees,
     form_random_connection!,
     break_random_connection!,
-    randomly_rotate_tree!
+    randomly_rotate_tree!,
+    randomize_tree
 using ..ConstantOptimizationModule: optimize_constants
 using ..RecorderModule: @recorder
 
@@ -593,10 +594,7 @@ function mutate!(
     nfeatures,
     kws...,
 ) where {T,N<:AbstractExpression{T},P<:PopMember}
-    tree_size_to_generate = rand(1:curmaxsize)
-    tree = with_contents(
-        tree, gen_random_tree_fixed_size(tree_size_to_generate, options, nfeatures, T)
-    )
+    tree = randomize_tree(tree, curmaxsize, options, nfeatures)
     @recorder recorder["type"] = "randomize"
     return MutationResult{N,P}(; tree=tree)
 end

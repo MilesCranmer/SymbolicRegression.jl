@@ -12,7 +12,7 @@ export Population,
     ParametricNode,
     Expression,
     ParametricExpression,
-    StructuredExpression,
+    ConstrainedExpression,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
@@ -91,7 +91,6 @@ using DynamicExpressions:
     ParametricNode,
     Expression,
     ParametricExpression,
-    StructuredExpression,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
@@ -217,6 +216,7 @@ using DispatchDoctor: @stable
     include("Migration.jl")
     include("SearchUtils.jl")
     include("ExpressionBuilder.jl")
+    include("ConstrainedExpression.jl")
     include("ParametricExpression.jl")
 end
 
@@ -309,6 +309,7 @@ using .SearchUtilsModule:
     save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!
+using .ConstrainedExpressionModule: ConstrainedExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
