@@ -41,11 +41,6 @@ function EB.extra_init_params(
     end
     return (; parameters=_parameters, parameter_names)
 end
-function EB.strip_metadata(
-    ex::ParametricExpression, options::AbstractOptions, dataset::Dataset{T,L}
-) where {T,L}
-    return with_metadata(ex; EB.init_params(options, dataset, ex, Val(false))...)
-end
 function EB.consistency_checks(options::AbstractOptions, prototype::ParametricExpression)
     @assert options.expression_type <: ParametricExpression
     if get_metadata(prototype).parameter_names !== nothing

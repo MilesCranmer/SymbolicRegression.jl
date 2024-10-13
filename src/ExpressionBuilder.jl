@@ -146,9 +146,15 @@ end
     end
 end
 
-"""Strips all metadata except for top-level information"""
+"""
+Strips all metadata except for top-level information, so that we avoid needing
+to copy irrelevant information to the evolution itself (like variable names
+stored within an expression).
+
+The opposite of this is `embed_metadata`.
+"""
 function strip_metadata(
-    ex::Expression, options::AbstractOptions, dataset::Dataset{T,L}
+    ex::AbstractExpression, options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T,L}
     return with_metadata(ex; init_params(options, dataset, ex, Val(false))...)
 end

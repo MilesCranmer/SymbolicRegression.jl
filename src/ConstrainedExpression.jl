@@ -96,39 +96,37 @@ function EB.create_expression(
 ) where {T,L,embed,E<:ConstrainedExpression}
     function_keys = keys(options.expression_options.variable_mapping)
 
-    # TODO: Generalize to other inner expression types
+    # NOTE: We need to copy over the operators so we can call the structure function
     operators = options.operators
     variable_names = embed ? dataset.variable_names : nothing
     inner_expressions = ntuple(
         _ -> Expression(copy(t); operators, variable_names), length(function_keys)
     )
+    # TODO: Generalize to other inner expression types
     return DE.constructorof(E)(
         NamedTuple{function_keys}(inner_expressions);
         EB.init_params(options, dataset, nothing, Val(embed))...,
     )
 end
 
-# function LF.eval_tree_dispatch(
-#     tree::ConstrainedExpression, dataset::Dataset, options::AbstractOptions, idx
-# )
-#     raw_contents = get_contents(tree)
+function LF.eval_tree_dispatch(
+    tree::ConstrainedExpression, dataset::Dataset, options::AbstractOptions, idx
+)
+    raw_contents = get_contents(tree)
 
-#     # Raw numerical results of each inner expression:
-#     outs = map(
-#         ex -> LF.eval_tree_dispatch(ex, dataset, options, idx),
-#         values(raw_contents)
-#     )
+    # Raw numerical results of each inner expression:
+    outs = map(ex -> LF.eval_tree_dispatch(ex, dataset, options, idx), values(raw_contents))
 
-#     # Check for any invalid evaluations
-#     if !all(last, outs)
-#         # TODO: Would be nice to return early
-#         return first(outs), false
-#     end
+    # Check for any invalid evaluations
+    if !all(last, outs)
+        # TODO: Would be nice to return early
+        return first(outs), false
+    end
 
-#     # Combine them using the structure function:
-#     results = NamedTuple{keys(raw_contents)}(map(first, outs))
-#     return get_metadata(tree).structure(results), true
-# end
+    # Combine them using the structure function:
+    results = NamedTuple{keys(raw_contents)}(map(first, outs))
+    return get_metadata(tree).structure(results), true
+end
 
 """
 We need full specialization for constrained expressions, as they rely on subexpressions being combined.
