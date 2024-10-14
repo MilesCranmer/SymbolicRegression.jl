@@ -207,8 +207,6 @@ function next_generation(
     while (!successful_mutation) && attempts < max_attempts
         tree = copy_node(member.tree)
 
-        # TODO: This uses dynamic dispatch. But it doesn't seem that bad
-        # in terms of performance. Still should investigate in more detail.
         mutation_result = _dispatch_mutations!(
             tree,
             member,
