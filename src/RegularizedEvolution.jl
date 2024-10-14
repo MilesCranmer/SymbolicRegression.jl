@@ -31,7 +31,7 @@ function reg_evol_cycle(
 
     for i in 1:n_evol_cycles
         if rand() > options.crossover_probability
-            allstar = best_of_sample(pop, running_search_statistics, options)
+            allstar = copy(best_of_sample(pop, running_search_statistics, options))
             mutation_recorder = RecordType()
             baby, mutation_accepted, tmp_num_evals = next_generation(
                 dataset,

@@ -411,6 +411,9 @@ end
 function crossover_trees(
     ex1::E, ex2::E, rng::AbstractRNG=default_rng()
 ) where {T,E<:AbstractExpression{T}}
+    if ex1 === ex2
+        error("Attempted to crossover the same expression!")
+    end
     tree1, context1 = get_contents_for_mutation(ex1, rng)
     tree2, context2 = get_contents_for_mutation(ex2, rng)
     out1, out2 = crossover_trees(tree1, tree2, rng)
@@ -423,6 +426,9 @@ end
 function crossover_trees(
     tree1::N, tree2::N, rng::AbstractRNG=default_rng()
 ) where {T,N<:AbstractExpressionNode{T}}
+    if tree1 === tree2
+        error("Attempted to crossover the same tree!")
+    end
     tree1 = copy(tree1)
     tree2 = copy(tree2)
 
