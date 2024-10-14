@@ -175,7 +175,7 @@ end
 
     _addprocs_function = addprocs_function === nothing ? addprocs : addprocs_function
 
-    exeflags = if VERSION >= v"1.9" && concurrency == :multiprocessing
+    exeflags = if concurrency == :multiprocessing
         heap_size_hint_in_megabytes = floor(
             Int, (
                 if heap_size_hint_in_bytes === nothing

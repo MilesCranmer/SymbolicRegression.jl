@@ -81,7 +81,6 @@ export Population,
 
 using Distributed
 using Printf: @printf, @sprintf
-using PackageExtensionCompat: @require_extensions
 using Pkg: Pkg
 using TOML: parsefile
 using Random: seed!, shuffle!
@@ -1086,10 +1085,6 @@ end
 
 include("MLJInterface.jl")
 using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
-
-function __init__()
-    @require_extensions
-end
 
 # Hack to get static analysis to work from within tests:
 @ignore include("../test/runtests.jl")

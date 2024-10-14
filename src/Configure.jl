@@ -329,10 +329,6 @@ function configure_workers(;
     end
 
     if we_created_procs
-        if VERSION < v"1.9.0"
-            # On newer Julia; environment is activated automatically
-            activate_env_on_workers(procs, project_path, options, verbosity)
-        end
         import_module_on_workers(procs, file, options, verbosity)
     end
 

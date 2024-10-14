@@ -99,10 +99,9 @@ end
     @test_throws ErrorException SymbolicRegression.assert_operators_well_defined(
         ComplexF64, options
     )
-    VERSION >= v"1.8" &&
-        @test_throws "complex plane" SymbolicRegression.assert_operators_well_defined(
-            ComplexF64, options
-        )
+    @test_throws "complex plane" SymbolicRegression.assert_operators_well_defined(
+        ComplexF64, options
+    )
 end
 
 @testset "Operators which return the wrong type should fail" begin
@@ -111,10 +110,9 @@ end
     @test_throws ErrorException SymbolicRegression.assert_operators_well_defined(
         Float64, options
     )
-    VERSION >= v"1.8" &&
-        @test_throws "returned an output of type" SymbolicRegression.assert_operators_well_defined(
-            Float64, options
-        )
+    @test_throws "returned an output of type" SymbolicRegression.assert_operators_well_defined(
+        Float64, options
+    )
     @test_nowarn SymbolicRegression.assert_operators_well_defined(Float32, options)
 end
 
