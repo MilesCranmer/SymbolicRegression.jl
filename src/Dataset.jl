@@ -49,7 +49,7 @@ mutable struct Dataset{
     T<:DATA_TYPE,
     L<:LOSS_TYPE,
     AX<:AbstractMatrix{T},
-    AY<:Union{AbstractVector{T},Nothing},
+    AY<:Union{AbstractVector,Nothing},
     AW<:Union{AbstractVector{T},Nothing},
     NT<:NamedTuple,
     XU<:Union{AbstractVector{<:Quantity},Nothing},
@@ -93,7 +93,7 @@ Construct a dataset to pass between internal functions.
 """
 function Dataset(
     X::AbstractMatrix{T},
-    y::Union{AbstractVector{T},Nothing}=nothing,
+    y::Union{AbstractVector,Nothing}=nothing,
     loss_type::Type{L}=Nothing;
     index::Int=1,
     weights::Union{AbstractVector{T},Nothing}=nothing,
@@ -150,7 +150,7 @@ function Dataset(
     else
         y_variable_name
     end
-    avg_y = if y === nothing
+    avg_y = if y === nothing || !(eltype(y) isa Number)
         nothing
     else
         if weighted
@@ -221,26 +221,6 @@ function Dataset(
         X_sym_units,
         y_sym_units,
     )
-end
-function Dataset(
-    X::AbstractMatrix,
-    y::Union{<:AbstractVector,Nothing}=nothing;
-    weights::Union{<:AbstractVector,Nothing}=nothing,
-    kws...,
-)
-    T = promote_type(
-        eltype(X),
-        (y === nothing) ? eltype(X) : eltype(y),
-        (weights === nothing) ? eltype(X) : eltype(weights),
-    )
-    X = Base.Fix1(convert, T).(X)
-    if y !== nothing
-        y = Base.Fix1(convert, T).(y)
-    end
-    if weights !== nothing
-        weights = Base.Fix1(convert, T).(weights)
-    end
-    return Dataset(X, y; weights=weights, kws...)
 end
 
 function error_on_mismatched_size(_, ::Nothing)

@@ -412,7 +412,7 @@ which is useful for debugging and profiling.
 """
 function equation_search(
     X::AbstractMatrix{T},
-    y::AbstractMatrix{T};
+    y::AbstractMatrix;
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
     options::AbstractOptions=Options(),
@@ -483,17 +483,8 @@ function equation_search(
 end
 
 function equation_search(
-    X::AbstractMatrix{T1}, y::AbstractMatrix{T2}; kw...
-) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
-    U = promote_type(T1, T2)
-    return equation_search(
-        convert(AbstractMatrix{U}, X), convert(AbstractMatrix{U}, y); kw...
-    )
-end
-
-function equation_search(
-    X::AbstractMatrix{T1}, y::AbstractVector{T2}; kw...
-) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
+    X::AbstractMatrix{T}, y::AbstractVector; kw...
+) where {T<:DATA_TYPE}
     return equation_search(X, reshape(y, (1, size(y, 1))); kw..., v_dim_out=Val(1))
 end
 

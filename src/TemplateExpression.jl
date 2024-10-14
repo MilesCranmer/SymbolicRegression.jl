@@ -321,12 +321,9 @@ function CC.check_constraints(
     end
 
     # Then, we check other constraints for inner expressions:
-    if any(t -> !CC.check_constraints(t, options, maxsize, cursize), values(raw_contents))
-        return false
-    end
-
-    # Then, we check the constraints for the combined tree:
-    return CC.check_constraints(get_tree(ex), options, maxsize, cursize)
+    return all(
+        t -> CC.check_constraints(t, options, maxsize, cursize), values(raw_contents)
+    )
 end
 function contains_other_features_than(tree::AbstractExpression, features)
     return contains_other_features_than(get_tree(tree), features)
@@ -338,9 +335,5 @@ function contains_other_features_than(tree::AbstractExpressionNode, features)
 end
 
 # TODO: Add custom behavior to adjust what feature nodes can be generated
-# TODO: Add custom printing
-# TODO: Better versions:
-#  - Allow evaluation to call structure function - in which case the structure would simply combine the results.
-#  - Maybe we want to do similar for string output as well. That way, the operators provided don't really matter.
 
 end
