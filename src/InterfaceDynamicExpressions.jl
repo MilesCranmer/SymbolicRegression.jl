@@ -11,14 +11,14 @@ using DynamicExpressions:
     Node,
     GraphNode
 using DynamicQuantities: dimension, ustrip
-using ..CoreModule: Options
+using ..CoreModule: AbstractOptions
 using ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
 using ..UtilsModule: subscriptify
 
 import ..deprecate_varmap
 
 """
-    eval_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::Options; kws...)
+    eval_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::AbstractOptions; kws...)
 
 Evaluate a binary tree (equation) over a given input data matrix. The
 operators contain all of the operators used. This function fuses doublets
@@ -41,7 +41,7 @@ which speed up evaluation significantly.
 # Arguments
 - `tree::Union{AbstractExpression,AbstractExpressionNode}`: The root node of the tree to evaluate.
 - `X::AbstractArray`: The input data to evaluate the tree on.
-- `options::Options`: Options used to define the operators used in the tree.
+- `options::AbstractOptions`: Options used to define the operators used in the tree.
 
 # Returns
 - `(output, complete)::Tuple{AbstractVector, Bool}`: the result,
@@ -53,7 +53,7 @@ which speed up evaluation significantly.
 function DE.eval_tree_array(
     tree::Union{AbstractExpressionNode,AbstractExpression},
     X::AbstractMatrix,
-    options::Options;
+    options::AbstractOptions;
     kws...,
 )
     A = expected_array_type(X)
@@ -70,7 +70,7 @@ function DE.eval_tree_array(
     tree::ParametricExpression,
     X::AbstractMatrix,
     classes::AbstractVector{<:Integer},
-    options::Options;
+    options::AbstractOptions;
     kws...,
 )
     A = expected_array_type(X)
@@ -91,7 +91,7 @@ function expected_array_type(X::AbstractArray)
 end
 
 """
-    eval_diff_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::Options, direction::Int)
+    eval_diff_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::AbstractOptions, direction::Int)
 
 Compute the forward derivative of an expression, using a similar
 structure and optimization to eval_tree_array. `direction` is the index of a particular
@@ -102,7 +102,7 @@ respect to `x1`.
 
 - `tree::Union{AbstractExpression,AbstractExpressionNode}`: The expression tree to evaluate.
 - `X::AbstractArray`: The data matrix, with each column being a data point.
-- `options::Options`: The options containing the operators used to create the `tree`.
+- `options::AbstractOptions`: The options containing the operators used to create the `tree`.
 - `direction::Int`: The index of the variable to take the derivative with respect to.
 
 # Returns
@@ -113,7 +113,7 @@ respect to `x1`.
 function DE.eval_diff_tree_array(
     tree::Union{AbstractExpression,AbstractExpressionNode},
     X::AbstractArray,
-    options::Options,
+    options::AbstractOptions,
     direction::Int,
 )
     A = expected_array_type(X)
@@ -124,7 +124,7 @@ function DE.eval_diff_tree_array(
 end
 
 """
-    eval_grad_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::Options; variable::Bool=false)
+    eval_grad_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::AbstractOptions; variable::Bool=false)
 
 Compute the forward-mode derivative of an expression, using a similar
 structure and optimization to eval_tree_array. `variable` specifies whether
@@ -135,7 +135,7 @@ to every constant in the expression.
 
 - `tree::Union{AbstractExpression,AbstractExpressionNode}`: The expression tree to evaluate.
 - `X::AbstractArray`: The data matrix, with each column being a data point.
-- `options::Options`: The options containing the operators used to create the `tree`.
+- `options::AbstractOptions`: The options containing the operators used to create the `tree`.
 - `variable::Bool`: Whether to take derivatives with respect to features (i.e., `X` - with `variable=true`),
     or with respect to every constant in the expression (`variable=false`).
 
@@ -147,7 +147,7 @@ to every constant in the expression.
 function DE.eval_grad_tree_array(
     tree::Union{AbstractExpression,AbstractExpressionNode},
     X::AbstractArray,
-    options::Options;
+    options::AbstractOptions;
     kws...,
 )
     A = expected_array_type(X)
@@ -158,14 +158,14 @@ function DE.eval_grad_tree_array(
 end
 
 """
-    differentiable_eval_tree_array(tree::AbstractExpressionNode, X::AbstractArray, options::Options)
+    differentiable_eval_tree_array(tree::AbstractExpressionNode, X::AbstractArray, options::AbstractOptions)
 
 Evaluate an expression tree in a way that can be auto-differentiated.
 """
 function DE.differentiable_eval_tree_array(
     tree::Union{AbstractExpression,AbstractExpressionNode},
     X::AbstractArray,
-    options::Options,
+    options::AbstractOptions,
 )
     A = expected_array_type(X)
     # TODO: Add `AbstractExpression` implementation in `Expression.jl`
@@ -177,20 +177,20 @@ end
 const WILDCARD_UNIT_STRING = "[?]"
 
 """
-    string_tree(tree::AbstractExpressionNode, options::Options; kws...)
+    string_tree(tree::AbstractExpressionNode, options::AbstractOptions; kws...)
 
 Convert an equation to a string.
 
 # Arguments
 
 - `tree::AbstractExpressionNode`: The equation to convert to a string.
-- `options::Options`: The options holding the definition of operators.
+- `options::AbstractOptions`: The options holding the definition of operators.
 - `variable_names::Union{Array{String, 1}, Nothing}=nothing`: what variables
     to print for each feature.
 """
 @inline function DE.string_tree(
     tree::Union{AbstractExpression,AbstractExpressionNode},
-    options::Options;
+    options::AbstractOptions;
     raw::Bool=true,
     X_sym_units=nothing,
     y_sym_units=nothing,
@@ -283,24 +283,27 @@ end
 end
 
 """
-    print_tree(tree::AbstractExpressionNode, options::Options; kws...)
+    print_tree(tree::AbstractExpressionNode, options::AbstractOptions; kws...)
 
 Print an equation
 
 # Arguments
 
 - `tree::AbstractExpressionNode`: The equation to convert to a string.
-- `options::Options`: The options holding the definition of operators.
+- `options::AbstractOptions`: The options holding the definition of operators.
 - `variable_names::Union{Array{String, 1}, Nothing}=nothing`: what variables
     to print for each feature.
 """
 function DE.print_tree(
-    tree::Union{AbstractExpression,AbstractExpressionNode}, options::Options; kws...
+    tree::Union{AbstractExpression,AbstractExpressionNode}, options::AbstractOptions; kws...
 )
     return DE.print_tree(tree, DE.get_operators(tree, options); kws...)
 end
 function DE.print_tree(
-    io::IO, tree::Union{AbstractExpression,AbstractExpressionNode}, options::Options; kws...
+    io::IO,
+    tree::Union{AbstractExpression,AbstractExpressionNode},
+    options::AbstractOptions;
+    kws...,
 )
     return DE.print_tree(io, tree, DE.get_operators(tree, options); kws...)
 end
@@ -317,7 +320,7 @@ defined.
 """
 macro extend_operators(options)
     operators = :($(options).operators)
-    type_requirements = Options
+    type_requirements = AbstractOptions
     alias_operators = gensym("alias_operators")
     return quote
         if !isa($(options), $type_requirements)
@@ -340,7 +343,7 @@ function define_alias_operators(operators)
 end
 
 function (tree::Union{AbstractExpression,AbstractExpressionNode})(
-    X, options::Options; kws...
+    X, options::AbstractOptions; kws...
 )
     return tree(
         X,
@@ -351,7 +354,10 @@ function (tree::Union{AbstractExpression,AbstractExpressionNode})(
     )
 end
 function DE.EvaluationHelpersModule._grad_evaluator(
-    tree::Union{AbstractExpression,AbstractExpressionNode}, X, options::Options; kws...
+    tree::Union{AbstractExpression,AbstractExpressionNode},
+    X,
+    options::AbstractOptions;
+    kws...,
 )
     return DE.EvaluationHelpersModule._grad_evaluator(
         tree, X, DE.get_operators(tree, options); turbo=options.turbo, kws...

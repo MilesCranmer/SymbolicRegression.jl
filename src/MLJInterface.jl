@@ -23,9 +23,8 @@ using DynamicQuantities:
     ustrip,
     dimension
 using LossFunctions: SupervisedLoss
-using Compat: allequal, stack
 using ..InterfaceDynamicQuantitiesModule: get_dimensions_type
-using ..CoreModule: Options, Dataset, MutationWeights, LOSS_TYPE
+using ..CoreModule: Options, Dataset, AbstractMutationWeights, MutationWeights, LOSS_TYPE
 using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame

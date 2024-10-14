@@ -2,7 +2,7 @@ module PopMemberModule
 
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, AbstractExpressionNode, string_tree
-using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE, create_expression
+using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, create_expression
 import ..ComplexityModule: compute_complexity
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: score_func
@@ -61,7 +61,7 @@ function PopMember(
     t::AbstractExpression{T},
     score::L,
     loss::L,
-    options::Union{Options,Nothing}=nothing,
+    options::Union{AbstractOptions,Nothing}=nothing,
     complexity::Union{Int,Nothing}=nothing;
     ref::Int=-1,
     parent::Int=-1,
@@ -93,7 +93,7 @@ end
     PopMember(
         dataset::Dataset{T,L},
         t::AbstractExpression{T},
-        options::Options
+        options::AbstractOptions
     )
 
 Create a population member with a birth date at the current time.
@@ -103,12 +103,12 @@ Automatically compute the score for this tree.
 
 - `dataset::Dataset{T,L}`: The dataset to evaluate the tree on.
 - `t::AbstractExpression{T}`: The tree for the population member.
-- `options::Options`: What options to use.
+- `options::AbstractOptions`: What options to use.
 """
 function PopMember(
     dataset::Dataset{T,L},
     tree::Union{AbstractExpressionNode{T},AbstractExpression{T}},
-    options::Options,
+    options::AbstractOptions,
     complexity::Union{Int,Nothing}=nothing;
     ref::Int=-1,
     parent::Int=-1,
@@ -148,7 +148,7 @@ end
 
 # Can read off complexity directly from pop members
 function compute_complexity(
-    member::PopMember, options::Options; break_sharing=Val(false)
+    member::PopMember, options::AbstractOptions; break_sharing=Val(false)
 )::Int
     complexity = getfield(member, :complexity)
     complexity == -1 && return recompute_complexity!(member, options; break_sharing)
@@ -156,7 +156,7 @@ function compute_complexity(
     return complexity
 end
 function recompute_complexity!(
-    member::PopMember, options::Options; break_sharing=Val(false)
+    member::PopMember, options::AbstractOptions; break_sharing=Val(false)
 )::Int
     complexity = compute_complexity(member.tree, options; break_sharing)
     setfield!(member, :complexity, complexity)

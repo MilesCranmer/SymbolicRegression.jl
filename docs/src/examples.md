@@ -90,7 +90,7 @@ We can get a SymbolicUtils version with:
 ```julia
 using SymbolicUtils
 
-eqn = node_to_symbolic(r.equations[1][r.best_idx[1]], model)
+eqn = node_to_symbolic(r.equations[1][r.best_idx[1]])
 ```
 
 We can get the LaTeX version with `Latexify`:
@@ -131,7 +131,7 @@ we can see that the output types are `Float32`:
 r = report(mach)
 best = r.equations[r.best_idx]
 println(typeof(best))
-# Expression{Float32}
+# Expression{Float32,Node{Float32},...}
 ```
 
 We can also use `Complex` numbers (ignore the warning
@@ -309,7 +309,15 @@ report(mach)
 The final equations will contain parameters that were optimized during training:
 
 ```julia
-typeof(report(mach).equations[end])
+eq = report(mach).equations[end]
+
+typeof(eq)
+```
+
+We can also access the parameters of the expression with:
+
+```julia
+get_metadata(eq).parameters
 ```
 
 This example demonstrates how to set up a symbolic regression model that searches for expressions with parameters, optimizing both the structure and the parameters of the expressions based on the provided class information.

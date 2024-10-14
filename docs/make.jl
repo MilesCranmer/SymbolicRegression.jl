@@ -1,7 +1,21 @@
 using Documenter
 using SymbolicUtils
 using SymbolicRegression
-using SymbolicRegression: Dataset, update_baseline_loss!
+using SymbolicRegression:
+    AbstractExpression,
+    ExpressionInterface,
+    Dataset,
+    update_baseline_loss!,
+    AbstractMutationWeights,
+    AbstractOptions,
+    mutate!,
+    condition_mutation_weights!,
+    sample_mutation,
+    MutationResult,
+    AbstractRuntimeOptions,
+    AbstractSearchState,
+    @extend_operators
+using DynamicExpressions
 
 DocMeta.setdocmeta!(
     SymbolicRegression, :DocTestSetup, :(using LossFunctions); recursive=true
@@ -40,14 +54,8 @@ readme = replace(
 
 # We prepend the `<table>` with a ```@raw html
 # and append the `</table>` with a ```:
-readme = replace(
-    readme,
-    r"<table>" => s"```@raw html\n<table>",
-)
-readme = replace(
-    readme,
-    r"</table>" => s"</table>\n```",
-)
+readme = replace(readme, r"<table>" => s"```@raw html\n<table>")
+readme = replace(readme, r"</table>" => s"</table>\n```")
 
 # Then, we surround ```mermaid\n...\n``` snippets
 # with ```@raw html\n<div class="mermaid">\n...\n</div>```:
@@ -96,6 +104,7 @@ makedocs(;
         "API" => "api.md",
         "Losses" => "losses.md",
         "Types" => "types.md",
+        "Customization" => "customization.md",
     ],
 )
 

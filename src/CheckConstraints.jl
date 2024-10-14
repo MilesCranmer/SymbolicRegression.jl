@@ -2,12 +2,12 @@ module CheckConstraintsModule
 
 using DynamicExpressions:
     AbstractExpressionNode, AbstractExpression, get_tree, count_depth, tree_mapreduce
-using ..CoreModule: Options
+using ..CoreModule: AbstractOptions
 using ..ComplexityModule: compute_complexity, past_complexity_limit
 
 # Check if any binary operator are overly complex
 function flag_bin_operator_complexity(
-    tree::AbstractExpressionNode, op, cons, options::Options
+    tree::AbstractExpressionNode, op, cons, options::AbstractOptions
 )::Bool
     any(tree) do subtree
         if subtree.degree == 2 && subtree.op == op
@@ -27,7 +27,7 @@ Check if any unary operators are overly complex.
 This assumes  you have already checked whether the constraint is > -1.
 """
 function flag_una_operator_complexity(
-    tree::AbstractExpressionNode, op, cons, options::Options
+    tree::AbstractExpressionNode, op, cons, options::AbstractOptions
 )::Bool
     any(tree) do subtree
         if subtree.degree == 1 && tree.op == op
@@ -52,7 +52,7 @@ function count_max_nestedness(tree, degree, op)
 end
 
 """Check if there are any illegal combinations of operators"""
-function flag_illegal_nests(tree::AbstractExpressionNode, options::Options)::Bool
+function flag_illegal_nests(tree::AbstractExpressionNode, options::AbstractOptions)::Bool
     # We search from the top first, then from child nodes at end.
     (nested_constraints = options.nested_constraints) === nothing && return false
     for (degree, op_idx, op_constraint) in nested_constraints
@@ -72,7 +72,7 @@ end
 """Check if user-passed constraints are violated or not"""
 function check_constraints(
     ex::AbstractExpression,
-    options::Options,
+    options::AbstractOptions,
     maxsize::Int,
     cursize::Union{Int,Nothing}=nothing,
 )::Bool
@@ -81,7 +81,7 @@ function check_constraints(
 end
 function check_constraints(
     tree::AbstractExpressionNode,
-    options::Options,
+    options::AbstractOptions,
     maxsize::Int,
     cursize::Union{Int,Nothing}=nothing,
 )::Bool
@@ -103,7 +103,7 @@ function check_constraints(
 end
 
 check_constraints(
-    ex::Union{AbstractExpression,AbstractExpressionNode}, options::Options
+    ex::Union{AbstractExpression,AbstractExpressionNode}, options::AbstractOptions
 )::Bool = check_constraints(ex, options, options.maxsize)
 
 end
