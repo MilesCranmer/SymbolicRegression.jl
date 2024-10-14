@@ -122,12 +122,12 @@ struct BlueprintExpression{
 end
 
 function BlueprintExpression(
-    trees::TS;
+    trees::NamedTuple{<:Any,<:NTuple{<:Any,<:AbstractExpression}};
     structure::F,
     operators::Union{AbstractOperatorEnum,Nothing}=nothing,
     variable_names::Union{AbstractVector{<:AbstractString},Nothing}=nothing,
     variable_mapping::NamedTuple{<:Any,<:NTuple{<:Any,Vector{Int}}},
-) where {E<:AbstractExpression,TS<:NamedTuple{<:Any,<:NTuple{<:Any,E}},F<:Function}
+) where {F<:Function}
     @assert length(trees) == length(variable_mapping)
     if variable_names !== nothing
         # TODO: Should this be removed?
