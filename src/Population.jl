@@ -3,7 +3,7 @@ module PopulationModule
 using StatsBase: StatsBase
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, string_tree
-using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
+using ..CoreModule: AbstractOptions, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: score_func, update_baseline_loss!
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
@@ -27,14 +27,14 @@ end
 
 """
     Population(dataset::Dataset{T,L};
-               population_size, nlength::Int=3, options::Options,
+               population_size, nlength::Int=3, options::AbstractOptions,
                nfeatures::Int)
 
 Create random population and score them on the dataset.
 """
 function Population(
     dataset::Dataset{T,L};
-    options::Options,
+    options::AbstractOptions,
     population_size=nothing,
     nlength::Int=3,
     nfeatures::Int,
@@ -62,7 +62,7 @@ end
 """
     Population(X::AbstractMatrix{T}, y::AbstractVector{T};
                population_size, nlength::Int=3,
-               options::Options, nfeatures::Int,
+               options::AbstractOptions, nfeatures::Int,
                loss_type::Type=Nothing)
 
 Create random population and score them on the dataset.
@@ -72,7 +72,7 @@ Create random population and score them on the dataset.
     y::AbstractVector{T};
     population_size=nothing,
     nlength::Int=3,
-    options::Options,
+    options::AbstractOptions,
     nfeatures::Int,
     loss_type::Type{L}=Nothing,
     npop=nothing,
@@ -99,7 +99,7 @@ function Base.copy(pop::P)::P where {T,L,N,P<:Population{T,L,N}}
 end
 
 # Sample random members of the population, and make a new one
-function sample_pop(pop::P, options::Options)::P where {P<:Population}
+function sample_pop(pop::P, options::AbstractOptions)::P where {P<:Population}
     return Population(
         StatsBase.sample(pop.members, options.tournament_selection_n; replace=false)
     )
@@ -109,7 +109,7 @@ end
 function best_of_sample(
     pop::Population{T,L,N},
     running_search_statistics::RunningSearchStatistics,
-    options::Options,
+    options::AbstractOptions,
 ) where {T,L,N}
     sample = sample_pop(pop, options)
     return _best_of_sample(
@@ -117,7 +117,9 @@ function best_of_sample(
     )::PopMember{T,L,N}
 end
 function _best_of_sample(
-    members::Vector{P}, running_search_statistics::RunningSearchStatistics, options::Options
+    members::Vector{P},
+    running_search_statistics::RunningSearchStatistics,
+    options::AbstractOptions,
 ) where {T,L,P<:PopMember{T,L}}
     p = options.tournament_selection_p
     n = length(members)  # == tournament_selection_n
@@ -166,7 +168,7 @@ const CACHED_WEIGHTS =
         PerThreadCache{Dict{Tuple{Int,Float32},typeof(test_weights)}}()
     end
 
-@unstable function get_tournament_selection_weights(@nospecialize(options::Options))
+@unstable function get_tournament_selection_weights(@nospecialize(options::AbstractOptions))
     n = options.tournament_selection_n
     p = options.tournament_selection_p
     # Computing the weights for the tournament becomes quite expensive,
@@ -179,7 +181,7 @@ const CACHED_WEIGHTS =
 end
 
 function finalize_scores(
-    dataset::Dataset{T,L}, pop::P, options::Options
+    dataset::Dataset{T,L}, pop::P, options::AbstractOptions
 )::Tuple{P,Float64} where {T,L,P<:Population{T,L}}
     need_recalculate = options.batching
     num_evals = 0.0
@@ -200,7 +202,7 @@ function best_sub_pop(pop::P; topn::Int=10)::P where {P<:Population}
     return Population(pop.members[best_idx[1:topn]])
 end
 
-function record_population(pop::Population, options::Options)::RecordType
+function record_population(pop::Population, options::AbstractOptions)::RecordType
     return RecordType(
         "population" => [
             RecordType(

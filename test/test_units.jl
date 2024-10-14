@@ -311,8 +311,7 @@ end
         # TODO: Should return same quantity as input
         @test typeof(ypred.a[begin]) <: Quantity
         @test typeof(y.a[begin]) <: RealQuantity
-        VERSION >= v"1.8" &&
-            @eval @test(typeof(ypred.b[begin]) == typeof(y.b[begin]), broken = true)
+        @eval @test(typeof(ypred.b[begin]) == typeof(y.b[begin]), broken = true)
     end
 end
 
@@ -322,8 +321,7 @@ end
 
     X = randn(11, 50)
     y = randn(50)
-    VERSION >= v"1.8.0" &&
-        @test_throws("Number of features", Dataset(X, y; X_units=["m", "1"], y_units="kg"))
+    @test_throws("Number of features", Dataset(X, y; X_units=["m", "1"], y_units="kg"))
 end
 
 @testitem "Should print units" tags = [:part3] begin

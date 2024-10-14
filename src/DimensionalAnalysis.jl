@@ -3,7 +3,7 @@ module DimensionalAnalysisModule
 using DynamicExpressions: AbstractExpression, AbstractExpressionNode, get_tree
 using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, constructorof
 
-using ..CoreModule: Options, Dataset
+using ..CoreModule: AbstractOptions, Dataset
 using ..UtilsModule: safe_call
 
 import DynamicQuantities: dimension, ustrip
@@ -180,12 +180,12 @@ function violates_dimensional_constraints_dispatch(
 end
 
 """
-    violates_dimensional_constraints(tree::AbstractExpressionNode, dataset::Dataset, options::Options)
+    violates_dimensional_constraints(tree::AbstractExpressionNode, dataset::Dataset, options::AbstractOptions)
 
 Checks whether an expression violates dimensional constraints.
 """
 function violates_dimensional_constraints(
-    tree::AbstractExpressionNode, dataset::Dataset, options::Options
+    tree::AbstractExpressionNode, dataset::Dataset, options::AbstractOptions
 )
     X = dataset.X
     return violates_dimensional_constraints(
@@ -193,7 +193,7 @@ function violates_dimensional_constraints(
     )
 end
 function violates_dimensional_constraints(
-    tree::AbstractExpression, dataset::Dataset, options::Options
+    tree::AbstractExpression, dataset::Dataset, options::AbstractOptions
 )
     return violates_dimensional_constraints(get_tree(tree), dataset, options)
 end
@@ -202,7 +202,7 @@ function violates_dimensional_constraints(
     X_units::AbstractVector{<:Quantity},
     y_units::Union{Quantity,Nothing},
     x::AbstractVector{T},
-    options::Options,
+    options::AbstractOptions,
 ) where {T}
     allow_wildcards = !(options.dimensionless_constants_only)
     dimensional_output = violates_dimensional_constraints_dispatch(
@@ -220,12 +220,20 @@ function violates_dimensional_constraints(
     return violates
 end
 function violates_dimensional_constraints(
-    ::AbstractExpressionNode{T}, ::Nothing, ::Quantity, ::AbstractVector{T}, ::Options
+    ::AbstractExpressionNode{T},
+    ::Nothing,
+    ::Quantity,
+    ::AbstractVector{T},
+    ::AbstractOptions,
 ) where {T}
     return error("This should never happen. Please submit a bug report.")
 end
 function violates_dimensional_constraints(
-    ::AbstractExpressionNode{T}, ::Nothing, ::Nothing, ::AbstractVector{T}, ::Options
+    ::AbstractExpressionNode{T},
+    ::Nothing,
+    ::Nothing,
+    ::AbstractVector{T},
+    ::AbstractOptions,
 ) where {T}
     return false
 end

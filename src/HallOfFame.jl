@@ -3,7 +3,7 @@ module HallOfFameModule
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: split_string
 using ..CoreModule:
-    MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
+    MAX_DEGREE, AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: PopMember
 using ..InterfaceDynamicExpressionsModule: format_dimensions, WILDCARD_UNIT_STRING
@@ -48,7 +48,7 @@ function Base.show(io::IO, mime::MIME"text/plain", hof::HallOfFame{T,L,N}) where
 end
 
 """
-    HallOfFame(options::Options, dataset::Dataset{T,L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    HallOfFame(options::AbstractOptions, dataset::Dataset{T,L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 
 Create empty HallOfFame. The HallOfFame stores a list
 of `PopMember` objects in `.members`, which is enumerated
@@ -57,11 +57,11 @@ by size (i.e., `.members[1]` is the constant solution).
 has been instantiated or not.
 
 Arguments:
-- `options`: Options containing specification about deterministic.
+- `options`: AbstractOptions containing specification about deterministic.
 - `dataset`: Dataset containing the input data.
 """
 function HallOfFame(
-    options::Options, dataset::Dataset{T,L}
+    options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     actualMaxsize = options.maxsize + MAX_DEGREE
     base_tree = create_expression(zero(T), options, dataset)

@@ -7,7 +7,7 @@ SRRegressor
 MultitargetSRRegressor
 ```
 
-## equation_search
+## Low-Level API
 
 ```@docs
 equation_search

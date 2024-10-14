@@ -30,8 +30,7 @@ jobs:
           - "part2"
           - "part3"
         julia-version:
-          - "1.6"
-          - "1.8"
+          - "1.10"
           - "1"
         os:
           - ubuntu-latest
@@ -53,15 +52,6 @@ jobs:
             test: "part2"
           - os: macOS-latest
             julia-version: "1"
-            test: "part3"
-          - os: ubuntu-latest
-            julia-version: "~1.11.0-0"
-            test: "part1"
-          - os: ubuntu-latest
-            julia-version: "~1.11.0-0"
-            test: "part2"
-          - os: ubuntu-latest
-            julia-version: "~1.11.0-0"
             test: "part3"
 
     steps:

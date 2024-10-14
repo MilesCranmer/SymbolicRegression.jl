@@ -187,11 +187,6 @@ function _save_kwargs(log_variable::Symbol, fdef::Expr)
     end
 end
 
-# Allows using `const` fields in older versions of Julia.
-macro constfield(ex)
-    return esc(VERSION < v"1.8.0" ? ex : Expr(:const, ex))
-end
-
 json3_write(args...) = error("Please load the JSON3.jl package.")
 
 """

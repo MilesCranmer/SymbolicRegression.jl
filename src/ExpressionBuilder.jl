@@ -17,7 +17,7 @@ using DynamicExpressions:
     eval_tree_array
 using Random: default_rng, AbstractRNG
 using StatsBase: StatsBase
-using ..CoreModule: Options, Dataset, DATA_TYPE
+using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE
 using ..HallOfFameModule: HallOfFame
 using ..LossFunctionsModule: maybe_getindex
 using ..InterfaceDynamicExpressionsModule: expected_array_type
@@ -32,7 +32,7 @@ import ..LossFunctionsModule: eval_tree_dispatch
 import ..ConstantOptimizationModule: count_constants_for_optimization
 
 @unstable function create_expression(
-    t::T, options::Options, dataset::Dataset{T,L}, ::Val{embed}=Val(false)
+    t::T, options::AbstractOptions, dataset::Dataset{T,L}, ::Val{embed}=Val(false)
 ) where {T,L,embed}
     return create_expression(
         constructorof(options.node_type)(; val=t), options, dataset, Val(embed)
@@ -40,7 +40,7 @@ import ..ConstantOptimizationModule: count_constants_for_optimization
 end
 @unstable function create_expression(
     t::AbstractExpressionNode{T},
-    options::Options,
+    options::AbstractOptions,
     dataset::Dataset{T,L},
     ::Val{embed}=Val(false),
 ) where {T,L,embed}
@@ -49,12 +49,12 @@ end
     )
 end
 function create_expression(
-    ex::AbstractExpression{T}, ::Options, ::Dataset{T,L}, ::Val{embed}=Val(false)
+    ex::AbstractExpression{T}, ::AbstractOptions, ::Dataset{T,L}, ::Val{embed}=Val(false)
 ) where {T,L,embed}
     return ex
 end
 @unstable function init_params(
-    options::Options,
+    options::AbstractOptions,
     dataset::Dataset{T,L},
     prototype::Union{Nothing,AbstractExpression},
     ::Val{embed},
@@ -71,7 +71,7 @@ end
 function extra_init_params(
     ::Type{E},
     prototype::Union{Nothing,AbstractExpression},
-    options::Options,
+    options::AbstractOptions,
     dataset::Dataset{T},
     ::Val{embed},
 ) where {T,embed,E<:AbstractExpression}
@@ -80,7 +80,7 @@ end
 function extra_init_params(
     ::Type{E},
     prototype::Union{Nothing,ParametricExpression},
-    options::Options,
+    options::AbstractOptions,
     dataset::Dataset{T},
     ::Val{embed},
 ) where {T,embed,E<:ParametricExpression}
@@ -95,8 +95,8 @@ function extra_init_params(
     return (; parameters=_parameters, parameter_names)
 end
 
-consistency_checks(::Options, prototype::Nothing) = nothing
-function consistency_checks(options::Options, prototype)
+consistency_checks(::AbstractOptions, prototype::Nothing) = nothing
+function consistency_checks(options::AbstractOptions, prototype)
     if prototype === nothing
         return nothing
     end
@@ -120,12 +120,12 @@ end
 
 @unstable begin
     function embed_metadata(
-        ex::AbstractExpression, options::Options, dataset::Dataset{T,L}
+        ex::AbstractExpression, options::AbstractOptions, dataset::Dataset{T,L}
     ) where {T,L}
         return with_metadata(ex; init_params(options, dataset, ex, Val(true))...)
     end
     function embed_metadata(
-        member::PopMember, options::Options, dataset::Dataset{T,L}
+        member::PopMember, options::AbstractOptions, dataset::Dataset{T,L}
     ) where {T,L}
         return PopMember(
             embed_metadata(member.tree, options, dataset),
@@ -138,37 +138,39 @@ end
         )
     end
     function embed_metadata(
-        pop::Population, options::Options, dataset::Dataset{T,L}
+        pop::Population, options::AbstractOptions, dataset::Dataset{T,L}
     ) where {T,L}
         return Population(
             map(member -> embed_metadata(member, options, dataset), pop.members)
         )
     end
     function embed_metadata(
-        hof::HallOfFame, options::Options, dataset::Dataset{T,L}
+        hof::HallOfFame, options::AbstractOptions, dataset::Dataset{T,L}
     ) where {T,L}
         return HallOfFame(
             map(member -> embed_metadata(member, options, dataset), hof.members), hof.exists
         )
     end
     function embed_metadata(
-        vec::Vector{H}, options::Options, dataset::Dataset{T,L}
+        vec::Vector{H}, options::AbstractOptions, dataset::Dataset{T,L}
     ) where {T,L,H<:Union{HallOfFame,Population,PopMember}}
         return map(elem -> embed_metadata(elem, options, dataset), vec)
     end
 end
 
 """Strips all metadata except for top-level information"""
-function strip_metadata(ex::Expression, options::Options, dataset::Dataset{T,L}) where {T,L}
-    return with_metadata(ex; init_params(options, dataset, ex, Val(false))...)
-end
 function strip_metadata(
-    ex::ParametricExpression, options::Options, dataset::Dataset{T,L}
+    ex::Expression, options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T,L}
     return with_metadata(ex; init_params(options, dataset, ex, Val(false))...)
 end
 function strip_metadata(
-    member::PopMember, options::Options, dataset::Dataset{T,L}
+    ex::ParametricExpression, options::AbstractOptions, dataset::Dataset{T,L}
+) where {T,L}
+    return with_metadata(ex; init_params(options, dataset, ex, Val(false))...)
+end
+function strip_metadata(
+    member::PopMember, options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T,L}
     return PopMember(
         strip_metadata(member.tree, options, dataset),
@@ -181,12 +183,12 @@ function strip_metadata(
     )
 end
 function strip_metadata(
-    pop::Population, options::Options, dataset::Dataset{T,L}
+    pop::Population, options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T,L}
     return Population(map(member -> strip_metadata(member, options, dataset), pop.members))
 end
 function strip_metadata(
-    hof::HallOfFame, options::Options, dataset::Dataset{T,L}
+    hof::HallOfFame, options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T,L}
     return HallOfFame(
         map(member -> strip_metadata(member, options, dataset), hof.members), hof.exists
@@ -194,7 +196,7 @@ function strip_metadata(
 end
 
 function eval_tree_dispatch(
-    tree::ParametricExpression{T}, dataset::Dataset{T}, options::Options, idx
+    tree::ParametricExpression{T}, dataset::Dataset{T}, options::AbstractOptions, idx
 ) where {T<:DATA_TYPE}
     A = expected_array_type(dataset.X)
     return eval_tree_array(
@@ -210,7 +212,7 @@ function make_random_leaf(
     ::Type{T},
     ::Type{N},
     rng::AbstractRNG=default_rng(),
-    options::Union{Options,Nothing}=nothing,
+    options::Union{AbstractOptions,Nothing}=nothing,
 ) where {T<:DATA_TYPE,N<:ParametricNode}
     choice = rand(rng, 1:3)
     if choice == 1
@@ -263,7 +265,7 @@ end
 function mutate_constant(
     ex::ParametricExpression{T},
     temperature,
-    options::Options,
+    options::AbstractOptions,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     if rand(rng, Bool)
@@ -280,10 +282,10 @@ function mutate_constant(
     end
 end
 
-@unstable function get_operators(ex::AbstractExpression, options::Options)
+@unstable function get_operators(ex::AbstractExpression, options::AbstractOptions)
     return get_operators(ex, options.operators)
 end
-@unstable function get_operators(ex::AbstractExpressionNode, options::Options)
+@unstable function get_operators(ex::AbstractExpressionNode, options::AbstractOptions)
     return get_operators(ex, options.operators)
 end
 
