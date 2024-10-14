@@ -85,7 +85,7 @@ function check_constraints(
     maxsize::Int,
     cursize::Union{Int,Nothing}=nothing,
 )::Bool
-    ((cursize === nothing) ? compute_complexity(tree, options) : cursize) >= maxsize &&
+    ((cursize === nothing) ? compute_complexity(tree, options) : cursize) > maxsize &&
         return false
     count_depth(tree) > options.maxdepth && return false
     for i in 1:(options.nbin)
