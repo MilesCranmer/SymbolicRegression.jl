@@ -30,6 +30,66 @@ using ..CheckConstraintsModule: CheckConstraintsModule as CC
 using ..ComplexityModule: ComplexityModule
 using ..LossFunctionsModule: LossFunctionsModule as LF
 
+"""
+    BlueprintExpression{T,F,N,E,TS,C,D} <: AbstractStructuredExpression{T,F,N,E,D}
+
+A symbolic expression that allows the combination of multiple sub-expressions
+in a structured way, with constraints on variable usage.
+
+`BlueprintExpression` is designed for symbolic regression tasks where
+domain-specific knowledge or constraints must be imposed on the model's structure.
+
+# Constructor
+
+- `BlueprintExpression(trees; structure, operators, variable_names, variable_mapping)`
+    - `trees`: A `NamedTuple` holding the sub-expressions (e.g., `f = Expression(...)`, `g = Expression(...)`).
+    - `structure`: A function that defines how the sub-expressions are combined. This should have one method
+        that takes `trees` as input and returns a single `Expression` node, and another method which takes
+        a `NamedTuple` of `Vector` (representing the numerical results of each sub-expression) and returns
+        a single vector after combining them.
+    - `operators`: An `OperatorEnum` that defines the allowed operators for the sub-expressions.
+    - `variable_names`: An optional `Vector` of `String` that defines the names of the variables in the dataset.
+    - `variable_mapping`: A `NamedTuple` that defines which variables each sub-expression is allowed to access.
+        For example, requesting `f(x1, x2)` and `g(x3)` would be equivalent to `(; f=[1, 2], g=[3])`.
+
+# Example
+
+Let's create an example `BlueprintExpression` that combines two sub-expressions `f(x1, x2)` and `g(x3)`:
+
+```julia
+# Define operators and variable names
+operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+variable_names = ["x1", "x2", "x3"]
+
+# Create sub-expressions
+x1 = Expression(Node{Float64}(; feature=1); operators, variable_names)
+x2 = Expression(Node{Float64}(; feature=2); operators, variable_names)
+x3 = Expression(Node{Float64}(; feature=3); operators, variable_names)
+
+# Define structure function for symbolic and numerical evaluation
+function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:Expression}}})
+    return sin(nt.f) + nt.g * nt.g
+end
+function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractVector}}})
+    return @. sin(nt.f) + nt.g * nt.g
+end
+
+# Define variable constraints (if desired)
+variable_mapping = (; f=[1, 2], g=[3])
+
+# Create BlueprintExpression
+example_expr = (; f=x1, g=x3)
+st_expr = BlueprintExpression(
+    example_expr;
+    structure=my_structure, operators, variable_names, variable_mapping
+)
+```
+
+When fitting a model in SymbolicRegression.jl, you would provide the `BlueprintExpression`
+as the `expression_type` argument, and then pass `expression_options=(; structure=my_structure, variable_mapping=variable_mapping)`
+as additional options. The `variable_mapping` will constraint `f` to only have access to `x1` and `x2`,
+and `g` to only have access to `x3`.
+"""
 struct BlueprintExpression{
     T,
     F<:Function,
