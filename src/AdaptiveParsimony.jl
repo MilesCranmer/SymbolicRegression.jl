@@ -24,9 +24,7 @@ struct RunningSearchStatistics
 end
 
 function RunningSearchStatistics(; options::AbstractOptions, window_size::Int=100000)
-    maxsize = options.maxsize
-    actualMaxsize = maxsize + MAX_DEGREE
-    init_frequencies = ones(Float64, actualMaxsize)
+    init_frequencies = ones(Float64, options.maxsize)
 
     return RunningSearchStatistics(
         window_size, init_frequencies, copy(init_frequencies) / sum(init_frequencies)

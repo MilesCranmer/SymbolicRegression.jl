@@ -1066,7 +1066,7 @@ end
     )
     num_evals += evals_from_optimize
     if options.batching
-        for i_member in 1:(options.maxsize + MAX_DEGREE)
+        for i_member in 1:(options.maxsize)
             score, result_loss = score_func(dataset, best_seen.members[i_member], options)
             best_seen.members[i_member].score = score
             best_seen.members[i_member].loss = result_loss
