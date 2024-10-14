@@ -1,6 +1,8 @@
 using BenchmarkTools
 using SymbolicRegression, BenchmarkTools, Random
 using SymbolicRegression.AdaptiveParsimonyModule: RunningSearchStatistics
+using SymbolicRegression.MutateModule: next_generation
+using SymbolicRegression.RecorderModule: RecordType
 using SymbolicRegression.PopulationModule: best_of_sample
 using SymbolicRegression.ConstantOptimizationModule: optimize_constants
 using SymbolicRegression.CheckConstraintsModule: check_constraints
@@ -90,6 +92,57 @@ function create_utils_benchmark()
             dataset = Dataset(randn(nfeatures, 32), randn(32));
             pop = Population(dataset; npop=100, nlength=20, options=$options, nfeatures);
             rss = RunningSearchStatistics(; options=$options)
+        )
+    )
+
+    suite["next_generation_x100"] = @benchmarkable(
+        let
+            for member in members
+                next_generation(
+                    dataset,
+                    member,
+                    temperature,
+                    curmaxsize,
+                    rss,
+                    options;
+                    tmp_recorder=recorder,
+                )
+            end
+        end,
+        setup = (
+            nfeatures = 1;
+            dataset = Dataset(randn(nfeatures, 32), randn(32));
+            mutation_weights = MutationWeights(;
+                mutate_constant=1.0,
+                mutate_operator=1.0,
+                swap_operands=1.0,
+                rotate_tree=1.0,
+                add_node=1.0,
+                insert_node=1.0,
+                simplify=0.0,
+                randomize=0.0,
+                do_nothing=0.0,
+                form_connection=0.0,
+                break_connection=0.0,
+            );
+            options = Options(;
+                unary_operators=[sin, cos], binary_operators=[+, -, *, /], mutation_weights
+            );
+            recorder = RecordType();
+            temperature = 1.0;
+            curmaxsize = 20;
+            rss = RunningSearchStatistics(; options);
+            trees = [
+                gen_random_tree_fixed_size(15, options, nfeatures, Float64) for _ in 1:100
+            ];
+            expressions = [
+                Expression(tree; operators=options.operators, variable_names=["x1"]) for
+                tree in trees
+            ];
+            members = [
+                PopMember(dataset, expression, options; deterministic=false) for
+                expression in expressions
+            ]
         )
     )
 

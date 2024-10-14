@@ -4,13 +4,13 @@ This includes: process management, stdin reading, checking for early stops."""
 module SearchUtilsModule
 
 using Printf: @printf, @sprintf
-using Distributed: Distributed, @spawnat, Future, procs
+using Distributed: Distributed, @spawnat, Future, procs, addprocs
 using StatsBase: mean
 using DispatchDoctor: @unstable
 
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
-using ..CoreModule: Dataset, Options, MAX_DEGREE, RecordType
+using ..CoreModule: Dataset, AbstractOptions, Options, MAX_DEGREE, RecordType
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
@@ -19,16 +19,33 @@ using ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 
 """
-    RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}
+    AbstractRuntimeOptions
+
+An abstract type representing runtime configuration parameters for the symbolic regression algorithm.
+
+`AbstractRuntimeOptions` is used by `equation_search` to control runtime aspects such
+as parallelism and iteration limits. By subtyping `AbstractRuntimeOptions`, advanced users
+can customize runtime behaviors by passing it to `equation_search`.
+
+# See Also
+
+- [`RuntimeOptions`](@ref): Default implementation used by `equation_search`.
+- [`equation_search`](@ref SymbolicRegression.equation_search): Main function to perform symbolic regression.
+- [`AbstractOptions`](@ref SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions): See how to extend abstract types for customizing options.
+
+"""
+abstract type AbstractRuntimeOptions end
+
+"""
+    RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE} <: AbstractRuntimeOptions
 
 Parameters for a search that are passed to `equation_search` directly,
 rather than set within `Options`. This is to differentiate between
 parameters that relate to processing and the duration of the search,
 and parameters dealing with the search hyperparameters itself.
 """
-Base.@kwdef struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE}
+struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE} <: AbstractRuntimeOptions
     niterations::Int64
-    total_cycles::Int64
     numprocs::Int64
     init_procs::Union{Vector{Int},Nothing}
     addprocs_function::Function
@@ -55,6 +72,141 @@ end
 end
 function Base.propertynames(roptions::RuntimeOptions)
     return (Base.fieldnames(typeof(roptions))..., :parallelism, :dim_out, :return_state)
+end
+
+@unstable function RuntimeOptions(;
+    niterations::Int=10,
+    nout::Int=1,
+    options::AbstractOptions=Options(),
+    parallelism=:multithreading,
+    numprocs::Union{Int,Nothing}=nothing,
+    procs::Union{Vector{Int},Nothing}=nothing,
+    addprocs_function::Union{Function,Nothing}=nothing,
+    heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
+    runtests::Bool=true,
+    return_state::Union{Bool,Nothing,Val}=nothing,
+    verbosity::Union{Int,Nothing}=nothing,
+    progress::Union{Bool,Nothing}=nothing,
+    v_dim_out::Val{DIM_OUT}=Val(nothing),
+) where {DIM_OUT}
+    concurrency = if parallelism in (:multithreading, "multithreading")
+        :multithreading
+    elseif parallelism in (:multiprocessing, "multiprocessing")
+        :multiprocessing
+    elseif parallelism in (:serial, "serial")
+        :serial
+    else
+        error(
+            "Invalid parallelism mode: $parallelism. " *
+            "You must choose one of :multithreading, :multiprocessing, or :serial.",
+        )
+        :serial
+    end
+    not_distributed = concurrency in (:multithreading, :serial)
+    not_distributed &&
+        procs !== nothing &&
+        error(
+            "`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
+        )
+    not_distributed &&
+        numprocs !== nothing &&
+        error(
+            "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
+        )
+
+    _return_state = if return_state isa Val
+        first(typeof(return_state).parameters)
+    else
+        if options.return_state === Val(nothing)
+            return_state === nothing ? false : return_state
+        else
+            @assert(
+                return_state === nothing,
+                "You cannot set `return_state` in both the `AbstractOptions` and in the passed arguments."
+            )
+            first(typeof(options.return_state).parameters)
+        end
+    end
+
+    dim_out = if DIM_OUT === nothing
+        nout > 1 ? 2 : 1
+    else
+        DIM_OUT
+    end
+    _numprocs::Int = if numprocs === nothing
+        if procs === nothing
+            4
+        else
+            length(procs)
+        end
+    else
+        if procs === nothing
+            numprocs
+        else
+            @assert length(procs) == numprocs
+            numprocs
+        end
+    end
+
+    _verbosity = if verbosity === nothing && options.verbosity === nothing
+        1
+    elseif verbosity === nothing && options.verbosity !== nothing
+        options.verbosity
+    elseif verbosity !== nothing && options.verbosity === nothing
+        verbosity
+    else
+        error(
+            "You cannot set `verbosity` in both the search parameters `AbstractOptions` and the call to `equation_search`.",
+        )
+        1
+    end
+    _progress::Bool = if progress === nothing && options.progress === nothing
+        (_verbosity > 0) && nout == 1
+    elseif progress === nothing && options.progress !== nothing
+        options.progress
+    elseif progress !== nothing && options.progress === nothing
+        progress
+    else
+        error(
+            "You cannot set `progress` in both the search parameters `AbstractOptions` and the call to `equation_search`.",
+        )
+        false
+    end
+
+    _addprocs_function = addprocs_function === nothing ? addprocs : addprocs_function
+
+    exeflags = if concurrency == :multiprocessing
+        heap_size_hint_in_megabytes = floor(
+            Int, (
+                if heap_size_hint_in_bytes === nothing
+                    (Sys.free_memory() / _numprocs)
+                else
+                    heap_size_hint_in_bytes
+                end
+            ) / 1024^2
+        )
+        _verbosity > 0 &&
+            heap_size_hint_in_bytes === nothing &&
+            @info "Automatically setting `--heap-size-hint=$(heap_size_hint_in_megabytes)M` on each Julia process. You can configure this with the `heap_size_hint_in_bytes` parameter."
+
+        `--heap-size=$(heap_size_hint_in_megabytes)M`
+    else
+        ``
+    end
+
+    return RuntimeOptions{concurrency,dim_out,_return_state}(
+        niterations,
+        _numprocs,
+        procs,
+        _addprocs_function,
+        exeflags,
+        runtests,
+        _verbosity,
+        _progress,
+        Val(concurrency),
+        Val(dim_out),
+        Val(_return_state),
+    )
 end
 
 """A simple dictionary to track worker allocations."""
@@ -126,7 +278,7 @@ macro sr_spawner(expr, kws...)
 end
 
 function init_dummy_pops(
-    npops::Int, datasets::Vector{D}, options::Options
+    npops::Int, datasets::Vector{D}, options::AbstractOptions
 ) where {T,L,D<:Dataset{T,L}}
     prototype = Population(
         first(datasets);
@@ -201,14 +353,14 @@ function check_for_user_quit(reader::StdinReader)::Bool
     return false
 end
 
-function check_for_loss_threshold(halls_of_fame, options::Options)::Bool
+function check_for_loss_threshold(halls_of_fame, options::AbstractOptions)::Bool
     return _check_for_loss_threshold(halls_of_fame, options.early_stop_condition, options)
 end
 
-function _check_for_loss_threshold(_, ::Nothing, ::Options)
+function _check_for_loss_threshold(_, ::Nothing, ::AbstractOptions)
     return false
 end
-function _check_for_loss_threshold(halls_of_fame, f::F, options::Options) where {F}
+function _check_for_loss_threshold(halls_of_fame, f::F, options::AbstractOptions) where {F}
     return all(halls_of_fame) do hof
         any(hof.members[hof.exists]) do member
             f(member.loss, compute_complexity(member, options))::Bool
@@ -216,12 +368,12 @@ function _check_for_loss_threshold(halls_of_fame, f::F, options::Options) where 
     end
 end
 
-function check_for_timeout(start_time::Float64, options::Options)::Bool
+function check_for_timeout(start_time::Float64, options::AbstractOptions)::Bool
     return options.timeout_in_seconds !== nothing &&
            time() - start_time > options.timeout_in_seconds::Float64
 end
 
-function check_max_evals(num_evals, options::Options)::Bool
+function check_max_evals(num_evals, options::AbstractOptions)::Bool
     return options.max_evals !== nothing && options.max_evals::Int <= sum(sum, num_evals)
 end
 
@@ -277,7 +429,7 @@ function update_progress_bar!(
     progress_bar::WrappedProgressBar,
     hall_of_fame::HallOfFame{T,L},
     dataset::Dataset{T,L},
-    options::Options,
+    options::AbstractOptions,
     equation_speed::Vector{Float32},
     head_node_occupation::Float64,
     parallelism=:serial,
@@ -306,7 +458,7 @@ end
 function print_search_state(
     hall_of_fames,
     datasets;
-    options::Options,
+    options::AbstractOptions,
     equation_speed::Vector{Float32},
     total_cycles::Int,
     cycles_remaining::Vector{Int},
@@ -370,13 +522,34 @@ end
 load_saved_population(::Nothing; kws...) = nothing
 
 """
-    SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelType}
+    AbstractSearchState{T,L,N}
 
-The state of a search, including the populations, worker outputs, tasks, and
+An abstract type encapsulating the internal state of the search process during symbolic regression.
+
+`AbstractSearchState` instances hold information like populations and progress metrics,
+used internally by `equation_search`. Subtyping `AbstractSearchState` allows
+customization of search state management.
+
+Look through the source of `equation_search` to see how this is used.
+
+# See Also
+
+- [`SearchState`](@ref): Default implementation of `AbstractSearchState`.
+- [`equation_search`](@ref SymbolicRegression.equation_search): Function where `AbstractSearchState` is utilized.
+- [`AbstractOptions`](@ref SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions): See how to extend abstract types for customizing options.
+
+"""
+abstract type AbstractSearchState{T,L,N<:AbstractExpression{T}} end
+
+"""
+    SearchState{T,L,N,WorkerOutputType,ChannelType} <: AbstractSearchState{T,L,N}
+
+The state of the search, including the populations, worker outputs, tasks, and
 channels. This is used to manage the search and keep track of runtime variables
 in a single struct.
 """
-Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,ChannelType}
+Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,ChannelType} <:
+                   AbstractSearchState{T,L,N}
     procs::Vector{Int}
     we_created_procs::Bool
     worker_output::Vector{Vector{WorkerOutputType}}
@@ -396,7 +569,7 @@ Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,Cha
 end
 
 function save_to_file(
-    dominating, nout::Integer, j::Integer, dataset::Dataset{T,L}, options::Options
+    dominating, nout::Integer, j::Integer, dataset::Dataset{T,L}, options::AbstractOptions
 ) where {T,L}
     output_file = options.output_file
     if nout > 1
@@ -443,7 +616,9 @@ end
 For searches where the maxsize gradually increases, this function returns the
 current maxsize.
 """
-function get_cur_maxsize(; options::Options, total_cycles::Int, cycles_remaining::Int)
+function get_cur_maxsize(;
+    options::AbstractOptions, total_cycles::Int, cycles_remaining::Int
+)
     cycles_elapsed = total_cycles - cycles_remaining
     fraction_elapsed = 1.0f0 * cycles_elapsed / total_cycles
     in_warmup_period = fraction_elapsed <= options.warmup_maxsize_by
@@ -502,7 +677,7 @@ function construct_datasets(
 end
 
 function update_hall_of_fame!(
-    hall_of_fame::HallOfFame, members::Vector{PM}, options::Options
+    hall_of_fame::HallOfFame, members::Vector{PM}, options::AbstractOptions
 ) where {PM<:PopMember}
     for member in members
         size = compute_complexity(member, options)

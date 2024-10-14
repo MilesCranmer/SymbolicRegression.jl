@@ -6,7 +6,7 @@ using DynamicExpressions:
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
 using ..InterfaceDynamicExpressionsModule: expected_array_type
-using ..CoreModule: Options, Dataset, create_expression, DATA_TYPE, LOSS_TYPE
+using ..CoreModule: AbstractOptions, Dataset, create_expression, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
 using ..DimensionalAnalysisModule: violates_dimensional_constraints
 
@@ -44,7 +44,7 @@ end
 function eval_tree_dispatch(
     tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
     dataset::Dataset{T},
-    options::Options,
+    options::AbstractOptions,
     idx,
 ) where {T<:DATA_TYPE}
     A = expected_array_type(dataset.X)
@@ -55,7 +55,7 @@ end
 function _eval_loss(
     tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
     dataset::Dataset{T,L},
-    options::Options,
+    options::AbstractOptions,
     regularization::Bool,
     idx,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -84,7 +84,11 @@ end
 
 # This evaluates function F:
 function evaluator(
-    f::F, tree::AbstractExpressionNode{T}, dataset::Dataset{T,L}, options::Options, idx
+    f::F,
+    tree::AbstractExpressionNode{T},
+    dataset::Dataset{T,L},
+    options::AbstractOptions,
+    idx,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE,F}
     if hasmethod(f, typeof((tree, dataset, options, idx)))
         # If user defines method that accepts batching indices:
@@ -105,7 +109,7 @@ end
 function eval_loss(
     tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
     dataset::Dataset{T,L},
-    options::Options;
+    options::AbstractOptions;
     regularization::Bool=true,
     idx=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -122,7 +126,7 @@ end
 function eval_loss_batched(
     tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
     dataset::Dataset{T,L},
-    options::Options;
+    options::AbstractOptions;
     regularization::Bool=true,
     idx=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -148,7 +152,7 @@ function loss_to_score(
     use_baseline::Bool,
     baseline::L,
     member,
-    options::Options,
+    options::AbstractOptions,
     complexity::Union{Int,Nothing}=nothing,
 )::L where {L<:LOSS_TYPE}
     # TODO: Come up with a more general normalization scheme.
@@ -167,7 +171,10 @@ end
 
 # Score an equation
 function score_func(
-    dataset::Dataset{T,L}, member, options::Options; complexity::Union{Int,Nothing}=nothing
+    dataset::Dataset{T,L},
+    member,
+    options::AbstractOptions;
+    complexity::Union{Int,Nothing}=nothing,
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     result_loss = eval_loss(get_tree_from_member(member), dataset, options)
     score = loss_to_score(
@@ -185,7 +192,7 @@ end
 function score_func_batched(
     dataset::Dataset{T,L},
     member,
-    options::Options;
+    options::AbstractOptions;
     complexity::Union{Int,Nothing}=nothing,
     idx=nothing,
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -202,12 +209,12 @@ function score_func_batched(
 end
 
 """
-    update_baseline_loss!(dataset::Dataset{T,L}, options::Options) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    update_baseline_loss!(dataset::Dataset{T,L}, options::AbstractOptions) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 
 Update the baseline loss of the dataset using the loss function specified in `options`.
 """
 function update_baseline_loss!(
-    dataset::Dataset{T,L}, options::Options
+    dataset::Dataset{T,L}, options::AbstractOptions
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     example_tree = create_expression(zero(T), options, dataset)
     # constructorof(options.node_type)(T; val=dataset.avg_y)
@@ -226,7 +233,7 @@ end
 function dimensional_regularization(
     tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
     dataset::Dataset{T,L},
-    options::Options,
+    options::AbstractOptions,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if !violates_dimensional_constraints(tree, dataset, options)
         return zero(L)

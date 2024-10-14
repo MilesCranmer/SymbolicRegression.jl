@@ -1,7 +1,7 @@
 module RegularizedEvolutionModule
 
 using DynamicExpressions: string_tree
-using ..CoreModule: Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
+using ..CoreModule: AbstractOptions, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..PopulationModule: Population, best_of_sample
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..MutateModule: next_generation, crossover_generation
@@ -16,7 +16,7 @@ function reg_evol_cycle(
     temperature,
     curmaxsize::Int,
     running_search_statistics::RunningSearchStatistics,
-    options::Options,
+    options::AbstractOptions,
     record::RecordType,
 )::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:Population{T,L}}
     # Batch over each subsample. Can give 15% improvement in speed; probably moreso for large pops.

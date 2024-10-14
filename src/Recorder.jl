@@ -2,7 +2,7 @@ module RecorderModule
 
 using ..CoreModule: RecordType
 
-"Assumes that `options` holds the user options::Options"
+"Assumes that `options` holds the user options::AbstractOptions"
 macro recorder(ex)
     quote
         if $(esc(:options)).use_recorder

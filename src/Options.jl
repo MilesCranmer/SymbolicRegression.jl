@@ -25,7 +25,7 @@ using ..OperatorsModule:
     safe_sqrt,
     safe_acosh,
     atanh_clip
-using ..MutationWeightsModule: MutationWeights, mutations
+using ..MutationWeightsModule: AbstractMutationWeights, MutationWeights, mutations
 import ..OptionsStructModule: Options
 using ..OptionsStructModule: ComplexityMapping, operator_specialization
 using ..UtilsModule: max_ops, @save_kwargs, @ignore
@@ -199,7 +199,7 @@ function inverse_unaopmap(op::F) where {F}
     return op
 end
 
-create_mutation_weights(w::MutationWeights) = w
+create_mutation_weights(w::AbstractMutationWeights) = w
 create_mutation_weights(w::NamedTuple) = MutationWeights(; w...)
 
 const deprecated_options_mapping = Base.ImmutableDict(
@@ -282,7 +282,7 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
             - `DWDMarginLoss(q)`.
 - `loss_function`: Alternatively, you may redefine the loss used
     as any function of `tree::AbstractExpressionNode{T}`, `dataset::Dataset{T}`,
-    and `options::Options`, so long as you output a non-negative
+    and `options::AbstractOptions`, so long as you output a non-negative
     scalar of type `T`. This is useful if you want to use a loss
     that takes into account derivatives, or correlations across
     the dataset. This also means you could use a custom evaluation
@@ -388,7 +388,7 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 - `probability_negate_constant`: Probability of negating a constant in the equation
     when mutating it.
 - `mutation_weights`: Relative probabilities of the mutations. The struct
-    `MutationWeights` should be passed to these options.
+    `MutationWeights` (or any `AbstractMutationWeights`) should be passed to these options.
     See its documentation on `MutationWeights` for the different weights.
 - `crossover_probability`: Probability of performing crossover.
 - `annealing`: Whether to use simulated annealing.
@@ -429,7 +429,7 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
 """
 
 """
-    Options(;kws...)
+    Options(;kws...) <: AbstractOptions
 
 Construct options for `equation_search` and other functions.
 The current arguments have been tuned using the median values from
@@ -471,7 +471,7 @@ $(OPTION_DESCRIPTIONS)
     annealing::Bool=false,
     batching::Bool=false,
     batch_size::Integer=50,
-    mutation_weights::Union{MutationWeights,AbstractVector,NamedTuple}=MutationWeights(),
+    mutation_weights::Union{AbstractMutationWeights,AbstractVector,NamedTuple}=MutationWeights(),
     crossover_probability::Real=0.066,
     warmup_maxsize_by::Real=0.0,
     use_frequency::Bool=true,
@@ -737,6 +737,7 @@ $(OPTION_DESCRIPTIONS)
         node_type,
         expression_type,
         typeof(expression_options),
+        typeof(set_mutation_weights),
         turbo,
         bumper,
         deprecated_return_state,
