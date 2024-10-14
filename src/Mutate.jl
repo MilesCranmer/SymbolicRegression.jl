@@ -207,8 +207,6 @@ function next_generation(
     while (!successful_mutation) && attempts < max_attempts
         tree = copy(member.tree)
 
-        # TODO: This uses dynamic dispatch. But it doesn't seem that bad
-        # in terms of performance. Still should investigate in more detail.
         mutation_result = _dispatch_mutations!(
             tree,
             member,
@@ -299,9 +297,10 @@ function next_generation(
         delta = afterScore - beforeScore
         probChange *= exp(-delta / (temperature * options.alpha))
     end
-    newSize = compute_complexity(tree, options)
+    newSize = -1
     if options.use_frequency
         oldSize = compute_complexity(member, options)
+        newSize = compute_complexity(tree, options)
         old_frequency = if (0 < oldSize <= options.maxsize)
             running_search_statistics.normalized_frequencies[oldSize]
         else
