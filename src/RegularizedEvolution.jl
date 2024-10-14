@@ -84,8 +84,8 @@ function reg_evol_cycle(
             pop.members[oldest] = baby
 
         else # Crossover
-            allstar1 = best_of_sample(pop, running_search_statistics, options)
-            allstar2 = best_of_sample(pop, running_search_statistics, options)
+            allstar1 = copy(best_of_sample(pop, running_search_statistics, options))
+            allstar2 = copy(best_of_sample(pop, running_search_statistics, options))
 
             baby1, baby2, crossover_accepted, tmp_num_evals = crossover_generation(
                 allstar1, allstar2, dataset, curmaxsize, options
