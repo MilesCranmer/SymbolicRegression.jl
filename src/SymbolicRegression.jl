@@ -51,6 +51,8 @@ export Population,
     get_tree,
     get_contents,
     get_metadata,
+    with_contents,
+    with_metadata,
 
     #Operators
     plus,
@@ -123,7 +125,9 @@ using DynamicExpressions:
     node_type,
     get_tree,
     get_contents,
-    get_metadata
+    get_metadata,
+    with_contents,
+    with_metadata
 using DynamicExpressions: with_type_parameters
 @reexport using LossFunctions:
     MarginLoss,
