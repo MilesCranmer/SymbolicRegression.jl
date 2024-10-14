@@ -70,29 +70,3 @@ dataset = Dataset(X', y)
 
 mach = machine(model, X, y)
 fit!(mach)
-
-println("hello")
-
-# using Profile
-# Profile.init(n=10^8, delay=1e-4)
-# mach = machine(model, X, y)
-# @profile fit!(mach, verbosity=0)
-# Profile.clear()
-# mach = machine(model, X, y)
-# @profile fit!(mach)
-
-# using PProf
-# pprof()
-# idx1 = lastindex(report(mach).equations)
-# ypred1 = predict(mach, (data=X, idx=idx1))
-# loss1 = sum(i -> abs2(ypred1[i] - y[i]), eachindex(y))
-
-# # Should keep all parameters
-# stop_at[] = 1e-5
-# fit!(mach)
-# idx2 = lastindex(report(mach).equations)
-# ypred2 = predict(mach, (data=X, idx=idx2))
-# loss2 = sum(i -> abs2(ypred2[i] - y[i]), eachindex(y))
-
-# # Should get better:
-# @test loss1 >= loss2

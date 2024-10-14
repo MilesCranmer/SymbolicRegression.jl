@@ -91,11 +91,8 @@ Note that the weights were already copied, so you don't need to worry about muta
 - `curmaxsize::Int`: The current maximum size constraint for the member's expression tree.
 """
 function condition_mutation_weights!(
-    weights::AbstractMutationWeights,
-    member::PopMember,
-    options::AbstractOptions,
-    curmaxsize::Int,
-)
+    weights::AbstractMutationWeights, member::P, options::AbstractOptions, curmaxsize::Int
+) where {T,L,N<:AbstractExpression,P<:PopMember{T,L,N}}
     tree = get_tree(member.tree)
     if !preserve_sharing(typeof(member.tree))
         weights.form_connection = 0.0
