@@ -30,7 +30,7 @@ using ..CheckConstraintsModule: CheckConstraintsModule as CC
 using ..ComplexityModule: ComplexityModule
 using ..LossFunctionsModule: LossFunctionsModule as LF
 
-struct ConstrainedExpression{
+struct BlueprintExpression{
     T,
     F<:Function,
     N<:AbstractExpressionNode{T},
@@ -45,7 +45,7 @@ struct ConstrainedExpression{
     trees::TS
     metadata::Metadata{D}
 
-    function ConstrainedExpression(
+    function BlueprintExpression(
         trees::TS, metadata::Metadata{D}
     ) where {
         TS,
@@ -61,7 +61,7 @@ struct ConstrainedExpression{
     end
 end
 
-function ConstrainedExpression(
+function BlueprintExpression(
     trees::TS;
     structure::F,
     operators::Union{AbstractOperatorEnum,Nothing}=nothing,
@@ -79,13 +79,13 @@ function ConstrainedExpression(
     operators = get_operators(example_tree, operators)
     variable_names = get_variable_names(example_tree, variable_names)
     metadata = (; structure, operators, variable_names, variable_mapping)
-    return ConstrainedExpression(trees, Metadata(metadata))
+    return BlueprintExpression(trees, Metadata(metadata))
 end
 
-DE.constructorof(::Type{<:ConstrainedExpression}) = ConstrainedExpression
+DE.constructorof(::Type{<:BlueprintExpression}) = BlueprintExpression
 
 @implements(
-    ExpressionInterface{all_ei_methods_except(())}, ConstrainedExpression, [Arguments()]
+    ExpressionInterface{all_ei_methods_except(())}, BlueprintExpression, [Arguments()]
 )
 
 function EB.create_expression(
@@ -95,7 +95,7 @@ function EB.create_expression(
     ::Type{<:AbstractExpressionNode},
     ::Type{E},
     ::Val{embed}=Val(false),
-) where {T,L,embed,E<:ConstrainedExpression}
+) where {T,L,embed,E<:BlueprintExpression}
     function_keys = keys(options.expression_options.variable_mapping)
 
     # NOTE: We need to copy over the operators so we can call the structure function
@@ -116,18 +116,18 @@ function EB.extra_init_params(
     options::AbstractOptions,
     dataset::Dataset{T},
     ::Val{embed},
-) where {T,embed,E<:ConstrainedExpression}
+) where {T,embed,E<:BlueprintExpression}
     # We also need to include the operators here to be consistent with `create_expression`.
     return (; options.operators, options.expression_options...)
 end
-function EB.sort_params(params::NamedTuple, ::Type{<:ConstrainedExpression})
+function EB.sort_params(params::NamedTuple, ::Type{<:BlueprintExpression})
     return (;
         params.structure, params.operators, params.variable_names, params.variable_mapping
     )
 end
 
 function ComplexityModule.compute_complexity(
-    tree::ConstrainedExpression, options::AbstractOptions; break_sharing=Val(false)
+    tree::BlueprintExpression, options::AbstractOptions; break_sharing=Val(false)
 )
     # Rather than including the complexity of the combined tree,
     # we only sum the complexity of each inner expression, which will be smaller.
@@ -138,7 +138,7 @@ function ComplexityModule.compute_complexity(
 end
 
 function LF.eval_tree_dispatch(
-    tree::ConstrainedExpression, dataset::Dataset, options::AbstractOptions, idx
+    tree::BlueprintExpression, dataset::Dataset, options::AbstractOptions, idx
 )
     raw_contents = get_contents(tree)
 
@@ -160,14 +160,14 @@ end
 We need full specialization for constrained expressions, as they rely on subexpressions being combined.
 """
 CM.operator_specialization(
-    ::Type{O}, ::Type{<:ConstrainedExpression}
+    ::Type{O}, ::Type{<:BlueprintExpression}
 ) where {O<:OperatorEnum} = O
 
 """
 We pick a random subexpression to mutate,
 and also return the symbol we mutated on so that we can put it back together later.
 """
-function MF.get_contents_for_mutation(ex::ConstrainedExpression, rng::AbstractRNG)
+function MF.get_contents_for_mutation(ex::BlueprintExpression, rng::AbstractRNG)
     raw_contents = get_contents(ex)
     function_keys = keys(raw_contents)
     key_to_mutate = rand(rng, function_keys)
@@ -175,9 +175,9 @@ function MF.get_contents_for_mutation(ex::ConstrainedExpression, rng::AbstractRN
     return raw_contents[key_to_mutate], key_to_mutate
 end
 
-"""See `get_contents_for_mutation(::ConstrainedExpression, ::AbstractRNG)`."""
+"""See `get_contents_for_mutation(::BlueprintExpression, ::AbstractRNG)`."""
 function MF.with_contents_for_mutation(
-    ex::ConstrainedExpression, new_inner_contents, context::Symbol
+    ex::BlueprintExpression, new_inner_contents, context::Symbol
 )
     raw_contents = get_contents(ex)
     raw_contents_keys = keys(raw_contents)
@@ -195,7 +195,7 @@ end
 
 """We combine the operators of each inner expression."""
 function DE.combine_operators(
-    ex::ConstrainedExpression{T,N}, operators::Union{AbstractOperatorEnum,Nothing}=nothing
+    ex::BlueprintExpression{T,N}, operators::Union{AbstractOperatorEnum,Nothing}=nothing
 ) where {T,N}
     raw_contents = get_contents(ex)
     function_keys = keys(raw_contents)
@@ -207,7 +207,7 @@ end
 
 """We simplify each inner expression."""
 function DE.simplify_tree!(
-    ex::ConstrainedExpression{T,N}, operators::Union{AbstractOperatorEnum,Nothing}=nothing
+    ex::BlueprintExpression{T,N}, operators::Union{AbstractOperatorEnum,Nothing}=nothing
 ) where {T,N}
     raw_contents = get_contents(ex)
     function_keys = keys(raw_contents)
@@ -217,12 +217,12 @@ function DE.simplify_tree!(
     return with_contents(ex, new_contents)
 end
 
-function CO.count_constants_for_optimization(ex::ConstrainedExpression)
+function CO.count_constants_for_optimization(ex::BlueprintExpression)
     return sum(CO.count_constants_for_optimization, values(get_contents(ex)))
 end
 
 function CC.check_constraints(
-    ex::ConstrainedExpression,
+    ex::BlueprintExpression,
     options::AbstractOptions,
     maxsize::Int,
     cursize::Union{Int,Nothing}=nothing,
