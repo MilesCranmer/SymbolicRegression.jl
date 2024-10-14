@@ -211,17 +211,26 @@ function DE.string_tree(
     # TODO: Make a fallback function in case the structure function is undefined.
     return get_metadata(tree).structure(inner_strings)
 end
-function LF.eval_tree_dispatch(
-    tree::TemplateExpression, dataset::Dataset, options::AbstractOptions, idx
-)
+function DE.eval_tree_array(
+    tree::TemplateExpression{T},
+    cX::AbstractMatrix{T},
+    operators::Union{AbstractOperatorEnum,Nothing}=nothing;
+    kws...,
+) where {T}
     raw_contents = get_contents(tree)
 
     # Raw numerical results of each inner expression:
-    outs = map(ex -> LF.eval_tree_dispatch(ex, dataset, options, idx), values(raw_contents))
+    outs = map(ex -> DE.eval_tree_array(ex, cX, operators; kws...), values(raw_contents))
 
     # Combine them using the structure function:
     results = NamedTuple{keys(raw_contents)}(map(first, outs))
     return get_metadata(tree).structure(results), all(last, outs)
+end
+function (ex::TemplateExpression)(
+    X, operators::Union{AbstractOperatorEnum,Nothing}=nothing; kws...
+)
+    # TODO: Why do we need to do this? It should automatically handle this!
+    return DE.eval_tree_array(ex, X, operators; kws...)
 end
 function DA.violates_dimensional_constraints(
     tree::TemplateExpression, dataset::Dataset, options::AbstractOptions
