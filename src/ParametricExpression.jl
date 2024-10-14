@@ -42,7 +42,10 @@ function EB.extra_init_params(
     return (; parameters=_parameters, parameter_names)
 end
 function EB.consistency_checks(options::AbstractOptions, prototype::ParametricExpression)
-    @assert options.expression_type <: ParametricExpression
+    @assert(
+        options.expression_type <: ParametricExpression,
+        "Need prototype to be of type $(options.expression_type), but got $(prototype)::$(typeof(prototype))"
+    )
     if get_metadata(prototype).parameter_names !== nothing
         @assert(
             length(get_metadata(prototype).parameter_names) ==
