@@ -121,7 +121,8 @@ Overload if needed for custom expression types.
 operator_specialization(
     ::Type{O}, ::Type{<:AbstractExpression}
 ) where {O<:AbstractOperatorEnum} = O
-operator_specialization(::Type{<:OperatorEnum}, ::Type{<:AbstractExpression}) = OperatorEnum
+@unstable operator_specialization(::Type{<:OperatorEnum}, ::Type{<:AbstractExpression}) =
+    OperatorEnum
 
 """
     AbstractOptions
