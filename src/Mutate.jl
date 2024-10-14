@@ -297,9 +297,10 @@ function next_generation(
         delta = afterScore - beforeScore
         probChange *= exp(-delta / (temperature * options.alpha))
     end
-    newSize = compute_complexity(tree, options)
+    newSize = -1
     if options.use_frequency
         oldSize = compute_complexity(member, options)
+        newSize = compute_complexity(tree, options)
         old_frequency = if (0 < oldSize <= options.maxsize)
             running_search_statistics.normalized_frequencies[oldSize]
         else
