@@ -329,10 +329,15 @@ function CC.check_constraints(
         return false
     end
 
+    # We also check the combined complexity:
+    ((cursize === nothing) ? ComplexityModule.compute_complexity(ex, options) : cursize) >
+    maxsize && return false
+
     # Then, we check other constraints for inner expressions:
     return all(
-        t -> CC.check_constraints(t, options, maxsize, cursize), values(raw_contents)
+        t -> CC.check_constraints(t, options, maxsize, nothing), values(raw_contents)
     )
+    # TODO: The concept of `cursize` doesn't really make sense here.
 end
 function contains_other_features_than(tree::AbstractExpression, features)
     return contains_other_features_than(get_tree(tree), features)
