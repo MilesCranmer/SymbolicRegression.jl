@@ -68,7 +68,8 @@ function DE.eval_tree_array(
     options::AbstractOptions;
     kws...,
 )
-    return DE.eval_tree_array(
+    A = expected_array_type(X, typeof(tree))
+    out, complete = DE.eval_tree_array(
         tree,
         X,
         classes,
@@ -76,7 +77,8 @@ function DE.eval_tree_array(
         turbo=options.turbo,
         bumper=options.bumper,
         kws...,
-    )::Tuple{<:expected_array_type(X, typeof(tree)),Bool}
+    )
+    return out::A, complete::Bool
 end
 function LF.eval_tree_dispatch(
     tree::ParametricExpression, dataset::Dataset, options::AbstractOptions, idx

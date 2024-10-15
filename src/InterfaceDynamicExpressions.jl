@@ -55,14 +55,16 @@ function DE.eval_tree_array(
     options::AbstractOptions;
     kws...,
 )
-    return DE.eval_tree_array(
+    A = expected_array_type(X, typeof(tree))
+    out, complete = DE.eval_tree_array(
         tree,
         X,
         DE.get_operators(tree, options);
         turbo=options.turbo,
         bumper=options.bumper,
         kws...,
-    )::Tuple{<:expected_array_type(X, typeof(tree)),Bool}
+    )
+    return out::A, complete::Bool
 end
 
 """Improve type inference by telling Julia the expected array returned."""
@@ -100,11 +102,11 @@ function DE.eval_diff_tree_array(
     direction::Int,
 )
     # TODO: Add `AbstractExpression` implementation in `Expression.jl`
-    return DE.eval_diff_tree_array(
+    A = expected_array_type(X, typeof(tree))
+    out, grad, complete = DE.eval_diff_tree_array(
         DE.get_tree(tree), X, DE.get_operators(tree, options), direction
-    )::Tuple{
-        <:expected_array_type(X, typeof(tree)),<:expected_array_type(X, typeof(tree)),Bool
-    }
+    )
+    return out::A, grad::A, complete::Bool
 end
 
 """
@@ -134,13 +136,12 @@ function DE.eval_grad_tree_array(
     options::AbstractOptions;
     kws...,
 )
-    return DE.eval_grad_tree_array(
+    A = expected_array_type(X, typeof(tree))
+    dA = expected_array_type(X, typeof(tree), Val(:eval_grad_tree_array))
+    out, grad, complete = DE.eval_grad_tree_array(
         tree, X, DE.get_operators(tree, options); kws...
-    )::Tuple{
-        <:expected_array_type(X, typeof(tree)),
-        <:expected_array_type(X, typeof(tree), Val(:eval_grad_tree_array)),
-        Bool,
-    }
+    )
+    return out::A, grad::dA, complete::Bool
 end
 
 """
@@ -154,9 +155,11 @@ function DE.differentiable_eval_tree_array(
     options::AbstractOptions,
 )
     # TODO: Add `AbstractExpression` implementation in `Expression.jl`
-    return DE.differentiable_eval_tree_array(
+    A = expected_array_type(X, typeof(tree))
+    out, complete = DE.differentiable_eval_tree_array(
         DE.get_tree(tree), X, DE.get_operators(tree, options)
-    )::Tuple{<:expected_array_type(X, typeof(tree)),Bool}
+    )
+    return out::A, complete::Bool
 end
 
 const WILDCARD_UNIT_STRING = "[?]"
