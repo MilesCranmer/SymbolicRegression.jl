@@ -236,6 +236,7 @@ using .CoreModule:
     Options,
     AbstractMutationWeights,
     MutationWeights,
+    is_weighted,
     sample_mutation,
     plus,
     sub,

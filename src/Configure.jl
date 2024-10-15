@@ -101,7 +101,7 @@ function test_dataset_configuration(
     end
 
     if !(typeof(options.elementwise_loss) <: SupervisedLoss) &&
-        dataset.weighted &&
+        is_weighted(dataset) &&
         !(3 in [m.nargs - 1 for m in methods(options.elementwise_loss)])
         throw(
             AssertionError(
@@ -132,7 +132,7 @@ function move_functions_to_workers(
                 continue
             end
             ops = (options.elementwise_loss,)
-            example_inputs = if dataset.weighted
+            example_inputs = if is_weighted(dataset)
                 (zero(T), zero(T), zero(T))
             else
                 (zero(T), zero(T))
