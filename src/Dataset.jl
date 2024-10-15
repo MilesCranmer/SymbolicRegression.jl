@@ -19,8 +19,7 @@ import ...deprecate_varmap
     dataset, if any.
 - `n::Int`: The number of samples.
 - `nfeatures::Int`: The number of features.
-- `weighted::Bool`: Whether the dataset is non-uniformly weighted.
-- `weights::Union{AbstractVector{T},Nothing}`: If the dataset is weighted,
+- `weights::Union{AbstractVector,Nothing}`: If the dataset is weighted,
     these specify the per-sample weight (with shape `(n,)`).
 - `extra::NamedTuple`: Extra information to pass to a custom evaluation
     function. Since this is an arbitrary named tuple, you could pass
@@ -50,7 +49,7 @@ mutable struct Dataset{
     L<:LOSS_TYPE,
     AX<:AbstractMatrix{T},
     AY<:Union{AbstractVector,Nothing},
-    AW<:Union{AbstractVector{T},Nothing},
+    AW<:Union{AbstractVector,Nothing},
     NT<:NamedTuple,
     XU<:Union{AbstractVector{<:Quantity},Nothing},
     YU<:Union{Quantity,Nothing},
@@ -62,7 +61,6 @@ mutable struct Dataset{
     const index::Int
     const n::Int
     const nfeatures::Int
-    const weighted::Bool
     const weights::AW
     const extra::NT
     const avg_y::Union{T,Nothing}
@@ -81,7 +79,7 @@ end
     Dataset(X::AbstractMatrix{T},
             y::Union{AbstractVector{T},Nothing}=nothing,
             loss_type::Type=Nothing;
-            weights::Union{AbstractVector{T}, Nothing}=nothing,
+            weights::Union{AbstractVector, Nothing}=nothing,
             variable_names::Union{Array{String, 1}, Nothing}=nothing,
             y_variable_name::Union{String,Nothing}=nothing,
             extra::NamedTuple=NamedTuple(),
@@ -96,7 +94,7 @@ function Dataset(
     y::Union{AbstractVector,Nothing}=nothing,
     loss_type::Type{L}=Nothing;
     index::Int=1,
-    weights::Union{AbstractVector{T},Nothing}=nothing,
+    weights::Union{AbstractVector,Nothing}=nothing,
     variable_names::Union{Array{String,1},Nothing}=nothing,
     display_variable_names=variable_names,
     y_variable_name::Union{String,Nothing}=nothing,
@@ -133,7 +131,6 @@ function Dataset(
 
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
-    weighted = weights !== nothing
     variable_names = if variable_names === nothing
         ["x$(i)" for i in 1:nfeatures]
     else
@@ -153,7 +150,7 @@ function Dataset(
     avg_y = if y === nothing || !(eltype(y) isa Number)
         nothing
     else
-        if weighted
+        if weights !== nothing
             sum(y .* weights) / sum(weights)
         else
             sum(y) / n
@@ -207,7 +204,6 @@ function Dataset(
         index,
         n,
         nfeatures,
-        weighted,
         weights,
         extra,
         avg_y,
@@ -222,6 +218,8 @@ function Dataset(
         y_sym_units,
     )
 end
+
+is_weighted(dataset::Dataset) = dataset.weights !== nothing
 
 function error_on_mismatched_size(_, ::Nothing)
     return nothing

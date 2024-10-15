@@ -6,7 +6,8 @@ using DynamicExpressions:
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
 using ..InterfaceDynamicExpressionsModule: expected_array_type
-using ..CoreModule: AbstractOptions, Dataset, create_expression, DATA_TYPE, LOSS_TYPE
+using ..CoreModule:
+    AbstractOptions, Dataset, create_expression, DATA_TYPE, LOSS_TYPE, is_weighted
 using ..ComplexityModule: compute_complexity
 using ..DimensionalAnalysisModule: violates_dimensional_constraints
 
@@ -65,7 +66,7 @@ function _eval_loss(
         return L(Inf)
     end
 
-    loss_val = if dataset.weighted
+    loss_val = if is_weighted(dataset)
         _weighted_loss(
             prediction,
             maybe_getindex(dataset.y, idx),
