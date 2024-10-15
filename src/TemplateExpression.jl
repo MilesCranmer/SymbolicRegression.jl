@@ -242,7 +242,7 @@ function DA.violates_dimensional_constraints(
     return false
 end
 function MM.condition_mutation_weights!(
-    _::AbstractMutationWeights, _::P, _::AbstractOptions, _::Int
+    weights::AbstractMutationWeights, member::P, options::AbstractOptions, curmaxsize::Int
 ) where {T,L,N<:TemplateExpression,P<:PopMember{T,L,N}}
     # HACK TODO
     return nothing
