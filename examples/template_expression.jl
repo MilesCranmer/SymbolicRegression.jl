@@ -1,72 +1,62 @@
 using SymbolicRegression
-using DynamicExpressions:
-    DynamicExpressions as DE,
-    Metadata,
-    get_tree,
-    get_operators,
-    get_variable_names,
-    OperatorEnum,
-    AbstractExpression
-using Random: MersenneTwister
-using MLJBase: machine, fit!, predict, report
-using Test
+using Random: rand
+using MLJBase: machine, fit!, report
+using Test: @test
 
-using DynamicExpressions.InterfacesModule: Interfaces, ExpressionInterface
-
-# Impose structure:
-#   Function f(x1, x2)
-#   Function g(x3)
-#   y = sin(f) + g^2
-operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+operators = options.operators
 variable_names = (i -> "x$i").(1:3)
 x1, x2, x3 = (i -> Expression(Node(Float64; feature=i); operators, variable_names)).(1:3)
 
-# For combining expressions to a single expression:
+variable_mapping = (; f=[1, 2], g1=[3], g2=[3])
+
 function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractString}}})
-    return "( $(nt.f) + $(nt.g1), $(nt.f) + $(nt.g2), $(nt.f) + $(nt.g3) )"
+    return "( $(nt.f) + $(nt.g1), $(nt.f) + $(nt.g2) )"
 end
 function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractVector}}})
-    return map(
-        i -> (nt.f[i] + nt.g1[i], nt.f[i] + nt.g2[i], nt.f[i] + nt.g3[i]), eachindex(nt.f)
-    )
+    return map(i -> (nt.f[i] + nt.g1[i], nt.f[i] + nt.g2[i]), eachindex(nt.f))
 end
 
-variable_mapping = (; f=[1, 2], g1=[3], g2=[3], g3=[3])
-
 st_expr = TemplateExpression(
-    (; f=x1, g1=x3, g2=x3, g3=x3);
+    (; f=x1, g1=x3, g2=x3);
     structure=my_structure,
     operators,
     variable_names,
     variable_mapping,
 )
 
-# @test Interfaces.test(
-#     ExpressionInterface,
-#     TemplateExpression,
-#     [st_expr]
-# )
+X = rand(100, 3) .* 10
+
+# Our dataset is a vector of 2-tuples
+y = [(sin(X[i, 1]) + X[i, 3]^2, sin(X[i, 1]) + X[i, 3]) for i in eachindex(axes(X, 1))]
 
 model = SRRegressor(;
-    niterations=200,
-    binary_operators=(+, *, /, -),
-    unary_operators=(sin, cos),
-    populations=30,
-    maxsize=30,
+    binary_operators=(+, *),
+    unary_operators=(sin,),
+    maxsize=15,
     expression_type=TemplateExpression,
     expression_options=(; structure=my_structure, variable_mapping),
-    parallelism=:multithreading,
-    elementwise_loss=((x1, x2, x3), (y1, y2, y3)) ->
-        (y1 - x1)^2 + (y2 - x2)^2 + (y3 - x3)^2,
+    # The elementwise needs to operate directly on each row of `y`:
+    elementwise_loss=((x1, x2), (y1, y2)) -> (y1 - x1)^2 + (y2 - x2)^2,
+    early_stop_condition=(loss, complexity) -> loss < 1e-5 && complexity <= 7,
 )
-
-X = rand(100, 3)
-y = [
-    (sin(X[i, 1]) + X[i, 3]^2, sin(X[i, 2]) + X[i, 3]^2, sin(X[i, 3]) + X[i, 3]^2) for
-    i in eachindex(axes(X, 1))
-]
-
-dataset = Dataset(X', y)
 
 mach = machine(model, X, y)
 fit!(mach)
+
+# Check the performance of the model
+r = report(mach)
+idx = r.best_idx
+best_loss = r.losses[idx]
+
+@test best_loss < 1e-5
+
+# Check the expression is split up correctly:
+best_expr = r.equations[idx]
+best_f = get_contents(best_expr).f
+best_g1 = get_contents(best_expr).g1
+best_g2 = get_contents(best_expr).g2
+
+@test best_f(X') ≈ (@. sin(X[:, 1]))
+@test best_g1(X') ≈ (@. X[:, 3] * X[:, 3])
+@test best_g2(X') ≈ (@. X[:, 3])
