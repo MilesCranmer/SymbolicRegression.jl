@@ -129,7 +129,7 @@ end
     @test completed
     @test out == [(1 + 3, 1 + 5, 1 + 3), (2 + 4, 2 + 6, 2 + 4)]
 end
-@testitem "TemplateExpression Creation" tags = [:part3] begin
+@testitem "TemplateExpression getters" tags = [:part3] begin
     using SymbolicRegression
     using DynamicExpressions: get_operators, get_variable_names
 
