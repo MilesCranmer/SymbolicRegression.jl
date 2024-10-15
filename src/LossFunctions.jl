@@ -9,6 +9,7 @@ using ..CoreModule:
     AbstractOptions, Dataset, create_expression, DATA_TYPE, LOSS_TYPE, is_weighted
 using ..ComplexityModule: compute_complexity
 using ..DimensionalAnalysisModule: violates_dimensional_constraints
+using ..InterfaceDynamicExpressionsModule: expected_array_type
 
 function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
@@ -44,12 +45,16 @@ end
 function eval_tree_dispatch(
     tree::AbstractExpression, dataset::Dataset, options::AbstractOptions, idx
 )
-    return eval_tree_array(tree, maybe_getindex(dataset.X, :, idx), options)
+    return eval_tree_array(
+        tree, maybe_getindex(dataset.X, :, idx), options
+    )::Tuple{<:expected_array_type(dataset.X, typeof(tree)),Bool}
 end
 function eval_tree_dispatch(
     tree::AbstractExpressionNode, dataset::Dataset, options::AbstractOptions, idx
 )
-    return eval_tree_array(tree, maybe_getindex(dataset.X, :, idx), options)
+    return eval_tree_array(
+        tree, maybe_getindex(dataset.X, :, idx), options
+    )::Tuple{<:expected_array_type(dataset.X, typeof(tree)),Bool}
 end
 
 # Evaluate the loss of a particular expression on the input dataset.
