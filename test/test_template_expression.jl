@@ -156,18 +156,28 @@ end
     @test get_variable_names(st_expr) == variable_names
     @test get_metadata(st_expr).structure == my_structure
 end
-# Integration test with fit! and performance check
-@testitem "Integration Test with fit! and Performance Check" begin
+@testitem "Integration Test with fit! and Performance Check" tags = [:part3] begin
     using SymbolicRegression
     using Random: rand
     using MLJBase: machine, fit!, report
 
-    operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    operators = options.operators
     variable_names = (i -> "x$i").(1:3)
     x1, x2, x3 =
         (i -> Expression(Node(Float64; feature=i); operators, variable_names)).(1:3)
 
     variable_mapping = (; f=[1, 2], g1=[3], g2=[3], g3=[3])
+
+    function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractString}}})
+        return "( $(nt.f) + $(nt.g1), $(nt.f) + $(nt.g2), $(nt.f) + $(nt.g3) )"
+    end
+    function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractVector}}})
+        return map(
+            i -> (nt.f[i] + nt.g1[i], nt.f[i] + nt.g2[i], nt.f[i] + nt.g3[i]),
+            eachindex(nt.f),
+        )
+    end
 
     st_expr = TemplateExpression(
         (; f=x1, g1=x3, g2=x3, g3=x3);
@@ -190,9 +200,9 @@ end
             (y1 - x1)^2 + (y2 - x2)^2 + (y3 - x3)^2,
     )
 
-    X = rand(100, 3)
+    X = rand(100, 3) .* 10
     y = [
-        (sin(X[i, 1]) + X[i, 3]^2, sin(X[i, 2]) + X[i, 3]^2, sin(X[i, 3]) + X[i, 3]^2) for
+        (sin(X[i, 1]) + X[i, 3]^2, sin(X[i, 2]) + X[i, 3]^3, sin(X[i, 1]) + X[i, 3]^2) for
         i in eachindex(axes(X, 1))
     ]
 
@@ -208,7 +218,4 @@ end
 
     # Ensure the loss is within a reasonable range
     @test best_loss < 1e-2  # Adjust this threshold based on expected performance
-
-    # The final model should be a TemplateExpression:
-
 end

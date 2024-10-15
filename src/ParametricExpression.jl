@@ -5,6 +5,7 @@ this file just adds custom behavior for SymbolicRegression.jl, where needed.
 module ParametricExpressionModule
 
 using DynamicExpressions:
+    DynamicExpressions as DE,
     AbstractExpression,
     ParametricExpression,
     ParametricNode,
@@ -17,10 +18,12 @@ using DynamicExpressions:
 using StatsBase: StatsBase
 using Random: default_rng, AbstractRNG
 
-using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE
+using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, AbstractMutationWeights
+using ..PopMemberModule: PopMember
 using ..InterfaceDynamicExpressionsModule: expected_array_type
 using ..LossFunctionsModule: LossFunctionsModule as LF
 using ..ExpressionBuilderModule: ExpressionBuilderModule as EB
+using ..MutateModule: MutateModule as MM
 using ..MutationFunctionsModule: MutationFunctionsModule as MF
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 
@@ -58,18 +61,45 @@ function EB.consistency_checks(options::AbstractOptions, prototype::ParametricEx
     return nothing
 end
 
+function DE.eval_tree_array(
+    tree::ParametricExpression,
+    X::AbstractMatrix,
+    classes::AbstractVector{<:Integer},
+    options::AbstractOptions;
+    kws...,
+)
+    return DE.eval_tree_array(
+        tree,
+        X,
+        classes,
+        DE.get_operators(tree, options);
+        turbo=options.turbo,
+        bumper=options.bumper,
+        kws...,
+    )::Tuple{<:expected_array_type(X, typeof(tree)),Bool}
+end
 function LF.eval_tree_dispatch(
     tree::ParametricExpression, dataset::Dataset, options::AbstractOptions, idx
 )
-    A = expected_array_type(dataset.X)
     return eval_tree_array(
         tree,
         LF.maybe_getindex(dataset.X, :, idx),
         LF.maybe_getindex(dataset.extra.classes, idx),
         options.operators,
-    )::Tuple{A,Bool}
+    )
 end
 
+function MM.condition_mutate_constant!(
+    ::Type{<:ParametricExpression},
+    weights::AbstractMutationWeights,
+    member::PopMember,
+    options::AbstractOptions,
+    curmaxsize::Int,
+)
+    # Avoid modifying the mutate_constant weight, since
+    # otherwise we would be mutating constants all the time!
+    return nothing
+end
 function MF.make_random_leaf(
     nfeatures::Int,
     ::Type{T},

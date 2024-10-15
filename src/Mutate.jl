@@ -2,7 +2,6 @@ module MutateModule
 
 using DynamicExpressions:
     AbstractExpression,
-    ParametricExpression,
     with_contents,
     get_tree,
     preserve_sharing,
@@ -147,17 +146,6 @@ function condition_mutate_constant!(
     n_constants = count_scalar_constants(member.tree)
     weights.mutate_constant *= min(8, n_constants) / 8.0
 
-    return nothing
-end
-function condition_mutate_constant!(
-    ::Type{<:ParametricExpression},
-    weights::AbstractMutationWeights,
-    member::PopMember,
-    options::AbstractOptions,
-    curmaxsize::Int,
-)
-    # Avoid modifying the mutate_constant weight, since
-    # otherwise we would be mutating constants all the time!
     return nothing
 end
 

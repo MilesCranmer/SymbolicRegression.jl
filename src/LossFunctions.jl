@@ -5,7 +5,6 @@ using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, get_tree, eval_tree_array
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
-using ..InterfaceDynamicExpressionsModule: expected_array_type
 using ..CoreModule:
     AbstractOptions, Dataset, create_expression, DATA_TYPE, LOSS_TYPE, is_weighted
 using ..ComplexityModule: compute_complexity
@@ -42,15 +41,15 @@ end
     end
 end
 
-for N in (:AbstractExpression, :AbstractExpressionNode)
-    @eval function eval_tree_dispatch(
-        tree::$N, dataset::Dataset, options::AbstractOptions, idx
-    )
-        A = expected_array_type(dataset.X)
-        return eval_tree_array(
-            tree, maybe_getindex(dataset.X, :, idx), options
-        )::Tuple{A,Bool}
-    end
+function eval_tree_dispatch(
+    tree::AbstractExpression, dataset::Dataset, options::AbstractOptions, idx
+)
+    return eval_tree_array(tree, maybe_getindex(dataset.X, :, idx), options)
+end
+function eval_tree_dispatch(
+    tree::AbstractExpressionNode, dataset::Dataset, options::AbstractOptions, idx
+)
+    return eval_tree_array(tree, maybe_getindex(dataset.X, :, idx), options)
 end
 
 # Evaluate the loss of a particular expression on the input dataset.

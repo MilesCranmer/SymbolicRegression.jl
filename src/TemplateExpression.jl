@@ -1,6 +1,7 @@
 module ConstrainedExpressionModule
 
 using Random: AbstractRNG
+using DispatchDoctor: @unstable
 using DynamicExpressions:
     DynamicExpressions as DE,
     AbstractStructuredExpression,
@@ -23,7 +24,7 @@ using DynamicExpressions.InterfacesModule:
 
 using ..CoreModule: AbstractOptions, Dataset, CoreModule as CM, AbstractMutationWeights
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
-using ..InterfaceDynamicExpressionsModule: expected_array_type
+using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..MutationFunctionsModule: MutationFunctionsModule as MF
 using ..ExpressionBuilderModule: ExpressionBuilderModule as EB
 using ..DimensionalAnalysisModule: DimensionalAnalysisModule as DA
@@ -232,6 +233,8 @@ function (ex::TemplateExpression)(
     # TODO: Why do we need to do this? It should automatically handle this!
     return DE.eval_tree_array(ex, X, operators; kws...)
 end
+@unstable IDE.expected_array_type(::AbstractMatrix, ::Type{<:TemplateExpression}) = Any
+
 function DA.violates_dimensional_constraints(
     tree::TemplateExpression, dataset::Dataset, options::AbstractOptions
 )
