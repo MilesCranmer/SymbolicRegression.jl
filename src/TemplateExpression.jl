@@ -251,9 +251,11 @@ end
 """
 We need full specialization for constrained expressions, as they rely on subexpressions being combined.
 """
-CM.operator_specialization(
+function CM.operator_specialization(
     ::Type{O}, ::Type{<:TemplateExpression}
-) where {O<:OperatorEnum} = O
+) where {O<:OperatorEnum}
+    return O
+end
 
 """
 We pick a random subexpression to mutate,
