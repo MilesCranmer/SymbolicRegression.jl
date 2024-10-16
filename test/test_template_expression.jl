@@ -159,3 +159,12 @@ end
 @testitem "Integration Test with fit! and Performance Check" tags = [:part3] begin
     include("../examples/template_expression.jl")
 end
+@testitem "Unimplemented functions" tags = [:part3] begin
+    using SymbolicRegression
+    using DynamicExpressions: constructorof
+
+    @test_throws ErrorException constructorof(TemplateExpression)
+    @test_throws "TemplateExpression requires additional information to constructor correctly." constructorof(
+        TemplateExpression
+    )
+end

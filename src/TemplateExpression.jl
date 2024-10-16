@@ -146,7 +146,12 @@ function TemplateExpression(
     return TemplateExpression(trees, Metadata(metadata))
 end
 
-DE.constructorof(::Type{<:TemplateExpression}) = TemplateExpression
+function DE.constructorof(::Type{<:TemplateExpression})
+    return error(
+        "TemplateExpression requires additional information to constructor correctly. " *
+        "Please use `create_expression` instead.",
+    )
+end
 
 @implements(
     ExpressionInterface{all_ei_methods_except(())}, TemplateExpression, [Arguments()]
