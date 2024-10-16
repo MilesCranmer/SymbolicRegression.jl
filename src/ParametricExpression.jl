@@ -83,12 +83,14 @@ end
 function LF.eval_tree_dispatch(
     tree::ParametricExpression, dataset::Dataset, options::AbstractOptions, idx
 )
-    return eval_tree_array(
+    A = expected_array_type(dataset.X, typeof(tree))
+    out, complete = DE.eval_tree_array(
         tree,
         LF.maybe_getindex(dataset.X, :, idx),
         LF.maybe_getindex(dataset.extra.classes, idx),
         options.operators,
     )
+    return out::A, complete::Bool
 end
 
 function MM.condition_mutate_constant!(
