@@ -131,6 +131,7 @@ end
     ENV["SYMBOLIC_REGRESSION_IS_TESTING"] = "true"
     include("../examples/parameterized_function.jl")
 end
+include("test_template_expression.jl")
 
 @testitem "Testing whether the recorder works." tags = [:part3] begin
     include("test_recorder.jl")
