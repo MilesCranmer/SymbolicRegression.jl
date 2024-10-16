@@ -73,12 +73,16 @@ function _eval_loss(
     loss_val = if is_weighted(dataset)
         _weighted_loss(
             prediction,
-            maybe_getindex(dataset.y, idx),
+            maybe_getindex(dataset.y::AbstractArray, idx),
             maybe_getindex(dataset.weights, idx),
             options.elementwise_loss,
         )
     else
-        _loss(prediction, maybe_getindex(dataset.y, idx), options.elementwise_loss)
+        _loss(
+            prediction,
+            maybe_getindex(dataset.y::AbstractArray, idx),
+            options.elementwise_loss,
+        )
     end
 
     if regularization
