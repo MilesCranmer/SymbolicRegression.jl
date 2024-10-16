@@ -25,7 +25,7 @@ jobs:
         uses: julia-actions/cache@v2
       - name: Install JuliaFormatter and format
         run: |
-          julia --startup-file=no -e 'using Pkg; pkg"activate --temp"; pkg"add JuliaFormatter"; using JuliaFormatter; format(".", verbose=true)'
+          julia --startup-file=no -e 'using Pkg; pkg"activate --temp"; pkg"add JuliaFormatter@1.0.61"; using JuliaFormatter; format("."; verbose=true)'
       - name: "Format check"
         run: |
           julia -e '
