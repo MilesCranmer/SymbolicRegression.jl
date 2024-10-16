@@ -24,12 +24,8 @@ jobs:
       - name: "Cache dependencies"
         uses: julia-actions/cache@v2
       - name: Install JuliaFormatter and format
-        # This will use the latest version by default but you can set the version like so:
-        #
-        # julia  -e 'using Pkg; Pkg.add(PackageSpec(name="JuliaFormatter", version="0.13.0"))'
         run: |
-          julia  -e 'using Pkg; Pkg.add(PackageSpec(name="JuliaFormatter"))'
-          julia  -e 'using JuliaFormatter; format(".", verbose=true)'
+          julia --startup-file=no -e 'using Pkg; pkg"activate --temp"; pkg"add JuliaFormatter"; using JuliaFormatter; format(".", verbose=true)'
       - name: "Format check"
         run: |
           julia -e '
