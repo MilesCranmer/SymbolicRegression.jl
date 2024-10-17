@@ -112,9 +112,7 @@ function best_of_sample(
     options::AbstractOptions,
 ) where {T,L,N}
     sample = sample_pop(pop, options)
-    return _best_of_sample(
-        sample.members, running_search_statistics, options
-    )::PopMember{T,L,N}
+    return copy(_best_of_sample(sample.members, running_search_statistics, options))
 end
 function _best_of_sample(
     members::Vector{P},
