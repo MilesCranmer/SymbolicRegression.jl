@@ -259,4 +259,59 @@ function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
     return output
 end
 
+function collect_mutable_object_ids(obj)
+    objs = Set{UInt64}()
+    visited = Set{UInt64}()
+    collect_mutable_objects(obj, objs, visited)
+    return objs
+end
+
+function collect_mutable_objects(obj, objs::Set{UInt64}, visited::Set{UInt64})
+    id = objectid(obj)
+    if isbits(obj) || id in visited
+        return nothing
+    end
+
+    push!(visited, id)
+    if ismutable(obj)
+        push!(objs, id)
+    end
+
+    T = typeof(obj)
+
+    if T <: Union{AbstractArray,AbstractSet,Tuple}
+        for elem in obj
+            collect_mutable_objects(elem, objs, visited)
+        end
+    elseif T <: AbstractDict
+        for (key, val) in obj
+            collect_mutable_objects(key, objs, visited)
+            collect_mutable_objects(val, objs, visited)
+        end
+    elseif isstructtype(T)
+        for field in fieldnames(T)
+            if isdefined(obj, field)
+                val = getfield(obj, field)
+                collect_mutable_objects(val, objs, visited)
+            end
+        end
+    else
+        # Not sure how to process, so skip
+    end
+    return nothing
+end
+
+function has_shared_mutable_objects(a::Union{AbstractArray,AbstractSet,Tuple})
+    seen = Set{UInt64}()
+    for elem in a
+        for obj_id in collect_mutable_object_ids(elem)
+            if obj_id in seen
+                return true
+            end
+            push!(seen, obj_id)
+        end
+    end
+    return false
+end
+
 end

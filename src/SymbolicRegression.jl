@@ -262,7 +262,8 @@ using .CoreModule:
     erfc,
     atanh_clip,
     create_expression
-using .UtilsModule: is_anonymous_function, recursive_merge, json3_write, @ignore
+using .UtilsModule:
+    is_anonymous_function, recursive_merge, json3_write, @ignore, has_shared_mutable_objects
 using .ComplexityModule: compute_complexity
 using .CheckConstraintsModule: check_constraints
 using .AdaptiveParsimonyModule:
@@ -858,6 +859,10 @@ function _main_search_loop!(
             update_hall_of_fame!(state.halls_of_fame[j], cur_pop.members, options)
             update_hall_of_fame!(state.halls_of_fame[j], best_seen.members[best_seen.exists], options)
             #! format: on
+
+            # if has_shared_mutable_objects(vcat(state.halls_of_fame[j].members, best_seen.members, cur_pop.members))
+            #     error("Shared mutable objects detected")
+            # end
 
             # Dominating pareto curve - must be better than all simpler equations
             dominating = calculate_pareto_frontier(state.halls_of_fame[j])
