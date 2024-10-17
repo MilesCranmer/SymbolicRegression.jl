@@ -1,4 +1,4 @@
-module ConstrainedExpressionModule
+module TemplateExpressionModule
 
 using Random: AbstractRNG
 using DispatchDoctor: @unstable

@@ -314,7 +314,7 @@ using .SearchUtilsModule:
     save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!
-using .ConstrainedExpressionModule: TemplateExpression
+using .TemplateExpressionModule: TemplateExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
