@@ -23,7 +23,7 @@ Return a random node from the tree. You may optionally
 filter the nodes matching some condition before sampling.
 """
 function random_node(
-    tree::AbstractNode, rng::AbstractRNG=default_rng(); filter::F=Returns(true)
+    tree::AbstractNode; rng::AbstractRNG=default_rng(), filter::F=Returns(true)
 ) where {F<:Function}
     Base.depwarn(
         "Instead of `random_node(tree, filter)`, use `rand(NodeSampler(; tree, filter))`",
@@ -49,7 +49,7 @@ end
 
 """Randomly convert an operator into another one (binary->binary; unary->unary)"""
 function mutate_operator(
-    ex::AbstractExpression{T}, options::AbstractOptions, rng::AbstractRNG=default_rng()
+    ex::AbstractExpression{T}, options::AbstractOptions; rng::AbstractRNG=default_rng()
 ) where {T<:DATA_TYPE}
     tree = get_contents(ex)
     ex = with_contents(ex, mutate_operator(tree, options, rng))
@@ -57,7 +57,7 @@ function mutate_operator(
 end
 function mutate_operator(
     tree::AbstractExpressionNode{T},
-    options::AbstractOptions,
+    options::AbstractOptions;
     rng::AbstractRNG=default_rng(),
 ) where {T}
     if !(has_operators(tree))
@@ -76,7 +76,7 @@ end
 function mutate_constant(
     ex::AbstractExpression{T},
     temperature,
-    options::AbstractOptions,
+    options::AbstractOptions;
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree = get_contents(ex)
@@ -86,7 +86,7 @@ end
 function mutate_constant(
     tree::AbstractExpressionNode{T},
     temperature,
-    options::AbstractOptions,
+    options::AbstractOptions;
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     # T is between 0 and 1.
@@ -121,8 +121,8 @@ end
 function append_random_op(
     ex::AbstractExpression{T},
     options::AbstractOptions,
-    nfeatures::Int,
-    rng::AbstractRNG=default_rng();
+    nfeatures::Int;
+    rng::AbstractRNG=default_rng(),
     makeNewBinOp::Union{Bool,Nothing}=nothing,
 ) where {T<:DATA_TYPE}
     tree = get_contents(ex)
@@ -132,8 +132,8 @@ end
 function append_random_op(
     tree::AbstractExpressionNode{T},
     options::AbstractOptions,
-    nfeatures::Int,
-    rng::AbstractRNG=default_rng();
+    nfeatures::Int;
+    rng::AbstractRNG=default_rng(),
     makeNewBinOp::Union{Bool,Nothing}=nothing,
 ) where {T<:DATA_TYPE}
     node = rand(rng, NodeSampler(; tree, filter=t -> t.degree == 0))
@@ -165,7 +165,7 @@ end
 function insert_random_op(
     ex::AbstractExpression{T},
     options::AbstractOptions,
-    nfeatures::Int,
+    nfeatures::Int;
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree = get_contents(ex)
@@ -175,7 +175,7 @@ end
 function insert_random_op(
     tree::AbstractExpressionNode{T},
     options::AbstractOptions,
-    nfeatures::Int,
+    nfeatures::Int;
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     node = rand(rng, NodeSampler(; tree))
@@ -199,7 +199,7 @@ end
 function prepend_random_op(
     ex::AbstractExpression{T},
     options::AbstractOptions,
-    nfeatures::Int,
+    nfeatures::Int;
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree = get_contents(ex)
@@ -209,7 +209,7 @@ end
 function prepend_random_op(
     tree::AbstractExpressionNode{T},
     options::AbstractOptions,
-    nfeatures::Int,
+    nfeatures::Int;
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     node = tree
@@ -232,9 +232,9 @@ end
 function make_random_leaf(
     nfeatures::Int,
     ::Type{T},
-    ::Type{N},
+    ::Type{N};
     rng::AbstractRNG=default_rng(),
-    ::Union{AbstractOptions,Nothing}=nothing,
+    (::Union{AbstractOptions,Nothing})=nothing,
 ) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
     if rand(rng, Bool)
         return constructorof(N)(T; val=randn(rng, T))
@@ -260,7 +260,7 @@ end
 function delete_random_op!(
     ex::AbstractExpression{T},
     options::AbstractOptions,
-    nfeatures::Int,
+    nfeatures::Int;
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree = get_contents(ex)
@@ -270,7 +270,7 @@ end
 function delete_random_op!(
     tree::AbstractExpressionNode{T},
     options::AbstractOptions,
-    nfeatures::Int,
+    nfeatures::Int;
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     node, parent, side = random_node_and_parent(tree, rng)
@@ -317,7 +317,7 @@ function gen_random_tree(
     length::Int,
     options::AbstractOptions,
     nfeatures::Int,
-    ::Type{T},
+    ::Type{T};
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     # Note that this base tree is just a placeholder; it will be replaced.
@@ -333,7 +333,7 @@ function gen_random_tree_fixed_size(
     node_count::Int,
     options::AbstractOptions,
     nfeatures::Int,
-    ::Type{T},
+    ::Type{T};
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree = make_random_leaf(nfeatures, T, options.node_type, rng, options)
@@ -351,7 +351,7 @@ function gen_random_tree_fixed_size(
 end
 
 function crossover_trees(
-    ex1::E, ex2::E, rng::AbstractRNG=default_rng()
+    ex1::E, ex2::E; rng::AbstractRNG=default_rng()
 ) where {T,E<:AbstractExpression{T}}
     tree1 = get_contents(ex1)
     tree2 = get_contents(ex2)
@@ -363,7 +363,7 @@ end
 
 """Crossover between two expressions"""
 function crossover_trees(
-    tree1::N, tree2::N, rng::AbstractRNG=default_rng()
+    tree1::N, tree2::N; rng::AbstractRNG=default_rng()
 ) where {T,N<:AbstractExpressionNode{T}}
     tree1 = copy_node(tree1)
     tree2 = copy_node(tree2)

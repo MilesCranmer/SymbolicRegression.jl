@@ -217,7 +217,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, class
         variable_names=variable_names,
         y_variable_names=y_variable_names,
         y_is_table=MMI.istable(y),
-        has_classes=!isnothing(classes),
+        has_classes=(!isnothing(classes)),
         X_units=X_units_clean,
         y_units=y_units_clean,
         types=(

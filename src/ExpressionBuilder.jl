@@ -32,7 +32,7 @@ import ..LossFunctionsModule: eval_tree_dispatch
 import ..ConstantOptimizationModule: count_constants_for_optimization
 
 @unstable function create_expression(
-    t::T, options::AbstractOptions, dataset::Dataset{T,L}, ::Val{embed}=Val(false)
+    t::T, options::AbstractOptions, dataset::Dataset{T,L}, (::Val{embed})=Val(false)
 ) where {T,L,embed}
     return create_expression(
         constructorof(options.node_type)(; val=t), options, dataset, Val(embed)
@@ -42,14 +42,14 @@ end
     t::AbstractExpressionNode{T},
     options::AbstractOptions,
     dataset::Dataset{T,L},
-    ::Val{embed}=Val(false),
+    (::Val{embed})=Val(false),
 ) where {T,L,embed}
     return constructorof(options.expression_type)(
         t; init_params(options, dataset, nothing, Val(embed))...
     )
 end
 function create_expression(
-    ex::AbstractExpression{T}, ::AbstractOptions, ::Dataset{T,L}, ::Val{embed}=Val(false)
+    ex::AbstractExpression{T}, ::AbstractOptions, ::Dataset{T,L}; (::Val{embed})=Val(false)
 ) where {T,L,embed}
     return ex
 end
@@ -210,7 +210,7 @@ end
 function make_random_leaf(
     nfeatures::Int,
     ::Type{T},
-    ::Type{N},
+    ::Type{N};
     rng::AbstractRNG=default_rng(),
     options::Union{AbstractOptions,Nothing}=nothing,
 ) where {T<:DATA_TYPE,N<:ParametricNode}
@@ -234,7 +234,7 @@ function make_random_leaf(
 end
 
 function crossover_trees(
-    ex1::ParametricExpression{T}, ex2::AbstractExpression{T}, rng::AbstractRNG=default_rng()
+    ex1::ParametricExpression{T}, ex2::AbstractExpression{T}; rng::AbstractRNG=default_rng()
 ) where {T}
     tree1 = get_contents(ex1)
     tree2 = get_contents(ex2)
@@ -265,7 +265,7 @@ end
 function mutate_constant(
     ex::ParametricExpression{T},
     temperature,
-    options::AbstractOptions,
+    options::AbstractOptions;
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     if rand(rng, Bool)

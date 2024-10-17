@@ -262,8 +262,8 @@ macro sr_spawner(expr, kws...)
     @assert all(ex -> ex.head == :(=), kws)
     @assert any(ex -> ex.args[1] == :parallelism, kws)
     @assert any(ex -> ex.args[1] == :worker_idx, kws)
-    parallelism = kws[findfirst(ex -> ex.args[1] == :parallelism, kws)::Int].args[2]
-    worker_idx = kws[findfirst(ex -> ex.args[1] == :worker_idx, kws)::Int].args[2]
+    parallelism = kws[findfirst(ex -> ex.args[1] == :parallelism, kws) :: Int].args[2]
+    worker_idx = kws[findfirst(ex -> ex.args[1] == :worker_idx, kws) :: Int].args[2]
     return quote
         if $(parallelism) == :serial
             $(expr)
@@ -363,7 +363,7 @@ end
 function _check_for_loss_threshold(halls_of_fame, f::F, options::AbstractOptions) where {F}
     return all(halls_of_fame) do hof
         any(hof.members[hof.exists]) do member
-            f(member.loss, compute_complexity(member, options))::Bool
+            return f(member.loss, compute_complexity(member, options))::Bool
         end
     end
 end
@@ -431,7 +431,7 @@ function update_progress_bar!(
     dataset::Dataset{T,L},
     options::AbstractOptions,
     equation_speed::Vector{Float32},
-    head_node_occupation::Float64,
+    head_node_occupation::Float64;
     parallelism=:serial,
 ) where {T,L}
     equation_strings = string_dominating_pareto_curve(
@@ -604,7 +604,7 @@ function save_to_file(
     # Write file twice in case exit in middle of filewrite
     for out_file in (output_file, output_file * ".bkup")
         open(out_file, "w") do io
-            write(io, s)
+            return write(io, s)
         end
     end
     return nothing

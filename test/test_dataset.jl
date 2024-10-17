@@ -10,7 +10,7 @@ end
 
 @testset "With deprecated kwarg" begin
     dataset = allow_unstable() do
-        Dataset(randn(ComplexF32, 3, 32), randn(ComplexF32, 32); loss_type=Float64)
+        return Dataset(randn(ComplexF32, 3, 32), randn(ComplexF32, 32); loss_type=Float64)
     end
     @test dataset isa Dataset{ComplexF32,Float64}
 end

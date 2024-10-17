@@ -5,7 +5,7 @@ import SymbolicRegression.UtilsModule: json3_write
 
 function json3_write(record, recorder_file)
     open(recorder_file, "w") do io
-        JSON3.write(io, record; allow_inf=true)
+        return JSON3.write(io, record; allow_inf=true)
     end
 end
 

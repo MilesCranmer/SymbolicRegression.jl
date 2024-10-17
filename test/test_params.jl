@@ -77,7 +77,7 @@ test_info(f::F, ::Test.Fail) where {F} = f()
 macro quiet(ex)
     return quote
         redirect_stderr(devnull) do
-            $ex
+            return $ex
         end
     end |> esc
 end

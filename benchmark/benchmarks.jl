@@ -88,10 +88,10 @@ function create_utils_benchmark()
     suite["best_of_sample"] = @benchmarkable(
         best_of_sample(pop, rss, $options),
         setup = (
-            nfeatures = 1;
-            dataset = Dataset(randn(nfeatures, 32), randn(32));
-            pop = Population(dataset; npop=100, nlength=20, options=$options, nfeatures);
-            rss = RunningSearchStatistics(; options=$options)
+            nfeatures=1;
+            dataset=Dataset(randn(nfeatures, 32), randn(32));
+            pop=Population(dataset; npop=100, nlength=20, options=($options), nfeatures);
+            rss=RunningSearchStatistics(; options=($options))
         )
     )
 
@@ -110,9 +110,9 @@ function create_utils_benchmark()
             end
         end,
         setup = (
-            nfeatures = 1;
-            dataset = Dataset(randn(nfeatures, 32), randn(32));
-            mutation_weights = MutationWeights(;
+            nfeatures=1;
+            dataset=Dataset(randn(nfeatures, 32), randn(32));
+            mutation_weights=MutationWeights(;
                 mutate_constant=1.0,
                 mutate_operator=1.0,
                 swap_operands=1.0,
@@ -125,21 +125,23 @@ function create_utils_benchmark()
                 form_connection=0.0,
                 break_connection=0.0,
             );
-            options = Options(;
-                unary_operators=[sin, cos], binary_operators=[+, -, *, /], mutation_weights
+            options=Options(;
+                unary_operators=[sin, cos],
+                binary_operators=[+, -, *, /],
+                mutation_weights,
             );
-            recorder = RecordType();
-            temperature = 1.0;
-            curmaxsize = 20;
-            rss = RunningSearchStatistics(; options);
-            trees = [
+            recorder=RecordType();
+            temperature=1.0;
+            curmaxsize=20;
+            rss=RunningSearchStatistics(; options);
+            trees=[
                 gen_random_tree_fixed_size(15, options, nfeatures, Float64) for _ in 1:100
             ];
-            expressions = [
+            expressions=[
                 Expression(tree; operators=options.operators, variable_names=["x1"]) for
                 tree in trees
             ];
-            members = [
+            members=[
                 PopMember(dataset, expression, options; deterministic=false) for
                 expression in expressions
             ]
@@ -149,18 +151,18 @@ function create_utils_benchmark()
     ntrees = 10
     suite["optimize_constants_x10"] = @benchmarkable(
         foreach(members) do member
-            optimize_constants(dataset, member, $options)
+            return optimize_constants(dataset, member, $options)
         end,
         seconds = 20,
         setup = (
-            nfeatures = 1;
-            T = Float64;
-            dataset = Dataset(randn(nfeatures, 512), randn(512));
-            ntrees = $ntrees;
-            trees = [
+            nfeatures=1;
+            T=Float64;
+            dataset=Dataset(randn(nfeatures, 512), randn(512));
+            ntrees=($ntrees);
+            trees=[
                 gen_random_tree_fixed_size(20, $options, nfeatures, T) for i in 1:ntrees
             ];
-            members = [
+            members=[
                 PopMember(dataset, tree, $options; deterministic=false) for tree in trees
             ]
         )
@@ -176,12 +178,12 @@ function create_utils_benchmark()
             )
             s[T] = @benchmarkable(
                 foreach(trees) do tree
-                    compute_complexity(tree, $options)
+                    return compute_complexity(tree, $options)
                 end,
                 setup = (
-                    T = Float64;
-                    nfeatures = 3;
-                    trees = [
+                    T=Float64;
+                    nfeatures=3;
+                    trees=[
                         gen_random_tree_fixed_size(20, $options, nfeatures, T) for
                         i in 1:($ntrees)
                     ]
@@ -194,12 +196,14 @@ function create_utils_benchmark()
     if isdefined(SymbolicRegression.MutationFunctionsModule, :randomly_rotate_tree!)
         suite["randomly_rotate_tree_x10"] = @benchmarkable(
             foreach(trees) do tree
-                SymbolicRegression.MutationFunctionsModule.randomly_rotate_tree!(tree)
+                return SymbolicRegression.MutationFunctionsModule.randomly_rotate_tree!(
+                    tree
+                )
             end,
             setup = (
-                T = Float64;
-                nfeatures = 3;
-                trees = [
+                T=Float64;
+                nfeatures=3;
+                trees=[
                     gen_random_tree_fixed_size(20, $options, nfeatures, T) for
                     i in 1:($ntrees)
                 ]
@@ -209,14 +213,14 @@ function create_utils_benchmark()
 
     suite["insert_random_op_x10"] = @benchmarkable(
         foreach(trees) do tree
-            SymbolicRegression.MutationFunctionsModule.insert_random_op(
+            return SymbolicRegression.MutationFunctionsModule.insert_random_op(
                 tree, $options, nfeatures
             )
         end,
         setup = (
-            T = Float64;
-            nfeatures = 3;
-            trees = [
+            T=Float64;
+            nfeatures=3;
+            trees=[
                 gen_random_tree_fixed_size(20, $options, nfeatures, T) for i in 1:($ntrees)
             ]
         )
@@ -237,12 +241,12 @@ function create_utils_benchmark()
     )
     suite["check_constraints_x10"] = @benchmarkable(
         foreach(trees) do tree
-            check_constraints(tree, $options, $options.maxsize)
+            return check_constraints(tree, $options, $options.maxsize)
         end,
         setup = (
-            T = Float64;
-            nfeatures = 3;
-            trees = [
+            T=Float64;
+            nfeatures=3;
+            trees=[
                 gen_random_tree_fixed_size(20, $options, nfeatures, T) for i in 1:($ntrees)
             ]
         )

@@ -135,7 +135,7 @@ function check_tree(
     tree::AbstractExpressionNode, node_index::NodeIndex, constant_list::AbstractVector
 )
     if tree.degree == 0
-        (!tree.constant) || tree.val == constant_list[node_index.val::UInt16]
+        (!tree.constant) || tree.val == constant_list[node_index.val:: UInt16]
     elseif tree.degree == 1
         check_tree(tree.l, node_index.l, constant_list)
     else

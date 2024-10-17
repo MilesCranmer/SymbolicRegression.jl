@@ -173,7 +173,7 @@ const CACHED_WEIGHTS =
     p = options.tournament_selection_p
     # Computing the weights for the tournament becomes quite expensive,
     return get!(CACHED_WEIGHTS, (n, p)) do
-        k = collect(0:(n - 1))
+        k = collect(0:(n-1))
         prob_each = p * ((1 - p) .^ k)
 
         return StatsBase.Weights(prob_each, sum(prob_each))

@@ -1,6 +1,6 @@
 const TEST_TYPE = Float32
 
-function test_operator(op::F, x::T, y=nothing) where {F,T}
+function test_operator(op::F, x::T; y=nothing) where {F,T}
     local output
     try
         output = y === nothing ? op(x) : op(x, y)
@@ -196,12 +196,10 @@ function activate_env_on_workers(
 )
     verbosity > 0 && @info "Activating environment on workers."
     @everywhere procs begin
-        Base.MainInclude.eval(
-            quote
-                using Pkg
-                Pkg.activate($$project_path)
-            end,
-        )
+        Base.MainInclude.eval(quote
+            using Pkg
+            Pkg.activate($$project_path)
+        end)
     end
 end
 
@@ -237,12 +235,9 @@ function import_module_on_workers(
     #             to JuliaLang.
 
     for ext in relevant_extensions
-        push!(
-            expr.args,
-            quote
-                using $ext: $ext
-            end,
-        )
+        push!(expr.args, quote
+            using $ext: $ext
+        end)
     end
 
     verbosity > 0 && if isempty(relevant_extensions)

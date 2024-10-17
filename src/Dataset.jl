@@ -92,9 +92,9 @@ end
 Construct a dataset to pass between internal functions.
 """
 function Dataset(
-    X::AbstractMatrix{T},
+    X::AbstractMatrix{T};
     y::Union{AbstractVector{T},Nothing}=nothing,
-    loss_type::Type{L}=Nothing;
+    loss_type::Type{L}=Nothing,
     index::Int=1,
     weights::Union{AbstractVector{T},Nothing}=nothing,
     variable_names::Union{Array{String,1},Nothing}=nothing,

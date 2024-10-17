@@ -104,7 +104,7 @@ function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
         # We check if this member is better than all members which are smaller than it and
         # also exist.
         betterThanAllSmaller = true
-        for i in 1:(size - 1)
+        for i in 1:(size-1)
             if !hallOfFame.exists[i]
                 continue
             end

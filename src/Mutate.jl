@@ -364,7 +364,7 @@ end
     kws...,
 ) where {W<:AbstractMutationWeights}
     mutation_choices = fieldnames(W)
-    quote
+    return quote
         Base.Cartesian.@nif(
             $(length(mutation_choices)),
             i -> mutation_choice == $(mutation_choices)[i],

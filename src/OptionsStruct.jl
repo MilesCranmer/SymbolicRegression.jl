@@ -285,7 +285,7 @@ end
     # Return an options struct with concrete operators
     type_parameters = O.parameters
     fields = Any[:(getfield(options, $(QuoteNode(k)))) for k in fieldnames(O)]
-    quote
+    return quote
         operators = getfield(options, :operators)
         Options{$(type_parameters[1]),typeof(operators),$(type_parameters[3:end]...)}(
             $(fields...)

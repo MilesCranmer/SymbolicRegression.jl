@@ -131,15 +131,15 @@ end
     # Check that every cos(...) which contains x1 also has complexity
     has_cos(tree) =
         any(get_tree(tree)) do t
-            t.degree == 1 && options.operators.unaops[t.op] == cos
+            return t.degree == 1 && options.operators.unaops[t.op] == cos
         end
     valid_trees = [
         !has_cos(member.tree) || any(
             t ->
                 t.degree == 1 &&
-                    options.operators.unaops[t.op] == cos &&
-                    Node(Float64; feature=1) in t &&
-                    compute_complexity(t, options) > 1,
+                options.operators.unaops[t.op] == cos &&
+                Node(Float64; feature=1) in t &&
+                compute_complexity(t, options) > 1,
             get_tree(member.tree),
         ) for member in dominating
     ]
@@ -243,10 +243,10 @@ end
     best = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
     @test compute_complexity(best, options2) == 6
     @test any(get_tree(best)) do t
-        t.degree == 1 && options2.operators.unaops[t.op] == cbrt
+        return t.degree == 1 && options2.operators.unaops[t.op] == cbrt
     end
     @test any(get_tree(best)) do t
-        t.degree == 1 && options2.operators.unaops[t.op] == safe_sqrt
+        return t.degree == 1 && options2.operators.unaops[t.op] == safe_sqrt
     end
 
     @testset "With MLJ" begin
@@ -268,10 +268,10 @@ end
             best_idx = findfirst(report.losses .< 1e-7)::Int
             @test report.complexities[best_idx] <= 6
             @test any(get_tree(report.equations[best_idx])) do t
-                t.degree == 1 && t.op == 2  # cbrt
+                return t.degree == 1 && t.op == 2  # cbrt
             end
             @test any(get_tree(report.equations[best_idx])) do t
-                t.degree == 1 && t.op == 1  # safe_sqrt
+                return t.degree == 1 && t.op == 1  # safe_sqrt
             end
 
             # Prediction should have same units:

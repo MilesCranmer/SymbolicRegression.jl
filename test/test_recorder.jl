@@ -25,7 +25,7 @@ hall_of_fame = equation_search(
 )
 
 data = open(options.recorder_file, "r") do io
-    JSON3.read(io; allow_inf=true)
+    return JSON3.read(io; allow_inf=true)
 end
 
 @test haskey(data, :options)

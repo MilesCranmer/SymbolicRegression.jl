@@ -17,7 +17,7 @@
         x = @view X[1, :]
         y = @view X[2, :]
 
-        sum(i -> x[i] * x[i] - cos(2.5 * y[i]), eachindex(x))
+        return sum(i -> x[i] * x[i] - cos(2.5 * y[i]), eachindex(x))
     end
     δy_hat = ex'(X)
 
@@ -28,7 +28,7 @@
         x = @view X[1, :]
         y = @view X[2, :]
 
-        sum(i -> (x[i] + x[i]) * sin(2.5 + y[i]), eachindex(x))
+        return sum(i -> (x[i] + x[i]) * sin(2.5 + y[i]), eachindex(x))
     end
     δy2_hat = ex'(X, options2)
 
@@ -98,7 +98,7 @@ end
                 X[1, i] * X[1, i] - cos(c[1] * X[2, i] + c[2]) + params[1, classes[i]] for
                 i in 1:32
             ]
-            sum(abs2, pred .- y) / length(y)
+            return sum(abs2, pred .- y) / length(y)
         end
 
     options = Options(;
