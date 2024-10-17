@@ -106,12 +106,6 @@ function optimize_and_simplify_population(
     # to manually allocate a new task with a larger stack for Enzyme.
     should_thread = !(options.deterministic) && !(isa(options.autodiff_backend, AutoEnzyme))
 
-    # TODO: This `copy` is necessary to avoid an undefined reference
-    # error when simplifying, and only for `TemplateExpression`.
-    # But, why is it needed? Could it be that
-    # some of the expressions across the population share subtrees?
-    pop.members .= map(copy, pop.members)
-
     @threads_if should_thread for j in 1:(pop.n)
         if options.should_simplify
             tree = pop.members[j].tree
