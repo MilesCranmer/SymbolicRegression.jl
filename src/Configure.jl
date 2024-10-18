@@ -88,7 +88,7 @@ function test_dataset_configuration(
 ) where {T<:DATA_TYPE}
     n = dataset.n
     if n != size(dataset.X, 2) ||
-        (dataset.y !== nothing && n != size(dataset.y::AbstractArray{T}, 1))
+        (dataset.y !== nothing && n != size(dataset.y::AbstractArray, 1))
         throw(
             AssertionError(
                 "Dataset dimensions are invalid. Make sure X is of shape [features, rows], y is of shape [rows] and if there are weights, they are of shape [rows].",
@@ -101,7 +101,7 @@ function test_dataset_configuration(
     end
 
     if !(typeof(options.elementwise_loss) <: SupervisedLoss) &&
-        dataset.weighted &&
+        is_weighted(dataset) &&
         !(3 in [m.nargs - 1 for m in methods(options.elementwise_loss)])
         throw(
             AssertionError(
@@ -132,7 +132,7 @@ function move_functions_to_workers(
                 continue
             end
             ops = (options.elementwise_loss,)
-            example_inputs = if dataset.weighted
+            example_inputs = if is_weighted(dataset)
                 (zero(T), zero(T), zero(T))
             else
                 (zero(T), zero(T))

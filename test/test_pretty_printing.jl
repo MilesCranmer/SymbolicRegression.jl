@@ -63,11 +63,7 @@ end
     .exists[6] = false
     .members[6] = undef
     .exists[7] = false
-    .members[7] = undef
-    .exists[8] = false
-    .members[8] = undef
-    .exists[9] = false
-    .members[9] = undef"
+    .members[7] = undef"
 
     @test s_hof == true_s
 end

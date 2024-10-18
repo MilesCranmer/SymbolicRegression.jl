@@ -681,7 +681,7 @@ function update_hall_of_fame!(
 ) where {PM<:PopMember}
     for member in members
         size = compute_complexity(member, options)
-        valid_size = 0 < size < options.maxsize + MAX_DEGREE
+        valid_size = 0 < size <= options.maxsize
         if !valid_size
             continue
         end

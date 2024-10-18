@@ -2,11 +2,9 @@ module MutateModule
 
 using DynamicExpressions:
     AbstractExpression,
-    ParametricExpression,
     with_contents,
     get_tree,
     preserve_sharing,
-    copy_node,
     count_scalar_constants,
     simplify_tree!,
     combine_operators
@@ -29,7 +27,8 @@ using ..MutationFunctionsModule:
     crossover_trees,
     form_random_connection!,
     break_random_connection!,
-    randomly_rotate_tree!
+    randomly_rotate_tree!,
+    randomize_tree
 using ..ConstantOptimizationModule: optimize_constants
 using ..RecorderModule: @recorder
 
@@ -91,11 +90,8 @@ Note that the weights were already copied, so you don't need to worry about muta
 - `curmaxsize::Int`: The current maximum size constraint for the member's expression tree.
 """
 function condition_mutation_weights!(
-    weights::AbstractMutationWeights,
-    member::PopMember,
-    options::AbstractOptions,
-    curmaxsize::Int,
-)
+    weights::AbstractMutationWeights, member::P, options::AbstractOptions, curmaxsize::Int
+) where {T,L,N<:AbstractExpression,P<:PopMember{T,L,N}}
     tree = get_tree(member.tree)
     if !preserve_sharing(typeof(member.tree))
         weights.form_connection = 0.0
@@ -152,17 +148,6 @@ function condition_mutate_constant!(
 
     return nothing
 end
-function condition_mutate_constant!(
-    ::Type{<:ParametricExpression},
-    weights::AbstractMutationWeights,
-    member::PopMember,
-    options::AbstractOptions,
-    curmaxsize::Int,
-)
-    # Avoid modifying the mutate_constant weight, since
-    # otherwise we would be mutating constants all the time!
-    return nothing
-end
 
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
@@ -205,7 +190,7 @@ function next_generation(
     #############################################
     local tree
     while (!successful_mutation) && attempts < max_attempts
-        tree = copy_node(member.tree)
+        tree = copy(member.tree)
 
         mutation_result = _dispatch_mutations!(
             tree,
@@ -250,7 +235,7 @@ function next_generation(
         mutation_accepted = false
         return (
             PopMember(
-                copy_node(member.tree),
+                copy(member.tree),
                 beforeScore,
                 beforeLoss,
                 options,
@@ -279,7 +264,7 @@ function next_generation(
         mutation_accepted = false
         return (
             PopMember(
-                copy_node(member.tree),
+                copy(member.tree),
                 beforeScore,
                 beforeLoss,
                 options,
@@ -322,7 +307,7 @@ function next_generation(
         mutation_accepted = false
         return (
             PopMember(
-                copy_node(member.tree),
+                copy(member.tree),
                 beforeScore,
                 beforeLoss,
                 options,
@@ -592,10 +577,7 @@ function mutate!(
     nfeatures,
     kws...,
 ) where {T,N<:AbstractExpression{T},P<:PopMember}
-    tree_size_to_generate = rand(1:curmaxsize)
-    tree = with_contents(
-        tree, gen_random_tree_fixed_size(tree_size_to_generate, options, nfeatures, T)
-    )
+    tree = randomize_tree(tree, curmaxsize, options, nfeatures)
     @recorder recorder["type"] = "randomize"
     return MutationResult{N,P}(; tree=tree)
 end

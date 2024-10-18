@@ -3,7 +3,7 @@ module PopulationModule
 using StatsBase: StatsBase
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, string_tree
-using ..CoreModule: AbstractOptions, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
+using ..CoreModule: AbstractOptions, Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: score_func, update_baseline_loss!
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
@@ -112,9 +112,7 @@ function best_of_sample(
     options::AbstractOptions,
 ) where {T,L,N}
     sample = sample_pop(pop, options)
-    return _best_of_sample(
-        sample.members, running_search_statistics, options
-    )::PopMember{T,L,N}
+    return copy(_best_of_sample(sample.members, running_search_statistics, options))
 end
 function _best_of_sample(
     members::Vector{P},
@@ -168,7 +166,7 @@ const CACHED_WEIGHTS =
         PerThreadCache{Dict{Tuple{Int,Float32},typeof(test_weights)}}()
     end
 
-@unstable function get_tournament_selection_weights(@nospecialize(options::AbstractOptions))
+@unstable function get_tournament_selection_weights(@nospecialize(options::Options))
     n = options.tournament_selection_n
     p = options.tournament_selection_p
     # Computing the weights for the tournament becomes quite expensive,

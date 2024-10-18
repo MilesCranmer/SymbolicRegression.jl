@@ -60,6 +60,16 @@ ParametricNode
 
 These types allow you to define expressions with parameters that can be tuned to fit the data better. You can specify the maximum number of parameters using the `expression_options` argument in `SRRegressor`.
 
+## Template Expressions
+
+Template expressions are a type of expression that allows you to specify a predefined structure.
+This lets you also fit vector expressions, as the custom evaluation structure can simply return
+a vector of tuples.
+
+```@docs
+TemplateExpression
+```
+
 ## Population
 
 Groups of equations are given as a population, which is

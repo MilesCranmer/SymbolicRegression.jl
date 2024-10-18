@@ -63,7 +63,6 @@ Arguments:
 function HallOfFame(
     options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    actualMaxsize = options.maxsize + MAX_DEGREE
     base_tree = create_expression(zero(T), options, dataset)
 
     return HallOfFame{T,L,typeof(base_tree)}(
@@ -75,9 +74,9 @@ function HallOfFame(
                 options;
                 parent=-1,
                 deterministic=options.deterministic,
-            ) for i in 1:actualMaxsize
+            ) for i in 1:(options.maxsize)
         ],
-        [false for i in 1:actualMaxsize],
+        [false for i in 1:(options.maxsize)],
     )
 end
 
@@ -95,8 +94,7 @@ function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
     P = PopMember{T,L,N}
     # Dominating pareto curve - must be better than all simpler equations
     dominating = P[]
-    actualMaxsize = length(hallOfFame.members)
-    for size in 1:actualMaxsize
+    for size in eachindex(hallOfFame.members)
         if !hallOfFame.exists[size]
             continue
         end

@@ -508,7 +508,7 @@ const input_scitype = Union{
 MMI.metadata_model(
     SRRegressor;
     input_scitype,
-    target_scitype=AbstractVector{<:MMI.Continuous},
+    target_scitype=AbstractVector{<:Any},
     supports_weights=true,
     reports_feature_importances=false,
     load_path="SymbolicRegression.MLJInterfaceModule.SRRegressor",
@@ -517,7 +517,7 @@ MMI.metadata_model(
 MMI.metadata_model(
     MultitargetSRRegressor;
     input_scitype,
-    target_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    target_scitype=Union{MMI.Table(Any),AbstractMatrix{<:Any}},
     supports_weights=true,
     reports_feature_importances=false,
     load_path="SymbolicRegression.MLJInterfaceModule.MultitargetSRRegressor",

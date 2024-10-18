@@ -12,7 +12,7 @@ export Population,
     ParametricNode,
     Expression,
     ParametricExpression,
-    StructuredExpression,
+    TemplateExpression,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
@@ -51,6 +51,8 @@ export Population,
     get_tree,
     get_contents,
     get_metadata,
+    with_contents,
+    with_metadata,
 
     #Operators
     plus,
@@ -91,7 +93,6 @@ using DynamicExpressions:
     ParametricNode,
     Expression,
     ParametricExpression,
-    StructuredExpression,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
@@ -124,7 +125,9 @@ using DynamicExpressions:
     node_type,
     get_tree,
     get_contents,
-    get_metadata
+    get_metadata,
+    with_contents,
+    with_metadata
 using DynamicExpressions: with_type_parameters
 @reexport using LossFunctions:
     MarginLoss,
@@ -217,6 +220,8 @@ using DispatchDoctor: @stable
     include("Migration.jl")
     include("SearchUtils.jl")
     include("ExpressionBuilder.jl")
+    include("TemplateExpression.jl")
+    include("ParametricExpression.jl")
 end
 
 using .CoreModule:
@@ -231,6 +236,7 @@ using .CoreModule:
     Options,
     AbstractMutationWeights,
     MutationWeights,
+    is_weighted,
     sample_mutation,
     plus,
     sub,
@@ -308,6 +314,7 @@ using .SearchUtilsModule:
     save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!
+using .TemplateExpressionModule: TemplateExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
@@ -410,7 +417,7 @@ which is useful for debugging and profiling.
 """
 function equation_search(
     X::AbstractMatrix{T},
-    y::AbstractMatrix{T};
+    y::AbstractMatrix;
     niterations::Int=10,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
     options::AbstractOptions=Options(),
@@ -481,17 +488,8 @@ function equation_search(
 end
 
 function equation_search(
-    X::AbstractMatrix{T1}, y::AbstractMatrix{T2}; kw...
-) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
-    U = promote_type(T1, T2)
-    return equation_search(
-        convert(AbstractMatrix{U}, X), convert(AbstractMatrix{U}, y); kw...
-    )
-end
-
-function equation_search(
-    X::AbstractMatrix{T1}, y::AbstractVector{T2}; kw...
-) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
+    X::AbstractMatrix{T}, y::AbstractVector; kw...
+) where {T<:DATA_TYPE}
     return equation_search(X, reshape(y, (1, size(y, 1))); kw..., v_dim_out=Val(1))
 end
 
@@ -1073,7 +1071,7 @@ end
     )
     num_evals += evals_from_optimize
     if options.batching
-        for i_member in 1:(options.maxsize + MAX_DEGREE)
+        for i_member in 1:(options.maxsize)
             score, result_loss = score_func(dataset, best_seen.members[i_member], options)
             best_seen.members[i_member].score = score
             best_seen.members[i_member].loss = result_loss

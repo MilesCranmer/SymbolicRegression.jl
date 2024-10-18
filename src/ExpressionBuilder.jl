@@ -1,3 +1,7 @@
+"""
+This module provides functions for creating, initializing, and manipulating
+`<:AbstractExpression` instances and their metadata within the SymbolicRegression.jl framework.
+"""
 module ExpressionBuilderModule
 
 using DispatchDoctor: @unstable
@@ -5,8 +9,6 @@ using DynamicExpressions:
     AbstractExpressionNode,
     AbstractExpression,
     Expression,
-    ParametricExpression,
-    ParametricNode,
     constructorof,
     get_tree,
     get_contents,
@@ -15,27 +17,20 @@ using DynamicExpressions:
     with_metadata,
     count_scalar_constants,
     eval_tree_array
-using Random: default_rng, AbstractRNG
 using StatsBase: StatsBase
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE
 using ..HallOfFameModule: HallOfFame
-using ..LossFunctionsModule: maybe_getindex
-using ..InterfaceDynamicExpressionsModule: expected_array_type
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
 
 import DynamicExpressions: get_operators
 import ..CoreModule: create_expression
-import ..MutationFunctionsModule:
-    make_random_leaf, crossover_trees, mutate_constant, mutate_factor
-import ..LossFunctionsModule: eval_tree_dispatch
-import ..ConstantOptimizationModule: count_constants_for_optimization
 
 @unstable function create_expression(
     t::T, options::AbstractOptions, dataset::Dataset{T,L}, ::Val{embed}=Val(false)
 ) where {T,L,embed}
     return create_expression(
-        constructorof(options.node_type)(; val=t), options, dataset, Val(embed)
+        t, options, dataset, options.node_type, options.expression_type, Val(embed)
     )
 end
 @unstable function create_expression(
@@ -44,14 +39,37 @@ end
     dataset::Dataset{T,L},
     ::Val{embed}=Val(false),
 ) where {T,L,embed}
-    return constructorof(options.expression_type)(
-        t; init_params(options, dataset, nothing, Val(embed))...
+    return create_expression(
+        t, options, dataset, options.node_type, options.expression_type, Val(embed)
     )
 end
 function create_expression(
-    ex::AbstractExpression{T}, ::AbstractOptions, ::Dataset{T,L}, ::Val{embed}=Val(false)
+    ex::AbstractExpression{T},
+    options::AbstractOptions,
+    ::Dataset{T,L},
+    ::Val{embed}=Val(false),
 ) where {T,L,embed}
-    return ex
+    return ex::options.expression_type
+end
+@unstable function create_expression(
+    t::T,
+    options::AbstractOptions,
+    dataset::Dataset{T,L},
+    ::Type{N},
+    ::Type{E},
+    ::Val{embed}=Val(false),
+) where {T,L,embed,N<:AbstractExpressionNode,E<:AbstractExpression}
+    return create_expression(constructorof(N)(; val=t), options, dataset, N, E, Val(embed))
+end
+@unstable function create_expression(
+    t::AbstractExpressionNode{T},
+    options::AbstractOptions,
+    dataset::Dataset{T,L},
+    ::Type{<:AbstractExpressionNode},
+    ::Type{E},
+    ::Val{embed}=Val(false),
+) where {T,L,embed,E<:AbstractExpression}
+    return constructorof(E)(t; init_params(options, dataset, nothing, Val(embed))...)
 end
 @unstable function init_params(
     options::AbstractOptions,
@@ -60,13 +78,17 @@ end
     ::Val{embed},
 ) where {T,L,embed}
     consistency_checks(options, prototype)
-    return (;
+    raw_params = (;
         operators=embed ? options.operators : nothing,
         variable_names=embed ? dataset.variable_names : nothing,
         extra_init_params(
             options.expression_type, prototype, options, dataset, Val(embed)
         )...,
     )
+    return sort_params(raw_params, options.expression_type)
+end
+function sort_params(raw_params::NamedTuple, ::Type{<:AbstractExpression})
+    return raw_params
 end
 function extra_init_params(
     ::Type{E},
@@ -75,46 +97,16 @@ function extra_init_params(
     dataset::Dataset{T},
     ::Val{embed},
 ) where {T,embed,E<:AbstractExpression}
+    # TODO: Potential aliasing here
     return (; options.expression_options...)
-end
-function extra_init_params(
-    ::Type{E},
-    prototype::Union{Nothing,ParametricExpression},
-    options::AbstractOptions,
-    dataset::Dataset{T},
-    ::Val{embed},
-) where {T,embed,E<:ParametricExpression}
-    num_params = options.expression_options.max_parameters
-    num_classes = length(unique(dataset.extra.classes))
-    parameter_names = embed ? ["p$i" for i in 1:num_params] : nothing
-    _parameters = if prototype === nothing
-        randn(T, (num_params, num_classes))
-    else
-        copy(get_metadata(prototype).parameters)
-    end
-    return (; parameters=_parameters, parameter_names)
 end
 
 consistency_checks(::AbstractOptions, prototype::Nothing) = nothing
 function consistency_checks(options::AbstractOptions, prototype)
-    if prototype === nothing
-        return nothing
-    end
     @assert(
         prototype isa options.expression_type,
         "Need prototype to be of type $(options.expression_type), but got $(prototype)::$(typeof(prototype))"
     )
-    if prototype isa ParametricExpression
-        if prototype.metadata.parameter_names !== nothing
-            @assert(
-                length(prototype.metadata.parameter_names) ==
-                    options.expression_options.max_parameters,
-                "Mismatch between options.expression_options.max_parameters=$(options.expression_options.max_parameters) and prototype.metadata.parameter_names=$(prototype.metadata.parameter_names)"
-            )
-        end
-        @assert size(prototype.metadata.parameters, 1) ==
-            options.expression_options.max_parameters
-    end
     return nothing
 end
 
@@ -158,14 +150,15 @@ end
     end
 end
 
-"""Strips all metadata except for top-level information"""
+"""
+Strips all metadata except for top-level information, so that we avoid needing
+to copy irrelevant information to the evolution itself (like variable names
+stored within an expression).
+
+The opposite of this is `embed_metadata`.
+"""
 function strip_metadata(
-    ex::Expression, options::AbstractOptions, dataset::Dataset{T,L}
-) where {T,L}
-    return with_metadata(ex; init_params(options, dataset, ex, Val(false))...)
-end
-function strip_metadata(
-    ex::ParametricExpression, options::AbstractOptions, dataset::Dataset{T,L}
+    ex::AbstractExpression, options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T,L}
     return with_metadata(ex; init_params(options, dataset, ex, Val(false))...)
 end
@@ -193,93 +186,6 @@ function strip_metadata(
     return HallOfFame(
         map(member -> strip_metadata(member, options, dataset), hof.members), hof.exists
     )
-end
-
-function eval_tree_dispatch(
-    tree::ParametricExpression{T}, dataset::Dataset{T}, options::AbstractOptions, idx
-) where {T<:DATA_TYPE}
-    A = expected_array_type(dataset.X)
-    return eval_tree_array(
-        tree,
-        maybe_getindex(dataset.X, :, idx),
-        maybe_getindex(dataset.extra.classes, idx),
-        options.operators,
-    )::Tuple{A,Bool}
-end
-
-function make_random_leaf(
-    nfeatures::Int,
-    ::Type{T},
-    ::Type{N},
-    rng::AbstractRNG=default_rng(),
-    options::Union{AbstractOptions,Nothing}=nothing,
-) where {T<:DATA_TYPE,N<:ParametricNode}
-    choice = rand(rng, 1:3)
-    if choice == 1
-        return ParametricNode(; val=randn(rng, T))
-    elseif choice == 2
-        return ParametricNode(T; feature=rand(rng, 1:nfeatures))
-    else
-        tree = ParametricNode{T}()
-        tree.val = zero(T)
-        tree.degree = 0
-        tree.feature = 0
-        tree.constant = false
-        tree.is_parameter = true
-        tree.parameter = rand(
-            rng, UInt16(1):UInt16(options.expression_options.max_parameters)
-        )
-        return tree
-    end
-end
-
-function crossover_trees(
-    ex1::ParametricExpression{T}, ex2::AbstractExpression{T}, rng::AbstractRNG=default_rng()
-) where {T}
-    tree1 = get_contents(ex1)
-    tree2 = get_contents(ex2)
-    out1, out2 = crossover_trees(tree1, tree2, rng)
-    ex1 = with_contents(ex1, out1)
-    ex2 = with_contents(ex2, out2)
-
-    # We also randomly share parameters
-    nparams1 = size(ex1.metadata.parameters, 1)
-    nparams2 = size(ex2.metadata.parameters, 1)
-    num_params_switch = min(nparams1, nparams2)
-    idx_to_switch = StatsBase.sample(
-        rng, 1:num_params_switch, num_params_switch; replace=false
-    )
-    for param_idx in idx_to_switch
-        ex2_params = ex2.metadata.parameters[param_idx, :]
-        ex2.metadata.parameters[param_idx, :] .= ex1.metadata.parameters[param_idx, :]
-        ex1.metadata.parameters[param_idx, :] .= ex2_params
-    end
-
-    return ex1, ex2
-end
-
-function count_constants_for_optimization(ex::ParametricExpression)
-    return count_scalar_constants(get_tree(ex)) + length(ex.metadata.parameters)
-end
-
-function mutate_constant(
-    ex::ParametricExpression{T},
-    temperature,
-    options::AbstractOptions,
-    rng::AbstractRNG=default_rng(),
-) where {T<:DATA_TYPE}
-    if rand(rng, Bool)
-        # Normal mutation of inner constant
-        tree = get_contents(ex)
-        return with_contents(ex, mutate_constant(tree, temperature, options, rng))
-    else
-        # Mutate parameters
-        parameter_index = rand(rng, 1:(options.expression_options.max_parameters))
-        # We mutate all the parameters at once
-        factor = mutate_factor(T, temperature, options, rng)
-        ex.metadata.parameters[parameter_index, :] .*= factor
-        return ex
-    end
 end
 
 @unstable function get_operators(ex::AbstractExpression, options::AbstractOptions)

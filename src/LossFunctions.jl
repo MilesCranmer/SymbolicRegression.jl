@@ -5,14 +5,15 @@ using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, get_tree, eval_tree_array
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
-using ..InterfaceDynamicExpressionsModule: expected_array_type
-using ..CoreModule: AbstractOptions, Dataset, create_expression, DATA_TYPE, LOSS_TYPE
+using ..CoreModule:
+    AbstractOptions, Dataset, create_expression, DATA_TYPE, LOSS_TYPE, is_weighted
 using ..ComplexityModule: compute_complexity
 using ..DimensionalAnalysisModule: violates_dimensional_constraints
+using ..InterfaceDynamicExpressionsModule: expected_array_type
 
 function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
-) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
+) where {T,LT<:Union{Function,SupervisedLoss}}
     if loss isa SupervisedLoss
         return LossFunctions.mean(loss, x, y)
     else
@@ -23,7 +24,7 @@ end
 
 function _weighted_loss(
     x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::LT
-) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
+) where {T,LT<:Union{Function,SupervisedLoss}}
     if loss isa SupervisedLoss
         return sum(loss, x, y, w; normalize=true)
     else
@@ -42,13 +43,18 @@ end
 end
 
 function eval_tree_dispatch(
-    tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
-    dataset::Dataset{T},
-    options::AbstractOptions,
-    idx,
-) where {T<:DATA_TYPE}
-    A = expected_array_type(dataset.X)
-    return eval_tree_array(tree, maybe_getindex(dataset.X, :, idx), options)::Tuple{A,Bool}
+    tree::AbstractExpression, dataset::Dataset, options::AbstractOptions, idx
+)
+    A = expected_array_type(dataset.X, typeof(tree))
+    out, complete = eval_tree_array(tree, maybe_getindex(dataset.X, :, idx), options)
+    return out::A, complete::Bool
+end
+function eval_tree_dispatch(
+    tree::AbstractExpressionNode, dataset::Dataset, options::AbstractOptions, idx
+)
+    A = expected_array_type(dataset.X, typeof(tree))
+    out, complete = eval_tree_array(tree, maybe_getindex(dataset.X, :, idx), options)
+    return out::A, complete::Bool
 end
 
 # Evaluate the loss of a particular expression on the input dataset.
@@ -64,15 +70,19 @@ function _eval_loss(
         return L(Inf)
     end
 
-    loss_val = if dataset.weighted
+    loss_val = if is_weighted(dataset)
         _weighted_loss(
             prediction,
-            maybe_getindex(dataset.y, idx),
+            maybe_getindex(dataset.y::AbstractArray, idx),
             maybe_getindex(dataset.weights, idx),
             options.elementwise_loss,
         )
     else
-        _loss(prediction, maybe_getindex(dataset.y, idx), options.elementwise_loss)
+        _loss(
+            prediction,
+            maybe_getindex(dataset.y::AbstractArray, idx),
+            options.elementwise_loss,
+        )
     end
 
     if regularization

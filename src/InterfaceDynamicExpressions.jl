@@ -7,11 +7,10 @@ using DynamicExpressions:
     GenericOperatorEnum,
     AbstractExpression,
     AbstractExpressionNode,
-    ParametricExpression,
     Node,
     GraphNode
 using DynamicQuantities: dimension, ustrip
-using ..CoreModule: AbstractOptions
+using ..CoreModule: AbstractOptions, Dataset
 using ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
 using ..UtilsModule: subscriptify
 
@@ -56,38 +55,24 @@ function DE.eval_tree_array(
     options::AbstractOptions;
     kws...,
 )
-    A = expected_array_type(X)
-    return DE.eval_tree_array(
+    A = expected_array_type(X, typeof(tree))
+    out, complete = DE.eval_tree_array(
         tree,
         X,
         DE.get_operators(tree, options);
         turbo=options.turbo,
         bumper=options.bumper,
         kws...,
-    )::Tuple{A,Bool}
-end
-function DE.eval_tree_array(
-    tree::ParametricExpression,
-    X::AbstractMatrix,
-    classes::AbstractVector{<:Integer},
-    options::AbstractOptions;
-    kws...,
-)
-    A = expected_array_type(X)
-    return DE.eval_tree_array(
-        tree,
-        X,
-        classes,
-        DE.get_operators(tree, options);
-        turbo=options.turbo,
-        bumper=options.bumper,
-        kws...,
-    )::Tuple{A,Bool}
+    )
+    return out::A, complete::Bool
 end
 
-# Improve type inference by telling Julia the expected array returned
-function expected_array_type(X::AbstractArray)
+"""Improve type inference by telling Julia the expected array returned."""
+function expected_array_type(X::AbstractArray, ::Type)
     return typeof(similar(X, axes(X, 2)))
+end
+function expected_array_type(X::AbstractArray, ::Type, ::Val{:eval_grad_tree_array})
+    return typeof(X)
 end
 
 """
@@ -116,11 +101,12 @@ function DE.eval_diff_tree_array(
     options::AbstractOptions,
     direction::Int,
 )
-    A = expected_array_type(X)
     # TODO: Add `AbstractExpression` implementation in `Expression.jl`
-    return DE.eval_diff_tree_array(
+    A = expected_array_type(X, typeof(tree))
+    out, grad, complete = DE.eval_diff_tree_array(
         DE.get_tree(tree), X, DE.get_operators(tree, options), direction
-    )::Tuple{A,A,Bool}
+    )
+    return out::A, grad::A, complete::Bool
 end
 
 """
@@ -150,11 +136,12 @@ function DE.eval_grad_tree_array(
     options::AbstractOptions;
     kws...,
 )
-    A = expected_array_type(X)
-    M = typeof(X)  # TODO: This won't work with StaticArrays!
-    return DE.eval_grad_tree_array(
+    A = expected_array_type(X, typeof(tree))
+    dA = expected_array_type(X, typeof(tree), Val(:eval_grad_tree_array))
+    out, grad, complete = DE.eval_grad_tree_array(
         tree, X, DE.get_operators(tree, options); kws...
-    )::Tuple{A,M,Bool}
+    )
+    return out::A, grad::dA, complete::Bool
 end
 
 """
@@ -167,11 +154,12 @@ function DE.differentiable_eval_tree_array(
     X::AbstractArray,
     options::AbstractOptions,
 )
-    A = expected_array_type(X)
     # TODO: Add `AbstractExpression` implementation in `Expression.jl`
-    return DE.differentiable_eval_tree_array(
+    A = expected_array_type(X, typeof(tree))
+    out, complete = DE.differentiable_eval_tree_array(
         DE.get_tree(tree), X, DE.get_operators(tree, options)
-    )::Tuple{A,Bool}
+    )
+    return out::A, complete::Bool
 end
 
 const WILDCARD_UNIT_STRING = "[?]"
