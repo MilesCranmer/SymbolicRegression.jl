@@ -36,12 +36,18 @@ You can create your own expression types by defining a new type that extends `Ab
 
 ```@docs
 AbstractExpression
-ExpressionInterface
 ```
 
 The interface is fairly flexible, and permits you define specific functional forms,
 extra parameters, etc. See the documentation of DynamicExpressions.jl for more details on what
-methods you need to implement. Then, for SymbolicRegression.jl, you would
+methods you need to implement. You can test the implementation of a given interface by using
+`ExpressionInterface` which makes use of `Interfaces.jl`:
+
+```@docs
+ExpressionInterface
+```
+
+Then, for SymbolicRegression.jl, you would
 pass `expression_type` to the `Options` constructor, as well as any
 `expression_options` you need (as a `NamedTuple`).
 
