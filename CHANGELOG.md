@@ -6,7 +6,7 @@
 
 ## SymbolicRegression.jl v1.0.0
 
-### Summary of major recent changes
+Summary of major recent changes, described in more detail below:
 
 - [Changed the core expression type from `Node{T} → Expression{T,Node{T},...}`](#changed-the-core-expression-type-from-nodet--expressiontnodet)
   - This gives us new features, improves user hackability, and greatly improves ergonomics!
@@ -32,14 +32,15 @@
 - [Major refactoring of the codebase to improve readability and modularity](#major-refactoring-of-the-codebase-to-improve-readability-and-modularity)
 - Increased documentation and examples.
 - Julia 1.10 is now the minimum supported Julia version.
+- [Other various features](#other-various-changes-in-v100)
+
+Note that some of these features were recently introduced in patch releases since they were backwards compatible. I am noting them here for visibility.
 
 ### Update Guide
 
 TODO
 
-### Major Changes
-
-#### Changed the core expression type from `Node{T} → Expression{T,Node{T},...}`
+### Changed the core expression type from `Node{T} → Expression{T,Node{T},...}`
 
 https://github.com/MilesCranmer/SymbolicRegression.jl/pull/326
 
@@ -74,15 +75,17 @@ Each time you use an operator on or between two `Expression`s that include the o
 
 You can access the tree with `get_tree` (guaranteed to return a `Node`), or `get_contents` – which returns the full info of an `AbstractExpression`, which might contain multiple expressions (which get stitched together when calling `get_tree`).
 
-#### Created "_Template Expressions_", for fitting expressions under a user-specified functional form (`TemplateExpression <: AbstractExpression`)
+### Created "_Template Expressions_", for fitting expressions under a user-specified functional form (`TemplateExpression <: AbstractExpression`)
 
-#### Created "_Parametric Expressions_", for custom functional forms with per-class parameters: (`ParametricExpression <: AbstractExpression`)
+### Created "_Parametric Expressions_", for custom functional forms with per-class parameters: (`ParametricExpression <: AbstractExpression`)
 
-#### Introduced a variety of new abstractions for user extensibility
+### Introduced a variety of new abstractions for user extensibility
 
-#### Fundamental improvements to the underlying evolutionary algorithm
+TODO: Describe `expression_type` and `node_type` options.
 
-#### Support for Zygote.jl and Enzyme.jl within the constant optimizer, specified using the `autodiff_backend` option
+### Fundamental improvements to the underlying evolutionary algorithm
+
+### Support for Zygote.jl and Enzyme.jl within the constant optimizer, specified using the `autodiff_backend` option
 
 Historically, SymbolicRegression has mostly relied on finite differences to estimate derivatives – which actually works well for small numbers of parameters. This is what Optim.jl selects unless you can provide it with gradients.
 
@@ -104,18 +107,14 @@ Options(
 
 for Enzyme.jl (though Enzyme support is highly experimental).
 
-#### Identified and fixed a major internal bug involving unexpected aliasing produced by the crossover operator
+### Identified and fixed a major internal bug involving unexpected aliasing produced by the crossover operator
 
-#### Major refactoring of the codebase to improve readability and modularity
+### Major refactoring of the codebase to improve readability and modularity
 
-### Other Changes
+### Other Various Changes in v1.0.0
 
-- Implement tree rotation operator by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/348
-  - This seems to help search performance overall – the new mutation is available as `rotate_tree` in the weights – which has been set to a default 0.3.
-- Avoid `Base.sleep` by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/305
-- CompatHelper: bump compat for MLJModelInterface to 1, (keep existing compat) by @github-actions in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/328
-- fix typos by @spaette in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/331
-- chore(deps): bump peter-evans/create-pull-request from 6 to 7 by @dependabot in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/343
+- Support for per-variable complexity, via the `complexity_of_variables` option.
+- Option to force dimensionless constants when fitting with dimensional constraints, via the `dimensionless_constants_only` option.
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.24.5...v1.0.0
 
