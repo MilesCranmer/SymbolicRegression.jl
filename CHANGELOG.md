@@ -1,6 +1,8 @@
-# SymbolicRegression.jl v1.0.0
+# Changelog
 
-## Summary of major recent changes
+## SymbolicRegression.jl v1.0.0
+
+### Summary of major recent changes
 
 - Changed the core expression type from `Node{T} → Expression{T,Node{T},...}`
   - This gives us new features, improves user hackability, and greatly improves ergonomics!
@@ -27,9 +29,9 @@
 - Increased documentation and examples.
 - Julia 1.10 is now the minimum supported Julia version.
 
-## Major Changes
+### Major Changes
 
-### **Breaking**: Changes default expressions from `Node` to the user-friendly `Expression`
+#### **Breaking**: Changes default expressions from `Node` to the user-friendly `Expression`
 
 https://github.com/MilesCranmer/SymbolicRegression.jl/pull/326
 
@@ -45,7 +47,7 @@ operators = options.operators
 variable_names = ["x1", "x2", "x3"]
 x1, x2, x3 = [Expression(Node(Float64; feature=i); operators, variable_names) for i=1:3]
 
-# Use the operators directly!
+## Use the operators directly!
 tree = cos(x1 - 3.2 * x2) - x1 * x1
 ```
 
@@ -64,13 +66,13 @@ Each time you use an operator on or between two `Expression`s that include the o
 
 You can access the tree with `get_tree` (guaranteed to return a `Node`), or `get_contents` – which returns the full info of an `AbstractExpression`, which might contain multiple expressions (which get stitched together when calling `get_tree`).
 
-### Customizing behavior
+#### Customizing behavior
 
 DynamicExpressions v1.0 has a full `AbstractExpression` interface to customize behavior of pretty much anything. As an example, there is this included `ParametricExpression` type, with an example available in `examples/parametrized_function.jl`. You can use this to find _basis functions_ with per-class parameters. It still needs some tuning but it works for simple examples.
 
 This `ParametricExpression` is meant partly as an example of the types of things you can do with the new `AbstractExpression` interface, though it should hopefully be a useful feature by itself.
 
-### Auto-diff within optimization
+#### Auto-diff within optimization
 
 Historically, SymbolicRegression has mostly relied on finite differences to estimate derivatives – which actually works well for small numbers of parameters. This is what Optim.jl selects unless you can provide it with gradients.
 
@@ -92,7 +94,7 @@ Options(
 
 for Enzyme.jl (though Enzyme support is highly experimental).
 
-## Other Changes
+### Other Changes
 
 - Implement tree rotation operator by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/348
   - This seems to help search performance overall – the new mutation is available as `rotate_tree` in the weights – which has been set to a default 0.3.
@@ -101,14 +103,14 @@ for Enzyme.jl (though Enzyme support is highly experimental).
 - fix typos by @spaette in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/331
 - chore(deps): bump peter-evans/create-pull-request from 6 to 7 by @dependabot in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/343
 
-## New Contributors
+### New Contributors
 
 - @spaette made their first contribution in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/331
 - Thanks to @larsentom for the mutation idea
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.24.5...v1.0.0-beta1
 
-# SymbolicRegression.jl v1.0.0-beta1
+## SymbolicRegression.jl v1.0.0-beta1
 
 This is a **_beta release_** that is not yet registered. To try it out, open a Julia REPL and hit `]`, then:
 
@@ -118,9 +120,9 @@ pkg> add SymbolicRegression#v1.0.0-beta1
 
 Before the final release of v1.0.0, the hyperparameters will be re-tuned to optimize the new mutations: `swap_operands` and `rotate_tree`, which seem to be quite effective.
 
-## Major Changes
+### Major Changes
 
-### **Breaking**: Changes default expressions from `Node` to the user-friendly `Expression`
+#### **Breaking**: Changes default expressions from `Node` to the user-friendly `Expression`
 
 https://github.com/MilesCranmer/SymbolicRegression.jl/pull/326
 
@@ -136,7 +138,7 @@ operators = options.operators
 variable_names = ["x1", "x2", "x3"]
 x1, x2, x3 = [Expression(Node(Float64; feature=i); operators, variable_names) for i=1:3]
 
-# Use the operators directly!
+## Use the operators directly!
 tree = cos(x1 - 3.2 * x2) - x1 * x1
 ```
 
@@ -155,13 +157,13 @@ Each time you use an operator on or between two `Expression`s that include the o
 
 You can access the tree with `get_tree` (guaranteed to return a `Node`), or `get_contents` – which returns the full info of an `AbstractExpression`, which might contain multiple expressions (which get stitched together when calling `get_tree`).
 
-### Customizing behavior
+#### Customizing behavior
 
 DynamicExpressions v1.0 has a full `AbstractExpression` interface to customize behavior of pretty much anything. As an example, there is this included `ParametricExpression` type, with an example available in `examples/parametrized_function.jl`. You can use this to find _basis functions_ with per-class parameters. It still needs some tuning but it works for simple examples.
 
 This `ParametricExpression` is meant partly as an example of the types of things you can do with the new `AbstractExpression` interface, though it should hopefully be a useful feature by itself.
 
-### Auto-diff within optimization
+#### Auto-diff within optimization
 
 Historically, SymbolicRegression has mostly relied on finite differences to estimate derivatives – which actually works well for small numbers of parameters. This is what Optim.jl selects unless you can provide it with gradients.
 
@@ -183,7 +185,7 @@ Options(
 
 for Enzyme.jl (though Enzyme support is highly experimental).
 
-## Other Changes
+### Other Changes
 
 - Implement tree rotation operator by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/348
   - This seems to help search performance overall – the new mutation is available as `rotate_tree` in the weights – which has been set to a default 0.3.
@@ -192,16 +194,16 @@ for Enzyme.jl (though Enzyme support is highly experimental).
 - fix typos by @spaette in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/331
 - chore(deps): bump peter-evans/create-pull-request from 6 to 7 by @dependabot in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/343
 
-## New Contributors
+### New Contributors
 
 - @spaette made their first contribution in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/331
 - Thanks to @larsentom for the mutation idea
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.24.5...v1.0.0-beta1
 
-# SymbolicRegression.jl v0.24.5
+## SymbolicRegression.jl v0.24.5
 
-## SymbolicRegression v0.24.5
+### SymbolicRegression v0.24.5
 
 [Diff since v0.24.4](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.24.4...v0.24.5)
 
@@ -216,9 +218,9 @@ for Enzyme.jl (though Enzyme support is highly experimental).
 - Allow per-variable complexity (#324) (@MilesCranmer)
 - Refactor tests to use TestItems.jl (#325) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.24.4
+## SymbolicRegression.jl v0.24.4
 
-## SymbolicRegression v0.24.4
+### SymbolicRegression v0.24.4
 
 [Diff since v0.24.3](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.24.3...v0.24.4)
 
@@ -229,9 +231,9 @@ for Enzyme.jl (though Enzyme support is highly experimental).
 - refactor: remove unused Tricks dependency (#309) (@MilesCranmer)
 - Add option to force dimensionless constants (#310) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.24.3
+## SymbolicRegression.jl v0.24.3
 
-## SymbolicRegression v0.24.3
+### SymbolicRegression v0.24.3
 
 [Diff since v0.24.2](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.24.2...v0.24.3)
 
@@ -243,9 +245,9 @@ for Enzyme.jl (though Enzyme support is highly experimental).
 
 - Silence warnings for Optim.jl (#255)
 
-# SymbolicRegression.jl v0.24.2
+## SymbolicRegression.jl v0.24.2
 
-## SymbolicRegression v0.24.2
+### SymbolicRegression v0.24.2
 
 [Diff since v0.24.1](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.24.1...v0.24.2)
 
@@ -261,9 +263,9 @@ for Enzyme.jl (though Enzyme support is highly experimental).
 - API Overhaul (#187)
 - [Feature]: Training on high dimensions X (#299)
 
-# SymbolicRegression.jl v0.24.1
+## SymbolicRegression.jl v0.24.1
 
-## What's Changed
+### What's Changed
 
 - CompatHelper: bump compat for MLJModelInterface to 1.9, (keep existing compat) by @github-actions in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/295
 - CompatHelper: bump compat for ProgressBars to 1, (keep existing compat) by @github-actions in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/294
@@ -272,9 +274,9 @@ for Enzyme.jl (though Enzyme support is highly experimental).
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.24.0...v0.24.1
 
-# SymbolicRegression.jl v0.24.0
+## SymbolicRegression.jl v0.24.0
 
-## What's Changed
+### What's Changed
 
 - Experimental support for program synthesis / graph-like expressions instead of trees (https://github.com/MilesCranmer/SymbolicRegression.jl/pull/271)
   - **BREAKING**: many types now have a third type parameter, declaring the type of node. For example, `PopMember{T,L}` is now `PopMember{T,L,N}` for `N` the type of expression.
@@ -315,9 +317,9 @@ end
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.23.3...v0.24.0
 
-# SymbolicRegression.jl v0.23.3
+## SymbolicRegression.jl v0.23.3
 
-## SymbolicRegression v0.23.3
+### SymbolicRegression v0.23.3
 
 [Diff since v0.23.2](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.23.2...v0.23.3)
 
@@ -327,9 +329,9 @@ end
 - Bump peter-evans/find-comment from 2 to 3 (#284) (@dependabot[bot])
 - Bump peter-evans/create-pull-request from 5 to 6 (#286) (@dependabot[bot])
 
-# SymbolicRegression.jl v0.23.2
+## SymbolicRegression.jl v0.23.2
 
-## SymbolicRegression v0.23.2
+### SymbolicRegression v0.23.2
 
 [Diff since v0.23.1](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.23.1...v0.23.2)
 
@@ -344,21 +346,21 @@ end
 - Garbage collection too passive on worker processes (#237)
 - How can I set the maximum number of nests? (#285)
 
-# SymbolicRegression.jl v0.23.1
+## SymbolicRegression.jl v0.23.1
 
-## What's Changed
+### What's Changed
 
 - Implement swap operands mutation for binary operators by @foxtran in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/276
 
-## New Contributors
+### New Contributors
 
 - @foxtran made their first contribution in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/276
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.23.0...v0.23.1
 
-# SymbolicRegression.jl v0.23.0
+## SymbolicRegression.jl v0.23.0
 
-## SymbolicRegression v0.23.0
+### SymbolicRegression v0.23.0
 
 [Diff since v0.22.5](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.22.5...v0.23.0)
 
@@ -370,9 +372,9 @@ end
 
 - How do I set up a basis function consisting of three different inputs x, y, z? (#268)
 
-# SymbolicRegression.jl v0.22.5
+## SymbolicRegression.jl v0.22.5
 
-## SymbolicRegression v0.22.5
+### SymbolicRegression v0.22.5
 
 [Diff since v0.22.4](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.22.4...v0.22.5)
 
@@ -383,9 +385,9 @@ end
 - Add `[compat]` entry for Documenter (#261) (@MilesCranmer)
 - CompatHelper: bump compat for DynamicQuantities to 0.10 (#264) (@github-actions[bot])
 
-# SymbolicRegression.jl v0.22.4
+## SymbolicRegression.jl v0.22.4
 
-## SymbolicRegression v0.22.4
+### SymbolicRegression v0.22.4
 
 [Diff since v0.22.3](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.22.3...v0.22.4)
 
@@ -394,9 +396,9 @@ end
 - Hotfix for breaking change in Optim.jl (#256) (@MilesCranmer)
 - Fix worldage issues by avoiding `static_hasmethod` when not needed (#258) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.22.3
+## SymbolicRegression.jl v0.22.3
 
-## What's Changed
+### What's Changed
 
 - CompatHelper: bump compat for DynamicExpressions to 0.13, (keep existing compat) by @github-actions in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/250
 - Fix type stability of deterministic mode by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/251
@@ -406,9 +408,9 @@ end
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.22.2...v0.22.3
 
-# SymbolicRegression.jl v0.22.2
+## SymbolicRegression.jl v0.22.2
 
-## SymbolicRegression v0.22.2
+### SymbolicRegression v0.22.2
 
 [Diff since v0.22.1](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.22.1...v0.22.2)
 
@@ -417,15 +419,15 @@ end
 - Expand aqua test suite (#246) (@MilesCranmer)
 - Return more descriptive errors for poorly defined operators (#247) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.22.1
+## SymbolicRegression.jl v0.22.1
 
-## SymbolicRegression v0.22.1
+### SymbolicRegression v0.22.1
 
 [Diff since v0.22.0](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.22.0...v0.22.1)
 
-# SymbolicRegression.jl v0.22.0
+## SymbolicRegression.jl v0.22.0
 
-## What's Changed
+### What's Changed
 
 - (**Algorithm modification**) Evaluate on fixed batch when building per-population hall of fame in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/243
   - This only affects searches that use `batching=true`. It results in improved searches on large datasets, as the "winning expression" is not biased towards an expression that landed on a lucky batch.
@@ -445,17 +447,17 @@ end
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.21.5...v0.22.0
 
-# SymbolicRegression.jl v0.21.5
+## SymbolicRegression.jl v0.21.5
 
-## What's Changed
+### What's Changed
 
 - Allow custom display variable names by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/240
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.21.4...v0.21.5
 
-# SymbolicRegression.jl v0.21.4
+## SymbolicRegression.jl v0.21.4
 
-## SymbolicRegression v0.21.4
+### SymbolicRegression v0.21.4
 
 [Diff since v0.21.3](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.21.3...v0.21.4)
 
@@ -468,34 +470,34 @@ end
 - CompatHelper: bump compat for LossFunctions to 0.11, (keep existing compat) (#238) (@github-actions[bot])
 - Enable compatibility with MLJTuning.jl (#239) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.21.3
+## SymbolicRegression.jl v0.21.3
 
-## What's Changed
+### What's Changed
 
 - Batching inside optimization loop + batching support for custom objectives by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/235
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.21.2...v0.21.3
 
-# SymbolicRegression.jl v0.21.2
+## SymbolicRegression.jl v0.21.2
 
-## What's Changed
+### What's Changed
 
 - Allow empty string units (==1) by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/233
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.21.1...v0.21.2
 
-# SymbolicRegression.jl v0.21.1
+## SymbolicRegression.jl v0.21.1
 
-## What's Changed
+### What's Changed
 
 - Update DynamicExpressions.jl version by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/232
   - Makes Zygote.jl an extension
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.21.0...v0.21.1
 
-# SymbolicRegression.jl v0.21.0
+## SymbolicRegression.jl v0.21.0
 
-## What's Changed
+### What's Changed
 
 - https://github.com/MilesCranmer/SymbolicRegression.jl/pull/228 and https://github.com/MilesCranmer/SymbolicRegression.jl/pull/230 and https://github.com/MilesCranmer/SymbolicRegression.jl/pull/231
   - **Dimensional analysis** (#228)
@@ -518,9 +520,9 @@ end
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.20.0...v0.21.0
 
-# SymbolicRegression.jl v0.20.0
+## SymbolicRegression.jl v0.20.0
 
-## SymbolicRegression v0.20.0
+### SymbolicRegression v0.20.0
 
 [Diff since v0.19.1](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.19.1...v0.20.0)
 
@@ -532,9 +534,9 @@ end
 
 - MLJ Integration (#226) (@MilesCranmer, @OkonSamuel)
 
-# SymbolicRegression.jl v0.19.1
+## SymbolicRegression.jl v0.19.1
 
-## SymbolicRegression v0.19.1
+### SymbolicRegression v0.19.1
 
 [Diff since v0.19.0](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.19.0...v0.19.1)
 
@@ -545,9 +547,9 @@ end
 - (Soft deprecation) rename `EquationSearch` to `equation_search` (#222) (@MilesCranmer)
 - Fix equation splitting for unicode variables (#223) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.19.0
+## SymbolicRegression.jl v0.19.0
 
-## What's Changed
+### What's Changed
 
 - Time to load improved by 40% with the following changes in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/215
   - Moved SymbolicUtils.jl to extension/Requires.jl
@@ -556,9 +558,9 @@ end
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.18.0...v0.19.0
 
-# SymbolicRegression.jl v0.18.0
+## SymbolicRegression.jl v0.18.0
 
-## SymbolicRegression v0.18.0
+### SymbolicRegression v0.18.0
 
 [Diff since v0.17.1](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.17.1...v0.18.0)
 
@@ -569,9 +571,9 @@ end
 - Show expressions evaluated per second (#209) (@MilesCranmer)
 - Cache complexity of expressions whenever possible (#210) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.17.1
+## SymbolicRegression.jl v0.17.1
 
-## SymbolicRegression v0.17.1
+### SymbolicRegression v0.17.1
 
 [Diff since v0.17.0](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.17.0...v0.17.1)
 
@@ -580,9 +582,9 @@ end
 - Faster custom losses (#197) (@MilesCranmer)
 - Migrate from SnoopPrecompile to PrecompileTools (#198) (@timholy)
 
-# SymbolicRegression.jl v0.17.0
+## SymbolicRegression.jl v0.17.0
 
-## SymbolicRegression v0.17.0
+### SymbolicRegression v0.17.0
 
 [Diff since v0.16.3](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.16.3...v0.17.0)
 
@@ -595,9 +597,9 @@ end
 - Multiple refactors: arbitrary data in `Dataset`, separate mutation weight conditioning, fix data races, cleaner API (#190) (@MilesCranmer)
 - CompatHelper: bump compat for DynamicExpressions to 0.6, (keep existing compat) (#194) (@github-actions[bot])
 
-# SymbolicRegression.jl v0.16.3
+## SymbolicRegression.jl v0.16.3
 
-## SymbolicRegression v0.16.3
+### SymbolicRegression v0.16.3
 
 [Diff since v0.16.2](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.16.2...v0.16.3)
 
@@ -605,21 +607,21 @@ end
 
 - CompatHelper: bump compat for SymbolicUtils to 1, (keep existing compat) (#168) (@github-actions[bot])
 
-# SymbolicRegression.jl v0.16.2
+## SymbolicRegression.jl v0.16.2
 
-## What's Changed
+### What's Changed
 
 - Turn off simplification when constraints given by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/189
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.16.1...v0.16.2
 
-# SymbolicRegression.jl v0.16.1
+## SymbolicRegression.jl v0.16.1
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.16.0...v0.16.1
 
-# SymbolicRegression.jl v0.16.0
+## SymbolicRegression.jl v0.16.0
 
-## SymbolicRegression v0.16.0
+### SymbolicRegression v0.16.0
 
 [Diff since v0.15.3](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.15.3...v0.16.0)
 
@@ -635,43 +637,43 @@ end
 - Abstract number support (#183) (@MilesCranmer)
 - Include datetime in default filename (#185) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.15.3
+## SymbolicRegression.jl v0.15.3
 
-## What's Changed
+### What's Changed
 
 - Re-compute losses for warm start by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/177
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.15.2...v0.15.3
 
-# SymbolicRegression.jl v0.15.2
+## SymbolicRegression.jl v0.15.2
 
-## What's Changed
+### What's Changed
 
 - Include depth check in `check_constraints` by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/172
 - Fix data race in state saving by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/173
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.15.1...v0.15.2
 
-# SymbolicRegression.jl v0.15.1
+## SymbolicRegression.jl v0.15.1
 
-## What's Changed
+### What's Changed
 
 - Fix bug in constraint checking by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/171
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.15.0...v0.15.1
 
-# SymbolicRegression.jl v0.15.0
+## SymbolicRegression.jl v0.15.0
 
-## What's Changed
+### What's Changed
 
 - Fully-customizable training objectives by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/143
 - Safely catch non-readable stdin stream by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/169
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.14.5...v0.15.0
 
-# SymbolicRegression.jl v0.14.5
+## SymbolicRegression.jl v0.14.5
 
-## SymbolicRegression v0.14.5
+### SymbolicRegression v0.14.5
 
 [Diff since v0.14.4](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.14.4...v0.14.5)
 
@@ -684,9 +686,9 @@ end
 - Quiet progress bar during CI (#160) (@MilesCranmer)
 - Proper SnoopCompilation (#161) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.14.4
+## SymbolicRegression.jl v0.14.4
 
-## SymbolicRegression v0.14.4
+### SymbolicRegression v0.14.4
 
 [Diff since v0.14.3](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.14.3...v0.14.4)
 
@@ -694,9 +696,9 @@ end
 
 - Refactor monitoring of resources (#158) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.14.3
+## SymbolicRegression.jl v0.14.3
 
-## SymbolicRegression v0.14.3
+### SymbolicRegression v0.14.3
 
 [Diff since v0.14.2](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.14.2...v0.14.3)
 
@@ -705,15 +707,15 @@ end
 - Turn off safe operators for turbo=true (#156) (@MilesCranmer)
 - Use `ProgressBars.jl` instead of copying (#157) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.14.2
+## SymbolicRegression.jl v0.14.2
 
-## SymbolicRegression v0.14.2
+### SymbolicRegression v0.14.2
 
 [Diff since v0.14.1](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.14.1...v0.14.2)
 
-# SymbolicRegression.jl v0.14.1
+## SymbolicRegression.jl v0.14.1
 
-## SymbolicRegression v0.14.1
+### SymbolicRegression v0.14.1
 
 [Diff since v0.14.0](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.14.0...v0.14.1)
 
@@ -721,9 +723,9 @@ end
 
 - Do optimizations as a low-probability mutation (#154) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.14.0
+## SymbolicRegression.jl v0.14.0
 
-## SymbolicRegression v0.14.0
+### SymbolicRegression v0.14.0
 
 [Diff since v0.13.3](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.13.3...v0.14.0)
 
@@ -731,9 +733,9 @@ end
 
 - Add `@extend_operators` from DynamicExpressions.jl v0.4.0 (#153) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.13.3
+## SymbolicRegression.jl v0.13.3
 
-## SymbolicRegression v0.13.3
+### SymbolicRegression v0.13.3
 
 [Diff since v0.13.1](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.13.1...v0.13.3)
 
@@ -741,15 +743,15 @@ end
 
 - 30% speed up by using LoopVectorization in DynamicExpressions.jl (#151) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.13.2
+## SymbolicRegression.jl v0.13.2
 
 - Allow strings to be passed for the `parallelism` argument of EquationSearch (e.g., `"multithreading"` instead of `:multithreading`). This is to allow compatibility with PyJulia calls, which can't pass symbols.
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.13.1...v0.13.2
 
-# SymbolicRegression.jl v0.13.1
+## SymbolicRegression.jl v0.13.1
 
-## SymbolicRegression v0.13.1
+### SymbolicRegression v0.13.1
 
 [Diff since v0.13.0](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.13.0...v0.13.1)
 
@@ -757,9 +759,9 @@ end
 
 - Refactor mutation probabilities (#140) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.13.0
+## SymbolicRegression.jl v0.13.0
 
-## SymbolicRegression v0.13.0
+### SymbolicRegression v0.13.0
 
 [Diff since v0.12.6](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.12.6...v0.13.0)
 
@@ -767,9 +769,9 @@ end
 
 - Split codebase in two: DynamicExpressions.jl and SymbolicRegression.jl (#147) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.12.6
+## SymbolicRegression.jl v0.12.6
 
-## SymbolicRegression v0.12.6
+### SymbolicRegression v0.12.6
 
 [Diff since v0.12.5](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.12.5...v0.12.6)
 
@@ -782,15 +784,15 @@ end
 
 - Fix search performance problem #148 (#149) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.12.5
+## SymbolicRegression.jl v0.12.5
 
-## SymbolicRegression v0.12.5
+### SymbolicRegression v0.12.5
 
 [Diff since v0.12.4](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.12.4...v0.12.5)
 
-# SymbolicRegression.jl v0.12.4
+## SymbolicRegression.jl v0.12.4
 
-## SymbolicRegression v0.12.4
+### SymbolicRegression v0.12.4
 
 [Diff since v0.12.3](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.12.3...v0.12.4)
 
@@ -798,9 +800,9 @@ end
 
 - Create logo (#145) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.12.3
+## SymbolicRegression.jl v0.12.3
 
-## SymbolicRegression v0.12.3
+### SymbolicRegression v0.12.3
 
 [Diff since v0.12.2](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.12.2...v0.12.3)
 
@@ -808,9 +810,9 @@ end
 
 - Even faster evaluation (#144) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.12.2
+## SymbolicRegression.jl v0.12.2
 
-## SymbolicRegression v0.12.2
+### SymbolicRegression v0.12.2
 
 [Diff since v0.12.1](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.12.1...v0.12.2)
 
@@ -822,15 +824,15 @@ end
 
 - Fast evaluation for constant trees (#129) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.12.1
+## SymbolicRegression.jl v0.12.1
 
-## SymbolicRegression v0.12.1
+### SymbolicRegression v0.12.1
 
 [Diff since v0.12.0](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.12.0...v0.12.1)
 
-# SymbolicRegression.jl v0.12.0
+## SymbolicRegression.jl v0.12.0
 
-## What's Changed
+### What's Changed
 
 - Use functions returning NaN on branch cuts instead of abs (issue #109) by @johanbluecreek in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/123
   - By returning NaN, an expression will have infinite loss - this will make the expression search simply avoid expressions that hit out-of-domain errors, rather than using `abs` everywhere which results in fundamentally different functional forms.
@@ -839,9 +841,9 @@ end
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.11.1...v0.12.0
 
-# SymbolicRegression.jl v0.11.1
+## SymbolicRegression.jl v0.11.1
 
-## What's Changed
+### What's Changed
 
 - Generalize expressions to have arbitrary constant types by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/119
 - Optimizer options by @johanbluecreek in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/121
@@ -849,15 +851,15 @@ end
 - Fix normalization when dataset has zero variance: https://github.com/MilesCranmer/SymbolicRegression.jl/commit/85f4909e8156ba8ff6cf89122371901a13df5688
 - Set default parsimony to 0.0
 
-## New Contributors
+### New Contributors
 
 - @johanbluecreek made their first contribution in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/121
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.10.2...v0.11.1
 
-# SymbolicRegression.jl v0.10.2
+## SymbolicRegression.jl v0.10.2
 
-## SymbolicRegression v0.10.2
+### SymbolicRegression v0.10.2
 
 [Diff since v0.9.7](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.9.7...v0.10.2)
 
@@ -866,30 +868,30 @@ end
 - Update losses.md (#114) (@pitmonticone)
 - Set `timeout-minutes` for CI (#116) (@rikhuijzer)
 
-# SymbolicRegression.jl v0.9.7
+## SymbolicRegression.jl v0.9.7
 
-## SymbolicRegression v0.9.7
+### SymbolicRegression v0.9.7
 
 [Diff since v0.9.6](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.9.6...v0.9.7)
 
-# SymbolicRegression.jl v0.9.6
+## SymbolicRegression.jl v0.9.6
 
-## SymbolicRegression v0.9.6
+### SymbolicRegression v0.9.6
 
 [Diff since v0.9.5](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.9.5...v0.9.6)
 
-# SymbolicRegression.jl v0.9.5
+## SymbolicRegression.jl v0.9.5
 
-## What's Changed
+### What's Changed
 
 - Add deterministic option in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/108
 - Fix issue with infinite while loop due to numerical precision
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.9.3...v0.9.5
 
-# SymbolicRegression.jl v0.9.3
+## SymbolicRegression.jl v0.9.3
 
-## SymbolicRegression v0.9.3
+### SymbolicRegression v0.9.3
 
 [Diff since v0.9.2](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.9.2...v0.9.3)
 
@@ -897,9 +899,9 @@ end
 
 - CompatHelper: bump compat for LossFunctions to 0.8, (keep existing compat) (#106) (@github-actions[bot])
 
-# SymbolicRegression.jl v0.9.2
+## SymbolicRegression.jl v0.9.2
 
-## SymbolicRegression v0.9.2
+### SymbolicRegression v0.9.2
 
 [Diff since v0.9.0](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.9.0...v0.9.2)
 
@@ -915,9 +917,9 @@ end
 - Limiting max evaluations (#104) (@MilesCranmer)
 - Custom complexities of operators, variables, and constants (#105) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.9.0
+## SymbolicRegression.jl v0.9.0
 
-## SymbolicRegression v0.9.0
+### SymbolicRegression v0.9.0
 
 [Diff since v0.8.7](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.8.7...v0.9.0)
 
@@ -929,15 +931,15 @@ end
 
 - Bump SymbolicUtils.jl to 0.19 (#84) (@ChrisRackauckas)
 
-# SymbolicRegression.jl v0.8.7
+## SymbolicRegression.jl v0.8.7
 
-## SymbolicRegression v0.8.7
+### SymbolicRegression v0.8.7
 
 [Diff since v0.8.6](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.8.6...v0.8.7)
 
-# SymbolicRegression.jl v0.8.6
+## SymbolicRegression.jl v0.8.6
 
-## SymbolicRegression v0.8.6
+### SymbolicRegression v0.8.6
 
 [Diff since v0.8.5](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.8.5...v0.8.6)
 
@@ -946,9 +948,9 @@ end
 - Switch from FromFile.jl to traditional module system (#95) (@MilesCranmer)
 - Add constraints on the number of times operators can be nested (#96) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.8.5
+## SymbolicRegression.jl v0.8.5
 
-## SymbolicRegression v0.8.5
+### SymbolicRegression v0.8.5
 
 [Diff since v0.8.3](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.8.3...v0.8.5)
 
@@ -963,15 +965,15 @@ end
 - fix worker connection timeout error (#91) (@CharFox1)
 - Automatic multi-node compute setup by passing custom `addprocs` (#94) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.8.3
+## SymbolicRegression.jl v0.8.3
 
-## SymbolicRegression v0.8.3
+### SymbolicRegression v0.8.3
 
 [Diff since v0.8.2](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.8.2...v0.8.3)
 
-# SymbolicRegression.jl v0.8.2
+## SymbolicRegression.jl v0.8.2
 
-## SymbolicRegression v0.8.2
+### SymbolicRegression v0.8.2
 
 [Diff since v0.8.1](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.8.1...v0.8.2)
 
@@ -979,9 +981,9 @@ end
 
 - Interactive regression / printing epochs (#80)
 
-# SymbolicRegression.jl v0.8.1
+## SymbolicRegression.jl v0.8.1
 
-## SymbolicRegression v0.8.1
+### SymbolicRegression v0.8.1
 
 [Diff since v0.7.13](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.7.13...v0.8.1)
 
@@ -995,27 +997,27 @@ end
 - Refactoring PopMember + adding adaptive parsimony to tournament (#75) (@MilesCranmer)
 - Introduce better default hyperparameters (#76) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.7.13
+## SymbolicRegression.jl v0.7.13
 
-## SymbolicRegression v0.7.13
+### SymbolicRegression v0.7.13
 
 [Diff since v0.7.10](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.7.10...v0.7.13)
 
-# SymbolicRegression.jl v0.7.10
+## SymbolicRegression.jl v0.7.10
 
-## SymbolicRegression v0.7.10
+### SymbolicRegression v0.7.10
 
 [Diff since v0.7.9](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.7.9...v0.7.10)
 
-# SymbolicRegression.jl v0.7.9
+## SymbolicRegression.jl v0.7.9
 
-## SymbolicRegression v0.7.9
+### SymbolicRegression v0.7.9
 
 [Diff since v0.7.8](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.7.8...v0.7.9)
 
-# SymbolicRegression.jl v0.7.8
+## SymbolicRegression.jl v0.7.8
 
-## SymbolicRegression v0.7.8
+### SymbolicRegression v0.7.8
 
 [Diff since v0.7.7](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.7.7...v0.7.8)
 
@@ -1027,15 +1029,15 @@ end
 
 - Fix tournament samples (#70) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.7.7
+## SymbolicRegression.jl v0.7.7
 
-## SymbolicRegression v0.7.7
+### SymbolicRegression v0.7.7
 
 [Diff since v0.7.6](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.7.6...v0.7.7)
 
-# SymbolicRegression.jl v0.7.6
+## SymbolicRegression.jl v0.7.6
 
-## SymbolicRegression v0.7.6
+### SymbolicRegression v0.7.6
 
 [Diff since v0.7.5](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.7.5...v0.7.6)
 
@@ -1044,15 +1046,15 @@ end
 - Parsimony interference in pareto frontier (#66)
 - DomainError when computing pareto curve (#67)
 
-# SymbolicRegression.jl v0.7.5
+## SymbolicRegression.jl v0.7.5
 
-## SymbolicRegression v0.7.5
+### SymbolicRegression v0.7.5
 
 [Diff since v0.7.4](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.7.4...v0.7.5)
 
-# SymbolicRegression.jl v0.7.4
+## SymbolicRegression.jl v0.7.4
 
-## SymbolicRegression v0.7.4
+### SymbolicRegression v0.7.4
 
 [Diff since v0.7.3](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.7.3...v0.7.4)
 
@@ -1060,21 +1062,21 @@ end
 
 - Base.print (#64)
 
-# SymbolicRegression.jl v0.7.3
+## SymbolicRegression.jl v0.7.3
 
-## SymbolicRegression v0.7.3
+### SymbolicRegression v0.7.3
 
 [Diff since v0.7.2](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.7.2...v0.7.3)
 
-# SymbolicRegression.jl v0.7.2
+## SymbolicRegression.jl v0.7.2
 
-## SymbolicRegression v0.7.2
+### SymbolicRegression v0.7.2
 
 [Diff since v0.7.1](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.7.1...v0.7.2)
 
-# SymbolicRegression.jl v0.7.1
+## SymbolicRegression.jl v0.7.1
 
-## SymbolicRegression v0.7.1
+### SymbolicRegression v0.7.1
 
 [Diff since v0.7.0](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.7.0...v0.7.1)
 
@@ -1082,9 +1084,9 @@ end
 
 - CompatHelper: bump compat for SpecialFunctions to 2, (keep existing compat) (#56) (@github-actions[bot])
 
-# SymbolicRegression.jl v0.7.0
+## SymbolicRegression.jl v0.7.0
 
-## SymbolicRegression v0.7.0
+### SymbolicRegression v0.7.0
 
 [Diff since v0.6.19](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.19...v0.7.0)
 
@@ -1096,21 +1098,21 @@ end
 
 - Revert to SymbolicUtils.jl 0.6 (#60) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.6.19
+## SymbolicRegression.jl v0.6.19
 
-## SymbolicRegression v0.6.19
+### SymbolicRegression v0.6.19
 
 [Diff since v0.6.18](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.18...v0.6.19)
 
-# SymbolicRegression.jl v0.6.18
+## SymbolicRegression.jl v0.6.18
 
-## SymbolicRegression v0.6.18
+### SymbolicRegression v0.6.18
 
 [Diff since v0.6.17](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.17...v0.6.18)
 
-# SymbolicRegression.jl v0.6.17
+## SymbolicRegression.jl v0.6.17
 
-## SymbolicRegression v0.6.17
+### SymbolicRegression v0.6.17
 
 [Diff since v0.6.16](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.16...v0.6.17)
 
@@ -1119,9 +1121,9 @@ end
 - Can't define options as listed in Tutorial, causes Method Error. (#54)
 - Using recorder to only track specific information? (#55)
 
-# SymbolicRegression.jl v0.6.16
+## SymbolicRegression.jl v0.6.16
 
-## SymbolicRegression v0.6.16
+### SymbolicRegression v0.6.16
 
 [Diff since v0.6.15](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.15...v0.6.16)
 
@@ -1129,9 +1131,9 @@ end
 
 - Expand compatibility to other SymbolicUtils.jl versions (#53) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.6.15
+## SymbolicRegression.jl v0.6.15
 
-## SymbolicRegression v0.6.15
+### SymbolicRegression v0.6.15
 
 [Diff since v0.6.14](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.14...v0.6.15)
 
@@ -1143,9 +1145,9 @@ end
 
 - SymbolicUtils v0.18 (#50) (@AlCap23)
 
-# SymbolicRegression.jl v0.6.14
+## SymbolicRegression.jl v0.6.14
 
-## SymbolicRegression v0.6.14
+### SymbolicRegression v0.6.14
 
 [Diff since v0.6.13](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.13...v0.6.14)
 
@@ -1154,15 +1156,15 @@ end
 - nested task error (#43)
 - MethodError: Cannot `convert` an object of type SymbolicUtils.Term{Number, Nothing} to an object of type SymbolicUtils.Pow{Number, SymbolicUtils.Term{Number, Nothing}, Float32, Nothing} (#44)
 
-# SymbolicRegression.jl v0.6.13
+## SymbolicRegression.jl v0.6.13
 
-## SymbolicRegression v0.6.13
+### SymbolicRegression v0.6.13
 
 [Diff since v0.6.12](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.12...v0.6.13)
 
-# SymbolicRegression.jl v0.6.12
+## SymbolicRegression.jl v0.6.12
 
-## SymbolicRegression v0.6.12
+### SymbolicRegression v0.6.12
 
 [Diff since v0.6.11](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.11...v0.6.12)
 
@@ -1174,9 +1176,9 @@ end
 
 - Fix index functions in SymbolicUtils (#40) (@MilesCranmer)
 
-# SymbolicRegression.jl v0.6.11
+## SymbolicRegression.jl v0.6.11
 
-## SymbolicRegression v0.6.11
+### SymbolicRegression v0.6.11
 
 [Diff since v0.6.10](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.10...v0.6.11)
 
@@ -1184,9 +1186,9 @@ end
 
 - Updates for SymbolicUtils 0.13 (#37) (@AlCap23)
 
-# SymbolicRegression.jl v0.6.10
+## SymbolicRegression.jl v0.6.10
 
-## SymbolicRegression v0.6.10
+### SymbolicRegression v0.6.10
 
 [Diff since v0.6.9](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.9...v0.6.10)
 
@@ -1199,51 +1201,51 @@ end
 - Add multithreading as alternative to distributed (#34) (@MilesCranmer)
 - Allow infinities in recorder (#36) (@cobac)
 
-# SymbolicRegression.jl v0.6.9
+## SymbolicRegression.jl v0.6.9
 
-## SymbolicRegression v0.6.9
+### SymbolicRegression v0.6.9
 
 [Diff since v0.6.8](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.8...v0.6.9)
 
-# SymbolicRegression.jl v0.6.8
+## SymbolicRegression.jl v0.6.8
 
-## SymbolicRegression v0.6.8
+### SymbolicRegression v0.6.8
 
 [Diff since v0.6.7](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.7...v0.6.8)
 
-# SymbolicRegression.jl v0.6.7
+## SymbolicRegression.jl v0.6.7
 
-## SymbolicRegression v0.6.7
+### SymbolicRegression v0.6.7
 
 [Diff since v0.6.6](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.6...v0.6.7)
 
-# SymbolicRegression.jl v0.6.6
+## SymbolicRegression.jl v0.6.6
 
-## SymbolicRegression v0.6.6
+### SymbolicRegression v0.6.6
 
 [Diff since v0.6.5](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.5...v0.6.6)
 
-# SymbolicRegression.jl v0.6.5
+## SymbolicRegression.jl v0.6.5
 
-## SymbolicRegression v0.6.5
+### SymbolicRegression v0.6.5
 
 [Diff since v0.6.4](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.4...v0.6.5)
 
-# SymbolicRegression.jl v0.6.4
+## SymbolicRegression.jl v0.6.4
 
-## SymbolicRegression v0.6.4
+### SymbolicRegression v0.6.4
 
 [Diff since v0.6.3](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.3...v0.6.4)
 
-# SymbolicRegression.jl v0.6.3
+## SymbolicRegression.jl v0.6.3
 
-## SymbolicRegression v0.6.3
+### SymbolicRegression v0.6.3
 
 [Diff since v0.6.2](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.2...v0.6.3)
 
-# SymbolicRegression.jl v0.6.2
+## SymbolicRegression.jl v0.6.2
 
-## SymbolicRegression v0.6.2
+### SymbolicRegression v0.6.2
 
 [Diff since v0.6.1](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.1...v0.6.2)
 
@@ -1252,9 +1254,9 @@ end
 - Data recorder (#27)
 - Long-running parallel jobs have small percentage of processes hang (#28)
 
-# SymbolicRegression.jl v0.6.1
+## SymbolicRegression.jl v0.6.1
 
-## SymbolicRegression v0.6.1
+### SymbolicRegression v0.6.1
 
 [Diff since v0.6.0](https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.6.0...v0.6.1)
 
