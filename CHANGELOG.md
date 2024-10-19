@@ -1,3 +1,6 @@
+<!-- markdownlint-disable MD034 -->
+<!-- markdownlint-disable MD024 -->
+
 # Changelog
 
 ## SymbolicRegression.jl v1.0.0
@@ -416,7 +419,7 @@ end
   - **Printing improvements** (#228)
     - By default, only 5 significant digits are now printed, rather than the entire float. You can change this with the `print_precision` option.
     - In the default printed equations, `x₁` is used rather than `x1`.
-    - `y = ` is printed at the start (or `y₁ = ` for multi-output). With units this becomes, for example, `y[kg] =`.
+    - `y =` is printed at the start (or `y₁ =` for multi-output). With units this becomes, for example, `y[kg] =`.
   - **Misc**
     - Easier to convert from MLJ interface to SymbolicUtils (via `node_to_symbolic(::Node, ::AbstractSRRegressor)`) (#228)
     - Improved precompilation (#228)
