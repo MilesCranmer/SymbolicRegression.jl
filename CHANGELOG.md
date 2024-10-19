@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD033 -->
 <!-- markdownlint-disable MD034 -->
 <!-- markdownlint-disable MD024 -->
 
@@ -7,34 +8,38 @@
 
 ### Summary of major recent changes
 
-- Changed the core expression type from `Node{T} → Expression{T,Node{T},...}`
+- [Changed the core expression type from `Node{T} → Expression{T,Node{T},...}`](#changed-the-core-expression-type-from-nodet--expressiontnodet)
   - This gives us new features, improves user hackability, and greatly improves ergonomics!
-- Created "_Template Expressions_", for fitting expressions under a user-specified functional form (`TemplateExpression <: AbstractExpression`).
+- [Created "_Template Expressions_", for fitting expressions under a user-specified functional form (`TemplateExpression <: AbstractExpression`)](#created-template-expressions-for-fitting-expressions-under-a-user-specified-functional-form-templateexpression--abstractexpression)
   - Template expressions are quite flexible: they are a meta-expression that wraps multiple other expressions, and combines them using a user-specified function.
   - This enables **vector expressions** - in other words, you can learn multiple components of a vector, simultaneously, with a single expression!
     - (Note that this still does not permit learning using vector operators, though we are working on that!)
-- Created "_Parametric Expressions_", for custom functional forms with per-class parameters: (`ParametricExpression <: AbstractExpression`).
+- [Created "_Parametric Expressions_", for custom functional forms with per-class parameters: (`ParametricExpression <: AbstractExpression`)](#created-parametric-expressions-for-custom-functional-forms-with-per-class-parameters-parametricexpression--abstractexpression)
   - This lets you fit expressions that act as _models of multiple systems_, with per-system parameters!
-- Introduced a variety of new abstractions for user extensibility and to **support new research on symbolic regression**.
+- [Introduced a variety of new abstractions for user extensibility](#introduced-a-variety-of-new-abstractions-for-user-extensibility) (**and to support new research on symbolic regression!**)
   - `AbstractExpression`, for increased flexibility in custom expression types.
   - `mutate!` and `AbstractMutationWeights`, for user-defined mutation operators.
   - `AbstractSearchState`, for holding custom metadata during searches.
-  - `AbstractOptions` and `AbstractRuntimeOptions`, for customizing everything else via multiple dispatch.
+  - `AbstractOptions` and `AbstractRuntimeOptions`, for customizing pretty much everything else in the library via multiple dispatch. Please make an issue/PR if you would like any particular internal functions be declared `public` to enable stability across versions for your tool.
   - Many of these were motivated to modularize the implementation of [LaSR](https://github.com/trishullab/LibraryAugmentedSymbolicRegression.jl), an LLM-guided version of SymbolicRegression.jl, so it can sit as a modular layer on top of SymbolicRegression.jl.
-- Fundamental improvements to the underlying evolutionary algorithm.
-  - New mutation operators introduced, `swap_operands` and `rotate_tree`, which seem to help kick the evolution out of local optima.
-  - New hyperparameter defaults based on Pareto front volume rather than simply accuracy of the best expression.
-- Support for Zygote.jl and Enzyme.jl within the constant optimizer, specified using the `autodiff_backend` option.
-- Identified and fixed a major internal bug involving unexpected aliasing produced by the crossover operator.
+- [Fundamental improvements to the underlying evolutionary algorithm](#fundamental-improvements-to-the-underlying-evolutionary-algorithm)
+  - New mutation operators introduced, `swap_operands` and `rotate_tree` – both seem to help kick the evolution out of local optima.
+  - New hyperparameter defaults created, based on a Pareto front volume calculation, rather than simply accuracy of the best expression.
+- [Support for Zygote.jl and Enzyme.jl within the constant optimizer, specified using the `autodiff_backend` option](#support-for-zygotejl-and-enzymejl-within-the-constant-optimizer-specified-using-the-autodiff_backend-option)
+- [Identified and fixed a major internal bug involving unexpected aliasing produced by the crossover operator](#identified-and-fixed-a-major-internal-bug-involving-unexpected-aliasing-produced-by-the-crossover-operator)
   - Segmentation faults caused by this are a likely culprit for some crashes reported during multi-day multi-node searches.
   - Introduced a new test for aliasing throughout the entire search state to prevent this from happening again.
-- Major refactoring of the codebase to improve readability and modularity.
+- [Major refactoring of the codebase to improve readability and modularity](#major-refactoring-of-the-codebase-to-improve-readability-and-modularity)
 - Increased documentation and examples.
 - Julia 1.10 is now the minimum supported Julia version.
 
+### Update Guide
+
+TODO
+
 ### Major Changes
 
-#### **Breaking**: Changes default expressions from `Node` to the user-friendly `Expression`
+#### Changed the core expression type from `Node{T} → Expression{T,Node{T},...}`
 
 https://github.com/MilesCranmer/SymbolicRegression.jl/pull/326
 
@@ -69,13 +74,15 @@ Each time you use an operator on or between two `Expression`s that include the o
 
 You can access the tree with `get_tree` (guaranteed to return a `Node`), or `get_contents` – which returns the full info of an `AbstractExpression`, which might contain multiple expressions (which get stitched together when calling `get_tree`).
 
-#### Customizing behavior
+#### Created "_Template Expressions_", for fitting expressions under a user-specified functional form (`TemplateExpression <: AbstractExpression`)
 
-DynamicExpressions v1.0 has a full `AbstractExpression` interface to customize behavior of pretty much anything. As an example, there is this included `ParametricExpression` type, with an example available in `examples/parametrized_function.jl`. You can use this to find _basis functions_ with per-class parameters. It still needs some tuning but it works for simple examples.
+#### Created "_Parametric Expressions_", for custom functional forms with per-class parameters: (`ParametricExpression <: AbstractExpression`)
 
-This `ParametricExpression` is meant partly as an example of the types of things you can do with the new `AbstractExpression` interface, though it should hopefully be a useful feature by itself.
+#### Introduced a variety of new abstractions for user extensibility
 
-#### Auto-diff within optimization
+#### Fundamental improvements to the underlying evolutionary algorithm
+
+#### Support for Zygote.jl and Enzyme.jl within the constant optimizer, specified using the `autodiff_backend` option
 
 Historically, SymbolicRegression has mostly relied on finite differences to estimate derivatives – which actually works well for small numbers of parameters. This is what Optim.jl selects unless you can provide it with gradients.
 
@@ -97,6 +104,10 @@ Options(
 
 for Enzyme.jl (though Enzyme support is highly experimental).
 
+#### Identified and fixed a major internal bug involving unexpected aliasing produced by the crossover operator
+
+#### Major refactoring of the codebase to improve readability and modularity
+
 ### Other Changes
 
 - Implement tree rotation operator by @MilesCranmer in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/348
@@ -106,12 +117,7 @@ for Enzyme.jl (though Enzyme support is highly experimental).
 - fix typos by @spaette in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/331
 - chore(deps): bump peter-evans/create-pull-request from 6 to 7 by @dependabot in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/343
 
-### New Contributors
-
-- @spaette made their first contribution in https://github.com/MilesCranmer/SymbolicRegression.jl/pull/331
-- Thanks to @larsentom for the mutation idea
-
-**Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.24.5...v1.0.0-beta1
+**Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.24.5...v1.0.0
 
 ## SymbolicRegression.jl v0.24.5
 
