@@ -8,7 +8,7 @@
 
 Summary of major recent changes, described in more detail below:
 
-- [Changed the core expression type from `Node{T} → Expression{T,Node{T},...}`](#changed-the-core-expression-type-from-nodet--expressiontnodet)
+- [Changed the core expression type from `Node{T} → Expression{T,Node{T},Metadata{...}}`](#changed-the-core-expression-type-from-nodet--expressiontnodet)
   - This gives us new features, improves user hackability, and greatly improves ergonomics!
 - [Created "_Template Expressions_", for fitting expressions under a user-specified functional form (`TemplateExpression <: AbstractExpression`)](#created-template-expressions-for-fitting-expressions-under-a-user-specified-functional-form-templateexpression--abstractexpression)
   - Template expressions are quite flexible: they are a meta-expression that wraps multiple other expressions, and combines them using a user-specified function.
@@ -32,13 +32,10 @@ Summary of major recent changes, described in more detail below:
 - [Major refactoring of the codebase to improve readability and modularity](#major-refactoring-of-the-codebase-to-improve-readability-and-modularity)
 - Increased documentation and examples.
 - Julia 1.10 is now the minimum supported Julia version.
-- [Other various features](#other-various-changes-in-v100)
+- [Other small features](#other-small-features-in-v100)
+- Also see the [Update Guide](#update-guide) below for more details on upgrading.
 
 Note that some of these features were recently introduced in patch releases since they were backwards compatible. I am noting them here for visibility.
-
-### Update Guide
-
-TODO
 
 ### Changed the core expression type from `Node{T} → Expression{T,Node{T},...}`
 
@@ -111,10 +108,14 @@ for Enzyme.jl (though Enzyme support is highly experimental).
 
 ### Major refactoring of the codebase to improve readability and modularity
 
-### Other Various Changes in v1.0.0
+### Other Small Features in v1.0.0
 
 - Support for per-variable complexity, via the `complexity_of_variables` option.
 - Option to force dimensionless constants when fitting with dimensional constraints, via the `dimensionless_constants_only` option.
+
+### Update Guide
+
+TODO:
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.24.5...v1.0.0
 
