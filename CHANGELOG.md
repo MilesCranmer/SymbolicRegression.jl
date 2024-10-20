@@ -225,6 +225,83 @@ best_g2 = get_contents(best_expr).g2
 
 ### Created "_Parametric Expressions_", for custom functional forms with per-class parameters: (`ParametricExpression <: AbstractExpression`)
 
+Parametric Expressions are another example of an `AbstractExpression` with additional features than a normal `Expression`.
+This type allows SymbolicRegression.jl to fit a _parametric functional form_, rather than an expression with fixed constants.
+This is particularly useful when modeling multiple systems or categories where each may have unique parameters but share
+a common functional form and certain constants.
+
+A parametric expression is constructed with a tree represented as a `ParametricNode <: AbstractExpressionNode` – this is an alternative
+type to the usual `Node` type which includes extra fields: `is_parameter::Bool`, and `parameter::UInt16`.
+A `ParametricExpression` wraps this type and stores the actual parameter matrix (under `.metadata.parameters`) as well as
+the parameter names (under `.metadata.parameter_names`).
+
+Various internal functions have been overloaded for custom behavior when fitting parametric expressions.
+For example, `mutate_constant` will perturb a row of the parameter matrix, rather than a single parameter.
+
+When fitting a `ParametricExpression`, the `expression_options` parameter in `Options/SRRegressor`
+should include a `max_parameters` keyword, which specifies the maximum number of separate parameters
+in the functional form.
+
+<details>
+<summary>Let's see an example of fitting a parametric expression:</summary>
+
+```julia
+using SymbolicRegression
+using Random: MersenneTwister
+using Zygote
+using MLJBase: machine, fit!, predict, report
+```
+
+Let's generate two classes of model and try to find it:
+
+```julia
+rng = MersenneTwister(0)
+X = NamedTuple{(:x1, :x2, :x3, :x4, :x5)}(ntuple(_ -> randn(rng, Float32, 30), Val(5)))
+X = (; X..., classes=rand(rng, 1:2, 30))  # Add class labels (1 or 2)
+
+# Define per-class parameters
+p1 = [0.0f0, 3.2f0]
+p2 = [1.5f0, 0.5f0]
+
+# Generate target variable y with class-specific parameters
+y = [
+    2 * cos(X.x4[i] + p1[X.classes[i]]) + X.x1[i]^2 - p2[X.classes[i]]
+    for i in eachindex(X.classes)
+]
+```
+
+When fitting a `ParametricExpression`, it tends to be more important to set up
+an `autodiff_backend` such as `:Zygote` or `:Enzyme`, as the default backend (finite differences)
+can be too slow for the high-dimensional parameter spaces.
+
+```julia
+model = SRRegressor(
+    niterations=100,
+    binary_operators=[+, *, /, -],
+    unary_operators=[cos, exp],
+    populations=30,
+    expression_type=ParametricExpression,
+    expression_options=(; max_parameters=2),  # Allow up to 2 parameters
+    autodiff_backend=:Zygote,  # Use Zygote for automatic differentiation
+    parallelism=:multithreading,
+)
+
+mach = machine(model, X, y)
+
+fit!(mach)
+```
+
+The expressions are returned with the parameters:
+
+```julia
+r = report(mach);
+best_expr = r.equations[r.best_idx]
+@show best_expr
+@show get_metadata(best_expr).parameters
+```
+
+</details>
+
 ### Introduced a variety of new abstractions for user extensibility
 
 TODO: Describe `expression_type` and `node_type` options.
