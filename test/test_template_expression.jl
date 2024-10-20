@@ -35,8 +35,7 @@
 
     # We can evaluate with this too:
     cX = [1.0 2.0; 3.0 4.0; 5.0 6.0]
-    out, completed = st_expr(cX)
-    @test completed
+    out = st_expr(cX)
     @test out ≈ [sin(1.0) + cos(5.0)^2, sin(2.0) + cos(6.0)^2]
 
     # And also check the contents:
@@ -125,8 +124,7 @@ end
 
     # We can directly call it:
     cX = [1.0 2.0; 3.0 4.0; 5.0 6.0]
-    out, completed = st_expr(cX)
-    @test completed
+    out = st_expr(cX)
     @test out == [(1 + 3, 1 + 5, 1 + 3), (2 + 4, 2 + 6, 2 + 4)]
 end
 @testitem "TemplateExpression getters" tags = [:part3] begin
