@@ -22,14 +22,14 @@ Summary of major recent changes, described in more detail below:
   - `AbstractSearchState`, for holding custom metadata during searches.
   - `AbstractOptions` and `AbstractRuntimeOptions`, for customizing pretty much everything else in the library via multiple dispatch. Please make an issue/PR if you would like any particular internal functions be declared `public` to enable stability across versions for your tool.
   - Many of these were motivated to modularize the implementation of [LaSR](https://github.com/trishullab/LibraryAugmentedSymbolicRegression.jl), an LLM-guided version of SymbolicRegression.jl, so it can sit as a modular layer on top of SymbolicRegression.jl.
-- [Fundamental improvements to the underlying evolutionary algorithm](#fundamental-improvements-to-the-underlying-evolutionary-algorithm)
-  - New mutation operators introduced, `swap_operands` and `rotate_tree` – both seem to help kick the evolution out of local optima.
+- Fundamental improvements to the underlying evolutionary algorithm
+  - New mutation operators introduced, `swap_operands` and `rotate_tree` – both of which seem to help kick the evolution out of local optima.
   - New hyperparameter defaults created, based on a Pareto front volume calculation, rather than simply accuracy of the best expression.
 - [Support for Zygote.jl and Enzyme.jl within the constant optimizer, specified using the `autodiff_backend` option](#support-for-zygotejl-and-enzymejl-within-the-constant-optimizer-specified-using-the-autodiff_backend-option)
-- [Identified and fixed a major internal bug involving unexpected aliasing produced by the crossover operator](#identified-and-fixed-a-major-internal-bug-involving-unexpected-aliasing-produced-by-the-crossover-operator)
+- Major refactoring of the codebase to improve readability and modularity
+- Identified and fixed a major internal bug involving unexpected aliasing produced by the crossover operator
   - Segmentation faults caused by this are a likely culprit for some crashes reported during multi-day multi-node searches.
   - Introduced a new test for aliasing throughout the entire search state to prevent this from happening again.
-- [Major refactoring of the codebase to improve readability and modularity](#major-refactoring-of-the-codebase-to-improve-readability-and-modularity)
 - Increased documentation and examples.
 - Julia 1.10 is now the minimum supported Julia version.
 - [Other small features](#other-small-features-in-v100)
@@ -304,7 +304,61 @@ best_expr = r.equations[r.best_idx]
 
 ### Introduced a variety of new abstractions for user extensibility
 
-TODO: Describe `expression_type` and `node_type` options.
+v1 introduces several new abstract types to improve extensibility.
+These allow you to define custom behaviors by leveraging Julia's multiple dispatch system.
+
+**Expression types**: `AbstractExpression`: As explained above, SymbolicRegression now works on `Expression` rather than `Node`, by default. Actually, most internal functions in SymbolicRegression.jl are now defined on `AbstractExpression`, which allows overloading behavior. The expression type used can be modified with the `expression_type` and `node_type` options in `Options`.
+
+- `expression_type`: By default, this is `Expression`, which simply stores a binary tree (`Node`) as well as the `variable_names::Vector{String}` and `operators::DynamicExpressions.OperatorEnum`. See the implementation of `TemplateExpression` and `ParametricExpression` for examples of what needs to be overloaded.
+- `node_type`: By default, this will be `DynamicExpressions.default_node_type(expression_type)`, which allows `ParametricExpression` to default to `ParametricNode` as the underlying node type.
+
+**Mutation types**: `mutate!(tree::N, member::P, ::Val{S}, mutation_weights::AbstractMutationWeights, options::AbstractOptions; kws...) where {N<:AbstractExpression,P<:PopMember,S}`, where `S` is a symbol representing the type of mutation to perform (where the symbols are taken from the `mutation_weights` fields). This allows you to define new mutation types by subtyping `AbstractMutationWeights` and creating new `mutate!` methods (simply pass the `mutation_weights` instance to `Options` or `SRRegressor`).
+
+**Search states**: `AbstractSearchState`: this is the abstract type for `SearchState` which stores the search process's state (such as the populations and halls of fame). For advanced users, you may wish to overload this to store additional state details. (For example, [LaSR](https://github.com/trishullab/LibraryAugmentedSymbolicRegression.jl) stores some history of the search process to feed the language model.)
+
+**Global options and full customization**: `AbstractOptions` and `AbstractRuntimeOptions`: Many functions throughout SymbolicRegression.jl take `AbstractOptions` as an input. The default assumed implementation is `Options`. However, you can subtype `AbstractOptions` to overload certain behavior.
+
+For example, if we have new options that we want to add to `Options`:
+
+```julia
+Base.@kwdef struct MyNewOptions
+    a::Float64 = 1.0
+    b::Int = 3
+end
+```
+
+we can create a combined options type that forwards properties to each corresponding type:
+
+```julia
+struct MyOptions{O<:SymbolicRegression.Options} <: SymbolicRegression.AbstractOptions
+    new_options::MyNewOptions
+    sr_options::O
+end
+const NEW_OPTIONS_KEYS = fieldnames(MyNewOptions)
+
+# Constructor with both sets of parameters:
+function MyOptions(; kws...)
+    new_options_keys = filter(k -> k in NEW_OPTIONS_KEYS, keys(kws))
+    new_options = MyNewOptions(; NamedTuple(new_options_keys .=> Tuple(kws[k] for k in new_options_keys))...)
+    sr_options_keys = filter(k -> !(k in NEW_OPTIONS_KEYS), keys(kws))
+    sr_options = SymbolicRegression.Options(; NamedTuple(sr_options_keys .=> Tuple(kws[k] for k in sr_options_keys))...)
+    return MyOptions(new_options, sr_options)
+end
+
+# Make all `Options` available while also making `new_options` accessible
+function Base.getproperty(options::MyOptions, k::Symbol)
+    if k in NEW_OPTIONS_KEYS
+        return getproperty(getfield(options, :new_options), k)
+    else
+        return getproperty(getfield(options, :sr_options), k)
+    end
+end
+
+Base.propertynames(options::MyOptions) = (NEW_OPTIONS_KEYS..., fieldnames(SymbolicRegression.Options)...)
+```
+
+These new abstractions provide users with greater flexibility in defining the structure and behavior of expressions, nodes, and the search process itself.
+These are also of course used as the basis for alternate behavior such as `ParametricExpression` and `TemplateExpression`.
 
 ### Fundamental improvements to the underlying evolutionary algorithm
 
@@ -330,10 +384,6 @@ Options(
 
 for Enzyme.jl (though Enzyme support is highly experimental).
 
-### Identified and fixed a major internal bug involving unexpected aliasing produced by the crossover operator
-
-### Major refactoring of the codebase to improve readability and modularity
-
 ### Other Small Features in v1.0.0
 
 - Support for per-variable complexity, via the `complexity_of_variables` option.
@@ -341,7 +391,68 @@ for Enzyme.jl (though Enzyme support is highly experimental).
 
 ### Update Guide
 
-TODO:
+Note that most code should work without changes!
+Only if you are interacting with the return types of
+`equation_search` or `report(mach)`,
+or if you have modified any internals,
+should you need to make some changes.
+
+So, the key changes are, as discussed [above](#changed-the-core-expression-type-from-nodet--expressiontnodet), the change from `Node` to `Expression` as the default type for representing expressions.
+This includes the hall of fame object returned by `equation_search`, as well as the vector of
+expressions stored in `report(mach).equations` for the MLJ interface.
+If you need to interact with the internal tree structure, you can use `get_contents(expression)` (which returns the tree of an `Expression`, or the named tuple of a `ParametricExpression` - use `get_tree` to map it to a single tree format).
+
+To access other info stored in expressions, such as the operators or variable names, use `get_metadata(expression)`.
+
+This also means that expressions are now basically self-contained.
+Functions like `eval_tree_array` no longer require options as arguments (though you can pass it to override the expression's stored options).
+This means you can also simply call the expression directly with input data (in `[n_features, n_rows]` format).
+
+Before this change, you might have written something like this:
+
+```julia
+using SymbolicRegression
+
+x1 = Node{Float64}(; feature=1)
+options = Options(; binary_operators=(+, *))
+tree = x1 * x1
+```
+
+This had worked, but only because of some spooky action at a distance behavior
+involving a global store of last-used operators!
+(Noting that `Node` simply stores an index to the operator to be lightweight.)
+
+After this change, things are much cleaner:
+
+```julia
+options = Options(; binary_operators=(+, *))
+operators = options.operators
+variable_names = ["x1"]
+x1 = Expression(Node{Float64}(; feature=1); operators, variable_names)
+
+tree = x1 * x1
+```
+
+This is now a safe and explicit construction, since `*` can lookup what operators each expression uses, and infer the right indices!
+This `operators::OperatorEnum` is a tuple of functions, so does not incur dispatch costs at runtime.
+(The `variable_names` is optional, and gets stripped during the evolution process, but is embedded when returned to the user.)
+
+We can now use this directly:
+
+```julia
+println(tree)       # Uses the `variable_names`, if stored
+tree(randn(1, 50))  # Evaluates the expression using the stored operators
+```
+
+Also note that the minimum supported version of Julia is now 1.10.
+This is because Julia 1.9 and earlier have now reached end-of-life status,
+and 1.10 is the new LTS release.
+
+### Additional Notes
+
+- **Custom Loss Functions**: Continue to define these on `AbstractExpressionNode`.
+- **General Usage**: Most existing code should work with minimal changes.
+- **CI Updates**: Tests are now split into parts for faster runs, and use TestItems.jl for better scoping of test variables.
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.24.5...v1.0.0
 
