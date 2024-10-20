@@ -72,10 +72,10 @@ x2 = Expression(Node{Float64}(; feature=2); operators, variable_names)
 x3 = Expression(Node{Float64}(; feature=3); operators, variable_names)
 
 # Define structure function for symbolic and numerical evaluation
-function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:Expression}}})
+function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{Expression}}})
     return sin(nt.f) + nt.g * nt.g
 end
-function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractVector}}})
+function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{AbstractVector}}})
     return @. sin(nt.f) + nt.g * nt.g
 end
 
@@ -231,8 +231,11 @@ end
 function (ex::TemplateExpression)(
     X, operators::Union{AbstractOperatorEnum,Nothing}=nothing; kws...
 )
-    # TODO: Why do we need to do this? It should automatically handle this!
-    return DE.eval_tree_array(ex, X, operators; kws...)
+    raw_contents = get_contents(ex)
+    results = NamedTuple{keys(raw_contents)}(
+        map(ex -> ex(X, operators; kws...), values(raw_contents))
+    )
+    return get_metadata(ex).structure(results)
 end
 @unstable IDE.expected_array_type(::AbstractMatrix, ::Type{<:TemplateExpression}) = Any
 

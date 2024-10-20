@@ -74,6 +74,155 @@ You can access the tree with `get_tree` (guaranteed to return a `Node`), or `get
 
 ### Created "_Template Expressions_", for fitting expressions under a user-specified functional form (`TemplateExpression <: AbstractExpression`)
 
+Template Expressions allow users to define symbolic expressions with a fixed structure, combining multiple sub-expressions under user-specified constraints.
+This is particularly useful for symbolic regression tasks where domain-specific knowledge or constraints must be imposed on the model's structure.
+
+This also lets you fit vector expressions using SymbolicRegression.jl, where vector components can also be shared!
+
+A `TemplateExpression` is constructed by specifying:
+
+- A named tuple of sub-expressions (e.g., `(; f=x1 - x2 * x2, g=1.5 * x3)`).
+- A structure function that defines how these sub-expressions are combined both numerically and when printing.
+- A `variable_mapping` that defines which variables each sub-expression can access.
+
+For example, you can create a `TemplateExpression` that enforces
+the constraint: `sin(f(x1, x2)) + g(x3)^2` - where we evolve `f` and `g` simultaneously.
+
+Let's see some code for this. First, we define some base expressions for each input feature:
+
+```julia
+using SymbolicRegression
+
+options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+operators = options.operators
+variable_names = ["x1", "x2", "x3"]
+
+# Base expressions:
+x1 = Expression(Node{Float64}(; feature=1); operators, variable_names)
+x2 = Expression(Node{Float64}(; feature=2); operators, variable_names)
+x3 = Expression(Node{Float64}(; feature=3); operators, variable_names)
+```
+
+A `TemplateExpression` is basically a named tuple of expressions, with a structure function that defines how to combine them
+in different contexts.
+It also has a `variable_mapping` that defines which variables each sub-expression can access. For example:
+
+```julia
+variable_mapping = (; f=[1, 2], g=[3])  # We have functions f(x1, x2) and g(x3)
+
+# Combine f and g them into a single scalar expression:
+function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{AbstractVector}}})
+    return @. sin(nt.f) + nt.g * nt.g
+end
+function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{AbstractString}}})
+    return "sin($(nt.f)) + $(nt.g)^2"  # Generates a string representation of the expression
+end
+```
+
+This defines how the `TemplateExpression` should be evaluated numerically on a given input,
+and also how it should be represented as a string:
+
+```julia
+julia> f_example = x1 - x2 * x2
+
+julia> g_example = 1.5 * x3  # Normal `Expression` object
+
+julia> # Create TemplateExpression from these sub-expressions:
+       st_expr = TemplateExpression((; f=f_example, g=g_example); structure=my_structure, operators, variable_names, variable_mapping);
+
+julia> st_expr  # Prints using `my_structure`!
+sin(x1 - (x2 * x2)) + 1.5 * x3^2
+
+julia> st_expr([0.0; 1.0; 2.0;;])  # Combines evaluation of `f` and `g` via `my_structure`!
+1-element Vector{Float64}:
+ 8.158529015192103
+```
+
+We can also use this `TemplateExpression` in SymbolicRegression.jl searches!
+
+<details>
+<summary>For example, say that we want to fit *vector expressions*:</summary>
+
+```julia
+using SymbolicRegression
+using MLJBase: machine, fit!, report
+
+```
+
+We first define our structure:
+
+```julia
+function my_structure2(nt::NamedTuple{<:Any,<:Tuple{Vararg{AbstractString}}})
+    return "( $(nt.f) + $(nt.g1), $(nt.f) + $(nt.g2) )"
+end
+function my_structure2(nt::NamedTuple{<:Any,<:Tuple{Vararg{AbstractVector}}})
+    return map(i -> (nt.f[i] + nt.g1[i], nt.f[i] + nt.g2[i]), eachindex(nt.f))
+end
+```
+
+As well as our variable mapping, which says
+we are fitting `f(x1, x2)`, `g1(x3)`, and `g2(x3)`:
+
+```julia
+variable_mapping = (; f=[1, 2], g1=[3], g2=[3])
+```
+
+Now, our dataset is a regular 2D array of inputs for `X`.
+But our `y` is actually a _vector of 2-tuples_!
+
+```julia
+X = rand(100, 3) .* 10
+
+y = [
+    (
+        sin(X[i, 1]) + X[i, 3]^2,
+        sin(X[i, 1]) + X[i, 3]
+    )
+    for i in eachindex(axes(X, 1))
+]
+```
+
+Now, since this is a vector-valued expression, we need to specify a custom `elementwise_loss` function:
+
+```julia
+elementwise_loss = ((x1, x2), (y1, y2)) -> (y1 - x1)^2 + (y2 - x2)^2
+```
+
+This reduces `y` and the predicted value of `y` returned by the structure function.
+
+Our regressor is then:
+
+```julia
+model = SRRegressor(;
+    binary_operators=(+, *),
+    unary_operators=(sin,),
+    maxsize=15,
+    expression_type=TemplateExpression,
+    # Note - this is where we pass custom options to the expression type:
+    expression_options=(; structure=my_structure2, variable_mapping),
+)
+
+mach = machine(model, X, y)
+fit!(mach)
+```
+
+Let's see the performance of the model:
+
+```julia
+report(mach)
+```
+
+We can also check the expression is split up correctly:
+
+```julia
+best_expr = r.equations[idx]
+best_f = get_contents(best_expr).f
+best_g1 = get_contents(best_expr).g1
+best_g2 = get_contents(best_expr).g2
+```
+
+</details>
+
 ### Created "_Parametric Expressions_", for custom functional forms with per-class parameters: (`ParametricExpression <: AbstractExpression`)
 
 ### Introduced a variety of new abstractions for user extensibility
