@@ -43,10 +43,7 @@ end
     split_string(s::String, n::Integer)
 
 ```jldoctest
-split_string("abcdefgh", 3)
-
-# output
-
+julia> split_string("abcdefgh", 3)
 ["abc", "def", "gh"]
 ```
 """
@@ -55,6 +52,21 @@ function split_string(s::String, n::Integer)
     # Due to unicode characters, need to split only at valid indices:
     I = eachindex(s) |> collect
     return [s[I[i]:I[min(i + n - 1, end)]] for i in 1:n:length(s)]
+end
+"""
+    include_splits_on_newlines(split_eqn::Vector{String})
+
+For output of `split_string`, this adds more splits, based on newlines.
+However, it filters newlines that are at the beginning of a string.
+"""
+function include_splits_on_newlines(split_eqn::Vector{String})
+    output = sizehint!(String[], length(split_eqn))
+    for piece in split_eqn
+        piece = replace(piece, r"^\n" => "")
+        subpieces = split(piece, '\n')
+        append!(output, subpieces)
+    end
+    return output
 end
 
 """

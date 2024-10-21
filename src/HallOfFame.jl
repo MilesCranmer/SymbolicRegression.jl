@@ -1,7 +1,7 @@
 module HallOfFameModule
 
 using DynamicExpressions: AbstractExpression, string_tree
-using ..UtilsModule: split_string
+using ..UtilsModule: split_string, include_splits_on_newlines
 using ..CoreModule:
     MAX_DEGREE, AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
@@ -149,23 +149,29 @@ function string_dominating_pareto_curve(
             y_prefix *= WILDCARD_UNIT_STRING
         end
         eqn_string = y_prefix * " = " * eqn_string
-        base_string_length = length(@sprintf("%-10d  %-8.3e  %8.3e  ", 1, 1.0, 1.0))
-
-        dots = "..."
-        equation_width = (twidth - 1) - base_string_length - length(dots)
-
-        output *= @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
-
-        split_eqn = split_string(eqn_string, equation_width)
-        print_pad = false
-        while length(split_eqn) > 1
-            cur_piece = popfirst!(split_eqn)
-            output *= " "^(print_pad * base_string_length) * cur_piece * dots * "\n"
-            print_pad = true
-        end
-        output *= " "^(print_pad * base_string_length) * split_eqn[1] * "\n"
+        stats_columns_string = @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
+        left_cols_width = length(stats_columns_string)
+        output *= stats_columns_string
+        output *= wrap_equation_string(eqn_string, left_cols_width, twidth)
     end
     output *= "-"^(twidth - 1)
+    return output
+end
+
+function wrap_equation_string(eqn_string, left_cols_width, twidth)
+    dots = "..."
+    equation_width = (twidth - 1) - left_cols_width - length(dots)
+    output = ""
+
+    split_eqn = split_string(eqn_string, equation_width)
+    split_eqn = include_splits_on_newlines(split_eqn)
+    print_pad = false
+    while length(split_eqn) > 1
+        cur_piece = popfirst!(split_eqn)
+        output *= " "^(print_pad * left_cols_width) * cur_piece * dots * "\n"
+        print_pad = true
+    end
+    output *= " "^(print_pad * left_cols_width) * only(split_eqn) * "\n"
     return output
 end
 
