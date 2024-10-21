@@ -20,9 +20,7 @@
 
     @test structure isa TemplateStructure{(:f, :g)}
 
-    st_expr = TemplateExpression(
-        (; f=x1, g=cos(x3)); structure=my_structure, operators, variable_names
-    )
+    st_expr = TemplateExpression((; f=x1, g=cos(x3)); structure, operators, variable_names)
     @test string_tree(st_expr) == "sin(x1) + cos(x3)^2"
     operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(cos, sin))
 

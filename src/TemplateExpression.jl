@@ -269,6 +269,7 @@ function combine_strings(ex::TemplateExpression, nt::NamedTuple)
     return combine_strings(get_metadata(ex).structure, nt)
 end
 
+can_combine(ex::TemplateExpression) = can_combine(get_metadata(ex).structure)
 function can_combine_vectors(ex::TemplateExpression)
     return can_combine_vectors(get_metadata(ex).structure)
 end
