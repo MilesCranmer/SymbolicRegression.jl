@@ -454,7 +454,7 @@ $(OPTION_DESCRIPTIONS)
     dimensional_constraint_penalty::Union{Nothing,Real}=nothing,
     dimensionless_constants_only::Bool=false,
     alpha::Real=0.100000,
-    maxsize::Integer=20,
+    maxsize::Integer=30,
     maxdepth::Union{Nothing,Integer}=nothing,
     turbo::Bool=false,
     bumper::Bool=false,
