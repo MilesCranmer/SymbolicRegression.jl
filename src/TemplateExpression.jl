@@ -87,7 +87,13 @@ function TemplateStructure(;
     combine_strings::S=nothing,
     variable_constraints::C=nothing,
     _function_keys::Val{K}=Val(nothing),
-) where {E,N,S,C,K}
+) where {
+    K,
+    E<:Union{Nothing,Function},
+    N<:Union{Nothing,Function},
+    S<:Union{Nothing,Function},
+    C<:Union{Nothing,NamedTuple{<:Any,<:Tuple{Vararg{Vector{Int}}}}},
+}
     K === nothing &&
         variable_constraints === nothing &&
         throw(
@@ -377,7 +383,6 @@ function (ex::TemplateExpression)(
         return callable(X, operators; kws...)
     end
 end
-@unstable IDE.expected_array_type(::AbstractMatrix, ::Type{<:TemplateExpression}) = Any
 
 function DA.violates_dimensional_constraints(
     tree::TemplateExpression, dataset::Dataset, options::AbstractOptions
