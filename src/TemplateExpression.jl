@@ -130,18 +130,18 @@ function combine_strings(template::TemplateStructure, nt::NamedTuple)
 end
 
 function (template::TemplateStructure)(
-    nt::NamedTuple{<:Any,<:Tuple{Vararg{AbstractExpression}}}
+    nt::NamedTuple{<:Any,<:Tuple{AbstractExpression,Vararg{AbstractExpression}}}
 )
     return combine(template, nt)
 end
 function (template::TemplateStructure)(
-    nt::NamedTuple{<:Any,<:Tuple{Vararg{AbstractVector}}},
+    nt::NamedTuple{<:Any,<:Tuple{AbstractVector,Vararg{AbstractVector}}},
     X::Union{AbstractMatrix,Nothing}=nothing,
 )
     return combine_vectors(template, nt, X)
 end
 function (template::TemplateStructure)(
-    nt::NamedTuple{<:Any,<:Tuple{Vararg{AbstractString}}}
+    nt::NamedTuple{<:Any,<:Tuple{AbstractString,Vararg{AbstractString}}}
 )
     return combine_strings(template, nt)
 end
