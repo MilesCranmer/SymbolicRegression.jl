@@ -94,8 +94,15 @@ function TemplateStructure(;
     S<:Union{Nothing,Function},
     C<:Union{Nothing,NamedTuple{<:Any,<:Tuple{Vararg{Vector{Int}}}}},
 }
-    K === nothing &&
-        variable_constraints === nothing &&
+    Kout = if K !== nothing && variable_constraints !== nothing
+        K != keys(variable_constraints) &&
+            throw(ArgumentError("`K` must match the keys of `variable_constraints`."))
+        K
+    elseif K !== nothing
+        K
+    elseif variable_constraints !== nothing
+        keys(variable_constraints)
+    else
         throw(
             ArgumentError(
                 "If `variable_constraints` is not provided, " *
@@ -103,12 +110,7 @@ function TemplateStructure(;
                 "`TemplateStructure{K}(...)`, for tuple of symbols `K`.",
             ),
         )
-    K !== nothing &&
-        variable_constraints !== nothing &&
-        K != keys(variable_constraints) &&
-        throw(ArgumentError("`K` must match the keys of `variable_constraints`."))
-
-    Kout = K === nothing ? keys(variable_constraints::NamedTuple) : K
+    end
     return TemplateStructure{Kout,E,N,S,C}(
         combine, combine_vectors, combine_strings, variable_constraints
     )
