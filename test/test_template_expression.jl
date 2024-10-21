@@ -6,25 +6,22 @@
 
     options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
     operators = options.operators
-    variable_names = (i -> "x$i").(1:3)
+    variable_names = ["x1", "x2", "x3"]
     x1, x2, x3 =
         (i -> Expression(Node(Float64; feature=i); operators, variable_names)).(1:3)
 
     # For combining expressions to a single expression:
-    my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractString}}}) =
-        "sin($(nt.f)) + $(nt.g)^2"
-    my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractVector}}}) =
-        @. sin(nt.f) + nt.g^2
-    my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:Expression}}}) =
-        sin(nt.f) + nt.g * nt.g
+    structure = TemplateStructure(;
+        combine=e -> sin(e.f) + e.g * e.g,
+        combine_vectors=e -> (@. sin(e.f) + e.g^2),
+        combine_strings=e -> "sin($(e.f)) + $(e.g)^2",
+        variable_constraints=(; f=[1, 2], g=[3]),
+    )
 
-    variable_mapping = (; f=[1, 2], g=[3])
+    @test structure isa TemplateStructure{(:f, :g)}
+
     st_expr = TemplateExpression(
-        (; f=x1, g=cos(x3));
-        structure=my_structure,
-        operators,
-        variable_names,
-        variable_mapping,
+        (; f=x1, g=cos(x3)); structure=my_structure, operators, variable_names
     )
     @test string_tree(st_expr) == "sin(x1) + cos(x3)^2"
     operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(cos, sin))
@@ -67,17 +64,13 @@ end
         (i -> Expression(Node(Float64; feature=i); operators, variable_names)).(1:3)
 
     # For combining expressions to a single expression:
-    my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractString}}}) =
-        "sin($(nt.f)) + $(nt.g)^2"
-    my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractVector}}}) =
-        @. sin(nt.f) + nt.g^2
-    my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:Expression}}}) =
-        sin(nt.f) + nt.g * nt.g
-
-    variable_mapping = (; f=[1, 2], g=[3])
-    st_expr = TemplateExpression(
-        (; f=x1, g=x3); structure=my_structure, operators, variable_names, variable_mapping
+    structure = TemplateStructure{(:f, :g)}(;
+        combine=e -> sin(e.f) + e.g * e.g,
+        combine_strings=e -> "sin($(e.f)) + $(e.g)^2",
+        combine_vectors=e -> (@. sin(e.f) + e.g^2),
+        variable_constraints=(; f=[1, 2], g=[3]),
     )
+    st_expr = TemplateExpression((; f=x1, g=x3); structure, operators, variable_names)
     @test Interfaces.test(ExpressionInterface, TemplateExpression, [st_expr])
 end
 @testitem "Utilising TemplateExpression to build vector expressions" tags = [:part3] begin
@@ -85,15 +78,11 @@ end
     using Random: rand
 
     # Define the structure function, which returns a tuple:
-    function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractString}}})
-        return "( $(nt.f) + $(nt.g1), $(nt.f) + $(nt.g2), $(nt.f) + $(nt.g3) )"
-    end
-    function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractVector}}})
-        return map(
-            i -> (nt.f[i] + nt.g1[i], nt.f[i] + nt.g2[i], nt.f[i] + nt.g3[i]),
-            eachindex(nt.f),
-        )
-    end
+    structure = TemplateStructure{(:f, :g1, :g2, :g3)}(;
+        combine_strings=e -> "( $(e.f) + $(e.g1), $(e.f) + $(e.g2), $(e.f) + $(e.g3) )",
+        combine_vectors=e ->
+            map((f, g1, g2, g3) -> (f + g1, f + g2, f + g3), e.f, e.g1, e.g2, e.g3),
+    )
 
     # Set up operators and variable names
     options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
@@ -105,20 +94,15 @@ end
 
     # Test with vector inputs:
     nt_vector = NamedTuple{(:f, :g1, :g2, :g3)}((1:3, 4:6, 7:9, 10:12))
-    @test my_structure(nt_vector) == [(5, 8, 11), (7, 10, 13), (9, 12, 15)]
+    @test structure(nt_vector) == [(5, 8, 11), (7, 10, 13), (9, 12, 15)]
 
     # And string inputs:
     nt_string = NamedTuple{(:f, :g1, :g2, :g3)}(("x1", "x2", "x3", "x2"))
-    @test my_structure(nt_string) == "( x1 + x2, x1 + x3, x1 + x2 )"
+    @test structure(nt_string) == "( x1 + x2, x1 + x3, x1 + x2 )"
 
     # Now, using TemplateExpression:
-    variable_mapping = (; f=[1, 2], g1=[3], g2=[3], g3=[3])
     st_expr = TemplateExpression(
-        (; f=x1, g1=x2, g2=x3, g3=x2);
-        structure=my_structure,
-        options.operators,
-        variable_names,
-        variable_mapping,
+        (; f=x1, g1=x2, g2=x3, g3=x2); structure, options.operators, variable_names
     )
     @test string_tree(st_expr) == "( x1 + x2, x1 + x3, x1 + x2 )"
 
@@ -137,22 +121,18 @@ end
     x1, x2, x3 =
         (i -> Expression(Node(Float64; feature=i); operators, variable_names)).(1:3)
 
-    my_structure(nt) = nt.f
-
-    variable_mapping = (; f=[1, 2], g1=[3], g2=[3], g3=[3])
+    structure = TemplateStructure(;
+        combine=e -> e.f, variable_constraints=(; f=[1, 2], g1=[3], g2=[3], g3=[3])
+    )
 
     st_expr = TemplateExpression(
-        (; f=x1, g1=x3, g2=x3, g3=x3);
-        structure=my_structure,
-        operators,
-        variable_names,
-        variable_mapping,
+        (; f=x1, g1=x3, g2=x3, g3=x3); structure, operators, variable_names
     )
 
     @test st_expr isa TemplateExpression
     @test get_operators(st_expr) == operators
     @test get_variable_names(st_expr) == variable_names
-    @test get_metadata(st_expr).structure == my_structure
+    @test get_metadata(st_expr).structure == structure
 end
 @testitem "Integration Test with fit! and Performance Check" tags = [:part3] begin
     include("../examples/template_expression.jl")
