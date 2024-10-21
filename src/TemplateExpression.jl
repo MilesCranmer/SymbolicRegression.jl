@@ -356,11 +356,7 @@ function DE.eval_tree_array(
         )
         # Combine them using the structure function:
         results = NamedTuple{keys(raw_contents)}(map(first, outs))
-        if !all(last, outs)
-            return first(first(outs)), false
-        else
-            return combine_vectors(tree, results, cX), true
-        end
+        return combine_vectors(tree, results, cX), all(last, outs)
     else
         @assert can_combine(tree)
         return DE.eval_tree_array(combine(tree, raw_contents), cX, operators; kws...)
