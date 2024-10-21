@@ -46,12 +46,15 @@ If not declared using the constructor `TemplateStructure{K}(...)`, the keys of t
 `variable_constraints` `NamedTuple` will be used to infer this.
 
 # Fields
-- `combine`: Optional function taking a `NamedTuple` of function keys => expression
-    pairs, returning a single expression. Fallback method used by `get_tree`
+- `combine`: Optional function taking a `NamedTuple` of function keys => expressions,
+    returning a single expression. Fallback method used by `get_tree`
     on a `TemplateExpression` to generate a single `Expression`.
-- `combine_vectors`: Optional function taking a `NamedTuple` of function keys => vector pairs,
+- `combine_vectors`: Optional function taking a `NamedTuple` of function keys => vectors,
     returning a single vector. Used for evaluating the expression tree.
-- `combine_strings`: Optional function taking a `NamedTuple` of function keys => string pairs,
+    You may optionally define a method with a second argument `X` for if you wish
+    to include the data matrix `X` (of shape `[num_features, num_rows]`) in the
+    computation.
+- `combine_strings`: Optional function taking a `NamedTuple` of function keys => strings,
     returning a single string. Used for printing the expression tree.
 - `variable_constraints`: Optional `NamedTuple` that defines which variables each sub-expression is allowed to access.
     For example, requesting `f(x1, x2)` and `g(x3)` would be equivalent to `(; f=[1, 2], g=[3])`.
