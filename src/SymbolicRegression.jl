@@ -13,6 +13,7 @@ export Population,
     Expression,
     ParametricExpression,
     TemplateExpression,
+    TemplateStructure,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
@@ -314,7 +315,7 @@ using .SearchUtilsModule:
     save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!
-using .TemplateExpressionModule: TemplateExpression
+using .TemplateExpressionModule: TemplateExpression, TemplateStructure
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
