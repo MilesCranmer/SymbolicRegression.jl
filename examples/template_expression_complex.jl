@@ -47,45 +47,60 @@ function simulate(rng::AbstractRNG=default_rng())
     return (; t, v, T, F, B, F_d, F_mag)
 end
 
+rng = MersenneTwister(0)
+n = 1000
+
+data = [simulate(rng) for _ in 1:n]
+
+X = (;
+    t=map(d -> d.t, data),
+    v_x=map(d -> d.v[1], data),
+    v_y=map(d -> d.v[2], data),
+    v_z=map(d -> d.v[3], data),
+    T=map(d -> d.T, data),
+)
+
+# We can regress directly on a struct!
 struct ForceVector{T}
     x::T
     y::T
     z::T
 end
+y = map(d -> ForceVector(d.F...), data)
 
-X, y, other = let
-    rng = MersenneTwister(0)
-    n = 1000
-    data = [simulate(rng) for _ in 1:n]
-    X = (;
-        t=map(d -> d.t, data),
-        v_x=map(d -> d.v[1], data),
-        v_y=map(d -> d.v[2], data),
-        v_z=map(d -> d.v[3], data),
-        T=map(d -> d.T, data),
-    )
-    y = map(d -> ForceVector(d.F...), data)
-    # To check our results at the end:
-    other = (;
-        B=map(d -> d.B, data), F_d=map(d -> d.F_d, data), F_mag=map(d -> d.F_mag, data)
-    )
+# The trick is to define the right structure function.
+# First, let's just make a function that prints the expression:
+function combine_strings(e)
+    return "\nB = ( $(e.B_x), $(e.B_y), $(e.B_z) )\nF_d = ($(e.F_d_scale)) * v"
+end
 
-    X, y, other
+# So, this will just print the separate B and F_d expressions we've learned.
+
+# Then, let's define an expression that takes the numerical values
+# evaluated in the TemplateExpression, and combines them into the resultant
+# force vector. Inside this function, we can do whatever we want.
+
+function combine_vectors(e, X)
+    # Extract the 3D velocity vectors from the input matrix:
+    v = map(x -> (x[2], x[3], x[4]), eachcol(X))
+
+    # Use this to compute the full drag force:
+    F_d = map((fd, v) -> fd .* v, e.F_d_scale, v)
+
+    # Collect the magnetic field components that we've learned into the vector:
+    B = map(tuple, e.B_x, e.B_y, e.B_z)
+
+    # Using this, we compute the magnetic force with a cross product:
+    F_mag = map(cross, v, B)
+
+    # Finally, we combine the drag and magnetic forces into the total force:
+    return map((fd, fm) -> ForceVector((fd .+ fm)...), F_d, F_mag)
 end
 
 structure = TemplateStructure{(:B_x, :B_y, :B_z, :F_d_scale)}(;
-    combine_strings=e ->
-        "\nB = ( $(e.B_x), $(e.B_y), $(e.B_z) )\nF_d = ($(e.F_d_scale)) * v",
-    combine_vectors=(e, X) -> [
-        let v = (X[2, i], X[3, i], X[4, i]),
-            F_d = e.F_d_scale[i] .* v,
-            B = (e.B_x[i], e.B_y[i], e.B_z[i]),
-            F_mag = cross(v, B)
-
-            ForceVector((F_d .+ F_mag)...)
-        end for i in eachindex(axes(X, 2), e.F_d_scale, e.B_x, e.B_y, e.B_z)
-    ],
-    variable_constraints,
+    combine_strings=combine_strings,
+    combine_vectors=combine_vectors,
+    variable_constraints=variable_constraints,
 )
 
 model = SRRegressor(;
@@ -94,7 +109,7 @@ model = SRRegressor(;
     niterations=100,
     maxsize=30,
     expression_type=TemplateExpression,
-    expression_options=(; structure),
+    expression_options=(; structure=structure),
     # The elementwise needs to operate directly on each row of `y`:
     elementwise_loss=(F1, F2) -> (F1.x - F2.x)^2 + (F1.y - F2.y)^2 + (F1.z - F2.z)^2,
 )
