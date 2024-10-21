@@ -164,29 +164,20 @@ function wrap_equation_string(eqn_string, left_cols_width, twidth)
     equation_width = (twidth - 1) - left_cols_width - length(dots)
     output = ""
 
-    split_eqn = split_string(eqn_string, equation_width)
-    split_eqn_with_metadata = map(
-        ((i, piece),) -> let is_before_last = i < length(split_eqn)
-            (piece, is_before_last)
-        end, enumerate(split_eqn)
-    )
-    print_pad = false
-    while length(split_eqn_with_metadata) > 0
-        (cur_piece, requires_dots) = popfirst!(split_eqn_with_metadata)::Tuple{String,Bool}
-        if occursin(r"\n", cur_piece)
-            inner_splits = split(cur_piece, '\n')
-            cur_piece = popfirst!(inner_splits)
-            prepend!(
-                split_eqn_with_metadata,
-                map(
-                    ((i, piece),) -> let is_last = i == length(inner_splits)
-                        (piece, is_last && requires_dots)
-                    end,
-                    enumerate(inner_splits),
-                ),
-            )
+    forced_split_eqn = split(eqn_string, '\n')
+    split_eqn = @NamedTuple{piece::String, requires_dots::Bool}[]
+    for piece in forced_split_eqn
+        subpieces = split_string(piece, equation_width)
+        for (i, subpiece) in enumerate(subpieces)
+            # We don't need dots on the last subpiece, since it
+            # is either the last row of the entire string, or it has
+            # an explicit newline in it!
+            push!(split_eqn, (piece=subpiece, requires_dots=i < length(subpieces)))
         end
-        output *= " "^(print_pad * left_cols_width) * cur_piece
+    end
+    print_pad = false
+    for (; piece, requires_dots) in split_eqn
+        output *= " "^(print_pad * left_cols_width) * piece
         if requires_dots
             output *= dots
         end

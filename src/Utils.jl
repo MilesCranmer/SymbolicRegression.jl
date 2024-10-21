@@ -40,14 +40,14 @@ function subscriptify(number::Integer)
 end
 
 """
-    split_string(s::String, n::Integer)
+    split_string(s::AbstractString, n::Integer)
 
 ```jldoctest
 julia> split_string("abcdefgh", 3)
 ["abc", "def", "gh"]
 ```
 """
-function split_string(s::String, n::Integer)
+function split_string(s::AbstractString, n::Integer)
     length(s) <= n && return [s]
     # Due to unicode characters, need to split only at valid indices:
     I = eachindex(s) |> collect
