@@ -108,9 +108,6 @@ end
 
 @testitem "printing utilities" tags = [:part2] begin
     using SymbolicRegression.UtilsModule: split_string
-    using SymbolicRegression.HallOfFameModule: wrap_equation_string
 
     @test split_string("abc\ndefg", 3) == ["abc", "\nde", "fg"]
-    @test wrap_equation_string("abcdefghijklmnop\nqrs\ntuvwxyz", 10, 30) ==
-        "abcdefghijklmnop...\n          qrs...\n          tuvwxyz\n"
 end

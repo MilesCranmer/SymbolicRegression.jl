@@ -1,7 +1,7 @@
 module HallOfFameModule
 
 using DynamicExpressions: AbstractExpression, string_tree
-using ..UtilsModule: split_string, include_splits_on_newlines
+using ..UtilsModule: split_string
 using ..CoreModule:
     MAX_DEGREE, AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
@@ -148,11 +148,12 @@ function string_dominating_pareto_curve(
         if dataset.y_sym_units === nothing && dataset.X_sym_units !== nothing
             y_prefix *= WILDCARD_UNIT_STRING
         end
-        eqn_string = y_prefix * " = " * eqn_string
+        prefix = y_prefix * " = "
+        eqn_string = prefix * eqn_string
         stats_columns_string = @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
         left_cols_width = length(stats_columns_string)
         output *= stats_columns_string
-        output *= wrap_equation_string(eqn_string, left_cols_width, twidth)
+        output *= wrap_equation_string(eqn_string, left_cols_width + length(prefix), twidth)
     end
     output *= "-"^(twidth - 1)
     return output
@@ -164,14 +165,34 @@ function wrap_equation_string(eqn_string, left_cols_width, twidth)
     output = ""
 
     split_eqn = split_string(eqn_string, equation_width)
-    split_eqn = include_splits_on_newlines(split_eqn)
+    split_eqn_with_metadata = map(
+        ((i, piece),) -> let is_before_last = i < length(split_eqn)
+            (piece, is_before_last)
+        end, enumerate(split_eqn)
+    )
     print_pad = false
-    while length(split_eqn) > 1
-        cur_piece = popfirst!(split_eqn)
-        output *= " "^(print_pad * left_cols_width) * cur_piece * dots * "\n"
+    while length(split_eqn_with_metadata) > 0
+        (cur_piece, requires_dots) = popfirst!(split_eqn_with_metadata)::Tuple{String,Bool}
+        if occursin(r"\n", cur_piece)
+            inner_splits = split(cur_piece, '\n')
+            cur_piece = popfirst!(inner_splits)
+            prepend!(
+                split_eqn_with_metadata,
+                map(
+                    ((i, piece),) -> let is_last = i == length(inner_splits)
+                        (piece, is_last && requires_dots)
+                    end,
+                    enumerate(inner_splits),
+                ),
+            )
+        end
+        output *= " "^(print_pad * left_cols_width) * cur_piece
+        if requires_dots
+            output *= dots
+        end
+        output *= "\n"
         print_pad = true
     end
-    output *= " "^(print_pad * left_cols_width) * only(split_eqn) * "\n"
     return output
 end
 
