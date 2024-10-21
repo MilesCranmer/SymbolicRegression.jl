@@ -383,6 +383,7 @@ function (ex::TemplateExpression)(
         return callable(X, operators; kws...)
     end
 end
+@unstable IDE.expected_array_type(::AbstractMatrix, ::Type{<:TemplateExpression}) = Any
 
 function DA.violates_dimensional_constraints(
     tree::TemplateExpression, dataset::Dataset, options::AbstractOptions
