@@ -122,13 +122,13 @@ end
 function string_dominating_pareto_curve(
     hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing
 )
-    twidth = (width === nothing) ? 100 : max(100, width::Integer)
-    output = ""
-    output *= "Hall of Fame:\n"
-    # TODO: Get user's terminal width.
-    output *= "-"^(twidth - 1) * "\n"
-    output *= @sprintf(
-        "%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation"
+    terminal_width = (width === nothing) ? 100 : max(100, width::Integer)
+    buffer = IOBuffer()
+    println(buffer, "Hall of Fame:")
+    println(buffer, '-'^(terminal_width - 1))
+    print(
+        buffer,
+        @sprintf("%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation")
     )
 
     formatted = format_hall_of_fame(hallOfFame, options)
@@ -152,39 +152,42 @@ function string_dominating_pareto_curve(
         eqn_string = prefix * eqn_string
         stats_columns_string = @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
         left_cols_width = length(stats_columns_string)
-        output *= stats_columns_string
-        output *= wrap_equation_string(eqn_string, left_cols_width + length(prefix), twidth)
+        print(buffer, stats_columns_string)
+        print(
+            buffer,
+            wrap_equation_string(
+                eqn_string, left_cols_width + length(prefix), terminal_width
+            ),
+        )
     end
-    output *= "-"^(twidth - 1)
-    return output
+    print(buffer, '-'^(terminal_width - 1))
+    return String(take!(buffer))
 end
 
-function wrap_equation_string(eqn_string, left_cols_width, twidth)
+function wrap_equation_string(eqn_string, left_cols_width, terminal_width)
     dots = "..."
-    equation_width = (twidth - 1) - left_cols_width - length(dots)
-    output = ""
+    equation_width = (terminal_width - 1) - left_cols_width - length(dots)
+    buffer = IOBuffer()
 
     forced_split_eqn = split(eqn_string, '\n')
-    split_eqn = @NamedTuple{piece::String, requires_dots::Bool}[]
+    print_pad = false
     for piece in forced_split_eqn
         subpieces = split_string(piece, equation_width)
         for (i, subpiece) in enumerate(subpieces)
             # We don't need dots on the last subpiece, since it
             # is either the last row of the entire string, or it has
             # an explicit newline in it!
-            push!(split_eqn, (piece=subpiece, requires_dots=i < length(subpieces)))
+            requires_dots = i < length(subpieces)
+            print(buffer, ' '^(print_pad * left_cols_width))
+            print(buffer, subpiece)
+            if requires_dots
+                print(buffer, dots)
+            end
+            println(buffer)
+            print_pad = true
         end
     end
-    print_pad = false
-    for (; piece, requires_dots) in split_eqn
-        output *= " "^(print_pad * left_cols_width) * piece
-        if requires_dots
-            output *= dots
-        end
-        output *= "\n"
-        print_pad = true
-    end
-    return output
+    return String(take!(buffer))
 end
 
 function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}
