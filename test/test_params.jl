@@ -30,7 +30,6 @@ const default_params = (
     hof_migration=true,
     fraction_replaced_hof=0.1f0,
     should_optimize_constants=true,
-    output_file=nothing,
     perturbation_factor=1.000000f0,
     annealing=true,
     batching=false,

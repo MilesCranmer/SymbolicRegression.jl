@@ -13,7 +13,7 @@ end
 
 normalize_frequencies!(statistics)
 
-@test sum(statistics.frequencies) == 1020
+@test sum(statistics.frequencies) == 1030
 @test sum(statistics.normalized_frequencies) ≈ 1.0
 @test statistics.normalized_frequencies[5] > statistics.normalized_frequencies[15]
 

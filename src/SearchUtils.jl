@@ -4,6 +4,7 @@ This includes: process management, stdin reading, checking for early stops."""
 module SearchUtilsModule
 
 using Printf: @printf, @sprintf
+using Dates: Dates
 using Distributed: Distributed, @spawnat, Future, procs, addprocs
 using StatsBase: mean
 using DispatchDoctor: @unstable
@@ -56,6 +57,7 @@ struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE} <: AbstractRuntimeOption
     parallelism::Val{PARALLELISM}
     dim_out::Val{DIM_OUT}
     return_state::Val{RETURN_STATE}
+    run_id::String
 end
 @unstable @inline function Base.getproperty(
     roptions::RuntimeOptions{P,D,R}, name::Symbol
@@ -85,6 +87,7 @@ end
     heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
     runtests::Bool=true,
     return_state::Union{Bool,Nothing,Val}=nothing,
+    run_id::Union{String,Nothing}=nothing,
     verbosity::Union{Int,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
@@ -194,6 +197,12 @@ end
         ``
     end
 
+    _run_id = if run_id === nothing
+        generate_run_id()
+    else
+        run_id
+    end
+
     return RuntimeOptions{concurrency,dim_out,_return_state}(
         niterations,
         _numprocs,
@@ -206,7 +215,14 @@ end
         Val(concurrency),
         Val(dim_out),
         Val(_return_state),
+        _run_id,
     )
+end
+
+function generate_run_id()
+    date_str = Dates.format(Dates.now(), "yyyymmdd_HHMMSS")
+    h = join(rand(['0':'9'; 'a':'z'; 'A':'Z'], 6))
+    return "$(date_str)_$h"
 end
 
 """A simple dictionary to track worker allocations."""
@@ -569,12 +585,21 @@ Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,Cha
 end
 
 function save_to_file(
-    dominating, nout::Integer, j::Integer, dataset::Dataset{T,L}, options::AbstractOptions
+    dominating,
+    nout::Integer,
+    j::Integer,
+    dataset::Dataset{T,L},
+    options::AbstractOptions,
+    ropt::AbstractRuntimeOptions,
 ) where {T,L}
-    output_file = options.output_file
-    if nout > 1
-        output_file = output_file * ".out$j"
-    end
+    output_directory = joinpath(
+        options.output_directory === nothing ? "outputs" : options.output_directory,
+        ropt.run_id,
+    )
+    mkpath(output_directory)
+    filename = nout > 1 ? "hall_of_fame_output$(j).csv" : "hall_of_fame.csv"
+    output_file = joinpath(output_directory, filename)
+
     dominating_n = length(dominating)
 
     complexities = Vector{Int}(undef, dominating_n)
@@ -602,7 +627,7 @@ function save_to_file(
     end
 
     # Write file twice in case exit in middle of filewrite
-    for out_file in (output_file, output_file * ".bkup")
+    for out_file in (output_file, output_file * ".bak")
         open(out_file, "w") do io
             write(io, s)
         end

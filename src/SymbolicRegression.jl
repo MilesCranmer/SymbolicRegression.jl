@@ -13,6 +13,7 @@ export Population,
     Expression,
     ParametricExpression,
     TemplateExpression,
+    TemplateStructure,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
@@ -314,7 +315,7 @@ using .SearchUtilsModule:
     save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!
-using .TemplateExpressionModule: TemplateExpression
+using .TemplateExpressionModule: TemplateExpression, TemplateStructure
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
@@ -432,6 +433,7 @@ function equation_search(
     runtests::Bool=true,
     saved_state=nothing,
     return_state::Union{Bool,Nothing,Val}=nothing,
+    run_id::Union{String,Nothing}=nothing,
     loss_type::Type{L}=Nothing,
     verbosity::Union{Integer,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
@@ -481,6 +483,7 @@ function equation_search(
         runtests=runtests,
         saved_state=saved_state,
         return_state=return_state,
+        run_id=run_id,
         verbosity=verbosity,
         progress=progress,
         v_dim_out=Val(DIM_OUT),
@@ -863,7 +866,7 @@ function _main_search_loop!(
             dominating = calculate_pareto_frontier(state.halls_of_fame[j])
 
             if options.save_to_file
-                save_to_file(dominating, nout, j, dataset, options)
+                save_to_file(dominating, nout, j, dataset, options, ropt)
             end
             ###################################################################
             # Migration #######################################################

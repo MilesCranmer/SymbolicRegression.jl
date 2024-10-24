@@ -8,22 +8,13 @@ operators = options.operators
 variable_names = (i -> "x$i").(1:3)
 x1, x2, x3 = (i -> Expression(Node(Float64; feature=i); operators, variable_names)).(1:3)
 
-variable_mapping = (; f=[1, 2], g1=[3], g2=[3])
-
-function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractString}}})
-    return "( $(nt.f) + $(nt.g1), $(nt.f) + $(nt.g2) )"
-end
-function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{<:AbstractVector}}})
-    return map(i -> (nt.f[i] + nt.g1[i], nt.f[i] + nt.g2[i]), eachindex(nt.f))
-end
-
-st_expr = TemplateExpression(
-    (; f=x1, g1=x3, g2=x3);
-    structure=my_structure,
-    operators,
-    variable_names,
-    variable_mapping,
+structure = TemplateStructure{(:f, :g1, :g2)}(;
+    combine_vectors=e -> map((f, g1, g2) -> (f + g1, f + g2), e.f, e.g1, e.g2),
+    combine_strings=e -> "( $(e.f) + $(e.g1), $(e.f) + $(e.g2) )",
+    variable_constraints=(; f=[1, 2], g1=[3], g2=[3]),
 )
+
+st_expr = TemplateExpression((; f=x1, g1=x3, g2=x3); structure, operators, variable_names)
 
 X = rand(100, 3) .* 10
 
@@ -35,7 +26,7 @@ model = SRRegressor(;
     unary_operators=(sin,),
     maxsize=15,
     expression_type=TemplateExpression,
-    expression_options=(; structure=my_structure, variable_mapping),
+    expression_options=(; structure),
     # The elementwise needs to operate directly on each row of `y`:
     elementwise_loss=((x1, x2), (y1, y2)) -> (y1 - x1)^2 + (y2 - x2)^2,
     early_stop_condition=(loss, complexity) -> loss < 1e-5 && complexity <= 7,
