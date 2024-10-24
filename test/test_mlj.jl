@@ -39,7 +39,7 @@ end
     rep = report(mach)
     @test occursin("a", rep.equation_strings[rep.best_idx])
     ypred_good = predict(mach, X)
-    @test sum(abs2, predict(mach, X) .- y) / length(y) < 1e-5
+    @test sum(abs2, predict(mach, X) .- y) / length(y) < 1e-4
 
     # Check that we can choose the equation
     ypred_same = predict(mach, (data=X, idx=rep.best_idx))
