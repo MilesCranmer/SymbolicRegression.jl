@@ -135,3 +135,93 @@ end
 @testitem "Integration Test with fit! and Performance Check" tags = [:part3] begin
     include("../examples/template_expression.jl")
 end
+@testitem "TemplateExpression with only combine function" tags = [:part3] begin
+    using SymbolicRegression
+    using SymbolicRegression.TemplateExpressionModule:
+        can_combine_vectors, can_combine, get_function_keys
+    using SymbolicRegression.InterfaceDynamicExpressionsModule: expected_array_type
+    using DynamicExpressions: constructorof
+
+    # Set up basic operators and variables
+    options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    operators = options.operators
+    variable_names = ["x1", "x2", "x3"]
+    x1, x2, x3 =
+        (i -> Expression(Node(Float64; feature=i); operators, variable_names)).(1:3)
+
+    # Create a TemplateStructure with only combine (no combine_vectors)
+    structure = TemplateStructure(;
+        combine=e -> sin(e.f) + e.g * e.g,  # Only define combine
+        variable_constraints=(; f=[1, 2], g=[3]),
+    )
+
+    # Create the TemplateExpression
+    st_expr = TemplateExpression((; f=x1, g=cos(x3)); structure, operators, variable_names)
+
+    @test constructorof(typeof(st_expr)) === TemplateExpression
+    @test get_function_keys(st_expr) == (:f, :g)
+
+    # Test evaluation
+    cX = [1.0 2.0; 3.0 4.0; 5.0 6.0]
+    out = st_expr(cX)
+    out_2, complete = eval_tree_array(st_expr, cX)
+
+    # The expression should evaluate by first combining to a single expression,
+    # then evaluating that expression
+    expected = sin.(cX[1, :]) .+ cos.(cX[3, :]) .^ 2
+    @test out ≈ expected
+
+    @test complete
+    @test out_2 ≈ expected
+
+    # Verify that can_combine_vectors is false but can_combine is true
+    @test !can_combine_vectors(st_expr)
+    @test can_combine(st_expr)
+
+    @test expected_array_type(cX, typeof(st_expr)) === Any
+
+    @test string_tree(st_expr) == "sin(x1) + (cos(x3) * cos(x3))"
+end
+@testitem "TemplateExpression with data in combine_vectors" tags = [:part3] begin
+    using SymbolicRegression
+
+    options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos, exp))
+    operators = options.operators
+    variable_names = ["x1", "x2", "x3"]
+    x1, x2, x3 =
+        (i -> Expression(Node(Float64; feature=i); operators, variable_names)).(1:3)
+    f = exp(2.5 * x3)
+    g = x1
+    structure = TemplateStructure(;
+        combine_vectors=(e, X) -> e.f .+ X[2, :], variable_constraints=(; f=[3], g=[1])
+    )
+    st_expr = TemplateExpression((; f, g); structure, operators, variable_names)
+    X = randn(3, 100)
+    @test st_expr(X) ≈ @. exp(2.5 * X[3, :]) + X[2, :]
+end
+@testitem "TemplateStructure constructors" tags = [:part3] begin
+    using SymbolicRegression
+
+    operators = Options(; binary_operators=(+, *, /, -)).operators
+    variable_names = ["x1", "x2"]
+
+    # Create simple expressions with constant values
+    f = Expression(Node(Float64; val=1.0); operators, variable_names)
+    g = Expression(Node(Float64; val=2.0); operators, variable_names)
+
+    # Test TemplateStructure{K}(combine; kws...)
+    st1 = TemplateStructure{(:f, :g)}(e -> e.f + e.g)
+    @test st1.combine((; f, g)) == f + g
+
+    # Test TemplateStructure(combine; kws...)
+    st2 = TemplateStructure(e -> e.f + e.g; variable_constraints=(; f=[1], g=[2]))
+    @test st2.combine((; f, g)) == f + g
+
+    # Test error when no K or variable_constraints provided
+    @test_throws ArgumentError TemplateStructure(e -> e.f + e.g)
+    @test_throws ArgumentError(
+        "If `variable_constraints` is not provided, " *
+        "you must initialize `TemplateStructure` with " *
+        "`TemplateStructure{K}(...)`, for tuple of symbols `K`.",
+    ) TemplateStructure(e -> e.f + e.g)
+end
