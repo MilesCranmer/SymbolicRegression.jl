@@ -127,10 +127,61 @@ end
     rng = MersenneTwister(0)
     X = randn(rng, 100, 3)
     Y = X
-    model = MultitargetSRRegressor(; niterations=10, stop_kws...)
+
+    # Create a temporary directory
+    temp_dir = mktempdir()
+
+    # Set the run_id and output_directory
+    run_id = "test_run"
+    output_directory = temp_dir
+
+    # Instantiate the model with the specified run_id and output_directory
+    model = MultitargetSRRegressor(;
+        niterations=10, run_id=run_id, output_directory=output_directory, stop_kws...
+    )
+
     mach = machine(model, X, Y)
     fit!(mach)
+
+    # Check predictions
     @test sum(abs2, predict(mach, X) .- Y) / length(X) < 1e-6
+
+    # Load the output CSV file
+    for i in 1:3
+        csv_file = joinpath(output_directory, run_id, "hall_of_fame_output$(i).csv")
+        csv_content = read(csv_file, String)
+
+        # Parse the CSV content using regex
+        lines = split(csv_content, '\n')
+        header = split(lines[1], ',')
+        data_lines = lines[2:end]
+
+        @test header[1] == "Complexity"
+        @test header[2] == "Loss"
+        @test header[3] == "Equation"
+
+        complexities = Int[]
+        losses = Float64[]
+        equations = String[]
+
+        for line in data_lines
+            if isempty(line)
+                continue
+            end
+            cols = split(line, ',')
+            push!(complexities, parse(Int, cols[1]))
+            push!(losses, parse(Float64, cols[2]))
+            @show cols
+            push!(equations, cols[3])
+        end
+
+        @test !isempty(complexities)
+        @test complexities == report(mach).complexities[i]
+        @test losses == report(mach).losses[i]
+        for (eq, eq_str) in zip(equations, report(mach).equation_strings[i])
+            @test eq[(begin + 1):(end - 1)] == eq_str
+        end
+    end
 end
 
 @testitem "Helpful errors" tags = [:part3] begin

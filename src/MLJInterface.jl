@@ -174,7 +174,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, class
     else
         old_fitresult.types
     end
-    X_t::types.X_t, variable_names, X_units::types.X_units = get_matrix_and_info(
+    X_t::types.X_t, variable_names, display_variable_names, X_units::types.X_units = get_matrix_and_info(
         X, m.dimensions_type
     )
     y_t::types.y_t, y_variable_names, y_units::types.y_units = format_input_for(
@@ -194,6 +194,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, class
         niterations=m.niterations,
         weights=w_t,
         variable_names=variable_names,
+        display_variable_names=display_variable_names,
         options=options,
         parallelism=m.parallelism,
         numprocs=m.numprocs,
@@ -254,14 +255,17 @@ end
 function get_matrix_and_info(X, ::Type{D}) where {D}
     sch = MMI.istable(X) ? MMI.schema(X) : nothing
     Xm_t = MMI.matrix(X; transpose=true)
-    colnames = if sch === nothing
-        [map(i -> "x$(subscriptify(i))", axes(Xm_t, 1))...]
+    colnames, display_colnames = if sch === nothing
+        (
+            ["x$(i)" for i in eachindex(axes(Xm_t, 1))],
+            ["x$(subscriptify(i))" for i in eachindex(axes(Xm_t, 1))],
+        )
     else
-        [string.(sch.names)...]
+        ([string(name) for name in sch.names], [string(name) for name in sch.names])
     end
     D_promoted = get_dimensions_type(Xm_t, D)
     Xm_t_strip, X_units = unwrap_units_single(Xm_t, D_promoted)
-    return Xm_t_strip, colnames, X_units
+    return Xm_t_strip, colnames, display_colnames, X_units
 end
 
 function format_input_for(::SRRegressor, y, ::Type{D}) where {D}
@@ -280,7 +284,8 @@ function format_input_for(::MultitargetSRRegressor, y, ::Type{D}) where {D}
         MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1),
         "For single-output regression, please use `SRRegressor`."
     )
-    return get_matrix_and_info(y, D)
+    out = get_matrix_and_info(y, D)
+    return out[1], out[2], out[4]
 end
 function validate_variable_names(variable_names, fitresult)
     @assert(
@@ -420,7 +425,7 @@ function _predict(m::M, fitresult, Xnew, idx, classes) where {M<:AbstractSRRegre
 
     params = full_report(m, fitresult; v_with_strings=Val(false))
     prototype = MMI.istable(Xnew) ? Xnew : nothing
-    Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
+    Xnew_t, variable_names, _, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     T = promote_type(eltype(Xnew_t), fitresult.types.T)
 
     if isempty(params.equations) || any(isempty, params.equations)
@@ -570,6 +575,7 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
         search, to see if there will be any problems during the equation search
         related to the host environment.
     - `run_id::Union{String,Nothing}=nothing`: A unique identifier for the run.
+        This will be used to store outputs from the run in the `outputs` directory.
         If not specified, a unique ID will be generated.
     - `loss_type::Type=Nothing`: If you would like to use a different type
         for the loss than for the data you passed, specify the type here.
