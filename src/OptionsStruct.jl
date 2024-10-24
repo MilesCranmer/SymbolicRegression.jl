@@ -207,7 +207,7 @@ struct Options{
     hof_migration::Bool
     should_simplify::Bool
     should_optimize_constants::Bool
-    output_file::String
+    output_directory::Union{String,Nothing}
     populations::Int
     perturbation_factor::Float32
     annealing::Bool

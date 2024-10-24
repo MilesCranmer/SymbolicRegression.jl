@@ -56,6 +56,7 @@ function modelexpr(model_name::Symbol)
         addprocs_function::Union{Function,Nothing} = nothing
         heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
         runtests::Bool = true
+        run_id::Union{String,Nothing} = nothing
         loss_type::L = Nothing
         selection_method::Function = choose_best
         dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
@@ -202,6 +203,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, class
         runtests=m.runtests,
         saved_state=(old_fitresult === nothing ? nothing : old_fitresult.state),
         return_state=true,
+        run_id=m.run_id,
         loss_type=m.loss_type,
         X_units=X_units_clean,
         y_units=y_units_clean,
@@ -567,6 +569,8 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
     - `runtests::Bool=true`: Whether to run (quick) tests before starting the
         search, to see if there will be any problems during the equation search
         related to the host environment.
+    - `run_id::Union{String,Nothing}=nothing`: A unique identifier for the run.
+        If not specified, a unique ID will be generated.
     - `loss_type::Type=Nothing`: If you would like to use a different type
         for the loss than for the data you passed, specify the type here.
         Note that if you pass complex data `::Complex{L}`, then the loss

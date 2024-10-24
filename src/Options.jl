@@ -2,7 +2,6 @@ module OptionsModule
 
 using DispatchDoctor: @unstable
 using Optim: Optim
-using Dates: Dates
 using StatsBase: StatsBase
 using DynamicExpressions: OperatorEnum, Expression, default_node_type
 using ADTypes: AbstractADType, ADTypes
@@ -206,7 +205,6 @@ const deprecated_options_mapping = Base.ImmutableDict(
     :mutationWeights => :mutation_weights,
     :hofMigration => :hof_migration,
     :shouldOptimizeConstants => :should_optimize_constants,
-    :hofFile => :output_file,
     :perturbationFactor => :perturbation_factor,
     :batchSize => :batch_size,
     :crossoverProbability => :crossover_probability,
@@ -382,7 +380,6 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     type, such as `:Zygote` for Zygote, `:Enzyme`, etc. Most backends will not
     work, and many will never work due to incompatibilities, though support for some
     is gradually being added.
-- `output_file`: What file to store equations to, as a backup.
 - `perturbation_factor`: When mutating a constant, either
     multiply or divide by (1+perturbation_factor)^(rand()+1).
 - `probability_negate_constant`: Probability of negating a constant in the equation
@@ -399,6 +396,9 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     not.
 - `print_precision`: How many digits to print when printing
     equations. By default, this is 5.
+- `output_directory`: The base directory to save output files to. Files
+    will be saved in a subdirectory according to the run ID. By default,
+    this is `./outputs`.
 - `save_to_file`: Whether to save equations to a file during the search.
 - `bin_constraints`: See `constraints`. This is the same, but specified for binary
     operators only (for example, if you have an operator that is both a binary
@@ -463,6 +463,7 @@ $(OPTION_DESCRIPTIONS)
     should_simplify::Union{Nothing,Bool}=nothing,
     should_optimize_constants::Bool=true,
     output_file::Union{Nothing,AbstractString}=nothing,
+    output_directory::Union{Nothing,String}=nothing,
     expression_type::Type=Expression,
     node_type::Type=default_node_type(expression_type),
     expression_options::NamedTuple=NamedTuple(),
@@ -537,7 +538,6 @@ $(OPTION_DESCRIPTIONS)
         #! format: off
         k == :hofMigration && (hof_migration = kws[k]; true) && continue
         k == :shouldOptimizeConstants && (should_optimize_constants = kws[k]; true) && continue
-        k == :hofFile && (output_file = kws[k]; true) && continue
         k == :perturbationFactor && (perturbation_factor = kws[k]; true) && continue
         k == :batchSize && (batch_size = kws[k]; true) && continue
         k == :crossoverProbability && (crossover_probability = kws[k]; true) && continue
@@ -597,6 +597,9 @@ $(OPTION_DESCRIPTIONS)
             Optim.BFGS(; linesearch=LineSearches.BackTracking())
         end
     end
+    if output_file !== nothing
+        error("`output_file` is deprecated. Use `output_directory` instead.")
+    end
 
     if elementwise_loss === nothing
         elementwise_loss = L2DistLoss()
@@ -614,18 +617,6 @@ $(OPTION_DESCRIPTIONS)
             bin_constraints === nothing &&
             una_constraints === nothing
         )
-    end
-
-    is_testing = parse(Bool, get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false"))
-
-    if output_file === nothing
-        # "%Y-%m-%d_%H%M%S.%f"
-        date_time_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS.sss")
-        output_file = "hall_of_fame_" * date_time_str * ".csv"
-        if is_testing
-            tmpdir = mktempdir()
-            output_file = joinpath(tmpdir, output_file)
-        end
     end
 
     @assert maxsize > 3
@@ -733,6 +724,14 @@ $(OPTION_DESCRIPTIONS)
         ADTypes.Auto(autodiff_backend)
     end
 
+    _output_directory =
+        if output_directory === nothing &&
+            get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false") == "true"
+            mktempdir()
+        else
+            output_directory
+        end
+
     options = Options{
         typeof(complexity_mapping),
         operator_specialization(typeof(operators), expression_type),
@@ -763,7 +762,7 @@ $(OPTION_DESCRIPTIONS)
         hof_migration,
         should_simplify,
         should_optimize_constants,
-        output_file,
+        _output_directory,
         populations,
         perturbation_factor,
         annealing,
