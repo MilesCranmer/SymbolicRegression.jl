@@ -26,6 +26,7 @@ Summary of major recent changes, described in more detail below:
   - New mutation operators introduced, `swap_operands` and `rotate_tree` – both of which seem to help kick the evolution out of local optima.
   - New hyperparameter defaults created, based on a Pareto front volume calculation, rather than simply accuracy of the best expression.
 - [Support for Zygote.jl and Enzyme.jl within the constant optimizer, specified using the `autodiff_backend` option](#support-for-zygotejl-and-enzymejl-within-the-constant-optimizer-specified-using-the-autodiff_backend-option)
+- [Changed output file handling](#changed-output-file-handling)
 - Major refactoring of the codebase to improve readability and modularity
 - Identified and fixed a major internal bug involving unexpected aliasing produced by the crossover operator
   - Segmentation faults caused by this are a likely culprit for some crashes reported during multi-day multi-node searches.
@@ -384,10 +385,20 @@ Options(
 
 for Enzyme.jl (though Enzyme support is highly experimental).
 
+### Changed output file handling
+
+Instead of writing to a single file like `hall_of_fame_<timestamp>.csv`, outputs are now organized in a directory structure.
+Each run gets a unique ID (containing a timestamp and random string, e.g., `20240315_120000_x7k92p`), and outputs are saved to `outputs/<run_id>/`.
+Currently, only saves `hall_of_fame.csv` (and `hall_of_fame.csv.bak`), with plans to add more logs and diagnostics in this folder in future releases.
+
+The output directory can be customized via the `output_directory` option (defaults to `./outputs`).
+A custom run ID can be specified via the new `run_id` parameter passed to `equation_search` (or `SRRegressor`).
+
 ### Other Small Features in v1.0.0
 
 - Support for per-variable complexity, via the `complexity_of_variables` option.
 - Option to force dimensionless constants when fitting with dimensional constraints, via the `dimensionless_constants_only` option.
+- Default `maxsize` increased from 20 to 30.
 
 ### Update Guide
 
@@ -396,6 +407,12 @@ Only if you are interacting with the return types of
 `equation_search` or `report(mach)`,
 or if you have modified any internals,
 should you need to make some changes.
+
+Also note that the "_hall of fame_" CSV file is now stored in
+a directory structure, of the form `outputs/<run_id>/hall_of_fame.csv`.
+This is to accommodate additional log files without polluting the current working directory.
+Multi-output runs are now stored in the format `.../hall_of_fame_output1.csv`, rather than
+the old format `hall_of_fame_{timestamp}.csv.out1`.
 
 So, the key changes are, as discussed [above](#changed-the-core-expression-type-from-nodet--expressiontnodet), the change from `Node` to `Expression` as the default type for representing expressions.
 This includes the hall of fame object returned by `equation_search`, as well as the vector of
