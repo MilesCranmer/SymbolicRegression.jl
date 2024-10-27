@@ -33,7 +33,7 @@ function s_r_cycle(
     if !options.annealing
         min_temp = max_temp
     end
-    all_temperatures = LinRange(max_temp, min_temp, ncycles)
+    all_temperatures = ncycles > 1 ? LinRange(max_temp, min_temp, ncycles) : [max_temp]
     best_examples_seen = HallOfFame(options, dataset)
     num_evals = 0.0
 
