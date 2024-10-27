@@ -22,13 +22,6 @@ include("utils.jl")
 process_literate_blocks("test")
 process_literate_blocks("examples")
 
-DocMeta.setdocmeta!(
-    SymbolicRegression, :DocTestSetup, :(using LossFunctions); recursive=true
-)
-DocMeta.setdocmeta!(
-    SymbolicRegression, :DocTestSetup, :(using DynamicExpressions); recursive=true
-)
-
 readme = open(dirname(@__FILE__) * "/../README.md") do io
     read(io, String)
 end
@@ -93,6 +86,12 @@ open(dirname(@__FILE__) * "/src/index.md", "w") do io
     write(io, index_base)
 end
 
+DocMeta.setdocmeta!(
+    SymbolicRegression,
+    :DocTestSetup,
+    :(using LossFunctions, DynamicExpressions);
+    recursive=true,
+)
 makedocs(;
     sitename="SymbolicRegression.jl",
     authors="Miles Cranmer",
@@ -105,7 +104,10 @@ makedocs(;
     pages=[
         "Contents" => "index_base.md",
         "Home" => "index.md",
-        "Examples" => "examples.md",
+        "Examples" => [
+            "Short Examples" => "examples.md",
+            "Template Expressions" => "examples/template_expression.md",
+        ],
         "API" => "api.md",
         "Losses" => "losses.md",
         "Types" => "types.md",
@@ -138,9 +140,11 @@ apply_to_a_href!(html.root) do element
     element.attributes["href"] = "#LossFunctions." * element.children[1].text
 end
 
-# Then, we write the new html to the file:
+# Then, we write the new html to the file, only if it has changed:
 open("docs/build/losses/index.html", "w") do io
     write(io, string(html))
 end
 
-deploydocs(; repo="github.com/MilesCranmer/SymbolicRegression.jl.git")
+if !haskey(ENV, "JL_LIVERELOAD")
+    deploydocs(; repo="github.com/MilesCranmer/SymbolicRegression.jl.git")
+end
