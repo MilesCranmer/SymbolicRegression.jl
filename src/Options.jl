@@ -814,4 +814,44 @@ $(OPTION_DESCRIPTIONS)
     return options
 end
 
+function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = nothing))
+    if version isa VersionNumber && version < v"1.0.0"
+        return (;)
+    else
+        return (;
+            adaptive_parsimony_scaling=147.85182336915454,
+            alpha=0.0236276472097734,
+            annealing=false,
+            batching=false,
+            crossover_probability=0.0611420635066688,
+            fraction_replaced=0.0001862232335251,
+            fraction_replaced_hof=0.4873748218612678,
+            maxsize=30,
+            mutation_weights=MutationWeights(;
+                add_node=0.1790074914122459,
+                delete_node=0.8570333054193809,
+                do_nothing=1.0,
+                insert_node=5.662909956653213,
+                mutate_constant=0.0819490475733105,
+                mutate_operator=8.432050027550325,
+                optimize=0.0,
+                randomize=0.0161291198588,
+                rotate_tree=3.3054325751117952,
+                simplify=0.0034318313230220503,
+                swap_operands=0.0141241179573197,
+                form_connection=0.5,
+                break_connection=0.1,
+            ),
+            ncycles_per_iteration=364,
+            parsimony=0.0,
+            perturbation_factor=0.2188520798183637,
+            population_size=57,
+            populations=86,
+            probability_negate_constant=0.0008335092034286,
+            tournament_selection_n=49,
+            tournament_selection_p=0.5093587102628294,
+        )
+    end
+end
+
 end
