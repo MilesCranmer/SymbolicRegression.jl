@@ -3,7 +3,8 @@ module OptionsModule
 using DispatchDoctor: @unstable
 using Optim: Optim
 using StatsBase: StatsBase
-using DynamicExpressions: OperatorEnum, Expression, default_node_type, AbstractExpression, AbstractExpressionNode
+using DynamicExpressions:
+    OperatorEnum, Expression, default_node_type, AbstractExpression, AbstractExpressionNode
 using ADTypes: AbstractADType, ADTypes
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim
@@ -444,49 +445,54 @@ $(OPTION_DESCRIPTIONS)
 @unstable @save_kwargs DEFAULT_OPTIONS function Options(;
     # Note: We can only `@nospecialize` on the first 32 arguments, which is why
     #       we have to declare some of these later on.
-    @nospecialize(defaults::Union{VersionNumber,Nothing}=nothing),
+    @nospecialize(defaults::Union{VersionNumber,Nothing} = nothing),
     # Search options:
     ## 1. Creating the Search Space:
-    @nospecialize(binary_operators=nothing),
-    @nospecialize(unary_operators=nothing),
-    @nospecialize(maxsize::Union{Nothing,Integer}=nothing),
-    @nospecialize(maxdepth::Union{Nothing,Integer}=nothing),
-    @nospecialize(expression_type::Type{<:AbstractExpression}=Expression),
-    @nospecialize(expression_options::NamedTuple=NamedTuple()),
-    @nospecialize(node_type::Type{<:AbstractExpressionNode}=default_node_type(expression_type)),
+    @nospecialize(binary_operators = nothing),
+    @nospecialize(unary_operators = nothing),
+    @nospecialize(maxsize::Union{Nothing,Integer} = nothing),
+    @nospecialize(maxdepth::Union{Nothing,Integer} = nothing),
+    @nospecialize(expression_type::Type{<:AbstractExpression} = Expression),
+    @nospecialize(expression_options::NamedTuple = NamedTuple()),
+    @nospecialize(
+        node_type::Type{<:AbstractExpressionNode} = default_node_type(expression_type)
+    ),
     ## 2. Setting the Search Size:
-    @nospecialize(populations::Union{Nothing,Integer}=nothing),
-    @nospecialize(population_size::Union{Nothing,Integer}=nothing),
-    @nospecialize(ncycles_per_iteration::Union{Nothing,Integer}=nothing),
+    @nospecialize(populations::Union{Nothing,Integer} = nothing),
+    @nospecialize(population_size::Union{Nothing,Integer} = nothing),
+    @nospecialize(ncycles_per_iteration::Union{Nothing,Integer} = nothing),
     ## 3. The Objective:
-    @nospecialize(elementwise_loss::Union{Function,SupervisedLoss,Nothing}=nothing),
-    @nospecialize(loss_function::Union{Function,Nothing}=nothing),
+    @nospecialize(elementwise_loss::Union{Function,SupervisedLoss,Nothing} = nothing),
+    @nospecialize(loss_function::Union{Function,Nothing} = nothing),
     ###           [model_selection - only used in MLJ interface]
-    @nospecialize(dimensional_constraint_penalty::Union{Nothing,Real}=nothing),
+    @nospecialize(dimensional_constraint_penalty::Union{Nothing,Real} = nothing),
     ###           dimensionless_constants_only
     ## 4. Working with Complexities:
-    @nospecialize(parsimony::Union{Nothing,Real}=nothing),
-    @nospecialize(constraints=nothing),
-    @nospecialize(nested_constraints=nothing),
-    @nospecialize(complexity_of_operators=nothing),
-    @nospecialize(complexity_of_constants::Union{Nothing,Real}=nothing),
-    @nospecialize(complexity_of_variables::Union{Nothing,Real,AbstractVector}=nothing),
-    @nospecialize(warmup_maxsize_by::Union{Real,Nothing}=nothing),
+    @nospecialize(parsimony::Union{Nothing,Real} = nothing),
+    @nospecialize(constraints = nothing),
+    @nospecialize(nested_constraints = nothing),
+    @nospecialize(complexity_of_operators = nothing),
+    @nospecialize(complexity_of_constants::Union{Nothing,Real} = nothing),
+    @nospecialize(complexity_of_variables::Union{Nothing,Real,AbstractVector} = nothing),
+    @nospecialize(warmup_maxsize_by::Union{Real,Nothing} = nothing),
     ###           use_frequency
     ###           use_frequency_in_tournament
-    @nospecialize(adaptive_parsimony_scaling::Union{Real,Nothing}=nothing),
+    @nospecialize(adaptive_parsimony_scaling::Union{Real,Nothing} = nothing),
     ###           should_simplify
     ## 5. Mutations:
-    @nospecialize(mutation_weights::Union{AbstractMutationWeights,AbstractVector,NamedTuple,Nothing}=nothing),
-    @nospecialize(crossover_probability::Union{Real,Nothing}=nothing),
-    @nospecialize(annealing::Union{Bool,Nothing}=nothing),
-    @nospecialize(alpha::Union{Nothing,Real}=nothing),
+    @nospecialize(
+        mutation_weights::Union{AbstractMutationWeights,AbstractVector,NamedTuple,Nothing} =
+            nothing
+    ),
+    @nospecialize(crossover_probability::Union{Real,Nothing} = nothing),
+    @nospecialize(annealing::Union{Bool,Nothing} = nothing),
+    @nospecialize(alpha::Union{Nothing,Real} = nothing),
     ###           perturbation_factor
-    @nospecialize(probability_negate_constant::Union{Real,Nothing}=nothing),
+    @nospecialize(probability_negate_constant::Union{Real,Nothing} = nothing),
     ###           skip_mutation_failures
     ## 6. Tournament Selection:
-    @nospecialize(tournament_selection_n::Union{Nothing,Integer}=nothing),
-    @nospecialize(tournament_selection_p::Union{Nothing,Real}=nothing),
+    @nospecialize(tournament_selection_n::Union{Nothing,Integer} = nothing),
+    @nospecialize(tournament_selection_p::Union{Nothing,Real} = nothing),
     ## 7. Constant Optimization:
     ###           optimizer_algorithm
     ###           optimizer_nrestarts
@@ -506,11 +512,11 @@ $(OPTION_DESCRIPTIONS)
     ## 10. Stopping Criteria:
     ###           timeout_in_seconds
     ###           max_evals
-    @nospecialize(early_stop_condition::Union{Function,Real,Nothing}=nothing),
+    @nospecialize(early_stop_condition::Union{Function,Real,Nothing} = nothing),
     ## 11. Performance and Parallelization:
     ###           [others, passed to `equation_search`]
-    @nospecialize(batching::Union{Bool,Nothing}=nothing),
-    @nospecialize(batch_size::Union{Nothing,Integer}=nothing),
+    @nospecialize(batching::Union{Bool,Nothing} = nothing),
+    @nospecialize(batch_size::Union{Nothing,Integer} = nothing),
     ###           turbo
     ###           bumper
     ###           autodiff_backend
