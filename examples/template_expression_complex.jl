@@ -107,13 +107,13 @@ We assume the drag force is linear in the velocity and
 depends on the temperature with a power law:
 
 ```math
-\mathbf{F}_\text{drag} = -\alpha T^{3/2} \mathbf{v}
+\mathbf{F}_\text{drag} = -\alpha T^{1/2} \mathbf{v}
 \quad \text{where} \quad \alpha = 10^{-5}
 ```
 
 This creates a temperature-dependent damping effect:
 =#
-F_d = [-1e-5 * Ti^(3//2) .* vi for (Ti, vi) in zip(T, v)]
+F_d = [-1e-5 * Ti^(1//2) .* vi for (Ti, vi) in zip(T, v)]
 F_d[1:3]
 
 #=
@@ -228,7 +228,7 @@ Let's look at an example of how this would be used
 in a TemplateExpression, for some guess at the form of
 the solution:
 =#
-options = Options(; binary_operators=(+, *, /, -, ^), unary_operators=(sin, cos, sqrt, exp))
+options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos, sqrt, exp))
 ## The inner operators are an `DynamicExpressions.OperatorEnum` which is used by `Expression`:
 operators = options.operators
 t = Expression(Node{Float64}(; feature=1); operators, variable_names)
