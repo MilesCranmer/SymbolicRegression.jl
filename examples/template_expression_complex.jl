@@ -176,7 +176,7 @@ function combine_strings(e)
     B_x_padded = e.B_x
     B_y_padded = e.B_y
     B_z_padded = e.B_z
-    return "  ╭ 𝐁 = [ $(B_x_padded) , $(B_y_padded) , $(B_z_padded) ]\n  ╰ 𝐅 = ($(e.F_d_scale)) * 𝐯"
+    return " ╭ 𝐁 = [ $(B_x_padded) , $(B_y_padded) , $(B_z_padded) ]\n ╰ 𝐅 = ($(e.F_d_scale)) * 𝐯"
 end
 
 #=
@@ -228,7 +228,7 @@ Let's look at an example of how this would be used
 in a TemplateExpression, for some guess at the form of
 the solution:
 =#
-options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos, sqrt, exp))
+options = Options(; binary_operators=(+, *, /, -, ^), unary_operators=(sin, cos, sqrt, exp))
 ## The inner operators are an `DynamicExpressions.OperatorEnum` which is used by `Expression`:
 operators = options.operators
 t = Expression(Node{Float64}(; feature=1); operators, variable_names)
