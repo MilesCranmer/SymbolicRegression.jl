@@ -3,7 +3,7 @@ module OptionsModule
 using DispatchDoctor: @unstable
 using Optim: Optim
 using StatsBase: StatsBase
-using DynamicExpressions: OperatorEnum, Expression, default_node_type
+using DynamicExpressions: OperatorEnum, Expression, default_node_type, AbstractExpression, AbstractExpressionNode
 using ADTypes: AbstractADType, ADTypes
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim
@@ -228,7 +228,10 @@ const deprecated_options_mapping = Base.ImmutableDict(
 # For static analysis tools:
 @ignore const DEFAULT_OPTIONS = ()
 
-const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators (functions) to use.
+const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Options`. The default,
+    `nothing`, will simply take the default options from the current version of SymbolicRegression.
+    However, you may also select the defaults from an earlier version, such as `v"0.24.5"`.
+- `binary_operators`: Vector of binary operators (functions) to use.
     Each operator should be defined for two input scalars,
     and one output scalar. All operators
     need to be defined over the entire real line (excluding infinity - these
@@ -439,83 +442,156 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 $(OPTION_DESCRIPTIONS)
 """
 @unstable @save_kwargs DEFAULT_OPTIONS function Options(;
-    binary_operators=Function[+, -, /, *],
-    unary_operators=Function[],
-    constraints=nothing,
-    elementwise_loss::Union{Function,SupervisedLoss,Nothing}=nothing,
-    loss_function::Union{Function,Nothing}=nothing,
-    tournament_selection_n::Integer=12, #1 sampled from every tournament_selection_n per mutation
-    tournament_selection_p::Real=0.86,
-    topn::Integer=12, #samples to return per population
-    complexity_of_operators=nothing,
-    complexity_of_constants::Union{Nothing,Real}=nothing,
-    complexity_of_variables::Union{Nothing,Real,AbstractVector}=nothing,
-    parsimony::Real=0.0032,
-    dimensional_constraint_penalty::Union{Nothing,Real}=nothing,
+    # Note: We can only `@nospecialize` on the first 32 arguments, which is why
+    #       we have to declare some of these later on.
+    @nospecialize(defaults::Union{VersionNumber,Nothing}=nothing),
+    # Search options:
+    ## 1. Creating the Search Space:
+    @nospecialize(binary_operators=nothing),
+    @nospecialize(unary_operators=nothing),
+    @nospecialize(maxsize::Union{Nothing,Integer}=nothing),
+    @nospecialize(maxdepth::Union{Nothing,Integer}=nothing),
+    @nospecialize(expression_type::Type{<:AbstractExpression}=Expression),
+    @nospecialize(expression_options::NamedTuple=NamedTuple()),
+    @nospecialize(node_type::Type{<:AbstractExpressionNode}=default_node_type(expression_type)),
+    ## 2. Setting the Search Size:
+    @nospecialize(populations::Union{Nothing,Integer}=nothing),
+    @nospecialize(population_size::Union{Nothing,Integer}=nothing),
+    @nospecialize(ncycles_per_iteration::Union{Nothing,Integer}=nothing),
+    ## 3. The Objective:
+    @nospecialize(elementwise_loss::Union{Function,SupervisedLoss,Nothing}=nothing),
+    @nospecialize(loss_function::Union{Function,Nothing}=nothing),
+    ###           [model_selection - only used in MLJ interface]
+    @nospecialize(dimensional_constraint_penalty::Union{Nothing,Real}=nothing),
+    ###           dimensionless_constants_only
+    ## 4. Working with Complexities:
+    @nospecialize(parsimony::Union{Nothing,Real}=nothing),
+    @nospecialize(constraints=nothing),
+    @nospecialize(nested_constraints=nothing),
+    @nospecialize(complexity_of_operators=nothing),
+    @nospecialize(complexity_of_constants::Union{Nothing,Real}=nothing),
+    @nospecialize(complexity_of_variables::Union{Nothing,Real,AbstractVector}=nothing),
+    @nospecialize(warmup_maxsize_by::Union{Real,Nothing}=nothing),
+    ###           use_frequency
+    ###           use_frequency_in_tournament
+    @nospecialize(adaptive_parsimony_scaling::Union{Real,Nothing}=nothing),
+    ###           should_simplify
+    ## 5. Mutations:
+    @nospecialize(mutation_weights::Union{AbstractMutationWeights,AbstractVector,NamedTuple,Nothing}=nothing),
+    @nospecialize(crossover_probability::Union{Real,Nothing}=nothing),
+    @nospecialize(annealing::Union{Bool,Nothing}=nothing),
+    @nospecialize(alpha::Union{Nothing,Real}=nothing),
+    ###           perturbation_factor
+    @nospecialize(probability_negate_constant::Union{Real,Nothing}=nothing),
+    ###           skip_mutation_failures
+    ## 6. Tournament Selection:
+    @nospecialize(tournament_selection_n::Union{Nothing,Integer}=nothing),
+    @nospecialize(tournament_selection_p::Union{Nothing,Real}=nothing),
+    ## 7. Constant Optimization:
+    ###           optimizer_algorithm
+    ###           optimizer_nrestarts
+    ###           optimizer_probability
+    ###           optimizer_iterations
+    ###           optimizer_f_calls_limit
+    ###           optimizer_options
+    ###           should_optimize_constants
+    ## 8. Migration between Populations:
+    ###           migration
+    ###           hof_migration
+    ###           fraction_replaced
+    ###           fraction_replaced_hof
+    ###           topn
+    ## 9. Data Preprocessing:
+    ###           [none]
+    ## 10. Stopping Criteria:
+    ###           timeout_in_seconds
+    ###           max_evals
+    @nospecialize(early_stop_condition::Union{Function,Real,Nothing}=nothing),
+    ## 11. Performance and Parallelization:
+    ###           [others, passed to `equation_search`]
+    @nospecialize(batching::Union{Bool,Nothing}=nothing),
+    @nospecialize(batch_size::Union{Nothing,Integer}=nothing),
+    ###           turbo
+    ###           bumper
+    ###           autodiff_backend
+    ## 12. Determinism:
+    ###           [others, passed to `equation_search`]
+    ###           deterministic
+    ###           seed
+    ## 13. Monitoring:
+    ###           verbosity
+    ###           print_precision
+    ###           progress
+    ## 14. Environment:
+    ###           [none]
+    ## 15. Exporting the Results:
+    ###           [others, passed to `equation_search`]
+    ###           output_directory
+    ###           save_to_file
+
+    # Other search, but no specializations (since Julia limits us to 32!)
+    ## 1. Search Space:
+    ## 2. Setting the Search Size:
+    ## 3. The Objective:
     dimensionless_constants_only::Bool=false,
-    alpha::Real=0.100000,
-    maxsize::Integer=30,
-    maxdepth::Union{Nothing,Integer}=nothing,
-    turbo::Bool=false,
-    bumper::Bool=false,
-    migration::Bool=true,
-    hof_migration::Bool=true,
-    should_simplify::Union{Nothing,Bool}=nothing,
-    should_optimize_constants::Bool=true,
-    output_file::Union{Nothing,AbstractString}=nothing,
-    output_directory::Union{Nothing,String}=nothing,
-    expression_type::Type=Expression,
-    node_type::Type=default_node_type(expression_type),
-    expression_options::NamedTuple=NamedTuple(),
-    populations::Integer=15,
-    perturbation_factor::Real=0.076,
-    annealing::Bool=false,
-    batching::Bool=false,
-    batch_size::Integer=50,
-    mutation_weights::Union{AbstractMutationWeights,AbstractVector,NamedTuple}=MutationWeights(),
-    crossover_probability::Real=0.066,
-    warmup_maxsize_by::Real=0.0,
+    ## 4. Working with Complexities:
     use_frequency::Bool=true,
     use_frequency_in_tournament::Bool=true,
-    adaptive_parsimony_scaling::Real=20.0,
-    population_size::Integer=33,
-    ncycles_per_iteration::Integer=550,
-    fraction_replaced::Real=0.00036,
-    fraction_replaced_hof::Real=0.035,
-    verbosity::Union{Integer,Nothing}=nothing,
-    print_precision::Integer=5,
-    save_to_file::Bool=true,
-    probability_negate_constant::Real=0.01,
-    seed=nothing,
-    bin_constraints=nothing,
-    una_constraints=nothing,
-    progress::Union{Bool,Nothing}=nothing,
-    terminal_width::Union{Nothing,Integer}=nothing,
+    should_simplify::Union{Nothing,Bool}=nothing,
+    ## 5. Mutations:
+    perturbation_factor::Union{Nothing,Real}=nothing,
+    skip_mutation_failures::Bool=true,
+    ## 6. Tournament Selection
+    ## 7. Constant Optimization:
     optimizer_algorithm::Union{AbstractString,Optim.AbstractOptimizer}=Optim.BFGS(;
         linesearch=LineSearches.BackTracking()
     ),
-    optimizer_nrestarts::Integer=2,
-    optimizer_probability::Real=0.14,
+    optimizer_nrestarts::Int=2,
+    optimizer_probability::Float64=0.14,
     optimizer_iterations::Union{Nothing,Integer}=nothing,
     optimizer_f_calls_limit::Union{Nothing,Integer}=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
-    autodiff_backend::Union{AbstractADType,Symbol,Nothing}=nothing,
-    use_recorder::Bool=false,
-    recorder_file::AbstractString="pysr_recorder.json",
-    early_stop_condition::Union{Function,Real,Nothing}=nothing,
+    should_optimize_constants::Bool=true,
+    ## 8. Migration between Populations:
+    migration::Bool=true,
+    hof_migration::Bool=true,
+    fraction_replaced::Union{Real,Nothing}=nothing,
+    fraction_replaced_hof::Union{Real,Nothing}=nothing,
+    topn::Union{Nothing,Integer}=nothing,
+    ## 9. Data Preprocessing:
+    ## 10. Stopping Criteria:
     timeout_in_seconds::Union{Nothing,Real}=nothing,
     max_evals::Union{Nothing,Integer}=nothing,
-    skip_mutation_failures::Bool=true,
-    nested_constraints=nothing,
+    ## 11. Performance and Parallelization:
+    turbo::Bool=false,
+    bumper::Bool=false,
+    autodiff_backend::Union{AbstractADType,Symbol,Nothing}=nothing,
+    ## 12. Determinism:
     deterministic::Bool=false,
-    # Not search options; just construction options:
+    seed=nothing,
+    ## 13. Monitoring:
+    verbosity::Union{Integer,Nothing}=nothing,
+    print_precision::Integer=5,
+    progress::Union{Bool,Nothing}=nothing,
+    ## 14. Environment:
+    ## 15. Exporting the Results:
+    output_directory::Union{Nothing,String}=nothing,
+    save_to_file::Bool=true,
+    ## Undocumented features:
+    bin_constraints=nothing,
+    una_constraints=nothing,
+    terminal_width::Union{Nothing,Integer}=nothing,
+    use_recorder::Bool=false,
+    recorder_file::AbstractString="pysr_recorder.json",
+    ### Not search options; just construction options:
     define_helper_functions::Bool=true,
-    deprecated_return_state=nothing,
     #########################################
     # Deprecated args: ######################
+    output_file::Union{Nothing,AbstractString}=nothing,
     fast_cycle::Bool=false,
     npopulations::Union{Nothing,Integer}=nothing,
     npop::Union{Nothing,Integer}=nothing,
+    deprecated_return_state=nothing,
     kws...,
     #########################################
 )
@@ -577,7 +653,6 @@ $(OPTION_DESCRIPTIONS)
             "Unknown deprecated keyword argument: $k. Please update `Options(;)` to transfer this key.",
         )
     end
-    fast_cycle && Base.depwarn("`fast_cycle` is deprecated and has no effect.", :Options)
     if npop !== nothing
         Base.depwarn("`npop` is deprecated. Use `population_size` instead.", :Options)
         population_size = npop
@@ -609,6 +684,35 @@ $(OPTION_DESCRIPTIONS)
         end
     end
 
+    #################################
+    #### Supply defaults ############
+    #! format: off
+    _default_options = default_options(defaults)
+    binary_operators = something(binary_operators, _default_options.binary_operators)
+    unary_operators = something(unary_operators, _default_options.unary_operators)
+    maxsize = something(maxsize, _default_options.maxsize)
+    populations = something(populations, _default_options.populations)
+    population_size = something(population_size, _default_options.population_size)
+    ncycles_per_iteration = something(ncycles_per_iteration, _default_options.ncycles_per_iteration)
+    parsimony = something(parsimony, _default_options.parsimony)
+    warmup_maxsize_by = something(warmup_maxsize_by, _default_options.warmup_maxsize_by)
+    adaptive_parsimony_scaling = something(adaptive_parsimony_scaling, _default_options.adaptive_parsimony_scaling)
+    mutation_weights = something(mutation_weights, _default_options.mutation_weights)
+    crossover_probability = something(crossover_probability, _default_options.crossover_probability)
+    annealing = something(annealing, _default_options.annealing)
+    alpha = something(alpha, _default_options.alpha)
+    perturbation_factor = something(perturbation_factor, _default_options.perturbation_factor)
+    probability_negate_constant = something(probability_negate_constant, _default_options.probability_negate_constant)
+    tournament_selection_n = something(tournament_selection_n, _default_options.tournament_selection_n)
+    tournament_selection_p = something(tournament_selection_p, _default_options.tournament_selection_p)
+    fraction_replaced = something(fraction_replaced, _default_options.fraction_replaced)
+    fraction_replaced_hof = something(fraction_replaced_hof, _default_options.fraction_replaced_hof)
+    topn = something(topn, _default_options.topn)
+    batching = something(batching, _default_options.batching)
+    batch_size = something(batch_size, _default_options.batch_size)
+    #! format: on
+    #################################
+
     if should_simplify === nothing
         should_simplify = (
             loss_function === nothing &&
@@ -623,6 +727,7 @@ $(OPTION_DESCRIPTIONS)
     @assert warmup_maxsize_by >= 0.0f0
     @assert length(unary_operators) <= max_ops
     @assert length(binary_operators) <= max_ops
+    @assert tournament_selection_n < population_size "`tournament_selection_n` must be less than `population_size`"
 
     # Make sure nested_constraints contains functions within our operator set:
     _nested_constraints = build_nested_constraints(;
@@ -694,18 +799,14 @@ $(OPTION_DESCRIPTIONS)
 
     # Parse optimizer options
     if !isa(optimizer_options, Optim.Options)
-        optimizer_iterations = isnothing(optimizer_iterations) ? 8 : optimizer_iterations
-        optimizer_f_calls_limit = if isnothing(optimizer_f_calls_limit)
-            10_000
-        else
-            optimizer_f_calls_limit
-        end
+        optimizer_iterations = something(optimizer_iterations, 8)
+        optimizer_f_calls_limit = something(optimizer_f_calls_limit, 10_000)
         extra_kws = hasfield(Optim.Options, :show_warnings) ? (; show_warnings=false) : ()
         optimizer_options = Optim.Options(;
             iterations=optimizer_iterations,
             f_calls_limit=optimizer_f_calls_limit,
             extra_kws...,
-            (isnothing(optimizer_options) ? () : optimizer_options)...,
+            something(optimizer_options, ())...,
         )
     else
         @assert optimizer_iterations === nothing && optimizer_f_calls_limit === nothing
@@ -828,10 +929,7 @@ function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = n
             # Working with Complexities
             parsimony=0.0032,
             warmup_maxsize_by=0.0,
-            use_frequency=true,
-            use_frequency_in_tournament=true,
             adaptive_parsimony_scaling=20.0,
-            should_simplify=true,
             # Mutations
             mutation_weights=MutationWeights(;
                 mutate_constant=0.048,
@@ -856,24 +954,13 @@ function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = n
             # Tournament Selection
             tournament_selection_n=12,
             tournament_selection_p=0.86,
-            # Constant Optimization
-            should_optimize_constants=true,
-            optimizer_probability=0.14,
-            optimizer_nrestarts=2,
-            optimizer_algorithm=Optim.BFGS(; linesearch=LineSearches.BackTracking()),
             # Migration between Populations
-            migration=true,
-            hof_migration=true,
             fraction_replaced=0.00036,
             fraction_replaced_hof=0.035,
             topn=12,
             # Performance and Parallelization
             batching=false,
             batch_size=50,
-            turbo=false,
-            bumper=false,
-            # Determinism
-            deterministic=false,
         )
     else
         return (;
@@ -888,22 +975,19 @@ function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = n
             # Working with Complexities
             parsimony=0.0,
             warmup_maxsize_by=0.0,
-            use_frequency=true,
-            use_frequency_in_tournament=true,
             adaptive_parsimony_scaling=148,
-            should_simplify=true,
             # Mutations
             mutation_weights=MutationWeights(;
-                mutate_constant=0.035291911190776126,
-                mutate_operator=3.6313193324458504,
-                swap_operands=0.006082646856290204,
-                rotate_tree=1.4235068782658613,
-                add_node=0.07709078600032576,
-                insert_node=2.43877044565746,
-                delete_node=0.369087185245687,
-                simplify=0.0014779413533204176,
-                randomize=0.006946114475984983,
-                do_nothing=0.43065675850844304,
+                mutate_constant=0.0353,
+                mutate_operator=3.63,
+                swap_operands=0.00608,
+                rotate_tree=1.42,
+                add_node=0.0771,
+                insert_node=2.44,
+                delete_node=0.369,
+                simplify=0.00148,
+                randomize=0.00695,
+                do_nothing=0.431,
                 optimize=0.0,
                 form_connection=0.5,
                 break_connection=0.1,
@@ -916,24 +1000,13 @@ function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = n
             # Tournament Selection
             tournament_selection_n=49,
             tournament_selection_p=0.509,
-            # Constant Optimization
-            should_optimize_constants=true,
-            optimizer_probability=0.14,
-            optimizer_nrestarts=2,
-            optimizer_algorithm=Optim.BFGS(; linesearch=LineSearches.BackTracking()),
             # Migration between Populations
-            migration=true,
-            hof_migration=true,
             fraction_replaced=0.000186,
             fraction_replaced_hof=0.487,
             topn=12,
             # Performance and Parallelization
             batching=false,
             batch_size=50,
-            turbo=false,
-            bumper=false,
-            # Determinism
-            deterministic=false,
         )
     end
 end

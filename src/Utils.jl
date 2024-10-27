@@ -171,7 +171,16 @@ function _save_kwargs(log_variable::Symbol, fdef::Expr)
     def = splitdef(fdef)
     # Get kwargs:
     kwargs = copy(def[:kwargs])
-    filter!(kwargs) do k
+    kwargs = map(kwargs) do k
+        # If it's a macrocall for @nospecialize
+        if k.head == :macrocall && string(k.args[1]) == "@nospecialize"
+            # Find the actual argument - it's the last non-LineNumberNode argument
+            inner_arg = last(filter(arg -> !(arg isa LineNumberNode), k.args))
+            return inner_arg
+        end
+        return k
+    end
+    kwargs = filter(kwargs) do k
         # Filter ...:
         k.head == :... && return false
         # Filter other deprecated kwargs:
