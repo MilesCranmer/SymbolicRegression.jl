@@ -18,6 +18,8 @@ mutable struct WrappedProgressBar
     end
 end
 
+precompile(Tuple{typeof(Base.setproperty!),WrappedProgressBar,Symbol,Int64})
+
 """Iterate a progress bar without needing to store cycle/state externally."""
 function manually_iterate!(pbar::WrappedProgressBar)
     cur_cycle = pbar.cycle

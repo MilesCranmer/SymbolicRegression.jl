@@ -8,6 +8,7 @@ using Dates: Dates
 using Distributed: Distributed, @spawnat, Future, procs, addprocs
 using StatsBase: mean
 using DispatchDoctor: @unstable
+using Compat: Fix
 
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
@@ -79,7 +80,6 @@ end
 @unstable function RuntimeOptions(;
     niterations::Int=10,
     nout::Int=1,
-    options::AbstractOptions=Options(),
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
@@ -91,6 +91,10 @@ end
     verbosity::Union{Int,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
+    # Defined from options
+    options_return_state,
+    options_verbosity,
+    options_progress,
 ) where {DIM_OUT}
     concurrency = if parallelism in (:multithreading, "multithreading")
         :multithreading
@@ -120,14 +124,14 @@ end
     _return_state = if return_state isa Val
         first(typeof(return_state).parameters)
     else
-        if options.return_state === Val(nothing)
+        if options_return_state === Val(nothing)
             return_state === nothing ? false : return_state
         else
             @assert(
                 return_state === nothing,
                 "You cannot set `return_state` in both the `AbstractOptions` and in the passed arguments."
             )
-            first(typeof(options.return_state).parameters)
+            first(typeof(options_return_state).parameters)
         end
     end
 
@@ -151,11 +155,11 @@ end
         end
     end
 
-    _verbosity = if verbosity === nothing && options.verbosity === nothing
+    _verbosity = if verbosity === nothing && options_verbosity === nothing
         1
-    elseif verbosity === nothing && options.verbosity !== nothing
-        options.verbosity
-    elseif verbosity !== nothing && options.verbosity === nothing
+    elseif verbosity === nothing && options_verbosity !== nothing
+        options_verbosity
+    elseif verbosity !== nothing && options_verbosity === nothing
         verbosity
     else
         error(
@@ -163,11 +167,11 @@ end
         )
         1
     end
-    _progress::Bool = if progress === nothing && options.progress === nothing
+    _progress::Bool = if progress === nothing && options_progress === nothing
         (_verbosity > 0) && nout == 1
-    elseif progress === nothing && options.progress !== nothing
-        options.progress
-    elseif progress !== nothing && options.progress === nothing
+    elseif progress === nothing && options_progress !== nothing
+        options_progress
+    elseif progress !== nothing && options_progress === nothing
         progress
     else
         error(
@@ -319,9 +323,9 @@ function init_dummy_pops(
     ]
 end
 
-struct StdinReader{ST}
+struct StdinReader
     can_read_user_input::Bool
-    stream::ST
+    stream::IO
 end
 
 """Start watching stream (like stdin) for user input."""
@@ -344,6 +348,7 @@ function watch_stream(stream)
     end
     return StdinReader(can_read_user_input, stream)
 end
+precompile(Tuple{typeof(watch_stream),Base.TTY})
 
 """Close the stdin reader and stop reading."""
 function close_reader!(reader::StdinReader)
@@ -628,9 +633,7 @@ function save_to_file(
 
     # Write file twice in case exit in middle of filewrite
     for out_file in (output_file, output_file * ".bak")
-        open(out_file, "w") do io
-            write(io, s)
-        end
+        open(Base.Fix2(write, s), out_file, "w")
     end
     return nothing
 end

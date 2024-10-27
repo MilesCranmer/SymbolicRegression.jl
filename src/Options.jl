@@ -28,7 +28,7 @@ using ..OperatorsModule:
 using ..MutationWeightsModule: AbstractMutationWeights, MutationWeights, mutations
 import ..OptionsStructModule: Options
 using ..OptionsStructModule: ComplexityMapping, operator_specialization
-using ..UtilsModule: max_ops, @save_kwargs, @ignore
+using ..UtilsModule: @save_kwargs, @ignore
 
 """Build constraints on operator-level complexity from a user-passed dict."""
 @unstable function build_constraints(;
@@ -731,8 +731,8 @@ $(OPTION_DESCRIPTIONS)
 
     @assert maxsize > 3
     @assert warmup_maxsize_by >= 0.0f0
-    @assert length(unary_operators) <= max_ops
-    @assert length(binary_operators) <= max_ops
+    @assert length(unary_operators) <= 8192
+    @assert length(binary_operators) <= 8192
     @assert tournament_selection_n < population_size "`tournament_selection_n` must be less than `population_size`"
 
     # Make sure nested_constraints contains functions within our operator set:
@@ -798,7 +798,7 @@ $(OPTION_DESCRIPTIONS)
     early_stop_condition = if typeof(early_stop_condition) <: Real
         # Need to make explicit copy here for this to work:
         stopping_point = Float64(early_stop_condition)
-        (loss, complexity) -> loss < stopping_point
+        Base.Fix2(<, stopping_point) ∘ first ∘ tuple # Equivalent to (l, c) -> l < stopping_point
     else
         early_stop_condition
     end
@@ -850,6 +850,7 @@ $(OPTION_DESCRIPTIONS)
         bumper,
         deprecated_return_state,
         typeof(_autodiff_backend),
+        print_precision,
     }(
         operators,
         _bin_constraints,
@@ -887,7 +888,7 @@ $(OPTION_DESCRIPTIONS)
         fraction_replaced_hof,
         topn,
         verbosity,
-        print_precision,
+        Val(print_precision),
         save_to_file,
         probability_negate_constant,
         length(unary_operators),

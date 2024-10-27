@@ -1,6 +1,7 @@
 module TemplateExpressionModule
 
 using Random: AbstractRNG
+using Compat: Fix
 using DispatchDoctor: @unstable
 using DynamicExpressions:
     DynamicExpressions as DE,
@@ -23,7 +24,8 @@ using DynamicExpressions:
 using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
 
-using ..CoreModule: AbstractOptions, Dataset, CoreModule as CM, AbstractMutationWeights
+using ..CoreModule:
+    AbstractOptions, Dataset, CoreModule as CM, AbstractMutationWeights, has_units
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..MutationFunctionsModule: MutationFunctionsModule as MF
@@ -388,13 +390,18 @@ end
 @unstable IDE.expected_array_type(::AbstractMatrix, ::Type{<:TemplateExpression}) = Any
 
 function DA.violates_dimensional_constraints(
-    tree::TemplateExpression, dataset::Dataset, options::AbstractOptions
+    @nospecialize(tree::TemplateExpression),
+    dataset::Dataset,
+    @nospecialize(options::AbstractOptions)
 )
-    @assert dataset.X_units === nothing && dataset.y_units === nothing
+    @assert !has_units(dataset)
     return false
 end
 function MM.condition_mutation_weights!(
-    weights::AbstractMutationWeights, member::P, options::AbstractOptions, curmaxsize::Int
+    @nospecialize(weights::AbstractMutationWeights),
+    @nospecialize(member::P),
+    @nospecialize(options::AbstractOptions),
+    curmaxsize::Int,
 ) where {T,L,N<:TemplateExpression,P<:PopMember{T,L,N}}
     # HACK TODO
     return nothing
@@ -498,9 +505,12 @@ function CC.check_constraints(
     maxsize && return false
 
     # Then, we check other constraints for inner expressions:
-    return all(
-        t -> CC.check_constraints(t, options, maxsize, nothing), values(raw_contents)
-    )
+    for t in values(raw_contents)
+        if !CC.check_constraints(t, options, maxsize, nothing)
+            return false
+        end
+    end
+    return true
     # TODO: The concept of `cursize` doesn't really make sense here.
 end
 function contains_other_features_than(tree::AbstractExpression, features)

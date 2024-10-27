@@ -5,6 +5,7 @@ This module provides functions for creating, initializing, and manipulating
 module ExpressionBuilderModule
 
 using DispatchDoctor: @unstable
+using Compat: Fix
 using DynamicExpressions:
     AbstractExpressionNode,
     AbstractExpression,
@@ -133,20 +134,20 @@ end
         pop::Population, options::AbstractOptions, dataset::Dataset{T,L}
     ) where {T,L}
         return Population(
-            map(member -> embed_metadata(member, options, dataset), pop.members)
+            map(Fix{2}(Fix{3}(embed_metadata, dataset), options), pop.members)
         )
     end
     function embed_metadata(
         hof::HallOfFame, options::AbstractOptions, dataset::Dataset{T,L}
     ) where {T,L}
         return HallOfFame(
-            map(member -> embed_metadata(member, options, dataset), hof.members), hof.exists
+            map(Fix{2}(Fix{3}(embed_metadata, dataset), options), hof.members), hof.exists
         )
     end
     function embed_metadata(
         vec::Vector{H}, options::AbstractOptions, dataset::Dataset{T,L}
     ) where {T,L,H<:Union{HallOfFame,Population,PopMember}}
-        return map(elem -> embed_metadata(elem, options, dataset), vec)
+        return map(Fix{2}(Fix{3}(embed_metadata, dataset), options), vec)
     end
 end
 

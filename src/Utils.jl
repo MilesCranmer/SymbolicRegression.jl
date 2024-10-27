@@ -26,6 +26,7 @@ function is_anonymous_function(op)
            op_string[1] == '#' &&
            op_string[2] in ('1', '2', '3', '4', '5', '6', '7', '8', '9')
 end
+precompile(Tuple{typeof(is_anonymous_function),Function})
 
 recursive_merge(x::AbstractVector...) = cat(x...; dims=1)
 recursive_merge(x::AbstractDict...) = merge(recursive_merge, x...)
@@ -88,12 +89,13 @@ function _to_vec(v::MutableTuple{S,T}) where {S,T}
     return x
 end
 
-const max_ops = 8192
-const vals = ntuple(Val, max_ops)
-
 """Return the bottom k elements of x, and their indices."""
-bottomk_fast(x::AbstractVector{T}, k) where {T} =
-    _bottomk_dispatch(x, vals[k])::Tuple{Vector{T},Vector{Int}}
+bottomk_fast(x::AbstractVector{T}, k) where {T} = Base.Cartesian.@nif(
+    32,
+    d -> d == k,
+    d -> _bottomk_dispatch(x, Val(d))::Tuple{Vector{T},Vector{Int}},
+    _ -> _bottomk_dispatch(x, Val(k))::Tuple{Vector{T},Vector{Int}}
+)
 
 function _bottomk_dispatch(x::AbstractVector{T}, ::Val{k}) where {T,k}
     if k == 1

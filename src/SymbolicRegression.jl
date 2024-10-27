@@ -157,7 +157,7 @@ using DynamicExpressions: with_type_parameters
     LogitDistLoss,
     QuantileLoss,
     LogCoshLoss
-using Compat: @compat
+using Compat: @compat, Fix
 
 @compat public AbstractOptions,
 AbstractRuntimeOptions,
@@ -262,7 +262,8 @@ using .CoreModule:
     erf,
     erfc,
     atanh_clip,
-    create_expression
+    create_expression,
+    has_units
 using .UtilsModule: is_anonymous_function, recursive_merge, json3_write, @ignore
 using .ComplexityModule: compute_complexity
 using .CheckConstraintsModule: check_constraints
@@ -507,14 +508,19 @@ function equation_search(
     runtime_options::Union{AbstractRuntimeOptions,Nothing}=nothing,
     runtime_options_kws...,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
-    runtime_options = if runtime_options === nothing
-        RuntimeOptions(; options, nout=length(datasets), runtime_options_kws...)
-    else
-        runtime_options
-    end
+    _runtime_options = @something(
+        runtime_options,
+        RuntimeOptions(;
+            options_return_state=options.return_state,
+            options_verbosity=options.verbosity,
+            options_progress=options.progress,
+            nout=length(datasets),
+            runtime_options_kws...,
+        )
+    )
 
     # Underscores here mean that we have mutated the variable
-    return _equation_search(datasets, runtime_options, options, saved_state)
+    return _equation_search(datasets, _runtime_options, options, saved_state)
 end
 
 @noinline function _equation_search(
@@ -1029,13 +1035,10 @@ function _format_output(
     out_hof = if ropt.dim_out == 1
         embed_metadata(only(state.halls_of_fame), options, only(datasets))
     else
-        map(j -> embed_metadata(state.halls_of_fame[j], options, datasets[j]), 1:nout)
+        map(Fix{2}(embed_metadata, options), state.halls_of_fame, datasets)
     end
     if ropt.return_state
-        return (
-            map(j -> embed_metadata(state.last_pops[j], options, datasets[j]), 1:nout),
-            out_hof,
-        )
+        return (map(Fix{2}(embed_metadata, options), state.last_pops, datasets), out_hof)
     else
         return out_hof
     end

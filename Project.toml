@@ -40,7 +40,7 @@ SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 
 [compat]
 ADTypes = "^1.4.0"
-Compat = "^4.2"
+Compat = "^4.16"
 ConstructionBase = "<1.5.7"
 Dates = "1"
 DifferentiationInterface = "0.5, 0.6"
@@ -66,8 +66,3 @@ StatsBase = "0.33, 0.34"
 SymbolicUtils = "0.19, ^1.0.5, 2, 3"
 TOML = "<0.0.1, 1"
 julia = "1.10"
-
-[extras]
-Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
-JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
-SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"

@@ -188,6 +188,7 @@ struct Options{
     _bumper,
     _return_state,
     AD,
+    print_precision,
 } <: AbstractOptions
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
@@ -225,7 +226,7 @@ struct Options{
     fraction_replaced_hof::Float32
     topn::Int
     verbosity::Union{Int,Nothing}
-    print_precision::Int
+    v_print_precision::Val{print_precision}
     save_to_file::Bool
     probability_negate_constant::Float32
     nuna::Int
@@ -256,7 +257,7 @@ struct Options{
     use_recorder::Bool
 end
 
-function Base.print(io::IO, options::Options)
+function Base.print(io::IO, @nospecialize(options::Options))
     return print(
         io,
         "Options(" *
@@ -278,7 +279,9 @@ function Base.print(io::IO, options::Options)
         ")",
     )
 end
-Base.show(io::IO, ::MIME"text/plain", options::Options) = Base.print(io, options)
+function Base.show(io::IO, ::MIME"text/plain", @nospecialize(options::Options))
+    return Base.print(io, options)
+end
 
 specialized_options(options::AbstractOptions) = options
 @unstable function specialized_options(options::Options)
