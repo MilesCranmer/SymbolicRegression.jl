@@ -439,4 +439,4 @@ The above code demonstrates how template expressions can be used to:
 - Constrains which variables can be used in each component
 - Create expressions that can output multiple values
 
-You can even output custom structs - see `examples/template_expression_complex.jl`
+You can even output custom structs - see the more detailed Template Expression example!
