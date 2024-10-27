@@ -86,16 +86,16 @@ end
     addprocs_function::Union{Function,Nothing}=nothing,
     heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
     runtests::Bool=true,
-    return_state::Union{Bool,Nothing,Val}=nothing,
+    return_state::VRS=nothing,
     run_id::Union{String,Nothing}=nothing,
     verbosity::Union{Int,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
     # Defined from options
-    options_return_state,
-    options_verbosity,
-    options_progress,
-) where {DIM_OUT}
+    options_return_state::Val{ORS}=Val(nothing),
+    options_verbosity::Union{Integer,Nothing}=nothing,
+    options_progress::Union{Bool,Nothing}=nothing,
+) where {DIM_OUT,ORS,VRS<:Union{Bool,Nothing,Val}}
     concurrency = if parallelism in (:multithreading, "multithreading")
         :multithreading
     elseif parallelism in (:multiprocessing, "multiprocessing")
@@ -109,37 +109,32 @@ end
         )
         :serial
     end
-    not_distributed = concurrency in (:multithreading, :serial)
-    not_distributed &&
-        procs !== nothing &&
-        error(
-            "`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
-        )
-    not_distributed &&
-        numprocs !== nothing &&
-        error(
+    if concurrency in (:multithreading, :serial)
+        numprocs !== nothing && error(
             "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
         )
-
-    _return_state = if return_state isa Val
-        first(typeof(return_state).parameters)
-    else
-        if options_return_state === Val(nothing)
-            return_state === nothing ? false : return_state
-        else
-            @assert(
-                return_state === nothing,
-                "You cannot set `return_state` in both the `AbstractOptions` and in the passed arguments."
-            )
-            first(typeof(options_return_state).parameters)
-        end
+        procs !== nothing && error(
+            "`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
+        )
     end
+    verbosity !== nothing &&
+        options_verbosity !== nothing &&
+        error(
+            "You cannot set `verbosity` in both the search parameters " *
+            "`AbstractOptions` and the call to `equation_search`.",
+        )
+    progress !== nothing &&
+        options_progress !== nothing &&
+        error(
+            "You cannot set `progress` in both the search parameters " *
+            "`AbstractOptions` and the call to `equation_search`.",
+        )
+    ORS !== nothing &&
+        return_state !== nothing &&
+        error(
+            "You cannot set `return_state` in both the `AbstractOptions` and in the passed arguments.",
+        )
 
-    dim_out = if DIM_OUT === nothing
-        nout > 1 ? 2 : 1
-    else
-        DIM_OUT
-    end
     _numprocs::Int = if numprocs === nothing
         if procs === nothing
             4
@@ -155,42 +150,17 @@ end
         end
     end
 
-    _verbosity = if verbosity === nothing && options_verbosity === nothing
-        1
-    elseif verbosity === nothing && options_verbosity !== nothing
-        options_verbosity
-    elseif verbosity !== nothing && options_verbosity === nothing
-        verbosity
-    else
-        error(
-            "You cannot set `verbosity` in both the search parameters `AbstractOptions` and the call to `equation_search`.",
-        )
-        1
-    end
-    _progress::Bool = if progress === nothing && options_progress === nothing
-        (_verbosity > 0) && nout == 1
-    elseif progress === nothing && options_progress !== nothing
-        options_progress
-    elseif progress !== nothing && options_progress === nothing
-        progress
-    else
-        error(
-            "You cannot set `progress` in both the search parameters `AbstractOptions` and the call to `equation_search`.",
-        )
-        false
-    end
-
-    _addprocs_function = addprocs_function === nothing ? addprocs : addprocs_function
+    _return_state = VRS <: Val ? first(VRS.parameters) : something(ORS, return_state, false)
+    dim_out = something(DIM_OUT, nout > 1 ? 2 : 1)
+    _verbosity = something(verbosity, options_verbosity, 1)
+    _progress = something(progress, options_progress, (_verbosity > 0) && nout == 1)
+    _addprocs_function = something(addprocs_function, addprocs)
+    _run_id = @something(run_id, generate_run_id())
 
     exeflags = if concurrency == :multiprocessing
         heap_size_hint_in_megabytes = floor(
-            Int, (
-                if heap_size_hint_in_bytes === nothing
-                    (Sys.free_memory() / _numprocs)
-                else
-                    heap_size_hint_in_bytes
-                end
-            ) / 1024^2
+            Int,
+            (@something(heap_size_hint_in_bytes, (Sys.free_memory() / _numprocs))) / 1024^2,
         )
         _verbosity > 0 &&
             heap_size_hint_in_bytes === nothing &&
@@ -199,12 +169,6 @@ end
         `--heap-size=$(heap_size_hint_in_megabytes)M`
     else
         ``
-    end
-
-    _run_id = if run_id === nothing
-        generate_run_id()
-    else
-        run_id
     end
 
     return RuntimeOptions{concurrency,dim_out,_return_state}(
@@ -597,10 +561,7 @@ function save_to_file(
     options::AbstractOptions,
     ropt::AbstractRuntimeOptions,
 ) where {T,L}
-    output_directory = joinpath(
-        options.output_directory === nothing ? "outputs" : options.output_directory,
-        ropt.run_id,
-    )
+    output_directory = joinpath(something(options.output_directory, "outputs"), ropt.run_id)
     mkpath(output_directory)
     filename = nout > 1 ? "hall_of_fame_output$(j).csv" : "hall_of_fame.csv"
     output_file = joinpath(output_directory, filename)

@@ -597,7 +597,7 @@ $(OPTION_DESCRIPTIONS)
     fast_cycle::Bool=false,
     npopulations::Union{Nothing,Integer}=nothing,
     npop::Union{Nothing,Integer}=nothing,
-    deprecated_return_state=nothing,
+    deprecated_return_state::Union{Bool,Nothing}=nothing,
     kws...,
     #########################################
 )
@@ -848,7 +848,7 @@ $(OPTION_DESCRIPTIONS)
         typeof(set_mutation_weights),
         turbo,
         bumper,
-        deprecated_return_state,
+        deprecated_return_state::Union{Bool,Nothing},
         typeof(_autodiff_backend),
         print_precision,
     }(

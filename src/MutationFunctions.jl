@@ -149,11 +149,11 @@ function append_random_op(
     options::AbstractOptions,
     nfeatures::Int,
     rng::AbstractRNG=default_rng();
-    makeNewBinOp::Union{Bool,Nothing}=nothing,
+    make_new_bin_op::Union{Bool,Nothing}=nothing,
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
     ex = with_contents_for_mutation(
-        ex, append_random_op(tree, options, nfeatures, rng; makeNewBinOp), context
+        ex, append_random_op(tree, options, nfeatures, rng; make_new_bin_op), context
     )
     return ex
 end
@@ -162,16 +162,15 @@ function append_random_op(
     options::AbstractOptions,
     nfeatures::Int,
     rng::AbstractRNG=default_rng();
-    makeNewBinOp::Union{Bool,Nothing}=nothing,
+    make_new_bin_op::Union{Bool,Nothing}=nothing,
 ) where {T<:DATA_TYPE}
     node = rand(rng, NodeSampler(; tree, filter=t -> t.degree == 0))
 
-    if makeNewBinOp === nothing
-        choice = rand(rng)
-        makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
-    end
+    _make_new_bin_op = @something(
+        make_new_bin_op, rand(rng) < options.nbin / (options.nuna + options.nbin),
+    )
 
-    if makeNewBinOp
+    if _make_new_bin_op
         newnode = constructorof(typeof(tree))(;
             op=rand(rng, 1:(options.nbin)),
             l=make_random_leaf(nfeatures, T, typeof(tree), rng, options),
@@ -210,10 +209,10 @@ function insert_random_op(
 ) where {T<:DATA_TYPE}
     node = rand(rng, NodeSampler(; tree))
     choice = rand(rng)
-    makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
+    make_new_bin_op = choice < options.nbin / (options.nuna + options.nbin)
     left = copy(node)
 
-    if makeNewBinOp
+    if make_new_bin_op
         right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
         newnode = constructorof(typeof(tree))(;
             op=rand(rng, 1:(options.nbin)), l=left, r=right
@@ -246,10 +245,10 @@ function prepend_random_op(
 ) where {T<:DATA_TYPE}
     node = tree
     choice = rand(rng)
-    makeNewBinOp = choice < options.nbin / (options.nuna + options.nbin)
+    make_new_bin_op = choice < options.nbin / (options.nuna + options.nbin)
     left = copy(tree)
 
-    if makeNewBinOp
+    if make_new_bin_op
         right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
         newnode = constructorof(typeof(tree))(;
             op=rand(rng, 1:(options.nbin)), l=left, r=right
@@ -399,7 +398,7 @@ function gen_random_tree_fixed_size(
     while cur_size < node_count
         if cur_size == node_count - 1  # only unary operator allowed.
             options.nuna == 0 && break # We will go over the requested amount, so we must break.
-            tree = append_random_op(tree, options, nfeatures, rng; makeNewBinOp=false)
+            tree = append_random_op(tree, options, nfeatures, rng; make_new_bin_op=false)
         else
             tree = append_random_op(tree, options, nfeatures, rng)
         end

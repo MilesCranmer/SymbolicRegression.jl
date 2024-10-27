@@ -437,17 +437,17 @@ function _predict(m::M, fitresult, Xnew, idx, classes) where {M<:AbstractSRRegre
     validate_variable_names(variable_names, fitresult)
     validate_units(X_units_clean, fitresult.X_units)
 
-    idx = idx === nothing ? params.best_idx : idx
+    _idx = something(idx, params.best_idx)
 
     if M <: SRRegressor
         return eval_tree_mlj(
-            params.equations[idx], Xnew_t, classes, m, T, fitresult, nothing, prototype
+            params.equations[_idx], Xnew_t, classes, m, T, fitresult, nothing, prototype
         )
     elseif M <: MultitargetSRRegressor
         outs = [
             eval_tree_mlj(
-                params.equations[i][idx[i]], Xnew_t, classes, m, T, fitresult, i, prototype
-            ) for i in eachindex(idx, params.equations)
+                params.equations[i][_idx[i]], Xnew_t, classes, m, T, fitresult, i, prototype
+            ) for i in eachindex(_idx, params.equations)
         ]
         out_matrix = reduce(hcat, outs)
         if !fitresult.y_is_table

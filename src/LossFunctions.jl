@@ -140,7 +140,7 @@ function eval_loss_batched(
     regularization::Bool=true,
     idx=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    _idx = idx === nothing ? batch_sample(dataset, options) : idx
+    _idx = @something(idx, batch_sample(dataset, options))
     return eval_loss(tree, dataset, options; regularization=regularization, idx=_idx)
 end
 
@@ -172,7 +172,7 @@ function loss_to_score(
         L(0.01)
     end
     loss_val = loss / normalization
-    size = complexity === nothing ? compute_complexity(member, options) : complexity
+    size = @something(complexity, compute_complexity(member, options))
     parsimony_term = size * options.parsimony
     loss_val += L(parsimony_term)
 
@@ -247,11 +247,8 @@ function dimensional_regularization(
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if !violates_dimensional_constraints(tree, dataset, options)
         return zero(L)
-    elseif options.dimensional_constraint_penalty === nothing
-        return L(1000)
-    else
-        return L(options.dimensional_constraint_penalty::Float32)
     end
+    return convert(L, something(options.dimensional_constraint_penalty, 1000))
 end
 
 end
