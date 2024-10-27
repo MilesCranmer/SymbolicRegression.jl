@@ -419,7 +419,7 @@ which is useful for debugging and profiling.
 function equation_search(
     X::AbstractMatrix{T},
     y::AbstractMatrix;
-    niterations::Int=40,
+    niterations::Int=50,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
     options::AbstractOptions=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
