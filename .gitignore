@@ -1,6 +1,8 @@
 .dataset*.jl
 .hyperparams*.jl
+outputs
 *.csv
+*.bak
 *.bkup
 performance*txt
 *.out
@@ -8,7 +10,7 @@ trials*
 **/__pycache__
 build
 dist
-Manifest.toml
+Manifest*.toml
 *.cov
 .coveralls.yml
 **/*tmp*.jl
