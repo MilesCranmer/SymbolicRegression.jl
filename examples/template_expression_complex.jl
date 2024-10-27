@@ -130,19 +130,9 @@ F = [fd .+ fm for (fd, fm) in zip(F_d, F_mag)]
 F[1:3]
 
 #=
-Just for fun, let's add another variable that we have to predict,
-some ``\psi(t)``:
-```math
-\psi(t) = \sin(3 t) \cos(2 t)
-```
-=#
-psi = [sin(3 * ti) * cos(2 * ti) for ti in t]
-psi[1:3]
-
-#=
 This forms our dataset!
 =#
-data = (; t, v, T, F, B, F_d, F_mag, psi)
+data = (; t, v, T, F, B, F_d, F_mag)
 keys(data)
 
 #=
@@ -154,7 +144,6 @@ X = (;
     v_y=[vi[2] for vi in data.v],
     v_z=[vi[3] for vi in data.v],
     T=data.T,
-    psi=data.psi,
 )
 keys(X)
 
@@ -166,9 +155,8 @@ struct Force{T}
     x::T
     y::T
     z::T
-    psi::T
 end
-y = [Force(F..., psi) for (F, psi) in zip(data.F, data.psi)]
+y = [Force(F...) for F in data.F]
 y[1:3]
 
 #=
@@ -188,7 +176,7 @@ function combine_strings(e)
     B_x_padded = e.B_x
     B_y_padded = e.B_y
     B_z_padded = e.B_z
-    return "  ╭ 𝐁 = [ $(B_x_padded) , $(B_y_padded) , $(B_z_padded) ]\n  │ 𝐅 = ($(e.F_d_scale)) * 𝐯\n  ╰ Ψ = $(e.psi)"
+    return "  ╭ 𝐁 = [ $(B_x_padded) , $(B_y_padded) , $(B_z_padded) ]\n  ╰ 𝐅 = ($(e.F_d_scale)) * 𝐯"
 end
 
 #=
@@ -214,10 +202,8 @@ function combine_vectors(e, X)
     ## Using this, we compute the magnetic force with a cross product:
     F_mag = [cross(vi, Bi) for (vi, Bi) in zip(v, B)]
 
-    psi = e.psi
-
     ## Finally, we combine the drag and magnetic forces into the total force:
-    return [Force((fd .+ fm)..., ei) for (fd, fm, ei) in zip(F_d, F_mag, psi)]
+    return [Force((fd .+ fm)...) for (fd, fm) in zip(F_d, F_mag)]
 end
 
 #=
@@ -226,12 +212,12 @@ each of them depends on, explicitly. Let's say B only depends on time,
 and the drag force scale only depends on temperature (we explicitly
 multiply the velocity in).
 =#
-variable_constraints = (; B_x=[1], B_y=[1], B_z=[1], F_d_scale=[5], psi=[1])
+variable_constraints = (; B_x=[1], B_y=[1], B_z=[1], F_d_scale=[5])
 
 #=
 Now, we can create our template expression:
 =#
-structure = TemplateStructure{(:B_x, :B_y, :B_z, :F_d_scale, :psi)}(;
+structure = TemplateStructure{(:B_x, :B_y, :B_z, :F_d_scale)}(;
     combine_strings=combine_strings,
     combine_vectors=combine_vectors,
     variable_constraints=variable_constraints,
@@ -249,10 +235,9 @@ t = Expression(Node{Float64}(; feature=1); operators, variable_names)
 T = Expression(Node{Float64}(; feature=5); operators, variable_names)
 B_x = B_y = B_z = 2.1 * cos(t)
 F_d_scale = 1.0 * sqrt(T)
-psi = 2.1 * sin(t) * cos(t)
 
 ex = TemplateExpression(
-    (; B_x, B_y, B_z, F_d_scale, psi);
+    (; B_x, B_y, B_z, F_d_scale);
     structure, operators, variable_names
 )
 
@@ -270,9 +255,7 @@ model = SRRegressor(;
     expression_type=TemplateExpression,
     expression_options=(; structure=structure),
     ## The elementwise needs to operate directly on each row of `y`:
-    elementwise_loss=(F1, F2) ->
-        (F1.x - F2.x)^2 + (F1.y - F2.y)^2 + (F1.z - F2.z)^2 + (F1.psi - F2.psi)^2,
-    mutation_weights=MutationWeights(; rotate_tree=0.5),
+    elementwise_loss=(F1, F2) -> (F1.x - F2.x)^2 + (F1.y - F2.y)^2 + (F1.z - F2.z)^2,
     batching=true,
     batch_size=30,
 );
