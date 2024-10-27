@@ -173,10 +173,7 @@ First, let's just make a function that prints the expression:
 =#
 function combine_strings(e)
     ## e is a named tuple of strings representing each formula
-    B_x_padded = e.B_x
-    B_y_padded = e.B_y
-    B_z_padded = e.B_z
-    return " ╭ 𝐁 = [ $(B_x_padded) , $(B_y_padded) , $(B_z_padded) ]\n ╰ 𝐅 = ($(e.F_d_scale)) * 𝐯"
+    return " ╭ 𝐁 = [ $(e.B_x) , $(e.B_y) , $(e.B_z) ]\n ╰ 𝐅 = ($(e.F_d_scale)) * 𝐯"
 end
 
 #=
