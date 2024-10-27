@@ -816,40 +816,124 @@ end
 
 function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = nothing))
     if version isa VersionNumber && version < v"1.0.0"
-        return (;)
-    else
         return (;
-            adaptive_parsimony_scaling=148,
-            alpha=0.0236,
-            annealing=false,
-            batching=false,
-            crossover_probability=0.0611,
-            fraction_replaced=0.000186,
-            fraction_replaced_hof=0.487,
-            maxsize=30,
+            # Creating the Search Space
+            binary_operators=[+, -, /, *],
+            unary_operators=Function[],
+            maxsize=20,
+            # Setting the Search Size
+            populations=15,
+            population_size=33,
+            ncycles_per_iteration=550,
+            # Working with Complexities
+            parsimony=0.0032,
+            warmup_maxsize_by=0.0,
+            use_frequency=true,
+            use_frequency_in_tournament=true,
+            adaptive_parsimony_scaling=20.0,
+            should_simplify=true,
+            # Mutations
             mutation_weights=MutationWeights(;
-                add_node=0.179,
-                delete_node=0.857,
-                do_nothing=1.0,
-                insert_node=5.66,
-                mutate_constant=0.0819,
-                mutate_operator=8.43,
+                mutate_constant=0.048,
+                mutate_operator=0.47,
+                swap_operands=0.1,
+                rotate_tree=0.0,
+                add_node=0.79,
+                insert_node=5.1,
+                delete_node=1.7,
+                simplify=0.0020,
+                randomize=0.00023,
+                do_nothing=0.21,
                 optimize=0.0,
-                randomize=0.0161,
-                rotate_tree=3.30,
-                simplify=0.00343,
-                swap_operands=0.0141,
                 form_connection=0.5,
                 break_connection=0.1,
             ),
-            ncycles_per_iteration=364,
-            parsimony=0.0,
-            perturbation_factor=0.219,
-            population_size=57,
+            crossover_probability=0.066,
+            annealing=false,
+            alpha=0.1,
+            perturbation_factor=0.076,
+            probability_negate_constant=0.01,
+            # Tournament Selection
+            tournament_selection_n=12,
+            tournament_selection_p=0.86,
+            # Constant Optimization
+            should_optimize_constants=true,
+            optimizer_probability=0.14,
+            optimizer_nrestarts=2,
+            optimizer_algorithm=Optim.BFGS(; linesearch=LineSearches.BackTracking()),
+            # Migration between Populations
+            migration=true,
+            hof_migration=true,
+            fraction_replaced=0.00036,
+            fraction_replaced_hof=0.035,
+            topn=12,
+            # Performance and Parallelization
+            batching=false,
+            batch_size=50,
+            turbo=false,
+            bumper=false,
+            # Determinism
+            deterministic=false,
+        )
+    else
+        return (;
+            # Creating the Search Space
+            binary_operators=[+, -, /, *],
+            unary_operators=Function[],
+            maxsize=30,
+            # Setting the Search Size
             populations=86,
+            population_size=57,
+            ncycles_per_iteration=364,
+            # Working with Complexities
+            parsimony=0.0,
+            warmup_maxsize_by=0.0,
+            use_frequency=true,
+            use_frequency_in_tournament=true,
+            adaptive_parsimony_scaling=148,
+            should_simplify=true,
+            # Mutations
+            mutation_weights=MutationWeights(;
+                mutate_constant=0.035291911190776126,
+                mutate_operator=3.6313193324458504,
+                swap_operands=0.006082646856290204,
+                rotate_tree=1.4235068782658613,
+                add_node=0.07709078600032576,
+                insert_node=2.43877044565746,
+                delete_node=0.369087185245687,
+                simplify=0.0014779413533204176,
+                randomize=0.006946114475984983,
+                do_nothing=0.43065675850844304,
+                optimize=0.0,
+                form_connection=0.5,
+                break_connection=0.1,
+            ),
+            crossover_probability=0.0611,
+            annealing=false,
+            alpha=0.1,
+            perturbation_factor=0.219,
             probability_negate_constant=0.000834,
+            # Tournament Selection
             tournament_selection_n=49,
             tournament_selection_p=0.509,
+            # Constant Optimization
+            should_optimize_constants=true,
+            optimizer_probability=0.14,
+            optimizer_nrestarts=2,
+            optimizer_algorithm=Optim.BFGS(; linesearch=LineSearches.BackTracking()),
+            # Migration between Populations
+            migration=true,
+            hof_migration=true,
+            fraction_replaced=0.000186,
+            fraction_replaced_hof=0.487,
+            topn=12,
+            # Performance and Parallelization
+            batching=false,
+            batch_size=50,
+            turbo=false,
+            bumper=false,
+            # Determinism
+            deterministic=false,
         )
     end
 end
