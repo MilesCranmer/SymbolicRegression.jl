@@ -282,17 +282,16 @@ Base.show(io::IO, ::MIME"text/plain", options::Options) = Base.print(io, options
 
 specialized_options(options::AbstractOptions) = options
 @unstable function specialized_options(options::Options)
-    return _specialized_options(options)
+    return _specialized_options(options, options.operators)
 end
-@generated function _specialized_options(options::O) where {O<:Options}
+@generated function _specialized_options(
+    options::O, operators::OP
+) where {O<:Options,OP<:AbstractOperatorEnum}
     # Return an options struct with concrete operators
     type_parameters = O.parameters
     fields = Any[:(getfield(options, $(QuoteNode(k)))) for k in fieldnames(O)]
     quote
-        operators = getfield(options, :operators)
-        Options{$(type_parameters[1]),typeof(operators),$(type_parameters[3:end]...)}(
-            $(fields...)
-        )
+        Options{$(type_parameters[1]),$(OP),$(type_parameters[3:end]...)}($(fields...))
     end
 end
 
