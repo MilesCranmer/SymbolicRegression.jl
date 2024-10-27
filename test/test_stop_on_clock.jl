@@ -10,6 +10,7 @@ y = 2 * cos.(X[4, :])
 options = Options(;
     default_params...,
     population_size=10,
+    tournament_selection_n=9,
     ncycles_per_iteration=100,
     maxsize=15,
     timeout_in_seconds=1,

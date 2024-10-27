@@ -339,7 +339,7 @@ which is useful for debugging and profiling.
 - `y::Union{AbstractMatrix{T}, AbstractVector{T}}`: The values to predict. The first dimension
     is the output feature to predict with each equation, and the
     second dimension is rows.
-- `niterations::Int=10`: The number of iterations to perform the search.
+- `niterations::Int=100`: The number of iterations to perform the search.
     More iterations will improve the results.
 - `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
     weight the loss for each `y` by this value (same shape as `y`).
@@ -419,7 +419,7 @@ which is useful for debugging and profiling.
 function equation_search(
     X::AbstractMatrix{T},
     y::AbstractMatrix;
-    niterations::Int=50,
+    niterations::Int=100,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
     options::AbstractOptions=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
