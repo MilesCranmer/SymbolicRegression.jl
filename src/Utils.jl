@@ -3,6 +3,7 @@ module UtilsModule
 
 using Printf: @printf
 using MacroTools: splitdef
+using StyledStrings: StyledStrings
 
 macro ignore(args...) end
 
@@ -265,6 +266,23 @@ function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
         thread_cache[Tuple{F,T}] = Bad
     end
     return output
+end
+
+@static if VERSION >= v"1.11.0-"
+    @eval begin
+        const AnnotatedIOBuffer = Base.AnnotatedIOBuffer
+        const AnnotatedString = Base.AnnotatedString
+    end
+else
+    @eval begin
+        const AnnotatedIOBuffer = StyledStrings.AnnotatedStrings.AnnotatedIOBuffer
+        const AnnotatedString = StyledStrings.AnnotatedStrings.AnnotatedString
+    end
+end
+
+dump_buffer(buffer::IOBuffer) = String(take!(buffer))
+function dump_buffer(buffer::AnnotatedIOBuffer)
+    return AnnotatedString(dump_buffer(buffer.io), buffer.annotations)
 end
 
 end

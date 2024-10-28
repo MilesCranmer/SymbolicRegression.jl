@@ -1,7 +1,7 @@
 module HallOfFameModule
 
 using DynamicExpressions: AbstractExpression, string_tree
-using ..UtilsModule: split_string
+using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
 using ..CoreModule:
     MAX_DEGREE, AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
@@ -123,7 +123,8 @@ function string_dominating_pareto_curve(
     hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing
 )
     terminal_width = (width === nothing) ? 100 : max(100, width::Integer)
-    buffer = IOBuffer()
+    _buffer = IOBuffer()
+    buffer = AnnotatedIOBuffer(_buffer)
     println(buffer, "Hall of Fame:")
     println(buffer, '-'^(terminal_width - 1))
     print(
@@ -161,13 +162,14 @@ function string_dominating_pareto_curve(
         )
     end
     print(buffer, '-'^(terminal_width - 1))
-    return String(take!(buffer))
+    return dump_buffer(buffer)
 end
 
 function wrap_equation_string(eqn_string, left_cols_width, terminal_width)
     dots = "..."
     equation_width = (terminal_width - 1) - left_cols_width - length(dots)
-    buffer = IOBuffer()
+    _buffer = IOBuffer()
+    buffer = AnnotatedIOBuffer(_buffer)
 
     forced_split_eqn = split(eqn_string, '\n')
     print_pad = false
@@ -187,7 +189,7 @@ function wrap_equation_string(eqn_string, left_cols_width, terminal_width)
             print_pad = true
         end
     end
-    return String(take!(buffer))
+    return dump_buffer(buffer)
 end
 
 function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}

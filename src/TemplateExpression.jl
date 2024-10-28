@@ -3,6 +3,7 @@ module TemplateExpressionModule
 using Random: AbstractRNG
 using Compat: Fix
 using DispatchDoctor: @unstable
+using StyledStrings: @styled_str
 using DynamicExpressions:
     DynamicExpressions as DE,
     AbstractStructuredExpression,
@@ -337,16 +338,21 @@ function ComplexityModule.compute_complexity(
     )
 end
 
+_color_string(s::AbstractString, c::Symbol) = styled"{$c:$s}"
 function DE.string_tree(
     tree::TemplateExpression, operators::Union{AbstractOperatorEnum,Nothing}=nothing; kws...
 )
     raw_contents = get_contents(tree)
     if can_combine_strings(tree)
         function_keys = keys(raw_contents)
+        colors = Base.Iterators.cycle((:magenta, :green, :red, :blue, :yellow, :cyan))
         inner_strings = NamedTuple{function_keys}(
             map(ex -> DE.string_tree(ex, operators; kws...), values(raw_contents))
         )
-        return combine_strings(tree, inner_strings)
+        colored_strings = NamedTuple{function_keys}(
+            map(_color_string, inner_strings, colors)
+        )
+        return combine_strings(tree, colored_strings)
     else
         @assert can_combine(tree)
         return DE.string_tree(combine(tree, raw_contents), operators; kws...)
