@@ -16,7 +16,6 @@ using SymbolicRegression:
     AbstractSearchState,
     @extend_operators
 using DynamicExpressions
-using Literate: markdown
 
 include("utils.jl")
 process_literate_blocks("test")

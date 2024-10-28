@@ -1,3 +1,4 @@
+using Literate: Literate
 
 # Function to process literate blocks in test files
 function process_literate_blocks(base_path="test")
@@ -51,7 +52,7 @@ function process_literate_block(output_file, content, source_file)
     output_dir = joinpath(@__DIR__, "src", "examples")
     base_name = first(splitext(basename(output_file))) # Remove any existing extension
 
-    markdown(temp_file, output_dir; name=base_name, documenter=true)
+    Literate.markdown(temp_file, output_dir; name=base_name, documenter=true)
 
     # Generate the relative path for EditURL
     edit_path = relpath(source_file, output_dir)
@@ -62,6 +63,29 @@ function process_literate_block(output_file, content, source_file)
 
     # Replace the existing EditURL with the correct one
     new_content = replace(md_content, r"EditURL = .*" => "EditURL = \"$edit_path\"")
+
+    # Add a codeblock at the end with the raw julia source
+    new_content = replace(
+        new_content,
+        r"\*This page was generated using \[Literate\.jl\]\(https://github\.com/fredrikekre/Literate\.jl\)\.\*" => """
+
+    ```@raw html
+    <details>
+    <summary> Show raw source code </summary>
+    ```
+
+    ```julia
+    $(replace(content, r"```" => "\\```"))
+    ```
+
+    which uses Literate.jl to generate this page.
+
+    ```@raw html
+    </details>
+    ```
+
+    """,
+    )
 
     # Write the updated content back to the file
     write(md_file, new_content)
