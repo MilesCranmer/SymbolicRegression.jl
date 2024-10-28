@@ -123,7 +123,7 @@ end
 # single callable function.
 
 function combine(template::TemplateStructure, nt::NamedTuple)
-    return (template.combine::Function)(nt)
+    return (template.combine::Function)(nt)::AbstractExpression
 end
 function combine_vectors(
     template::TemplateStructure, nt::NamedTuple, X::Union{AbstractMatrix,Nothing}=nothing
@@ -131,13 +131,13 @@ function combine_vectors(
     combiner = template.combine_vectors::Function
     if X !== nothing && hasmethod(combiner, typeof((nt, X)))
         # TODO: Refactor this
-        return combiner(nt, X)
+        return combiner(nt, X)::AbstractVector
     else
-        return combiner(nt)
+        return combiner(nt)::AbstractVector
     end
 end
 function combine_strings(template::TemplateStructure, nt::NamedTuple)
-    return (template.combine_strings::Function)(nt)
+    return (template.combine_strings::Function)(nt)::AbstractString
 end
 
 function (template::TemplateStructure)(
