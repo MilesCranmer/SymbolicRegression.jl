@@ -26,7 +26,7 @@ function barlen(pbar::WrappedProgressBar)::Int
     return @something(pbar.bar.barlen, displaysize(stdout)[2])
 end
 
-"""Iterate a progress bar without needing to store cycle/state externally."""
+"""Iterate a progress bar."""
 function manually_iterate!(pbar::WrappedProgressBar)
     width = barlen(pbar)
     postfix = map(Fix{2}(format_for_meter, width), pbar.postfix)
@@ -36,13 +36,17 @@ end
 
 function format_for_meter((k, s), width::Integer)
     new_s = if occursin('\n', s)
-        pieces = [rpad(line, width) for line in split(s, '\n')]
         left_margin = length("  $(string(k)):  ")
-        ' '^(width - left_margin) * join(pieces)
+        left_padding = ' '^(width - left_margin)
+        left_padding * newlines_to_spaces(s, width)
     else
         s
     end
     return (k, new_s)
+end
+
+function newlines_to_spaces(s::AbstractString, width::Integer)
+    return join([rpad(line, width) for line in split(s, '\n')])
 end
 
 end

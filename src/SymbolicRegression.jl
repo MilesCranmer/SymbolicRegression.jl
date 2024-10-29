@@ -784,12 +784,14 @@ function _main_search_loop!(
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
     start_time = time()
-    if ropt.progress
+    progress_bar = if ropt.progress
         #TODO: need to iterate this on the max cycles remaining!
         sum_cycle_remaining = sum(state.cycles_remaining)
-        progress_bar = WrappedProgressBar(
+        WrappedProgressBar(
             sum_cycle_remaining, ropt.niterations; barlen=options.terminal_width
         )
+    else
+        nothing
     end
     last_print_time = time()
     last_speed_recording_time = time()
@@ -937,7 +939,7 @@ function _main_search_loop!(
                 options, total_cycles, cycles_remaining=state.cycles_remaining[j]
             )
             move_window!(state.all_running_search_statistics[j])
-            if ropt.progress
+            if progress_bar !== nothing
                 head_node_occupation = estimate_work_fraction(resource_monitor)
                 update_progress_bar!(
                     progress_bar,
