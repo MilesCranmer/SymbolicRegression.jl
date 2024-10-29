@@ -1,38 +1,48 @@
 module ProgressBarsModule
 
-using ProgressBars: ProgressBar, set_multiline_postfix
+using Compat: Fix
+using ProgressMeter: Progress, next!
+using StyledStrings: @styled_str
+using ..UtilsModule: AnnotatedString
 
 # Simple wrapper for a progress bar which stores its own state
 mutable struct WrappedProgressBar
-    bar::ProgressBar
-    state::Union{Int,Nothing}
-    cycle::Union{Int,Nothing}
+    bar::Progress
+    postfix::Vector{Tuple{AnnotatedString,AnnotatedString}}
 
-    function WrappedProgressBar(args...; kwargs...)
-        if haskey(ENV, "SYMBOLIC_REGRESSION_TEST") &&
-            ENV["SYMBOLIC_REGRESSION_TEST"] == "true"
-            output_stream = devnull
-            return new(ProgressBar(args...; output_stream, kwargs...), nothing, nothing)
+    function WrappedProgressBar(n::Integer, niterations::Integer; kwargs...)
+        init_vector = Tuple{AnnotatedString,AnnotatedString}[]
+        kwargs = (; kwargs..., desc="Evolving for $niterations iterations...")
+        if get(ENV, "SYMBOLIC_REGRESSION_TEST", "false") == "true"
+            # For testing, create a progress bar that writes to devnull
+            output = devnull
+            return new(Progress(n; output, kwargs...), init_vector)
         end
-        return new(ProgressBar(args...; kwargs...), nothing, nothing)
+        return new(Progress(n; kwargs...), init_vector)
     end
 end
 
-precompile(Tuple{typeof(Base.setproperty!),WrappedProgressBar,Symbol,Int64})
+function barlen(pbar::WrappedProgressBar)
+    return @something(pbar.bar.barlen, displaysize(stdout)[2])
+end
 
 """Iterate a progress bar without needing to store cycle/state externally."""
 function manually_iterate!(pbar::WrappedProgressBar)
-    cur_cycle = pbar.cycle
-    if cur_cycle === nothing
-        pbar.cycle, pbar.state = iterate(pbar.bar)
-    else
-        pbar.cycle, pbar.state = iterate(pbar.bar, pbar.state)
-    end
+    width = barlen(pbar)
+    postfix = map(Fix{2}(format_for_meter, width), pbar.postfix)
+    next!(pbar.bar; showvalues=postfix, valuecolor=:none)
     return nothing
 end
 
-function set_multiline_postfix!(t::WrappedProgressBar, postfix::AbstractString)
-    return set_multiline_postfix(t.bar, postfix)
+function format_for_meter((k, s), width::Integer)
+    new_s = if occursin('\n', s)
+        pieces = [rpad(line, width) for line in split(s, '\n')]
+        left_margin = length("  $(string(k)):  ")
+        ' '^(width - left_margin) * join(pieces)
+    else
+        s
+    end
+    return (k, new_s)
 end
 
 end
