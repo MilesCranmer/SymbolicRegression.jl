@@ -22,7 +22,7 @@ mutable struct WrappedProgressBar
     end
 end
 
-function barlen(pbar::WrappedProgressBar)
+function barlen(pbar::WrappedProgressBar)::Int
     return @something(pbar.bar.barlen, displaysize(stdout)[2])
 end
 
