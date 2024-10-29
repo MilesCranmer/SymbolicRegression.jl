@@ -2,7 +2,7 @@ module ProgressBarsModule
 
 using Compat: Fix
 using ProgressMeter: Progress, next!
-using StyledStrings: @styled_str
+using StyledStrings: @styled_str, annotatedstring
 using ..UtilsModule: AnnotatedString
 
 # Simple wrapper for a progress bar which stores its own state
@@ -38,7 +38,7 @@ function format_for_meter((k, s), width::Integer)
     new_s = if occursin('\n', s)
         left_margin = length("  $(string(k)):  ")
         left_padding = ' '^(width - left_margin)
-        left_padding * newlines_to_spaces(s, width)
+        annotatedstring(left_padding, newlines_to_spaces(s, width))
     else
         s
     end
@@ -46,7 +46,7 @@ function format_for_meter((k, s), width::Integer)
 end
 
 function newlines_to_spaces(s::AbstractString, width::Integer)
-    return join([rpad(line, width) for line in split(s, '\n')])
+    return join(rpad(line, width) for line in split(s, '\n'))
 end
 
 end
