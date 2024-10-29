@@ -788,7 +788,7 @@ function _main_search_loop!(
         #TODO: need to iterate this on the max cycles remaining!
         sum_cycle_remaining = sum(state.cycles_remaining)
         progress_bar = WrappedProgressBar(
-            1:sum_cycle_remaining; width=options.terminal_width
+            sum_cycle_remaining, ropt.niterations; barlen=options.terminal_width
         )
     end
     last_print_time = time()

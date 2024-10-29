@@ -7,6 +7,7 @@ using Printf: @printf, @sprintf
 using Dates: Dates
 using Distributed: Distributed, @spawnat, Future, procs, addprocs
 using StatsBase: mean
+using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
 using Compat: Fix
 
@@ -17,7 +18,7 @@ using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
 using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
-using ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
+using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 
 """
@@ -419,23 +420,25 @@ function update_progress_bar!(
     head_node_occupation::Float64,
     parallelism=:serial,
 ) where {T,L}
-    equation_strings = string_dominating_pareto_curve(
-        hall_of_fame, dataset, options; width=progress_bar.bar.width
-    )
     # TODO - include command about "q" here.
     load_string = if length(equation_speed) > 0
         average_speed = sum(equation_speed) / length(equation_speed)
         @sprintf(
-            "Expressions evaluated per second: %-5.2e. ",
+            "Full dataset evaluations per second: %-5.2e. ",
             round(average_speed, sigdigits=3)
         )
     else
-        @sprintf("Expressions evaluated per second: [.....]. ")
+        @sprintf("Full dataset evaluations per second: [.....]. ")
     end
     load_string *= get_load_string(; head_node_occupation, parallelism)
-    load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
-    equation_strings = load_string * equation_strings
-    set_multiline_postfix!(progress_bar, equation_strings)
+    load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.")
+    equation_strings = string_dominating_pareto_curve(
+        hall_of_fame, dataset, options; width=barlen(progress_bar)
+    )
+    progress_bar.postfix = [
+        (styled"{italic:Info}", styled"{italic:$load_string}"),
+        (styled"{italic:Hall of Fame}", equation_strings),
+    ]
     manually_iterate!(progress_bar)
     return nothing
 end
