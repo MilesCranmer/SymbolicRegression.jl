@@ -1,5 +1,6 @@
 module HallOfFameModule
 
+using StyledStrings: @styled_str
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
 using ..CoreModule:
@@ -119,18 +120,26 @@ function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
     return dominating
 end
 
+const HEADER = let
+    join(
+        (
+            rpad(styled"{bold:{underline:Complexity}}", 10),
+            rpad(styled"{bold:{underline:Loss}}", 9),
+            rpad(styled"{bold:{underline:Score}}", 9),
+            styled"{bold:{underline:Equation}}",
+        ),
+        "  ",
+    )
+end
+
 function string_dominating_pareto_curve(
     hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing
 )
     terminal_width = (width === nothing) ? 100 : max(100, width::Integer)
     _buffer = IOBuffer()
     buffer = AnnotatedIOBuffer(_buffer)
-    println(buffer, "Hall of Fame:")
-    println(buffer, '-'^(terminal_width - 1))
-    print(
-        buffer,
-        @sprintf("%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation")
-    )
+    println(buffer, '─'^(terminal_width - 1))
+    println(buffer, HEADER)
 
     formatted = format_hall_of_fame(hallOfFame, options)
     for (tree, score, loss, complexity) in
@@ -161,7 +170,7 @@ function string_dominating_pareto_curve(
             ),
         )
     end
-    print(buffer, '-'^(terminal_width - 1))
+    print(buffer, '─'^(terminal_width - 1))
     return dump_buffer(buffer)
 end
 
