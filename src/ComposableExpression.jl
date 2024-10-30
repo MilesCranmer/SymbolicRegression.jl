@@ -45,11 +45,11 @@ end
     ExpressionInterface{all_ei_methods_except(())}, ComposableExpression, [Arguments()]
 )
 
-struct ResultOk{A<:AbstractVector}
+struct VectorWrapper{A<:AbstractVector}
     value::A
-    ok::Bool
+    valid::Bool
 end
-ResultOk(x::Tuple{Vararg{Any,2}}) = ResultOk(x...)
+VectorWrapper(x::Tuple{Vararg{Any,2}}) = VectorWrapper(x...)
 
 function (ex::AbstractComposableExpression)(x)
     return error("ComposableExpression does not support input of type $(typeof(x))")
@@ -57,24 +57,24 @@ end
 function (ex::AbstractComposableExpression)(x::AbstractVector, _xs::AbstractVector...)
     xs = (x, _xs...)
     # Wrap it up for the recursive call
-    xs = ntuple(i -> ResultOk(xs[i], true), Val(length(xs)))
-    result_ok = ex(xs...)
+    xs = ntuple(i -> VectorWrapper(xs[i], true), Val(length(xs)))
+    result = ex(xs...)
     # Unwrap it
-    if result_ok.ok
-        return result_ok.value
+    if result.valid
+        return result.value
     else
-        nan = convert(eltype(result_ok.value), NaN)
-        return result_ok.value .* nan
+        nan = convert(eltype(result.value), NaN)
+        return result.value .* nan
     end
 end
-function (ex::AbstractComposableExpression)(x::ResultOk, _xs::ResultOk...)
+function (ex::AbstractComposableExpression)(x::VectorWrapper, _xs::VectorWrapper...)
     xs = (x, _xs...)
-    ok = all(xi -> xi.ok, xs)
-    if !ok
-        return ResultOk(first(xs).value, false)
+    valid = all(xi -> xi.valid, xs)
+    if !valid
+        return VectorWrapper(first(xs).value, false)
     end
     X = Matrix(stack(map(xi -> xi.value, xs)...)')
-    return ResultOk(eval_tree_array(ex, X))
+    return VectorWrapper(eval_tree_array(ex, X))
 end
 
 end
