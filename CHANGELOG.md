@@ -12,8 +12,9 @@ Summary of major recent changes, described in more detail below:
   - This gives us new features, improves user hackability, and greatly improves ergonomics!
 - [Created "_Template Expressions_", for fitting expressions under a user-specified functional form (`TemplateExpression <: AbstractExpression`)](#created-template-expressions-for-fitting-expressions-under-a-user-specified-functional-form-templateexpression--abstractexpression)
   - Template expressions are quite flexible: they are a meta-expression that wraps multiple other expressions, and combines them using a user-specified function.
-  - This enables **vector expressions** - in other words, you can learn multiple components of a vector, simultaneously, with a single expression!
-    - (Note that this still does not permit learning using vector operators, though we are working on that!)
+  - This enables **vector expressions** - in other words, you can learn multiple components of a vector, simultaneously, with a single expression! Or more generally, you can learn expressions onto any Julia struct.
+    - (Note that this still does not permit learning using non-scalar operators, though we are working on that!)
+  - Template expressions also make use of colored strings to represent each part in the printout, to improve readability.
 - [Created "_Parametric Expressions_", for custom functional forms with per-class parameters: (`ParametricExpression <: AbstractExpression`)](#created-parametric-expressions-for-custom-functional-forms-with-per-class-parameters-parametricexpression--abstractexpression)
   - This lets you fit expressions that act as _models of multiple systems_, with per-system parameters!
 - [Introduced a variety of new abstractions for user extensibility](#introduced-a-variety-of-new-abstractions-for-user-extensibility) (**and to support new research on symbolic regression!**)
@@ -32,6 +33,8 @@ Summary of major recent changes, described in more detail below:
   - Segmentation faults caused by this are a likely culprit for some crashes reported during multi-day multi-node searches.
   - Introduced a new test for aliasing throughout the entire search state to prevent this from happening again.
 - Increased documentation and examples.
+- Improved progress bar.
+- StyledStrings integration.
 - Julia 1.10 is now the minimum supported Julia version.
 - [Other small features](#other-small-features-in-v100)
 - Also see the [Update Guide](#update-guide) below for more details on upgrading.
@@ -83,8 +86,7 @@ This also lets you fit vector expressions using SymbolicRegression.jl, where vec
 A `TemplateExpression` is constructed by specifying:
 
 - A named tuple of sub-expressions (e.g., `(; f=x1 - x2 * x2, g=1.5 * x3)`).
-- A structure function that defines how these sub-expressions are combined both numerically and when printing.
-- A `variable_mapping` that defines which variables each sub-expression can access.
+- A structure function that defines how these sub-expressions are combined in different contexts.
 
 For example, you can create a `TemplateExpression` that enforces
 the constraint: `sin(f(x1, x2)) + g(x3)^2` - where we evolve `f` and `g` simultaneously.
@@ -104,32 +106,44 @@ x2 = Expression(Node{Float64}(; feature=2); operators, variable_names)
 x3 = Expression(Node{Float64}(; feature=3); operators, variable_names)
 ```
 
-A `TemplateExpression` is basically a named tuple of expressions, with a structure function that defines how to combine them
-in different contexts.
-It also has a `variable_mapping` that defines which variables each sub-expression can access. For example:
+To build a `TemplateExpression`, we specify the structure using
+a `TemplateStructure` object. This class has several fields:
+
+- `combine`: Optional function taking a `NamedTuple` of function keys => expressions,
+  returning a single expression. Fallback method used by `get_tree`
+  on a `TemplateExpression` to generate a single `Expression`.
+- `combine_vectors`: Optional function taking a `NamedTuple` of function keys => vectors,
+  returning a single vector. Used for evaluating the expression tree.
+  You may optionally define a method with a second argument `X` for if you wish
+  to include the data matrix `X` (of shape `[num_features, num_rows]`) in the
+  computation.
+- `combine_strings`: Optional function taking a `NamedTuple` of function keys => strings,
+  returning a single string. Used for printing the expression tree.
+- `variable_constraints`: Optional `NamedTuple` that defines which variables each sub-expression is allowed to access.
+  For example, requesting `f(x1, x2)` and `g(x3)` would be equivalent to `(; f=[1, 2], g=[3])`.
+
+Let's see an example:
 
 ```julia
-variable_mapping = (; f=[1, 2], g=[3])  # We have functions f(x1, x2) and g(x3)
 
 # Combine f and g them into a single scalar expression:
-function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{AbstractVector}}})
-    return @. sin(nt.f) + nt.g * nt.g
-end
-function my_structure(nt::NamedTuple{<:Any,<:Tuple{Vararg{AbstractString}}})
-    return "sin($(nt.f)) + $(nt.g)^2"  # Generates a string representation of the expression
-end
+structure = TemplateStructure(;
+    combine_strings=e -> "sin(" * e.f * ") + (" * e.g * ")^2",
+    combine_vectors=e -> map((f, g) -> sin(f) + g * g, e.f, e.g),
+    variable_constraints = (; f=[1, 2], g=[3]),  # We constrain it to f(x1, x2) and g(x3)
+)
 ```
 
 This defines how the `TemplateExpression` should be evaluated numerically on a given input,
 and also how it should be represented as a string:
 
 ```julia
-julia> f_example = x1 - x2 * x2
+julia> f_example = x1 - x2 * x2;  # Normal `Expression` object
 
-julia> g_example = 1.5 * x3  # Normal `Expression` object
+julia> g_example = 1.5 * x3;
 
 julia> # Create TemplateExpression from these sub-expressions:
-       st_expr = TemplateExpression((; f=f_example, g=g_example); structure=my_structure, operators, variable_names, variable_mapping);
+       st_expr = TemplateExpression((; f=f_example, g=g_example); structure, operators, variable_names);
 
 julia> st_expr  # Prints using `my_structure`!
 sin(x1 - (x2 * x2)) + 1.5 * x3^2
@@ -147,25 +161,18 @@ We can also use this `TemplateExpression` in SymbolicRegression.jl searches!
 ```julia
 using SymbolicRegression
 using MLJBase: machine, fit!, report
-
 ```
 
-We first define our structure:
-
-```julia
-function my_structure2(nt::NamedTuple{<:Any,<:Tuple{Vararg{AbstractString}}})
-    return "( $(nt.f) + $(nt.g1), $(nt.f) + $(nt.g2) )"
-end
-function my_structure2(nt::NamedTuple{<:Any,<:Tuple{Vararg{AbstractVector}}})
-    return map(i -> (nt.f[i] + nt.g1[i], nt.f[i] + nt.g2[i]), eachindex(nt.f))
-end
-```
-
-As well as our variable mapping, which says
+We first define our structure.
+This also has our variable mapping, which says
 we are fitting `f(x1, x2)`, `g1(x3)`, and `g2(x3)`:
 
 ```julia
-variable_mapping = (; f=[1, 2], g1=[3], g2=[3])
+structure = TemplateStructure(;
+    combine_strings=e -> "( " * e.f * " + " * e.g1 * ", " * e.f * " + " * e.g2 * " )",
+    combine_vectors=e -> map(i -> (e.f[i] + e.g1[i], e.f[i] + e.g2[i]), eachindex(e.f)),
+    variable_constraints = (; f=[1, 2], g1=[3], g2=[3]),
+)
 ```
 
 Now, our dataset is a regular 2D array of inputs for `X`.
@@ -198,9 +205,10 @@ model = SRRegressor(;
     binary_operators=(+, *),
     unary_operators=(sin,),
     maxsize=15,
+    elementwise_loss=elementwise_loss,
     expression_type=TemplateExpression,
     # Note - this is where we pass custom options to the expression type:
-    expression_options=(; structure=my_structure2, variable_mapping),
+    expression_options=(; structure),
 )
 
 mach = machine(model, X, y)
@@ -216,6 +224,8 @@ report(mach)
 We can also check the expression is split up correctly:
 
 ```julia
+r = report(mach)
+idx = r.best_idx
 best_expr = r.equations[idx]
 best_f = get_contents(best_expr).f
 best_g1 = get_contents(best_expr).g1
