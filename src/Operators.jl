@@ -106,6 +106,15 @@ DE.get_op_name(::typeof(safe_log1p)) = "log1p"
 DE.get_op_name(::typeof(safe_acosh)) = "acosh"
 DE.get_op_name(::typeof(safe_sqrt)) = "sqrt"
 
+# Expression algebra
+DE.declare_operator_alias(::typeof(safe_pow), ::Val{2}) = ^
+DE.declare_operator_alias(::typeof(safe_log), ::Val{1}) = log
+DE.declare_operator_alias(::typeof(safe_log2), ::Val{1}) = log2
+DE.declare_operator_alias(::typeof(safe_log10), ::Val{1}) = log10
+DE.declare_operator_alias(::typeof(safe_log1p), ::Val{1}) = log1p
+DE.declare_operator_alias(::typeof(safe_acosh), ::Val{1}) = acosh
+DE.declare_operator_alias(::typeof(safe_sqrt), ::Val{1}) = sqrt
+
 # Deprecated operations:
 @deprecate pow(x, y) safe_pow(x, y)
 @deprecate pow_abs(x, y) safe_pow(x, y)

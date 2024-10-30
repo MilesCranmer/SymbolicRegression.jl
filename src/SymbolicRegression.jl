@@ -13,6 +13,7 @@ export Population,
     Expression,
     ParametricExpression,
     TemplateExpression,
+    TemplateStructure,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
@@ -156,7 +157,7 @@ using DynamicExpressions: with_type_parameters
     LogitDistLoss,
     QuantileLoss,
     LogCoshLoss
-using Compat: @compat
+using Compat: @compat, Fix
 
 @compat public AbstractOptions,
 AbstractRuntimeOptions,
@@ -261,7 +262,8 @@ using .CoreModule:
     erf,
     erfc,
     atanh_clip,
-    create_expression
+    create_expression,
+    has_units
 using .UtilsModule: is_anonymous_function, recursive_merge, json3_write, @ignore
 using .ComplexityModule: compute_complexity
 using .CheckConstraintsModule: check_constraints
@@ -314,7 +316,7 @@ using .SearchUtilsModule:
     save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!
-using .TemplateExpressionModule: TemplateExpression
+using .TemplateExpressionModule: TemplateExpression, TemplateStructure
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
@@ -338,7 +340,7 @@ which is useful for debugging and profiling.
 - `y::Union{AbstractMatrix{T}, AbstractVector{T}}`: The values to predict. The first dimension
     is the output feature to predict with each equation, and the
     second dimension is rows.
-- `niterations::Int=10`: The number of iterations to perform the search.
+- `niterations::Int=100`: The number of iterations to perform the search.
     More iterations will improve the results.
 - `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
     weight the loss for each `y` by this value (same shape as `y`).
@@ -418,7 +420,7 @@ which is useful for debugging and profiling.
 function equation_search(
     X::AbstractMatrix{T},
     y::AbstractMatrix;
-    niterations::Int=10,
+    niterations::Int=100,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
     options::AbstractOptions=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
@@ -432,6 +434,7 @@ function equation_search(
     runtests::Bool=true,
     saved_state=nothing,
     return_state::Union{Bool,Nothing,Val}=nothing,
+    run_id::Union{String,Nothing}=nothing,
     loss_type::Type{L}=Nothing,
     verbosity::Union{Integer,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
@@ -481,6 +484,7 @@ function equation_search(
         runtests=runtests,
         saved_state=saved_state,
         return_state=return_state,
+        run_id=run_id,
         verbosity=verbosity,
         progress=progress,
         v_dim_out=Val(DIM_OUT),
@@ -504,14 +508,19 @@ function equation_search(
     runtime_options::Union{AbstractRuntimeOptions,Nothing}=nothing,
     runtime_options_kws...,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
-    runtime_options = if runtime_options === nothing
-        RuntimeOptions(; options, nout=length(datasets), runtime_options_kws...)
-    else
-        runtime_options
-    end
+    _runtime_options = @something(
+        runtime_options,
+        RuntimeOptions(;
+            options_return_state=options.return_state,
+            options_verbosity=options.verbosity,
+            options_progress=options.progress,
+            nout=length(datasets),
+            runtime_options_kws...,
+        )
+    )
 
     # Underscores here mean that we have mutated the variable
-    return _equation_search(datasets, runtime_options, options, saved_state)
+    return _equation_search(datasets, _runtime_options, options, saved_state)
 end
 
 @noinline function _equation_search(
@@ -775,12 +784,14 @@ function _main_search_loop!(
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
     start_time = time()
-    if ropt.progress
+    progress_bar = if ropt.progress
         #TODO: need to iterate this on the max cycles remaining!
         sum_cycle_remaining = sum(state.cycles_remaining)
-        progress_bar = WrappedProgressBar(
-            1:sum_cycle_remaining; width=options.terminal_width
+        WrappedProgressBar(
+            sum_cycle_remaining, ropt.niterations; barlen=options.terminal_width
         )
+    else
+        nothing
     end
     last_print_time = time()
     last_speed_recording_time = time()
@@ -863,7 +874,7 @@ function _main_search_loop!(
             dominating = calculate_pareto_frontier(state.halls_of_fame[j])
 
             if options.save_to_file
-                save_to_file(dominating, nout, j, dataset, options)
+                save_to_file(dominating, nout, j, dataset, options, ropt)
             end
             ###################################################################
             # Migration #######################################################
@@ -928,7 +939,7 @@ function _main_search_loop!(
                 options, total_cycles, cycles_remaining=state.cycles_remaining[j]
             )
             move_window!(state.all_running_search_statistics[j])
-            if ropt.progress
+            if progress_bar !== nothing
                 head_node_occupation = estimate_work_fraction(resource_monitor)
                 update_progress_bar!(
                     progress_bar,
@@ -1026,13 +1037,10 @@ function _format_output(
     out_hof = if ropt.dim_out == 1
         embed_metadata(only(state.halls_of_fame), options, only(datasets))
     else
-        map(j -> embed_metadata(state.halls_of_fame[j], options, datasets[j]), 1:nout)
+        map(Fix{2}(embed_metadata, options), state.halls_of_fame, datasets)
     end
     if ropt.return_state
-        return (
-            map(j -> embed_metadata(state.last_pops[j], options, datasets[j]), 1:nout),
-            out_hof,
-        )
+        return (map(Fix{2}(embed_metadata, options), state.last_pops, datasets), out_hof)
     else
         return out_hof
     end

@@ -1,7 +1,8 @@
 module HallOfFameModule
 
+using StyledStrings: @styled_str
 using DynamicExpressions: AbstractExpression, string_tree
-using ..UtilsModule: split_string
+using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
 using ..CoreModule:
     MAX_DEGREE, AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
@@ -119,17 +120,26 @@ function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
     return dominating
 end
 
+const HEADER = let
+    join(
+        (
+            rpad(styled"{bold:{underline:Complexity}}", 10),
+            rpad(styled"{bold:{underline:Loss}}", 9),
+            rpad(styled"{bold:{underline:Score}}", 9),
+            styled"{bold:{underline:Equation}}",
+        ),
+        "  ",
+    )
+end
+
 function string_dominating_pareto_curve(
     hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing
 )
-    twidth = (width === nothing) ? 100 : max(100, width::Integer)
-    output = ""
-    output *= "Hall of Fame:\n"
-    # TODO: Get user's terminal width.
-    output *= "-"^(twidth - 1) * "\n"
-    output *= @sprintf(
-        "%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation"
-    )
+    terminal_width = (width === nothing) ? 100 : max(100, width::Integer)
+    _buffer = IOBuffer()
+    buffer = AnnotatedIOBuffer(_buffer)
+    println(buffer, '─'^(terminal_width - 1))
+    println(buffer, HEADER)
 
     formatted = format_hall_of_fame(hallOfFame, options)
     for (tree, score, loss, complexity) in
@@ -148,25 +158,47 @@ function string_dominating_pareto_curve(
         if dataset.y_sym_units === nothing && dataset.X_sym_units !== nothing
             y_prefix *= WILDCARD_UNIT_STRING
         end
-        eqn_string = y_prefix * " = " * eqn_string
-        base_string_length = length(@sprintf("%-10d  %-8.3e  %8.3e  ", 1, 1.0, 1.0))
+        prefix = y_prefix * " = "
+        eqn_string = prefix * eqn_string
+        stats_columns_string = @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
+        left_cols_width = length(stats_columns_string)
+        print(buffer, stats_columns_string)
+        print(
+            buffer,
+            wrap_equation_string(
+                eqn_string, left_cols_width + length(prefix), terminal_width
+            ),
+        )
+    end
+    print(buffer, '─'^(terminal_width - 1))
+    return dump_buffer(buffer)
+end
 
-        dots = "..."
-        equation_width = (twidth - 1) - base_string_length - length(dots)
+function wrap_equation_string(eqn_string, left_cols_width, terminal_width)
+    dots = "..."
+    equation_width = (terminal_width - 1) - left_cols_width - length(dots)
+    _buffer = IOBuffer()
+    buffer = AnnotatedIOBuffer(_buffer)
 
-        output *= @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
-
-        split_eqn = split_string(eqn_string, equation_width)
-        print_pad = false
-        while length(split_eqn) > 1
-            cur_piece = popfirst!(split_eqn)
-            output *= " "^(print_pad * base_string_length) * cur_piece * dots * "\n"
+    forced_split_eqn = split(eqn_string, '\n')
+    print_pad = false
+    for piece in forced_split_eqn
+        subpieces = split_string(piece, equation_width)
+        for (i, subpiece) in enumerate(subpieces)
+            # We don't need dots on the last subpiece, since it
+            # is either the last row of the entire string, or it has
+            # an explicit newline in it!
+            requires_dots = i < length(subpieces)
+            print(buffer, ' '^(print_pad * left_cols_width))
+            print(buffer, subpiece)
+            if requires_dots
+                print(buffer, dots)
+            end
+            println(buffer)
             print_pad = true
         end
-        output *= " "^(print_pad * base_string_length) * split_eqn[1] * "\n"
     end
-    output *= "-"^(twidth - 1)
-    return output
+    return dump_buffer(buffer)
 end
 
 function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}

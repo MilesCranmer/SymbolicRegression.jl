@@ -230,26 +230,39 @@ Note that you can also search for dimensionless units by settings
 
 ## 7. Working with Expressions
 
-Expressions in `SymbolicRegression.jl` are represented using the `Expression` type, which combines the raw `Node` type with an `OperatorEnum`. This allows for more flexible and powerful expression manipulation and evaluation.
-
-Here's an example:
+Expressions in `SymbolicRegression.jl` are represented using the `Expression{T,Node{T},...}` type, which provides a more robust way to combine structure, operators, and constraints. Here's an example:
 
 ```julia
 using SymbolicRegression
 
-# Define options with operators
-options = Options(; binary_operators=[+, -, *], unary_operators=[cos])
+# Define options with operators and structure
+options = Options(
+    binary_operators=[+, -, *],
+    unary_operators=[cos],
+    expression_options=(
+        structure=TemplateStructure(),
+        variable_constraints=Dict(1 => [1, 2], 2 => [2])
+    )
+)
 
-# Create expression nodes
+# Create expression nodes with constraints
 operators = options.operators
 variable_names = ["x1", "x2"]
-x1 = Expression(Node{Float64}(feature=1); operators, variable_names)
-x2 = Expression(Node{Float64}(feature=2); operators, variable_names)
+x1 = Expression(
+    Node{Float64}(feature=1),
+    operators=operators,
+    variable_names=variable_names,
+    structure=options.expression_options.structure
+)
+x2 = Expression(
+    Node{Float64}(feature=2),
+    operators=operators,
+    variable_names=variable_names,
+    structure=options.expression_options.structure
+)
 
-# Construct an expression using the operators from options
+# Construct and evaluate expression
 expr = x1 * cos(x2 - 3.2)
-
-# Evaluate the expression directly
 X = rand(Float64, 2, 100)
 output = expr(X)
 ```
@@ -330,3 +343,100 @@ to browse the documentation for the Python frontend
 [PySR](http://astroautomata.com/PySR), which has additional documentation.
 In particular, the [tuning page](http://astroautomata.com/PySR/tuning)
 is useful for improving search performance.
+
+## 10. Template Expressions
+
+Template expressions allow you to define structured expressions where different parts can be constrained to use specific variables. In this example, we'll create expressions that output pairs of values.
+
+First, let's set up our basic configuration:
+
+```julia
+using SymbolicRegression
+using Random: rand
+using MLJBase: machine, fit!, report
+
+options = Options(
+    binary_operators=(+, *, /, -),
+    unary_operators=(sin, cos)
+)
+operators = options.operators
+variable_names = ["x1", "x2", "x3"]
+```
+
+Now we'll create base expressions for each variable:
+
+```julia
+x1, x2, x3 = [
+    Expression(
+        Node{Float64}(feature=i);
+        operators=operators,
+        variable_names=variable_names
+    )
+    for i in 1:3
+]
+```
+
+The key part is defining our template structure. This determines how different parts of the expression combine:
+
+```julia
+structure = TemplateStructure{(:f, :g1, :g2)}(;
+    # Define how to combine vectors of evaluated expressions
+    combine_vectors=e -> map(
+        (f, g1, g2) -> (f + g1, f + g2),
+        e.f, e.g1, e.g2
+    ),
+    # Define how to combine strings for printing
+    combine_strings=e -> "( $(e.f) + $(e.g1), $(e.f) + $(e.g2) )",
+    # Constrain which variables can be used in each part
+    variable_constraints=(; f=[1, 2], g1=[3], g2=[3])
+)
+```
+
+Let's generate some example data:
+
+```julia
+X = rand(100, 3) .* 10
+# Create pairs of target expressions
+y = [
+    (sin(X[i, 1]) + X[i, 3]^2, sin(X[i, 1]) + X[i, 3])
+    for i in eachindex(axes(X, 1))
+]
+```
+
+Now we can set up and train our model:
+
+```julia
+model = SRRegressor(;
+    binary_operators=(+, *),
+    unary_operators=(sin,),
+    maxsize=25,
+    expression_type=TemplateExpression,
+    # Pass options used to instantiate expressions
+    expression_options=(; structure),
+    # Our `y` is 2-tuple of values
+    elementwise_loss=((x1, x2), (y1, y2)) -> (y1 - x1)^2 + (y2 - x2)^2
+)
+
+mach = machine(model, X, y)
+fit!(mach)
+```
+
+After training, we can examine the best expression:
+
+```julia
+r = report(mach)
+best_expr = r.equations[r.best_idx]
+
+# Access individual parts of the template expression
+f_part = get_contents(best_expr).f    # Expression using x1 or x2
+g1_part = get_contents(best_expr).g1  # Expression using x3
+g2_part = get_contents(best_expr).g2  # Expression using x3
+```
+
+The above code demonstrates how template expressions can be used to:
+
+- Define structured expressions with multiple components
+- Constrains which variables can be used in each component
+- Create expressions that can output multiple values
+
+You can even output custom structs - see the more detailed Template Expression example!

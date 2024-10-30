@@ -4,9 +4,12 @@ This includes: process management, stdin reading, checking for early stops."""
 module SearchUtilsModule
 
 using Printf: @printf, @sprintf
+using Dates: Dates
 using Distributed: Distributed, @spawnat, Future, procs, addprocs
 using StatsBase: mean
+using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
+using Compat: Fix
 
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
@@ -15,7 +18,7 @@ using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
 using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
-using ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
+using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 
 """
@@ -56,6 +59,7 @@ struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE} <: AbstractRuntimeOption
     parallelism::Val{PARALLELISM}
     dim_out::Val{DIM_OUT}
     return_state::Val{RETURN_STATE}
+    run_id::String
 end
 @unstable @inline function Base.getproperty(
     roptions::RuntimeOptions{P,D,R}, name::Symbol
@@ -77,18 +81,22 @@ end
 @unstable function RuntimeOptions(;
     niterations::Int=10,
     nout::Int=1,
-    options::AbstractOptions=Options(),
     parallelism=:multithreading,
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
     heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
     runtests::Bool=true,
-    return_state::Union{Bool,Nothing,Val}=nothing,
+    return_state::VRS=nothing,
+    run_id::Union{String,Nothing}=nothing,
     verbosity::Union{Int,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
-) where {DIM_OUT}
+    # Defined from options
+    options_return_state::Val{ORS}=Val(nothing),
+    options_verbosity::Union{Integer,Nothing}=nothing,
+    options_progress::Union{Bool,Nothing}=nothing,
+) where {DIM_OUT,ORS,VRS<:Union{Bool,Nothing,Val}}
     concurrency = if parallelism in (:multithreading, "multithreading")
         :multithreading
     elseif parallelism in (:multiprocessing, "multiprocessing")
@@ -102,37 +110,32 @@ end
         )
         :serial
     end
-    not_distributed = concurrency in (:multithreading, :serial)
-    not_distributed &&
-        procs !== nothing &&
-        error(
-            "`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
-        )
-    not_distributed &&
-        numprocs !== nothing &&
-        error(
+    if concurrency in (:multithreading, :serial)
+        numprocs !== nothing && error(
             "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
         )
-
-    _return_state = if return_state isa Val
-        first(typeof(return_state).parameters)
-    else
-        if options.return_state === Val(nothing)
-            return_state === nothing ? false : return_state
-        else
-            @assert(
-                return_state === nothing,
-                "You cannot set `return_state` in both the `AbstractOptions` and in the passed arguments."
-            )
-            first(typeof(options.return_state).parameters)
-        end
+        procs !== nothing && error(
+            "`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
+        )
     end
+    verbosity !== nothing &&
+        options_verbosity !== nothing &&
+        error(
+            "You cannot set `verbosity` in both the search parameters " *
+            "`AbstractOptions` and the call to `equation_search`.",
+        )
+    progress !== nothing &&
+        options_progress !== nothing &&
+        error(
+            "You cannot set `progress` in both the search parameters " *
+            "`AbstractOptions` and the call to `equation_search`.",
+        )
+    ORS !== nothing &&
+        return_state !== nothing &&
+        error(
+            "You cannot set `return_state` in both the `AbstractOptions` and in the passed arguments.",
+        )
 
-    dim_out = if DIM_OUT === nothing
-        nout > 1 ? 2 : 1
-    else
-        DIM_OUT
-    end
     _numprocs::Int = if numprocs === nothing
         if procs === nothing
             4
@@ -148,42 +151,17 @@ end
         end
     end
 
-    _verbosity = if verbosity === nothing && options.verbosity === nothing
-        1
-    elseif verbosity === nothing && options.verbosity !== nothing
-        options.verbosity
-    elseif verbosity !== nothing && options.verbosity === nothing
-        verbosity
-    else
-        error(
-            "You cannot set `verbosity` in both the search parameters `AbstractOptions` and the call to `equation_search`.",
-        )
-        1
-    end
-    _progress::Bool = if progress === nothing && options.progress === nothing
-        (_verbosity > 0) && nout == 1
-    elseif progress === nothing && options.progress !== nothing
-        options.progress
-    elseif progress !== nothing && options.progress === nothing
-        progress
-    else
-        error(
-            "You cannot set `progress` in both the search parameters `AbstractOptions` and the call to `equation_search`.",
-        )
-        false
-    end
-
-    _addprocs_function = addprocs_function === nothing ? addprocs : addprocs_function
+    _return_state = VRS <: Val ? first(VRS.parameters) : something(ORS, return_state, false)
+    dim_out = something(DIM_OUT, nout > 1 ? 2 : 1)
+    _verbosity = something(verbosity, options_verbosity, 1)
+    _progress = something(progress, options_progress, (_verbosity > 0) && nout == 1)
+    _addprocs_function = something(addprocs_function, addprocs)
+    _run_id = @something(run_id, generate_run_id())
 
     exeflags = if concurrency == :multiprocessing
         heap_size_hint_in_megabytes = floor(
-            Int, (
-                if heap_size_hint_in_bytes === nothing
-                    (Sys.free_memory() / _numprocs)
-                else
-                    heap_size_hint_in_bytes
-                end
-            ) / 1024^2
+            Int,
+            (@something(heap_size_hint_in_bytes, (Sys.free_memory() / _numprocs))) / 1024^2,
         )
         _verbosity > 0 &&
             heap_size_hint_in_bytes === nothing &&
@@ -206,7 +184,14 @@ end
         Val(concurrency),
         Val(dim_out),
         Val(_return_state),
+        _run_id,
     )
+end
+
+function generate_run_id()
+    date_str = Dates.format(Dates.now(), "yyyymmdd_HHMMSS")
+    h = join(rand(['0':'9'; 'a':'z'; 'A':'Z'], 6))
+    return "$(date_str)_$h"
 end
 
 """A simple dictionary to track worker allocations."""
@@ -303,9 +288,9 @@ function init_dummy_pops(
     ]
 end
 
-struct StdinReader{ST}
+struct StdinReader
     can_read_user_input::Bool
-    stream::ST
+    stream::IO
 end
 
 """Start watching stream (like stdin) for user input."""
@@ -328,6 +313,7 @@ function watch_stream(stream)
     end
     return StdinReader(can_read_user_input, stream)
 end
+precompile(Tuple{typeof(watch_stream),Base.TTY})
 
 """Close the stdin reader and stop reading."""
 function close_reader!(reader::StdinReader)
@@ -434,23 +420,25 @@ function update_progress_bar!(
     head_node_occupation::Float64,
     parallelism=:serial,
 ) where {T,L}
-    equation_strings = string_dominating_pareto_curve(
-        hall_of_fame, dataset, options; width=progress_bar.bar.width
-    )
     # TODO - include command about "q" here.
     load_string = if length(equation_speed) > 0
         average_speed = sum(equation_speed) / length(equation_speed)
         @sprintf(
-            "Expressions evaluated per second: %-5.2e. ",
+            "Full dataset evaluations per second: %-5.2e. ",
             round(average_speed, sigdigits=3)
         )
     else
-        @sprintf("Expressions evaluated per second: [.....]. ")
+        @sprintf("Full dataset evaluations per second: [.....]. ")
     end
     load_string *= get_load_string(; head_node_occupation, parallelism)
-    load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
-    equation_strings = load_string * equation_strings
-    set_multiline_postfix!(progress_bar, equation_strings)
+    load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.")
+    equation_strings = string_dominating_pareto_curve(
+        hall_of_fame, dataset, options; width=barlen(progress_bar)
+    )
+    progress_bar.postfix = [
+        (styled"{italic:Info}", styled"{italic:$load_string}"),
+        (styled"{italic:Hall of Fame}", equation_strings),
+    ]
     manually_iterate!(progress_bar)
     return nothing
 end
@@ -569,12 +557,18 @@ Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,Cha
 end
 
 function save_to_file(
-    dominating, nout::Integer, j::Integer, dataset::Dataset{T,L}, options::AbstractOptions
+    dominating,
+    nout::Integer,
+    j::Integer,
+    dataset::Dataset{T,L},
+    options::AbstractOptions,
+    ropt::AbstractRuntimeOptions,
 ) where {T,L}
-    output_file = options.output_file
-    if nout > 1
-        output_file = output_file * ".out$j"
-    end
+    output_directory = joinpath(something(options.output_directory, "outputs"), ropt.run_id)
+    mkpath(output_directory)
+    filename = nout > 1 ? "hall_of_fame_output$(j).csv" : "hall_of_fame.csv"
+    output_file = joinpath(output_directory, filename)
+
     dominating_n = length(dominating)
 
     complexities = Vector{Int}(undef, dominating_n)
@@ -602,10 +596,8 @@ function save_to_file(
     end
 
     # Write file twice in case exit in middle of filewrite
-    for out_file in (output_file, output_file * ".bkup")
-        open(out_file, "w") do io
-            write(io, s)
-        end
+    for out_file in (output_file, output_file * ".bak")
+        open(Base.Fix2(write, s), out_file, "w")
     end
     return nothing
 end

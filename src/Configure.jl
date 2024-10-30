@@ -1,6 +1,6 @@
 const TEST_TYPE = Float32
 
-function test_operator(op::F, x::T, y=nothing) where {F,T}
+function test_operator(@nospecialize(op::Function), x::T, y=nothing) where {T}
     local output
     try
         output = y === nothing ? op(x) : op(x, y)
@@ -26,14 +26,18 @@ function test_operator(op::F, x::T, y=nothing) where {F,T}
     end
     return nothing
 end
+precompile(Tuple{typeof(test_operator),Function,Float64,Float64})
+precompile(Tuple{typeof(test_operator),Function,Float32,Float32})
+precompile(Tuple{typeof(test_operator),Function,Float64})
+precompile(Tuple{typeof(test_operator),Function,Float32})
 
 const TEST_INPUTS = collect(range(-100, 100; length=99))
 
 function assert_operators_well_defined(T, options::AbstractOptions)
     test_input = if T <: Complex
-        (x -> convert(T, x)).(TEST_INPUTS .+ TEST_INPUTS .* im)
+        Base.Fix1(convert, T).(TEST_INPUTS .+ TEST_INPUTS .* im)
     else
-        (x -> convert(T, x)).(TEST_INPUTS)
+        Base.Fix1(convert, T).(TEST_INPUTS)
     end
     for x in test_input, y in test_input, op in options.operators.binops
         test_operator(op, x, y)
@@ -54,20 +58,18 @@ function test_option_configuration(
         verbosity > 0 &&
             @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
     end
-    if any(d -> d.X_units !== nothing || d.y_units !== nothing, datasets) &&
-        options.dimensional_constraint_penalty === nothing
+    if any(has_units, datasets) && options.dimensional_constraint_penalty === nothing
         verbosity > 0 &&
             @warn "You are using dimensional constraints, but `dimensional_constraint_penalty` was not set. The default penalty of `1000.0` will be used."
     end
 
-    for op in (options.operators.binops..., options.operators.unaops...)
-        if is_anonymous_function(op)
-            throw(
-                AssertionError(
-                    "Anonymous functions can't be used as operators for SymbolicRegression.jl",
-                ),
-            )
-        end
+    if any(is_anonymous_function, options.operators.binops) ||
+        any(is_anonymous_function, options.operators.unaops)
+        throw(
+            AssertionError(
+                "Anonymous functions can't be used as operators for SymbolicRegression.jl"
+            ),
+        )
     end
 
     assert_operators_well_defined(T, options)
@@ -80,6 +82,7 @@ function test_option_configuration(
             ),
         )
     end
+    return nothing
 end
 
 # Check for errors before they happen
@@ -205,9 +208,7 @@ function activate_env_on_workers(
     end
 end
 
-function import_module_on_workers(
-    procs, filename::String, options::AbstractOptions, verbosity
-)
+function import_module_on_workers(procs, filename::String, verbosity)
     loaded_modules_head_worker = [k.name for (k, _) in Base.loaded_modules]
 
     included_as_local = "SymbolicRegression" ∉ loaded_modules_head_worker
@@ -329,7 +330,7 @@ function configure_workers(;
     end
 
     if we_created_procs
-        import_module_on_workers(procs, file, options, verbosity)
+        import_module_on_workers(procs, file, verbosity)
     end
 
     move_functions_to_workers(procs, options, example_dataset, verbosity)

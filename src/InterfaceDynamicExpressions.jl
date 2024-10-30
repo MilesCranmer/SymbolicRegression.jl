@@ -1,6 +1,7 @@
 module InterfaceDynamicExpressionsModule
 
 using Printf: @sprintf
+using Compat: Fix
 using DynamicExpressions:
     DynamicExpressions as DE,
     OperatorEnum,
@@ -199,16 +200,17 @@ Convert an equation to a string.
         )
     end
 
-    vprecision = vals[options.print_precision]
     if X_sym_units !== nothing || y_sym_units !== nothing
         return DE.string_tree(
             tree,
             DE.get_operators(tree, options);
-            f_variable=(feature, vname) -> string_variable(feature, vname, X_sym_units),
+            f_variable=Fix{3}(string_variable, X_sym_units),
             f_constant=let
                 unit_placeholder =
                     options.dimensionless_constants_only ? "" : WILDCARD_UNIT_STRING
-                (val,) -> string_constant(val, vprecision, unit_placeholder)
+                Fix{2}(
+                    Fix{3}(string_constant, unit_placeholder), options.v_print_precision
+                )
             end,
             variable_names=display_variable_names,
             kws...,
@@ -218,13 +220,12 @@ Convert an equation to a string.
             tree,
             DE.get_operators(tree, options);
             f_variable=string_variable,
-            f_constant=(val,) -> string_constant(val, vprecision, ""),
+            f_constant=Fix{2}(Fix{3}(string_constant, ""), options.v_print_precision),
             variable_names=display_variable_names,
             kws...,
         )
     end
 end
-const vals = ntuple(Val, 8192)
 function string_variable_raw(feature, variable_names)
     if variable_names === nothing || feature > length(variable_names)
         return "x" * string(feature)

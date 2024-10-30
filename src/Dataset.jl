@@ -131,22 +131,11 @@ function Dataset(
 
     n = size(X, BATCH_DIM)
     nfeatures = size(X, FEATURE_DIM)
-    variable_names = if variable_names === nothing
-        ["x$(i)" for i in 1:nfeatures]
-    else
-        variable_names
-    end
-    display_variable_names = if display_variable_names === nothing
-        ["x$(subscriptify(i))" for i in 1:nfeatures]
-    else
-        display_variable_names
-    end
-
-    y_variable_name = if y_variable_name === nothing
-        ("y" ∉ variable_names) ? "y" : "target"
-    else
-        y_variable_name
-    end
+    variable_names = @something(variable_names, ["x$(i)" for i in 1:nfeatures])
+    display_variable_names = @something(
+        display_variable_names, ["x$(subscriptify(i))" for i in 1:nfeatures]
+    )
+    y_variable_name = @something(y_variable_name, ("y" ∉ variable_names) ? "y" : "target")
     avg_y = if y === nothing || !(eltype(y) isa Number)
         nothing
     else

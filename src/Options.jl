@@ -2,9 +2,9 @@ module OptionsModule
 
 using DispatchDoctor: @unstable
 using Optim: Optim
-using Dates: Dates
 using StatsBase: StatsBase
-using DynamicExpressions: OperatorEnum, Expression, default_node_type
+using DynamicExpressions:
+    OperatorEnum, Expression, default_node_type, AbstractExpression, AbstractExpressionNode
 using ADTypes: AbstractADType, ADTypes
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim
@@ -28,7 +28,7 @@ using ..OperatorsModule:
 using ..MutationWeightsModule: AbstractMutationWeights, MutationWeights, mutations
 import ..OptionsStructModule: Options
 using ..OptionsStructModule: ComplexityMapping, operator_specialization
-using ..UtilsModule: max_ops, @save_kwargs, @ignore
+using ..UtilsModule: @save_kwargs, @ignore
 
 """Build constraints on operator-level complexity from a user-passed dict."""
 @unstable function build_constraints(;
@@ -206,7 +206,6 @@ const deprecated_options_mapping = Base.ImmutableDict(
     :mutationWeights => :mutation_weights,
     :hofMigration => :hof_migration,
     :shouldOptimizeConstants => :should_optimize_constants,
-    :hofFile => :output_file,
     :perturbationFactor => :perturbation_factor,
     :batchSize => :batch_size,
     :crossoverProbability => :crossover_probability,
@@ -230,7 +229,10 @@ const deprecated_options_mapping = Base.ImmutableDict(
 # For static analysis tools:
 @ignore const DEFAULT_OPTIONS = ()
 
-const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators (functions) to use.
+const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Options`. The default,
+    `nothing`, will simply take the default options from the current version of SymbolicRegression.
+    However, you may also select the defaults from an earlier version, such as `v"0.24.5"`.
+- `binary_operators`: Vector of binary operators (functions) to use.
     Each operator should be defined for two input scalars,
     and one output scalar. All operators
     need to be defined over the entire real line (excluding infinity - these
@@ -382,7 +384,6 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     type, such as `:Zygote` for Zygote, `:Enzyme`, etc. Most backends will not
     work, and many will never work due to incompatibilities, though support for some
     is gradually being added.
-- `output_file`: What file to store equations to, as a backup.
 - `perturbation_factor`: When mutating a constant, either
     multiply or divide by (1+perturbation_factor)^(rand()+1).
 - `probability_negate_constant`: Probability of negating a constant in the equation
@@ -399,6 +400,9 @@ const OPTION_DESCRIPTIONS = """- `binary_operators`: Vector of binary operators 
     not.
 - `print_precision`: How many digits to print when printing
     equations. By default, this is 5.
+- `output_directory`: The base directory to save output files to. Files
+    will be saved in a subdirectory according to the run ID. By default,
+    this is `./outputs`.
 - `save_to_file`: Whether to save equations to a file during the search.
 - `bin_constraints`: See `constraints`. This is the same, but specified for binary
     operators only (for example, if you have an operator that is both a binary
@@ -439,82 +443,161 @@ https://github.com/MilesCranmer/PySR/discussions/115.
 $(OPTION_DESCRIPTIONS)
 """
 @unstable @save_kwargs DEFAULT_OPTIONS function Options(;
-    binary_operators=Function[+, -, /, *],
-    unary_operators=Function[],
-    constraints=nothing,
-    elementwise_loss::Union{Function,SupervisedLoss,Nothing}=nothing,
-    loss_function::Union{Function,Nothing}=nothing,
-    tournament_selection_n::Integer=12, #1 sampled from every tournament_selection_n per mutation
-    tournament_selection_p::Real=0.86,
-    topn::Integer=12, #samples to return per population
-    complexity_of_operators=nothing,
-    complexity_of_constants::Union{Nothing,Real}=nothing,
-    complexity_of_variables::Union{Nothing,Real,AbstractVector}=nothing,
-    parsimony::Real=0.0032,
-    dimensional_constraint_penalty::Union{Nothing,Real}=nothing,
+    # Note: We can only `@nospecialize` on the first 32 arguments, which is why
+    #       we have to declare some of these later on.
+    @nospecialize(defaults::Union{VersionNumber,Nothing} = nothing),
+    # Search options:
+    ## 1. Creating the Search Space:
+    @nospecialize(binary_operators = nothing),
+    @nospecialize(unary_operators = nothing),
+    @nospecialize(maxsize::Union{Nothing,Integer} = nothing),
+    @nospecialize(maxdepth::Union{Nothing,Integer} = nothing),
+    @nospecialize(expression_type::Type{<:AbstractExpression} = Expression),
+    @nospecialize(expression_options::NamedTuple = NamedTuple()),
+    @nospecialize(
+        node_type::Type{<:AbstractExpressionNode} = default_node_type(expression_type)
+    ),
+    ## 2. Setting the Search Size:
+    @nospecialize(populations::Union{Nothing,Integer} = nothing),
+    @nospecialize(population_size::Union{Nothing,Integer} = nothing),
+    @nospecialize(ncycles_per_iteration::Union{Nothing,Integer} = nothing),
+    ## 3. The Objective:
+    @nospecialize(elementwise_loss::Union{Function,SupervisedLoss,Nothing} = nothing),
+    @nospecialize(loss_function::Union{Function,Nothing} = nothing),
+    ###           [model_selection - only used in MLJ interface]
+    @nospecialize(dimensional_constraint_penalty::Union{Nothing,Real} = nothing),
+    ###           dimensionless_constants_only
+    ## 4. Working with Complexities:
+    @nospecialize(parsimony::Union{Nothing,Real} = nothing),
+    @nospecialize(constraints = nothing),
+    @nospecialize(nested_constraints = nothing),
+    @nospecialize(complexity_of_operators = nothing),
+    @nospecialize(complexity_of_constants::Union{Nothing,Real} = nothing),
+    @nospecialize(complexity_of_variables::Union{Nothing,Real,AbstractVector} = nothing),
+    @nospecialize(warmup_maxsize_by::Union{Real,Nothing} = nothing),
+    ###           use_frequency
+    ###           use_frequency_in_tournament
+    @nospecialize(adaptive_parsimony_scaling::Union{Real,Nothing} = nothing),
+    ###           should_simplify
+    ## 5. Mutations:
+    @nospecialize(
+        mutation_weights::Union{AbstractMutationWeights,AbstractVector,NamedTuple,Nothing} =
+            nothing
+    ),
+    @nospecialize(crossover_probability::Union{Real,Nothing} = nothing),
+    @nospecialize(annealing::Union{Bool,Nothing} = nothing),
+    @nospecialize(alpha::Union{Nothing,Real} = nothing),
+    ###           perturbation_factor
+    @nospecialize(probability_negate_constant::Union{Real,Nothing} = nothing),
+    ###           skip_mutation_failures
+    ## 6. Tournament Selection:
+    @nospecialize(tournament_selection_n::Union{Nothing,Integer} = nothing),
+    @nospecialize(tournament_selection_p::Union{Nothing,Real} = nothing),
+    ## 7. Constant Optimization:
+    ###           optimizer_algorithm
+    ###           optimizer_nrestarts
+    ###           optimizer_probability
+    ###           optimizer_iterations
+    ###           optimizer_f_calls_limit
+    ###           optimizer_options
+    ###           should_optimize_constants
+    ## 8. Migration between Populations:
+    ###           migration
+    ###           hof_migration
+    ###           fraction_replaced
+    ###           fraction_replaced_hof
+    ###           topn
+    ## 9. Data Preprocessing:
+    ###           [none]
+    ## 10. Stopping Criteria:
+    ###           timeout_in_seconds
+    ###           max_evals
+    @nospecialize(early_stop_condition::Union{Function,Real,Nothing} = nothing),
+    ## 11. Performance and Parallelization:
+    ###           [others, passed to `equation_search`]
+    @nospecialize(batching::Union{Bool,Nothing} = nothing),
+    @nospecialize(batch_size::Union{Nothing,Integer} = nothing),
+    ###           turbo
+    ###           bumper
+    ###           autodiff_backend
+    ## 12. Determinism:
+    ###           [others, passed to `equation_search`]
+    ###           deterministic
+    ###           seed
+    ## 13. Monitoring:
+    ###           verbosity
+    ###           print_precision
+    ###           progress
+    ## 14. Environment:
+    ###           [none]
+    ## 15. Exporting the Results:
+    ###           [others, passed to `equation_search`]
+    ###           output_directory
+    ###           save_to_file
+
+    # Other search, but no specializations (since Julia limits us to 32!)
+    ## 1. Search Space:
+    ## 2. Setting the Search Size:
+    ## 3. The Objective:
     dimensionless_constants_only::Bool=false,
-    alpha::Real=0.100000,
-    maxsize::Integer=20,
-    maxdepth::Union{Nothing,Integer}=nothing,
-    turbo::Bool=false,
-    bumper::Bool=false,
-    migration::Bool=true,
-    hof_migration::Bool=true,
-    should_simplify::Union{Nothing,Bool}=nothing,
-    should_optimize_constants::Bool=true,
-    output_file::Union{Nothing,AbstractString}=nothing,
-    expression_type::Type=Expression,
-    node_type::Type=default_node_type(expression_type),
-    expression_options::NamedTuple=NamedTuple(),
-    populations::Integer=15,
-    perturbation_factor::Real=0.076,
-    annealing::Bool=false,
-    batching::Bool=false,
-    batch_size::Integer=50,
-    mutation_weights::Union{AbstractMutationWeights,AbstractVector,NamedTuple}=MutationWeights(),
-    crossover_probability::Real=0.066,
-    warmup_maxsize_by::Real=0.0,
+    ## 4. Working with Complexities:
     use_frequency::Bool=true,
     use_frequency_in_tournament::Bool=true,
-    adaptive_parsimony_scaling::Real=20.0,
-    population_size::Integer=33,
-    ncycles_per_iteration::Integer=550,
-    fraction_replaced::Real=0.00036,
-    fraction_replaced_hof::Real=0.035,
-    verbosity::Union{Integer,Nothing}=nothing,
-    print_precision::Integer=5,
-    save_to_file::Bool=true,
-    probability_negate_constant::Real=0.01,
-    seed=nothing,
-    bin_constraints=nothing,
-    una_constraints=nothing,
-    progress::Union{Bool,Nothing}=nothing,
-    terminal_width::Union{Nothing,Integer}=nothing,
+    should_simplify::Union{Nothing,Bool}=nothing,
+    ## 5. Mutations:
+    perturbation_factor::Union{Nothing,Real}=nothing,
+    skip_mutation_failures::Bool=true,
+    ## 6. Tournament Selection
+    ## 7. Constant Optimization:
     optimizer_algorithm::Union{AbstractString,Optim.AbstractOptimizer}=Optim.BFGS(;
         linesearch=LineSearches.BackTracking()
     ),
-    optimizer_nrestarts::Integer=2,
-    optimizer_probability::Real=0.14,
+    optimizer_nrestarts::Int=2,
+    optimizer_probability::AbstractFloat=0.14,
     optimizer_iterations::Union{Nothing,Integer}=nothing,
     optimizer_f_calls_limit::Union{Nothing,Integer}=nothing,
     optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
-    autodiff_backend::Union{AbstractADType,Symbol,Nothing}=nothing,
-    use_recorder::Bool=false,
-    recorder_file::AbstractString="pysr_recorder.json",
-    early_stop_condition::Union{Function,Real,Nothing}=nothing,
+    should_optimize_constants::Bool=true,
+    ## 8. Migration between Populations:
+    migration::Bool=true,
+    hof_migration::Bool=true,
+    fraction_replaced::Union{Real,Nothing}=nothing,
+    fraction_replaced_hof::Union{Real,Nothing}=nothing,
+    topn::Union{Nothing,Integer}=nothing,
+    ## 9. Data Preprocessing:
+    ## 10. Stopping Criteria:
     timeout_in_seconds::Union{Nothing,Real}=nothing,
     max_evals::Union{Nothing,Integer}=nothing,
-    skip_mutation_failures::Bool=true,
-    nested_constraints=nothing,
+    ## 11. Performance and Parallelization:
+    turbo::Bool=false,
+    bumper::Bool=false,
+    autodiff_backend::Union{AbstractADType,Symbol,Nothing}=nothing,
+    ## 12. Determinism:
     deterministic::Bool=false,
-    # Not search options; just construction options:
+    seed=nothing,
+    ## 13. Monitoring:
+    verbosity::Union{Integer,Nothing}=nothing,
+    print_precision::Integer=5,
+    progress::Union{Bool,Nothing}=nothing,
+    ## 14. Environment:
+    ## 15. Exporting the Results:
+    output_directory::Union{Nothing,String}=nothing,
+    save_to_file::Bool=true,
+    ## Undocumented features:
+    bin_constraints=nothing,
+    una_constraints=nothing,
+    terminal_width::Union{Nothing,Integer}=nothing,
+    use_recorder::Bool=false,
+    recorder_file::AbstractString="pysr_recorder.json",
+    ### Not search options; just construction options:
     define_helper_functions::Bool=true,
-    deprecated_return_state=nothing,
     #########################################
     # Deprecated args: ######################
+    output_file::Union{Nothing,AbstractString}=nothing,
     fast_cycle::Bool=false,
     npopulations::Union{Nothing,Integer}=nothing,
     npop::Union{Nothing,Integer}=nothing,
+    deprecated_return_state::Union{Bool,Nothing}=nothing,
     kws...,
     #########################################
 )
@@ -537,7 +620,6 @@ $(OPTION_DESCRIPTIONS)
         #! format: off
         k == :hofMigration && (hof_migration = kws[k]; true) && continue
         k == :shouldOptimizeConstants && (should_optimize_constants = kws[k]; true) && continue
-        k == :hofFile && (output_file = kws[k]; true) && continue
         k == :perturbationFactor && (perturbation_factor = kws[k]; true) && continue
         k == :batchSize && (batch_size = kws[k]; true) && continue
         k == :crossoverProbability && (crossover_probability = kws[k]; true) && continue
@@ -577,7 +659,6 @@ $(OPTION_DESCRIPTIONS)
             "Unknown deprecated keyword argument: $k. Please update `Options(;)` to transfer this key.",
         )
     end
-    fast_cycle && Base.depwarn("`fast_cycle` is deprecated and has no effect.", :Options)
     if npop !== nothing
         Base.depwarn("`npop` is deprecated. Use `population_size` instead.", :Options)
         population_size = npop
@@ -597,6 +678,9 @@ $(OPTION_DESCRIPTIONS)
             Optim.BFGS(; linesearch=LineSearches.BackTracking())
         end
     end
+    if output_file !== nothing
+        error("`output_file` is deprecated. Use `output_directory` instead.")
+    end
 
     if elementwise_loss === nothing
         elementwise_loss = L2DistLoss()
@@ -605,6 +689,35 @@ $(OPTION_DESCRIPTIONS)
             error("You cannot specify both `elementwise_loss` and `loss_function`.")
         end
     end
+
+    #################################
+    #### Supply defaults ############
+    #! format: off
+    _default_options = default_options(defaults)
+    binary_operators = something(binary_operators, _default_options.binary_operators)
+    unary_operators = something(unary_operators, _default_options.unary_operators)
+    maxsize = something(maxsize, _default_options.maxsize)
+    populations = something(populations, _default_options.populations)
+    population_size = something(population_size, _default_options.population_size)
+    ncycles_per_iteration = something(ncycles_per_iteration, _default_options.ncycles_per_iteration)
+    parsimony = something(parsimony, _default_options.parsimony)
+    warmup_maxsize_by = something(warmup_maxsize_by, _default_options.warmup_maxsize_by)
+    adaptive_parsimony_scaling = something(adaptive_parsimony_scaling, _default_options.adaptive_parsimony_scaling)
+    mutation_weights = something(mutation_weights, _default_options.mutation_weights)
+    crossover_probability = something(crossover_probability, _default_options.crossover_probability)
+    annealing = something(annealing, _default_options.annealing)
+    alpha = something(alpha, _default_options.alpha)
+    perturbation_factor = something(perturbation_factor, _default_options.perturbation_factor)
+    probability_negate_constant = something(probability_negate_constant, _default_options.probability_negate_constant)
+    tournament_selection_n = something(tournament_selection_n, _default_options.tournament_selection_n)
+    tournament_selection_p = something(tournament_selection_p, _default_options.tournament_selection_p)
+    fraction_replaced = something(fraction_replaced, _default_options.fraction_replaced)
+    fraction_replaced_hof = something(fraction_replaced_hof, _default_options.fraction_replaced_hof)
+    topn = something(topn, _default_options.topn)
+    batching = something(batching, _default_options.batching)
+    batch_size = something(batch_size, _default_options.batch_size)
+    #! format: on
+    #################################
 
     if should_simplify === nothing
         should_simplify = (
@@ -616,22 +729,11 @@ $(OPTION_DESCRIPTIONS)
         )
     end
 
-    is_testing = parse(Bool, get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false"))
-
-    if output_file === nothing
-        # "%Y-%m-%d_%H%M%S.%f"
-        date_time_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS.sss")
-        output_file = "hall_of_fame_" * date_time_str * ".csv"
-        if is_testing
-            tmpdir = mktempdir()
-            output_file = joinpath(tmpdir, output_file)
-        end
-    end
-
     @assert maxsize > 3
     @assert warmup_maxsize_by >= 0.0f0
-    @assert length(unary_operators) <= max_ops
-    @assert length(binary_operators) <= max_ops
+    @assert length(unary_operators) <= 8192
+    @assert length(binary_operators) <= 8192
+    @assert tournament_selection_n < population_size "`tournament_selection_n` must be less than `population_size`"
 
     # Make sure nested_constraints contains functions within our operator set:
     _nested_constraints = build_nested_constraints(;
@@ -696,25 +798,21 @@ $(OPTION_DESCRIPTIONS)
     early_stop_condition = if typeof(early_stop_condition) <: Real
         # Need to make explicit copy here for this to work:
         stopping_point = Float64(early_stop_condition)
-        (loss, complexity) -> loss < stopping_point
+        Base.Fix2(<, stopping_point) ∘ first ∘ tuple # Equivalent to (l, c) -> l < stopping_point
     else
         early_stop_condition
     end
 
     # Parse optimizer options
     if !isa(optimizer_options, Optim.Options)
-        optimizer_iterations = isnothing(optimizer_iterations) ? 8 : optimizer_iterations
-        optimizer_f_calls_limit = if isnothing(optimizer_f_calls_limit)
-            10_000
-        else
-            optimizer_f_calls_limit
-        end
+        optimizer_iterations = something(optimizer_iterations, 8)
+        optimizer_f_calls_limit = something(optimizer_f_calls_limit, 10_000)
         extra_kws = hasfield(Optim.Options, :show_warnings) ? (; show_warnings=false) : ()
         optimizer_options = Optim.Options(;
             iterations=optimizer_iterations,
             f_calls_limit=optimizer_f_calls_limit,
             extra_kws...,
-            (isnothing(optimizer_options) ? () : optimizer_options)...,
+            something(optimizer_options, ())...,
         )
     else
         @assert optimizer_iterations === nothing && optimizer_f_calls_limit === nothing
@@ -733,6 +831,14 @@ $(OPTION_DESCRIPTIONS)
         ADTypes.Auto(autodiff_backend)
     end
 
+    _output_directory =
+        if output_directory === nothing &&
+            get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false") == "true"
+            mktempdir()
+        else
+            output_directory
+        end
+
     options = Options{
         typeof(complexity_mapping),
         operator_specialization(typeof(operators), expression_type),
@@ -742,8 +848,9 @@ $(OPTION_DESCRIPTIONS)
         typeof(set_mutation_weights),
         turbo,
         bumper,
-        deprecated_return_state,
+        deprecated_return_state::Union{Bool,Nothing},
         typeof(_autodiff_backend),
+        print_precision,
     }(
         operators,
         _bin_constraints,
@@ -763,7 +870,7 @@ $(OPTION_DESCRIPTIONS)
         hof_migration,
         should_simplify,
         should_optimize_constants,
-        output_file,
+        _output_directory,
         populations,
         perturbation_factor,
         annealing,
@@ -781,7 +888,7 @@ $(OPTION_DESCRIPTIONS)
         fraction_replaced_hof,
         topn,
         verbosity,
-        print_precision,
+        Val(print_precision),
         save_to_file,
         probability_negate_constant,
         length(unary_operators),
@@ -813,6 +920,105 @@ $(OPTION_DESCRIPTIONS)
     )
 
     return options
+end
+
+function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = nothing))
+    if version isa VersionNumber && version < v"1.0.0"
+        return (;
+            # Creating the Search Space
+            binary_operators=[+, -, /, *],
+            unary_operators=Function[],
+            maxsize=20,
+            # Setting the Search Size
+            populations=15,
+            population_size=33,
+            ncycles_per_iteration=550,
+            # Working with Complexities
+            parsimony=0.0032,
+            warmup_maxsize_by=0.0,
+            adaptive_parsimony_scaling=20.0,
+            # Mutations
+            mutation_weights=MutationWeights(;
+                mutate_constant=0.048,
+                mutate_operator=0.47,
+                swap_operands=0.1,
+                rotate_tree=0.0,
+                add_node=0.79,
+                insert_node=5.1,
+                delete_node=1.7,
+                simplify=0.0020,
+                randomize=0.00023,
+                do_nothing=0.21,
+                optimize=0.0,
+                form_connection=0.5,
+                break_connection=0.1,
+            ),
+            crossover_probability=0.066,
+            annealing=false,
+            alpha=0.1,
+            perturbation_factor=0.076,
+            probability_negate_constant=0.01,
+            # Tournament Selection
+            tournament_selection_n=12,
+            tournament_selection_p=0.86,
+            # Migration between Populations
+            fraction_replaced=0.00036,
+            fraction_replaced_hof=0.035,
+            topn=12,
+            # Performance and Parallelization
+            batching=false,
+            batch_size=50,
+        )
+    else
+        return (;
+            # Creating the Search Space
+            binary_operators=Function[+, -, /, *],
+            unary_operators=Function[],
+            maxsize=30,
+            # Setting the Search Size
+            populations=31,
+            population_size=27,
+            ncycles_per_iteration=380,
+            # Working with Complexities
+            parsimony=0.0,
+            warmup_maxsize_by=0.0,
+            adaptive_parsimony_scaling=1040,
+            # Mutations
+            mutation_weights=MutationWeights(;
+                mutate_constant=0.0346,
+                mutate_operator=0.293,
+                swap_operands=0.198,
+                rotate_tree=4.26,
+                add_node=2.47,
+                insert_node=0.0112,
+                delete_node=0.870,
+                simplify=0.00209,
+                randomize=0.000502,
+                do_nothing=0.273,
+                optimize=0.0,
+                form_connection=0.5,
+                break_connection=0.1,
+            ),
+            crossover_probability=0.0259,
+            annealing=true,
+            alpha=3.17,
+            perturbation_factor=0.129,
+            probability_negate_constant=0.00743,
+            # Tournament Selection
+            tournament_selection_n=15,
+            tournament_selection_p=0.982,
+            # Migration between Populations
+            fraction_replaced=0.00036,
+            ## ^Note: the optimal value found was 0.00000425,
+            ## but I thought this was a symptom of doing the sweep on such
+            ## a small problem, so I increased it to the older value of 0.00036
+            fraction_replaced_hof=0.0614,
+            topn=12,
+            # Performance and Parallelization
+            batching=false,
+            batch_size=50,
+        )
+    end
 end
 
 end

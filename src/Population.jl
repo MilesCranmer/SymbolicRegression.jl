@@ -139,7 +139,7 @@ function _best_of_sample(
             scores[i] = member.score * exp(adaptive_parsimony_scaling * frequency)
         end
     else
-        map!(member -> member.score, scores, members)
+        map!(_get_score, scores, members)
     end
 
     chosen_idx = if p == 1.0
@@ -157,6 +157,7 @@ function _best_of_sample(
     end
     return members[chosen_idx]
 end
+_get_score(member::PopMember) = member.score
 
 const CACHED_WEIGHTS =
     let init_k = collect(0:5),

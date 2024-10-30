@@ -3,6 +3,7 @@ module UtilsModule
 
 using Printf: @printf
 using MacroTools: splitdef
+using StyledStrings: StyledStrings
 
 macro ignore(args...) end
 
@@ -26,6 +27,7 @@ function is_anonymous_function(op)
            op_string[1] == '#' &&
            op_string[2] in ('1', '2', '3', '4', '5', '6', '7', '8', '9')
 end
+precompile(Tuple{typeof(is_anonymous_function),Function})
 
 recursive_merge(x::AbstractVector...) = cat(x...; dims=1)
 recursive_merge(x::AbstractDict...) = merge(recursive_merge, x...)
@@ -40,17 +42,14 @@ function subscriptify(number::Integer)
 end
 
 """
-    split_string(s::String, n::Integer)
+    split_string(s::AbstractString, n::Integer)
 
 ```jldoctest
-split_string("abcdefgh", 3)
-
-# output
-
+julia> split_string("abcdefgh", 3)
 ["abc", "def", "gh"]
 ```
 """
-function split_string(s::String, n::Integer)
+function split_string(s::AbstractString, n::Integer)
     length(s) <= n && return [s]
     # Due to unicode characters, need to split only at valid indices:
     I = eachindex(s) |> collect
@@ -91,12 +90,13 @@ function _to_vec(v::MutableTuple{S,T}) where {S,T}
     return x
 end
 
-const max_ops = 8192
-const vals = ntuple(Val, max_ops)
-
 """Return the bottom k elements of x, and their indices."""
-bottomk_fast(x::AbstractVector{T}, k) where {T} =
-    _bottomk_dispatch(x, vals[k])::Tuple{Vector{T},Vector{Int}}
+bottomk_fast(x::AbstractVector{T}, k) where {T} = Base.Cartesian.@nif(
+    32,
+    d -> d == k,
+    d -> _bottomk_dispatch(x, Val(d))::Tuple{Vector{T},Vector{Int}},
+    _ -> _bottomk_dispatch(x, Val(k))::Tuple{Vector{T},Vector{Int}}
+)
 
 function _bottomk_dispatch(x::AbstractVector{T}, ::Val{k}) where {T,k}
     if k == 1
@@ -174,7 +174,16 @@ function _save_kwargs(log_variable::Symbol, fdef::Expr)
     def = splitdef(fdef)
     # Get kwargs:
     kwargs = copy(def[:kwargs])
-    filter!(kwargs) do k
+    kwargs = map(kwargs) do k
+        # If it's a macrocall for @nospecialize
+        if k.head == :macrocall && string(k.args[1]) == "@nospecialize"
+            # Find the actual argument - it's the last non-LineNumberNode argument
+            inner_arg = last(filter(arg -> !(arg isa LineNumberNode), k.args))
+            return inner_arg
+        end
+        return k
+    end
+    kwargs = filter(kwargs) do k
         # Filter ...:
         k.head == :... && return false
         # Filter other deprecated kwargs:
@@ -257,6 +266,23 @@ function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
         thread_cache[Tuple{F,T}] = Bad
     end
     return output
+end
+
+@static if VERSION >= v"1.11.0-"
+    @eval begin
+        const AnnotatedIOBuffer = Base.AnnotatedIOBuffer
+        const AnnotatedString = Base.AnnotatedString
+    end
+else
+    @eval begin
+        const AnnotatedIOBuffer = StyledStrings.AnnotatedStrings.AnnotatedIOBuffer
+        const AnnotatedString = StyledStrings.AnnotatedStrings.AnnotatedString
+    end
+end
+
+dump_buffer(buffer::IOBuffer) = String(take!(buffer))
+function dump_buffer(buffer::AnnotatedIOBuffer)
+    return AnnotatedString(dump_buffer(buffer.io), buffer.annotations)
 end
 
 end
