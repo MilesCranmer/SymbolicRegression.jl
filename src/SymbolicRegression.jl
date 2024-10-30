@@ -14,6 +14,7 @@ export Population,
     ParametricExpression,
     TemplateExpression,
     TemplateStructure,
+    ComposableExpression,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
@@ -222,6 +223,7 @@ using DispatchDoctor: @stable
     include("SearchUtils.jl")
     include("ExpressionBuilder.jl")
     include("TemplateExpression.jl")
+    include("ComposableExpression.jl")
     include("ParametricExpression.jl")
 end
 
@@ -317,6 +319,7 @@ using .SearchUtilsModule:
     get_cur_maxsize,
     update_hall_of_fame!
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure
+using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
