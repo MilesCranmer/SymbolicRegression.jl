@@ -41,6 +41,17 @@ function DE.get_variable_names(
     return something(variable_names, DE.get_metadata(ex).variable_names)
 end
 
+function DE.get_scalar_constants(ex::AbstractComposableExpression)
+    return DE.get_scalar_constants(DE.get_contents(ex))
+end
+function DE.set_scalar_constants!(ex::AbstractComposableExpression, constants, refs)
+    return DE.set_scalar_constants!(DE.get_contents(ex), constants, refs)
+end
+
+function Base.copy(ex::AbstractComposableExpression)
+    return ComposableExpression(copy(ex.tree), copy(ex.metadata))
+end
+
 @implements(
     ExpressionInterface{all_ei_methods_except(())}, ComposableExpression, [Arguments()]
 )
@@ -73,7 +84,7 @@ function (ex::AbstractComposableExpression)(x::VectorWrapper, _xs::VectorWrapper
     if !valid
         return VectorWrapper(first(xs).value, false)
     end
-    X = Matrix(stack(map(xi -> xi.value, xs)...)')
+    X = Matrix(stack(map(xi -> xi.value, xs))')
     return VectorWrapper(eval_tree_array(ex, X))
 end
 
