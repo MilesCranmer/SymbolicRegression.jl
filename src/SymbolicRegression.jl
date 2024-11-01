@@ -222,8 +222,9 @@ using DispatchDoctor: @stable
     include("Migration.jl")
     include("SearchUtils.jl")
     include("ExpressionBuilder.jl")
-    include("TemplateExpression.jl")
     include("ComposableExpression.jl")
+    include("TemplateExpression.jl")
+    include("HierarchicalExpression.jl")
     include("ParametricExpression.jl")
 end
 
