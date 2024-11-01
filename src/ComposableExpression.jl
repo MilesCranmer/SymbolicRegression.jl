@@ -7,6 +7,8 @@ using DynamicExpressions:
     Metadata,
     eval_tree_array,
     set_node!,
+    get_contents,
+    with_contents,
     DynamicExpressions as DE
 using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
@@ -110,6 +112,19 @@ end
 # Basically we want to vectorize every single operation on VectorWrapper,
 # so that the user can use it easily.
 
+function apply_operator(op::F, x...) where {F<:Function}
+    if all(_is_valid, x)
+        vx = map(_get_value, x)
+        return VectorWrapper(op.(vx...), true)
+    else
+        return VectorWrapper(_get_value(first(x)), false)
+    end
+end
+_is_valid(x::VectorWrapper) = x.valid
+_is_valid(x) = true
+_get_value(x::VectorWrapper) = x.value
+_get_value(x) = x
+
 #! format: off
 # First, binary operators:
 for op in (
@@ -117,8 +132,10 @@ for op in (
     :atan, :atand, :copysign, :flipsign,
     :&, :|, :⊻, ://, :\,
 )
-    @eval function Base.$(op)(x::VectorWrapper, y::VectorWrapper)
-        return VectorWrapper(@. Base.$(op)(x.value, y.value))
+    @eval begin
+        Base.$(op)(x::VectorWrapper, y::VectorWrapper) = apply_operator(Base.$(op), x, y)
+        Base.$(op)(x::VectorWrapper, y::Number) = apply_operator(Base.$(op), x, y)
+        Base.$(op)(x::Number, y::VectorWrapper) = apply_operator(Base.$(op), x, y)
     end
 end
 
@@ -134,9 +151,7 @@ for op in (
     :inv, :sqrt, :cbrt, :abs2, :angle, :factorial,
     :(!), :-, :+, :sign, :identity,
 )
-    @eval function Base.$(op)(x::VectorWrapper)
-        return VectorWrapper(@. Base.$(op)(x.value))
-    end
+    @eval Base.$(op)(x::VectorWrapper) = apply_operator(Base.$(op), x)
 end
 #! format: on
 
