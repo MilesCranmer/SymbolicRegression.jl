@@ -58,8 +58,8 @@ struct HierarchicalStructure{K,E<:Function} <: Function
     combine::E
 end
 
-function HierarchicalStructure{K}(combine::E; combine_strings=nothing) where {K,E<:Function}
-    return HierarchicalStructure{K}(combine; combine_strings=nothing)
+function HierarchicalStructure{K}(combine::E) where {K,E<:Function}
+    return HierarchicalStructure{K,E}(combine)
 end
 
 function combine(template::HierarchicalStructure, args...)
@@ -229,7 +229,9 @@ function DE.string_tree(
         map(ex -> DE.string_tree(ex, operators; kws...), values(raw_contents))
     )
     colored_strings = NamedTuple{function_keys}(map(_color_string, inner_strings, colors))
-    return join((annotatedstring(k, " = ", v) for (k, v) in pairs(colored_strings)), "\n")
+    return join(
+        (annotatedstring(k, " = ", v) for (k, v) in pairs(colored_strings)), styled"\n"
+    )
 end
 function DE.eval_tree_array(
     tree::HierarchicalExpression{T},
@@ -238,7 +240,9 @@ function DE.eval_tree_array(
     kws...,
 ) where {T}
     raw_contents = get_contents(tree)
-    result = combine(tree, raw_contents, map(x -> VectorWrapper(x, true), eachrow(cX)))
+    result = combine(
+        tree, raw_contents, map(x -> VectorWrapper(copy(x), true), eachrow(cX))
+    )
     return result.value, result.valid
 end
 function (ex::HierarchicalExpression)(

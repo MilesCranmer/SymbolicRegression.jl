@@ -14,6 +14,8 @@ export Population,
     ParametricExpression,
     TemplateExpression,
     TemplateStructure,
+    HierarchicalExpression,
+    HierarchicalStructure,
     ComposableExpression,
     NodeSampler,
     AbstractExpression,
@@ -320,6 +322,7 @@ using .SearchUtilsModule:
     get_cur_maxsize,
     update_hall_of_fame!
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure
+using .HierarchicalExpressionModule: HierarchicalExpression, HierarchicalStructure
 using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
