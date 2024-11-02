@@ -37,7 +37,7 @@ using ..ComplexityModule: ComplexityModule
 using ..LossFunctionsModule: LossFunctionsModule as LF
 using ..MutateModule: MutateModule as MM
 using ..PopMemberModule: PopMember
-using ..ComposableExpressionModule: AbstractComposableExpression, VectorWrapper
+using ..ComposableExpressionModule: ComposableExpression, VectorWrapper
 
 """
     HierarchicalStructure{K,S,N,E,C} <: Function
@@ -122,9 +122,11 @@ struct HierarchicalExpression{
     T,
     F<:HierarchicalStructure,
     N<:AbstractExpressionNode{T},
-    E<:AbstractComposableExpression{T,N},
+    E<:ComposableExpression{T,N},
     TS<:NamedTuple{<:Any,<:NTuple{<:Any,E}},
-    D<:@NamedTuple{structure::F, operators::O, variable_names::V} where {O,V},
+    D<:@NamedTuple{
+        structure::F, operators::O, variable_names::V
+    } where {O<:AbstractOperatorEnum,V},
 } <: AbstractStructuredExpression{T,F,N,E,D}
     trees::TS
     metadata::Metadata{D}
@@ -183,7 +185,8 @@ function EB.create_expression(
     operators = options.operators
     variable_names = embed ? dataset.variable_names : nothing
     inner_expressions = ntuple(
-        _ -> ComposableExpression(copy(t); operators, variable_names), length(function_keys)
+        _ -> ComposableExpression(copy(t); operators, variable_names),
+        Val(length(function_keys)),
     )
     # TODO: Generalize to other inner expression types
     return DE.constructorof(E)(

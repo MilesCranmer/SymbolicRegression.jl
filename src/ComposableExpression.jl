@@ -15,8 +15,11 @@ using DynamicExpressions.InterfacesModule:
 
 abstract type AbstractComposableExpression{T,N} <: AbstractExpression{T,N} end
 
-struct ComposableExpression{T,N<:AbstractExpressionNode{T},D<:NamedTuple} <:
-       AbstractComposableExpression{T,N}
+struct ComposableExpression{
+    T,
+    N<:AbstractExpressionNode{T},
+    D<:@NamedTuple{operators::O, variable_names::V} where {O<:AbstractOperatorEnum,V},
+} <: AbstractComposableExpression{T,N}
     tree::N
     metadata::Metadata{D}
 end
@@ -35,13 +38,13 @@ DE.get_tree(ex::AbstractComposableExpression) = ex.tree
 function DE.get_operators(
     ex::AbstractComposableExpression, operators::Union{AbstractOperatorEnum,Nothing}=nothing
 )
-    return something(operators, DE.get_metadata(ex).operators)
+    return @something(operators, DE.get_metadata(ex).operators)
 end
 function DE.get_variable_names(
     ex::AbstractComposableExpression,
     variable_names::Union{Nothing,AbstractVector{<:AbstractString}}=nothing,
 )
-    return something(variable_names, DE.get_metadata(ex).variable_names)
+    return @something(variable_names, DE.get_metadata(ex).variable_names, Some(nothing))
 end
 
 function DE.get_scalar_constants(ex::AbstractComposableExpression)
