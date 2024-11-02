@@ -150,23 +150,24 @@ function (ex::AbstractComposableExpression)(
     xs = map(Base.Fix2(ValidVector, true), __xs)
     result = ex(xs...)
     # Unwrap it
-    if result.valid
-        return result.x
+    if _is_valid(result)
+        return _get_value(result)
     else
         # TODO: Make this more general. Like checking if the eltype is numeric.
-        nan = convert(eltype(result.x), NaN)
-        return result.x .* nan
+        x = _get_value(result)
+        nan = convert(eltype(x), NaN)
+        return x .* nan
     end
 end
 function (ex::AbstractComposableExpression)(
     x::ValidVector, _xs::Vararg{ValidVector,N}
 ) where {N}
     xs = (x, _xs...)
-    valid = all(xi -> xi.valid, xs)
+    valid = all(_is_valid, xs)
     if !valid
-        return ValidVector(first(xs).x, false)
+        return ValidVector(_get_value(first(xs)), false)
     else
-        X = Matrix(stack(map(xi -> xi.x, xs))')
+        X = Matrix(stack(map(_get_value, xs))')
         return ValidVector(eval_tree_array(ex, X))
     end
 end
