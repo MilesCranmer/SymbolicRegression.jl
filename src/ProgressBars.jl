@@ -1,7 +1,7 @@
 module ProgressBarsModule
 
 using Compat: Fix
-using ProgressMeter: ProgressMeter, Progress, next!, finish!
+using ProgressMeter: ProgressMeter, Progress, next!
 using StyledStrings: @styled_str, annotatedstring
 using ..UtilsModule: AnnotatedString
 

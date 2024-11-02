@@ -7,19 +7,9 @@ module ExpressionBuilderModule
 using DispatchDoctor: @unstable
 using Compat: Fix
 using DynamicExpressions:
-    AbstractExpressionNode,
-    AbstractExpression,
-    Expression,
-    constructorof,
-    get_tree,
-    get_contents,
-    get_metadata,
-    with_contents,
-    with_metadata,
-    count_scalar_constants,
-    eval_tree_array
+    AbstractExpressionNode, AbstractExpression, constructorof, with_metadata
 using StatsBase: StatsBase
-using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE
+using ..CoreModule: AbstractOptions, Dataset
 using ..HallOfFameModule: HallOfFame
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember

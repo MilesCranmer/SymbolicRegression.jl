@@ -11,7 +11,6 @@ using DynamicExpressions:
     AbstractExpression,
     AbstractOperatorEnum,
     OperatorEnum,
-    Expression,
     Metadata,
     get_contents,
     with_contents,
@@ -20,7 +19,6 @@ using DynamicExpressions:
     get_variable_names,
     get_tree,
     node_type,
-    eval_tree_array,
     count_nodes
 using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments

@@ -86,6 +86,7 @@ using Pkg: Pkg
 using TOML: parsefile
 using Random: seed!, shuffle!
 using Reexport
+using ProgressMeter: finish!
 using DynamicExpressions:
     Node,
     GraphNode,
@@ -276,7 +277,7 @@ using .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 using .MutateModule: mutate!, condition_mutation_weights!, MutationResult
 using .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
-using .ProgressBarsModule: WrappedProgressBar, finish!
+using .ProgressBarsModule: WrappedProgressBar
 using .RecorderModule: @recorder, find_iteration_from_record
 using .MigrationModule: migrate!
 using .SearchUtilsModule:

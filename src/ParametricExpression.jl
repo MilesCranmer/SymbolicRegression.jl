@@ -6,15 +6,12 @@ module ParametricExpressionModule
 
 using DynamicExpressions:
     DynamicExpressions as DE,
-    AbstractExpression,
     ParametricExpression,
     ParametricNode,
     get_metadata,
-    with_metadata,
     get_contents,
     with_contents,
-    get_tree,
-    eval_tree_array
+    get_tree
 using StatsBase: StatsBase
 using Random: default_rng, AbstractRNG
 

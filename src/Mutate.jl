@@ -2,7 +2,6 @@ module MutateModule
 
 using DynamicExpressions:
     AbstractExpression,
-    with_contents,
     get_tree,
     preserve_sharing,
     count_scalar_constants,
@@ -21,7 +20,6 @@ using ..CheckConstraintsModule: check_constraints
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..PopMemberModule: PopMember
 using ..MutationFunctionsModule:
-    gen_random_tree_fixed_size,
     mutate_constant,
     mutate_operator,
     swap_operands,

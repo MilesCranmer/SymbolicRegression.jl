@@ -9,11 +9,10 @@ using Distributed: Distributed, @spawnat, Future, procs, addprocs
 using StatsBase: mean
 using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
-using Compat: Fix
 
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
-using ..CoreModule: Dataset, AbstractOptions, Options, MAX_DEGREE, RecordType, max_features
+using ..CoreModule: Dataset, AbstractOptions, Options, RecordType, max_features
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
