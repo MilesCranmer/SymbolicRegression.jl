@@ -21,6 +21,30 @@ using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 
 abstract type AbstractComposableExpression{T,N} <: AbstractExpression{T,N} end
 
+"""
+    ComposableExpression{T,N,D} <: AbstractComposableExpression{T,N} <: AbstractExpression{T,N}
+
+A symbolic expression representing a mathematical formula as an expression tree (`tree::N`) with associated metadata (`metadata::Metadata{D}`). Used to construct and manipulate expressions in symbolic regression tasks.
+
+Example:
+
+Create variables `x1` and `x2`, and build an expression `f = x1 * sin(x2)`:
+
+```julia
+operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+variable_names = ["x1", "x2"]
+x1 = ComposableExpression(Node(Float64; feature=1); operators, variable_names)
+x2 = ComposableExpression(Node(Float64; feature=2); operators, variable_names)
+f = x1 * sin(x2)
+# ^This now references the first and second arguments of things passed to it:
+
+f(x1, x1) # == x1 * sin(x1)
+f(randn(5), randn(5)) # == randn(5) .* sin.(randn(5))
+
+# You can even pass it to itself:
+f(f, f) # == (x1 * sin(x2)) * sin((x1 * sin(x2)))
+```
+"""
 struct ComposableExpression{
     T,
     N<:AbstractExpressionNode{T},
@@ -88,6 +112,25 @@ end
     ExpressionInterface{all_ei_methods_except(())}, ComposableExpression, [Arguments()]
 )
 
+"""
+    ValidVector{A<:AbstractVector}
+
+A wrapper for an AbstractVector paired with a validity flag (valid::Bool).
+It represents a vector along with a boolean indicating whether the data is valid.
+This is useful in computations where certain operations might produce invalid data
+(e.g., division by zero), allowing the validity to propagate through calculations.
+Operations on `ValidVector` instances automatically handle the valid flag: if all
+operands are valid, the result is valid; if any operand is invalid, the result is
+marked invalid.
+
+You will need to work with this to do highly custom operations with
+`ComposableExpression` and `HierarchicalExpression`.
+
+# Fields:
+
+- `value::A`: The vector data.
+- `valid::Bool`: Indicates if the data is valid.
+"""
 struct ValidVector{A<:AbstractVector}
     value::A
     valid::Bool
