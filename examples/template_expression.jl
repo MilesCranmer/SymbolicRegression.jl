@@ -6,7 +6,8 @@ using Test: @test
 options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
 operators = options.operators
 variable_names = (i -> "x$i").(1:3)
-x1, x2, x3 = (i -> ComposableExpression(Node(Float64; feature=i); operators, variable_names)).(1:3)
+x1, x2, x3 =
+    (i -> ComposableExpression(Node(Float64; feature=i); operators, variable_names)).(1:3)
 
 structure = TemplateStructure{(:f, :g1, :g2)}(
     ((; f, g1, g2), (x1, x2, x3)) -> let

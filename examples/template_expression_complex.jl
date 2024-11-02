@@ -187,7 +187,7 @@ function compute_force((; B_x, B_y, B_z, F_d_scale), (t, v_x, v_y, v_z, T))
     _F_d_scale = F_d_scale(T)
     ## Note that we can also evaluate an expression multiple times,
     ## including in a hierarchy!
-    
+
     ## Now, let's do the same computation we did above to
     ## get the total force vectors. Note that the evaluation
     ## output is wrapped in `ValidVector`, so we need
