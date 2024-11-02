@@ -50,23 +50,62 @@ If not declared using the constructor `HierarchicalStructure{K}(...)`, the keys 
 `variable_constraints` `NamedTuple` will be used to infer this.
 
 # Fields
-- `combine`: Required function taking a `NamedTuple` of function keys => expressions,
-    returning a single expression. Fallback method used by `get_tree`
-    on a `HierarchicalExpression` to generate a single `Expression`.
+- `combine`: Required function taking a `NamedTuple` of callable expressions (with keys `K`),
+    and a tuple representing the data. For example, `((; f, g), (x1, x2, x3)) -> f(x1, x2) + g(x3)`
+    would be a valid `combine` function. You may also re-use the callable expressions and
+    use different inputs, such as `((; f, g), (x1, x2)) -> f(x1 + g(x2)) - g(x1)` is
+    another valid choice.
+- `num_features`: Optional `NamedTuple` of function keys => integers representing the number of
+    features used by each expression. If not provided, it will be inferred using the `combine`
+    function. For example, if `f` takes two arguments, and `g` takes one, then
+    `num_features = (; f=2, g=1)`.
 """
-struct HierarchicalStructure{K,E<:Function} <: Function
+struct HierarchicalStructure{K,E<:Function,NF<:NamedTuple} <: Function
     combine::E
+    num_features::NF
 end
 
-function HierarchicalStructure{K}(combine::E) where {K,E<:Function}
-    return HierarchicalStructure{K,E}(combine)
+function HierarchicalStructure{K}(combine::E, num_features=nothing) where {K,E<:Function}
+    num_features = @something(num_features, infer_variable_constraints(Val(K), combine))
+    return HierarchicalStructure{K,E,typeof(num_features)}(combine, num_features)
 end
 
-function combine(template::HierarchicalStructure, args...)
+@unstable function combine(template::HierarchicalStructure, args...)
     return template.combine(args...)
 end
 
 get_function_keys(::HierarchicalStructure{K}) where {K} = K
+
+function _record_composable_expression!(variable_constraints, ::Val{k}, args...) where {k}
+    vc = variable_constraints[k][]
+    if vc == -1
+        variable_constraints[k][] = length(args)
+    elseif vc != length(args)
+        throw(ArgumentError("Inconsistent number of arguments passed to $k"))
+    end
+    return first(args)
+end
+
+"""Infers number of features used by each subexpression, by passing in test data."""
+function infer_variable_constraints(::Val{K}, combiner::F) where {K,F}
+    variable_constraints = NamedTuple{K}(map(_ -> Ref(-1), K))
+    # Now, we need to evaluate the `combine` function to see how many
+    # features are used for each function call. If unset, we record it.
+    # If set, we validate.
+    inner = Fix{1}(_record_composable_expression!, variable_constraints)
+    _recorders_of_composable_expressions = NamedTuple{K}(map(k -> Fix{1}(inner, Val(k)), K))
+    # We use an evaluation to get the variable constraints
+    combiner(
+        _recorders_of_composable_expressions,
+        Base.Iterators.repeated(VectorWrapper(ones(Float64, 1), true)),
+    )
+    inferred = NamedTuple{K}(map(x -> x[], values(variable_constraints)))
+    if any(==(-1), values(inferred))
+        failed_keys = filter(k -> inferred[k] == -1, K)
+        throw(ArgumentError("Failed to infer number of features used by $failed_keys"))
+    end
+    return inferred
+end
 
 """
     HierarchicalExpression{T,F,N,E,TS,D} <: AbstractStructuredExpression{T,F,N,E,D}
@@ -164,7 +203,7 @@ end
     ExpressionInterface{all_ei_methods_except(())}, HierarchicalExpression, [Arguments()]
 )
 
-function combine(ex::HierarchicalExpression, args...)
+@unstable function combine(ex::HierarchicalExpression, args...)
     return combine(get_metadata(ex).structure, args...)
 end
 function get_function_keys(ex::HierarchicalExpression)
@@ -232,8 +271,10 @@ function DE.string_tree(
         map(ex -> DE.string_tree(ex, operators; kws...), values(raw_contents))
     )
     colored_strings = NamedTuple{function_keys}(map(_color_string, inner_strings, colors))
-    return join(
-        (annotatedstring(k, " = ", v) for (k, v) in pairs(colored_strings)), styled"\n"
+    return annotatedstring(
+        join(
+            (annotatedstring(k, " = ", v) for (k, v) in pairs(colored_strings)), styled"\n"
+        ),
     )
 end
 function DE.eval_tree_array(
