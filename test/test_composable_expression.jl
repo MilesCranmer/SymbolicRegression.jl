@@ -270,3 +270,27 @@ end
     )
     @test invalid_template2([1.0 2.0 3.0]') === nothing
 end
+@testitem "Test invalid structure" tags = [:part3] begin
+    using SymbolicRegression
+
+    operators = Options(; binary_operators=(+, -, *, /)).operators
+    variable_names = ["x1", "x2", "x3"]
+
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+    x2 = ComposableExpression(Node{Float64}(; feature=2); operators, variable_names)
+    x3 = ComposableExpression(Node{Float64}(; feature=3); operators, variable_names)
+
+    @test_throws ArgumentError TemplateStructure{(:f,)}(
+        ((; f), (x1, x2)) -> f(x1) + f(x1, x2)
+    )
+    @test_throws "Inconsistent number of arguments passed to f" TemplateStructure{(:f,)}(
+        ((; f), (x1, x2)) -> f(x1) + f(x1, x2)
+    )
+
+    @test_throws ArgumentError TemplateStructure{(:f, :g)}(((; f, g), (x1, x2)) -> f(x1))
+    @test_throws "Failed to infer number of features used by (:g,)" TemplateStructure{(
+        :f, :g
+    )}(
+        ((; f, g), (x1, x2)) -> f(x1)
+    )
+end
