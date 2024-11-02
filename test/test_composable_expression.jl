@@ -138,3 +138,24 @@ end
     @test (x + 2).valid
     @test sin(x).valid
 end
+@testitem "Test validity propagation with NaN" tags = [:part2] begin
+    using SymbolicRegression: ComposableExpression, Node, ValidVector
+    using DynamicExpressions: OperatorEnum
+
+    operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    variable_names = (i -> "x$i").(1:3)
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+    x2 = ComposableExpression(Node{Float64}(; feature=2); operators, variable_names)
+    x3 = ComposableExpression(Node{Float64}(; feature=3); operators, variable_names)
+
+    ex = 1.0 + x2 / x1
+
+    @test ex([1.0], [2.0]) ≈ [3.0]
+
+    @test ex([1.0, 1.0], [2.0, 2.0]) |> Base.Fix1(count, isnan) == 0
+    @test ex([1.0, 0.0], [2.0, 2.0]) |> Base.Fix1(count, isnan) == 2
+
+    x1_val = ValidVector([1.0, 2.0], false)
+    x2_val = ValidVector([1.0, 2.0], false)
+    @test ex(x1_val, x2_val).valid == false
+end
