@@ -285,7 +285,7 @@ _color_string(s::AbstractString, c::Symbol) = styled"{$c:$s}"
 function DE.string_tree(
     tree::HierarchicalExpression,
     operators::Union{AbstractOperatorEnum,Nothing}=nothing;
-    pretty::Bool,
+    pretty::Bool=false,
     variable_names=nothing,
     kws...,
 )
