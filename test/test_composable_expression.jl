@@ -207,3 +207,66 @@ end
     X = -rand(2, 32)
     @test expr(X) === nothing
 end
+
+@testitem "Test constraints checking in TemplateExpression" tags = [:part2] begin
+    using SymbolicRegression
+    using SymbolicRegression: CheckConstraintsModule as CC
+
+    # Create a template expression with nested exponentials
+    options = Options(;
+        binary_operators=(+, -, *, /),
+        unary_operators=(exp,),
+        nested_constraints=[exp => [exp => 1]], # Only allow one nested exp
+    )
+    operators = options.operators
+    variable_names = ["x1", "x2"]
+
+    # Create a valid inner expression
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+    valid_expr = exp(x1)  # One exp is ok
+
+    # Create an invalid inner expression with too many nested exp
+    invalid_expr = exp(exp(exp(x1)))
+    # Three nested exp's violates constraint
+
+    @test CC.check_constraints(valid_expr, options, 20)
+    @test !CC.check_constraints(invalid_expr, options, 20)
+end
+
+@testitem "Test feature constraints in TemplateExpression" tags = [:part1] begin
+    using SymbolicRegression
+    using DynamicExpressions: Node
+
+    operators = Options(; binary_operators=(+, -, *, /)).operators
+    variable_names = ["x1", "x2", "x3"]
+
+    # Create a structure where f only gets access to x1, x2
+    # and g only gets access to x3
+    structure = TemplateStructure{(:f, :g)}(((; f, g), (x1, x2, x3)) -> f(x1, x2) + g(x3))
+
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+    x2 = ComposableExpression(Node{Float64}(; feature=2); operators, variable_names)
+    x3 = ComposableExpression(Node{Float64}(; feature=3); operators, variable_names)
+
+    # Test valid case - each function only uses allowed features
+    valid_f = x1 + x2
+    valid_g = x1
+    valid_template = TemplateExpression(
+        (; f=valid_f, g=valid_g); structure, operators, variable_names
+    )
+    @test valid_template([1.0 2.0 3.0]') ≈ [6.0]  # (1 + 2) + 3
+
+    # Test invalid case - f tries to use x3 which it shouldn't have access to
+    invalid_f = x1 + x3
+    invalid_template = TemplateExpression(
+        (; f=invalid_f, g=valid_g); structure, operators, variable_names
+    )
+    @test invalid_template([1.0 2.0 3.0]') === nothing
+
+    # Test invalid case - g tries to use x2 which it shouldn't have access to
+    invalid_g = x2
+    invalid_template2 = TemplateExpression(
+        (; f=valid_f, g=invalid_g); structure, operators, variable_names
+    )
+    @test invalid_template2([1.0 2.0 3.0]') === nothing
+end
