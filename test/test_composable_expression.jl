@@ -75,7 +75,7 @@ end
     expr = TemplateExpression((; f, g); structure, operators, variable_names)
 
     # Default printing strategy:
-    @test String(string_tree(expr)) == "f = x1 * x2\ng = x1"
+    @test String(string_tree(expr)) == "f = #1 * #2; g = #1"
 
     x1_val = randn(5)
     x2_val = randn(5)

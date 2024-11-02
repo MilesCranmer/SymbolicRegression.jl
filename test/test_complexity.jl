@@ -38,6 +38,7 @@ end
     options = make_options(;
         complexity_of_operators=[sin => 3, (+) => 2], complexity_of_variables=2
     )
+    tree = sin((x1 + x2 + x3)^2.3)
     @test compute_complexity(tree, options) == 12 + 3 * 1
     options = make_options(;
         complexity_of_operators=[sin => 3, (+) => 2],
