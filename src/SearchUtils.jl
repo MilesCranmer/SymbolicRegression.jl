@@ -470,7 +470,7 @@ function print_search_state(
         100.0 * cycles_elapsed / total_cycles / nout
     )
 
-    print("="^twidth * "\n")
+    print("═"^twidth * "\n")
     for (j, (hall_of_fame, dataset)) in enumerate(zip(hall_of_fames, datasets))
         if nout > 1
             @printf("Best equations for output %d\n", j)
@@ -479,7 +479,7 @@ function print_search_state(
             hall_of_fame, dataset, options; width=width
         )
         print(equation_strings * "\n")
-        print("="^twidth * "\n")
+        print("═"^twidth * "\n")
     end
     return print("Press 'q' and then <enter> to stop execution early.\n")
 end
