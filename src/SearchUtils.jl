@@ -13,7 +13,7 @@ using Compat: Fix
 
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
-using ..CoreModule: Dataset, AbstractOptions, Options, MAX_DEGREE, RecordType
+using ..CoreModule: Dataset, AbstractOptions, Options, MAX_DEGREE, RecordType, max_features
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
@@ -269,7 +269,7 @@ function init_dummy_pops(
         first(datasets);
         population_size=1,
         options=options,
-        nfeatures=first(datasets).nfeatures,
+        nfeatures=max_features(first(datasets), options),
     )
     # ^ Due to occasional inference issue, we manually specify the return type
     return [
@@ -281,7 +281,7 @@ function init_dummy_pops(
                     datasets[j];
                     population_size=1,
                     options=options,
-                    nfeatures=datasets[j].nfeatures,
+                    nfeatures=max_features(datasets[j], options),
                 )
             end for i in 1:npops
         ] for j in 1:length(datasets)

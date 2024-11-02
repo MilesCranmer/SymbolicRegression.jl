@@ -26,7 +26,7 @@ using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
 
 using ..CoreModule:
-    AbstractOptions, Dataset, CoreModule as CM, AbstractMutationWeights, has_units
+    AbstractOptions, Options, Dataset, CoreModule as CM, AbstractMutationWeights, has_units
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..MutationFunctionsModule: MutationFunctionsModule as MF
@@ -375,6 +375,13 @@ function CM.operator_specialization(
     ::Type{O}, ::Type{<:HierarchicalExpression}
 ) where {O<:OperatorEnum}
     return O
+end
+
+function CM.max_features(
+    dataset::Dataset, options::Options{<:Any,<:Any,<:Any,<:HierarchicalExpression}
+)
+    num_features = options.expression_options.structure.num_features
+    return max(values(num_features)...)
 end
 
 """

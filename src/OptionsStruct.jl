@@ -6,6 +6,8 @@ using DynamicExpressions:
     AbstractOperatorEnum, AbstractExpressionNode, AbstractExpression, OperatorEnum
 using LossFunctions: SupervisedLoss
 
+using ..DatasetModule: Dataset
+import ..DatasetModule: max_features
 import ..MutationWeightsModule: AbstractMutationWeights
 
 """

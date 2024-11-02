@@ -12,7 +12,7 @@ include("Options.jl")
 
 using .ProgramConstantsModule:
     MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, DATA_TYPE, LOSS_TYPE
-using .DatasetModule: Dataset, is_weighted, has_units
+using .DatasetModule: Dataset, is_weighted, has_units, max_features
 using .MutationWeightsModule: AbstractMutationWeights, MutationWeights, sample_mutation
 using .OptionsStructModule:
     AbstractOptions,

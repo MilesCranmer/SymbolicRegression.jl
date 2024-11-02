@@ -9,7 +9,12 @@ using DynamicExpressions:
     simplify_tree!,
     combine_operators
 using ..CoreModule:
-    AbstractOptions, AbstractMutationWeights, Dataset, RecordType, sample_mutation
+    AbstractOptions,
+    AbstractMutationWeights,
+    Dataset,
+    RecordType,
+    sample_mutation,
+    max_features
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: score_func, score_func_batched
 using ..CheckConstraintsModule: check_constraints
@@ -173,7 +178,7 @@ function next_generation(
         member.score, member.loss
     end
 
-    nfeatures = dataset.nfeatures
+    nfeatures = max_features(dataset, options)
 
     weights = copy(options.mutation_weights)
 

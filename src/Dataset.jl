@@ -235,4 +235,8 @@ _fill!(x::NamedTuple, val) = foreach(v -> _fill!(v, val), values(x))
 _fill!(::Nothing, val) = nothing
 _fill!(x, val) = x
 
+function max_features(dataset::Dataset, _)
+    return dataset.nfeatures
+end
+
 end

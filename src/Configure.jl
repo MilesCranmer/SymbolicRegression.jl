@@ -299,7 +299,7 @@ function test_entire_pipeline(
                     population_size=20,
                     nlength=3,
                     options=options,
-                    nfeatures=dataset.nfeatures,
+                    nfeatures=max_features(dataset, options),
                 )
                 tmp_pop = s_r_cycle(
                     dataset,
