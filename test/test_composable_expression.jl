@@ -1,3 +1,6 @@
+@testitem "Integration Test with fit! and Performance Check" tags = [:part3] begin
+    include("../examples/template_expression.jl")
+end
 @testitem "Test ComposableExpression" tags = [:part2] begin
     using SymbolicRegression: ComposableExpression, Node
     using DynamicExpressions: OperatorEnum
@@ -30,9 +33,9 @@ end
     @test Interfaces.test(ExpressionInterface, ComposableExpression, [f, g])
 end
 
-@testitem "Test interface for HierarchicalExpression" tags = [:part2] begin
+@testitem "Test interface for TemplateExpression" tags = [:part2] begin
     using SymbolicRegression
-    using SymbolicRegression: HierarchicalExpression
+    using SymbolicRegression: TemplateExpression
     using DynamicExpressions.InterfacesModule: Interfaces, ExpressionInterface
     using DynamicExpressions: OperatorEnum
 
@@ -41,23 +44,23 @@ end
     x1 = ComposableExpression(Node(Float64; feature=1); operators, variable_names)
     x2 = ComposableExpression(Node(Float64; feature=2); operators, variable_names)
 
-    structure = HierarchicalStructure{(:f, :g)}(
+    structure = TemplateStructure{(:f, :g)}(
         ((; f, g), (x1, x2)) -> f(f(f(x1))) - f(g(x2, x1))
     )
     @test structure.num_features == (; f=1, g=2)
 
-    expr = HierarchicalExpression((; f=x1, g=x2 * x2); structure, operators, variable_names)
+    expr = TemplateExpression((; f=x1, g=x2 * x2); structure, operators, variable_names)
 
     @test String(string_tree(expr)) == "f = #1; g = #2 * #2"
     @test String(string_tree(expr; pretty=true)) == "f = #1\ng = #2 * #2"
     @test string_tree(get_tree(expr), operators) == "x1 - (x1 * x1)"
-    @test Interfaces.test(ExpressionInterface, HierarchicalExpression, [expr])
+    @test Interfaces.test(ExpressionInterface, TemplateExpression, [expr])
 end
 
-@testitem "Printing and evaluation of HierarchicalExpression" begin
+@testitem "Printing and evaluation of TemplateExpression" begin
     using SymbolicRegression
 
-    structure = HierarchicalStructure{(:f, :g)}(
+    structure = TemplateStructure{(:f, :g)}(
         ((; f, g), (x1, x2, x3)) -> sin(f(x1, x2)) + g(x3)^2
     )
     operators = Options().operators
@@ -69,7 +72,7 @@ end
     ]
     f = x1 * x2
     g = x1
-    expr = HierarchicalExpression((; f, g); structure, operators, variable_names)
+    expr = TemplateExpression((; f, g); structure, operators, variable_names)
 
     # Default printing strategy:
     @test String(string_tree(expr)) == "f = x1 * x2\ng = x1"

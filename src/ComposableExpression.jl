@@ -124,15 +124,15 @@ operands are valid, the result is valid; if any operand is invalid, the result i
 marked invalid.
 
 You will need to work with this to do highly custom operations with
-`ComposableExpression` and `HierarchicalExpression`.
+`ComposableExpression` and `TemplateExpression`.
 
 # Fields:
 
-- `value::A`: The vector data.
+- `x::A`: The vector data.
 - `valid::Bool`: Indicates if the data is valid.
 """
 struct ValidVector{A<:AbstractVector}
-    value::A
+    x::A
     valid::Bool
 end
 ValidVector(x::Tuple{Vararg{Any,2}}) = ValidVector(x...)
@@ -147,19 +147,19 @@ function (ex::AbstractComposableExpression)(x::AbstractVector, _xs::AbstractVect
     result = ex(xs...)
     # Unwrap it
     if result.valid
-        return result.value
+        return result.x
     else
-        nan = convert(eltype(result.value), NaN)
-        return result.value .* nan
+        nan = convert(eltype(result.x), NaN)
+        return result.x .* nan
     end
 end
 function (ex::AbstractComposableExpression)(x::ValidVector, _xs::ValidVector...)
     xs = (x, _xs...)
     valid = all(xi -> xi.valid, xs)
     if !valid
-        return ValidVector(first(xs).value, false)
+        return ValidVector(first(xs).x, false)
     else
-        X = Matrix(stack(map(xi -> xi.value, xs))')
+        X = Matrix(stack(map(xi -> xi.x, xs))')
         return ValidVector(eval_tree_array(ex, X))
     end
 end
@@ -194,7 +194,7 @@ function apply_operator(op::F, x...) where {F<:Function}
 end
 _is_valid(x::ValidVector) = x.valid
 _is_valid(x) = true
-_get_value(x::ValidVector) = x.value
+_get_value(x::ValidVector) = x.x
 _get_value(x) = x
 
 #! format: off

@@ -14,17 +14,13 @@ export Population,
     ParametricExpression,
     TemplateExpression,
     TemplateStructure,
-    HierarchicalExpression,
-    HierarchicalStructure,
+    ValidVector,
     ComposableExpression,
-    NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
     EvalOptions,
     SRRegressor,
     MultitargetSRRegressor,
-    LOSS_TYPE,
-    DATA_TYPE,
 
     #Functions:
     equation_search,
@@ -44,7 +40,6 @@ export Population,
     set_node!,
     copy_node,
     node_to_symbolic,
-    node_type,
     symbolic_to_node,
     simplify_tree!,
     tree_mapreduce,
@@ -162,16 +157,17 @@ using DynamicExpressions: with_type_parameters
     LogCoshLoss
 using Compat: @compat, Fix
 
-@compat public AbstractOptions,
-AbstractRuntimeOptions,
-RuntimeOptions,
-AbstractMutationWeights,
-mutate!,
-condition_mutation_weights!,
-sample_mutation,
-MutationResult,
-AbstractSearchState,
-SearchState
+#! format: off
+@compat(
+    public,
+    (
+        AbstractOptions, AbstractRuntimeOptions, RuntimeOptions,
+        AbstractMutationWeights, mutate!, condition_mutation_weights!,
+        sample_mutation, MutationResult, AbstractSearchState, SearchState,
+        NodeSampler, LOSS_TYPE, DATA_TYPE, node_type,
+    )
+)
+#! format: on
 # ^ We can add new functions here based on requests from users.
 # However, I don't want to add many functions without knowing what
 # users will actually want to overload.
@@ -217,7 +213,6 @@ using DispatchDoctor: @stable
     include("ExpressionBuilder.jl")
     include("ComposableExpression.jl")
     include("TemplateExpression.jl")
-    include("HierarchicalExpression.jl")
     include("ParametricExpression.jl")
 end
 
@@ -315,8 +310,7 @@ using .SearchUtilsModule:
     get_cur_maxsize,
     update_hall_of_fame!
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure
-using .HierarchicalExpressionModule:
-    HierarchicalExpression, HierarchicalStructure, ValidVector
+using .TemplateExpressionModule: TemplateExpression, TemplateStructure, ValidVector
 using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 

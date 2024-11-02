@@ -29,7 +29,9 @@ the components of a particle's motion under magnetic and drag forces. We'll see 
 
 Let's get started!
 =#
-using SymbolicRegression, Random
+using SymbolicRegression
+using SymbolicRegression: ValidVector
+using Random
 using MLJBase: machine, fit!, predict, report
 
 #=
@@ -168,61 +170,63 @@ variable_names = ["t", "v_x", "v_y", "v_z", "T"]
 Template expressions require you to define a _structure_ function,
 which describes how to combine the sub-expressions into a single
 expression, numerically evaluate them, and print them.
+These are evaluated using `ComposableExpression` for the individual
+subexpressions (which allow them to be composed into new expressions),
+and `ValidVector` for carrying through evaluation results.
 
-First, let's just make a function that prints the expression:
+Let's define our structure function. Note that this takes two arguments,
+one being a named tuple of our expressions (`::ComposableExpression`), and the other being a tuple
+of the input variables (`::ValidVector`).
 =#
-function combine_strings(e)
-    ## e is a named tuple of strings representing each formula
-    return " ╭ 𝐁 = [ " * e.B_x * " , " * e.B_y * " , " * e.B_z * " ]\n ╰ 𝐅 = (" * e.F_d_scale * ") * 𝐯"
-    ## (Note that string interpolation will erase the colors, so use `*` instead)
-end
+function compute_force((; B_x, B_y, B_z, F_d_scale), (t, v_x, v_y, v_z, T))
+    ## First, we evaluate each subexpression on the variables we wish
+    ## to have each depend on:
+    _B_x = B_x(t)
+    _B_y = B_y(t)
+    _B_z = B_z(t)
+    _F_d_scale = F_d_scale(T)
+    ## Note that we can also evaluate an expression multiple times,
+    ## including in a hierarchy!
+    
+    ## Now, let's do the same computation we did above to
+    ## get the total force vectors. Note that the evaluation
+    ## output is wrapped in `ValidVector`, so we need
+    ## to extract the `.x` to get raw vectors:
+    B = [(bx, by, bz) for (bx, by, bz) in zip(_B_x.x, _B_y.x, _B_z.x)]
+    v = [(vx, vy, vz) for (vx, vy, vz) in zip(v_x.x, v_y.x, v_z.x)]
 
-#=
-So, this will just print the separate B and F_d expressions we've learned.
 
-Then, let's define an expression that takes the numerical values
-evaluated in the TemplateExpression, and combines them into the resultant
-force vector. Inside this function, we can do whatever we want.
-=#
-function combine_vectors(e, X)
-    ## This time, e is a named tuple of *vectors*, representing the batched
-    ## evaluation of each formula.
+    ## Now, let's compute the drag force using our model:
+    F_d = [_F_d_scale.x .* vi for (vi, _F_d_scale) in zip(v, _F_d_scale)]
 
-    ## First, extract the 3D velocity vectors from the input matrix:
-    v = [(X[2, i], X[3, i], X[4, i]) for i in eachindex(axes(X, 2))]
-
-    ## Use this to compute the full drag force:
-    F_d = [F_d_scale_i .* vi for (F_d_scale_i, vi) in zip(e.F_d_scale, v)]
-
-    ## Collect the magnetic field components that we've learned into the vector:
-    B = [(bx, by, bz) for (bx, by, bz) in zip(e.B_x, e.B_y, e.B_z)]
-
-    ## Using this, we compute the magnetic force with a cross product:
+    ## Now, the magnetic force:
     F_mag = [cross(vi, Bi) for (vi, Bi) in zip(v, B)]
 
     ## Finally, we combine the drag and magnetic forces into the total force:
-    return [Force((fd .+ fm)...) for (fd, fm) in zip(F_d, F_mag)]
+    F = map((fd, fm) -> Force((fd .+ fm)...), F_d, F_mag)
+
+    ## The output of this function needs to be another `ValidVector`,
+    ## which carries through the validity of the evaluation. We compute
+    ## this below.
+    ValidVector(F, _B_x.valid && _B_y.valid && _B_z.valid && _F_d_scale.valid)
+    ## (Note that if you were doing operations that could not handle NaNs,
+    ## you may need to return early - just be sure to also return the `ValidVector`!)
 end
 
 #=
-For the functions we wish to learn, we can constraint what variables
-each of them depends on, explicitly. Let's say B only depends on time,
-and the drag force scale only depends on temperature (we explicitly
-multiply the velocity in).
+Note above that we have constrained what variables each subexpression depends on.
+
+We have constrained the magnetic field to only depend on time,
+and the drag force scale to only depend on temperature.
+The other variables we simply pass through and use in the evaluation.
+
+Now, we can create our template expression, with the
+subexpression symbols we wish to learn:
 =#
-variable_constraints = (; B_x=[1], B_y=[1], B_z=[1], F_d_scale=[5])
+structure = TemplateStructure{(:B_x, :B_y, :B_z, :F_d_scale)}(compute_force)
 
 #=
-Now, we can create our template expression:
-=#
-structure = TemplateStructure{(:B_x, :B_y, :B_z, :F_d_scale)}(;
-    combine_strings=combine_strings,
-    combine_vectors=combine_vectors,
-    variable_constraints=variable_constraints,
-)
-
-#=
-Let's look at an example of how this would be used
+First, let's look at an example of how this would be used
 in a TemplateExpression, for some guess at the form of
 the solution:
 =#
@@ -243,7 +247,7 @@ ex = TemplateExpression(
 So we can see that it prints the expression as we've defined it.
 
 Now, we can create a regressor that builds template expressions
-which follow this structure:
+which follow this structure!
 =#
 model = SRRegressor(;
     binary_operators=(+, -, *, /),
@@ -252,7 +256,7 @@ model = SRRegressor(;
     maxsize=35,
     expression_type=TemplateExpression,
     expression_options=(; structure=structure),
-    ## The elementwise needs to operate directly on each row of `y`:
+    ## Note that the elementwise loss needs to operate directly on each row of `y`:
     elementwise_loss=(F1, F2) -> (F1.x - F2.x)^2 + (F1.y - F2.y)^2 + (F1.z - F2.z)^2,
     batching=true,
     batch_size=30,

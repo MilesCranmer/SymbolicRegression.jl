@@ -3,7 +3,7 @@ module TemplateExpressionModule
 using Random: AbstractRNG
 using Compat: Fix
 using DispatchDoctor: @unstable
-using StyledStrings: @styled_str
+using StyledStrings: @styled_str, annotatedstring
 using DynamicExpressions:
     DynamicExpressions as DE,
     AbstractStructuredExpression,
@@ -26,7 +26,7 @@ using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
 
 using ..CoreModule:
-    AbstractOptions, Dataset, CoreModule as CM, AbstractMutationWeights, has_units
+    AbstractOptions, Options, Dataset, CoreModule as CM, AbstractMutationWeights, has_units
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..MutationFunctionsModule: MutationFunctionsModule as MF
@@ -37,130 +37,75 @@ using ..ComplexityModule: ComplexityModule
 using ..LossFunctionsModule: LossFunctionsModule as LF
 using ..MutateModule: MutateModule as MM
 using ..PopMemberModule: PopMember
+using ..ComposableExpressionModule: ComposableExpression, ValidVector
 
 """
     TemplateStructure{K,S,N,E,C} <: Function
 
 A struct that defines a prescribed structure for a `TemplateExpression`,
-including functions that define the result of combining sub-expressions in different contexts.
+including functions that define the result in different contexts.
 
 The `K` parameter is used to specify the symbols representing the inner expressions.
 If not declared using the constructor `TemplateStructure{K}(...)`, the keys of the
 `variable_constraints` `NamedTuple` will be used to infer this.
 
 # Fields
-- `combine`: Optional function taking a `NamedTuple` of function keys => expressions,
-    returning a single expression. Fallback method used by `get_tree`
-    on a `TemplateExpression` to generate a single `Expression`.
-- `combine_vectors`: Optional function taking a `NamedTuple` of function keys => vectors,
-    returning a single vector. Used for evaluating the expression tree.
-    You may optionally define a method with a second argument `X` for if you wish
-    to include the data matrix `X` (of shape `[num_features, num_rows]`) in the
-    computation.
-- `combine_strings`: Optional function taking a `NamedTuple` of function keys => strings,
-    returning a single string. Used for printing the expression tree.
-- `variable_constraints`: Optional `NamedTuple` that defines which variables each sub-expression is allowed to access.
-    For example, requesting `f(x1, x2)` and `g(x3)` would be equivalent to `(; f=[1, 2], g=[3])`.
+- `combine`: Required function taking a `NamedTuple` of callable expressions (with keys `K`),
+    and a tuple representing the data. For example, `((; f, g), (x1, x2, x3)) -> f(x1, x2) + g(x3)`
+    would be a valid `combine` function. You may also re-use the callable expressions and
+    use different inputs, such as `((; f, g), (x1, x2)) -> f(x1 + g(x2)) - g(x1)` is
+    another valid choice.
+- `num_features`: Optional `NamedTuple` of function keys => integers representing the number of
+    features used by each expression. If not provided, it will be inferred using the `combine`
+    function. For example, if `f` takes two arguments, and `g` takes one, then
+    `num_features = (; f=2, g=1)`.
 """
-struct TemplateStructure{
-    K,
-    E<:Union{Nothing,Function},
-    N<:Union{Nothing,Function},
-    S<:Union{Nothing,Function},
-    C<:Union{Nothing,NamedTuple{<:Any,<:Tuple{Vararg{Vector{Int}}}}},
-} <: Function
+struct TemplateStructure{K,E<:Function,NF<:NamedTuple} <: Function
     combine::E
-    combine_vectors::N
-    combine_strings::S
-    variable_constraints::C
+    num_features::NF
 end
 
-function TemplateStructure{K}(combine::E; kws...) where {K,E<:Function}
-    return TemplateStructure{K}(; combine, kws...)
-end
-function TemplateStructure{K}(; kws...) where {K}
-    return TemplateStructure(; _function_keys=Val(K), kws...)
-end
-function TemplateStructure(combine::E; kws...) where {E<:Function}
-    return TemplateStructure(; combine, kws...)
-end
-function TemplateStructure(;
-    combine::E=nothing,
-    combine_vectors::N=nothing,
-    combine_strings::S=nothing,
-    variable_constraints::C=nothing,
-    _function_keys::Val{K}=Val(nothing),
-) where {
-    K,
-    E<:Union{Nothing,Function},
-    N<:Union{Nothing,Function},
-    S<:Union{Nothing,Function},
-    C<:Union{Nothing,NamedTuple{<:Any,<:Tuple{Vararg{Vector{Int}}}}},
-}
-    Kout = if K !== nothing && variable_constraints !== nothing
-        K != keys(variable_constraints) &&
-            throw(ArgumentError("`K` must match the keys of `variable_constraints`."))
-        K
-    elseif K !== nothing
-        K
-    elseif variable_constraints !== nothing
-        keys(variable_constraints)
-    else
-        throw(
-            ArgumentError(
-                "If `variable_constraints` is not provided, " *
-                "you must initialize `TemplateStructure` with " *
-                "`TemplateStructure{K}(...)`, for tuple of symbols `K`.",
-            ),
-        )
-    end
-    return TemplateStructure{Kout,E,N,S,C}(
-        combine, combine_vectors, combine_strings, variable_constraints
-    )
-end
-# TODO: This interface is ugly. Part of this is due to AbstractStructuredExpression,
-# which was not written with this `TemplateStructure` in mind, but just with a
-# single callable function.
-
-function combine(template::TemplateStructure, nt::NamedTuple)
-    return (template.combine::Function)(nt)::AbstractExpression
-end
-function combine_vectors(
-    template::TemplateStructure, nt::NamedTuple, X::Union{AbstractMatrix,Nothing}=nothing
-)
-    combiner = template.combine_vectors::Function
-    if X !== nothing && hasmethod(combiner, typeof((nt, X)))
-        # TODO: Refactor this
-        return combiner(nt, X)::AbstractVector
-    else
-        return combiner(nt)::AbstractVector
-    end
-end
-function combine_strings(template::TemplateStructure, nt::NamedTuple)
-    return (template.combine_strings::Function)(nt)::AbstractString
+function TemplateStructure{K}(combine::E, num_features=nothing) where {K,E<:Function}
+    num_features = @something(num_features, infer_variable_constraints(Val(K), combine))
+    return TemplateStructure{K,E,typeof(num_features)}(combine, num_features)
 end
 
-function (template::TemplateStructure)(
-    nt::NamedTuple{<:Any,<:Tuple{AbstractExpression,Vararg{AbstractExpression}}}
-)
-    return combine(template, nt)
-end
-function (template::TemplateStructure)(
-    nt::NamedTuple{<:Any,<:Tuple{AbstractVector,Vararg{AbstractVector}}},
-    X::Union{AbstractMatrix,Nothing}=nothing,
-)
-    return combine_vectors(template, nt, X)
-end
-function (template::TemplateStructure)(
-    nt::NamedTuple{<:Any,<:Tuple{AbstractString,Vararg{AbstractString}}}
-)
-    return combine_strings(template, nt)
+@unstable function combine(template::TemplateStructure, args...)
+    return template.combine(args...)
 end
 
-can_combine(template::TemplateStructure) = template.combine !== nothing
-can_combine_vectors(template::TemplateStructure) = template.combine_vectors !== nothing
-can_combine_strings(template::TemplateStructure) = template.combine_strings !== nothing
 get_function_keys(::TemplateStructure{K}) where {K} = K
+
+function _record_composable_expression!(variable_constraints, ::Val{k}, args...) where {k}
+    vc = variable_constraints[k][]
+    if vc == -1
+        variable_constraints[k][] = length(args)
+    elseif vc != length(args)
+        throw(ArgumentError("Inconsistent number of arguments passed to $k"))
+    end
+    return first(args)
+end
+
+"""Infers number of features used by each subexpression, by passing in test data."""
+function infer_variable_constraints(::Val{K}, combiner::F) where {K,F}
+    variable_constraints = NamedTuple{K}(map(_ -> Ref(-1), K))
+    # Now, we need to evaluate the `combine` function to see how many
+    # features are used for each function call. If unset, we record it.
+    # If set, we validate.
+    inner = Fix{1}(_record_composable_expression!, variable_constraints)
+    _recorders_of_composable_expressions = NamedTuple{K}(map(k -> Fix{1}(inner, Val(k)), K))
+    # We use an evaluation to get the variable constraints
+    combiner(
+        _recorders_of_composable_expressions,
+        Base.Iterators.repeated(ValidVector(ones(Float64, 1), true)),
+    )
+    inferred = NamedTuple{K}(map(x -> x[], values(variable_constraints)))
+    if any(==(-1), values(inferred))
+        failed_keys = filter(k -> inferred[k] == -1, K)
+        throw(ArgumentError("Failed to infer number of features used by $failed_keys"))
+    end
+    return inferred
+end
 
 """
     TemplateExpression{T,F,N,E,TS,D} <: AbstractStructuredExpression{T,F,N,E,D}
@@ -199,20 +144,8 @@ x3 = Expression(Node{Float64}(; feature=3); operators, variable_names)
 example_expr = (; f=x1, g=x3)
 st_expr = TemplateExpression(
     example_expr;
-    structure=TemplateStructure{(:f, :g)}(nt -> sin(nt.f) + nt.g * nt.g),
-    operators,
-    variable_names,
-)
-```
-
-We can also define constraints on which variables each sub-expression is allowed to access:
-
-```julia
-variable_constraints = (; f=[1, 2], g=[3])
-st_expr = TemplateExpression(
-    example_expr;
-    structure=TemplateStructure(
-        nt -> sin(nt.f) + nt.g * nt.g; variable_constraints
+    structure=TemplateStructure{(:f, :g)}(
+        ((; f, g), (x1, x2, x3)) -> sin(f(x1, x2)) + g(x3)^2
     ),
     operators,
     variable_names,
@@ -228,9 +161,11 @@ struct TemplateExpression{
     T,
     F<:TemplateStructure,
     N<:AbstractExpressionNode{T},
-    E<:Expression{T,N},  # TODO: Generalize this
+    E<:ComposableExpression{T,N},
     TS<:NamedTuple{<:Any,<:NTuple{<:Any,E}},
-    D<:@NamedTuple{structure::F, operators::O, variable_names::V} where {O,V},
+    D<:@NamedTuple{
+        structure::F, operators::O, variable_names::V
+    } where {O<:AbstractOperatorEnum,V},
 } <: AbstractStructuredExpression{T,F,N,E,D}
     trees::TS
     metadata::Metadata{D}
@@ -268,28 +203,28 @@ end
     ExpressionInterface{all_ei_methods_except(())}, TemplateExpression, [Arguments()]
 )
 
-function combine(ex::TemplateExpression, nt::NamedTuple)
-    return combine(get_metadata(ex).structure, nt)
-end
-function combine_vectors(
-    ex::TemplateExpression, nt::NamedTuple, X::Union{AbstractMatrix,Nothing}=nothing
-)
-    return combine_vectors(get_metadata(ex).structure, nt, X)
-end
-function combine_strings(ex::TemplateExpression, nt::NamedTuple)
-    return combine_strings(get_metadata(ex).structure, nt)
+@unstable function combine(ex::TemplateExpression, args...)
+    return combine(get_metadata(ex).structure, args...)
 end
 
-function can_combine(ex::TemplateExpression)
-    return can_combine(get_metadata(ex).structure)
+function DE.get_tree(ex::TemplateExpression{<:Any,<:Any,<:Any,E}) where {E}
+    raw_contents = get_contents(ex)
+    total_num_features = max(values(get_metadata(ex).structure.num_features)...)
+    example_inner_ex = first(values(raw_contents))
+    example_tree = get_contents(example_inner_ex)::AbstractExpressionNode
+
+    variable_trees = [
+        DE.constructorof(typeof(example_tree))(; feature=i) for i in 1:total_num_features
+    ]
+    variable_expressions = [
+        with_contents(inner_ex, variable_tree) for
+        (inner_ex, variable_tree) in zip(values(raw_contents), variable_trees)
+    ]
+
+    return DE.get_tree(
+        combine(get_metadata(ex).structure, raw_contents, variable_expressions)
+    )
 end
-function can_combine_vectors(ex::TemplateExpression)
-    return can_combine_vectors(get_metadata(ex).structure)
-end
-function can_combine_strings(ex::TemplateExpression)
-    return can_combine_strings(get_metadata(ex).structure)
-end
-get_function_keys(ex::TemplateExpression) = get_function_keys(get_metadata(ex).structure)
 
 function EB.create_expression(
     t::AbstractExpressionNode{T},
@@ -305,7 +240,8 @@ function EB.create_expression(
     operators = options.operators
     variable_names = embed ? dataset.variable_names : nothing
     inner_expressions = ntuple(
-        _ -> Expression(copy(t); operators, variable_names), length(function_keys)
+        _ -> ComposableExpression(copy(t); operators, variable_names),
+        Val(length(function_keys)),
     )
     # TODO: Generalize to other inner expression types
     return DE.constructorof(E)(
@@ -338,25 +274,53 @@ function ComplexityModule.compute_complexity(
     )
 end
 
+# Rather than using iterator with repeat, just make a tuple:
+function _colors(::Val{n}) where {n}
+    return ntuple(
+        (i -> (:magenta, :green, :red, :blue, :yellow, :cyan)[mod1(i, n)]), Val(n)
+    )
+end
+
 _color_string(s::AbstractString, c::Symbol) = styled"{$c:$s}"
 function DE.string_tree(
-    tree::TemplateExpression, operators::Union{AbstractOperatorEnum,Nothing}=nothing; kws...
+    tree::TemplateExpression,
+    operators::Union{AbstractOperatorEnum,Nothing}=nothing;
+    pretty::Bool=false,
+    variable_names=nothing,
+    kws...,
 )
     raw_contents = get_contents(tree)
-    if can_combine_strings(tree)
-        function_keys = keys(raw_contents)
-        colors = Base.Iterators.cycle((:magenta, :green, :red, :blue, :yellow, :cyan))
-        inner_strings = NamedTuple{function_keys}(
-            map(ex -> DE.string_tree(ex, operators; kws...), values(raw_contents))
-        )
-        colored_strings = NamedTuple{function_keys}(
-            map(_color_string, inner_strings, colors)
-        )
-        return combine_strings(tree, colored_strings)
-    else
-        @assert can_combine(tree)
-        return DE.string_tree(combine(tree, raw_contents), operators; kws...)
-    end
+    function_keys = keys(raw_contents)
+    num_features = get_metadata(tree).structure.num_features
+    total_num_features = max(values(num_features)...)
+    colors = _colors(Val(length(function_keys)))
+    variable_names = ["#" * string(i) for i in 1:total_num_features]
+    inner_strings = NamedTuple{function_keys}(
+        map(
+            ex -> DE.string_tree(ex, operators; pretty, variable_names, kws...),
+            values(raw_contents),
+        ),
+    )
+    strings = NamedTuple{function_keys}(
+        map(
+            (k, s, c) -> let
+                prefix = if !pretty || length(function_keys) == 1
+                    ""
+                elseif k == first(function_keys)
+                    "╭ "
+                elseif k == last(function_keys)
+                    "╰ "
+                else
+                    "├ "
+                end
+                annotatedstring(prefix * string(k) * " = ", _color_string(s, c))
+            end,
+            function_keys,
+            values(inner_strings),
+            colors,
+        ),
+    )
+    return annotatedstring(join(strings, pretty ? styled"\n" : "; "))
 end
 function DE.eval_tree_array(
     tree::TemplateExpression{T},
@@ -365,32 +329,21 @@ function DE.eval_tree_array(
     kws...,
 ) where {T}
     raw_contents = get_contents(tree)
-    if can_combine_vectors(tree)
-        # Raw numerical results of each inner expression:
-        outs = map(
-            ex -> DE.eval_tree_array(ex, cX, operators; kws...), values(raw_contents)
-        )
-        # Combine them using the structure function:
-        results = NamedTuple{keys(raw_contents)}(map(first, outs))
-        return combine_vectors(tree, results, cX), all(last, outs)
-    else
-        @assert can_combine(tree)
-        return DE.eval_tree_array(combine(tree, raw_contents), cX, operators; kws...)
+    if has_invalid_variables(tree)
+        return (cX[1, :], false)
     end
+    result = combine(tree, raw_contents, map(x -> ValidVector(copy(x), true), eachrow(cX)))
+    return result.x, result.valid
 end
 function (ex::TemplateExpression)(
     X, operators::Union{AbstractOperatorEnum,Nothing}=nothing; kws...
 )
-    raw_contents = get_contents(ex)
-    if can_combine_vectors(ex)
-        results = NamedTuple{keys(raw_contents)}(
-            map(ex -> ex(X, operators; kws...), values(raw_contents))
-        )
-        return combine_vectors(ex, results, X)
+    result, valid = DE.eval_tree_array(ex, X, operators; kws...)
+    if valid
+        return result
     else
-        @assert can_combine(ex)
-        callable = combine(ex, raw_contents)
-        return callable(X, operators; kws...)
+        nan = convert(eltype(result), NaN)
+        return result .* nan
     end
 end
 @unstable IDE.expected_array_type(::AbstractMatrix, ::Type{<:TemplateExpression}) = Any
@@ -420,6 +373,13 @@ function CM.operator_specialization(
     ::Type{O}, ::Type{<:TemplateExpression}
 ) where {O<:OperatorEnum}
     return O
+end
+
+function CM.max_features(
+    dataset::Dataset, options::Options{<:Any,<:Any,<:Any,<:TemplateExpression}
+)
+    num_features = options.expression_options.structure.num_features
+    return max(values(num_features)...)
 end
 
 """
@@ -493,16 +453,8 @@ function CC.check_constraints(
     maxsize::Int,
     cursize::Union{Int,Nothing}=nothing,
 )::Bool
-    raw_contents = get_contents(ex)
-    variable_constraints = get_metadata(ex).structure.variable_constraints
-
     # First, we check the variable constraints at the top level:
-    has_invalid_variables = any(keys(raw_contents)) do key
-        tree = raw_contents[key]
-        allowed_variables = variable_constraints[key]
-        contains_other_features_than(tree, allowed_variables)
-    end
-    if has_invalid_variables
+    if has_invalid_variables(ex)
         return false
     end
 
@@ -511,6 +463,7 @@ function CC.check_constraints(
         return false
 
     # Then, we check other constraints for inner expressions:
+    raw_contents = get_contents(ex)
     for t in values(raw_contents)
         if !CC.check_constraints(t, options, maxsize, nothing)
             return false
@@ -519,12 +472,21 @@ function CC.check_constraints(
     return true
     # TODO: The concept of `cursize` doesn't really make sense here.
 end
-function contains_other_features_than(tree::AbstractExpression, features)
-    return contains_other_features_than(get_tree(tree), features)
+function has_invalid_variables(ex::TemplateExpression)
+    raw_contents = get_contents(ex)
+    num_features = get_metadata(ex).structure.num_features
+    any(keys(raw_contents)) do key
+        tree = raw_contents[key]
+        max_feature = num_features[key]
+        contains_features_greater_than(tree, max_feature)
+    end
 end
-function contains_other_features_than(tree::AbstractExpressionNode, features)
+function contains_features_greater_than(tree::AbstractExpression, max_feature)
+    return contains_features_greater_than(get_tree(tree), max_feature)
+end
+function contains_features_greater_than(tree::AbstractExpressionNode, max_feature)
     any(tree) do node
-        node.degree == 0 && !node.constant && node.feature ∉ features
+        node.degree == 0 && !node.constant && node.feature > max_feature
     end
 end
 
