@@ -57,7 +57,7 @@ end
     @test Interfaces.test(ExpressionInterface, TemplateExpression, [expr])
 end
 
-@testitem "Printing and evaluation of TemplateExpression" begin
+@testitem "Printing and evaluation of TemplateExpression" tags = [:part2] begin
     using SymbolicRegression
 
     structure = TemplateStructure{(:f, :g)}(
@@ -97,4 +97,44 @@ end
 
     # This is even though `g` is defined on `x1` only:
     @test g(x3_val) ≈ x3_val
+end
+
+@testitem "Test error handling" tags = [:part2] begin
+    using SymbolicRegression
+    using SymbolicRegression: ComposableExpression, Node, ValidVector
+    using DynamicExpressions: OperatorEnum
+
+    operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    variable_names = (i -> "x$i").(1:3)
+    ex = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+
+    # Test error for unsupported input type with specific message
+    @test_throws "ComposableExpression does not support input of type String" ex(
+        "invalid input"
+    )
+
+    # Test ValidVector operations with numbers
+    x = ValidVector([1.0, 2.0, 3.0], true)
+
+    # Test binary operations between ValidVector and Number
+    @test (x + 2.0).x ≈ [3.0, 4.0, 5.0]
+    @test (2.0 + x).x ≈ [3.0, 4.0, 5.0]
+    @test (x * 2.0).x ≈ [2.0, 4.0, 6.0]
+    @test (2.0 * x).x ≈ [2.0, 4.0, 6.0]
+
+    # Test unary operations on ValidVector
+    @test sin(x).x ≈ sin.([1.0, 2.0, 3.0])
+    @test cos(x).x ≈ cos.([1.0, 2.0, 3.0])
+    @test abs(x).x ≈ [1.0, 2.0, 3.0]
+    @test (-x).x ≈ [-1.0, -2.0, -3.0]
+
+    # Test propagation of invalid flag
+    invalid_x = ValidVector([1.0, 2.0, 3.0], false)
+    @test !((invalid_x + 2.0).valid)
+    @test !((2.0 + invalid_x).valid)
+    @test !(sin(invalid_x).valid)
+
+    # Test that regular numbers are considered valid
+    @test (x + 2).valid
+    @test sin(x).valid
 end

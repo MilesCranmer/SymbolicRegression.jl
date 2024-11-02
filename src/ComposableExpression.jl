@@ -189,7 +189,9 @@ function apply_operator(op::F, x...) where {F<:Function}
         vx = map(_get_value, x)
         return ValidVector(op.(vx...), true)
     else
-        return ValidVector(_get_value(first(x)), false)
+        example_vector =
+            something(map(xi -> xi isa ValidVector ? xi : nothing, x)...)::ValidVector
+        return ValidVector(_get_value(example_vector), false)
     end
 end
 _is_valid(x::ValidVector) = x.valid
