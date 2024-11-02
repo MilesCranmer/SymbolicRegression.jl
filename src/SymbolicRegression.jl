@@ -933,7 +933,7 @@ function _main_search_loop!(
                 options, total_cycles, cycles_remaining=state.cycles_remaining[j]
             )
             move_window!(state.all_running_search_statistics[j])
-            if progress_bar !== nothing
+            if !isnothing(progress_bar)
                 head_node_occupation = estimate_work_fraction(resource_monitor)
                 update_progress_bar!(
                     progress_bar,
@@ -1003,7 +1003,7 @@ function _main_search_loop!(
         end
         ################################################################
     end
-    if ropt.progress
+    if !isnothing(progress_bar)
         finish!(progress_bar)
     end
     return nothing
