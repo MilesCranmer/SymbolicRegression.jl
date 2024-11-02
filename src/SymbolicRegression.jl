@@ -231,6 +231,7 @@ using .CoreModule:
     Dataset,
     AbstractOptions,
     Options,
+    ComplexityMapping,
     AbstractMutationWeights,
     MutationWeights,
     is_weighted,

@@ -326,6 +326,10 @@ const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Op
 - `complexity_of_variables`: What complexity should be assigned to use of a variable,
     which can also be a vector indicating different per-variable complexity.
     By default, this is 1.
+- `complexity_mapping`: Alternatively, you can pass a function that takes
+    the expression as input and returns the complexity. Make sure that
+    this operates on `AbstractExpression` (and unpacks to `AbstractExpressionNode`),
+    and returns an integer.
 - `alpha`: The probability of accepting an equation mutation
     during regularized evolution is given by exp(-delta_loss/(alpha * T)),
     where T goes from 1 to 0. Thus, alpha=infinite is the same as no annealing.
@@ -474,6 +478,7 @@ $(OPTION_DESCRIPTIONS)
     @nospecialize(complexity_of_operators = nothing),
     @nospecialize(complexity_of_constants::Union{Nothing,Real} = nothing),
     @nospecialize(complexity_of_variables::Union{Nothing,Real,AbstractVector} = nothing),
+    ###           complexity_mapping
     @nospecialize(warmup_maxsize_by::Union{Real,Nothing} = nothing),
     ###           use_frequency
     ###           use_frequency_in_tournament
@@ -541,6 +546,7 @@ $(OPTION_DESCRIPTIONS)
     ## 3. The Objective:
     dimensionless_constants_only::Bool=false,
     ## 4. Working with Complexities:
+    complexity_mapping::Union{Function,ComplexityMapping,Nothing}=nothing,
     use_frequency::Bool=true,
     use_frequency_in_tournament::Bool=true,
     should_simplify::Union{Nothing,Bool}=nothing,
@@ -689,6 +695,11 @@ $(OPTION_DESCRIPTIONS)
             error("You cannot specify both `elementwise_loss` and `loss_function`.")
         end
     end
+    if complexity_mapping !== nothing
+        @assert complexity_of_operators === nothing &&
+            complexity_of_constants === nothing &&
+            complexity_of_variables === nothing
+    end
 
     #################################
     #### Supply defaults ############
@@ -761,12 +772,15 @@ $(OPTION_DESCRIPTIONS)
         una_constraints, bin_constraints, unary_operators, binary_operators
     )
 
-    complexity_mapping = ComplexityMapping(
-        complexity_of_operators,
-        complexity_of_variables,
-        complexity_of_constants,
-        binary_operators,
-        unary_operators,
+    complexity_mapping = @something(
+        complexity_mapping,
+        ComplexityMapping(
+            complexity_of_operators,
+            complexity_of_variables,
+            complexity_of_constants,
+            binary_operators,
+            unary_operators,
+        )
     )
 
     if maxdepth === nothing
