@@ -1,10 +1,14 @@
 module ComposableExpressionModule
 
+using DispatchDoctor: @unstable
 using DynamicExpressions:
     AbstractExpression,
+    Expression,
     AbstractExpressionNode,
     AbstractOperatorEnum,
     Metadata,
+    constructorof,
+    get_metadata,
     eval_tree_array,
     set_node!,
     get_contents,
@@ -12,6 +16,8 @@ using DynamicExpressions:
     DynamicExpressions as DE
 using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
+
+using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 
 abstract type AbstractComposableExpression{T,N} <: AbstractExpression{T,N} end
 
@@ -30,6 +36,8 @@ end
     d = (; metadata...)
     return ComposableExpression(tree, Metadata(d))
 end
+
+@unstable DE.constructorof(::Type{<:ComposableExpression}) = ComposableExpression
 
 DE.get_metadata(ex::AbstractComposableExpression) = ex.metadata
 DE.get_contents(ex::AbstractComposableExpression) = ex.tree
@@ -56,6 +64,24 @@ end
 
 function Base.copy(ex::AbstractComposableExpression)
     return ComposableExpression(copy(ex.tree), copy(ex.metadata))
+end
+
+function Base.convert(::Type{E}, ex::AbstractComposableExpression) where {E<:Expression}
+    return constructorof(E)(get_contents(ex), get_metadata(ex))
+end
+
+for name in (:combine_operators, :simplify_tree!)
+    @eval function DE.$name(
+        ex::AbstractComposableExpression{T,N},
+        operators::Union{AbstractOperatorEnum,Nothing}=nothing,
+    ) where {T,N}
+        inner_ex = DE.$name(convert(Expression, ex), operators)
+        return with_contents(ex, inner_ex)
+    end
+end
+
+function CO.count_constants_for_optimization(ex::AbstractComposableExpression)
+    return CO.count_constants_for_optimization(convert(Expression, ex))
 end
 
 @implements(

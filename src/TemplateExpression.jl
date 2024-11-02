@@ -507,8 +507,8 @@ function CC.check_constraints(
     end
 
     # We also check the combined complexity:
-    ((cursize === nothing) ? ComplexityModule.compute_complexity(ex, options) : cursize) >
-    maxsize && return false
+    @something(cursize, ComplexityModule.compute_complexity(ex, options)) > maxsize &&
+        return false
 
     # Then, we check other constraints for inner expressions:
     for t in values(raw_contents)

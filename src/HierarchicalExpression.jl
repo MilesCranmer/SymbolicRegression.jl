@@ -284,6 +284,9 @@ function DE.eval_tree_array(
     kws...,
 ) where {T}
     raw_contents = get_contents(tree)
+    if has_invalid_variables(tree)
+        return (cX[1, :], false)
+    end
     result = combine(
         tree, raw_contents, map(x -> VectorWrapper(copy(x), true), eachrow(cX))
     )
@@ -394,46 +397,48 @@ function CO.count_constants_for_optimization(ex::HierarchicalExpression)
     return sum(CO.count_constants_for_optimization, values(get_contents(ex)))
 end
 
-# function CC.check_constraints(
-#     ex::HierarchicalExpression,
-#     options::AbstractOptions,
-#     maxsize::Int,
-#     cursize::Union{Int,Nothing}=nothing,
-# )::Bool
-#     raw_contents = get_contents(ex)
-#     variable_constraints = get_metadata(ex).structure.variable_constraints
+function CC.check_constraints(
+    ex::HierarchicalExpression,
+    options::AbstractOptions,
+    maxsize::Int,
+    cursize::Union{Int,Nothing}=nothing,
+)::Bool
+    # First, we check the variable constraints at the top level:
+    if has_invalid_variables(ex)
+        return false
+    end
 
-#     # First, we check the variable constraints at the top level:
-#     has_invalid_variables = any(keys(raw_contents)) do key
-#         tree = raw_contents[key]
-#         allowed_variables = variable_constraints[key]
-#         contains_other_features_than(tree, allowed_variables)
-#     end
-#     if has_invalid_variables
-#         return false
-#     end
+    # We also check the combined complexity:
+    @something(cursize, ComplexityModule.compute_complexity(ex, options)) > maxsize &&
+        return false
 
-#     # We also check the combined complexity:
-#     ((cursize === nothing) ? ComplexityModule.compute_complexity(ex, options) : cursize) >
-#     maxsize && return false
-
-#     # Then, we check other constraints for inner expressions:
-#     for t in values(raw_contents)
-#         if !CC.check_constraints(t, options, maxsize, nothing)
-#             return false
-#         end
-#     end
-#     return true
-#     # TODO: The concept of `cursize` doesn't really make sense here.
-# end
-# function contains_other_features_than(tree::AbstractExpression, features)
-#     return contains_other_features_than(get_tree(tree), features)
-# end
-# function contains_other_features_than(tree::AbstractExpressionNode, features)
-#     any(tree) do node
-#         node.degree == 0 && !node.constant && node.feature ∉ features
-#     end
-# end
+    # Then, we check other constraints for inner expressions:
+    raw_contents = get_contents(ex)
+    for t in values(raw_contents)
+        if !CC.check_constraints(t, options, maxsize, nothing)
+            return false
+        end
+    end
+    return true
+    # TODO: The concept of `cursize` doesn't really make sense here.
+end
+function has_invalid_variables(ex::HierarchicalExpression)
+    raw_contents = get_contents(ex)
+    num_features = get_metadata(ex).structure.num_features
+    any(keys(raw_contents)) do key
+        tree = raw_contents[key]
+        max_feature = num_features[key]
+        contains_features_greater_than(tree, max_feature)
+    end
+end
+function contains_features_greater_than(tree::AbstractExpression, max_feature)
+    return contains_features_greater_than(get_tree(tree), max_feature)
+end
+function contains_features_greater_than(tree::AbstractExpressionNode, max_feature)
+    any(tree) do node
+        node.degree == 0 && !node.constant && node.feature > max_feature
+    end
+end
 
 # TODO: Add custom behavior to adjust what feature nodes can be generated
 
