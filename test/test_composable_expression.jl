@@ -49,7 +49,7 @@ end
     expr = HierarchicalExpression((; f=x1, g=x2 * x2); structure, operators, variable_names)
 
     @test String(string_tree(expr)) == "f = #1\ng = #2 * #2"
-    @test string_tree(get_tree(expr)) == "x1 - (x1 * x1)"
+    @test string_tree(get_tree(expr), operators) == "x1 - (x1 * x1)"
     @test Interfaces.test(ExpressionInterface, HierarchicalExpression, [expr])
 end
 
@@ -57,9 +57,7 @@ end
     using SymbolicRegression
 
     structure = HierarchicalStructure{(:f, :g)}(
-        ((; f, g), (x1, x2, x3)) -> let
-            sin(f(x1, x2)) + g(x3)^2
-        end
+        ((; f, g), (x1, x2, x3)) -> sin(f(x1, x2)) + g(x3)^2
     )
     operators = Options().operators
     variable_names = ["x1", "x2", "x3"]

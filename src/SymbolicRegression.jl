@@ -190,15 +190,6 @@ catch
     VersionNumber(0, 0, 0)
 end
 
-function deprecate_varmap(variable_names, varMap, func_name)
-    if varMap !== nothing
-        Base.depwarn("`varMap` is deprecated; use `variable_names` instead", func_name)
-        @assert variable_names === nothing "Cannot pass both `varMap` and `variable_names`"
-        variable_names = varMap
-    end
-    return variable_names
-end
-
 using DispatchDoctor: @stable
 
 @stable default_mode = "disable" begin
@@ -451,7 +442,6 @@ function equation_search(
     v_dim_out::Val{DIM_OUT}=Val(nothing),
     # Deprecated:
     multithreaded=nothing,
-    varMap=nothing,
 ) where {T<:DATA_TYPE,L,DIM_OUT}
     if multithreaded !== nothing
         error(
@@ -459,7 +449,6 @@ function equation_search(
             "Choose one of :multithreaded, :multiprocessing, or :serial.",
         )
     end
-    variable_names = deprecate_varmap(variable_names, varMap, :equation_search)
 
     if weights !== nothing
         @assert length(weights) == length(y)
