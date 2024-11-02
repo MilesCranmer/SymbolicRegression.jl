@@ -142,20 +142,25 @@ ValidVector(x::Tuple{Vararg{Any,2}}) = ValidVector(x...)
 function (ex::AbstractComposableExpression)(x)
     return error("ComposableExpression does not support input of type $(typeof(x))")
 end
-function (ex::AbstractComposableExpression)(x::AbstractVector, _xs::AbstractVector...)
-    xs = (x, _xs...)
+function (ex::AbstractComposableExpression)(
+    x::AbstractVector, _xs::Vararg{AbstractVector,N}
+) where {N}
+    __xs = (x, _xs...)
     # Wrap it up for the recursive call
-    xs = ntuple(i -> ValidVector(xs[i], true), Val(length(xs)))
+    xs = map(Base.Fix2(ValidVector, true), __xs)
     result = ex(xs...)
     # Unwrap it
     if result.valid
         return result.x
     else
+        # TODO: Make this more general. Like checking if the eltype is numeric.
         nan = convert(eltype(result.x), NaN)
         return result.x .* nan
     end
 end
-function (ex::AbstractComposableExpression)(x::ValidVector, _xs::ValidVector...)
+function (ex::AbstractComposableExpression)(
+    x::ValidVector, _xs::Vararg{ValidVector,N}
+) where {N}
     xs = (x, _xs...)
     valid = all(xi -> xi.valid, xs)
     if !valid
@@ -166,8 +171,8 @@ function (ex::AbstractComposableExpression)(x::ValidVector, _xs::ValidVector...)
     end
 end
 function (ex::AbstractComposableExpression)(
-    x::AbstractComposableExpression, _xs::AbstractComposableExpression...
-)
+    x::AbstractComposableExpression, _xs::Vararg{AbstractComposableExpression,N}
+) where {N}
     xs = (x, _xs...)
     # To do this, we basically want to put the tree of x
     # into the position of variable 1, and so on!
