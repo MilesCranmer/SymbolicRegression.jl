@@ -102,13 +102,11 @@ function Dataset(
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
     # Deprecated:
-    varMap=nothing,
     kws...,
 ) where {T<:DATA_TYPE,L}
     Base.require_one_based_indexing(X)
     y !== nothing && Base.require_one_based_indexing(y)
     # Deprecation warning:
-    variable_names = deprecate_varmap(variable_names, varMap, :Dataset)
     if haskey(kws, :loss_type)
         Base.depwarn(
             "The `loss_type` keyword argument is deprecated. Pass as an argument instead.",

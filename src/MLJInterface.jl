@@ -459,11 +459,14 @@ function _predict(m::M, fitresult, Xnew, idx, classes) where {M<:AbstractSRRegre
 end
 
 function get_equation_strings_for(::SRRegressor, trees, options, variable_names)
-    return (t -> string_tree(t, options; variable_names=variable_names)).(trees)
+    return (
+        t -> string_tree(t, options; variable_names=variable_names, pretty=false)
+    ).(trees)
 end
 function get_equation_strings_for(::MultitargetSRRegressor, trees, options, variable_names)
     return [
-        (t -> string_tree(t, options; variable_names=variable_names)).(ts) for ts in trees
+        (t -> string_tree(t, options; variable_names=variable_names, pretty=false)).(ts) for
+        ts in trees
     ]
 end
 

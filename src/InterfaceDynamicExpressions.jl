@@ -180,23 +180,21 @@ Convert an equation to a string.
 @inline function DE.string_tree(
     tree::Union{AbstractExpression,AbstractExpressionNode},
     options::AbstractOptions;
-    raw::Bool=true,
+    pretty::Bool=false,
     X_sym_units=nothing,
     y_sym_units=nothing,
     variable_names=nothing,
     display_variable_names=variable_names,
-    varMap=nothing,
     kws...,
 )
-    variable_names = deprecate_varmap(variable_names, varMap, :string_tree)
-
-    if raw
+    if !pretty
         tree = tree isa GraphNode ? convert(Node, tree) : tree
         return DE.string_tree(
             tree,
             DE.get_operators(tree, options);
             f_variable=string_variable_raw,
             variable_names,
+            pretty,
         )
     end
 
@@ -213,6 +211,7 @@ Convert an equation to a string.
                 )
             end,
             variable_names=display_variable_names,
+            pretty,
             kws...,
         )
     else
@@ -222,6 +221,7 @@ Convert an equation to a string.
             f_variable=string_variable,
             f_constant=Fix{2}(Fix{3}(string_constant, ""), options.v_print_precision),
             variable_names=display_variable_names,
+            pretty,
             kws...,
         )
     end

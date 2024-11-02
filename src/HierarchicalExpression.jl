@@ -206,9 +206,6 @@ end
 @unstable function combine(ex::HierarchicalExpression, args...)
     return combine(get_metadata(ex).structure, args...)
 end
-function get_function_keys(ex::HierarchicalExpression)
-    return get_function_keys(get_metadata(ex).structure)
-end
 
 function DE.get_tree(ex::HierarchicalExpression{<:Any,<:Any,<:Any,E}) where {E}
     raw_contents = get_contents(ex)
@@ -288,6 +285,7 @@ _color_string(s::AbstractString, c::Symbol) = styled"{$c:$s}"
 function DE.string_tree(
     tree::HierarchicalExpression,
     operators::Union{AbstractOperatorEnum,Nothing}=nothing;
+    pretty::Bool,
     variable_names=nothing,
     kws...,
 )
@@ -299,19 +297,30 @@ function DE.string_tree(
     variable_names = ["#" * string(i) for i in 1:total_num_features]
     inner_strings = NamedTuple{function_keys}(
         map(
-            ex -> DE.string_tree(ex, operators; variable_names, kws...),
+            ex -> DE.string_tree(ex, operators; pretty, variable_names, kws...),
             values(raw_contents),
         ),
     )
     strings = NamedTuple{function_keys}(
         map(
-            (k, s, c) -> annotatedstring(string(k) * " = ", _color_string(s, c)),
+            (k, s, c) -> let
+                prefix = if !pretty || length(function_keys) == 1
+                    ""
+                elseif k == first(function_keys)
+                    "╭ "
+                elseif k == last(function_keys)
+                    "╰ "
+                else
+                    "├ "
+                end
+                annotatedstring(prefix * string(k) * " = ", _color_string(s, c))
+            end,
             function_keys,
             values(inner_strings),
             colors,
         ),
     )
-    return annotatedstring(join(strings, styled"\n"))
+    return annotatedstring(join(strings, pretty ? styled"\n" : "; "))
 end
 function DE.eval_tree_array(
     tree::HierarchicalExpression{T},
