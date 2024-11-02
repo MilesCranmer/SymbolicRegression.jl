@@ -123,4 +123,13 @@ DE.declare_operator_alias(::typeof(safe_sqrt), ::Val{1}) = sqrt
 @ignore pow(x, y) = safe_pow(x, y)
 @ignore pow_abs(x, y) = safe_pow(x, y)
 
+get_safe_op(op::F) where {F<:Function} = op
+get_safe_op(::typeof(^)) = safe_pow
+get_safe_op(::typeof(log)) = safe_log
+get_safe_op(::typeof(log2)) = safe_log2
+get_safe_op(::typeof(log10)) = safe_log10
+get_safe_op(::typeof(log1p)) = safe_log1p
+get_safe_op(::typeof(sqrt)) = safe_sqrt
+get_safe_op(::typeof(acosh)) = safe_acosh
+
 end

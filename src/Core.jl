@@ -21,6 +21,7 @@ using .OptionsStructModule:
     specialized_options,
     operator_specialization
 using .OperatorsModule:
+    get_safe_op,
     plus,
     sub,
     mult,

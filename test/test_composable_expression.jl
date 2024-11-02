@@ -189,3 +189,21 @@ end
     x2_val_false = ValidVector([2.0], false)
     @test @inferred(x1(x1_val, x2_val_false)).valid == false
 end
+@testitem "Test compatibility with power laws" tags = [:part3] begin
+    using SymbolicRegression
+    using DynamicExpressions: OperatorEnum
+
+    operators = OperatorEnum(; binary_operators=(+, -, *, /, ^))
+    variable_names = ["x1", "x2"]
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+    x2 = ComposableExpression(Node{Float64}(; feature=2); operators, variable_names)
+
+    structure = TemplateStructure{(:f,)}(((; f), (x1, x2)) -> f(x1)^f(x2))
+    expr = TemplateExpression((; f=x1); structure, operators, variable_names)
+
+    # There shouldn't be an error when we evaluate with invalid
+    # expressions, even though the source of the NaN comes from the structure
+    # function itself:
+    X = -rand(2, 32)
+    @test expr(X) === nothing
+end

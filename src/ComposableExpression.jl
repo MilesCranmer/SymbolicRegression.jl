@@ -19,6 +19,7 @@ using DynamicExpressions.InterfacesModule:
 using DynamicExpressions.ValueInterfaceModule: is_valid_array
 
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
+using ..CoreModule: get_safe_op
 
 abstract type AbstractComposableExpression{T,N} <: AbstractExpression{T,N} end
 
@@ -185,10 +186,11 @@ end
 # Basically we want to vectorize every single operation on ValidVector,
 # so that the user can use it easily.
 
-function apply_operator(op::F, x...) where {F<:Function}
+function apply_operator(op::F, x::Vararg{Any,N}) where {F<:Function,N}
     if all(_is_valid, x)
         vx = map(_get_value, x)
-        result = op.(vx...)
+        safe_op = get_safe_op(op)
+        result = safe_op.(vx...)
         return ValidVector(result, is_valid_array(result))
     else
         example_vector =
