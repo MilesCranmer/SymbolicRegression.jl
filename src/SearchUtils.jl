@@ -580,7 +580,7 @@ function save_to_file(
         complexities[i] = compute_complexity(member, options)
         losses[i] = member.loss
         strings[i] = string_tree(
-            member.tree, options; variable_names=dataset.variable_names
+            member.tree, options; variable_names=dataset.variable_names, pretty=false
         )
     end
 
