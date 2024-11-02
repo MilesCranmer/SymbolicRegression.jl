@@ -210,6 +210,23 @@ function get_function_keys(ex::HierarchicalExpression)
     return get_function_keys(get_metadata(ex).structure)
 end
 
+function DE.get_tree(ex::HierarchicalExpression{<:Any,<:Any,<:Any,E}) where {E}
+    raw_contents = get_contents(ex)
+    total_num_features = max(values(get_metadata(ex).structure.num_features)...)
+    example_inner_ex = first(values(raw_contents))
+    example_tree = get_contents(example_inner_ex)::AbstractExpressionNode
+
+    variable_trees = [
+        DE.constructorof(typeof(example_tree))(; feature=i) for i in 1:total_num_features
+    ]
+    variable_expressions = [
+        with_contents(inner_ex, variable_tree) for
+        (inner_ex, variable_tree) in zip(values(raw_contents), variable_trees)
+    ]
+
+    return combine(get_metadata(ex).structure, raw_contents, variable_expressions)
+end
+
 function EB.create_expression(
     t::AbstractExpressionNode{T},
     options::AbstractOptions,
@@ -258,24 +275,41 @@ function ComplexityModule.compute_complexity(
     )
 end
 
+# Rather than using iterator with repeat, just make a tuple:
+function _colors(::Val{n}) where {n}
+    return ntuple(
+        (i -> (:magenta, :green, :red, :blue, :yellow, :cyan)[mod1(i, n)]), Val(n)
+    )
+end
+
 _color_string(s::AbstractString, c::Symbol) = styled"{$c:$s}"
 function DE.string_tree(
     tree::HierarchicalExpression,
     operators::Union{AbstractOperatorEnum,Nothing}=nothing;
+    variable_names=nothing,
     kws...,
 )
     raw_contents = get_contents(tree)
     function_keys = keys(raw_contents)
-    colors = Base.Iterators.cycle((:magenta, :green, :red, :blue, :yellow, :cyan))
+    num_features = get_metadata(tree).structure.num_features
+    total_num_features = max(values(num_features)...)
+    colors = _colors(Val(length(function_keys)))
+    variable_names = ["#" * string(i) for i in 1:total_num_features]
     inner_strings = NamedTuple{function_keys}(
-        map(ex -> DE.string_tree(ex, operators; kws...), values(raw_contents))
-    )
-    colored_strings = NamedTuple{function_keys}(map(_color_string, inner_strings, colors))
-    return annotatedstring(
-        join(
-            (annotatedstring(k, " = ", v) for (k, v) in pairs(colored_strings)), styled"\n"
+        map(
+            ex -> DE.string_tree(ex, operators; variable_names, kws...),
+            values(raw_contents),
         ),
     )
+    strings = NamedTuple{function_keys}(
+        map(
+            (k, s, c) -> annotatedstring(string(k) * " = ", _color_string(s, c)),
+            function_keys,
+            values(inner_strings),
+            colors,
+        ),
+    )
+    return annotatedstring(join(strings, styled"\n"))
 end
 function DE.eval_tree_array(
     tree::HierarchicalExpression{T},
