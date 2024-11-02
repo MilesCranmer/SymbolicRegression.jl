@@ -11,16 +11,46 @@
     @test ex(x, y) == x
 end
 
-@testitem "Test interface" tags = [:part2] begin
+@testitem "Test interface for ComposableExpression" tags = [:part2] begin
     using SymbolicRegression: ComposableExpression
     using DynamicExpressions.InterfacesModule: Interfaces, ExpressionInterface
     using DynamicExpressions: OperatorEnum
 
     operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
     variable_names = (i -> "x$i").(1:3)
-    f = ComposableExpression(Node(Float64; feature=1); operators, variable_names)
+    x1 = ComposableExpression(Node(Float64; feature=1); operators, variable_names)
+    x2 = ComposableExpression(Node(Float64; feature=2); operators, variable_names)
 
-    @test Interfaces.test(ExpressionInterface, ComposableExpression, [f])
+    f = x1 * sin(x2)
+    g = f(f, f)
+
+    @test string_tree(f) == "x1 * sin(x2)"
+    @test string_tree(g) == "(x1 * sin(x2)) * sin(x1 * sin(x2))"
+
+    @test Interfaces.test(ExpressionInterface, ComposableExpression, [f, g])
+end
+
+@testitem "Test interface for HierarchicalExpression" tags = [:part2] begin
+    using SymbolicRegression
+    using SymbolicRegression: HierarchicalExpression
+    using DynamicExpressions.InterfacesModule: Interfaces, ExpressionInterface
+    using DynamicExpressions: OperatorEnum
+
+    operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    variable_names = (i -> "x$i").(1:3)
+    x1 = ComposableExpression(Node(Float64; feature=1); operators, variable_names)
+    x2 = ComposableExpression(Node(Float64; feature=2); operators, variable_names)
+
+    structure = HierarchicalStructure{(:f, :g)}(
+        ((; f, g), (x1, x2)) -> f(f(f(x1))) - f(g(x2, x1))
+    )
+    @test structure.num_features == (; f=1, g=2)
+
+    expr = HierarchicalExpression((; f=x1, g=x2 * x2); structure, operators, variable_names)
+
+    @test String(string_tree(expr)) == "f = #1\ng = #2 * #2"
+    @test string_tree(get_tree(expr)) == "x1 - (x1 * x1)"
+    @test Interfaces.test(ExpressionInterface, HierarchicalExpression, [expr])
 end
 
 @testitem "Printing and evaluation of HierarchicalExpression" begin

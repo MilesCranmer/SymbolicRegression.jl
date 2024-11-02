@@ -224,7 +224,9 @@ function DE.get_tree(ex::HierarchicalExpression{<:Any,<:Any,<:Any,E}) where {E}
         (inner_ex, variable_tree) in zip(values(raw_contents), variable_trees)
     ]
 
-    return combine(get_metadata(ex).structure, raw_contents, variable_expressions)
+    return DE.get_tree(
+        combine(get_metadata(ex).structure, raw_contents, variable_expressions)
+    )
 end
 
 function EB.create_expression(

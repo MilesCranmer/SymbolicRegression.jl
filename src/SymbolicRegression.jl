@@ -1135,7 +1135,14 @@ function _info_dump(
             @info "Output $j:"
         end
         equation_strings = string_dominating_pareto_curve(
-            hall_of_fame, dataset, options; width=options.terminal_width
+            hall_of_fame,
+            dataset,
+            options;
+            width=@something(
+                options.terminal_width,
+                ropt.progress ? displaysize(stdout)[2] : nothing,
+                Some(nothing)
+            )
         )
         println(equation_strings)
     end
