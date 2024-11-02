@@ -288,7 +288,7 @@ using .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
 using .MutateModule: mutate!, condition_mutation_weights!, MutationResult
 using .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
-using .ProgressBarsModule: WrappedProgressBar
+using .ProgressBarsModule: WrappedProgressBar, finish!
 using .RecorderModule: @recorder, find_iteration_from_record
 using .MigrationModule: migrate!
 using .SearchUtilsModule:
@@ -539,6 +539,7 @@ end
     _warmup_search!(state, datasets, ropt, options)
     _main_search_loop!(state, datasets, ropt, options)
     _tear_down!(state, ropt, options)
+    _info_dump(state, datasets, ropt, options)
     return _format_output(state, datasets, ropt, options)
 end
 
@@ -1016,6 +1017,9 @@ function _main_search_loop!(
         end
         ################################################################
     end
+    if ropt.progress
+        finish!(progress_bar)
+    end
     return nothing
 end
 function _tear_down!(
@@ -1110,6 +1114,44 @@ redirect_stdout(devnull) do
     redirect_stderr(devnull) do
         do_precompilation(Val(:precompile))
     end
+end
+
+function _info_dump(
+    state::AbstractSearchState,
+    datasets::Vector{D},
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+) where {D<:Dataset}
+    ropt.verbosity <= 0 && return nothing
+
+    nout = length(state.halls_of_fame)
+    if nout > 1
+        @info "Final populations:"
+    else
+        @info "Final population:"
+    end
+    for (j, (hall_of_fame, dataset)) in enumerate(zip(state.halls_of_fame, datasets))
+        if nout > 1
+            @info "Output $j:"
+        end
+        equation_strings = string_dominating_pareto_curve(
+            hall_of_fame, dataset, options; width=options.terminal_width
+        )
+        println(equation_strings)
+    end
+
+    if options.save_to_file
+        output_directory = joinpath(
+            something(options.output_directory, "outputs"), ropt.run_id
+        )
+        @info "Results saved to:"
+        for j in 1:nout
+            filename = nout > 1 ? "hall_of_fame_output$(j).csv" : "hall_of_fame.csv"
+            output_file = joinpath(output_directory, filename)
+            println("  - ", output_file)
+        end
+    end
+    return nothing
 end
 
 end #module SR

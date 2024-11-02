@@ -1,7 +1,7 @@
 module ProgressBarsModule
 
 using Compat: Fix
-using ProgressMeter: Progress, next!
+using ProgressMeter: ProgressMeter, Progress, next!, finish!
 using StyledStrings: @styled_str, annotatedstring
 using ..UtilsModule: AnnotatedString
 
@@ -24,6 +24,11 @@ end
 
 function barlen(pbar::WrappedProgressBar)::Int
     return @something(pbar.bar.barlen, displaysize(stdout)[2])
+end
+
+function ProgressMeter.finish!(pbar::WrappedProgressBar)
+    ProgressMeter.finish!(pbar.bar)
+    return nothing
 end
 
 """Iterate a progress bar."""
