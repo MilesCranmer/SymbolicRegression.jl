@@ -88,11 +88,11 @@ end
     ExpressionInterface{all_ei_methods_except(())}, ComposableExpression, [Arguments()]
 )
 
-struct VectorWrapper{A<:AbstractVector}
+struct ValidVector{A<:AbstractVector}
     value::A
     valid::Bool
 end
-VectorWrapper(x::Tuple{Vararg{Any,2}}) = VectorWrapper(x...)
+ValidVector(x::Tuple{Vararg{Any,2}}) = ValidVector(x...)
 
 function (ex::AbstractComposableExpression)(x)
     return error("ComposableExpression does not support input of type $(typeof(x))")
@@ -100,7 +100,7 @@ end
 function (ex::AbstractComposableExpression)(x::AbstractVector, _xs::AbstractVector...)
     xs = (x, _xs...)
     # Wrap it up for the recursive call
-    xs = ntuple(i -> VectorWrapper(xs[i], true), Val(length(xs)))
+    xs = ntuple(i -> ValidVector(xs[i], true), Val(length(xs)))
     result = ex(xs...)
     # Unwrap it
     if result.valid
@@ -110,14 +110,14 @@ function (ex::AbstractComposableExpression)(x::AbstractVector, _xs::AbstractVect
         return result.value .* nan
     end
 end
-function (ex::AbstractComposableExpression)(x::VectorWrapper, _xs::VectorWrapper...)
+function (ex::AbstractComposableExpression)(x::ValidVector, _xs::ValidVector...)
     xs = (x, _xs...)
     valid = all(xi -> xi.valid, xs)
     if !valid
-        return VectorWrapper(first(xs).value, false)
+        return ValidVector(first(xs).value, false)
     else
         X = Matrix(stack(map(xi -> xi.value, xs))')
-        return VectorWrapper(eval_tree_array(ex, X))
+        return ValidVector(eval_tree_array(ex, X))
     end
 end
 function (ex::AbstractComposableExpression)(
@@ -138,20 +138,20 @@ function (ex::AbstractComposableExpression)(
     return with_contents(ex, tree)
 end
 
-# Basically we want to vectorize every single operation on VectorWrapper,
+# Basically we want to vectorize every single operation on ValidVector,
 # so that the user can use it easily.
 
 function apply_operator(op::F, x...) where {F<:Function}
     if all(_is_valid, x)
         vx = map(_get_value, x)
-        return VectorWrapper(op.(vx...), true)
+        return ValidVector(op.(vx...), true)
     else
-        return VectorWrapper(_get_value(first(x)), false)
+        return ValidVector(_get_value(first(x)), false)
     end
 end
-_is_valid(x::VectorWrapper) = x.valid
+_is_valid(x::ValidVector) = x.valid
 _is_valid(x) = true
-_get_value(x::VectorWrapper) = x.value
+_get_value(x::ValidVector) = x.value
 _get_value(x) = x
 
 #! format: off
@@ -162,9 +162,9 @@ for op in (
     :&, :|, :⊻, ://, :\,
 )
     @eval begin
-        Base.$(op)(x::VectorWrapper, y::VectorWrapper) = apply_operator(Base.$(op), x, y)
-        Base.$(op)(x::VectorWrapper, y::Number) = apply_operator(Base.$(op), x, y)
-        Base.$(op)(x::Number, y::VectorWrapper) = apply_operator(Base.$(op), x, y)
+        Base.$(op)(x::ValidVector, y::ValidVector) = apply_operator(Base.$(op), x, y)
+        Base.$(op)(x::ValidVector, y::Number) = apply_operator(Base.$(op), x, y)
+        Base.$(op)(x::Number, y::ValidVector) = apply_operator(Base.$(op), x, y)
     end
 end
 
@@ -180,7 +180,7 @@ for op in (
     :inv, :sqrt, :cbrt, :abs2, :angle, :factorial,
     :(!), :-, :+, :sign, :identity,
 )
-    @eval Base.$(op)(x::VectorWrapper) = apply_operator(Base.$(op), x)
+    @eval Base.$(op)(x::ValidVector) = apply_operator(Base.$(op), x)
 end
 #! format: on
 

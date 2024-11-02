@@ -37,7 +37,7 @@ using ..ComplexityModule: ComplexityModule
 using ..LossFunctionsModule: LossFunctionsModule as LF
 using ..MutateModule: MutateModule as MM
 using ..PopMemberModule: PopMember
-using ..ComposableExpressionModule: ComposableExpression, VectorWrapper
+using ..ComposableExpressionModule: ComposableExpression, ValidVector
 
 """
     HierarchicalStructure{K,S,N,E,C} <: Function
@@ -97,7 +97,7 @@ function infer_variable_constraints(::Val{K}, combiner::F) where {K,F}
     # We use an evaluation to get the variable constraints
     combiner(
         _recorders_of_composable_expressions,
-        Base.Iterators.repeated(VectorWrapper(ones(Float64, 1), true)),
+        Base.Iterators.repeated(ValidVector(ones(Float64, 1), true)),
     )
     inferred = NamedTuple{K}(map(x -> x[], values(variable_constraints)))
     if any(==(-1), values(inferred))
@@ -332,9 +332,7 @@ function DE.eval_tree_array(
     if has_invalid_variables(tree)
         return (cX[1, :], false)
     end
-    result = combine(
-        tree, raw_contents, map(x -> VectorWrapper(copy(x), true), eachrow(cX))
-    )
+    result = combine(tree, raw_contents, map(x -> ValidVector(copy(x), true), eachrow(cX)))
     return result.value, result.valid
 end
 function (ex::HierarchicalExpression)(

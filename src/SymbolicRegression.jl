@@ -316,7 +316,7 @@ using .SearchUtilsModule:
     update_hall_of_fame!
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure
 using .HierarchicalExpressionModule:
-    HierarchicalExpression, HierarchicalStructure, VectorWrapper
+    HierarchicalExpression, HierarchicalStructure, ValidVector
 using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
