@@ -48,7 +48,8 @@ end
 
     expr = HierarchicalExpression((; f=x1, g=x2 * x2); structure, operators, variable_names)
 
-    @test String(string_tree(expr)) == "f = #1\ng = #2 * #2"
+    @test String(string_tree(expr)) == "f = #1; g = #2 * #2"
+    @test String(string_tree(expr; pretty=true)) == "f = #1\ng = #2 * #2"
     @test string_tree(get_tree(expr), operators) == "x1 - (x1 * x1)"
     @test Interfaces.test(ExpressionInterface, HierarchicalExpression, [expr])
 end
