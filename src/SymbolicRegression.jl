@@ -314,7 +314,8 @@ using .SearchUtilsModule:
     get_cur_maxsize,
     update_hall_of_fame!
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure
-using .HierarchicalExpressionModule: HierarchicalExpression, HierarchicalStructure
+using .HierarchicalExpressionModule:
+    HierarchicalExpression, HierarchicalStructure, VectorWrapper
 using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
