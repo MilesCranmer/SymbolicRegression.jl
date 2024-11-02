@@ -6,8 +6,6 @@ using ..UtilsModule: subscriptify, get_base_type
 using ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
 using ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
 
-import ...deprecate_varmap
-
 """
     Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
 

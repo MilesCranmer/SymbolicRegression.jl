@@ -77,9 +77,7 @@ end
     include("test_nested_constraints.jl")
 end
 
-@testitem "Test complexity evaluation" tags = [:part3] begin
-    include("test_complexity.jl")
-end
+include("test_complexity.jl")
 
 @testitem "Test options" tags = [:part1] begin
     include("test_options.jl")

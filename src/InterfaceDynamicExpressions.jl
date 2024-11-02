@@ -15,8 +15,6 @@ using ..CoreModule: AbstractOptions, Dataset
 using ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
 using ..UtilsModule: subscriptify
 
-import ..deprecate_varmap
-
 """
     eval_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::AbstractOptions; kws...)
 
