@@ -159,3 +159,33 @@ end
     x2_val = ValidVector([1.0, 2.0], false)
     @test ex(x1_val, x2_val).valid == false
 end
+
+@testitem "Test nothing return and type inference for TemplateExpression" tags = [:part2] begin
+    using SymbolicRegression
+    using Test: @inferred
+
+    # Create a template expression that divides by x1
+    structure = TemplateStructure{(:f,)}(((; f), (x1, x2)) -> 1.0 + f(x1) / x1)
+    operators = Options(; binary_operators=(+, -, *, /)).operators
+    variable_names = ["x1", "x2"]
+
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+    x2 = ComposableExpression(Node{Float64}(; feature=2); operators, variable_names)
+    expr = TemplateExpression((; f=x1); structure, operators, variable_names)
+
+    # Test division by zero returns nothing
+    X = [0.0 1.0]'
+    @test expr(X) === nothing
+
+    # Test type inference
+    X_good = [1.0 2.0]'
+    @test @inferred(Union{Nothing,Vector{Float64}}, expr(X_good)) ≈ [2.0]
+
+    # Test type inference with ValidVector input
+    x1_val = ValidVector([1.0], true)
+    x2_val = ValidVector([2.0], true)
+    @test @inferred(ValidVector{Vector{Float64}}, x1(x1_val, x2_val)).x ≈ [1.0]
+
+    x2_val_false = ValidVector([2.0], false)
+    @test @inferred(x1(x1_val, x2_val_false)).valid == false
+end

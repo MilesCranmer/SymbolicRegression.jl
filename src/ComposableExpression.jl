@@ -16,6 +16,7 @@ using DynamicExpressions:
     DynamicExpressions as DE
 using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
+using DynamicExpressions.ValueInterfaceModule: is_valid_array
 
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 
@@ -187,7 +188,8 @@ end
 function apply_operator(op::F, x...) where {F<:Function}
     if all(_is_valid, x)
         vx = map(_get_value, x)
-        return ValidVector(op.(vx...), true)
+        result = op.(vx...)
+        return ValidVector(result, is_valid_array(result))
     else
         example_vector =
             something(map(xi -> xi isa ValidVector ? xi : nothing, x)...)::ValidVector
