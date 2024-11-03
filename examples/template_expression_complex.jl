@@ -203,7 +203,7 @@ function compute_force((; B_x, B_y, B_z, F_d_scale), (t, v_x, v_y, v_z, T))
     F_mag = [cross(vi, Bi) for (vi, Bi) in zip(v, B)]
 
     ## Finally, we combine the drag and magnetic forces into the total force:
-    F = map((fd, fm) -> Force((fd .+ fm)...), F_d, F_mag)
+    F = [Force((fd .+ fm)...) for (fd, fm) in zip(F_d, F_mag)]
 
     ## The output of this function needs to be another `ValidVector`,
     ## which carries through the validity of the evaluation. We compute
