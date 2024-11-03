@@ -1,6 +1,7 @@
 module InterfaceDynamicExpressionsModule
 
 using Printf: @sprintf
+using DispatchDoctor: @stable
 using Compat: Fix
 using DynamicExpressions:
     DynamicExpressions as DE,
@@ -48,23 +49,31 @@ which speed up evaluation significantly.
     or nan was encountered, and a large loss should be assigned
     to the equation.
 """
-function DE.eval_tree_array(
-    tree::Union{AbstractExpressionNode,AbstractExpression},
-    X::AbstractMatrix,
-    options::AbstractOptions;
-    kws...,
-)
-    A = expected_array_type(X, typeof(tree))
-    out, complete = DE.eval_tree_array(
-        tree,
-        X,
-        DE.get_operators(tree, options);
-        turbo=options.turbo,
-        bumper=options.bumper,
+@stable(
+    default_mode = "disable",
+    default_union_limit = 2,
+    function DE.eval_tree_array(
+        tree::Union{AbstractExpressionNode,AbstractExpression},
+        X::AbstractMatrix,
+        options::AbstractOptions;
         kws...,
     )
-    return out::A, complete::Bool
-end
+        A = expected_array_type(X, typeof(tree))
+        out, complete = DE.eval_tree_array(
+            tree,
+            X,
+            DE.get_operators(tree, options);
+            turbo=options.turbo,
+            bumper=options.bumper,
+            kws...,
+        )
+        if isnothing(out)
+            return nothing, false
+        else
+            return out::A, complete::Bool
+        end
+    end
+)
 
 """Improve type inference by telling Julia the expected array returned."""
 function expected_array_type(X::AbstractArray, ::Type)

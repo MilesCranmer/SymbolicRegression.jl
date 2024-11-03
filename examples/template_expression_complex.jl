@@ -197,7 +197,7 @@ function compute_force((; B_x, B_y, B_z, F_d_scale), (t, v_x, v_y, v_z, T))
 
 
     ## Now, let's compute the drag force using our model:
-    F_d = [_F_d_scale.x .* vi for (vi, _F_d_scale) in zip(v, _F_d_scale)]
+    F_d = [_F_d_scale .* vi for (vi, _F_d_scale) in zip(v, _F_d_scale.x)]
 
     ## Now, the magnetic force:
     F_mag = [cross(vi, Bi) for (vi, Bi) in zip(v, B)]
@@ -233,8 +233,8 @@ the solution:
 options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos, sqrt, exp))
 ## The inner operators are an `DynamicExpressions.OperatorEnum` which is used by `Expression`:
 operators = options.operators
-t = Expression(Node{Float64}(; feature=1); operators, variable_names)
-T = Expression(Node{Float64}(; feature=5); operators, variable_names)
+t = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+T = ComposableExpression(Node{Float64}(; feature=5); operators, variable_names)
 B_x = B_y = B_z = 2.1 * cos(t)
 F_d_scale = 1.0 * sqrt(T)
 

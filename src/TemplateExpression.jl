@@ -2,7 +2,7 @@ module TemplateExpressionModule
 
 using Random: AbstractRNG
 using Compat: Fix
-using DispatchDoctor: @unstable
+using DispatchDoctor: @unstable, @stable
 using StyledStrings: @styled_str, annotatedstring
 using DynamicExpressions:
     DynamicExpressions as DE,
@@ -322,30 +322,37 @@ function DE.string_tree(
     )
     return annotatedstring(join(strings, pretty ? styled"\n" : "; "))
 end
-function DE.eval_tree_array(
-    tree::TemplateExpression{T},
-    cX::AbstractMatrix{T},
-    operators::Union{AbstractOperatorEnum,Nothing}=nothing;
-    kws...,
-) where {T}
-    raw_contents = get_contents(tree)
-    if has_invalid_variables(tree)
-        return (cX[1, :], false)
+@stable(
+    default_mode = "disable",
+    default_union_limit = 2,
+    begin
+        function DE.eval_tree_array(
+            tree::TemplateExpression{T},
+            cX::AbstractMatrix{T},
+            operators::Union{AbstractOperatorEnum,Nothing}=nothing;
+            kws...,
+        ) where {T}
+            raw_contents = get_contents(tree)
+            if has_invalid_variables(tree)
+                return (nothing, false)
+            end
+            result = combine(
+                tree, raw_contents, map(x -> ValidVector(copy(x), true), eachrow(cX))
+            )
+            return result.x, result.valid
+        end
+        function (ex::TemplateExpression)(
+            X, operators::Union{AbstractOperatorEnum,Nothing}=nothing; kws...
+        )
+            result, valid = DE.eval_tree_array(ex, X, operators; kws...)
+            if valid
+                return result
+            else
+                return nothing
+            end
+        end
     end
-    result = combine(tree, raw_contents, map(x -> ValidVector(copy(x), true), eachrow(cX)))
-    return result.x, result.valid
-end
-function (ex::TemplateExpression)(
-    X, operators::Union{AbstractOperatorEnum,Nothing}=nothing; kws...
 )
-    result, valid = DE.eval_tree_array(ex, X, operators; kws...)
-    if valid
-        return result
-    else
-        nan = convert(eltype(result), NaN)
-        return result .* nan
-    end
-end
 @unstable IDE.expected_array_type(::AbstractMatrix, ::Type{<:TemplateExpression}) = Any
 
 function DA.violates_dimensional_constraints(
