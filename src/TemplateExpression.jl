@@ -58,7 +58,7 @@ If not declared using the constructor `TemplateStructure{K}(...)`, the keys of t
     function. For example, if `f` takes two arguments, and `g` takes one, then
     `num_features = (; f=2, g=1)`.
 """
-struct TemplateStructure{K,E<:Function,NF<:NamedTuple} <: Function
+struct TemplateStructure{K,E<:Function,NF<:NamedTuple{K}} <: Function
     combine::E
     num_features::NF
 end
