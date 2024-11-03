@@ -16,6 +16,7 @@ export Population,
     TemplateStructure,
     ValidVector,
     ComposableExpression,
+    NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
     EvalOptions,
@@ -165,7 +166,7 @@ using Compat: @compat, Fix
         AbstractOptions, AbstractRuntimeOptions, RuntimeOptions,
         AbstractMutationWeights, mutate!, condition_mutation_weights!,
         sample_mutation, MutationResult, AbstractSearchState, SearchState,
-        NodeSampler, LOSS_TYPE, DATA_TYPE, node_type,
+        LOSS_TYPE, DATA_TYPE, node_type,
     )
 )
 #! format: on
