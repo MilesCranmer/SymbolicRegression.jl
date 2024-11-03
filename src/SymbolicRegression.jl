@@ -1085,23 +1085,6 @@ end
     end
     return (out_pop, best_seen, record, num_evals)
 end
-
-include("MLJInterface.jl")
-using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
-
-# Hack to get static analysis to work from within tests:
-@ignore include("../test/runtests.jl")
-
-# TODO: Hack to force ConstructionBase version
-using ConstructionBase: ConstructionBase as _
-
-include("precompile.jl")
-redirect_stdout(devnull) do
-    redirect_stderr(devnull) do
-        do_precompilation(Val(:precompile))
-    end
-end
-
 function _info_dump(
     state::AbstractSearchState,
     datasets::Vector{D},
@@ -1145,6 +1128,22 @@ function _info_dump(
         end
     end
     return nothing
+end
+
+include("MLJInterface.jl")
+using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
+
+# Hack to get static analysis to work from within tests:
+@ignore include("../test/runtests.jl")
+
+# TODO: Hack to force ConstructionBase version
+using ConstructionBase: ConstructionBase as _
+
+include("precompile.jl")
+redirect_stdout(devnull) do
+    redirect_stderr(devnull) do
+        do_precompilation(Val(:precompile))
+    end
 end
 
 end #module SR
