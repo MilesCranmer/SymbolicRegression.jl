@@ -231,6 +231,7 @@ using .CoreModule:
     ComplexityMapping,
     AbstractMutationWeights,
     MutationWeights,
+    get_safe_op,
     max_features,
     is_weighted,
     sample_mutation,
