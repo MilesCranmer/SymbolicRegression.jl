@@ -60,14 +60,6 @@ ParametricNode
 
 These types allow you to define expressions with parameters that can be tuned to fit the data better. You can specify the maximum number of parameters using the `expression_options` argument in `SRRegressor`.
 
-## Composable Expressions
-
-Composable expressions allow you to combine multiple expressions together.
-
-```@docs
-ComposableExpression
-```
-
 ## Template Expressions
 
 Template expressions allow you to specify predefined structures and constraints for your expressions.
@@ -79,6 +71,12 @@ These use the `TemplateStructure` type to define how expressions should be combi
 ```@docs
 TemplateExpression
 TemplateStructure
+```
+
+Composable expressions allow you to combine multiple expressions together.
+
+```@docs
+ComposableExpression
 ```
 
 ## Population
