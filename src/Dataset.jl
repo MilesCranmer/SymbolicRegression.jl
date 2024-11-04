@@ -3,7 +3,7 @@ module DatasetModule
 using DynamicQuantities: Quantity
 
 using ..UtilsModule: subscriptify, get_base_type
-using ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
+using ..ProgramConstantsModule: DATA_TYPE, LOSS_TYPE
 using ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
 
 """
@@ -125,8 +125,8 @@ function Dataset(
         )
     end
 
-    n = size(X, BATCH_DIM)
-    nfeatures = size(X, FEATURE_DIM)
+    n = size(X, 2)
+    nfeatures = size(X, 1)
     variable_names = @something(variable_names, ["x$(i)" for i in 1:nfeatures])
     display_variable_names = @something(
         display_variable_names, ["x$(subscriptify(i))" for i in 1:nfeatures]

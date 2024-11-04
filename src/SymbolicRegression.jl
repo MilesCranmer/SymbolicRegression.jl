@@ -219,9 +219,6 @@ using DispatchDoctor: @stable
 end
 
 using .CoreModule:
-    MAX_DEGREE,
-    BATCH_DIM,
-    FEATURE_DIM,
     DATA_TYPE,
     LOSS_TYPE,
     RecordType,
