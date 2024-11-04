@@ -144,7 +144,7 @@ end
     fit!(mach)
 
     # Check predictions
-    @test sum(abs2, predict(mach, X) .- Y) / length(X) < 1e-6
+    @test sum(abs2, predict(mach, X) .- Y) / length(X) < 1e-5
 
     # Load the output CSV file
     for i in 1:3

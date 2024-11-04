@@ -32,12 +32,12 @@ y = [(sin(x1[i]) + x3[i]^2, sin(x1[i]) + x3[i]) for i in eachindex(x1, x2, x3)]
 model = SRRegressor(;
     binary_operators=(+, *),
     unary_operators=(sin,),
-    maxsize=15,
+    maxsize=20,
     expression_type=TemplateExpression,
     expression_options=(; structure),
     # The elementwise needs to operate directly on each row of `y`:
     elementwise_loss=((x1, x2), (y1, y2)) -> (y1 - x1)^2 + (y2 - x2)^2,
-    early_stop_condition=(loss, complexity) -> loss < 1e-5 && complexity <= 7,
+    early_stop_condition=(loss, complexity) -> loss < 1e-6 && complexity <= 7,
 )
 
 mach = machine(model, [x1 x2 x3], y)
