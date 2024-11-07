@@ -1,5 +1,4 @@
 name: Documentation
-# Modelled from DiffEqDocs
 
 on:
   push:
@@ -18,10 +17,10 @@ jobs:
     strategy:
       matrix:
         target:
-          - repo: "github.com/MilesCranmer/SymbolicRegression.jl.git"
-            key: "astroautomata"
-          - repo: "github.com/ai-damtp-cam-ac-uk/symbolicregression.git"
-            key: "cam"
+          - name: "astroautomata"
+            repo_url: "github.com/MilesCranmer/SymbolicRegression.jl.git"
+          - name: "cam"
+            repo_url: "github.com/ai-damtp-cam-ac-uk/symbolicregression.git"
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@latest
@@ -35,14 +34,9 @@ jobs:
           julia -e 'ENV["JULIA_PKG_SERVER"]=""; using Pkg; Pkg.update()'
       - name: "Install dependencies"
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-      - name: "Set DOCUMENTER_KEY based on target"
-        run: |
-          if [ "${{ matrix.target.key }}" == "astroautomata" ]; then
-            echo "DOCUMENTER_KEY=${{ secrets.DOCUMENTER_KEY }}" >> $GITHUB_ENV
-          elif [ "${{ matrix.target.key }}" == "cam" ]; then
-            echo "DOCUMENTER_KEY=${{ secrets.DAMTP_DEPLOY_KEY }}" >> $GITHUB_ENV
-          fi
       - name: "Build and deploy"
         env:
-          TARGET_REPO: ${{ matrix.target.repo }}
-        run: julia --project=docs/ docs/make.jl
+          DOCUMENTER_KEY: ${{ matrix.target.name == 'astroautomata' && secrets.DOCUMENTER_KEY_ASTROAUTOMATA || secrets.DOCUMENTER_KEY_CAM }}
+          TARGET_REPO: ${{ matrix.target.repo_url }}
+        run: |
+          julia --project=docs/ docs/make.jl
