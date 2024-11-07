@@ -3,8 +3,7 @@ module HallOfFameModule
 using StyledStrings: @styled_str
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
-using ..CoreModule:
-    MAX_DEGREE, AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
+using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: PopMember
 using ..InterfaceDynamicExpressionsModule: format_dimensions, WILDCARD_UNIT_STRING
@@ -133,7 +132,7 @@ const HEADER = let
 end
 
 function string_dominating_pareto_curve(
-    hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing
+    hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing, pretty::Bool=true
 )
     terminal_width = (width === nothing) ? 100 : max(100, width::Integer)
     _buffer = IOBuffer()
@@ -150,7 +149,7 @@ function string_dominating_pareto_curve(
             display_variable_names=dataset.display_variable_names,
             X_sym_units=dataset.X_sym_units,
             y_sym_units=dataset.y_sym_units,
-            raw=false,
+            pretty,
         )
         y_prefix = dataset.y_variable_name
         unit_str = format_dimensions(dataset.y_sym_units)

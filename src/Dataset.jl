@@ -3,10 +3,8 @@ module DatasetModule
 using DynamicQuantities: Quantity
 
 using ..UtilsModule: subscriptify, get_base_type
-using ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
+using ..ProgramConstantsModule: DATA_TYPE, LOSS_TYPE
 using ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
-
-import ...deprecate_varmap
 
 """
     Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -102,13 +100,11 @@ function Dataset(
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
     # Deprecated:
-    varMap=nothing,
     kws...,
 ) where {T<:DATA_TYPE,L}
     Base.require_one_based_indexing(X)
     y !== nothing && Base.require_one_based_indexing(y)
     # Deprecation warning:
-    variable_names = deprecate_varmap(variable_names, varMap, :Dataset)
     if haskey(kws, :loss_type)
         Base.depwarn(
             "The `loss_type` keyword argument is deprecated. Pass as an argument instead.",
@@ -129,8 +125,8 @@ function Dataset(
         )
     end
 
-    n = size(X, BATCH_DIM)
-    nfeatures = size(X, FEATURE_DIM)
+    n = size(X, 2)
+    nfeatures = size(X, 1)
     variable_names = @something(variable_names, ["x$(i)" for i in 1:nfeatures])
     display_variable_names = @something(
         display_variable_names, ["x$(subscriptify(i))" for i in 1:nfeatures]
@@ -238,5 +234,9 @@ _fill!(x::AbstractArray, val) = fill!(x, val)
 _fill!(x::NamedTuple, val) = foreach(v -> _fill!(v, val), values(x))
 _fill!(::Nothing, val) = nothing
 _fill!(x, val) = x
+
+function max_features(dataset::Dataset, _)
+    return dataset.nfeatures
+end
 
 end

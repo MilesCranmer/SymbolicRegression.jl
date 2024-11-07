@@ -2,21 +2,24 @@ module MutateModule
 
 using DynamicExpressions:
     AbstractExpression,
-    with_contents,
     get_tree,
     preserve_sharing,
     count_scalar_constants,
     simplify_tree!,
     combine_operators
 using ..CoreModule:
-    AbstractOptions, AbstractMutationWeights, Dataset, RecordType, sample_mutation
+    AbstractOptions,
+    AbstractMutationWeights,
+    Dataset,
+    RecordType,
+    sample_mutation,
+    max_features
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: score_func, score_func_batched
 using ..CheckConstraintsModule: check_constraints
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..PopMemberModule: PopMember
 using ..MutationFunctionsModule:
-    gen_random_tree_fixed_size,
     mutate_constant,
     mutate_operator,
     swap_operands,
@@ -173,7 +176,7 @@ function next_generation(
         member.score, member.loss
     end
 
-    nfeatures = dataset.nfeatures
+    nfeatures = max_features(dataset, options)
 
     weights = copy(options.mutation_weights)
 

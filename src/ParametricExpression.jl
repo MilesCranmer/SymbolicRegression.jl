@@ -6,15 +6,12 @@ module ParametricExpressionModule
 
 using DynamicExpressions:
     DynamicExpressions as DE,
-    AbstractExpression,
     ParametricExpression,
     ParametricNode,
     get_metadata,
-    with_metadata,
     get_contents,
     with_contents,
-    get_tree,
-    eval_tree_array
+    get_tree
 using StatsBase: StatsBase
 using Random: default_rng, AbstractRNG
 
@@ -35,7 +32,7 @@ function EB.extra_init_params(
     ::Val{embed},
 ) where {T,embed,E<:ParametricExpression}
     num_params = options.expression_options.max_parameters
-    num_classes = length(unique(dataset.extra.classes))
+    num_classes = length(unique(dataset.extra.class))
     parameter_names = embed ? ["p$i" for i in 1:num_params] : nothing
     _parameters = if prototype === nothing
         randn(T, (num_params, num_classes))
@@ -64,7 +61,7 @@ end
 function DE.eval_tree_array(
     tree::ParametricExpression,
     X::AbstractMatrix,
-    classes::AbstractVector{<:Integer},
+    class::AbstractVector{<:Integer},
     options::AbstractOptions;
     kws...,
 )
@@ -72,7 +69,7 @@ function DE.eval_tree_array(
     out, complete = DE.eval_tree_array(
         tree,
         X,
-        classes,
+        class,
         DE.get_operators(tree, options);
         turbo=options.turbo,
         bumper=options.bumper,
@@ -87,7 +84,7 @@ function LF.eval_tree_dispatch(
     out, complete = DE.eval_tree_array(
         tree,
         LF.maybe_getindex(dataset.X, :, idx),
-        LF.maybe_getindex(dataset.extra.classes, idx),
+        LF.maybe_getindex(dataset.extra.class, idx),
         options.operators,
     )
     return out::A, complete::Bool

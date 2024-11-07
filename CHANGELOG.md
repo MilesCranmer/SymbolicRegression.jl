@@ -91,67 +91,60 @@ A `TemplateExpression` is constructed by specifying:
 For example, you can create a `TemplateExpression` that enforces
 the constraint: `sin(f(x1, x2)) + g(x3)^2` - where we evolve `f` and `g` simultaneously.
 
-Let's see some code for this. First, we define some base expressions for each input feature:
+To do this, we first describe the structure using `TemplateStructure`
+that takes a single closure function that maps a named tuple of
+`ComposableExpression` expressions and a tuple of features:
 
 ```julia
 using SymbolicRegression
 
-options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
-operators = options.operators
-variable_names = ["x1", "x2", "x3"]
-
-# Base expressions:
-x1 = Expression(Node{Float64}(; feature=1); operators, variable_names)
-x2 = Expression(Node{Float64}(; feature=2); operators, variable_names)
-x3 = Expression(Node{Float64}(; feature=3); operators, variable_names)
-```
-
-To build a `TemplateExpression`, we specify the structure using
-a `TemplateStructure` object. This class has several fields:
-
-- `combine`: Optional function taking a `NamedTuple` of function keys => expressions,
-  returning a single expression. Fallback method used by `get_tree`
-  on a `TemplateExpression` to generate a single `Expression`.
-- `combine_vectors`: Optional function taking a `NamedTuple` of function keys => vectors,
-  returning a single vector. Used for evaluating the expression tree.
-  You may optionally define a method with a second argument `X` for if you wish
-  to include the data matrix `X` (of shape `[num_features, num_rows]`) in the
-  computation.
-- `combine_strings`: Optional function taking a `NamedTuple` of function keys => strings,
-  returning a single string. Used for printing the expression tree.
-- `variable_constraints`: Optional `NamedTuple` that defines which variables each sub-expression is allowed to access.
-  For example, requesting `f(x1, x2)` and `g(x3)` would be equivalent to `(; f=[1, 2], g=[3])`.
-
-Let's see an example:
-
-```julia
-
-# Combine f and g them into a single scalar expression:
-structure = TemplateStructure(;
-    combine_strings=e -> "sin(" * e.f * ") + (" * e.g * ")^2",
-    combine_vectors=e -> map((f, g) -> sin(f) + g * g, e.f, e.g),
-    variable_constraints = (; f=[1, 2], g=[3]),  # We constrain it to f(x1, x2) and g(x3)
+structure = TemplateStructure{(:f, :g)}(
+  ((; f, g), (x1, x2, x3)) -> sin(f(x1, x2)) + g(x3)^2
 )
 ```
 
-This defines how the `TemplateExpression` should be evaluated numerically on a given input,
-and also how it should be represented as a string:
+This defines how the `TemplateExpression` should be
+evaluated numerically on a given input.
+
+The number of arguments allowed by each expression object
+is inferred using this closure, though it can also
+be passed explicitly with the `num_features` kwarg.
 
 ```julia
-julia> f_example = x1 - x2 * x2;  # Normal `Expression` object
-
-julia> g_example = 1.5 * x3;
-
-julia> # Create TemplateExpression from these sub-expressions:
-       st_expr = TemplateExpression((; f=f_example, g=g_example); structure, operators, variable_names);
-
-julia> st_expr  # Prints using `my_structure`!
-sin(x1 - (x2 * x2)) + 1.5 * x3^2
-
-julia> st_expr([0.0; 1.0; 2.0;;])  # Combines evaluation of `f` and `g` via `my_structure`!
-1-element Vector{Float64}:
- 8.158529015192103
+operators = Options(binary_operators=(+, -, *, /)).operators
+variable_names = ["x1", "x2", "x3"]
+x1 = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+x2 = ComposableExpression(Node{Float64}(; feature=2); operators, variable_names)
+x3 = ComposableExpression(Node{Float64}(; feature=3); operators, variable_names)
 ```
+
+Note that using `x1` here refers to the
+_relative_ argument to the expression.
+So the node with feature equal to 1 will reference
+the first argument, regardless of what it is.
+
+```julia
+st_expr = TemplateExpression(
+    (; f=x1 - x2 * x2, g=1.5 * x1);
+    structure,
+    operators,
+    variable_names
+) # Prints as: f = #1 - (#2 * #2); g = 1.5 * #1
+
+# Evaluation combines evaluation of `f` and `g`, and combines them
+# with the structure function:
+st_expr([0.0; 1.0; 2.0;;])
+```
+
+This also work with hierarchical expressions! For example,
+
+```julia
+structure = TemplateStructure{(:f, :g)}(
+  ((; f, g), (x1, x2, x3)) -> f(x1, g(x2), x3^2) - g(x3)
+)
+```
+
+this is a valid structure!
 
 We can also use this `TemplateExpression` in SymbolicRegression.jl searches!
 
@@ -168,11 +161,17 @@ This also has our variable mapping, which says
 we are fitting `f(x1, x2)`, `g1(x3)`, and `g2(x3)`:
 
 ```julia
-structure = TemplateStructure(;
-    combine_strings=e -> "( " * e.f * " + " * e.g1 * ", " * e.f * " + " * e.g2 * " )",
-    combine_vectors=e -> map(i -> (e.f[i] + e.g1[i], e.f[i] + e.g2[i]), eachindex(e.f)),
-    variable_constraints = (; f=[1, 2], g1=[3], g2=[3]),
-)
+function my_structure((; f, g1, g2), (x1, x2, x3))
+    _f = f(x1, x2)
+    _g1 = g1(x3)
+    _g2 = g2(x3)
+
+    # We use `.x` to get the underlying vector
+    out = map((fi, g1i, g2i) -> (fi + g1i, fi + g2i), _f.x, _g1.x, _g2.x)
+    # And `.valid` to see whether the evaluations
+    return ValidVector(out, _f.valid && _g1.valid && _g2.valid)
+end
+structure = TemplateStructure{(:f, :g1, :g2)}(my_structure)
 ```
 
 Now, our dataset is a regular 2D array of inputs for `X`.
@@ -182,10 +181,7 @@ But our `y` is actually a _vector of 2-tuples_!
 X = rand(100, 3) .* 10
 
 y = [
-    (
-        sin(X[i, 1]) + X[i, 3]^2,
-        sin(X[i, 1]) + X[i, 3]
-    )
+    (sin(X[i, 1]) + X[i, 3]^2, sin(X[i, 1]) + X[i, 3])
     for i in eachindex(axes(X, 1))
 ]
 ```

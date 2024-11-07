@@ -1,6 +1,6 @@
 module AdaptiveParsimonyModule
 
-using ..CoreModule: AbstractOptions, MAX_DEGREE
+using ..CoreModule: AbstractOptions
 
 """
     RunningSearchStatistics

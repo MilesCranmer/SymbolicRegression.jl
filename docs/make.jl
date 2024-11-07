@@ -106,6 +106,7 @@ makedocs(;
         "Examples" => [
             "Short Examples" => "examples.md",
             "Template Expressions" => "examples/template_expression.md",
+            "Parameterized Expressions" => "examples/parameterized_function.md",
         ],
         "API" => "api.md",
         "Losses" => "losses.md",

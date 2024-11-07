@@ -63,32 +63,21 @@ These types allow you to define expressions with parameters that can be tuned to
 ## Template Expressions
 
 Template expressions allow you to specify predefined structures and constraints for your expressions.
-These use the new `TemplateStructure` type to define how expressions should be combined and evaluated.
+These use `ComposableExpressions` as their internal expression type, which makes them
+flexible for creating a structure out of a single function.
+
+These use the `TemplateStructure` type to define how expressions should be combined and evaluated.
 
 ```@docs
 TemplateExpression
 TemplateStructure
 ```
 
-Example usage:
+Composable expressions allow you to combine multiple expressions together.
 
-```julia
-# Define a template structure
-structure = TemplateStructure(
-    combine=e -> e.f + e.g,                  # Create normal `Expression`
-    combine_vectors=e -> (e.f .+ e.g),       # Output vector
-    combine_strings=e -> "($e.f) + ($e.g)",  # Output string
-    variable_constraints=(; f=[1, 2], g=[3]) # Constrain dependencies
-)
-
-# Use in options
-model = SRRegressor(;
-    expression_type=TemplateExpression,
-    expression_options=(; structure=structure)
-)
+```@docs
+ComposableExpression
 ```
-
-The `variable_constraints` field allows you to specify which variables can be used in different parts of the expression.
 
 ## Population
 

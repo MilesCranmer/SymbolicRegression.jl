@@ -9,11 +9,10 @@ using Distributed: Distributed, @spawnat, Future, procs, addprocs
 using StatsBase: mean
 using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
-using Compat: Fix
 
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
-using ..CoreModule: Dataset, AbstractOptions, Options, MAX_DEGREE, RecordType
+using ..CoreModule: Dataset, AbstractOptions, Options, RecordType, max_features
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
@@ -269,7 +268,7 @@ function init_dummy_pops(
         first(datasets);
         population_size=1,
         options=options,
-        nfeatures=first(datasets).nfeatures,
+        nfeatures=max_features(first(datasets), options),
     )
     # ^ Due to occasional inference issue, we manually specify the return type
     return [
@@ -281,7 +280,7 @@ function init_dummy_pops(
                     datasets[j];
                     population_size=1,
                     options=options,
-                    nfeatures=datasets[j].nfeatures,
+                    nfeatures=max_features(datasets[j], options),
                 )
             end for i in 1:npops
         ] for j in 1:length(datasets)
@@ -470,7 +469,7 @@ function print_search_state(
         100.0 * cycles_elapsed / total_cycles / nout
     )
 
-    print("="^twidth * "\n")
+    print("═"^twidth * "\n")
     for (j, (hall_of_fame, dataset)) in enumerate(zip(hall_of_fames, datasets))
         if nout > 1
             @printf("Best equations for output %d\n", j)
@@ -479,7 +478,7 @@ function print_search_state(
             hall_of_fame, dataset, options; width=width
         )
         print(equation_strings * "\n")
-        print("="^twidth * "\n")
+        print("═"^twidth * "\n")
     end
     return print("Press 'q' and then <enter> to stop execution early.\n")
 end
@@ -580,7 +579,7 @@ function save_to_file(
         complexities[i] = compute_complexity(member, options)
         losses[i] = member.loss
         strings[i] = string_tree(
-            member.tree, options; variable_names=dataset.variable_names
+            member.tree, options; variable_names=dataset.variable_names, pretty=false
         )
     end
 

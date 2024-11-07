@@ -14,14 +14,14 @@ export Population,
     ParametricExpression,
     TemplateExpression,
     TemplateStructure,
+    ValidVector,
+    ComposableExpression,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
     EvalOptions,
     SRRegressor,
     MultitargetSRRegressor,
-    LOSS_TYPE,
-    DATA_TYPE,
 
     #Functions:
     equation_search,
@@ -41,7 +41,6 @@ export Population,
     set_node!,
     copy_node,
     node_to_symbolic,
-    node_type,
     symbolic_to_node,
     simplify_tree!,
     tree_mapreduce,
@@ -88,6 +87,7 @@ using Pkg: Pkg
 using TOML: parsefile
 using Random: seed!, shuffle!
 using Reexport
+using ProgressMeter: finish!
 using DynamicExpressions:
     Node,
     GraphNode,
@@ -159,16 +159,17 @@ using DynamicExpressions: with_type_parameters
     LogCoshLoss
 using Compat: @compat, Fix
 
-@compat public AbstractOptions,
-AbstractRuntimeOptions,
-RuntimeOptions,
-AbstractMutationWeights,
-mutate!,
-condition_mutation_weights!,
-sample_mutation,
-MutationResult,
-AbstractSearchState,
-SearchState
+#! format: off
+@compat(
+    public,
+    (
+        AbstractOptions, AbstractRuntimeOptions, RuntimeOptions,
+        AbstractMutationWeights, mutate!, condition_mutation_weights!,
+        sample_mutation, MutationResult, AbstractSearchState, SearchState,
+        LOSS_TYPE, DATA_TYPE, node_type,
+    )
+)
+#! format: on
 # ^ We can add new functions here based on requests from users.
 # However, I don't want to add many functions without knowing what
 # users will actually want to overload.
@@ -185,15 +186,6 @@ const PACKAGE_VERSION = try
     end
 catch
     VersionNumber(0, 0, 0)
-end
-
-function deprecate_varmap(variable_names, varMap, func_name)
-    if varMap !== nothing
-        Base.depwarn("`varMap` is deprecated; use `variable_names` instead", func_name)
-        @assert variable_names === nothing "Cannot pass both `varMap` and `variable_names`"
-        variable_names = varMap
-    end
-    return variable_names
 end
 
 using DispatchDoctor: @stable
@@ -221,22 +213,23 @@ using DispatchDoctor: @stable
     include("Migration.jl")
     include("SearchUtils.jl")
     include("ExpressionBuilder.jl")
+    include("ComposableExpression.jl")
     include("TemplateExpression.jl")
     include("ParametricExpression.jl")
 end
 
 using .CoreModule:
-    MAX_DEGREE,
-    BATCH_DIM,
-    FEATURE_DIM,
     DATA_TYPE,
     LOSS_TYPE,
     RecordType,
     Dataset,
     AbstractOptions,
     Options,
+    ComplexityMapping,
     AbstractMutationWeights,
     MutationWeights,
+    get_safe_op,
+    max_features,
     is_weighted,
     sample_mutation,
     plus,
@@ -317,6 +310,8 @@ using .SearchUtilsModule:
     get_cur_maxsize,
     update_hall_of_fame!
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure
+using .TemplateExpressionModule: TemplateExpression, TemplateStructure, ValidVector
+using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
@@ -444,7 +439,6 @@ function equation_search(
     v_dim_out::Val{DIM_OUT}=Val(nothing),
     # Deprecated:
     multithreaded=nothing,
-    varMap=nothing,
 ) where {T<:DATA_TYPE,L,DIM_OUT}
     if multithreaded !== nothing
         error(
@@ -452,7 +446,6 @@ function equation_search(
             "Choose one of :multithreaded, :multiprocessing, or :serial.",
         )
     end
-    variable_names = deprecate_varmap(variable_names, varMap, :equation_search)
 
     if weights !== nothing
         @assert length(weights) == length(y)
@@ -532,6 +525,7 @@ end
     _warmup_search!(state, datasets, ropt, options)
     _main_search_loop!(state, datasets, ropt, options)
     _tear_down!(state, ropt, options)
+    _info_dump(state, datasets, ropt, options)
     return _format_output(state, datasets, ropt, options)
 end
 
@@ -715,7 +709,7 @@ function _initialize_search!(
                                 population_size=options.population_size,
                                 nlength=3,
                                 options=options,
-                                nfeatures=datasets[j].nfeatures,
+                                nfeatures=max_features(datasets[j], options),
                             ),
                             HallOfFame(options, datasets[j]),
                             RecordType(),
@@ -939,7 +933,7 @@ function _main_search_loop!(
                 options, total_cycles, cycles_remaining=state.cycles_remaining[j]
             )
             move_window!(state.all_running_search_statistics[j])
-            if progress_bar !== nothing
+            if !isnothing(progress_bar)
                 head_node_occupation = estimate_work_fraction(resource_monitor)
                 update_progress_bar!(
                     progress_bar,
@@ -1008,6 +1002,9 @@ function _main_search_loop!(
             break
         end
         ################################################################
+    end
+    if !isnothing(progress_bar)
+        finish!(progress_bar)
     end
     return nothing
 end
@@ -1087,6 +1084,50 @@ end
         end
     end
     return (out_pop, best_seen, record, num_evals)
+end
+function _info_dump(
+    state::AbstractSearchState,
+    datasets::Vector{D},
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+) where {D<:Dataset}
+    ropt.verbosity <= 0 && return nothing
+
+    nout = length(state.halls_of_fame)
+    if nout > 1
+        @info "Final populations:"
+    else
+        @info "Final population:"
+    end
+    for (j, (hall_of_fame, dataset)) in enumerate(zip(state.halls_of_fame, datasets))
+        if nout > 1
+            @info "Output $j:"
+        end
+        equation_strings = string_dominating_pareto_curve(
+            hall_of_fame,
+            dataset,
+            options;
+            width=@something(
+                options.terminal_width,
+                ropt.progress ? displaysize(stdout)[2] : nothing,
+                Some(nothing)
+            )
+        )
+        println(equation_strings)
+    end
+
+    if options.save_to_file
+        output_directory = joinpath(
+            something(options.output_directory, "outputs"), ropt.run_id
+        )
+        @info "Results saved to:"
+        for j in 1:nout
+            filename = nout > 1 ? "hall_of_fame_output$(j).csv" : "hall_of_fame.csv"
+            output_file = joinpath(output_directory, filename)
+            println("  - ", output_file)
+        end
+    end
+    return nothing
 end
 
 include("MLJInterface.jl")

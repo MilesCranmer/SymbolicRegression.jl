@@ -4,7 +4,7 @@ import .HallOfFameModule: calculate_pareto_frontier
 import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
 
 @deprecate(
-    calculate_pareto_frontier(X, y, hallOfFame, options; weights=nothing, varMap=nothing),
+    calculate_pareto_frontier(X, y, hallOfFame, options; weights=nothing),
     calculate_pareto_frontier(hallOfFame)
 )
 @deprecate(
@@ -41,7 +41,6 @@ import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
         loss_type::Type=Nothing,
         # Deprecated:
         multithreaded=nothing,
-        varMap=nothing,
     ) where {T<:DATA_TYPE},
     equation_search(
         X,
@@ -58,7 +57,6 @@ import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
         saved_state,
         loss_type,
         multithreaded,
-        varMap,
     )
 )
 

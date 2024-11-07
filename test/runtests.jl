@@ -77,9 +77,7 @@ end
     include("test_nested_constraints.jl")
 end
 
-@testitem "Test complexity evaluation" tags = [:part3] begin
-    include("test_complexity.jl")
-end
+include("test_complexity.jl")
 
 @testitem "Test options" tags = [:part1] begin
     include("test_options.jl")
@@ -131,7 +129,6 @@ end
     ENV["SYMBOLIC_REGRESSION_IS_TESTING"] = "true"
     include("../examples/parameterized_function.jl")
 end
-include("test_template_expression.jl")
 
 @testitem "Testing whether the recorder works." tags = [:part3] begin
     include("test_recorder.jl")
@@ -165,6 +162,7 @@ end
 
 include("test_pretty_printing.jl")
 include("test_expression_builder.jl")
+include("test_composable_expression.jl")
 
 @testitem "Aqua tests" tags = [:part2, :aqua] begin
     include("test_aqua.jl")

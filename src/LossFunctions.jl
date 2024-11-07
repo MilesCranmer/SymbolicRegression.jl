@@ -1,5 +1,6 @@
 module LossFunctionsModule
 
+using DispatchDoctor: @stable
 using StatsBase: StatsBase
 using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, get_tree, eval_tree_array
@@ -42,20 +43,38 @@ end
     end
 end
 
-function eval_tree_dispatch(
-    tree::AbstractExpression, dataset::Dataset, options::AbstractOptions, idx
+@stable(
+    default_mode = "disable",
+    default_union_limit = 2,
+    begin
+        function eval_tree_dispatch(
+            tree::AbstractExpression, dataset::Dataset, options::AbstractOptions, idx
+        )
+            A = expected_array_type(dataset.X, typeof(tree))
+            out, complete = eval_tree_array(
+                tree, maybe_getindex(dataset.X, :, idx), options
+            )
+            if isnothing(out)
+                return out, false
+            else
+                return out::A, complete::Bool
+            end
+        end
+        function eval_tree_dispatch(
+            tree::AbstractExpressionNode, dataset::Dataset, options::AbstractOptions, idx
+        )
+            A = expected_array_type(dataset.X, typeof(tree))
+            out, complete = eval_tree_array(
+                tree, maybe_getindex(dataset.X, :, idx), options
+            )
+            if isnothing(out)
+                return out, false
+            else
+                return out::A, complete::Bool
+            end
+        end
+    end
 )
-    A = expected_array_type(dataset.X, typeof(tree))
-    out, complete = eval_tree_array(tree, maybe_getindex(dataset.X, :, idx), options)
-    return out::A, complete::Bool
-end
-function eval_tree_dispatch(
-    tree::AbstractExpressionNode, dataset::Dataset, options::AbstractOptions, idx
-)
-    A = expected_array_type(dataset.X, typeof(tree))
-    out, complete = eval_tree_array(tree, maybe_getindex(dataset.X, :, idx), options)
-    return out::A, complete::Bool
-end
 
 # Evaluate the loss of a particular expression on the input dataset.
 function _eval_loss(
@@ -66,7 +85,7 @@ function _eval_loss(
     idx,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
     (prediction, completion) = eval_tree_dispatch(tree, dataset, options, idx)
-    if !completion
+    if !completion || isnothing(prediction)
         return L(Inf)
     end
 

@@ -120,7 +120,12 @@ function move_functions_to_workers(
 ) where {T}
     # All the types of functions we need to move to workers:
     function_sets = (
-        :unaops, :binops, :elementwise_loss, :early_stop_condition, :loss_function
+        :unaops,
+        :binops,
+        :elementwise_loss,
+        :early_stop_condition,
+        :loss_function,
+        :complexity_mapping,
     )
 
     for function_set in function_sets
@@ -152,6 +157,12 @@ function move_functions_to_workers(
             end
             ops = (options.loss_function,)
             example_inputs = (Node(T; val=zero(T)), dataset, options)
+        elseif function_set == :complexity_mapping
+            if !(options.complexity_mapping isa Function)
+                continue
+            end
+            ops = (options.complexity_mapping,)
+            example_inputs = (create_expression(zero(T), options, dataset),)
         else
             error("Invalid function set: $function_set")
         end
@@ -171,7 +182,9 @@ function move_functions_to_workers(
     end
 end
 
-function copy_definition_to_workers(op, procs, options::AbstractOptions, verbosity)
+function copy_definition_to_workers(
+    @nospecialize(op), procs, @nospecialize(options::AbstractOptions), verbosity
+)
     name = nameof(op)
     verbosity > 0 && @info "Copying definition of $op to workers..."
     src_ms = methods(op).ms
@@ -195,7 +208,7 @@ function test_function_on_workers(example_inputs, op, procs)
 end
 
 function activate_env_on_workers(
-    procs, project_path::String, options::AbstractOptions, verbosity
+    procs, project_path::String, @nospecialize(options::AbstractOptions), verbosity
 )
     verbosity > 0 && @info "Activating environment on workers."
     @everywhere procs begin
@@ -286,7 +299,7 @@ function test_entire_pipeline(
                     population_size=20,
                     nlength=3,
                     options=options,
-                    nfeatures=dataset.nfeatures,
+                    nfeatures=max_features(dataset, options),
                 )
                 tmp_pop = s_r_cycle(
                     dataset,

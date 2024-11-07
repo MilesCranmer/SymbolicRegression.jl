@@ -178,7 +178,7 @@ all properties of `Options` available for internal methods in SymbolicRegression
 abstract type AbstractOptions end
 
 struct Options{
-    CM<:ComplexityMapping,
+    CM<:Union{ComplexityMapping,Function},
     OP<:AbstractOperatorEnum,
     N<:AbstractExpressionNode,
     E<:AbstractExpression,
