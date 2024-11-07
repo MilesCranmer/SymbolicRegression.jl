@@ -158,7 +158,7 @@ function move_functions_to_workers(
             ops = (options.loss_function,)
             example_inputs = (Node(T; val=zero(T)), dataset, options)
         elseif function_set == :complexity_mapping
-            if options.complexity_mapping isa Union{ComplexityMapping,Function}
+            if !(options.complexity_mapping isa Function)
                 continue
             end
             ops = (options.complexity_mapping,)
