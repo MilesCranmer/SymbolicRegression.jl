@@ -61,7 +61,7 @@ end
 function DE.eval_tree_array(
     tree::ParametricExpression,
     X::AbstractMatrix,
-    classes::AbstractVector{<:Integer},
+    class::AbstractVector{<:Integer},
     options::AbstractOptions;
     kws...,
 )
@@ -69,7 +69,7 @@ function DE.eval_tree_array(
     out, complete = DE.eval_tree_array(
         tree,
         X,
-        classes,
+        class,
         DE.get_operators(tree, options);
         turbo=options.turbo,
         bumper=options.bumper,
@@ -84,7 +84,7 @@ function LF.eval_tree_dispatch(
     out, complete = DE.eval_tree_array(
         tree,
         LF.maybe_getindex(dataset.X, :, idx),
-        LF.maybe_getindex(dataset.extra.classes, idx),
+        LF.maybe_getindex(dataset.extra.class, idx),
         options.operators,
     )
     return out::A, complete::Bool

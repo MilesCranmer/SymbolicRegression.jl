@@ -142,21 +142,21 @@ function MMI.update(
     options = old_fitresult === nothing ? get_options(m) : old_fitresult.options
     return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, nothing)
 end
-function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, classes)
-    if isnothing(classes) && MMI.istable(X) && haskey(X, :classes)
+function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, class)
+    if isnothing(class) && MMI.istable(X) && haskey(X, :class)
         if !(X isa NamedTuple)
             error("Classes can only be specified with named tuples.")
         end
-        new_X = Base.structdiff(X, (; X.classes))
-        new_classes = X.classes
+        new_X = Base.structdiff(X, (; X.class))
+        new_class = X.class
         return _update(
-            m, verbosity, old_fitresult, old_cache, new_X, y, w, options, new_classes
+            m, verbosity, old_fitresult, old_cache, new_X, y, w, options, new_class
         )
     end
     if !isnothing(old_fitresult)
         @assert(
-            old_fitresult.has_classes == !isnothing(classes),
-            "If the first fit used classes, the second fit must also use classes."
+            old_fitresult.has_class == !isnothing(class),
+            "If the first fit used class, the second fit must also use class."
         )
     end
     # To speed up iterative fits, we cache the types:
@@ -210,7 +210,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, class
         X_units=X_units_clean,
         y_units=y_units_clean,
         verbosity=verbosity,
-        extra=isnothing(classes) ? (;) : (; classes),
+        extra=isnothing(class) ? (;) : (; class),
         # Help out with inference:
         v_dim_out=isa(m, SRRegressor) ? Val(1) : Val(2),
     )
@@ -221,7 +221,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, class
         variable_names=variable_names,
         y_variable_names=y_variable_names,
         y_is_table=MMI.istable(y),
-        has_classes=!isnothing(classes),
+        has_class=!isnothing(class),
         X_units=X_units_clean,
         y_units=y_units_clean,
         types=(
@@ -377,17 +377,17 @@ end
 function eval_tree_mlj(
     tree::AbstractExpression,
     X_t,
-    classes,
+    class,
     m::AbstractSRRegressor,
     ::Type{T},
     fitresult,
     i,
     prototype,
 ) where {T}
-    out, completed = if isnothing(classes)
+    out, completed = if isnothing(class)
         eval_tree_array(tree, X_t, fitresult.options)
     else
-        eval_tree_array(tree, X_t, classes, fitresult.options)
+        eval_tree_array(tree, X_t, class, fitresult.options)
     end
     if completed
         return wrap_units(out, fitresult.y_units, i)
@@ -397,30 +397,29 @@ function eval_tree_mlj(
 end
 
 function MMI.predict(
-    m::M, fitresult, Xnew; idx=nothing, classes=nothing
+    m::M, fitresult, Xnew; idx=nothing, class=nothing
 ) where {M<:AbstractSRRegressor}
-    return _predict(m, fitresult, Xnew, idx, classes)
+    return _predict(m, fitresult, Xnew, idx, class)
 end
-function _predict(m::M, fitresult, Xnew, idx, classes) where {M<:AbstractSRRegressor}
+function _predict(m::M, fitresult, Xnew, idx, class) where {M<:AbstractSRRegressor}
     if Xnew isa NamedTuple && (haskey(Xnew, :idx) || haskey(Xnew, :data))
         @assert(
             haskey(Xnew, :idx) && haskey(Xnew, :data) && length(keys(Xnew)) == 2,
             "If specifying an equation index during prediction, you must use a named tuple with keys `idx` and `data`."
         )
-        return _predict(m, fitresult, Xnew.data, Xnew.idx, classes)
+        return _predict(m, fitresult, Xnew.data, Xnew.idx, class)
     end
-    if isnothing(classes) && MMI.istable(Xnew) && haskey(Xnew, :classes)
+    if isnothing(class) && MMI.istable(Xnew) && haskey(Xnew, :class)
         if !(Xnew isa NamedTuple)
             error("Classes can only be specified with named tuples.")
         end
-        Xnew2 = Base.structdiff(Xnew, (; Xnew.classes))
-        return _predict(m, fitresult, Xnew2, idx, Xnew.classes)
+        Xnew2 = Base.structdiff(Xnew, (; Xnew.class))
+        return _predict(m, fitresult, Xnew2, idx, Xnew.class)
     end
 
-    if fitresult.has_classes
+    if fitresult.has_class
         @assert(
-            !isnothing(classes),
-            "Classes must be specified if the model was fit with classes."
+            !isnothing(class), "Classes must be specified if the model was fit with class."
         )
     end
 
@@ -442,12 +441,12 @@ function _predict(m::M, fitresult, Xnew, idx, classes) where {M<:AbstractSRRegre
 
     if M <: SRRegressor
         return eval_tree_mlj(
-            params.equations[_idx], Xnew_t, classes, m, T, fitresult, nothing, prototype
+            params.equations[_idx], Xnew_t, class, m, T, fitresult, nothing, prototype
         )
     elseif M <: MultitargetSRRegressor
         outs = [
             eval_tree_mlj(
-                params.equations[i][_idx[i]], Xnew_t, classes, m, T, fitresult, i, prototype
+                params.equations[i][_idx[i]], Xnew_t, class, m, T, fitresult, i, prototype
             ) for i in eachindex(_idx, params.equations)
         ]
         out_matrix = reduce(hcat, outs)
