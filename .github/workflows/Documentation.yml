@@ -36,7 +36,7 @@ jobs:
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: "Build and deploy"
         env:
-          DOCUMENTER_KEY: ${{ matrix.target.name == 'astroautomata' && secrets.DOCUMENTER_KEY_ASTROAUTOMATA || secrets.DOCUMENTER_KEY_CAM }}
+          DOCUMENTER_KEY: ${{ matrix.target.name == 'astroautomata' && secrets.DOCUMENTER_KEY || secrets.DAMTP_DEPLOY_KEY }}
           TARGET_REPO: ${{ matrix.target.repo_url }}
         run: |
           julia --project=docs/ docs/make.jl
