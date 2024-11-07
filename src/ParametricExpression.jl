@@ -32,7 +32,7 @@ function EB.extra_init_params(
     ::Val{embed},
 ) where {T,embed,E<:ParametricExpression}
     num_params = options.expression_options.max_parameters
-    num_classes = length(unique(dataset.extra.classes))
+    num_classes = length(unique(dataset.extra.class))
     parameter_names = embed ? ["p$i" for i in 1:num_params] : nothing
     _parameters = if prototype === nothing
         randn(T, (num_params, num_classes))
