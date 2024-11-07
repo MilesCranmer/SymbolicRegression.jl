@@ -1,21 +1,62 @@
+#literate_begin file="src/examples/parameterized_function.md"
+#=
+# Learning Parameterized Expressions
+
+_Note: Parametric expressions are currently considered experimental and may change in the future._
+
+Parameterized expressions in SymbolicRegression.jl allow you to discover symbolic expressions that contain
+optimizable parameters. This is particularly useful when you have data that follows different patterns
+based on some categorical variable, or when you want to learn an expression with constants that should
+be optimized during the search.
+
+In this tutorial, we'll generate synthetic data with class-dependent parameters and use symbolic regression to discover the parameterized expressions.
+
+## The Problem
+
+Let's create a synthetic dataset where the underlying function changes based on a class label:
+
+```math
+y = 2\cos(x_2 + 0.1) + x_1^2 - 3.2 \ \ \ \ \text{[class 1]} \\
+\text{OR} \\
+y = 2\cos(x_2 + 1.5) + x_1^2 - 0.5 \ \ \ \ \text{[class 2]}
+```
+
+We will need to simultaneously learn the symbolic expression and per-class parameters!
+=#
 using SymbolicRegression
 using Random: MersenneTwister
 using Zygote
 using MLJBase: machine, fit!, predict, report
 using Test
 
-rng = MersenneTwister(0)
-X = NamedTuple{(:x1, :x2, :x3, :x4, :x5)}(ntuple(_ -> randn(rng, Float32, 30), Val(5)))
-X = (; X..., classes=rand(rng, 1:2, 30))
-p1 = [0.0f0, 3.2f0]
-p2 = [1.5f0, 0.5f0]
+#=
+Now, we generate synthetic data, with these 2 different classes.
 
-y = [
-    2 * cos(X.x4[i] + p1[X.classes[i]]) + X.x1[i]^2 - p2[X.classes[i]] for
-    i in eachindex(X.classes)
-]
+Note that the `class` feature is given special treatment for the [`SRRegressor`](@ref)
+as a categorical variable:
+=#
 
-stop_at = Ref(1e-4)
+X = let rng = MersenneTwister(0), n = 30
+    (; x1=randn(rng, n), x2=randn(rng, n), class=rand(rng, 1:2, n))
+end
+
+#=
+Now, we generate target values using the true model that
+has class-dependent parameters:
+=#
+y = let P1 = [0.1, 1.5], P2 = [3.2, 0.5]
+    [2 * cos(x2 + P1[class]) + x1^2 - P2[class] for (x1, x2, class) in zip(X.x1, X.x2, X.class)]
+end
+
+#=
+## Setting up the Search
+
+We'll configure the symbolic regression search to:
+- Use parameterized expressions with up to 2 parameters
+- Use Zygote.jl for automatic differentiation during parameter optimization (important when using parametric expressions, as it is higher dimensional)
+=#
+
+stop_at = Ref(1e-4)  #src
 
 model = SRRegressor(;
     niterations=100,
@@ -25,11 +66,37 @@ model = SRRegressor(;
     expression_type=ParametricExpression,
     expression_options=(; max_parameters=2),
     autodiff_backend=:Zygote,
-    parallelism=:multithreading,
-    early_stop_condition=(loss, _) -> loss < stop_at[],
-)
+    early_stop_condition=(loss, _) -> loss < stop_at[],  #src
+);
+
+#=
+Now, let's set up the machine and fit it:
+=#
 
 mach = machine(model, X, y)
+
+#=
+At this point, you would run:
+
+```julia
+fit!(mach)
+```
+
+You can extract the best expression and parameters with:
+
+```julia
+report(mach).equations[end]
+```
+
+## Key Takeaways
+
+1. [`ParametricExpression`](@ref)s allows us to discover symbolic expressions with optimizable parameters
+2. The parameters can capture class-dependent variations in the underlying model
+
+This approach is particularly useful when you suspect your data follows a common
+functional form, but with varying parameters across different conditions or class!
+=#
+#literate_end
 
 fit!(mach)
 idx1 = lastindex(report(mach).equations)

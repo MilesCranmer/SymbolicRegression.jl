@@ -7,9 +7,9 @@ Template expressions are a powerful feature in SymbolicRegression.jl that allow 
 on the symbolic regression search. Rather than searching for a completely free-form expression, you can
 specify a template that combines multiple sub-expressions in a prescribed way.
 
-This is particularly useful when:
+This is particularly useful when any of the following are true:
 - You have domain knowledge about the functional form of your solution
-- You want to learn vector-valued expressions (e.g., force fields, velocity fields)
+- You want to learn expressions for a vector-valued output
 - You need to enforce constraints on which variables can appear in different parts of the expression
 - You want to share sub-expressions between multiple components
 
