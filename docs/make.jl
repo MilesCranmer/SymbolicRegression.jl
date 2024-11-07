@@ -146,5 +146,10 @@ open("docs/build/losses/index.html", "w") do io
 end
 
 if !haskey(ENV, "JL_LIVERELOAD")
-    deploydocs(; repo=ENV["TARGET_REPO"])
+    ENV["DOCUMENTER_KEY"] = ENV["DOCUMENTER_KEY_ASTROAUTOMATA"]
+    deploydocs(; repo="github.com/MilesCranmer/SymbolicRegression.jl.git")
+
+    ENV["DOCUMENTER_KEY"] = ENV["DOCUMENTER_KEY_CAM"]
+    ENV["GITHUB_REPOSITORY"] = "ai-damtp-cam-ac-uk/symbolicregression.git"
+    deploydocs(; repo="github.com/ai-damtp-cam-ac-uk/symbolicregression.git")
 end
