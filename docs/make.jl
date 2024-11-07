@@ -98,7 +98,7 @@ makedocs(;
     strict=:doctest,
     clean=true,
     format=Documenter.HTML(;
-        canonical="https://astroautomata.com/SymbolicRegression.jl/stable"
+        canonical="https://ai.damtp.cam.ac.uk/symbolicregression/stable"
     ),
     pages=[
         "Contents" => "index_base.md",
@@ -146,5 +146,5 @@ open("docs/build/losses/index.html", "w") do io
 end
 
 if !haskey(ENV, "JL_LIVERELOAD")
-    deploydocs(; repo="github.com/MilesCranmer/SymbolicRegression.jl.git")
+    deploydocs(; repo=ENV["TARGET_REPO"])
 end

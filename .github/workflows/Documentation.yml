@@ -15,6 +15,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - repo: "github.com/MilesCranmer/SymbolicRegression.jl.git"
+            key: "astroautomata"
+          - repo: "github.com/ai-damtp-cam-ac-uk/symbolicregression.git"
+            key: "cam"
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@latest
@@ -28,8 +35,14 @@ jobs:
           julia -e 'ENV["JULIA_PKG_SERVER"]=""; using Pkg; Pkg.update()'
       - name: "Install dependencies"
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      - name: "Set DOCUMENTER_KEY based on target"
+        run: |
+          if [ "${{ matrix.target.key }}" == "astroautomata" ]; then
+            echo "DOCUMENTER_KEY=${{ secrets.DOCUMENTER_KEY }}" >> $GITHUB_ENV
+          elif [ "${{ matrix.target.key }}" == "cam" ]; then
+            echo "DOCUMENTER_KEY=${{ secrets.DAMTP_DEPLOY_KEY }}" >> $GITHUB_ENV
+          fi
       - name: "Build and deploy"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
-          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # For authentication with SSH deploy key
+          TARGET_REPO: ${{ matrix.target.repo }}
         run: julia --project=docs/ docs/make.jl
