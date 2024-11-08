@@ -276,75 +276,7 @@ what used to be output directly) is accessible with
 get_contents(expr)
 ```
 
-## 8. Parametric Expressions
-
-Parametric expressions allow the algorithm to optimize parameters within the expressions during the search process. This is useful for finding expressions that not only fit the data but also have tunable parameters.
-
-To use this, the data needs to have information on which class
-each row belongs to --- this class information will be used to
-select the parameters when evaluating each expression.
-
-For example:
-
-```julia
-using SymbolicRegression
-using MLJ
-
-# Define the dataset
-X = NamedTuple{(:x1, :x2)}(ntuple(_ -> randn(Float32, 30), Val(2)))
-X = (; X..., classes=rand(1:2, 30))
-p1 = [0.0f0, 3.2f0]
-p2 = [1.5f0, 0.5f0]
-
-y = [
-    2 * cos(X.x1[i] + p1[X.classes[i]]) + X.x2[i]^2 - p2[X.classes[i]] for
-    i in eachindex(X.classes)
-]
-
-# Define the model with parametric expressions
-model = SRRegressor(
-    niterations=100,
-    binary_operators=[+, *, /, -],
-    unary_operators=[cos],
-    expression_type=ParametricExpression,
-    expression_options=(; max_parameters=2),
-    parallelism=:multithreading
-)
-
-# Train the model
-mach = machine(model, X, y)
-fit!(mach)
-
-# View the best expression
-report(mach)
-```
-
-The final equations will contain parameters that were optimized during training:
-
-```julia
-eq = report(mach).equations[end]
-
-typeof(eq)
-```
-
-We can also access the parameters of the expression with:
-
-```julia
-get_metadata(eq).parameters
-```
-
-This example demonstrates how to set up a symbolic regression model that searches for expressions with parameters, optimizing both the structure and the parameters of the expressions based on the provided class information.
-
-## 9. Additional features
-
-For the many other features available in SymbolicRegression.jl,
-check out the API page for `Options`. You might also find it useful
-to browse the documentation for the Python frontend
-[PySR](http://astroautomata.com/PySR), which has additional documentation.
-In particular, the [tuning page](http://astroautomata.com/PySR/tuning)
-is useful for improving search performance.
-
-## 10. Template Expressions
+## 8. Template Expressions
 
 Template expressions allow you to define structured expressions where different parts can be constrained to use specific variables.
 In this example, we'll create expressions that constrain the functional form in highly specific ways.
@@ -449,3 +381,14 @@ The above code demonstrates how template expressions can be used to:
 - Create expressions that can output multiple values
 
 You can even output custom structs - see the more detailed [Template Expression example](examples/template_expression.md)!
+
+Be sure to also check out the [Parametric Expression example](examples/parametric_expression.md).
+
+## 9. Additional features
+
+For the many other features available in SymbolicRegression.jl,
+check out the API page for `Options`. You might also find it useful
+to browse the documentation for the Python frontend
+[PySR](http://astroautomata.com/PySR), which has additional documentation.
+In particular, the [tuning page](http://astroautomata.com/PySR/tuning)
+is useful for improving search performance.
