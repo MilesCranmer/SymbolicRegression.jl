@@ -32,9 +32,8 @@ Summary of major recent changes, described in more detail below:
 - Identified and fixed a major internal bug involving unexpected aliasing produced by the crossover operator
   - Segmentation faults caused by this are a likely culprit for some crashes reported during multi-day multi-node searches.
   - Introduced a new test for aliasing throughout the entire search state to prevent this from happening again.
-- Increased documentation and examples.
-- Improved progress bar.
-- StyledStrings integration.
+- New URL! And increased documentation and examples.
+- Improved progress bar and StyledStrings integration.
 - Julia 1.10 is now the minimum supported Julia version.
 - [Other small features](#other-small-features-in-v100)
 - Also see the [Update Guide](#update-guide) below for more details on upgrading.
