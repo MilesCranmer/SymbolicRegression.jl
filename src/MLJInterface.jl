@@ -31,6 +31,7 @@ using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
 using ..UtilsModule: subscriptify, @ignore
+using ..LoggingModule: AbstractSRLogger
 
 import ..equation_search
 
@@ -57,9 +58,7 @@ function modelexpr(model_name::Symbol)
         procs::Union{Vector{Int},Nothing} = nothing
         addprocs_function::Union{Function,Nothing} = nothing
         heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
-        logger::Union{AbstractLogger,Nothing} = nothing
-        logging_callback::Union{Function,Nothing} = nothing
-        log_every_n::Union{Integer,NamedTuple} = 1
+        logger::Union{AbstractSRLogger,Nothing} = nothing
         runtests::Bool = true
         run_id::Union{String,Nothing} = nothing
         loss_type::L = Nothing
@@ -270,8 +269,6 @@ function _update(
         verbosity=verbosity,
         extra=isnothing(class) ? (;) : (; class),
         logger=m.logger,
-        logging_callback=m.logging_callback,
-        log_every_n=m.log_every_n,
         # Help out with inference:
         v_dim_out=isa(m, SRRegressor) ? Val(1) : Val(2),
     )
