@@ -7,7 +7,7 @@ https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-98
 
 | Latest release | Documentation | Forums | Paper |
 | :---: | :---: | :---: | :---: |
-| [![version](https://juliahub.com/docs/SymbolicRegression/version.svg)](https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS) | [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://astroautomata.com/SymbolicRegression.jl/dev/) | [![Discussions](https://img.shields.io/badge/discussions-github-informational)](https://github.com/MilesCranmer/PySR/discussions) | [![Paper](https://img.shields.io/badge/arXiv-2305.01582-b31b1b)](https://arxiv.org/abs/2305.01582) |
+| [![version](https://juliahub.com/docs/SymbolicRegression/version.svg)](https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS) | [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://ai.damtp.cam.ac.uk/symbolicregression/dev/) | [![Discussions](https://img.shields.io/badge/discussions-github-informational)](https://github.com/MilesCranmer/PySR/discussions) | [![Paper](https://img.shields.io/badge/arXiv-2305.01582-b31b1b)](https://arxiv.org/abs/2305.01582) |
 
 | Build status | Coverage |
 | :---: | :---: |
@@ -110,7 +110,7 @@ where here we choose to evaluate the second equation.
 
 For fitting multiple outputs, one can use `MultitargetSRRegressor`
 (and pass an array of indices to `idx` in `predict` for selecting specific equations).
-For a full list of options available to each regressor, see the [API page](https://astroautomata.com/SymbolicRegression.jl/dev/api/).
+For a full list of options available to each regressor, see the [API page](https://ai.damtp.cam.ac.uk/symbolicregression/dev/api/).
 
 ### Low-Level Interface
 
@@ -495,4 +495,4 @@ done | vims -l 'f a--> ' | sort
 
 ## Search options
 
-See https://astroautomata.com/SymbolicRegression.jl/stable/api/#Options
+See https://ai.damtp.cam.ac.uk/symbolicregression/stable/api/#Options
