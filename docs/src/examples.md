@@ -346,91 +346,100 @@ is useful for improving search performance.
 
 ## 10. Template Expressions
 
-Template expressions allow you to define structured expressions where different parts can be constrained to use specific variables. In this example, we'll create expressions that output pairs of values.
+Template expressions allow you to define structured expressions where different parts can be constrained to use specific variables.
+In this example, we'll create expressions that constrain the functional form in highly specific ways.
+(_For a more complex example, see ["Searching with template expressions"](examples/template_expression.md)_)
 
 First, let's set up our basic configuration:
 
 ```julia
 using SymbolicRegression
-using Random: rand
+using Random: rand, MersenneTwister
 using MLJBase: machine, fit!, report
-
-options = Options(
-    binary_operators=(+, *, /, -),
-    unary_operators=(sin, cos)
-)
-operators = options.operators
-variable_names = ["x1", "x2", "x3"]
-```
-
-Now we'll create base expressions for each variable:
-
-```julia
-x1, x2, x3 = [
-    Expression(
-        Node{Float64}(feature=i);
-        operators=operators,
-        variable_names=variable_names
-    )
-    for i in 1:3
-]
 ```
 
 The key part is defining our template structure. This determines how different parts of the expression combine:
 
 ```julia
-structure = TemplateStructure{(:f, :g1, :g2)}(;
-    # Define how to combine vectors of evaluated expressions
-    combine_vectors=e -> map(
-        (f, g1, g2) -> (f + g1, f + g2),
-        e.f, e.g1, e.g2
-    ),
-    # Define how to combine strings for printing
-    combine_strings=e -> "( $(e.f) + $(e.g1), $(e.f) + $(e.g2) )",
-    # Constrain which variables can be used in each part
-    variable_constraints=(; f=[1, 2], g1=[3], g2=[3])
+structure = TemplateStructure{(:f, :g)}(
+    ((; f, g), (x1, x2, x3)) -> f(x1, x2) + g(x2) - g(x3)
 )
 ```
+
+With this structure, we are telling the algorithm that it can learn
+any symbolic expressions `f` and `g`, with `f` a function of two inputs,
+and `g` a function of one input. The result of
+
+```math
+f(x_1, x_2) + g(x_2) - g(x_3)
+```
+
+will be compared with the target `y`.
 
 Let's generate some example data:
 
 ```julia
-X = rand(100, 3) .* 10
-# Create pairs of target expressions
+n = 100
+rng = MersenneTwister(0)
+x1 = 10rand(rng, n)
+x2 = 10rand(rng, n)
+x3 = 10rand(rng, n)
+X = (; x1, x2, x3)
 y = [
-    (sin(X[i, 1]) + X[i, 3]^2, sin(X[i, 1]) + X[i, 3])
-    for i in eachindex(axes(X, 1))
+    2 * cos(x1[i] + 3.2) + x2[i]^2 - 0.8 * x3[i]^2
+    for i in eachindex(x1)
 ]
 ```
 
-Now we can set up and train our model:
+Now, remember our structure: for the model to learn this,
+it would need to correctly disentangle the contribution
+of `f` and `g`!
+
+Now we can set up and train our model.
+Note that we pass the structure in to `expression_options`:
 
 ```julia
 model = SRRegressor(;
-    binary_operators=(+, *),
-    unary_operators=(sin,),
+    binary_operators=(+, -, *, /),
+    unary_operators=(cos,),
+    niterations=500,
     maxsize=25,
     expression_type=TemplateExpression,
-    # Pass options used to instantiate expressions
     expression_options=(; structure),
-    # Our `y` is 2-tuple of values
-    elementwise_loss=((x1, x2), (y1, y2)) -> (y1 - x1)^2 + (y2 - x2)^2
 )
 
 mach = machine(model, X, y)
 fit!(mach)
 ```
 
-After training, we can examine the best expression:
+If all goes well, you should see a printout with the following expression:
+
+```text
+y = ╭ f = ((#2 * 0.2) * #2) + (cos(#1 + 0.058407) * -2)
+    ╰ g = #1 * (#1 * 0.8)
+```
+
+This is what we were looking for! We can see that under
+$f(x_1, x_2) + g(x_2) - g(x_3)$, this correctly expands to
+$2 \cos(x_1 + 3.2) + x_2^2 - 0.8 x_3^2$.
+
+We can also access the individual parts of the template expression
+directly from the report:
 
 ```julia
 r = report(mach)
 best_expr = r.equations[r.best_idx]
 
 # Access individual parts of the template expression
-f_part = get_contents(best_expr).f    # Expression using x1 or x2
-g1_part = get_contents(best_expr).g1  # Expression using x3
-g2_part = get_contents(best_expr).g2  # Expression using x3
+println("f: ", get_contents(best_expr).f)
+println("g: ", get_contents(best_expr).g)
+```
+
+The `TemplateExpression` combines these under the structure
+so we can directly and efficiently evaluate this:
+
+```julia
+best_expr(randn(3, 20))
 ```
 
 The above code demonstrates how template expressions can be used to:
@@ -439,4 +448,4 @@ The above code demonstrates how template expressions can be used to:
 - Constrains which variables can be used in each component
 - Create expressions that can output multiple values
 
-You can even output custom structs - see the more detailed Template Expression example!
+You can even output custom structs - see the more detailed [Template Expression example](examples/template_expression.md)!
