@@ -16,10 +16,10 @@ end
 function SU.default_logging_callback(
     logger::AbstractLogger;
     log_step::Integer,
-    state::SearchState,
+    @nospecialize(state::SearchState),
     datasets::AbstractVector{<:Dataset{T,L}},
-    ropt::RuntimeOptions,
-    options::Options,
+    @nospecialize(ropt::RuntimeOptions),
+    @nospecialize(options::Options),
 ) where {T,L}
     nout = length(datasets)
     data = let d = Ref(Dict{String,Any}())

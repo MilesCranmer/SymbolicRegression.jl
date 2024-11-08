@@ -10,7 +10,14 @@ using SymbolicRegression.LoggingModule: convex_hull
 import SymbolicRegression.LoggingModule: add_plot_to_log!
 
 function add_plot_to_log!(
-    log::Dict; trees, losses, complexities, options, variable_names, log_step, ropt
+    log::Dict;
+    trees,
+    losses,
+    complexities,
+    @nospecialize(options),
+    variable_names,
+    log_step,
+    ropt,
 )
     if ropt.log_every_n.plots > 0 && log_step % ropt.log_every_n.plots == 0
         log["plot"] = plot(
@@ -29,13 +36,16 @@ function default_sr_plot end
 end
 
 # TODO: Add variable names
-@recipe function default_sr_plot(hall_of_fame::HallOfFame, options::Options)
+@recipe function default_sr_plot(hall_of_fame::HallOfFame, @nospecialize(options::Options))
     out = format_hall_of_fame(hall_of_fame, options)
     return (out.trees, out.losses, out.complexities, options)
 end
 
 @recipe function default_sr_plot(
-    trees::Vector{N}, losses::Vector{L}, complexities::Vector{Int}, options::Options
+    trees::Vector{N},
+    losses::Vector{L},
+    complexities::Vector{Int},
+    @nospecialize(options::Options)
 ) where {T,L,N<:AbstractExpression{T}}
     tree_strings = [string_tree(tree, options) for tree in trees]
     log_losses = @. log10(losses + eps(L))
