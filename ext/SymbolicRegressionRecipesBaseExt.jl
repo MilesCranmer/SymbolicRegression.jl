@@ -9,24 +9,11 @@ using SymbolicRegression.LoggingModule: convex_hull
 
 import SymbolicRegression.LoggingModule: add_plot_to_log!
 
-function add_plot_to_log!(
-    log::Dict;
-    trees,
-    losses,
-    complexities,
-    @nospecialize(options),
-    variable_names,
-    log_step,
-    ropt,
+function add_plot_to_log!(;
+    trees, losses, complexities, @nospecialize(options), variable_names
 )
-    if ropt.log_every_n.plots > 0 && log_step % ropt.log_every_n.plots == 0
-        log["plot"] = plot(
-            trees, losses, complexities, options; variable_names=variable_names
-        )
-    else
-        nothing
-    end
-    return nothing
+    plot_result = plot(trees, losses, complexities, options; variable_names=variable_names)
+    return Dict{String,Any}("plot" => plot_result)
 end
 
 function default_sr_plot end

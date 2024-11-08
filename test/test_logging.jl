@@ -1,37 +1,38 @@
-using Test
-using SymbolicRegression
-using TensorBoardLogger
-using Logging
-using MLJBase
-using Plots
-include("test_params.jl")
+@testitem "Test logging" tags = [:part1, :integration] begin
+    using SymbolicRegression, TensorBoardLogger, Logging, MLJBase, Plots
 
-mktempdir() do dir
-    logger = TBLogger(dir, tb_overwrite; min_level=Logging.Info)
+    include("test_params.jl")
 
-    niterations = 4
-    populations = 36
-    log_every_n = (; scalars=2, plots=10)
-    model = SRRegressor(;
-        binary_operators=[+, -, *, mod],
-        unary_operators=[],
-        maxsize=40,
-        niterations,
-        populations,
-        log_every_n,
-        logger,
-    )
+    mktempdir() do dir
+        logger = SRLogger(;
+            logger=TBLogger(dir, tb_overwrite; min_level=Logging.Info),
+            log_interval_scalars=2,
+            log_interval_plots=10,
+        )
 
-    X = (a=rand(500), b=rand(500))
-    y = @. 2 * cos(X.a * 23.5) - X.b^2
-    mach = machine(model, X, y)
+        niterations = 4
+        populations = 36
+        model = SRRegressor(;
+            binary_operators=[+, -, *, mod],
+            unary_operators=[],
+            maxsize=40,
+            niterations,
+            populations,
+            log_every_n,
+            logger,
+        )
 
-    fit!(mach)
+        X = (a=rand(500), b=rand(500))
+        y = @. 2 * cos(X.a * 23.5) - X.b^2
+        mach = machine(model, X, y)
 
-    b = TensorBoardLogger.steps(logger)
-    @test length(b) == (niterations * populations//log_every_n.scalars) + 1
+        fit!(mach)
 
-    files_and_dirs = readdir(dir)
-    @test length(files_and_dirs) == 1
-    @test occursin(r"events\.out\.tfevents", only(files_and_dirs))
+        b = TensorBoardLogger.steps(logger)
+        @test length(b) == (niterations * populations//log_every_n.scalars) + 1
+
+        files_and_dirs = readdir(dir)
+        @test length(files_and_dirs) == 1
+        @test occursin(r"events\.out\.tfevents", only(files_and_dirs))
+    end
 end

@@ -22,6 +22,7 @@ export Population,
     EvalOptions,
     SRRegressor,
     MultitargetSRRegressor,
+    SRLogger,
 
     #Functions:
     equation_search,
@@ -83,7 +84,6 @@ export Population,
 
 using Distributed
 using Printf: @printf, @sprintf
-using Logging: AbstractLogger
 using Pkg: Pkg
 using TOML: parsefile
 using Random: seed!, shuffle!
@@ -310,7 +310,9 @@ using .SearchUtilsModule:
     construct_datasets,
     save_to_file,
     get_cur_maxsize,
-    update_hall_of_fame!
+    update_hall_of_fame!,
+    logging_callback!
+using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure, ValidVector
 using .ComposableExpressionModule: ComposableExpression
@@ -434,9 +436,7 @@ function equation_search(
     run_id::Union{String,Nothing}=nothing,
     loss_type::Type{L}=Nothing,
     verbosity::Union{Integer,Nothing}=nothing,
-    logger::Union{AbstractLogger,Nothing}=nothing,
-    logging_callback::Union{Function,Nothing}=nothing,
-    log_every_n::Union{Integer,NamedTuple}=1,
+    logger::Union{AbstractSRLogger,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
@@ -485,8 +485,6 @@ function equation_search(
         run_id=run_id,
         verbosity=verbosity,
         logger=logger,
-        logging_callback=logging_callback,
-        log_every_n=log_every_n,
         progress=progress,
         v_dim_out=Val(DIM_OUT),
     )
@@ -796,7 +794,6 @@ function _main_search_loop!(
         nothing
     end
 
-    log_step = 0
     last_print_time = time()
     last_speed_recording_time = time()
     num_evals_last = sum(sum, state.num_evals)
@@ -955,10 +952,9 @@ function _main_search_loop!(
                     ropt.parallelism,
                 )
             end
-            if ropt.logging_callback !== nothing && log_step % ropt.log_every_n.scalars == 0
-                ropt.logging_callback(; log_step, state, datasets, ropt, options)
+            if ropt.logger !== nothing
+                logging_callback!(ropt.logger; state, datasets, ropt, options)
             end
-            log_step += 1
         end
         yield()
 

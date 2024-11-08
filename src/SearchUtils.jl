@@ -21,7 +21,7 @@ using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
 using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 
-function default_logging_callback end
+function logging_callback! end
 
 """
     AbstractRuntimeOptions
@@ -42,15 +42,14 @@ can customize runtime behaviors by passing it to `equation_search`.
 abstract type AbstractRuntimeOptions end
 
 """
-    RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE,NT} <: AbstractRuntimeOptions
+    RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE,LOGGER} <: AbstractRuntimeOptions
 
 Parameters for a search that are passed to `equation_search` directly,
 rather than set within `Options`. This is to differentiate between
 parameters that relate to processing and the duration of the search,
 and parameters dealing with the search hyperparameters itself.
 """
-struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE,NT<:NamedTuple} <:
-       AbstractRuntimeOptions
+struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE,LOGGER} <: AbstractRuntimeOptions
     niterations::Int64
     numprocs::Int64
     init_procs::Union{Vector{Int},Nothing}
@@ -59,8 +58,7 @@ struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE,NT<:NamedTuple} <:
     runtests::Bool
     verbosity::Int64
     progress::Bool
-    logging_callback::Union{Function,Nothing}
-    log_every_n::NT
+    logger::Union{AbstractLogger,Nothing}
     parallelism::Val{PARALLELISM}
     dim_out::Val{DIM_OUT}
     return_state::Val{RETURN_STATE}
@@ -97,9 +95,7 @@ end
     verbosity::Union{Int,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
-    logger::Union{AbstractLogger,Nothing}=nothing,
-    logging_callback::Union{Function,Nothing}=nothing,
-    log_every_n::Union{Integer,NamedTuple}=1,
+    logger=nothing,
     # Defined from options
     options_return_state::Val{ORS}=Val(nothing),
     options_verbosity::Union{Integer,Nothing}=nothing,
@@ -158,16 +154,6 @@ end
             numprocs
         end
     end
-    _logging_callback = if logging_callback === nothing && logger !== nothing
-        (; kws...) -> default_logging_callback(logger; kws...)
-    else
-        logging_callback
-    end
-    _log_every_n = if log_every_n isa Integer
-        (; scalars=log_every_n, plots=0)
-    else
-        log_every_n
-    end
 
     _return_state = VRS <: Val ? first(VRS.parameters) : something(ORS, return_state, false)
     dim_out = something(DIM_OUT, nout > 1 ? 2 : 1)
@@ -190,7 +176,7 @@ end
         ``
     end
 
-    return RuntimeOptions{concurrency,dim_out,_return_state,typeof(_log_every_n)}(
+    return RuntimeOptions{concurrency,dim_out,_return_state,typeof(logger)}(
         niterations,
         _numprocs,
         procs,
@@ -199,8 +185,7 @@ end
         runtests,
         _verbosity,
         _progress,
-        _logging_callback,
-        _log_every_n,
+        logger,
         Val(concurrency),
         Val(dim_out),
         Val(_return_state),
