@@ -1,6 +1,6 @@
 const TEST_TYPE = Float32
 
-function test_operator(op::F, x::T, y=nothing) where {F,T}
+function test_operator(@nospecialize(op::Function), x::T, y=nothing) where {T}
     local output
     try
         output = y === nothing ? op(x) : op(x, y)
@@ -26,14 +26,18 @@ function test_operator(op::F, x::T, y=nothing) where {F,T}
     end
     return nothing
 end
+precompile(Tuple{typeof(test_operator),Function,Float64,Float64})
+precompile(Tuple{typeof(test_operator),Function,Float32,Float32})
+precompile(Tuple{typeof(test_operator),Function,Float64})
+precompile(Tuple{typeof(test_operator),Function,Float32})
 
 const TEST_INPUTS = collect(range(-100, 100; length=99))
 
-function assert_operators_well_defined(T, options::Options)
+function assert_operators_well_defined(T, options::AbstractOptions)
     test_input = if T <: Complex
-        (x -> convert(T, x)).(TEST_INPUTS .+ TEST_INPUTS .* im)
+        Base.Fix1(convert, T).(TEST_INPUTS .+ TEST_INPUTS .* im)
     else
-        (x -> convert(T, x)).(TEST_INPUTS)
+        Base.Fix1(convert, T).(TEST_INPUTS)
     end
     for x in test_input, y in test_input, op in options.operators.binops
         test_operator(op, x, y)
@@ -45,7 +49,7 @@ end
 
 # Check for errors before they happen
 function test_option_configuration(
-    parallelism, datasets::Vector{D}, options::Options, verbosity
+    parallelism, datasets::Vector{D}, options::AbstractOptions, verbosity
 ) where {T,D<:Dataset{T}}
     if options.deterministic && parallelism != :serial
         error("Determinism is only guaranteed for serial mode.")
@@ -54,20 +58,18 @@ function test_option_configuration(
         verbosity > 0 &&
             @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
     end
-    if any(d -> d.X_units !== nothing || d.y_units !== nothing, datasets) &&
-        options.dimensional_constraint_penalty === nothing
+    if any(has_units, datasets) && options.dimensional_constraint_penalty === nothing
         verbosity > 0 &&
             @warn "You are using dimensional constraints, but `dimensional_constraint_penalty` was not set. The default penalty of `1000.0` will be used."
     end
 
-    for op in (options.operators.binops..., options.operators.unaops...)
-        if is_anonymous_function(op)
-            throw(
-                AssertionError(
-                    "Anonymous functions can't be used as operators for SymbolicRegression.jl",
-                ),
-            )
-        end
+    if any(is_anonymous_function, options.operators.binops) ||
+        any(is_anonymous_function, options.operators.unaops)
+        throw(
+            AssertionError(
+                "Anonymous functions can't be used as operators for SymbolicRegression.jl"
+            ),
+        )
     end
 
     assert_operators_well_defined(T, options)
@@ -80,15 +82,16 @@ function test_option_configuration(
             ),
         )
     end
+    return nothing
 end
 
 # Check for errors before they happen
 function test_dataset_configuration(
-    dataset::Dataset{T}, options::Options, verbosity
+    dataset::Dataset{T}, options::AbstractOptions, verbosity
 ) where {T<:DATA_TYPE}
     n = dataset.n
     if n != size(dataset.X, 2) ||
-        (dataset.y !== nothing && n != size(dataset.y::AbstractArray{T}, 1))
+        (dataset.y !== nothing && n != size(dataset.y::AbstractArray, 1))
         throw(
             AssertionError(
                 "Dataset dimensions are invalid. Make sure X is of shape [features, rows], y is of shape [rows] and if there are weights, they are of shape [rows].",
@@ -101,7 +104,7 @@ function test_dataset_configuration(
     end
 
     if !(typeof(options.elementwise_loss) <: SupervisedLoss) &&
-        dataset.weighted &&
+        is_weighted(dataset) &&
         !(3 in [m.nargs - 1 for m in methods(options.elementwise_loss)])
         throw(
             AssertionError(
@@ -113,11 +116,16 @@ end
 
 """ Move custom operators and loss functions to workers, if undefined """
 function move_functions_to_workers(
-    procs, options::Options, dataset::Dataset{T}, verbosity
+    procs, options::AbstractOptions, dataset::Dataset{T}, verbosity
 ) where {T}
     # All the types of functions we need to move to workers:
     function_sets = (
-        :unaops, :binops, :elementwise_loss, :early_stop_condition, :loss_function
+        :unaops,
+        :binops,
+        :elementwise_loss,
+        :early_stop_condition,
+        :loss_function,
+        :complexity_mapping,
     )
 
     for function_set in function_sets
@@ -132,7 +140,7 @@ function move_functions_to_workers(
                 continue
             end
             ops = (options.elementwise_loss,)
-            example_inputs = if dataset.weighted
+            example_inputs = if is_weighted(dataset)
                 (zero(T), zero(T), zero(T))
             else
                 (zero(T), zero(T))
@@ -149,6 +157,12 @@ function move_functions_to_workers(
             end
             ops = (options.loss_function,)
             example_inputs = (Node(T; val=zero(T)), dataset, options)
+        elseif function_set == :complexity_mapping
+            if !(options.complexity_mapping isa Function)
+                continue
+            end
+            ops = (options.complexity_mapping,)
+            example_inputs = (create_expression(zero(T), options, dataset),)
         else
             error("Invalid function set: $function_set")
         end
@@ -168,7 +182,9 @@ function move_functions_to_workers(
     end
 end
 
-function copy_definition_to_workers(op, procs, options::Options, verbosity)
+function copy_definition_to_workers(
+    @nospecialize(op), procs, @nospecialize(options::AbstractOptions), verbosity
+)
     name = nameof(op)
     verbosity > 0 && @info "Copying definition of $op to workers..."
     src_ms = methods(op).ms
@@ -191,7 +207,9 @@ function test_function_on_workers(example_inputs, op, procs)
     end
 end
 
-function activate_env_on_workers(procs, project_path::String, options::Options, verbosity)
+function activate_env_on_workers(
+    procs, project_path::String, @nospecialize(options::AbstractOptions), verbosity
+)
     verbosity > 0 && @info "Activating environment on workers."
     @everywhere procs begin
         Base.MainInclude.eval(
@@ -203,7 +221,7 @@ function activate_env_on_workers(procs, project_path::String, options::Options, 
     end
 end
 
-function import_module_on_workers(procs, filename::String, options::Options, verbosity)
+function import_module_on_workers(procs, filename::String, verbosity)
     loaded_modules_head_worker = [k.name for (k, _) in Base.loaded_modules]
 
     included_as_local = "SymbolicRegression" ∉ loaded_modules_head_worker
@@ -251,7 +269,7 @@ function import_module_on_workers(procs, filename::String, options::Options, ver
     return nothing
 end
 
-function test_module_on_workers(procs, options::Options, verbosity)
+function test_module_on_workers(procs, options::AbstractOptions, verbosity)
     verbosity > 0 && @info "Testing module on workers..."
     futures = []
     for proc in procs
@@ -268,7 +286,7 @@ function test_module_on_workers(procs, options::Options, verbosity)
 end
 
 function test_entire_pipeline(
-    procs, dataset::Dataset{T}, options::Options, verbosity
+    procs, dataset::Dataset{T}, options::AbstractOptions, verbosity
 ) where {T<:DATA_TYPE}
     futures = []
     verbosity > 0 && @info "Testing entire pipeline on workers..."
@@ -281,7 +299,7 @@ function test_entire_pipeline(
                     population_size=20,
                     nlength=3,
                     options=options,
-                    nfeatures=dataset.nfeatures,
+                    nfeatures=max_features(dataset, options),
                 )
                 tmp_pop = s_r_cycle(
                     dataset,
@@ -310,7 +328,7 @@ function configure_workers(;
     procs::Union{Vector{Int},Nothing},
     numprocs::Int,
     addprocs_function::Function,
-    options::Options,
+    options::AbstractOptions,
     project_path,
     file,
     exeflags::Cmd,
@@ -325,11 +343,7 @@ function configure_workers(;
     end
 
     if we_created_procs
-        if VERSION < v"1.9.0"
-            # On newer Julia; environment is activated automatically
-            activate_env_on_workers(procs, project_path, options, verbosity)
-        end
-        import_module_on_workers(procs, file, options, verbosity)
+        import_module_on_workers(procs, file, verbosity)
     end
 
     move_functions_to_workers(procs, options, example_dataset, verbosity)

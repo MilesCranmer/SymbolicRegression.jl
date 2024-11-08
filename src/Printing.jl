@@ -4,7 +4,7 @@ module PrintingModule
 using ..CoreModule: Options
 using ..MLJInterfaceModule: SRRegressor, SRFitResult
 
-function Base.print(io::IO, options::Options)
+function Base.print(io::IO, @nospecialize(options::Options))
     return print(
         io,
         "Options(" *
@@ -26,9 +26,11 @@ function Base.print(io::IO, options::Options)
         ")",
     )
 end
-Base.show(io::IO, ::MIME"text/plain", options::Options) = Base.print(io, options)
+function Base.show(io::IO, ::MIME"text/plain", @nospecialize(options::Options))
+    return Base.print(io, options)
+end
 
-function Base.show(io::IO, ::MIME"text/plain", fitresult::SRFitResult)
+function Base.show(io::IO, ::MIME"text/plain", @nospecialize(fitresult::SRFitResult))
     print(io, "SRFitResult for $(fitresult.model):")
     print(io, "\n")
     print(io, "  state:\n")

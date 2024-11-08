@@ -1,12 +1,15 @@
 using SymbolicRegression: L2DistLoss, MutationWeights
-using DynamicExpressions: set_default_variable_names!
+using DynamicExpressions.OperatorEnumConstructionModule: empty_all_globals!
 using Optim: Optim
 using LineSearches: LineSearches
 using Test: Test
 
 ENV["SYMBOLIC_REGRESSION_IS_TESTING"] = "true"
 
+empty_all_globals!()
+
 const maximum_residual = 1e-2
+
 if !@isdefined(custom_cos) || !hasmethod(custom_cos, (String,))
     @eval custom_cos(x) = cos(x)
 end
@@ -27,7 +30,6 @@ const default_params = (
     hof_migration=true,
     fraction_replaced_hof=0.1f0,
     should_optimize_constants=true,
-    output_file=nothing,
     perturbation_factor=1.000000f0,
     annealing=true,
     batching=false,
@@ -71,4 +73,10 @@ test_info(_, x) = error("Test failed: $x")
 test_info(_, ::Test.Pass) = nothing
 test_info(f::F, ::Test.Fail) where {F} = f()
 
-set_default_variable_names!(["x$(i)" for i in 1:100])
+macro quiet(ex)
+    return quote
+        redirect_stderr(devnull) do
+            $ex
+        end
+    end |> esc
+end

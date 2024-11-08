@@ -1,19 +1,10 @@
 module DatasetModule
 
-using DynamicQuantities:
-    AbstractDimensions,
-    Dimensions,
-    SymbolicDimensions,
-    Quantity,
-    uparse,
-    sym_uparse,
-    DEFAULT_DIM_BASE_TYPE
+using DynamicQuantities: Quantity
 
-using ..UtilsModule: subscriptify, get_base_type, @constfield
-using ..ProgramConstantsModule: BATCH_DIM, FEATURE_DIM, DATA_TYPE, LOSS_TYPE
+using ..UtilsModule: subscriptify, get_base_type
+using ..ProgramConstantsModule: DATA_TYPE, LOSS_TYPE
 using ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
-
-import ...deprecate_varmap
 
 """
     Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -22,10 +13,11 @@ import ...deprecate_varmap
 
 - `X::AbstractMatrix{T}`: The input features, with shape `(nfeatures, n)`.
 - `y::AbstractVector{T}`: The desired output values, with shape `(n,)`.
+- `index::Int`: The index of the output feature corresponding to this
+    dataset, if any.
 - `n::Int`: The number of samples.
 - `nfeatures::Int`: The number of features.
-- `weighted::Bool`: Whether the dataset is non-uniformly weighted.
-- `weights::Union{AbstractVector{T},Nothing}`: If the dataset is weighted,
+- `weights::Union{AbstractVector,Nothing}`: If the dataset is weighted,
     these specify the per-sample weight (with shape `(n,)`).
 - `extra::NamedTuple`: Extra information to pass to a custom evaluation
     function. Since this is an arbitrary named tuple, you could pass
@@ -54,38 +46,38 @@ mutable struct Dataset{
     T<:DATA_TYPE,
     L<:LOSS_TYPE,
     AX<:AbstractMatrix{T},
-    AY<:Union{AbstractVector{T},Nothing},
-    AW<:Union{AbstractVector{T},Nothing},
+    AY<:Union{AbstractVector,Nothing},
+    AW<:Union{AbstractVector,Nothing},
     NT<:NamedTuple,
     XU<:Union{AbstractVector{<:Quantity},Nothing},
     YU<:Union{Quantity,Nothing},
     XUS<:Union{AbstractVector{<:Quantity},Nothing},
     YUS<:Union{Quantity,Nothing},
 }
-    @constfield X::AX
-    @constfield y::AY
-    @constfield n::Int
-    @constfield nfeatures::Int
-    @constfield weighted::Bool
-    @constfield weights::AW
-    @constfield extra::NT
-    @constfield avg_y::Union{T,Nothing}
+    const X::AX
+    const y::AY
+    const index::Int
+    const n::Int
+    const nfeatures::Int
+    const weights::AW
+    const extra::NT
+    const avg_y::Union{T,Nothing}
     use_baseline::Bool
     baseline_loss::L
-    @constfield variable_names::Array{String,1}
-    @constfield display_variable_names::Array{String,1}
-    @constfield y_variable_name::String
-    @constfield X_units::XU
-    @constfield y_units::YU
-    @constfield X_sym_units::XUS
-    @constfield y_sym_units::YUS
+    const variable_names::Array{String,1}
+    const display_variable_names::Array{String,1}
+    const y_variable_name::String
+    const X_units::XU
+    const y_units::YU
+    const X_sym_units::XUS
+    const y_sym_units::YUS
 end
 
 """
     Dataset(X::AbstractMatrix{T},
             y::Union{AbstractVector{T},Nothing}=nothing,
             loss_type::Type=Nothing;
-            weights::Union{AbstractVector{T}, Nothing}=nothing,
+            weights::Union{AbstractVector, Nothing}=nothing,
             variable_names::Union{Array{String, 1}, Nothing}=nothing,
             y_variable_name::Union{String,Nothing}=nothing,
             extra::NamedTuple=NamedTuple(),
@@ -97,9 +89,10 @@ Construct a dataset to pass between internal functions.
 """
 function Dataset(
     X::AbstractMatrix{T},
-    y::Union{AbstractVector{T},Nothing}=nothing,
+    y::Union{AbstractVector,Nothing}=nothing,
     loss_type::Type{L}=Nothing;
-    weights::Union{AbstractVector{T},Nothing}=nothing,
+    index::Int=1,
+    weights::Union{AbstractVector,Nothing}=nothing,
     variable_names::Union{Array{String,1},Nothing}=nothing,
     display_variable_names=variable_names,
     y_variable_name::Union{String,Nothing}=nothing,
@@ -107,13 +100,11 @@ function Dataset(
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
     # Deprecated:
-    varMap=nothing,
     kws...,
 ) where {T<:DATA_TYPE,L}
     Base.require_one_based_indexing(X)
     y !== nothing && Base.require_one_based_indexing(y)
     # Deprecation warning:
-    variable_names = deprecate_varmap(variable_names, varMap, :Dataset)
     if haskey(kws, :loss_type)
         Base.depwarn(
             "The `loss_type` keyword argument is deprecated. Pass as an argument instead.",
@@ -123,6 +114,7 @@ function Dataset(
             X,
             y,
             kws[:loss_type];
+            index,
             weights,
             variable_names,
             display_variable_names,
@@ -133,29 +125,17 @@ function Dataset(
         )
     end
 
-    n = size(X, BATCH_DIM)
-    nfeatures = size(X, FEATURE_DIM)
-    weighted = weights !== nothing
-    variable_names = if variable_names === nothing
-        ["x$(i)" for i in 1:nfeatures]
-    else
-        variable_names
-    end
-    display_variable_names = if display_variable_names === nothing
-        ["x$(subscriptify(i))" for i in 1:nfeatures]
-    else
-        display_variable_names
-    end
-
-    y_variable_name = if y_variable_name === nothing
-        ("y" ∉ variable_names) ? "y" : "target"
-    else
-        y_variable_name
-    end
-    avg_y = if y === nothing
+    n = size(X, 2)
+    nfeatures = size(X, 1)
+    variable_names = @something(variable_names, ["x$(i)" for i in 1:nfeatures])
+    display_variable_names = @something(
+        display_variable_names, ["x$(subscriptify(i))" for i in 1:nfeatures]
+    )
+    y_variable_name = @something(y_variable_name, ("y" ∉ variable_names) ? "y" : "target")
+    avg_y = if y === nothing || !(eltype(y) isa Number)
         nothing
     else
-        if weighted
+        if weights !== nothing
             sum(y .* weights) / sum(weights)
         else
             sum(y) / n
@@ -206,9 +186,9 @@ function Dataset(
     }(
         X,
         y,
+        index,
         n,
         nfeatures,
-        weighted,
         weights,
         extra,
         avg_y,
@@ -223,26 +203,8 @@ function Dataset(
         y_sym_units,
     )
 end
-function Dataset(
-    X::AbstractMatrix,
-    y::Union{<:AbstractVector,Nothing}=nothing;
-    weights::Union{<:AbstractVector,Nothing}=nothing,
-    kws...,
-)
-    T = promote_type(
-        eltype(X),
-        (y === nothing) ? eltype(X) : eltype(y),
-        (weights === nothing) ? eltype(X) : eltype(weights),
-    )
-    X = Base.Fix1(convert, T).(X)
-    if y !== nothing
-        y = Base.Fix1(convert, T).(y)
-    end
-    if weights !== nothing
-        weights = Base.Fix1(convert, T).(weights)
-    end
-    return Dataset(X, y; weights=weights, kws...)
-end
+
+is_weighted(dataset::Dataset) = dataset.weights !== nothing
 
 function error_on_mismatched_size(_, ::Nothing)
     return nothing
@@ -258,6 +220,23 @@ end
 
 function has_units(dataset::Dataset)
     return dataset.X_units !== nothing || dataset.y_units !== nothing
+end
+
+# Used for Enzyme
+function Base.fill!(d::Dataset, val)
+    _fill!(d.X, val)
+    _fill!(d.y, val)
+    _fill!(d.weights, val)
+    _fill!(d.extra, val)
+    return d
+end
+_fill!(x::AbstractArray, val) = fill!(x, val)
+_fill!(x::NamedTuple, val) = foreach(v -> _fill!(v, val), values(x))
+_fill!(::Nothing, val) = nothing
+_fill!(x, val) = x
+
+function max_features(dataset::Dataset, _)
+    return dataset.nfeatures
 end
 
 end

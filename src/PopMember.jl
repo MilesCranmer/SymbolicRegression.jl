@@ -1,15 +1,14 @@
 module PopMemberModule
 
 using DispatchDoctor: @unstable
-
-using DynamicExpressions: AbstractExpressionNode, copy_node, count_nodes
-using ..CoreModule: Options, Dataset, DATA_TYPE, LOSS_TYPE
+using DynamicExpressions: AbstractExpression, AbstractExpressionNode, string_tree
+using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, create_expression
 import ..ComplexityModule: compute_complexity
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: score_func
 
 # Define a member of population by equation, score, and age
-mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}}
+mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
     tree::N
     score::L  # Inludes complexity penalty, normalization
     loss::L  # Raw loss
@@ -33,11 +32,20 @@ end
     )
     return getfield(member, field)
 end
+function Base.show(io::IO, p::PopMember{T,L,N}) where {T,L,N}
+    shower(x) = sprint(show, x)
+    print(io, "PopMember(")
+    print(io, "tree = (", string_tree(p.tree), "), ")
+    print(io, "loss = ", shower(p.loss), ", ")
+    print(io, "score = ", shower(p.score))
+    print(io, ")")
+    return nothing
+end
 
 generate_reference() = abs(rand(Int))
 
 """
-    PopMember(t::AbstractExpressionNode{T}, score::L, loss::L)
+    PopMember(t::AbstractExpression{T}, score::L, loss::L)
 
 Create a population member with a birth date at the current time.
 The type of the `Node` may be different from the type of the score
@@ -45,22 +53,29 @@ and loss.
 
 # Arguments
 
-- `t::AbstractExpressionNode{T}`: The tree for the population member.
+- `t::AbstractExpression{T}`: The tree for the population member.
 - `score::L`: The score (normalized to a baseline, and offset by a complexity penalty)
 - `loss::L`: The raw loss to assign.
 """
 function PopMember(
-    t::AbstractExpressionNode{T},
+    t::AbstractExpression{T},
     score::L,
     loss::L,
-    options::Options,
+    options::Union{AbstractOptions,Nothing}=nothing,
     complexity::Union{Int,Nothing}=nothing;
     ref::Int=-1,
     parent::Int=-1,
-    deterministic=false,
+    deterministic=nothing,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if ref == -1
         ref = generate_reference()
+    end
+    if !(deterministic isa Bool)
+        throw(
+            ArgumentError(
+                "You must declare `deterministic` as `true` or `false`, it cannot be left undefined.",
+            ),
+        )
     end
     complexity = complexity === nothing ? -1 : complexity
     return PopMember{T,L,typeof(t)}(
@@ -75,8 +90,11 @@ function PopMember(
 end
 
 """
-    PopMember(dataset::Dataset{T,L},
-              t::AbstractExpressionNode{T}, options::Options)
+    PopMember(
+        dataset::Dataset{T,L},
+        t::AbstractExpression{T},
+        options::AbstractOptions
+    )
 
 Create a population member with a birth date at the current time.
 Automatically compute the score for this tree.
@@ -84,23 +102,24 @@ Automatically compute the score for this tree.
 # Arguments
 
 - `dataset::Dataset{T,L}`: The dataset to evaluate the tree on.
-- `t::AbstractExpressionNode{T}`: The tree for the population member.
-- `options::Options`: What options to use.
+- `t::AbstractExpression{T}`: The tree for the population member.
+- `options::AbstractOptions`: What options to use.
 """
 function PopMember(
     dataset::Dataset{T,L},
-    t::AbstractExpressionNode{T},
-    options::Options,
+    tree::Union{AbstractExpressionNode{T},AbstractExpression{T}},
+    options::AbstractOptions,
     complexity::Union{Int,Nothing}=nothing;
     ref::Int=-1,
     parent::Int=-1,
     deterministic=nothing,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    set_complexity = complexity === nothing ? compute_complexity(t, options) : complexity
+    ex = create_expression(tree, options, dataset)
+    set_complexity = complexity === nothing ? compute_complexity(ex, options) : complexity
     @assert set_complexity != -1
-    score, loss = score_func(dataset, t, options; complexity=set_complexity)
+    score, loss = score_func(dataset, ex, options; complexity=set_complexity)
     return PopMember(
-        t,
+        ex,
         score,
         loss,
         options,
@@ -129,7 +148,7 @@ end
 
 # Can read off complexity directly from pop members
 function compute_complexity(
-    member::PopMember, options::Options; break_sharing=Val(false)
+    member::PopMember, options::AbstractOptions; break_sharing=Val(false)
 )::Int
     complexity = getfield(member, :complexity)
     complexity == -1 && return recompute_complexity!(member, options; break_sharing)
@@ -137,7 +156,7 @@ function compute_complexity(
     return complexity
 end
 function recompute_complexity!(
-    member::PopMember, options::Options; break_sharing=Val(false)
+    member::PopMember, options::AbstractOptions; break_sharing=Val(false)
 )::Int
     complexity = compute_complexity(member.tree, options; break_sharing)
     setfield!(member, :complexity, complexity)

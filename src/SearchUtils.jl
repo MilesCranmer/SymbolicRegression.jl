@@ -4,32 +4,54 @@ This includes: process management, stdin reading, checking for early stops."""
 module SearchUtilsModule
 
 using Printf: @printf, @sprintf
-using Distributed
+using Dates: Dates
+using Distributed: Distributed, @spawnat, Future, procs, addprocs
 using StatsBase: mean
+using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
+using Logging: AbstractLogger
 
-using DynamicExpressions: AbstractExpressionNode, string_tree
+using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
-using ..CoreModule: Dataset, Options, MAX_DEGREE, RecordType
+using ..CoreModule: Dataset, AbstractOptions, Options, RecordType, max_features
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
-using ..HallOfFameModule:
-    HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
-using ..ProgressBarsModule: WrappedProgressBar, set_multiline_postfix!, manually_iterate!
-using ..AdaptiveParsimonyModule: update_frequencies!, RunningSearchStatistics
+using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
+using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
+using ..AdaptiveParsimonyModule: RunningSearchStatistics
+
+function default_logging_callback end
 
 """
-    RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE}
+    AbstractRuntimeOptions
+
+An abstract type representing runtime configuration parameters for the symbolic regression algorithm.
+
+`AbstractRuntimeOptions` is used by `equation_search` to control runtime aspects such
+as parallelism and iteration limits. By subtyping `AbstractRuntimeOptions`, advanced users
+can customize runtime behaviors by passing it to `equation_search`.
+
+# See Also
+
+- [`RuntimeOptions`](@ref): Default implementation used by `equation_search`.
+- [`equation_search`](@ref SymbolicRegression.equation_search): Main function to perform symbolic regression.
+- [`AbstractOptions`](@ref SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions): See how to extend abstract types for customizing options.
+
+"""
+abstract type AbstractRuntimeOptions end
+
+"""
+    RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE,NT} <: AbstractRuntimeOptions
 
 Parameters for a search that are passed to `equation_search` directly,
 rather than set within `Options`. This is to differentiate between
 parameters that relate to processing and the duration of the search,
 and parameters dealing with the search hyperparameters itself.
 """
-Base.@kwdef struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE,NT<:NamedTuple}
+struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE,NT<:NamedTuple} <:
+       AbstractRuntimeOptions
     niterations::Int64
-    total_cycles::Int64
     numprocs::Int64
     init_procs::Union{Vector{Int},Nothing}
     addprocs_function::Function
@@ -42,6 +64,7 @@ Base.@kwdef struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE,NT<:NamedTupl
     parallelism::Val{PARALLELISM}
     dim_out::Val{DIM_OUT}
     return_state::Val{RETURN_STATE}
+    run_id::String
 end
 @unstable @inline function Base.getproperty(
     roptions::RuntimeOptions{P,D,R}, name::Symbol
@@ -58,6 +81,137 @@ end
 end
 function Base.propertynames(roptions::RuntimeOptions)
     return (Base.fieldnames(typeof(roptions))..., :parallelism, :dim_out, :return_state)
+end
+
+@unstable function RuntimeOptions(;
+    niterations::Int=10,
+    nout::Int=1,
+    parallelism=:multithreading,
+    numprocs::Union{Int,Nothing}=nothing,
+    procs::Union{Vector{Int},Nothing}=nothing,
+    addprocs_function::Union{Function,Nothing}=nothing,
+    heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
+    runtests::Bool=true,
+    return_state::VRS=nothing,
+    run_id::Union{String,Nothing}=nothing,
+    verbosity::Union{Int,Nothing}=nothing,
+    progress::Union{Bool,Nothing}=nothing,
+    v_dim_out::Val{DIM_OUT}=Val(nothing),
+    logger::Union{AbstractLogger,Nothing}=nothing,
+    logging_callback::Union{Function,Nothing}=nothing,
+    log_every_n::Union{Integer,NamedTuple}=1,
+    # Defined from options
+    options_return_state::Val{ORS}=Val(nothing),
+    options_verbosity::Union{Integer,Nothing}=nothing,
+    options_progress::Union{Bool,Nothing}=nothing,
+) where {DIM_OUT,ORS,VRS<:Union{Bool,Nothing,Val}}
+    concurrency = if parallelism in (:multithreading, "multithreading")
+        :multithreading
+    elseif parallelism in (:multiprocessing, "multiprocessing")
+        :multiprocessing
+    elseif parallelism in (:serial, "serial")
+        :serial
+    else
+        error(
+            "Invalid parallelism mode: $parallelism. " *
+            "You must choose one of :multithreading, :multiprocessing, or :serial.",
+        )
+        :serial
+    end
+    if concurrency in (:multithreading, :serial)
+        numprocs !== nothing && error(
+            "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
+        )
+        procs !== nothing && error(
+            "`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
+        )
+    end
+    verbosity !== nothing &&
+        options_verbosity !== nothing &&
+        error(
+            "You cannot set `verbosity` in both the search parameters " *
+            "`AbstractOptions` and the call to `equation_search`.",
+        )
+    progress !== nothing &&
+        options_progress !== nothing &&
+        error(
+            "You cannot set `progress` in both the search parameters " *
+            "`AbstractOptions` and the call to `equation_search`.",
+        )
+    ORS !== nothing &&
+        return_state !== nothing &&
+        error(
+            "You cannot set `return_state` in both the `AbstractOptions` and in the passed arguments.",
+        )
+
+    _numprocs::Int = if numprocs === nothing
+        if procs === nothing
+            4
+        else
+            length(procs)
+        end
+    else
+        if procs === nothing
+            numprocs
+        else
+            @assert length(procs) == numprocs
+            numprocs
+        end
+    end
+    _logging_callback = if logging_callback === nothing && logger !== nothing
+        (; kws...) -> default_logging_callback(logger; kws...)
+    else
+        logging_callback
+    end
+    _log_every_n = if log_every_n isa Integer
+        (; scalars=log_every_n, plots=0)
+    else
+        log_every_n
+    end
+
+    _return_state = VRS <: Val ? first(VRS.parameters) : something(ORS, return_state, false)
+    dim_out = something(DIM_OUT, nout > 1 ? 2 : 1)
+    _verbosity = something(verbosity, options_verbosity, 1)
+    _progress = something(progress, options_progress, (_verbosity > 0) && nout == 1)
+    _addprocs_function = something(addprocs_function, addprocs)
+    _run_id = @something(run_id, generate_run_id())
+
+    exeflags = if concurrency == :multiprocessing
+        heap_size_hint_in_megabytes = floor(
+            Int,
+            (@something(heap_size_hint_in_bytes, (Sys.free_memory() / _numprocs))) / 1024^2,
+        )
+        _verbosity > 0 &&
+            heap_size_hint_in_bytes === nothing &&
+            @info "Automatically setting `--heap-size-hint=$(heap_size_hint_in_megabytes)M` on each Julia process. You can configure this with the `heap_size_hint_in_bytes` parameter."
+
+        `--heap-size=$(heap_size_hint_in_megabytes)M`
+    else
+        ``
+    end
+
+    return RuntimeOptions{concurrency,dim_out,_return_state,typeof(_log_every_n)}(
+        niterations,
+        _numprocs,
+        procs,
+        _addprocs_function,
+        exeflags,
+        runtests,
+        _verbosity,
+        _progress,
+        _logging_callback,
+        _log_every_n,
+        Val(concurrency),
+        Val(dim_out),
+        Val(_return_state),
+        _run_id,
+    )
+end
+
+function generate_run_id()
+    date_str = Dates.format(Dates.now(), "yyyymmdd_HHMMSS")
+    h = join(rand(['0':'9'; 'a':'z'; 'A':'Z'], 6))
+    return "$(date_str)_$h"
 end
 
 """A simple dictionary to track worker allocations."""
@@ -129,19 +283,34 @@ macro sr_spawner(expr, kws...)
 end
 
 function init_dummy_pops(
-    npops::Int, datasets::Vector{D}, options::Options
+    npops::Int, datasets::Vector{D}, options::AbstractOptions
 ) where {T,L,D<:Dataset{T,L}}
+    prototype = Population(
+        first(datasets);
+        population_size=1,
+        options=options,
+        nfeatures=max_features(first(datasets), options),
+    )
+    # ^ Due to occasional inference issue, we manually specify the return type
     return [
-        [
-            Population(d; population_size=1, options=options, nfeatures=d.nfeatures) for
-            _ in 1:npops
-        ] for d in datasets
+        typeof(prototype)[
+            if (i == 1 && j == 1)
+                prototype
+            else
+                Population(
+                    datasets[j];
+                    population_size=1,
+                    options=options,
+                    nfeatures=max_features(datasets[j], options),
+                )
+            end for i in 1:npops
+        ] for j in 1:length(datasets)
     ]
 end
 
-struct StdinReader{ST}
+struct StdinReader
     can_read_user_input::Bool
-    stream::ST
+    stream::IO
 end
 
 """Start watching stream (like stdin) for user input."""
@@ -164,6 +333,7 @@ function watch_stream(stream)
     end
     return StdinReader(can_read_user_input, stream)
 end
+precompile(Tuple{typeof(watch_stream),Base.TTY})
 
 """Close the stdin reader and stop reading."""
 function close_reader!(reader::StdinReader)
@@ -189,14 +359,14 @@ function check_for_user_quit(reader::StdinReader)::Bool
     return false
 end
 
-function check_for_loss_threshold(halls_of_fame, options::Options)::Bool
+function check_for_loss_threshold(halls_of_fame, options::AbstractOptions)::Bool
     return _check_for_loss_threshold(halls_of_fame, options.early_stop_condition, options)
 end
 
-function _check_for_loss_threshold(_, ::Nothing, ::Options)
+function _check_for_loss_threshold(_, ::Nothing, ::AbstractOptions)
     return false
 end
-function _check_for_loss_threshold(halls_of_fame, f::F, options::Options) where {F}
+function _check_for_loss_threshold(halls_of_fame, f::F, options::AbstractOptions) where {F}
     return all(halls_of_fame) do hof
         any(hof.members[hof.exists]) do member
             f(member.loss, compute_complexity(member, options))::Bool
@@ -204,113 +374,91 @@ function _check_for_loss_threshold(halls_of_fame, f::F, options::Options) where 
     end
 end
 
-function check_for_timeout(start_time::Float64, options::Options)::Bool
+function check_for_timeout(start_time::Float64, options::AbstractOptions)::Bool
     return options.timeout_in_seconds !== nothing &&
            time() - start_time > options.timeout_in_seconds::Float64
 end
 
-function check_max_evals(num_evals, options::Options)::Bool
+function check_max_evals(num_evals, options::AbstractOptions)::Bool
     return options.max_evals !== nothing && options.max_evals::Int <= sum(sum, num_evals)
 end
 
-const TIME_TYPE = Float64
+"""
+This struct is used to monitor resources.
 
-"""This struct is used to monitor resources."""
+Whenever we check a channel, we record if it was empty or not.
+This gives us a measure for how much of a bottleneck there is
+at the head worker.
+"""
 Base.@kwdef mutable struct ResourceMonitor
-    """The time the search started."""
-    absolute_start_time::TIME_TYPE = time()
-    """The time the head worker started doing work."""
-    start_work::TIME_TYPE = Inf
-    """The time the head worker finished doing work."""
-    stop_work::TIME_TYPE = Inf
-
-    num_starts::UInt = 0
-    num_stops::UInt = 0
-    work_intervals::Vector{TIME_TYPE} = TIME_TYPE[]
-    rest_intervals::Vector{TIME_TYPE} = TIME_TYPE[]
-
-    """Number of intervals to store."""
-    num_intervals_to_store::Int
+    population_ready::Vector{Bool} = Bool[]
+    max_recordings::Int
+    start_reporting_at::Int
+    window_size::Int
 end
 
-function start_work_monitor!(monitor::ResourceMonitor)
-    monitor.start_work = time()
-    monitor.num_starts += 1
-    if monitor.num_stops > 0
-        push!(monitor.rest_intervals, monitor.start_work - monitor.stop_work)
-        if length(monitor.rest_intervals) > monitor.num_intervals_to_store
-            popfirst!(monitor.rest_intervals)
-        end
-    end
-    return nothing
-end
-
-function stop_work_monitor!(monitor::ResourceMonitor)
-    monitor.stop_work = time()
-    push!(monitor.work_intervals, monitor.stop_work - monitor.start_work)
-    monitor.num_stops += 1
-    @assert monitor.num_stops == monitor.num_starts
-    if length(monitor.work_intervals) > monitor.num_intervals_to_store
-        popfirst!(monitor.work_intervals)
+function record_channel_state!(monitor::ResourceMonitor, state)
+    push!(monitor.population_ready, state)
+    if length(monitor.population_ready) > monitor.max_recordings
+        popfirst!(monitor.population_ready)
     end
     return nothing
 end
 
 function estimate_work_fraction(monitor::ResourceMonitor)::Float64
-    if monitor.num_stops <= 1
+    if length(monitor.population_ready) <= monitor.start_reporting_at
         return 0.0  # Can't estimate from only one interval, due to JIT.
     end
-    work_intervals = monitor.work_intervals
-    rest_intervals = monitor.rest_intervals
-    # Trim 1st, in case we are still in the first interval.
-    if monitor.num_stops <= monitor.num_intervals_to_store + 1
-        work_intervals = work_intervals[2:end]
-        rest_intervals = rest_intervals[2:end]
-    end
-    return mean(work_intervals) / (mean(work_intervals) + mean(rest_intervals))
+    return mean(monitor.population_ready[(end - (monitor.window_size - 1)):end])
 end
 
 function get_load_string(; head_node_occupation::Float64, parallelism=:serial)
-    parallelism == :serial && return ""
-    out = @sprintf("Head worker occupation: %.1f%%", head_node_occupation * 100)
-
-    raise_usage_warning = head_node_occupation > 0.4
-    if raise_usage_warning
-        out *= "."
-        out *= " This is high, and will prevent efficient resource usage."
-        out *= " Increase `ncycles_per_iteration` to reduce load on head worker."
+    if parallelism == :serial || head_node_occupation == 0.0
+        return ""
     end
+    return ""
+    ## TODO: Debug why populations are always ready
+    # out = @sprintf("Head worker occupation: %.1f%%", head_node_occupation * 100)
 
-    out *= "\n"
-    return out
+    # raise_usage_warning = head_node_occupation > 0.4
+    # if raise_usage_warning
+    #     out *= "."
+    #     out *= " This is high, and will prevent efficient resource usage."
+    #     out *= " Increase `ncycles_per_iteration` to reduce load on head worker."
+    # end
+
+    # out *= "\n"
+    # return out
 end
 
 function update_progress_bar!(
     progress_bar::WrappedProgressBar,
     hall_of_fame::HallOfFame{T,L},
     dataset::Dataset{T,L},
-    options::Options,
+    options::AbstractOptions,
     equation_speed::Vector{Float32},
     head_node_occupation::Float64,
     parallelism=:serial,
 ) where {T,L}
-    equation_strings = string_dominating_pareto_curve(
-        hall_of_fame, dataset, options; width=progress_bar.bar.width
-    )
     # TODO - include command about "q" here.
     load_string = if length(equation_speed) > 0
         average_speed = sum(equation_speed) / length(equation_speed)
         @sprintf(
-            "Expressions evaluated per second: %-5.2e. ",
+            "Full dataset evaluations per second: %-5.2e. ",
             round(average_speed, sigdigits=3)
         )
     else
-        @sprintf("Expressions evaluated per second: [.....]. ")
+        @sprintf("Full dataset evaluations per second: [.....]. ")
     end
     load_string *= get_load_string(; head_node_occupation, parallelism)
-    load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.\n")
-    equation_strings = load_string * equation_strings
-    set_multiline_postfix!(progress_bar, equation_strings)
+    load_string *= @sprintf("Press 'q' and then <enter> to stop execution early.")
+    equation_strings = string_dominating_pareto_curve(
+        hall_of_fame, dataset, options; width=barlen(progress_bar)
+    )
+    progress_bar.postfix = [
+        (styled"{italic:Info}", styled"{italic:$load_string}"),
+        (styled"{italic:Hall of Fame}", equation_strings),
+    ]
     manually_iterate!(progress_bar)
     return nothing
 end
@@ -318,7 +466,7 @@ end
 function print_search_state(
     hall_of_fames,
     datasets;
-    options::Options,
+    options::AbstractOptions,
     equation_speed::Vector{Float32},
     total_cycles::Int,
     cycles_remaining::Vector{Int},
@@ -342,7 +490,7 @@ function print_search_state(
         100.0 * cycles_elapsed / total_cycles / nout
     )
 
-    print("="^twidth * "\n")
+    print("═"^twidth * "\n")
     for (j, (hall_of_fame, dataset)) in enumerate(zip(hall_of_fames, datasets))
         if nout > 1
             @printf("Best equations for output %d\n", j)
@@ -351,7 +499,7 @@ function print_search_state(
             hall_of_fame, dataset, options; width=width
         )
         print(equation_strings * "\n")
-        print("="^twidth * "\n")
+        print("═"^twidth * "\n")
     end
     return print("Press 'q' and then <enter> to stop execution early.\n")
 end
@@ -382,15 +530,34 @@ end
 load_saved_population(::Nothing; kws...) = nothing
 
 """
-    SearchState{PopType,HallOfFameType,WorkerOutputType,ChannelType}
+    AbstractSearchState{T,L,N}
 
-The state of a search, including the populations, worker outputs, tasks, and
+An abstract type encapsulating the internal state of the search process during symbolic regression.
+
+`AbstractSearchState` instances hold information like populations and progress metrics,
+used internally by `equation_search`. Subtyping `AbstractSearchState` allows
+customization of search state management.
+
+Look through the source of `equation_search` to see how this is used.
+
+# See Also
+
+- [`SearchState`](@ref): Default implementation of `AbstractSearchState`.
+- [`equation_search`](@ref SymbolicRegression.equation_search): Function where `AbstractSearchState` is utilized.
+- [`AbstractOptions`](@ref SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions): See how to extend abstract types for customizing options.
+
+"""
+abstract type AbstractSearchState{T,L,N<:AbstractExpression{T}} end
+
+"""
+    SearchState{T,L,N,WorkerOutputType,ChannelType} <: AbstractSearchState{T,L,N}
+
+The state of the search, including the populations, worker outputs, tasks, and
 channels. This is used to manage the search and keep track of runtime variables
 in a single struct.
 """
-Base.@kwdef struct SearchState{
-    T,L,N<:AbstractExpressionNode{T},WorkerOutputType,ChannelType
-}
+Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,ChannelType} <:
+                   AbstractSearchState{T,L,N}
     procs::Vector{Int}
     we_created_procs::Bool
     worker_output::Vector{Vector{WorkerOutputType}}
@@ -410,12 +577,18 @@ Base.@kwdef struct SearchState{
 end
 
 function save_to_file(
-    dominating, nout::Integer, j::Integer, dataset::Dataset{T,L}, options::Options
+    dominating,
+    nout::Integer,
+    j::Integer,
+    dataset::Dataset{T,L},
+    options::AbstractOptions,
+    ropt::AbstractRuntimeOptions,
 ) where {T,L}
-    output_file = options.output_file
-    if nout > 1
-        output_file = output_file * ".out$j"
-    end
+    output_directory = joinpath(something(options.output_directory, "outputs"), ropt.run_id)
+    mkpath(output_directory)
+    filename = nout > 1 ? "hall_of_fame_output$(j).csv" : "hall_of_fame.csv"
+    output_file = joinpath(output_directory, filename)
+
     dominating_n = length(dominating)
 
     complexities = Vector{Int}(undef, dominating_n)
@@ -427,7 +600,7 @@ function save_to_file(
         complexities[i] = compute_complexity(member, options)
         losses[i] = member.loss
         strings[i] = string_tree(
-            member.tree, options; variable_names=dataset.variable_names
+            member.tree, options; variable_names=dataset.variable_names, pretty=false
         )
     end
 
@@ -443,10 +616,8 @@ function save_to_file(
     end
 
     # Write file twice in case exit in middle of filewrite
-    for out_file in (output_file, output_file * ".bkup")
-        open(out_file, "w") do io
-            write(io, s)
-        end
+    for out_file in (output_file, output_file * ".bak")
+        open(Base.Fix2(write, s), out_file, "w")
     end
     return nothing
 end
@@ -457,7 +628,9 @@ end
 For searches where the maxsize gradually increases, this function returns the
 current maxsize.
 """
-function get_cur_maxsize(; options::Options, total_cycles::Int, cycles_remaining::Int)
+function get_cur_maxsize(;
+    options::AbstractOptions, total_cycles::Int, cycles_remaining::Int
+)
     cycles_elapsed = total_cycles - cycles_remaining
     fraction_elapsed = 1.0f0 * cycles_elapsed / total_cycles
     in_warmup_period = fraction_elapsed <= options.warmup_maxsize_by
@@ -480,6 +653,7 @@ function construct_datasets(
     y_variable_names,
     X_units,
     y_units,
+    extra,
     ::Type{L},
 ) where {L}
     nout = size(y, 1)
@@ -488,6 +662,7 @@ function construct_datasets(
             X,
             y[j, :],
             L;
+            index=j,
             weights=(weights === nothing ? weights : weights[j, :]),
             variable_names=variable_names,
             display_variable_names=display_variable_names,
@@ -508,16 +683,17 @@ function construct_datasets(
             end,
             X_units=X_units,
             y_units=isa(y_units, AbstractVector) ? y_units[j] : y_units,
+            extra=extra,
         ) for j in 1:nout
     ]
 end
 
 function update_hall_of_fame!(
-    hall_of_fame::HallOfFame, members::Vector{PM}, options::Options
+    hall_of_fame::HallOfFame, members::Vector{PM}, options::AbstractOptions
 ) where {PM<:PopMember}
     for member in members
         size = compute_complexity(member, options)
-        valid_size = 0 < size < options.maxsize + MAX_DEGREE
+        valid_size = 0 < size <= options.maxsize
         if !valid_size
             continue
         end

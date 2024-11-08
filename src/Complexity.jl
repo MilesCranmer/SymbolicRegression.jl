@@ -1,9 +1,12 @@
 module ComplexityModule
 
-using DynamicExpressions: AbstractExpressionNode, count_nodes, tree_mapreduce
-using ..CoreModule: Options, ComplexityMapping
+using DynamicExpressions:
+    AbstractExpression, AbstractExpressionNode, get_tree, count_nodes, tree_mapreduce
+using ..CoreModule: AbstractOptions, ComplexityMapping
 
-function past_complexity_limit(tree::AbstractExpressionNode, options::Options, limit)::Bool
+function past_complexity_limit(
+    tree::Union{AbstractExpression,AbstractExpressionNode}, options::AbstractOptions, limit
+)::Bool
     return compute_complexity(tree, options) > limit
 end
 
@@ -15,9 +18,19 @@ However, it could use the custom settings in options.complexity_mapping
 if these are defined.
 """
 function compute_complexity(
-    tree::AbstractExpressionNode, options::Options; break_sharing=Val(false)
+    tree::AbstractExpression, options::AbstractOptions; break_sharing=Val(false)
+)
+    if options.complexity_mapping isa Function
+        return options.complexity_mapping(tree)::Int
+    else
+        return compute_complexity(get_tree(tree), options; break_sharing)
+    end
+end
+function compute_complexity(
+    tree::AbstractExpressionNode, options::AbstractOptions; break_sharing=Val(false)
 )::Int
-    if options.complexity_mapping.use
+    complexity_mapping = options.complexity_mapping
+    if complexity_mapping isa ComplexityMapping && complexity_mapping.use
         raw_complexity = _compute_complexity(
             tree, options.complexity_mapping; break_sharing
         )

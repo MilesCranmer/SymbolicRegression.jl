@@ -1,12 +1,11 @@
 module HallOfFameModule
 
-using DynamicExpressions: AbstractExpressionNode, Node, constructorof, string_tree
-using DynamicExpressions.EquationModule: with_type_parameters
-using ..UtilsModule: split_string
-using ..CoreModule: MAX_DEGREE, Options, Dataset, DATA_TYPE, LOSS_TYPE, relu
+using StyledStrings: @styled_str
+using DynamicExpressions: AbstractExpression, string_tree
+using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
+using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: PopMember
-using ..LossFunctionsModule: eval_loss
 using ..InterfaceDynamicExpressionsModule: format_dimensions, WILDCARD_UNIT_STRING
 using Printf: @sprintf
 
@@ -23,13 +22,33 @@ have been set, you can run `.members[exists]`.
     These are ordered by complexity, with `.members[1]` the member with complexity 1.
 - `exists::Array{Bool,1}`: Whether the member at the given complexity has been set.
 """
-struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode{T}}
+struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
     members::Array{PopMember{T,L,N},1}
     exists::Array{Bool,1} #Whether it has been set
 end
+function Base.show(io::IO, mime::MIME"text/plain", hof::HallOfFame{T,L,N}) where {T,L,N}
+    println(io, "HallOfFame{...}:")
+    for i in eachindex(hof.members, hof.exists)
+        s_member, s_exists = if hof.exists[i]
+            sprint((io, m) -> show(io, mime, m), hof.members[i]), "true"
+        else
+            "undef", "false"
+        end
+        println(io, " "^4 * ".exists[$i] = $s_exists")
+        print(io, " "^4 * ".members[$i] =")
+        splitted = split(strip(s_member), '\n')
+        if length(splitted) == 1
+            println(io, " " * s_member)
+        else
+            println(io)
+            foreach(line -> println(io, " "^8 * line), splitted)
+        end
+    end
+    return nothing
+end
 
 """
-    HallOfFame(options::Options, ::Type{T}, ::Type{L}) where {T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpressionNode}
+    HallOfFame(options::AbstractOptions, dataset::Dataset{T,L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 
 Create empty HallOfFame. The HallOfFame stores a list
 of `PopMember` objects in `.members`, which is enumerated
@@ -38,27 +57,26 @@ by size (i.e., `.members[1]` is the constant solution).
 has been instantiated or not.
 
 Arguments:
-- `options`: Options containing specification about deterministic.
-- `T`: Type of Nodes to use in the population. e.g., `Float64`.
-- `L`: Type of loss to use in the population. e.g., `Float64`.
+- `options`: AbstractOptions containing specification about deterministic.
+- `dataset`: Dataset containing the input data.
 """
 function HallOfFame(
-    options::Options, ::Type{T}, ::Type{L}
+    options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    actualMaxsize = options.maxsize + MAX_DEGREE
-    NT = with_type_parameters(options.node_type, T)
-    return HallOfFame{T,L,NT}(
+    base_tree = create_expression(zero(T), options, dataset)
+
+    return HallOfFame{T,L,typeof(base_tree)}(
         [
             PopMember(
-                constructorof(options.node_type)(T; val=convert(T, 1)),
+                copy(base_tree),
                 L(0),
                 L(Inf),
                 options;
                 parent=-1,
                 deterministic=options.deterministic,
-            ) for i in 1:actualMaxsize
+            ) for i in 1:(options.maxsize)
         ],
-        [false for i in 1:actualMaxsize],
+        [false for i in 1:(options.maxsize)],
     )
 end
 
@@ -76,8 +94,7 @@ function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
     P = PopMember{T,L,N}
     # Dominating pareto curve - must be better than all simpler equations
     dominating = P[]
-    actualMaxsize = length(hallOfFame.members)
-    for size in 1:actualMaxsize
+    for size in eachindex(hallOfFame.members)
         if !hallOfFame.exists[size]
             continue
         end
@@ -102,17 +119,26 @@ function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
     return dominating
 end
 
-function string_dominating_pareto_curve(
-    hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing
-)
-    twidth = (width === nothing) ? 100 : max(100, width::Integer)
-    output = ""
-    output *= "Hall of Fame:\n"
-    # TODO: Get user's terminal width.
-    output *= "-"^(twidth - 1) * "\n"
-    output *= @sprintf(
-        "%-10s  %-8s   %-8s  %-8s\n", "Complexity", "Loss", "Score", "Equation"
+const HEADER = let
+    join(
+        (
+            rpad(styled"{bold:{underline:Complexity}}", 10),
+            rpad(styled"{bold:{underline:Loss}}", 9),
+            rpad(styled"{bold:{underline:Score}}", 9),
+            styled"{bold:{underline:Equation}}",
+        ),
+        "  ",
     )
+end
+
+function string_dominating_pareto_curve(
+    hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing, pretty::Bool=true
+)
+    terminal_width = (width === nothing) ? 100 : max(100, width::Integer)
+    _buffer = IOBuffer()
+    buffer = AnnotatedIOBuffer(_buffer)
+    println(buffer, '─'^(terminal_width - 1))
+    println(buffer, HEADER)
 
     formatted = format_hall_of_fame(hallOfFame, options)
     for (tree, score, loss, complexity) in
@@ -123,7 +149,7 @@ function string_dominating_pareto_curve(
             display_variable_names=dataset.display_variable_names,
             X_sym_units=dataset.X_sym_units,
             y_sym_units=dataset.y_sym_units,
-            raw=false,
+            pretty,
         )
         y_prefix = dataset.y_variable_name
         unit_str = format_dimensions(dataset.y_sym_units)
@@ -131,25 +157,47 @@ function string_dominating_pareto_curve(
         if dataset.y_sym_units === nothing && dataset.X_sym_units !== nothing
             y_prefix *= WILDCARD_UNIT_STRING
         end
-        eqn_string = y_prefix * " = " * eqn_string
-        base_string_length = length(@sprintf("%-10d  %-8.3e  %8.3e  ", 1, 1.0, 1.0))
+        prefix = y_prefix * " = "
+        eqn_string = prefix * eqn_string
+        stats_columns_string = @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
+        left_cols_width = length(stats_columns_string)
+        print(buffer, stats_columns_string)
+        print(
+            buffer,
+            wrap_equation_string(
+                eqn_string, left_cols_width + length(prefix), terminal_width
+            ),
+        )
+    end
+    print(buffer, '─'^(terminal_width - 1))
+    return dump_buffer(buffer)
+end
 
-        dots = "..."
-        equation_width = (twidth - 1) - base_string_length - length(dots)
+function wrap_equation_string(eqn_string, left_cols_width, terminal_width)
+    dots = "..."
+    equation_width = (terminal_width - 1) - left_cols_width - length(dots)
+    _buffer = IOBuffer()
+    buffer = AnnotatedIOBuffer(_buffer)
 
-        output *= @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
-
-        split_eqn = split_string(eqn_string, equation_width)
-        print_pad = false
-        while length(split_eqn) > 1
-            cur_piece = popfirst!(split_eqn)
-            output *= " "^(print_pad * base_string_length) * cur_piece * dots * "\n"
+    forced_split_eqn = split(eqn_string, '\n')
+    print_pad = false
+    for piece in forced_split_eqn
+        subpieces = split_string(piece, equation_width)
+        for (i, subpiece) in enumerate(subpieces)
+            # We don't need dots on the last subpiece, since it
+            # is either the last row of the entire string, or it has
+            # an explicit newline in it!
+            requires_dots = i < length(subpieces)
+            print(buffer, ' '^(print_pad * left_cols_width))
+            print(buffer, subpiece)
+            if requires_dots
+                print(buffer, dots)
+            end
+            println(buffer)
             print_pad = true
         end
-        output *= " "^(print_pad * base_string_length) * split_eqn[1] * "\n"
     end
-    output *= "-"^(twidth - 1)
-    return output
+    return dump_buffer(buffer)
 end
 
 function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}

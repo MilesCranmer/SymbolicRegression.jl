@@ -2,7 +2,10 @@
 module UtilsModule
 
 using Printf: @printf
-using MacroTools: splitdef, combinedef
+using MacroTools: splitdef
+using StyledStrings: StyledStrings
+
+macro ignore(args...) end
 
 const pseudo_time = Ref(0)
 
@@ -24,6 +27,7 @@ function is_anonymous_function(op)
            op_string[1] == '#' &&
            op_string[2] in ('1', '2', '3', '4', '5', '6', '7', '8', '9')
 end
+precompile(Tuple{typeof(is_anonymous_function),Function})
 
 recursive_merge(x::AbstractVector...) = cat(x...; dims=1)
 recursive_merge(x::AbstractDict...) = merge(recursive_merge, x...)
@@ -38,17 +42,14 @@ function subscriptify(number::Integer)
 end
 
 """
-    split_string(s::String, n::Integer)
+    split_string(s::AbstractString, n::Integer)
 
 ```jldoctest
-split_string("abcdefgh", 3)
-
-# output
-
+julia> split_string("abcdefgh", 3)
 ["abc", "def", "gh"]
 ```
 """
-function split_string(s::String, n::Integer)
+function split_string(s::AbstractString, n::Integer)
     length(s) <= n && return [s]
     # Due to unicode characters, need to split only at valid indices:
     I = eachindex(s) |> collect
@@ -89,12 +90,13 @@ function _to_vec(v::MutableTuple{S,T}) where {S,T}
     return x
 end
 
-const max_ops = 8192
-const vals = ntuple(Val, max_ops)
-
 """Return the bottom k elements of x, and their indices."""
-bottomk_fast(x::AbstractVector{T}, k) where {T} =
-    _bottomk_dispatch(x, vals[k])::Tuple{Vector{T},Vector{Int}}
+bottomk_fast(x::AbstractVector{T}, k) where {T} = Base.Cartesian.@nif(
+    32,
+    d -> d == k,
+    d -> _bottomk_dispatch(x, Val(d))::Tuple{Vector{T},Vector{Int}},
+    _ -> _bottomk_dispatch(x, Val(k))::Tuple{Vector{T},Vector{Int}}
+)
 
 function _bottomk_dispatch(x::AbstractVector{T}, ::Val{k}) where {T,k}
     if k == 1
@@ -172,7 +174,16 @@ function _save_kwargs(log_variable::Symbol, fdef::Expr)
     def = splitdef(fdef)
     # Get kwargs:
     kwargs = copy(def[:kwargs])
-    filter!(kwargs) do k
+    kwargs = map(kwargs) do k
+        # If it's a macrocall for @nospecialize
+        if k.head == :macrocall && string(k.args[1]) == "@nospecialize"
+            # Find the actual argument - it's the last non-LineNumberNode argument
+            inner_arg = last(filter(arg -> !(arg isa LineNumberNode), k.args))
+            return inner_arg
+        end
+        return k
+    end
+    kwargs = filter(kwargs) do k
         # Filter ...:
         k.head == :... && return false
         # Filter other deprecated kwargs:
@@ -185,9 +196,47 @@ function _save_kwargs(log_variable::Symbol, fdef::Expr)
     end
 end
 
-# Allows using `const` fields in older versions of Julia.
-macro constfield(ex)
-    return esc(VERSION < v"1.8.0" ? ex : Expr(:const, ex))
+json3_write(args...) = error("Please load the JSON3.jl package.")
+
+"""
+    PerThreadCache{T}
+
+A cache that is efficient for multithreaded code, and works
+by having a separate cache for each thread. This allows
+us to avoid repeated locking. We only need to lock the cache
+when resizing to the number of threads.
+"""
+struct PerThreadCache{T}
+    x::Vector{T}
+    num_threads::Ref{Int}
+    lock::Threads.SpinLock
+
+    PerThreadCache{T}() where {T} = new(Vector{T}(undef, 1), Ref(1), Threads.SpinLock())
+end
+
+function _get_thread_cache(cache::PerThreadCache{T}) where {T}
+    if cache.num_threads[] < Threads.nthreads()
+        Base.@lock cache.lock begin
+            # The reason we have this extra `.num_threads[]` parameter is to avoid
+            # a race condition between a thread resizing the array concurrent
+            # to the check above. Basically we want to make sure the array is
+            # always big enough by the time we get to using it. Since `.num_threads[]`
+            # is set last, we can safely use the array.
+            if cache.num_threads[] < Threads.nthreads()
+                resize!(cache.x, Threads.nthreads())
+                cache.num_threads[] = Threads.nthreads()
+            end
+        end
+    end
+    threadid = Threads.threadid()
+    if !isassigned(cache.x, threadid)
+        cache.x[threadid] = eltype(cache.x)()
+    end
+    return cache.x[threadid]
+end
+function Base.get!(f::F, cache::PerThreadCache, key) where {F<:Function}
+    thread_cache = _get_thread_cache(cache)
+    return get!(f, thread_cache, key)
 end
 
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
@@ -197,29 +246,43 @@ end
     Bad
     Undefined
 end
-const SafeFunctions = Dict{Type,IsGood}()
-const SafeFunctionsLock = Threads.SpinLock()
+const SafeFunctions = PerThreadCache{Dict{Type,IsGood}}()
 
 function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
-    status = get(SafeFunctions, Tuple{F,T}, Undefined)
+    thread_cache = _get_thread_cache(SafeFunctions)
+    status = get(thread_cache, Tuple{F,T}, Undefined)
     status == Good && return (f(x...)::D, true)
     status == Bad && return (default, false)
-    return lock(SafeFunctionsLock) do
-        output = try
-            (f(x...)::D, true)
-        catch e
-            !isa(e, MethodError) && rethrow(e)
-            (default, false)
-        end
-        if output[2]
-            SafeFunctions[Tuple{F,T}] = Good
-        else
-            SafeFunctions[Tuple{F,T}] = Bad
-        end
-        return output
+
+    output = try
+        (f(x...)::D, true)
+    catch e
+        !isa(e, MethodError) && rethrow(e)
+        (default, false)
+    end
+    if output[2]
+        thread_cache[Tuple{F,T}] = Good
+    else
+        thread_cache[Tuple{F,T}] = Bad
+    end
+    return output
+end
+
+@static if VERSION >= v"1.11.0-"
+    @eval begin
+        const AnnotatedIOBuffer = Base.AnnotatedIOBuffer
+        const AnnotatedString = Base.AnnotatedString
+    end
+else
+    @eval begin
+        const AnnotatedIOBuffer = StyledStrings.AnnotatedStrings.AnnotatedIOBuffer
+        const AnnotatedString = StyledStrings.AnnotatedStrings.AnnotatedString
     end
 end
 
-json3_write(args...) = error("Please load the JSON3.jl package.")
+dump_buffer(buffer::IOBuffer) = String(take!(buffer))
+function dump_buffer(buffer::AnnotatedIOBuffer)
+    return AnnotatedString(dump_buffer(buffer.io), buffer.annotations)
+end
 
 end

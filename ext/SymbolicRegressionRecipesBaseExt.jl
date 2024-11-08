@@ -1,7 +1,7 @@
 module SymbolicRegressionRecipesBaseExt
 
 using RecipesBase: @recipe, @series, plot
-using DynamicExpressions: Node, string_tree
+using DynamicExpressions: AbstractExpression, string_tree
 using SymbolicRegression.CoreModule: Options
 using SymbolicRegression.HallOfFameModule: HallOfFame, format_hall_of_fame
 using SymbolicRegression.MLJInterfaceModule: SRFitResult, SRRegressor
@@ -36,7 +36,7 @@ end
 
 @recipe function default_sr_plot(
     trees::Vector{N}, losses::Vector{L}, complexities::Vector{Int}, options::Options
-) where {T,L,N<:Node{T}}
+) where {T,L,N<:AbstractExpression{T}}
     tree_strings = [string_tree(tree, options) for tree in trees]
     log_losses = @. log10(losses + eps(L))
     log_complexities = @. log10(complexities)

@@ -90,7 +90,7 @@ We can get a SymbolicUtils version with:
 ```julia
 using SymbolicUtils
 
-eqn = node_to_symbolic(r.equations[1][r.best_idx[1]], model)
+eqn = node_to_symbolic(r.equations[1][r.best_idx[1]])
 ```
 
 We can get the LaTeX version with `Latexify`:
@@ -131,7 +131,7 @@ we can see that the output types are `Float32`:
 r = report(mach)
 best = r.equations[r.best_idx]
 println(typeof(best))
-# Node{Float32}
+# Expression{Float32,Node{Float32},...}
 ```
 
 We can also use `Complex` numbers (ignore the warning
@@ -228,7 +228,163 @@ a constant `"2.6353e-22[m s⁻²]"`.
 Note that you can also search for dimensionless units by settings
 `dimensionless_constants_only` to `true`.
 
-## 7. Additional features
+## 7. Working with Expressions
+
+Expressions in `SymbolicRegression.jl` are represented using the `Expression{T,Node{T},...}` type, which provides a more robust way to combine structure, operators, and constraints. Here's an example:
+
+```julia
+using SymbolicRegression
+
+# Define options with operators and structure
+options = Options(
+    binary_operators=[+, -, *],
+    unary_operators=[cos],
+    expression_options=(
+        structure=TemplateStructure(),
+        variable_constraints=Dict(1 => [1, 2], 2 => [2])
+    )
+)
+
+# Create expression nodes with constraints
+operators = options.operators
+variable_names = ["x1", "x2"]
+x1 = Expression(
+    Node{Float64}(feature=1),
+    operators=operators,
+    variable_names=variable_names,
+    structure=options.expression_options.structure
+)
+x2 = Expression(
+    Node{Float64}(feature=2),
+    operators=operators,
+    variable_names=variable_names,
+    structure=options.expression_options.structure
+)
+
+# Construct and evaluate expression
+expr = x1 * cos(x2 - 3.2)
+X = rand(Float64, 2, 100)
+output = expr(X)
+```
+
+This `Expression` type, contains both the structure
+and the operators used in the expression. These are what
+are returned by the search. The raw `Node` type (which is
+what used to be output directly) is accessible with
+
+```julia
+get_contents(expr)
+```
+
+## 8. Template Expressions
+
+Template expressions allow you to define structured expressions where different parts can be constrained to use specific variables.
+In this example, we'll create expressions that constrain the functional form in highly specific ways.
+(_For a more complex example, see ["Searching with template expressions"](examples/template_expression.md)_)
+
+First, let's set up our basic configuration:
+
+```julia
+using SymbolicRegression
+using Random: rand, MersenneTwister
+using MLJBase: machine, fit!, report
+```
+
+The key part is defining our template structure. This determines how different parts of the expression combine:
+
+```julia
+structure = TemplateStructure{(:f, :g)}(
+    ((; f, g), (x1, x2, x3)) -> f(x1, x2) + g(x2) - g(x3)
+)
+```
+
+With this structure, we are telling the algorithm that it can learn
+any symbolic expressions `f` and `g`, with `f` a function of two inputs,
+and `g` a function of one input. The result of
+
+```math
+f(x_1, x_2) + g(x_2) - g(x_3)
+```
+
+will be compared with the target `y`.
+
+Let's generate some example data:
+
+```julia
+n = 100
+rng = MersenneTwister(0)
+x1 = 10rand(rng, n)
+x2 = 10rand(rng, n)
+x3 = 10rand(rng, n)
+X = (; x1, x2, x3)
+y = [
+    2 * cos(x1[i] + 3.2) + x2[i]^2 - 0.8 * x3[i]^2
+    for i in eachindex(x1)
+]
+```
+
+Now, remember our structure: for the model to learn this,
+it would need to correctly disentangle the contribution
+of `f` and `g`!
+
+Now we can set up and train our model.
+Note that we pass the structure in to `expression_options`:
+
+```julia
+model = SRRegressor(;
+    binary_operators=(+, -, *, /),
+    unary_operators=(cos,),
+    niterations=500,
+    maxsize=25,
+    expression_type=TemplateExpression,
+    expression_options=(; structure),
+)
+
+mach = machine(model, X, y)
+fit!(mach)
+```
+
+If all goes well, you should see a printout with the following expression:
+
+```text
+y = ╭ f = ((#2 * 0.2) * #2) + (cos(#1 + 0.058407) * -2)
+    ╰ g = #1 * (#1 * 0.8)
+```
+
+This is what we were looking for! We can see that under
+$f(x_1, x_2) + g(x_2) - g(x_3)$, this correctly expands to
+$2 \cos(x_1 + 3.2) + x_2^2 - 0.8 x_3^2$.
+
+We can also access the individual parts of the template expression
+directly from the report:
+
+```julia
+r = report(mach)
+best_expr = r.equations[r.best_idx]
+
+# Access individual parts of the template expression
+println("f: ", get_contents(best_expr).f)
+println("g: ", get_contents(best_expr).g)
+```
+
+The `TemplateExpression` combines these under the structure
+so we can directly and efficiently evaluate this:
+
+```julia
+best_expr(randn(3, 20))
+```
+
+The above code demonstrates how template expressions can be used to:
+
+- Define structured expressions with multiple components
+- Constrains which variables can be used in each component
+- Create expressions that can output multiple values
+
+You can even output custom structs - see the more detailed [Template Expression example](examples/template_expression.md)!
+
+Be sure to also check out the [Parametric Expression example](examples/parametric_expression.md).
+
+## 9. Additional features
 
 For the many other features available in SymbolicRegression.jl,
 check out the API page for `Options`. You might also find it useful

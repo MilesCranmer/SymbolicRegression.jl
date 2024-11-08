@@ -1,6 +1,6 @@
 module AdaptiveParsimonyModule
 
-using ..CoreModule: Options, MAX_DEGREE
+using ..CoreModule: AbstractOptions
 
 """
     RunningSearchStatistics
@@ -23,10 +23,8 @@ struct RunningSearchStatistics
     normalized_frequencies::Vector{Float64}  # Stores `frequencies`, but normalized (updated once in a while)
 end
 
-function RunningSearchStatistics(; options::Options, window_size::Int=100000)
-    maxsize = options.maxsize
-    actualMaxsize = maxsize + MAX_DEGREE
-    init_frequencies = ones(Float64, actualMaxsize)
+function RunningSearchStatistics(; options::AbstractOptions, window_size::Int=100000)
+    init_frequencies = ones(Float64, options.maxsize)
 
     return RunningSearchStatistics(
         window_size, init_frequencies, copy(init_frequencies) / sum(init_frequencies)

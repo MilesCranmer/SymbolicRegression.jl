@@ -1,14 +1,25 @@
 using Documenter
 using SymbolicUtils
 using SymbolicRegression
-using SymbolicRegression: Dataset, update_baseline_loss!
+using SymbolicRegression:
+    AbstractExpression,
+    ExpressionInterface,
+    Dataset,
+    update_baseline_loss!,
+    AbstractMutationWeights,
+    AbstractOptions,
+    mutate!,
+    condition_mutation_weights!,
+    sample_mutation,
+    MutationResult,
+    AbstractRuntimeOptions,
+    AbstractSearchState,
+    @extend_operators
+using DynamicExpressions
 
-DocMeta.setdocmeta!(
-    SymbolicRegression, :DocTestSetup, :(using LossFunctions); recursive=true
-)
-DocMeta.setdocmeta!(
-    SymbolicRegression, :DocTestSetup, :(using DynamicExpressions); recursive=true
-)
+include("utils.jl")
+process_literate_blocks("test")
+process_literate_blocks("examples")
 
 readme = open(dirname(@__FILE__) * "/../README.md") do io
     read(io, String)
@@ -40,14 +51,8 @@ readme = replace(
 
 # We prepend the `<table>` with a ```@raw html
 # and append the `</table>` with a ```:
-readme = replace(
-    readme,
-    r"<table>" => s"```@raw html\n<table>",
-)
-readme = replace(
-    readme,
-    r"</table>" => s"</table>\n```",
-)
+readme = replace(readme, r"<table>" => s"```@raw html\n<table>")
+readme = replace(readme, r"</table>" => s"</table>\n```")
 
 # Then, we surround ```mermaid\n...\n``` snippets
 # with ```@raw html\n<div class="mermaid">\n...\n</div>```:
@@ -80,6 +85,12 @@ open(dirname(@__FILE__) * "/src/index.md", "w") do io
     write(io, index_base)
 end
 
+DocMeta.setdocmeta!(
+    SymbolicRegression,
+    :DocTestSetup,
+    :(using LossFunctions, DynamicExpressions);
+    recursive=true,
+)
 makedocs(;
     sitename="SymbolicRegression.jl",
     authors="Miles Cranmer",
@@ -87,15 +98,20 @@ makedocs(;
     strict=:doctest,
     clean=true,
     format=Documenter.HTML(;
-        canonical="https://astroautomata.com/SymbolicRegression.jl/stable"
+        canonical="https://ai.damtp.cam.ac.uk/symbolicregression/stable"
     ),
     pages=[
         "Contents" => "index_base.md",
         "Home" => "index.md",
-        "Examples" => "examples.md",
+        "Examples" => [
+            "Short Examples" => "examples.md",
+            "Template Expressions" => "examples/template_expression.md",
+            "Parameterized Expressions" => "examples/parameterized_function.md",
+        ],
         "API" => "api.md",
         "Losses" => "losses.md",
         "Types" => "types.md",
+        "Customization" => "customization.md",
     ],
 )
 
@@ -124,9 +140,16 @@ apply_to_a_href!(html.root) do element
     element.attributes["href"] = "#LossFunctions." * element.children[1].text
 end
 
-# Then, we write the new html to the file:
+# Then, we write the new html to the file, only if it has changed:
 open("docs/build/losses/index.html", "w") do io
     write(io, string(html))
 end
 
-deploydocs(; repo="github.com/MilesCranmer/SymbolicRegression.jl.git")
+if !haskey(ENV, "JL_LIVERELOAD")
+    ENV["DOCUMENTER_KEY"] = get(ENV, "DOCUMENTER_KEY_ASTROAUTOMATA", "")
+    deploydocs(; repo="github.com/MilesCranmer/SymbolicRegression.jl.git")
+
+    ENV["DOCUMENTER_KEY"] = get(ENV, "DOCUMENTER_KEY_CAM", "")
+    ENV["GITHUB_REPOSITORY"] = "ai-damtp-cam-ac-uk/symbolicregression.git"
+    deploydocs(; repo="github.com/ai-damtp-cam-ac-uk/symbolicregression.git")
+end

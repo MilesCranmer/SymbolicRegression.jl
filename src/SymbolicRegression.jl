@@ -9,12 +9,19 @@ export Population,
     MutationWeights,
     Node,
     GraphNode,
+    ParametricNode,
+    Expression,
+    ParametricExpression,
+    TemplateExpression,
+    TemplateStructure,
+    ValidVector,
+    ComposableExpression,
     NodeSampler,
+    AbstractExpression,
     AbstractExpressionNode,
+    EvalOptions,
     SRRegressor,
     MultitargetSRRegressor,
-    LOSS_TYPE,
-    DATA_TYPE,
 
     #Functions:
     equation_search,
@@ -22,6 +29,9 @@ export Population,
     calculate_pareto_frontier,
     count_nodes,
     compute_complexity,
+    @parse_expression,
+    parse_expression,
+    @declare_expression_operator,
     print_tree,
     string_tree,
     eval_tree_array,
@@ -38,6 +48,11 @@ export Population,
     gen_random_tree,
     gen_random_tree_fixed_size,
     @extend_operators,
+    get_tree,
+    get_contents,
+    get_metadata,
+    with_contents,
+    with_metadata,
 
     #Operators
     plus,
@@ -68,27 +83,38 @@ export Population,
 
 using Distributed
 using Printf: @printf, @sprintf
-using PackageExtensionCompat: @require_extensions
 using Logging: AbstractLogger
 using Pkg: Pkg
 using TOML: parsefile
 using Random: seed!, shuffle!
 using Reexport
+using ProgressMeter: finish!
 using DynamicExpressions:
     Node,
     GraphNode,
+    ParametricNode,
+    Expression,
+    ParametricExpression,
     NodeSampler,
+    AbstractExpression,
     AbstractExpressionNode,
+    ExpressionInterface,
+    @parse_expression,
+    parse_expression,
+    @declare_expression_operator,
     copy_node,
     set_node!,
     string_tree,
     print_tree,
     count_nodes,
     get_constants,
-    set_constants,
+    get_scalar_constants,
+    set_constants!,
+    set_scalar_constants!,
     index_constants,
     NodeIndex,
     eval_tree_array,
+    EvalOptions,
     differentiable_eval_tree_array,
     eval_diff_tree_array,
     eval_grad_tree_array,
@@ -97,8 +123,14 @@ using DynamicExpressions:
     combine_operators,
     simplify_tree!,
     tree_mapreduce,
-    set_default_variable_names!
-using DynamicExpressions.EquationModule: with_type_parameters
+    set_default_variable_names!,
+    node_type,
+    get_tree,
+    get_contents,
+    get_metadata,
+    with_contents,
+    with_metadata
+using DynamicExpressions: with_type_parameters
 @reexport using LossFunctions:
     MarginLoss,
     DistanceLoss,
@@ -126,6 +158,22 @@ using DynamicExpressions.EquationModule: with_type_parameters
     LogitDistLoss,
     QuantileLoss,
     LogCoshLoss
+using Compat: @compat, Fix
+
+#! format: off
+@compat(
+    public,
+    (
+        AbstractOptions, AbstractRuntimeOptions, RuntimeOptions,
+        AbstractMutationWeights, mutate!, condition_mutation_weights!,
+        sample_mutation, MutationResult, AbstractSearchState, SearchState,
+        LOSS_TYPE, DATA_TYPE, node_type,
+    )
+)
+#! format: on
+# ^ We can add new functions here based on requests from users.
+# However, I don't want to add many functions without knowing what
+# users will actually want to overload.
 
 # https://discourse.julialang.org/t/how-to-find-out-the-version-of-a-package-from-its-module/37755/15
 const PACKAGE_VERSION = try
@@ -139,15 +187,6 @@ const PACKAGE_VERSION = try
     end
 catch
     VersionNumber(0, 0, 0)
-end
-
-function deprecate_varmap(variable_names, varMap, func_name)
-    if varMap !== nothing
-        Base.depwarn("`varMap` is deprecated; use `variable_names` instead", func_name)
-        @assert variable_names === nothing "Cannot pass both `varMap` and `variable_names`"
-        variable_names = varMap
-    end
-    return variable_names
 end
 
 using DispatchDoctor: @stable
@@ -175,18 +214,26 @@ using DispatchDoctor: @stable
     include("Migration.jl")
     include("SearchUtils.jl")
     include("Logging.jl")
+    include("ExpressionBuilder.jl")
+    include("ComposableExpression.jl")
+    include("TemplateExpression.jl")
+    include("ParametricExpression.jl")
 end
 
 using .CoreModule:
-    MAX_DEGREE,
-    BATCH_DIM,
-    FEATURE_DIM,
     DATA_TYPE,
     LOSS_TYPE,
     RecordType,
     Dataset,
+    AbstractOptions,
     Options,
+    ComplexityMapping,
+    AbstractMutationWeights,
     MutationWeights,
+    get_safe_op,
+    max_features,
+    is_weighted,
+    sample_mutation,
     plus,
     sub,
     mult,
@@ -209,8 +256,10 @@ using .CoreModule:
     gamma,
     erf,
     erfc,
-    atanh_clip
-using .UtilsModule: is_anonymous_function, recursive_merge, json3_write
+    atanh_clip,
+    create_expression,
+    has_units
+using .UtilsModule: is_anonymous_function, recursive_merge, json3_write, @ignore
 using .ComplexityModule: compute_complexity
 using .CheckConstraintsModule: check_constraints
 using .AdaptiveParsimonyModule:
@@ -227,12 +276,15 @@ using .PopMemberModule: PopMember, reset_birth!
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 using .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
+using .MutateModule: mutate!, condition_mutation_weights!, MutationResult
 using .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
 using .ProgressBarsModule: WrappedProgressBar
 using .RecorderModule: @recorder, find_iteration_from_record
 using .MigrationModule: migrate!
 using .SearchUtilsModule:
+    AbstractSearchState,
     SearchState,
+    AbstractRuntimeOptions,
     RuntimeOptions,
     WorkerAssignments,
     DefaultWorkerOutputType,
@@ -248,8 +300,7 @@ using .SearchUtilsModule:
     check_for_timeout,
     check_max_evals,
     ResourceMonitor,
-    start_work_monitor!,
-    stop_work_monitor!,
+    record_channel_state!,
     estimate_work_fraction,
     update_progress_bar!,
     print_search_state,
@@ -260,7 +311,10 @@ using .SearchUtilsModule:
     save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!
-using .LoggingModule: default_logging_callback
+using .TemplateExpressionModule: TemplateExpression, TemplateStructure
+using .TemplateExpressionModule: TemplateExpression, TemplateStructure, ValidVector
+using .ComposableExpressionModule: ComposableExpression
+using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
     include("deprecates.jl")
@@ -283,11 +337,11 @@ which is useful for debugging and profiling.
 - `y::Union{AbstractMatrix{T}, AbstractVector{T}}`: The values to predict. The first dimension
     is the output feature to predict with each equation, and the
     second dimension is rows.
-- `niterations::Int=10`: The number of iterations to perform the search.
+- `niterations::Int=100`: The number of iterations to perform the search.
     More iterations will improve the results.
 - `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
     weight the loss for each `y` by this value (same shape as `y`).
-- `options::Options=Options()`: The options for the search, such as
+- `options::AbstractOptions=Options()`: The options for the search, such as
     which operators to use, evolution hyperparameters, etc.
 - `variable_names::Union{Vector{String}, Nothing}=nothing`: The names
     of each feature in `X`, which will be used during printing of equations.
@@ -362,10 +416,10 @@ which is useful for debugging and profiling.
 """
 function equation_search(
     X::AbstractMatrix{T},
-    y::AbstractMatrix{T};
-    niterations::Int=10,
+    y::AbstractMatrix;
+    niterations::Int=100,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
-    options::Options=Options(),
+    options::AbstractOptions=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
     display_variable_names::Union{AbstractVector{String},Nothing}=variable_names,
     y_variable_names::Union{String,AbstractVector{String},Nothing}=nothing,
@@ -377,6 +431,7 @@ function equation_search(
     runtests::Bool=true,
     saved_state=nothing,
     return_state::Union{Bool,Nothing,Val}=nothing,
+    run_id::Union{String,Nothing}=nothing,
     loss_type::Type{L}=Nothing,
     verbosity::Union{Integer,Nothing}=nothing,
     logger::Union{AbstractLogger,Nothing}=nothing,
@@ -385,10 +440,10 @@ function equation_search(
     progress::Union{Bool,Nothing}=nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
+    extra::NamedTuple=NamedTuple(),
     v_dim_out::Val{DIM_OUT}=Val(nothing),
     # Deprecated:
     multithreaded=nothing,
-    varMap=nothing,
 ) where {T<:DATA_TYPE,L,DIM_OUT}
     if multithreaded !== nothing
         error(
@@ -396,7 +451,6 @@ function equation_search(
             "Choose one of :multithreaded, :multiprocessing, or :serial.",
         )
     end
-    variable_names = deprecate_varmap(variable_names, varMap, :equation_search)
 
     if weights !== nothing
         @assert length(weights) == length(y)
@@ -412,6 +466,7 @@ function equation_search(
         y_variable_names,
         X_units,
         y_units,
+        extra,
         L,
     )
 
@@ -427,6 +482,7 @@ function equation_search(
         runtests=runtests,
         saved_state=saved_state,
         return_state=return_state,
+        run_id=run_id,
         verbosity=verbosity,
         logger=logger,
         logging_callback=logging_callback,
@@ -437,17 +493,8 @@ function equation_search(
 end
 
 function equation_search(
-    X::AbstractMatrix{T1}, y::AbstractMatrix{T2}; kw...
-) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
-    U = promote_type(T1, T2)
-    return equation_search(
-        convert(AbstractMatrix{U}, X), convert(AbstractMatrix{U}, y); kw...
-    )
-end
-
-function equation_search(
-    X::AbstractMatrix{T1}, y::AbstractVector{T2}; kw...
-) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
+    X::AbstractMatrix{T}, y::AbstractVector; kw...
+) where {T<:DATA_TYPE}
     return equation_search(X, reshape(y, (1, size(y, 1))); kw..., v_dim_out=Val(1))
 end
 
@@ -457,169 +504,28 @@ end
 
 function equation_search(
     datasets::Vector{D};
-    niterations::Int=10,
-    options::Options=Options(),
-    parallelism=:multithreading,
-    numprocs::Union{Int,Nothing}=nothing,
-    procs::Union{Vector{Int},Nothing}=nothing,
-    addprocs_function::Union{Function,Nothing}=nothing,
-    heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
-    runtests::Bool=true,
+    options::AbstractOptions=Options(),
     saved_state=nothing,
-    return_state::Union{Bool,Nothing,Val}=nothing,
-    verbosity::Union{Int,Nothing}=nothing,
-    logger::Union{AbstractLogger,Nothing}=nothing,
-    logging_callback::Union{Function,Nothing}=nothing,
-    log_every_n::Union{Integer,NamedTuple}=1,
-    progress::Union{Bool,Nothing}=nothing,
-    v_dim_out::Val{DIM_OUT}=Val(nothing),
-) where {DIM_OUT,T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
-    concurrency = if parallelism in (:multithreading, "multithreading")
-        :multithreading
-    elseif parallelism in (:multiprocessing, "multiprocessing")
-        :multiprocessing
-    elseif parallelism in (:serial, "serial")
-        :serial
-    else
-        error(
-            "Invalid parallelism mode: $parallelism. " *
-            "You must choose one of :multithreading, :multiprocessing, or :serial.",
+    runtime_options::Union{AbstractRuntimeOptions,Nothing}=nothing,
+    runtime_options_kws...,
+) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
+    _runtime_options = @something(
+        runtime_options,
+        RuntimeOptions(;
+            options_return_state=options.return_state,
+            options_verbosity=options.verbosity,
+            options_progress=options.progress,
+            nout=length(datasets),
+            runtime_options_kws...,
         )
-        :serial
-    end
-    not_distributed = concurrency in (:multithreading, :serial)
-    not_distributed &&
-        procs !== nothing &&
-        error(
-            "`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
-        )
-    not_distributed &&
-        numprocs !== nothing &&
-        error(
-            "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
-        )
-    logging_callback !== nothing &&
-        logger !== nothing &&
-        error(
-            "You cannot set both `logging_callback` and `logger`. Instead, simply use your logger within the `logging_callback`.",
-        )
-
-    _return_state = if return_state isa Val
-        first(typeof(return_state).parameters)
-    else
-        if options.return_state === Val(nothing)
-            return_state === nothing ? false : return_state
-        else
-            @assert(
-                return_state === nothing,
-                "You cannot set `return_state` in both the `Options` and in the passed arguments."
-            )
-            first(typeof(options.return_state).parameters)
-        end
-    end
-
-    dim_out = if DIM_OUT === nothing
-        length(datasets) > 1 ? 2 : 1
-    else
-        DIM_OUT
-    end
-    _numprocs::Int = if numprocs === nothing
-        if procs === nothing
-            4
-        else
-            length(procs)
-        end
-    else
-        if procs === nothing
-            numprocs
-        else
-            @assert length(procs) == numprocs
-            numprocs
-        end
-    end
-
-    _verbosity = if verbosity === nothing && options.verbosity === nothing
-        1
-    elseif verbosity === nothing && options.verbosity !== nothing
-        options.verbosity
-    elseif verbosity !== nothing && options.verbosity === nothing
-        verbosity
-    else
-        error(
-            "You cannot set `verbosity` in both the search parameters `Options` and the call to `equation_search`.",
-        )
-        1
-    end
-    _progress::Bool = if progress === nothing && options.progress === nothing
-        (_verbosity > 0) && length(datasets) == 1
-    elseif progress === nothing && options.progress !== nothing
-        options.progress
-    elseif progress !== nothing && options.progress === nothing
-        progress
-    else
-        error(
-            "You cannot set `progress` in both the search parameters `Options` and the call to `equation_search`.",
-        )
-        false
-    end
-
-    _addprocs_function = addprocs_function === nothing ? addprocs : addprocs_function
-
-    exeflags = if VERSION >= v"1.9" && concurrency == :multiprocessing
-        heap_size_hint_in_megabytes = floor(
-            Int, (
-                if heap_size_hint_in_bytes === nothing
-                    (Sys.free_memory() / _numprocs)
-                else
-                    heap_size_hint_in_bytes
-                end
-            ) / 1024^2
-        )
-        _verbosity > 0 &&
-            heap_size_hint_in_bytes === nothing &&
-            @info "Automatically setting `--heap-size-hint=$(heap_size_hint_in_megabytes)M` on each Julia process. You can configure this with the `heap_size_hint_in_bytes` parameter."
-
-        `--heap-size=$(heap_size_hint_in_megabytes)M`
-    else
-        ``
-    end
-    _logging_callback = if logging_callback === nothing && logger !== nothing
-        (; kws...) -> default_logging_callback(logger; kws...)
-    else
-        logging_callback
-    end
-    _log_every_n = if log_every_n isa Integer
-        (; scalars=log_every_n, plots=0)
-    else
-        log_every_n
-    end
+    )
 
     # Underscores here mean that we have mutated the variable
-    return _equation_search(
-        datasets,
-        RuntimeOptions(;
-            niterations=niterations,
-            total_cycles=options.populations * niterations,
-            numprocs=_numprocs,
-            init_procs=procs,
-            addprocs_function=_addprocs_function,
-            exeflags=exeflags,
-            runtests=runtests,
-            verbosity=_verbosity,
-            progress=_progress,
-            logging_callback=_logging_callback,
-            log_every_n=_log_every_n,
-            parallelism=Val(concurrency),
-            dim_out=Val(dim_out),
-            return_state=Val(_return_state),
-        ),
-        options,
-        saved_state,
-    )
+    return _equation_search(datasets, _runtime_options, options, saved_state)
 end
 
-@stable default_mode = "disable" @noinline function _equation_search(
-    datasets::Vector{D}, ropt::RuntimeOptions, options::Options, saved_state
+@noinline function _equation_search(
+    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions, saved_state
 ) where {D<:Dataset}
     _validate_options(datasets, ropt, options)
     state = _create_workers(datasets, ropt, options)
@@ -627,11 +533,12 @@ end
     _warmup_search!(state, datasets, ropt, options)
     _main_search_loop!(state, datasets, ropt, options)
     _tear_down!(state, ropt, options)
-    return _format_output(state, ropt)
+    _info_dump(state, datasets, ropt, options)
+    return _format_output(state, datasets, ropt, options)
 end
 
 function _validate_options(
-    datasets::Vector{D}, ropt::RuntimeOptions, options::Options
+    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions
 ) where {T,L,D<:Dataset{T,L}}
     example_dataset = first(datasets)
     nout = length(datasets)
@@ -661,7 +568,7 @@ function _validate_options(
     return nothing
 end
 @stable default_mode = "disable" function _create_workers(
-    datasets::Vector{D}, ropt::RuntimeOptions, options::Options
+    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions
 ) where {T,L,D<:Dataset{T,L}}
     stdin_reader = watch_stream(stdin)
 
@@ -670,7 +577,8 @@ end
 
     nout = length(datasets)
     example_dataset = first(datasets)
-    NT = with_type_parameters(options.node_type, T)
+    example_ex = create_expression(zero(T), options, example_dataset)
+    NT = typeof(example_ex)
     PopType = Population{T,L,NT}
     HallOfFameType = HallOfFame{T,L,NT}
     WorkerOutputType = get_worker_output_type(
@@ -721,15 +629,14 @@ end
 
     halls_of_fame = Vector{HallOfFameType}(undef, nout)
 
-    cycles_remaining = [ropt.total_cycles for j in 1:nout]
+    total_cycles = ropt.niterations * options.populations
+    cycles_remaining = [total_cycles for j in 1:nout]
     cur_maxsizes = [
-        get_cur_maxsize(; options, ropt.total_cycles, cycles_remaining=cycles_remaining[j])
-        for j in 1:nout
+        get_cur_maxsize(; options, total_cycles, cycles_remaining=cycles_remaining[j]) for
+        j in 1:nout
     ]
 
-    return SearchState{
-        T,L,with_type_parameters(options.node_type, T),WorkerOutputType,ChannelType
-    }(;
+    return SearchState{T,L,typeof(example_ex),WorkerOutputType,ChannelType}(;
         procs=procs,
         we_created_procs=we_created_procs,
         worker_output=worker_output,
@@ -749,20 +656,24 @@ end
     )
 end
 function _initialize_search!(
-    state::SearchState{T,L,N}, datasets, ropt::RuntimeOptions, options::Options, saved_state
+    state::AbstractSearchState{T,L,N},
+    datasets,
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+    saved_state,
 ) where {T,L,N}
     nout = length(datasets)
 
     init_hall_of_fame = load_saved_hall_of_fame(saved_state)
     if init_hall_of_fame === nothing
         for j in 1:nout
-            state.halls_of_fame[j] = HallOfFame(options, T, L)
+            state.halls_of_fame[j] = HallOfFame(options, datasets[j])
         end
     else
         # Recompute losses for the hall of fame, in
         # case the dataset changed:
         for j in eachindex(init_hall_of_fame, datasets, state.halls_of_fame)
-            hof = init_hall_of_fame[j]
+            hof = strip_metadata(init_hall_of_fame[j], options, datasets[j])
             for member in hof.members[hof.exists]
                 score, result_loss = score_func(datasets[j], member, options)
                 member.score = score
@@ -779,17 +690,17 @@ function _initialize_search!(
         saved_pop = load_saved_population(saved_state; out=j, pop=i)
         new_pop =
             if saved_pop !== nothing && length(saved_pop.members) == options.population_size
-                saved_pop::Population{T,L,N}
+                _saved_pop = strip_metadata(saved_pop, options, datasets[j])
                 ## Update losses:
-                for member in saved_pop.members
+                for member in _saved_pop.members
                     score, result_loss = score_func(datasets[j], member, options)
                     member.score = score
                     member.loss = result_loss
                 end
-                copy_pop = copy(saved_pop)
+                copy_pop = copy(_saved_pop)
                 @sr_spawner(
                     begin
-                        (copy_pop, HallOfFame(options, T, L), RecordType(), 0.0)
+                        (copy_pop, HallOfFame(options, datasets[j]), RecordType(), 0.0)
                     end,
                     parallelism = ropt.parallelism,
                     worker_idx = worker_idx
@@ -806,9 +717,9 @@ function _initialize_search!(
                                 population_size=options.population_size,
                                 nlength=3,
                                 options=options,
-                                nfeatures=datasets[j].nfeatures,
+                                nfeatures=max_features(datasets[j], options),
                             ),
-                            HallOfFame(options, T, L),
+                            HallOfFame(options, datasets[j]),
                             RecordType(),
                             Float64(options.population_size),
                         )
@@ -823,7 +734,10 @@ function _initialize_search!(
     return nothing
 end
 function _warmup_search!(
-    state::SearchState{T,L,N}, datasets, ropt::RuntimeOptions, options::Options
+    state::AbstractSearchState{T,L,N},
+    datasets,
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
 ) where {T,L,N}
     nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
@@ -864,17 +778,22 @@ function _warmup_search!(
     return nothing
 end
 function _main_search_loop!(
-    state::SearchState{T,L,N}, datasets, ropt::RuntimeOptions, options::Options
+    state::AbstractSearchState{T,L,N},
+    datasets,
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
 ) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
     start_time = time()
-    if ropt.progress
+    progress_bar = if ropt.progress
         #TODO: need to iterate this on the max cycles remaining!
         sum_cycle_remaining = sum(state.cycles_remaining)
-        progress_bar = WrappedProgressBar(
-            1:sum_cycle_remaining; width=options.terminal_width
+        WrappedProgressBar(
+            sum_cycle_remaining, ropt.niterations; barlen=options.terminal_width
         )
+    else
+        nothing
     end
 
     log_step = 0
@@ -894,10 +813,11 @@ function _main_search_loop!(
     end
     kappa = 0
     resource_monitor = ResourceMonitor(;
-        absolute_start_time=time(),
         # Storing n times as many monitoring intervals as populations seems like it will
         # help get accurate resource estimates:
-        num_intervals_to_store=options.populations * 100 * nout,
+        max_recordings=options.populations * 100 * nout,
+        start_reporting_at=options.populations * 3 * nout,
+        window_size=options.populations * 2 * nout,
     )
     while sum(state.cycles_remaining) > 0
         kappa += 1
@@ -921,11 +841,12 @@ function _main_search_loop!(
         else
             true
         end
+        record_channel_state!(resource_monitor, population_ready)
+
         # Don't start more if this output has finished its cycles:
         # TODO - this might skip extra cycles?
         population_ready &= (state.cycles_remaining[j] > 0)
         if population_ready
-            start_work_monitor!(resource_monitor)
             # Take the fetch operation from the channel since its ready
             (cur_pop, best_seen, cur_record, cur_num_evals) = if ropt.parallelism in
                 (
@@ -957,7 +878,7 @@ function _main_search_loop!(
             dominating = calculate_pareto_frontier(state.halls_of_fame[j])
 
             if options.save_to_file
-                save_to_file(dominating, nout, j, dataset, options)
+                save_to_file(dominating, nout, j, dataset, options, ropt)
             end
             ###################################################################
             # Migration #######################################################
@@ -1017,12 +938,12 @@ function _main_search_loop!(
                 )
             end
 
+            total_cycles = ropt.niterations * options.populations
             state.cur_maxsizes[j] = get_cur_maxsize(;
-                options, ropt.total_cycles, cycles_remaining=state.cycles_remaining[j]
+                options, total_cycles, cycles_remaining=state.cycles_remaining[j]
             )
-            stop_work_monitor!(resource_monitor)
             move_window!(state.all_running_search_statistics[j])
-            if ropt.progress
+            if !isnothing(progress_bar)
                 head_node_occupation = estimate_work_fraction(resource_monitor)
                 update_progress_bar!(
                     progress_bar,
@@ -1039,7 +960,7 @@ function _main_search_loop!(
             end
             log_step += 1
         end
-        sleep(1e-6)
+        yield()
 
         ################################################################
         ## Search statistics
@@ -1067,12 +988,13 @@ function _main_search_loop!(
 
                 # Dominating pareto curve - must be better than all simpler equations
                 head_node_occupation = estimate_work_fraction(resource_monitor)
+                total_cycles = ropt.niterations * options.populations
                 print_search_state(
                     state.halls_of_fame,
                     datasets;
                     options,
                     equation_speed,
-                    ropt.total_cycles,
+                    total_cycles,
                     state.cycles_remaining,
                     head_node_occupation,
                     parallelism=ropt.parallelism,
@@ -1095,9 +1017,14 @@ function _main_search_loop!(
         end
         ################################################################
     end
+    if !isnothing(progress_bar)
+        finish!(progress_bar)
+    end
     return nothing
 end
-function _tear_down!(state::SearchState, ropt::RuntimeOptions, options::Options)
+function _tear_down!(
+    state::AbstractSearchState, ropt::AbstractRuntimeOptions, options::AbstractOptions
+)
     close_reader!(state.stdin_reader)
     # Safely close all processes or threads
     if ropt.parallelism == :multiprocessing
@@ -1111,10 +1038,20 @@ function _tear_down!(state::SearchState, ropt::RuntimeOptions, options::Options)
     @recorder json3_write(state.record[], options.recorder_file)
     return nothing
 end
-function _format_output(state::SearchState, ropt::RuntimeOptions)
-    out_hof = (ropt.dim_out == 1 ? only(state.halls_of_fame) : state.halls_of_fame)
+function _format_output(
+    state::AbstractSearchState,
+    datasets,
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+)
+    nout = length(datasets)
+    out_hof = if ropt.dim_out == 1
+        embed_metadata(only(state.halls_of_fame), options, only(datasets))
+    else
+        map(Fix{2}(embed_metadata, options), state.halls_of_fame, datasets)
+    end
     if ropt.return_state
-        return (state.last_pops, out_hof)
+        return (map(Fix{2}(embed_metadata, options), state.last_pops, datasets), out_hof)
     else
         return out_hof
     end
@@ -1123,7 +1060,7 @@ end
 @stable default_mode = "disable" function _dispatch_s_r_cycle(
     in_pop::Population{T,L,N},
     dataset::Dataset,
-    options::Options;
+    options::AbstractOptions;
     pop::Int,
     out::Int,
     iteration::Int,
@@ -1153,7 +1090,7 @@ end
     )
     num_evals += evals_from_optimize
     if options.batching
-        for i_member in 1:(options.maxsize + MAX_DEGREE)
+        for i_member in 1:(options.maxsize)
             score, result_loss = score_func(dataset, best_seen.members[i_member], options)
             best_seen.members[i_member].score = score
             best_seen.members[i_member].loss = result_loss
@@ -1162,20 +1099,60 @@ end
     end
     return (out_pop, best_seen, record, num_evals)
 end
+function _info_dump(
+    state::AbstractSearchState,
+    datasets::Vector{D},
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+) where {D<:Dataset}
+    ropt.verbosity <= 0 && return nothing
 
-@stable default_mode = "disable" begin
-    include("MLJInterface.jl")
-    using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
-    include("Printing.jl")
+    nout = length(state.halls_of_fame)
+    if nout > 1
+        @info "Final populations:"
+    else
+        @info "Final population:"
+    end
+    for (j, (hall_of_fame, dataset)) in enumerate(zip(state.halls_of_fame, datasets))
+        if nout > 1
+            @info "Output $j:"
+        end
+        equation_strings = string_dominating_pareto_curve(
+            hall_of_fame,
+            dataset,
+            options;
+            width=@something(
+                options.terminal_width,
+                ropt.progress ? displaysize(stdout)[2] : nothing,
+                Some(nothing)
+            )
+        )
+        println(equation_strings)
+    end
+
+    if options.save_to_file
+        output_directory = joinpath(
+            something(options.output_directory, "outputs"), ropt.run_id
+        )
+        @info "Results saved to:"
+        for j in 1:nout
+            filename = nout > 1 ? "hall_of_fame_output$(j).csv" : "hall_of_fame.csv"
+            output_file = joinpath(output_directory, filename)
+            println("  - ", output_file)
+        end
+    end
+    return nothing
 end
 
-function __init__()
-    @require_extensions
-end
+include("MLJInterface.jl")
+using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
+include("Printing.jl")
 
-macro ignore(args...) end
 # Hack to get static analysis to work from within tests:
 @ignore include("../test/runtests.jl")
+
+# TODO: Hack to force ConstructionBase version
+using ConstructionBase: ConstructionBase as _
 
 include("precompile.jl")
 redirect_stdout(devnull) do

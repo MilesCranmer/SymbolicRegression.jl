@@ -7,13 +7,13 @@ using DynamicExpressions: string_tree
 using ..CoreModule: Options, Dataset
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: calculate_pareto_frontier
-using ..SearchUtilsModule: SearchState, RuntimeOptions
+using ..SearchUtilsModule: SearchState, RuntimeOptions, SearchUtilsModule as SU
 
 function add_plot_to_log!(log; kws...)
     return nothing
 end
 
-function default_logging_callback(
+function SU.default_logging_callback(
     logger::AbstractLogger;
     log_step::Integer,
     state::SearchState,

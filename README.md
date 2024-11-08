@@ -7,7 +7,7 @@ https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-98
 
 | Latest release | Documentation | Forums | Paper |
 | :---: | :---: | :---: | :---: |
-| [![version](https://juliahub.com/docs/SymbolicRegression/version.svg)](https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS) | [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://astroautomata.com/SymbolicRegression.jl/dev/) | [![Discussions](https://img.shields.io/badge/discussions-github-informational)](https://github.com/MilesCranmer/PySR/discussions) | [![Paper](https://img.shields.io/badge/arXiv-2305.01582-b31b1b)](https://arxiv.org/abs/2305.01582) |
+| [![version](https://juliahub.com/docs/SymbolicRegression/version.svg)](https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS) | [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://ai.damtp.cam.ac.uk/symbolicregression/dev/) | [![Discussions](https://img.shields.io/badge/discussions-github-informational)](https://github.com/MilesCranmer/PySR/discussions) | [![Paper](https://img.shields.io/badge/arXiv-2305.01582-b31b1b)](https://arxiv.org/abs/2305.01582) |
 
 | Build status | Coverage |
 | :---: | :---: |
@@ -110,7 +110,7 @@ where here we choose to evaluate the second equation.
 
 For fitting multiple outputs, one can use `MultitargetSRRegressor`
 (and pass an array of indices to `idx` in `predict` for selecting specific equations).
-For a full list of options available to each regressor, see the [API page](https://astroautomata.com/SymbolicRegression.jl/dev/api/).
+For a full list of options available to each regressor, see the [API page](https://ai.damtp.cam.ac.uk/symbolicregression/dev/api/).
 
 ### Low-Level Interface
 
@@ -155,36 +155,35 @@ We can get the expressions with:
 trees = [member.tree for member in dominating]
 ```
 
-Each of these equations is a `Node{T}` type for some constant type `T` (like `Float32`).
+Each of these equations is an `Expression{T}` type for some constant type `T` (like `Float32`).
 
-You can evaluate a given tree with:
+These expression objects are callable – you can simply pass in data:
 
 ```julia
-import SymbolicRegression: eval_tree_array
-
 tree = trees[end]
-output, did_succeed = eval_tree_array(tree, X, options)
+output = tree(X)
 ```
 
-The `output` array will contain the result of the tree at each of the 100 rows.
-This `did_succeed` flag detects whether an evaluation was successful, or whether
-encountered any NaNs or Infs during calculation (such as, e.g., `sqrt(-1)`).
 
 ## Constructing expressions
 
-Expressions are represented as the `Node` type which is developed
+Expressions are represented under-the-hood as the `Node` type which is developed
 in the [DynamicExpressions.jl](https://github.com/SymbolicML/DynamicExpressions.jl/) package.
+The `Expression` type wraps this and includes metadata about operators and variable names.
 
 You can manipulate and construct expressions directly. For example:
 
 ```julia
-import SymbolicRegression: Options, Node, eval_tree_array
+using SymbolicRegression: Options, Expression, Node
 
 options = Options(;
-    binary_operators=[+, -, *, ^, /], unary_operators=[cos, exp, sin]
+    binary_operators=[+, -, *, /], unary_operators=[cos, exp, sin]
 )
-x1, x2, x3 = [Node(; feature=i) for i=1:3]
-tree = cos(x1 - 3.2 * x2) - x1^3.2
+operators = options.operators
+variable_names = ["x1", "x2", "x3"]
+x1, x2, x3 = [Expression(Node(Float64; feature=i); operators, variable_names) for i=1:3]
+
+tree = cos(x1 - 3.2 * x2) - x1 * x1
 ```
 
 This tree has `Float64` constants, so the type of the entire tree
@@ -193,15 +192,27 @@ will be promoted to `Node{Float64}`.
 We can convert all constants (recursively) to `Float32`:
 
 ```julia
-float32_tree = convert(Node{Float32}, tree)
+float32_tree = convert(Expression{Float32}, tree)
 ```
 
 We can then evaluate this tree on a dataset:
 
 ```julia
 X = rand(Float32, 3, 100)
-output, did_succeed = eval_tree_array(tree, X, options)
+
+tree(X)
 ```
+
+This callable format is the easy-to-use version which will
+automatically set all values to NaN if there were any
+Inf or NaN during evaluation. You can call the raw evaluation
+method with `eval_tree_array`:
+
+```julia
+output, did_succeed = eval_tree_array(tree, X)
+```
+
+where `did_succeed` explicitly declares whether the evaluation was successful.
 
 ## Exporting to SymbolicUtils.jl
 
@@ -219,7 +230,7 @@ with the following function:
 ```julia
 import SymbolicRegression: node_to_symbolic
 
-eqn = node_to_symbolic(dominating[end].tree, options)
+eqn = node_to_symbolic(dominating[end].tree)
 println(simplify(eqn*5 + 3))
 ```
 
@@ -347,6 +358,7 @@ stateDiagram-v2
     AdaptiveParsimony --> Mutate
     AdaptiveParsimony --> Population
     AdaptiveParsimony --> RegularizedEvolution
+    AdaptiveParsimony --> SearchUtils
     AdaptiveParsimony --> SingleIteration
     AdaptiveParsimony --> SymbolicRegression
     CheckConstraints --> Mutate
@@ -354,20 +366,27 @@ stateDiagram-v2
     Complexity --> CheckConstraints
     Complexity --> HallOfFame
     Complexity --> LossFunctions
+    Complexity --> MLJInterface
     Complexity --> Mutate
+    Complexity --> PopMember
     Complexity --> Population
     Complexity --> SearchUtils
     Complexity --> SingleIteration
     Complexity --> SymbolicRegression
+    ConstantOptimization --> ExpressionBuilder
     ConstantOptimization --> Mutate
     ConstantOptimization --> SingleIteration
     Core --> AdaptiveParsimony
     Core --> CheckConstraints
     Core --> Complexity
     Core --> ConstantOptimization
+    Core --> DimensionalAnalysis
+    Core --> ExpressionBuilder
+    Core --> ExpressionBuilder
     Core --> HallOfFame
     Core --> InterfaceDynamicExpressions
     Core --> LossFunctions
+    Core --> MLJInterface
     Core --> Migration
     Core --> Mutate
     Core --> MutationFunctions
@@ -379,35 +398,55 @@ stateDiagram-v2
     Core --> SingleIteration
     Core --> SymbolicRegression
     Dataset --> Core
+    DimensionalAnalysis --> LossFunctions
+    ExpressionBuilder --> SymbolicRegression
+    HallOfFame --> ExpressionBuilder
+    HallOfFame --> MLJInterface
     HallOfFame --> SearchUtils
     HallOfFame --> SingleIteration
     HallOfFame --> SymbolicRegression
+    HallOfFame --> deprecates
+    InterfaceDynamicExpressions --> ExpressionBuilder
+    InterfaceDynamicExpressions --> HallOfFame
     InterfaceDynamicExpressions --> LossFunctions
     InterfaceDynamicExpressions --> SymbolicRegression
+    InterfaceDynamicQuantities --> Dataset
+    InterfaceDynamicQuantities --> MLJInterface
     LossFunctions --> ConstantOptimization
-    LossFunctions --> HallOfFame
+    LossFunctions --> ExpressionBuilder
+    LossFunctions --> ExpressionBuilder
     LossFunctions --> Mutate
     LossFunctions --> PopMember
     LossFunctions --> Population
+    LossFunctions --> SingleIteration
     LossFunctions --> SymbolicRegression
+    MLJInterface --> SymbolicRegression
     Migration --> SymbolicRegression
     Mutate --> RegularizedEvolution
+    MutationFunctions --> ExpressionBuilder
     MutationFunctions --> Mutate
     MutationFunctions --> Population
     MutationFunctions --> SymbolicRegression
+    MutationFunctions --> deprecates
+    MutationWeights --> Core
+    MutationWeights --> Options
+    MutationWeights --> OptionsStruct
     Operators --> Core
     Operators --> Options
     Options --> Core
     OptionsStruct --> Core
     OptionsStruct --> Options
+    OptionsStruct --> Options
     PopMember --> ConstantOptimization
+    PopMember --> ExpressionBuilder
     PopMember --> HallOfFame
     PopMember --> Migration
     PopMember --> Mutate
     PopMember --> Population
-    PopMember --> RegularizedEvolution
+    PopMember --> SearchUtils
     PopMember --> SingleIteration
     PopMember --> SymbolicRegression
+    Population --> ExpressionBuilder
     Population --> Migration
     Population --> RegularizedEvolution
     Population --> SearchUtils
@@ -415,6 +454,7 @@ stateDiagram-v2
     Population --> SymbolicRegression
     ProgramConstants --> Core
     ProgramConstants --> Dataset
+    ProgramConstants --> Operators
     ProgressBars --> SearchUtils
     ProgressBars --> SymbolicRegression
     Recorder --> Mutate
@@ -424,10 +464,19 @@ stateDiagram-v2
     RegularizedEvolution --> SingleIteration
     SearchUtils --> SymbolicRegression
     SingleIteration --> SymbolicRegression
-    Utils --> CheckConstraints
     Utils --> ConstantOptimization
+    Utils --> Dataset
+    Utils --> DimensionalAnalysis
+    Utils --> HallOfFame
+    Utils --> InterfaceDynamicExpressions
+    Utils --> MLJInterface
+    Utils --> Migration
+    Utils --> Operators
     Utils --> Options
     Utils --> PopMember
+    Utils --> Population
+    Utils --> RegularizedEvolution
+    Utils --> SearchUtils
     Utils --> SingleIteration
     Utils --> SymbolicRegression
 ```
@@ -438,7 +487,7 @@ Bash command to generate dependency structure from `src` directory (requires `vi
 echo 'stateDiagram-v2'
 IFS=$'\n'
 for f in *.jl; do
-    for line in $(cat $f | grep -e 'import \.\.' -e 'import \.'); do
+    for line in $(cat $f | grep -e 'import \.\.' -e 'import \.' -e 'using \.' -e 'using \.\.'); do
         echo $(echo $line | vims -s 'dwf:d$' -t '%s/^\.*//g' '%s/Module//g') $(basename "$f" .jl);
     done;
 done | vims -l 'f a--> ' | sort
@@ -446,4 +495,4 @@ done | vims -l 'f a--> ' | sort
 
 ## Search options
 
-See https://astroautomata.com/SymbolicRegression.jl/stable/api/#Options
+See https://ai.damtp.cam.ac.uk/symbolicregression/stable/api/#Options

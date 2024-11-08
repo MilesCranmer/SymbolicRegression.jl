@@ -1,51 +1,21 @@
-using SymbolicRegression
-using SymbolicRegression:
-    square,
-    cube,
-    plus,
-    sub,
-    mult,
-    greater,
-    cond,
-    relu,
-    logical_or,
-    logical_and,
-    safe_pow,
-    atanh_clip
-using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units, get_dimensions_type
-using SymbolicRegression.MLJInterfaceModule: unwrap_units_single
-using SymbolicRegression.DimensionalAnalysisModule:
-    violates_dimensional_constraints, @maybe_return_call, WildcardQuantity
-using DynamicQuantities:
-    DEFAULT_DIM_BASE_TYPE,
-    RealQuantity,
-    Quantity,
-    QuantityArray,
-    SymbolicDimensions,
-    Dimensions,
-    DimensionError,
-    @u_str,
-    @us_str,
-    uparse,
-    sym_uparse,
-    ustrip,
-    dimension
-using MLJBase: MLJBase as MLJ
-using MLJModelInterface: MLJModelInterface as MMI
-include("utils.jl")
+@testitem "Dimensional analysis" tags = [:part3] begin
+    using SymbolicRegression
+    using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units
+    using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
+    using DynamicQuantities
+    using DynamicQuantities: DEFAULT_DIM_BASE_TYPE
 
-custom_op(x, y) = x + y
-
-options = Options(;
-    binary_operators=[-, *, /, custom_op, ^], unary_operators=[cos, cbrt, sqrt, abs, inv]
-)
-@extend_operators options
-
-(x1, x2, x3) = (i -> Node(Float64; feature=i)).(1:3)
-
-@testset "Dimensional analysis" begin
     X = randn(3, 100)
     y = @. cos(X[3, :] * 2.1 - 0.2) + 0.5
+
+    custom_op(x, y) = x + y
+    options = Options(;
+        binary_operators=[-, *, /, custom_op, ^],
+        unary_operators=[cos, cbrt, sqrt, abs, inv],
+    )
+    @extend_operators options
+
+    (x1, x2, x3) = (i -> Node(Float64; feature=i)).(1:3)
 
     D = Dimensions{DEFAULT_DIM_BASE_TYPE}
     SD = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
@@ -130,15 +100,24 @@ options = Options(;
     end
 end
 
-options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos])
-@extend_operators options
+@testitem "Search with dimensional constraints" tags = [:part3] begin
+    using SymbolicRegression
+    using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
+    using Random: MersenneTwister
 
-@testset "Search with dimensional constraints" begin
-    X = rand(1, 128) .* 10
+    rng = MersenneTwister(0)
+    X = rand(rng, 1, 128) .* 20
     y = @. cos(X[1, :]) + X[1, :]
     dataset = Dataset(X, y; X_units=["kg"], y_units="1")
+    custom_op(x, y) = x + y
+    options = Options(;
+        binary_operators=[-, *, /, custom_op],
+        unary_operators=[cos],
+        early_stop_condition=(loss, complexity) -> (loss < 1e-7 && complexity <= 8),
+    )
+    @extend_operators options
 
-    hof = EquationSearch(dataset; options)
+    hof = equation_search(dataset; niterations=1000, options)
 
     # Solutions should be like cos([cons] * X[1]) + [cons]*X[1]
     dominating = calculate_pareto_frontier(hof)
@@ -151,26 +130,27 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
 
     # Check that every cos(...) which contains x1 also has complexity
     has_cos(tree) =
-        any(tree) do t
+        any(get_tree(tree)) do t
             t.degree == 1 && options.operators.unaops[t.op] == cos
         end
     valid_trees = [
-        !has_cos(member.tree) || any(member.tree) do t
-            if (
+        !has_cos(member.tree) || any(
+            t ->
                 t.degree == 1 &&
-                options.operators.unaops[t.op] == cos &&
-                Node(Float64; feature=1) in t
-            )
-                return compute_complexity(t, options) > 1
-            end
-            return false
-        end for member in dominating
+                    options.operators.unaops[t.op] == cos &&
+                    Node(Float64; feature=1) in t &&
+                    compute_complexity(t, options) > 1,
+            get_tree(member.tree),
+        ) for member in dominating
     ]
     @test all(valid_trees)
     @test length(valid_trees) > 0
 end
 
-@testset "Operator compatibility" begin
+@testitem "Operator compatibility" tags = [:part3] begin
+    using SymbolicRegression
+    using DynamicQuantities
+
     ## square cube plus sub mult greater cond relu logical_or logical_and safe_pow atanh_clip
     # Want to ensure these operators perform correctly in the context of units
     @test square(1.0u"m") == 1.0u"m^2"
@@ -210,11 +190,24 @@ end
     @test_throws DimensionError atanh_clip(1.0u"m")
 end
 
-options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos])
-@extend_operators options
+@testitem "Search with dimensional constraints on output" tags = [:part3] begin
+    using SymbolicRegression
+    using MLJBase: MLJBase as MLJ
+    using DynamicQuantities
+    using Random: MersenneTwister
 
-@testset "Search with dimensional constraints on output" begin
-    X = randn(2, 128)
+    include("utils.jl")
+
+    custom_op(x, y) = x + y
+    options = Options(;
+        binary_operators=[-, *, /, custom_op],
+        unary_operators=[cos],
+        early_stop_condition=(loss, complexity) -> (loss < 1e-7 && complexity == 3),
+    )
+    @extend_operators options
+
+    rng = MersenneTwister(0)
+    X = randn(rng, 2, 128)
     X[2, :] .= X[1, :]
     y = X[1, :] .^ 2
 
@@ -224,7 +217,7 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
 
     # Solution should be x2 * x2
     dominating = calculate_pareto_frontier(hof)
-    best = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
+    best = get_tree(first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree)
 
     x2 = Node(Float64; feature=2)
 
@@ -236,18 +229,23 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
         @warn "Complexity of best solution is not 3; search with units might have failed"
     end
 
-    X = randn(2, 128)
+    rng = MersenneTwister(0)
+    X = randn(rng, 2, 128)
     y = @. cbrt(X[1, :]) .+ sqrt(abs(X[2, :]))
-    options2 = Options(; binary_operators=[+, *], unary_operators=[sqrt, cbrt, abs])
+    options2 = Options(;
+        binary_operators=[+, *],
+        unary_operators=[sqrt, cbrt, abs],
+        early_stop_condition=(loss, complexity) -> (loss < 1e-7 && complexity == 6),
+    )
     hof = EquationSearch(X, y; options=options2, X_units=["kg^3", "kg^2"], y_units="kg")
 
     dominating = calculate_pareto_frontier(hof)
     best = first(filter(m::PopMember -> m.loss < 1e-7, dominating)).tree
     @test compute_complexity(best, options2) == 6
-    @test any(best) do t
+    @test any(get_tree(best)) do t
         t.degree == 1 && options2.operators.unaops[t.op] == cbrt
     end
-    @test any(best) do t
+    @test any(get_tree(best)) do t
         t.degree == 1 && options2.operators.unaops[t.op] == safe_sqrt
     end
 
@@ -269,10 +267,10 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
             report = MLJ.report(mach)
             best_idx = findfirst(report.losses .< 1e-7)::Int
             @test report.complexities[best_idx] <= 6
-            @test any(report.equations[best_idx]) do t
+            @test any(get_tree(report.equations[best_idx])) do t
                 t.degree == 1 && t.op == 2  # cbrt
             end
-            @test any(report.equations[best_idx]) do t
+            @test any(get_tree(report.equations[best_idx])) do t
                 t.degree == 1 && t.op == 1  # safe_sqrt
             end
 
@@ -313,19 +311,23 @@ options = Options(; binary_operators=[-, *, /, custom_op], unary_operators=[cos]
         # TODO: Should return same quantity as input
         @test typeof(ypred.a[begin]) <: Quantity
         @test typeof(y.a[begin]) <: RealQuantity
-        VERSION >= v"1.8" &&
-            @eval @test(typeof(ypred.b[begin]) == typeof(y.b[begin]), broken = true)
+        @eval @test(typeof(ypred.b[begin]) == typeof(y.b[begin]), broken = true)
     end
 end
 
-@testset "Should error on mismatched units" begin
+@testitem "Should error on mismatched units" tags = [:part3] begin
+    using SymbolicRegression
+    using DynamicQuantities
+
     X = randn(11, 50)
     y = randn(50)
-    VERSION >= v"1.8.0" &&
-        @test_throws("Number of features", Dataset(X, y; X_units=["m", "1"], y_units="kg"))
+    @test_throws("Number of features", Dataset(X, y; X_units=["m", "1"], y_units="kg"))
 end
 
-@testset "Should print units" begin
+@testitem "Should print units" tags = [:part3] begin
+    using SymbolicRegression
+    using DynamicQuantities
+
     X = randn(5, 64)
     y = randn(64)
     dataset = Dataset(X, y; X_units=["m^3", "km/s", "kg", "1", "1"], y_units="kg")
@@ -335,15 +337,15 @@ end
 
     @test string_tree(tree, options) ==
         "(1.0 * (x1 + ((x2 * x3) * 5.32))) - cos(1.5 * (x1 - 0.5))"
-    @test string_tree(tree, options; raw=false) ==
+    @test string_tree(tree, options; pretty=true) ==
         "(1 * (x₁ + ((x₂ * x₃) * 5.32))) - cos(1.5 * (x₁ - 0.5))"
     @test string_tree(
-        tree, options; raw=false, display_variable_names=dataset.display_variable_names
+        tree, options; pretty=true, display_variable_names=dataset.display_variable_names
     ) == "(1 * (x₁ + ((x₂ * x₃) * 5.32))) - cos(1.5 * (x₁ - 0.5))"
     @test string_tree(
         tree,
         options;
-        raw=false,
+        pretty=true,
         display_variable_names=dataset.display_variable_names,
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
@@ -353,7 +355,7 @@ end
     @test string_tree(
         x5 * 3.2,
         options;
-        raw=false,
+        pretty=true,
         display_variable_names=dataset.display_variable_names,
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
@@ -364,7 +366,7 @@ end
     @test string_tree(
         x5 * 3.2,
         options;
-        raw=false,
+        pretty=true,
         display_variable_names=dataset2.display_variable_names,
         X_sym_units=dataset2.X_sym_units,
         y_sym_units=dataset2.y_sym_units,
@@ -379,14 +381,20 @@ end
     @test string_tree(
         x5 * 3.2,
         options;
-        raw=false,
+        pretty=true,
         display_variable_names=dataset2.display_variable_names,
         X_sym_units=dataset2.X_sym_units,
         y_sym_units=dataset2.y_sym_units,
     ) == "x₅[5.0 m] * 3.2"
 end
 
-@testset "Dimensionless constants" begin
+@testitem "Dimensionless constants" tags = [:part3] begin
+    using SymbolicRegression
+    using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
+    using DynamicQuantities
+
+    include("utils.jl")
+
     options = Options(;
         binary_operators=[+, -, *, /, square, cube],
         unary_operators=[cos, sin],
@@ -422,7 +430,14 @@ end
     end
 end
 
-@testset "Miscellaneous" begin
+@testitem "Miscellaneous tests of unit interface" tags = [:part3] begin
+    using SymbolicRegression
+    using DynamicQuantities
+    using SymbolicRegression.DimensionalAnalysisModule: @maybe_return_call, WildcardQuantity
+    using SymbolicRegression.MLJInterfaceModule: unwrap_units_single
+    using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_dimensions_type
+    using MLJModelInterface: MLJModelInterface as MMI
+
     function test_return_call(op::Function, w...)
         @maybe_return_call(typeof(first(w)), op, w)
         return nothing
