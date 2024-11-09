@@ -306,7 +306,7 @@ function DE.string_tree(
                 prefix = if !pretty || length(function_keys) == 1
                     ""
                 elseif k == first(function_keys)
-                    "┬ "
+                    "╭ "
                 elseif k == last(function_keys)
                     "╰ "
                 else
