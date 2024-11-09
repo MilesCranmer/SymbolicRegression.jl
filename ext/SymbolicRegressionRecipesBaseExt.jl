@@ -10,9 +10,9 @@ using SymbolicRegression.LoggingModule: convex_hull
 import SymbolicRegression.LoggingModule: add_plot_to_log!
 
 function add_plot_to_log!(;
-    trees, losses, complexities, @nospecialize(options), variable_names
+    hall_of_fame::HallOfFame, @nospecialize(options::Options), variable_names
 )
-    plot_result = plot(trees, losses, complexities, options; variable_names=variable_names)
+    plot_result = plot(hall_of_fame, options; variable_names=variable_names)
     return Dict{String,Any}("plot" => plot_result)
 end
 

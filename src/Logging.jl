@@ -109,15 +109,22 @@ function log_payload(
         if should_log_scalars
             out = merge(
                 out,
-                _log_scalars(
-                    state.last_pops[i], state.halls_of_fame[i], datasets[i], options
+                _log_scalars(;
+                    pops=state.last_pops[i],
+                    hall_of_fame=state.halls_of_fame[i],
+                    dataset=datasets[i],
+                    options,
                 ),
             )
         end
         if should_log_plots
             out = merge(
                 out,
-                add_plot_to_log!(; trees, losses, complexities, datasets[i].variable_names),
+                add_plot_to_log!(;
+                    hall_of_fame=state.halls_of_fame[i],
+                    options,
+                    variable_names=datasets[i].variable_names,
+                ),
             )
         end
         if length(datasets) == 1
@@ -130,7 +137,7 @@ function log_payload(
     return d[]
 end
 
-function _log_scalars(
+function _log_scalars(;
     @nospecialize(pops::AbstractVector{<:Population}),
     @nospecialize(hall_of_fame::HallOfFame{T,L}),
     dataset::Dataset{T,L},

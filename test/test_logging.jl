@@ -18,7 +18,6 @@
             maxsize=40,
             niterations,
             populations,
-            log_every_n,
             logger,
         )
 
@@ -28,8 +27,8 @@
 
         fit!(mach)
 
-        b = TensorBoardLogger.steps(logger)
-        @test length(b) == (niterations * populations//log_every_n.scalars) + 1
+        b = TensorBoardLogger.steps(logger.logger)
+        @test length(b) == (niterations * populations//2) + 1
 
         files_and_dirs = readdir(dir)
         @test length(files_and_dirs) == 1
