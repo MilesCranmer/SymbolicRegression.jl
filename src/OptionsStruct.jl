@@ -257,6 +257,32 @@ struct Options{
     use_recorder::Bool
 end
 
+function Base.print(io::IO, @nospecialize(options::Options))
+    return print(
+        io,
+        "Options(" *
+        "binops=$(options.operators.binops), " *
+        "unaops=$(options.operators.unaops), "
+        # Fill in remaining fields automatically:
+        *
+        join(
+            [
+                if fieldname in (:optimizer_options, :mutation_weights)
+                    "$(fieldname)=..."
+                else
+                    "$(fieldname)=$(getfield(options, fieldname))"
+                end for
+                fieldname in fieldnames(Options) if fieldname ∉ [:operators, :nuna, :nbin]
+            ],
+            ", ",
+        ) *
+        ")",
+    )
+end
+function Base.show(io::IO, ::MIME"text/plain", @nospecialize(options::Options))
+    return Base.print(io, options)
+end
+
 specialized_options(options::AbstractOptions) = options
 @unstable function specialized_options(options::Options)
     return _specialized_options(options, options.operators)

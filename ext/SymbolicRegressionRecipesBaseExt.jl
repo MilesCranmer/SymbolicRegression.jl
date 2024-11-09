@@ -18,10 +18,6 @@ end
 
 function default_sr_plot end
 
-@recipe function default_sr_plot(fitresult::SRFitResult{<:SRRegressor})
-    return fitresult.state[2], fitresult.options
-end
-
 # TODO: Add variable names
 @recipe function default_sr_plot(hall_of_fame::HallOfFame, @nospecialize(options::Options))
     out = format_hall_of_fame(hall_of_fame, options)
