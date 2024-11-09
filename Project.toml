@@ -33,13 +33,11 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 [weakdeps]
 Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
-RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 
 [extensions]
 SymbolicRegressionEnzymeExt = "Enzyme"
 SymbolicRegressionJSON3Ext = "JSON3"
-SymbolicRegressionRecipesBaseExt = "RecipesBase"
 SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 
 [compat]
@@ -65,7 +63,6 @@ PrecompileTools = "1"
 Printf = "<0.0.1, 1"
 ProgressMeter = "1.10"
 Random = "<0.0.1, 1"
-RecipesBase = "1"
 Reexport = "1"
 SpecialFunctions = "0.10.1, 1, 2"
 StatsBase = "0.33, 0.34"

@@ -36,44 +36,34 @@ A logger for symbolic regression that wraps another logger.
 
 # Arguments
 - `logger`: The base logger to wrap
-- `log_interval_scalars`: Number of steps between logging events for scalars. Default is 1 (log every step).
-- `log_interval_plots`: Number of steps between logging events for plots. Default is 0 (never log plots).
+- `log_interval`: Number of steps between logging events. Default is 1 (log every step).
 """
 Base.@kwdef struct SRLogger{L<:AbstractLogger} <: AbstractSRLogger
     logger::L
-    log_interval_scalars::Int = 1
-    log_interval_plots::Int = 0
+    log_interval::Int = 1
     _log_step::Base.RefValue{Int} = Base.RefValue(0)
 end
 SRLogger(logger::AbstractLogger; kws...) = SRLogger(; logger, kws...)
 
-get_logger(logger::SRLogger) = logger.logger
+function get_logger(logger::SRLogger)
+    return logger.logger
+end
 function should_log(logger::SRLogger)
-    return should_log(logger, Val(:scalars)) || should_log(logger, Val(:plots))
+    return logger.log_interval > 0 && logger._log_step[] % logger.log_interval == 0
 end
-function should_log(logger::SRLogger, ::Val{:scalars})
-    return logger.log_interval_scalars > 0 &&
-           logger._log_step[] % logger.log_interval_scalars == 0
-end
-function should_log(logger::SRLogger, ::Val{:plots})
-    return logger.log_interval_plots > 0 &&
-           logger._log_step[] % logger.log_interval_plots == 0
+function increment_log_step!(logger::SRLogger)
+    logger._log_step[] += 1
+    return nothing
 end
 
 function LG.with_logger(f::Function, logger::AbstractSRLogger)
     return LG.with_logger(f, get_logger(logger))
 end
 
-# Will get method created by RecipesBase extension
-function make_plot(args...)
-    return error("Please load `Plots` or another plotting package.")
-end
-
 """
     logging_callback!(logger::AbstractSRLogger; kws...)
 
-Default logging callback for SymbolicRegression. Logs the current state of the search,
-and adds a plot of the current Pareto front to the logger.
+Default logging callback for SymbolicRegression.
 
 To override the default logging behavior, create a new type `MyLogger <: AbstractSRLogger`
 and define a method for `SymbolicRegression.logging_callback`.
@@ -85,14 +75,13 @@ function logging_callback!(
     @nospecialize(ropt::AbstractRuntimeOptions),
     @nospecialize(options::AbstractOptions),
 ) where {T,L}
-    log_step = logger._log_step[]
     if should_log(logger)
         data = log_payload(logger, state, datasets, options)
         LG.with_logger(logger) do
             @info("search", data = data)
         end
     end
-    logger._log_step[] += 1
+    increment_log_step!(logger)
     return nothing
 end
 
@@ -103,26 +92,13 @@ function log_payload(
     @nospecialize(options::AbstractOptions),
 ) where {T,L}
     d = Ref(Dict{String,Any}())
-    should_log_scalars = should_log(logger, Val(:scalars))
-    should_log_plots = should_log(logger, Val(:plots))
     for i in eachindex(datasets, state.halls_of_fame)
-        out = Dict{String,Any}()
-        if should_log_scalars
-            out = merge(
-                out,
-                _log_scalars(;
-                    pops=state.last_pops[i],
-                    hall_of_fame=state.halls_of_fame[i],
-                    dataset=datasets[i],
-                    options,
-                ),
-            )
-        end
-        if should_log_plots
-            out = merge(
-                out, make_plot(state.halls_of_fame[i], options, datasets[i].variable_names)
-            )
-        end
+        out = _log_scalars(;
+            pops=state.last_pops[i],
+            hall_of_fame=state.halls_of_fame[i],
+            dataset=datasets[i],
+            options,
+        )
         if length(datasets) == 1
             d[] = out
         else

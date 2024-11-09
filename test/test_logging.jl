@@ -1,13 +1,11 @@
 @testitem "Test logging" tags = [:part1, :integration] begin
-    using SymbolicRegression, TensorBoardLogger, Logging, MLJBase, Plots
+    using SymbolicRegression, TensorBoardLogger, Logging, MLJBase
 
     include("test_params.jl")
 
     mktempdir() do dir
         logger = SRLogger(;
-            logger=TBLogger(dir, tb_overwrite; min_level=Logging.Info),
-            log_interval_scalars=2,
-            log_interval_plots=10,
+            logger=TBLogger(dir, tb_overwrite; min_level=Logging.Info), log_interval=2
         )
 
         niterations = 4
