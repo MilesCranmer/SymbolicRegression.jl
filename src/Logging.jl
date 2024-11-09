@@ -25,7 +25,7 @@ Abstract type for symbolic regression loggers. Subtypes must implement:
     reduce the logging frequency, you can increment and monitor a counter within this
     function.
 """
-abstract type AbstractSRLogger <: LG.AbstractLogger end
+abstract type AbstractSRLogger <: AbstractLogger end
 
 """
     SRLogger(logger::AbstractLogger; log_every_n::Integer=1)
