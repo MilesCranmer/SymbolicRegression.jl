@@ -151,13 +151,7 @@ function string_dominating_pareto_curve(
             y_sym_units=dataset.y_sym_units,
             pretty,
         )
-        y_prefix = dataset.y_variable_name
-        unit_str = format_dimensions(dataset.y_sym_units)
-        y_prefix *= unit_str
-        if dataset.y_sym_units === nothing && dataset.X_sym_units !== nothing
-            y_prefix *= WILDCARD_UNIT_STRING
-        end
-        prefix = y_prefix * " = "
+        prefix = make_prefix(tree, options, dataset)
         eqn_string = prefix * eqn_string
         stats_columns_string = @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
         left_cols_width = length(stats_columns_string)
@@ -171,6 +165,15 @@ function string_dominating_pareto_curve(
     end
     print(buffer, '─'^(terminal_width - 1))
     return dump_buffer(buffer)
+end
+function make_prefix(::AbstractExpression, ::AbstractOptions, dataset::Dataset)
+    y_prefix = dataset.y_variable_name
+    unit_str = format_dimensions(dataset.y_sym_units)
+    y_prefix *= unit_str
+    if dataset.y_sym_units === nothing && dataset.X_sym_units !== nothing
+        y_prefix *= WILDCARD_UNIT_STRING
+    end
+    return y_prefix * " = "
 end
 
 function wrap_equation_string(eqn_string, left_cols_width, terminal_width)
