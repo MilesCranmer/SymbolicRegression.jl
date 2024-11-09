@@ -74,12 +74,7 @@ such as from TensorBoardLogger.jl or Wandb.jl.
 ```julia
 using TensorBoardLogger
 
-logger = SRLogger(
-    TBLogger("logs/run1", tb_overwrite),  # Base logger to use
-    log_interval_scalars=2,  # Log scalar metrics every 2 steps
-    # log_interval_plots=0   # Log plots steps (requires Plots.jl to be loaded)
-    # ^ Set to greater than 0 to enable logging of plots
-)
+logger = SRLogger(TBLogger("logs/run"), log_interval=2)
 
 model = SRRegressor(;
     logger=logger,

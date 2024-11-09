@@ -23,6 +23,7 @@ Summary of major recent changes, described in more detail below:
   - `AbstractSearchState`, for holding custom metadata during searches.
   - `AbstractOptions` and `AbstractRuntimeOptions`, for customizing pretty much everything else in the library via multiple dispatch. Please make an issue/PR if you would like any particular internal functions be declared `public` to enable stability across versions for your tool.
   - Many of these were motivated to modularize the implementation of [LaSR](https://github.com/trishullab/LibraryAugmentedSymbolicRegression.jl), an LLM-guided version of SymbolicRegression.jl, so it can sit as a modular layer on top of SymbolicRegression.jl.
+- [Added TensorBoardLogger.jl and other logging integrations via `SRLogger`](#added-tensorboardloggerjl-and-other-logging-integrations-via-srlogger)
 - Fundamental improvements to the underlying evolutionary algorithm
   - New mutation operators introduced, `swap_operands` and `rotate_tree` – both of which seem to help kick the evolution out of local optima.
   - New hyperparameter defaults created, based on a Pareto front volume calculation, rather than simply accuracy of the best expression.
@@ -366,7 +367,36 @@ Base.propertynames(options::MyOptions) = (NEW_OPTIONS_KEYS..., fieldnames(Symbol
 These new abstractions provide users with greater flexibility in defining the structure and behavior of expressions, nodes, and the search process itself.
 These are also of course used as the basis for alternate behavior such as `ParametricExpression` and `TemplateExpression`.
 
-### Fundamental improvements to the underlying evolutionary algorithm
+### Added TensorBoardLogger.jl and other logging integrations via `SRLogger`
+
+You can now track the progress of symbolic regression searches using `TensorBoardLogger.jl`, `Wandb.jl`, or other logging backends.
+
+This is done by wrapping any `AbstractLogger` with the new `SRLogger` type, and passing it to the `logger` option in `SRRegressor`
+or `equation_search`:
+
+```julia
+using SymbolicRegression
+using TensorBoardLogger
+
+logger = SRLogger(
+    TBLogger("logs/run"),
+    log_interval=2,  # Log every 2 steps
+)
+
+model = SRRegressor(;
+    binary_operators=[+, -, *],
+    logger=logger,
+)
+```
+
+The logger will track:
+
+- Loss curves over time at each complexity level
+- Population statistics (distribution of complexities)
+- Pareto frontier volume (can be used as an overall metric of search performance)
+- Full equations at each complexity level
+
+This works with any logger that implements the Julia logging interface.
 
 ### Support for Zygote.jl and Enzyme.jl within the constant optimizer, specified using the `autodiff_backend` option
 
