@@ -27,8 +27,6 @@ Abstract type for symbolic regression loggers. Subtypes must implement:
 """
 abstract type AbstractSRLogger <: LG.AbstractLogger end
 
-function get_logger end
-
 """
     SRLogger(logger::AbstractLogger; log_every_n::Integer=1)
 
