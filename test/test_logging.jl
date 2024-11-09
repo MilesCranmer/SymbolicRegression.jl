@@ -1,12 +1,18 @@
 @testitem "Test logging" tags = [:part1, :integration] begin
-    using SymbolicRegression, TensorBoardLogger, Logging, MLJBase
+    using SymbolicRegression
+    using TensorBoardLogger: TensorBoardLogger, TBLogger
+    using Logging: Logging, SimpleLogger
+    using LoggingExtras: TeeLogger
+    using MLJBase: machine, fit!
 
     include("test_params.jl")
 
     mktempdir() do dir
-        logger = SRLogger(;
-            logger=TBLogger(dir, tb_overwrite; min_level=Logging.Info), log_interval=2
-        )
+        buf = IOBuffer()
+        simple_logger = SimpleLogger(buf)
+        tb_logger = TBLogger(dir, TensorBoardLogger.tb_overwrite)
+
+        logger = SRLogger(; logger=TeeLogger(simple_logger, tb_logger), log_interval=2)
 
         niterations = 4
         populations = 36
@@ -25,12 +31,16 @@
 
         fit!(mach)
 
-        b = TensorBoardLogger.steps(logger.logger)
+        # Check TensorBoardLogger
+        b = TensorBoardLogger.steps(tb_logger)
         @test length(b) == (niterations * populations//2) + 1
-
         files_and_dirs = readdir(dir)
         @test length(files_and_dirs) == 1
         @test occursin(r"events\.out\.tfevents", only(files_and_dirs))
+
+        # Check SimpleLogger
+        s = String(take!(buf))
+        @test occursin(r"search\s*\n\s*│\s*data\s*=\s*", s)
     end
 end
 @testitem "Test convex hull calculation" tags = [:part1] begin
