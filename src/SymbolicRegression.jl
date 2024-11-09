@@ -22,6 +22,7 @@ export Population,
     EvalOptions,
     SRRegressor,
     MultitargetSRRegressor,
+    SRLogger,
 
     #Functions:
     equation_search,
@@ -212,6 +213,7 @@ using DispatchDoctor: @stable
     include("ProgressBars.jl")
     include("Migration.jl")
     include("SearchUtils.jl")
+    include("Logging.jl")
     include("ExpressionBuilder.jl")
     include("ComposableExpression.jl")
     include("TemplateExpression.jl")
@@ -308,7 +310,9 @@ using .SearchUtilsModule:
     construct_datasets,
     save_to_file,
     get_cur_maxsize,
-    update_hall_of_fame!
+    update_hall_of_fame!,
+    logging_callback!
+using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure, ValidVector
 using .ComposableExpressionModule: ComposableExpression
@@ -366,7 +370,7 @@ which is useful for debugging and profiling.
     a distributed run manually with `procs = addprocs()` and `@everywhere`,
     pass the `procs` to this keyword argument.
 - `addprocs_function::Union{Function, Nothing}=nothing`: If using multiprocessing
-    (`parallelism=:multithreading`), and are not passing `procs` manually,
+    (`parallelism=:multiprocessing`), and are not passing `procs` manually,
     then they will be allocated dynamically using `addprocs`. However,
     you may also pass a custom function to use instead of `addprocs`.
     This function should take a single positional argument,
@@ -395,6 +399,9 @@ which is useful for debugging and profiling.
     Note that if you pass complex data `::Complex{L}`, then the loss
     type will automatically be set to `L`.
 - `verbosity`: Whether to print debugging statements or not.
+- `logger::Union{AbstractSRLogger,Nothing}=nothing`: An optional logger to record
+    the progress of the search. You can use an `SRLogger` to wrap a custom logger,
+    or pass `nothing` to disable logging.
 - `progress`: Whether to use a progress bar output. Only available for
     single target output.
 - `X_units::Union{AbstractVector,Nothing}=nothing`: The units of the dataset,
@@ -432,6 +439,7 @@ function equation_search(
     run_id::Union{String,Nothing}=nothing,
     loss_type::Type{L}=Nothing,
     verbosity::Union{Integer,Nothing}=nothing,
+    logger::Union{AbstractSRLogger,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
@@ -479,6 +487,7 @@ function equation_search(
         return_state=return_state,
         run_id=run_id,
         verbosity=verbosity,
+        logger=logger,
         progress=progress,
         v_dim_out=Val(DIM_OUT),
     )
@@ -787,6 +796,7 @@ function _main_search_loop!(
     else
         nothing
     end
+
     last_print_time = time()
     last_speed_recording_time = time()
     num_evals_last = sum(sum, state.num_evals)
@@ -944,6 +954,9 @@ function _main_search_loop!(
                     head_node_occupation,
                     ropt.parallelism,
                 )
+            end
+            if ropt.logger !== nothing
+                logging_callback!(ropt.logger; state, datasets, ropt, options)
             end
         end
         yield()

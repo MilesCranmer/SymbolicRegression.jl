@@ -160,6 +160,7 @@ end
     include("test_abstract_numbers.jl")
 end
 
+include("test_logging.jl")
 include("test_pretty_printing.jl")
 include("test_expression_builder.jl")
 include("test_composable_expression.jl")

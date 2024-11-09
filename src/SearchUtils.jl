@@ -9,6 +9,7 @@ using Distributed: Distributed, @spawnat, Future, procs, addprocs
 using StatsBase: mean
 using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
+using Logging: AbstractLogger
 
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
@@ -19,6 +20,8 @@ using ..PopMemberModule: PopMember
 using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
 using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
+
+function logging_callback! end
 
 """
     AbstractRuntimeOptions
@@ -39,14 +42,14 @@ can customize runtime behaviors by passing it to `equation_search`.
 abstract type AbstractRuntimeOptions end
 
 """
-    RuntimeOptions{N,PARALLELISM,DIM_OUT,RETURN_STATE} <: AbstractRuntimeOptions
+    RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE,LOGGER} <: AbstractRuntimeOptions
 
 Parameters for a search that are passed to `equation_search` directly,
 rather than set within `Options`. This is to differentiate between
 parameters that relate to processing and the duration of the search,
 and parameters dealing with the search hyperparameters itself.
 """
-struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE} <: AbstractRuntimeOptions
+struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE,LOGGER} <: AbstractRuntimeOptions
     niterations::Int64
     numprocs::Int64
     init_procs::Union{Vector{Int},Nothing}
@@ -55,6 +58,7 @@ struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE} <: AbstractRuntimeOption
     runtests::Bool
     verbosity::Int64
     progress::Bool
+    logger::Union{AbstractLogger,Nothing}
     parallelism::Val{PARALLELISM}
     dim_out::Val{DIM_OUT}
     return_state::Val{RETURN_STATE}
@@ -91,6 +95,7 @@ end
     verbosity::Union{Int,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
+    logger=nothing,
     # Defined from options
     options_return_state::Val{ORS}=Val(nothing),
     options_verbosity::Union{Integer,Nothing}=nothing,
@@ -171,7 +176,7 @@ end
         ``
     end
 
-    return RuntimeOptions{concurrency,dim_out,_return_state}(
+    return RuntimeOptions{concurrency,dim_out,_return_state,typeof(logger)}(
         niterations,
         _numprocs,
         procs,
@@ -180,6 +185,7 @@ end
         runtests,
         _verbosity,
         _progress,
+        logger,
         Val(concurrency),
         Val(dim_out),
         Val(_return_state),

@@ -29,6 +29,7 @@ using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..MutationFunctionsModule: MutationFunctionsModule as MF
 using ..ExpressionBuilderModule: ExpressionBuilderModule as EB
+using ..HallOfFameModule: HallOfFameModule as HOF
 using ..DimensionalAnalysisModule: DimensionalAnalysisModule as DA
 using ..CheckConstraintsModule: CheckConstraintsModule as CC
 using ..ComplexityModule: ComplexityModule
@@ -320,6 +321,10 @@ function DE.string_tree(
     )
     return annotatedstring(join(strings, pretty ? styled"\n" : "; "))
 end
+function HOF.make_prefix(::TemplateExpression, ::AbstractOptions, ::Dataset)
+    return ""
+end
+
 @stable(
     default_mode = "disable",
     default_union_limit = 2,
