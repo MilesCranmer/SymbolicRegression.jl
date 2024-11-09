@@ -279,7 +279,8 @@ function _update(
     fitresult = SRFitResult(;
         model=m,
         state=search_state,
-        niterations=niterations,
+        niterations=niterations +
+                    (old_fitresult === nothing ? 0 : old_fitresult.niterations),
         num_targets=isa(m, SRRegressor) ? 1 : size(y_t, 1),
         options=options,
         variable_names=variable_names,
