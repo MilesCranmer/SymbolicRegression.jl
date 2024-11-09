@@ -39,19 +39,29 @@ end
     using SymbolicRegression.LoggingModule: convex_hull, convex_hull_area
 
     # Create a Pareto front with an interior point that should be ignored
-    # Points: (0,0), (0,2), (2,0), and (1,1) which is inside the triangle
-    points = [
-        0.0 0.0   # vertex 1
-        0.0 2.0   # vertex 2
-        2.0 0.0   # vertex 3
-        1.0 1.0   # interior point that should be ignored
-    ]
-    hull = convex_hull(points)
+    log_complexities = [1.0, 2.0, 3.0, 4.0]
+    log_losses = [4.0, 3.0, 3.0, 2.5]
 
-    @test length(hull) == 3
-    @test hull == [[0.0, 0.0], [0.0, 2.0], [2.0, 0.0]]
+    # Add a point to connect things at lower right corner
+    push!(log_complexities, 5.0)
+    push!(log_losses, 2.5)
+
+    # Add a point to connect things at upper right corner
+    push!(log_losses, 4.0)
+    push!(log_complexities, 5.0)
+
+    xy = cat(log_complexities, log_losses; dims=2)
+    hull = convex_hull(xy)
+    @test length(hull) == 5
+    @test hull == [[1.0, 4.0], [5.0, 4.0], [5.0, 2.5], [4.0, 2.5], [2.0, 3.0]]
 
     # Expected area = 1/2 * base * height = 1/2 * 2 * 2 = 2
     area = convex_hull_area(hull)
-    @test isapprox(area, 2.0, atol=1e-10)
+    true_area = (
+        1 * (4.0 - 2.5)           # lower right rectangle
+        + 2.0 * (4.0 - 3.0)       # block to the slight left and update
+        + 1.0 * (4.0 - 3.0) / 2  # top left triangle
+        + 2.0 * (3.0 - 2.5) / 2  # bottom triangle
+    )
+    @test isapprox(area, true_area, atol=1e-10)
 end
