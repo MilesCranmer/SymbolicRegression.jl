@@ -73,8 +73,3 @@ StyledStrings = "1"
 SymbolicUtils = "0.19, ^1.0.5, 2, 3"
 TOML = "<0.0.1, 1"
 julia = "1.10"
-
-[extras]
-JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
-RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
-SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
