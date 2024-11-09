@@ -60,9 +60,9 @@ function should_log(logger::SRLogger, ::Val{:plots})
            logger._log_step[] % logger.log_interval_plots == 0
 end
 
-#! format: off
-LG.with_logger(f::Function, logger::AbstractSRLogger) = LG.with_logger(f, get_logger(logger))
-#! format: on
+function LG.with_logger(f::Function, logger::AbstractSRLogger)
+    return LG.with_logger(f, get_logger(logger))
+end
 
 # Will get method created by RecipesBase extension
 function add_plot_to_log! end
@@ -199,6 +199,7 @@ end
 
 """Uses gift wrapping algorithm to create a convex hull."""
 function convex_hull(xy)
+    @assert size(xy, 2) == 2
     cur_point = xy[sortperm(xy[:, 1])[1], :]
     hull = typeof(cur_point)[]
     while true
