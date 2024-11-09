@@ -7,9 +7,9 @@ using SymbolicRegression.HallOfFameModule: HallOfFame, format_hall_of_fame
 using SymbolicRegression.MLJInterfaceModule: SRFitResult, SRRegressor
 using SymbolicRegression.LoggingModule: convex_hull
 
-import SymbolicRegression.LoggingModule: add_plot_to_log!
+import SymbolicRegression.LoggingModule: make_plot
 
-function add_plot_to_log!(;
+function make_plot(;
     hall_of_fame::HallOfFame, @nospecialize(options::Options), variable_names
 )
     plot_result = plot(hall_of_fame, options; variable_names=variable_names)

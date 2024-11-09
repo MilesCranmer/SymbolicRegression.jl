@@ -65,8 +65,9 @@ function LG.with_logger(f::Function, logger::AbstractSRLogger)
 end
 
 # Will get method created by RecipesBase extension
-function add_plot_to_log! end
-@ignore add_plot_to_log!(; kws...) = nothing
+function make_plot(; kws...)
+    return error("Please load `Plots` or another plotting package.")
+end
 
 """
     logging_callback!(logger::AbstractSRLogger; kws...)
@@ -120,7 +121,7 @@ function log_payload(
         if should_log_plots
             out = merge(
                 out,
-                add_plot_to_log!(;
+                make_plot(;
                     hall_of_fame=state.halls_of_fame[i],
                     options,
                     variable_names=datasets[i].variable_names,
