@@ -370,7 +370,7 @@ which is useful for debugging and profiling.
     a distributed run manually with `procs = addprocs()` and `@everywhere`,
     pass the `procs` to this keyword argument.
 - `addprocs_function::Union{Function, Nothing}=nothing`: If using multiprocessing
-    (`parallelism=:multithreading`), and are not passing `procs` manually,
+    (`parallelism=:multiprocessing`), and are not passing `procs` manually,
     then they will be allocated dynamically using `addprocs`. However,
     you may also pass a custom function to use instead of `addprocs`.
     This function should take a single positional argument,
@@ -399,6 +399,9 @@ which is useful for debugging and profiling.
     Note that if you pass complex data `::Complex{L}`, then the loss
     type will automatically be set to `L`.
 - `verbosity`: Whether to print debugging statements or not.
+- `logger::Union{AbstractSRLogger,Nothing}=nothing`: An optional logger to record
+    the progress of the search. You can use an `SRLogger` to wrap a custom logger,
+    or pass `nothing` to disable logging.
 - `progress`: Whether to use a progress bar output. Only available for
     single target output.
 - `X_units::Union{AbstractVector,Nothing}=nothing`: The units of the dataset,

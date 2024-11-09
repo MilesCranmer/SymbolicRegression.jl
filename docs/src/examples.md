@@ -384,7 +384,44 @@ You can even output custom structs - see the more detailed [Template Expression 
 
 Be sure to also check out the [Parametric Expression example](examples/parametric_expression.md).
 
-## 9. Additional features
+## 9. Logging with TensorBoard
+
+You can track the progress of symbolic regression searches using TensorBoard or other logging backends. Here's an example using `TensorBoardLogger` and wrapping it with [`SRLogger`](@ref):
+
+```julia
+using SymbolicRegression
+using TensorBoardLogger
+using MLJ
+
+logger = SRLogger(TBLogger("logs/sr_run"))
+
+# Create and fit model with logger
+model = SRRegressor(
+    binary_operators=[+, -, *],
+    maxsize=40,
+    niterations=100,
+    logger=logger
+)
+
+X = (a=rand(500), b=rand(500))
+y = @. 2 * cos(X.a * 23.5) - X.b^2
+
+mach = machine(model, X, y)
+fit!(mach)
+```
+
+You can then view the logs with:
+
+```bash
+tensorboard --logdir logs
+```
+
+The TensorBoard interface will show
+the loss curves over time (at each complexity), as well
+as the Pareto frontier volume which can be used as an overall metric
+of the search performance.
+
+## 10. Additional features
 
 For the many other features available in SymbolicRegression.jl,
 check out the API page for `Options`. You might also find it useful
