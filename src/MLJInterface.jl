@@ -141,6 +141,7 @@ Base.@kwdef struct SRFitResult{
 }
     model::M
     state::S
+    niterations::Int
     num_targets::Int
     options::O
     variable_names::Vector{String}
@@ -246,10 +247,13 @@ function _update(
     else
         w
     end
+    niterations =
+        m.niterations - (old_fitresult === nothing ? 0 : old_fitresult.niterations)
+    @assert niterations >= 0
     search_state::types.state = equation_search(
         X_t,
         y_t;
-        niterations=m.niterations,
+        niterations=niterations,
         weights=w_t,
         variable_names=variable_names,
         display_variable_names=display_variable_names,
@@ -275,6 +279,7 @@ function _update(
     fitresult = SRFitResult(;
         model=m,
         state=search_state,
+        niterations=niterations,
         num_targets=isa(m, SRRegressor) ? 1 : size(y_t, 1),
         options=options,
         variable_names=variable_names,
