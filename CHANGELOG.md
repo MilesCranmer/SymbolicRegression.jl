@@ -405,6 +405,7 @@ A custom run ID can be specified via the new `run_id` parameter passed to `equat
 - Option to force dimensionless constants when fitting with dimensional constraints, via the `dimensionless_constants_only` option.
 - Default `maxsize` increased from 20 to 30.
 - Default `niterations` increased from 10 to 50, as many users seem to be unaware that this is small (and meant for testing), even in publications. I think this 50 is still low, but it should be a more accurate default for those who don't tune.
+- `MLJ.fit!(mach)` now records the number of iterations used, and, should `mach.model.niterations` be changed after the fit, the number of iterations passed to `equation_search` will be reduced accordingly.
 
 ### Update Guide
 
