@@ -52,7 +52,7 @@ end
 function modelexpr(model_name::Symbol)
     struct_def = :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L} <:
                                  AbstractSRRegressor
-        niterations::Int = 10
+        niterations::Int = 100
         parallelism::Symbol = :multithreading
         numprocs::Union{Int,Nothing} = nothing
         procs::Union{Vector{Int},Nothing} = nothing
