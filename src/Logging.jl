@@ -28,17 +28,17 @@ Abstract type for symbolic regression loggers. Subtypes must implement:
 abstract type AbstractSRLogger <: AbstractLogger end
 
 """
-    SRLogger(logger::AbstractLogger; log_every_n::Integer=1)
+    SRLogger(logger::AbstractLogger; log_interval::Int=100)
 
 A logger for symbolic regression that wraps another logger.
 
 # Arguments
 - `logger`: The base logger to wrap
-- `log_interval`: Number of steps between logging events. Default is 1 (log every step).
+- `log_interval`: Number of steps between logging events. Default is 100 (log every 100 steps).
 """
 Base.@kwdef struct SRLogger{L<:AbstractLogger} <: AbstractSRLogger
     logger::L
-    log_interval::Int = 1
+    log_interval::Int = 100
     _log_step::Base.RefValue{Int} = Base.RefValue(0)
 end
 SRLogger(logger::AbstractLogger; kws...) = SRLogger(; logger, kws...)
