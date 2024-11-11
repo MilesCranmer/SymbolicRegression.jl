@@ -132,25 +132,10 @@ function _log_scalars(;
     losses = L[member.loss for member in dominating]
     complexities = Int[compute_complexity(member, options) for member in dominating]
 
-    out["min_loss"] = length(dominating) > 0 ? dominating[end].loss : L(Inf)
-    out["pareto_volume"] = if length(dominating) > 1
-        log_losses = @. log10(losses + eps(L))
-        log_complexities = @. log10(complexities)
-
-        # Add a point equal to the best loss and largest possible complexity, + 1
-        push!(log_losses, minimum(log_losses))
-        push!(log_complexities, log10(options.maxsize + 1))
-
-        # Add a point to connect things:
-        push!(log_losses, maximum(log_losses))
-        push!(log_complexities, maximum(log_complexities))
-
-        xy = cat(log_complexities, log_losses; dims=2)
-        hull = convex_hull(xy)
-        convex_hull_area(hull)
-    else
-        0.0
-    end
+    out["summaries"] = Dict([
+        "min_loss" => length(dominating) > 0 ? dominating[end].loss : L(Inf),
+        "pareto_volume" => pareto_volume(losses, complexities, options.maxsize),
+    ])
 
     #### Full Pareto front
     out["equations"] = let
@@ -165,6 +150,26 @@ function _log_scalars(;
         ])
     end
     return out
+end
+
+function pareto_volume(losses::AbstractVector{L}, complexities, maxsize::Int) where {L}
+    if length(losses) == 0
+        return 0.0
+    end
+    log_losses = @. log10(losses + eps(L))
+    log_complexities = @. log10(complexities)
+
+    # Add a point equal to the best loss and largest possible complexity, + 1
+    push!(log_losses, minimum(log_losses))
+    push!(log_complexities, log10(maxsize + 1))
+
+    # Add a point to connect things:
+    push!(log_losses, maximum(log_losses))
+    push!(log_complexities, maximum(log_complexities))
+
+    xy = cat(log_complexities, log_losses; dims=2)
+    hull = convex_hull(xy)
+    return Float64(convex_hull_area(hull))
 end
 
 """Uses gift wrapping algorithm to create a convex hull."""
