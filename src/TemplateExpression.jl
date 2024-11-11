@@ -400,14 +400,7 @@ function MF.get_contents_for_mutation(ex::TemplateExpression, rng::AbstractRNG)
     raw_contents = get_contents(ex)
     function_keys = keys(raw_contents)
 
-    # Sample weighted by number of nodes in each subexpression
-    num_nodes = map(count_nodes, values(raw_contents))
-    weights = map(Base.Fix2(/, sum(num_nodes)), num_nodes)
-    cumsum_weights = cumsum(weights)
-    rand_val = rand(rng)
-    idx = findfirst(Base.Fix2(>=, rand_val), cumsum_weights)::Int
-
-    key_to_mutate = function_keys[idx]
+    key_to_mutate = rand(rng, function_keys)
     return raw_contents[key_to_mutate], key_to_mutate
 end
 
