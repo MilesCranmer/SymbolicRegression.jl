@@ -10,39 +10,43 @@ New URL: https://ai.damtp.cam.ac.uk/symbolicregression
 
 Summary of major recent changes, described in more detail below:
 
-- [Changed the core expression type from `Node{T} → Expression{T,Node{T},Metadata{...}}`](#changed-the-core-expression-type-from-nodet--expressiontnodet)
-  - This gives us new features, improves user hackability, and greatly improves ergonomics!
-- [Created "_Template Expressions_", for fitting expressions under a user-specified functional form (`TemplateExpression <: AbstractExpression`)](#created-template-expressions-for-fitting-expressions-under-a-user-specified-functional-form-templateexpression--abstractexpression)
-  - Template expressions are quite flexible: they are a meta-expression that wraps multiple other expressions, and combines them using a user-specified function.
-  - This enables **vector expressions** - in other words, you can learn multiple components of a vector, simultaneously, with a single expression! Or more generally, you can learn expressions onto any Julia struct.
-    - (Note that this still does not permit learning using non-scalar operators, though we are working on that!)
-  - Template expressions also make use of colored strings to represent each part in the printout, to improve readability.
-- [Created "_Parametric Expressions_", for custom functional forms with per-class parameters: (`ParametricExpression <: AbstractExpression`)](#created-parametric-expressions-for-custom-functional-forms-with-per-class-parameters-parametricexpression--abstractexpression)
-  - This lets you fit expressions that act as _models of multiple systems_, with per-system parameters!
-- [Introduced a variety of new abstractions for user extensibility](#introduced-a-variety-of-new-abstractions-for-user-extensibility) (**and to support new research on symbolic regression!**)
-  - `AbstractExpression`, for increased flexibility in custom expression types.
-  - `mutate!` and `AbstractMutationWeights`, for user-defined mutation operators.
-  - `AbstractSearchState`, for holding custom metadata during searches.
-  - `AbstractOptions` and `AbstractRuntimeOptions`, for customizing pretty much everything else in the library via multiple dispatch. Please make an issue/PR if you would like any particular internal functions be declared `public` to enable stability across versions for your tool.
-  - Many of these were motivated to modularize the implementation of [LaSR](https://github.com/trishullab/LibraryAugmentedSymbolicRegression.jl), an LLM-guided version of SymbolicRegression.jl, so it can sit as a modular layer on top of SymbolicRegression.jl.
-- [Added TensorBoardLogger.jl and other logging integrations via `SRLogger`](#added-tensorboardloggerjl-and-other-logging-integrations-via-srlogger)
-- Fundamental improvements to the underlying evolutionary algorithm
-  - New mutation operators introduced, `swap_operands` and `rotate_tree` – both of which seem to help kick the evolution out of local optima.
-  - New hyperparameter defaults created, based on a Pareto front volume calculation, rather than simply accuracy of the best expression.
-- [Support for Zygote.jl and Enzyme.jl within the constant optimizer, specified using the `autodiff_backend` option](#support-for-zygotejl-and-enzymejl-within-the-constant-optimizer-specified-using-the-autodiff_backend-option)
-- [Changed output file handling](#changed-output-file-handling)
-- Major refactoring of the codebase to improve readability and modularity
-- Identified and fixed a major internal bug involving unexpected aliasing produced by the crossover operator
-  - Segmentation faults caused by this are a likely culprit for some crashes reported during multi-day multi-node searches.
-  - Introduced a new test for aliasing throughout the entire search state to prevent this from happening again.
-- Improved progress bar and StyledStrings integration.
-- Julia 1.10 is now the minimum supported Julia version.
-- [Other small features](#other-small-features-in-v100)
-- Also see the [Update Guide](#update-guide) below for more details on upgrading.
+1. Changed the core expression type from `Node{T} → Expression{T,Node{T},Metadata{...}}`
+    - This gives us new features, improves user hackability, and greatly improves ergonomics!
+2. Created "_Template Expressions_", for fitting expressions under a user-specified functional form (`TemplateExpression <: AbstractExpression`)
+    - Template expressions are quite flexible: they are a meta-expression that wraps multiple other expressions, and combines them using a user-specified function.
+    - This enables **vector expressions** - in other words, you can learn multiple components of a vector, simultaneously, with a single expression! Or more generally, you can learn expressions onto any Julia struct.
+      - (Note that this still does not permit learning using non-scalar operators, though we are working on that!)
+    - Template expressions also make use of colored strings to represent each part in the printout, to improve readability.
+3. Created "_Parametric Expressions_", for custom functional forms with per-class parameters: (`ParametricExpression <: AbstractExpression`)
+    - This lets you fit expressions that act as _models of multiple systems_, with per-system parameters!
+4. Introduced a variety of new abstractions for user extensibility (**and to support new research on symbolic regression!**)
+    - `AbstractExpression`, for increased flexibility in custom expression types.
+    - `mutate!` and `AbstractMutationWeights`, for user-defined mutation operators.
+    - `AbstractSearchState`, for holding custom metadata during searches.
+    - `AbstractOptions` and `AbstractRuntimeOptions`, for customizing pretty much everything else in the library via multiple dispatch. Please make an issue/PR if you would like any particular internal functions be declared `public` to enable stability across versions for your tool.
+    - Many of these were motivated to modularize the implementation of [LaSR](https://github.com/trishullab/LibraryAugmentedSymbolicRegression.jl), an LLM-guided version of SymbolicRegression.jl, so it can sit as a modular layer on top of SymbolicRegression.jl.
+5. Added TensorBoardLogger.jl and other logging integrations via `SRLogger`
+6. Support for Zygote.jl and Enzyme.jl within the constant optimizer, specified using the `autodiff_backend` option
+7. Other changes:
+    - Fundamental improvements to the underlying evolutionary algorithm
+        - New mutation operators introduced, `swap_operands` and `rotate_tree` – both of which seem to help kick the evolution out of local optima.
+        - New hyperparameter defaults created, based on a Pareto front volume calculation, rather than simply accuracy of the best expression.
+    - Changed output file handling
+    - Major refactoring of the codebase to improve readability and modularity
+    - Identified and fixed a major internal bug involving unexpected aliasing produced by the crossover operator
+      - Segmentation faults caused by this are a likely culprit for some crashes reported during multi-day multi-node searches.
+      - Introduced a new test for aliasing throughout the entire search state to prevent this from happening again.
+    - Improved progress bar and StyledStrings integration.
+    - Julia 1.10 is now the minimum supported Julia version.
+    - Other small features
+    - Also see the "Update Guide" below for more details on upgrading.
+
 
 Note that some of these features were recently introduced in patch releases since they were backwards compatible. I am noting them here for visibility.
 
-### Changed the core expression type from `Node{T} → Expression{T,Node{T},...}`
+### 1. Changed the core expression type from `Node{T} → Expression{T,Node{T},...}`
+
+<details>
 
 https://github.com/MilesCranmer/SymbolicRegression.jl/pull/326
 
@@ -77,10 +81,15 @@ Each time you use an operator on or between two `Expression`s that include the o
 
 You can access the tree with `get_tree` (guaranteed to return a `Node`), or `get_contents` – which returns the full info of an `AbstractExpression`, which might contain multiple expressions (which get stitched together when calling `get_tree`).
 
-### Created "_Template Expressions_", for fitting expressions under a user-specified functional form (`TemplateExpression <: AbstractExpression`)
+</details>
 
-Template Expressions allow users to define symbolic expressions with a fixed structure, combining multiple sub-expressions under user-specified constraints.
-This is particularly useful for symbolic regression tasks where domain-specific knowledge or constraints must be imposed on the model's structure.
+</details>
+
+### 2. Created "_Template Expressions_", for fitting expressions under a user-specified functional form (`TemplateExpression <: AbstractExpression`)
+
+<details>
+
+Template Expressions allow users to define symbolic expressions with a fixed structure, combining multiple sub-expressions under user-specified constraints. This is particularly useful for symbolic regression tasks where domain-specific knowledge or constraints must be imposed on the model's structure.
 
 This also lets you fit vector expressions using SymbolicRegression.jl, where vector components can also be shared!
 
@@ -89,12 +98,9 @@ A `TemplateExpression` is constructed by specifying:
 - A named tuple of sub-expressions (e.g., `(; f=x1 - x2 * x2, g=1.5 * x3)`).
 - A structure function that defines how these sub-expressions are combined in different contexts.
 
-For example, you can create a `TemplateExpression` that enforces
-the constraint: `sin(f(x1, x2)) + g(x3)^2` - where we evolve `f` and `g` simultaneously.
+For example, you can create a `TemplateExpression` that enforces the constraint: `sin(f(x1, x2)) + g(x3)^2` - where we evolve `f` and `g` simultaneously.
 
-To do this, we first describe the structure using `TemplateStructure`
-that takes a single closure function that maps a named tuple of
-`ComposableExpression` expressions and a tuple of features:
+To do this, we first describe the structure using `TemplateStructure` that takes a single closure function that maps a named tuple of `ComposableExpression` expressions and a tuple of features:
 
 ```julia
 using SymbolicRegression
@@ -104,12 +110,9 @@ structure = TemplateStructure{(:f, :g)}(
 )
 ```
 
-This defines how the `TemplateExpression` should be
-evaluated numerically on a given input.
+This defines how the `TemplateExpression` should be evaluated numerically on a given input.
 
-The number of arguments allowed by each expression object
-is inferred using this closure, though it can also
-be passed explicitly with the `num_features` kwarg.
+The number of arguments allowed by each expression object is inferred using this closure, though it can also be passed explicitly with the `num_features` kwarg.
 
 ```julia
 operators = Options(binary_operators=(+, -, *, /)).operators
@@ -119,10 +122,7 @@ x2 = ComposableExpression(Node{Float64}(; feature=2); operators, variable_names)
 x3 = ComposableExpression(Node{Float64}(; feature=3); operators, variable_names)
 ```
 
-Note that using `x1` here refers to the
-_relative_ argument to the expression.
-So the node with feature equal to 1 will reference
-the first argument, regardless of what it is.
+Note that using `x1` here refers to the _relative_ argument to the expression. So the node with feature equal to 1 will reference the first argument, regardless of what it is.
 
 ```julia
 st_expr = TemplateExpression(
@@ -157,9 +157,7 @@ using SymbolicRegression
 using MLJBase: machine, fit!, report
 ```
 
-We first define our structure.
-This also has our variable mapping, which says
-we are fitting `f(x1, x2)`, `g1(x3)`, and `g2(x3)`:
+We first define our structure. This also has our variable mapping, which says we are fitting `f(x1, x2)`, `g1(x3)`, and `g2(x3)`:
 
 ```julia
 function my_structure((; f, g1, g2), (x1, x2, x3))
@@ -175,8 +173,7 @@ end
 structure = TemplateStructure{(:f, :g1, :g2)}(my_structure)
 ```
 
-Now, our dataset is a regular 2D array of inputs for `X`.
-But our `y` is actually a _vector of 2-tuples_!
+Now, our dataset is a regular 2D array of inputs for `X`. But our `y` is actually a _vector of 2-tuples_!
 
 ```julia
 X = rand(100, 3) .* 10
@@ -231,24 +228,19 @@ best_g2 = get_contents(best_expr).g2
 
 </details>
 
-### Created "_Parametric Expressions_", for custom functional forms with per-class parameters: (`ParametricExpression <: AbstractExpression`)
+</details>
 
-Parametric Expressions are another example of an `AbstractExpression` with additional features than a normal `Expression`.
-This type allows SymbolicRegression.jl to fit a _parametric functional form_, rather than an expression with fixed constants.
-This is particularly useful when modeling multiple systems or categories where each may have unique parameters but share
-a common functional form and certain constants.
+### 3. Created "_Parametric Expressions_", for custom functional forms with per-class parameters: (`ParametricExpression <: AbstractExpression`)
 
-A parametric expression is constructed with a tree represented as a `ParametricNode <: AbstractExpressionNode` – this is an alternative
-type to the usual `Node` type which includes extra fields: `is_parameter::Bool`, and `parameter::UInt16`.
-A `ParametricExpression` wraps this type and stores the actual parameter matrix (under `.metadata.parameters`) as well as
-the parameter names (under `.metadata.parameter_names`).
+<details>
 
-Various internal functions have been overloaded for custom behavior when fitting parametric expressions.
-For example, `mutate_constant` will perturb a row of the parameter matrix, rather than a single parameter.
+Parametric Expressions are another example of an `AbstractExpression` with additional features than a normal `Expression`. This type allows SymbolicRegression.jl to fit a _parametric functional form_, rather than an expression with fixed constants. This is particularly useful when modeling multiple systems or categories where each may have unique parameters but share a common functional form and certain constants.
 
-When fitting a `ParametricExpression`, the `expression_options` parameter in `Options/SRRegressor`
-should include a `max_parameters` keyword, which specifies the maximum number of separate parameters
-in the functional form.
+A parametric expression is constructed with a tree represented as a `ParametricNode <: AbstractExpressionNode` – this is an alternative type to the usual `Node` type which includes extra fields: `is_parameter::Bool`, and `parameter::UInt16`. A `ParametricExpression` wraps this type and stores the actual parameter matrix (under `.metadata.parameters`) as well as the parameter names (under `.metadata.parameter_names`).
+
+Various internal functions have been overloaded for custom behavior when fitting parametric expressions. For example, `mutate_constant` will perturb a row of the parameter matrix, rather than a single parameter.
+
+When fitting a `ParametricExpression`, the `expression_options` parameter in `Options/SRRegressor` should include a `max_parameters` keyword, which specifies the maximum number of separate parameters in the functional form.
 
 <details>
 <summary>Let's see an example of fitting a parametric expression:</summary>
@@ -278,9 +270,7 @@ y = [
 ]
 ```
 
-When fitting a `ParametricExpression`, it tends to be more important to set up
-an `autodiff_backend` such as `:Zygote` or `:Enzyme`, as the default backend (finite differences)
-can be too slow for the high-dimensional parameter spaces.
+When fitting a `ParametricExpression`, it tends to be more important to set up an `autodiff_backend` such as `:Zygote` or `:Enzyme`, as the default backend (finite differences) can be too slow for the high-dimensional parameter spaces.
 
 ```julia
 model = SRRegressor(
@@ -310,10 +300,14 @@ best_expr = r.equations[r.best_idx]
 
 </details>
 
-### Introduced a variety of new abstractions for user extensibility
 
-v1 introduces several new abstract types to improve extensibility.
-These allow you to define custom behaviors by leveraging Julia's multiple dispatch system.
+</details>
+
+### 4. Introduced a variety of new abstractions for user extensibility
+
+<details>
+
+v1 introduces several new abstract types to improve extensibility. These allow you to define custom behaviors by leveraging Julia's multiple dispatch system.
 
 **Expression types**: `AbstractExpression`: As explained above, SymbolicRegression now works on `Expression` rather than `Node`, by default. Actually, most internal functions in SymbolicRegression.jl are now defined on `AbstractExpression`, which allows overloading behavior. The expression type used can be modified with the `expression_type` and `node_type` options in `Options`.
 
@@ -365,15 +359,17 @@ end
 Base.propertynames(options::MyOptions) = (NEW_OPTIONS_KEYS..., fieldnames(SymbolicRegression.Options)...)
 ```
 
-These new abstractions provide users with greater flexibility in defining the structure and behavior of expressions, nodes, and the search process itself.
-These are also of course used as the basis for alternate behavior such as `ParametricExpression` and `TemplateExpression`.
+These new abstractions provide users with greater flexibility in defining the structure and behavior of expressions, nodes, and the search process itself.  These are also of course used as the basis for alternate behavior such as `ParametricExpression` and `TemplateExpression`.
 
-### Added TensorBoardLogger.jl and other logging integrations via `SRLogger`
+</details>
+
+### 5. Added TensorBoardLogger.jl and other logging integrations via `SRLogger`
+
+<details>
 
 You can now track the progress of symbolic regression searches using `TensorBoardLogger.jl`, `Wandb.jl`, or other logging backends.
 
-This is done by wrapping any `AbstractLogger` with the new `SRLogger` type, and passing it to the `logger` option in `SRRegressor`
-or `equation_search`:
+This is done by wrapping any `AbstractLogger` with the new `SRLogger` type, and passing it to the `logger` option in `SRRegressor` or `equation_search`:
 
 ```julia
 using SymbolicRegression
@@ -399,7 +395,11 @@ The logger will track:
 
 This works with any logger that implements the Julia logging interface.
 
-### Support for Zygote.jl and Enzyme.jl within the constant optimizer, specified using the `autodiff_backend` option
+</details>
+
+### 6. Support for Zygote.jl and Enzyme.jl within the constant optimizer, specified using the `autodiff_backend` option
+
+<details>
 
 Historically, SymbolicRegression has mostly relied on finite differences to estimate derivatives – which actually works well for small numbers of parameters. This is what Optim.jl selects unless you can provide it with gradients.
 
@@ -421,47 +421,47 @@ Options(
 
 for Enzyme.jl (though Enzyme support is highly experimental).
 
-### Changed output file handling
+</details>
 
-Instead of writing to a single file like `hall_of_fame_<timestamp>.csv`, outputs are now organized in a directory structure.
-Each run gets a unique ID (containing a timestamp and random string, e.g., `20240315_120000_x7k92p`), and outputs are saved to `outputs/<run_id>/`.
-Currently, only saves `hall_of_fame.csv` (and `hall_of_fame.csv.bak`), with plans to add more logs and diagnostics in this folder in future releases.
+### 7. Other Changes
 
-The output directory can be customized via the `output_directory` option (defaults to `./outputs`).
-A custom run ID can be specified via the new `run_id` parameter passed to `equation_search` (or `SRRegressor`).
+<details>
 
-### Other Small Features in v1.0.0
+#### Changed output file handling
+
+Instead of writing to a single file like `hall_of_fame_<timestamp>.csv`, outputs are now organized in a directory structure. Each run gets a unique ID (containing a timestamp and random string, e.g., `20240315_120000_x7k92p`), and outputs are saved to `outputs/<run_id>/`. Currently, only saves `hall_of_fame.csv` (and `hall_of_fame.csv.bak`), with plans to add more logs and diagnostics in this folder in future releases.
+
+The output directory can be customized via the `output_directory` option (defaults to `./outputs`). A custom run ID can be specified via the new `run_id` parameter passed to `equation_search` (or `SRRegressor`).
+
+#### Other Small Features in v1.0.0
 
 - Support for per-variable complexity, via the `complexity_of_variables` option.
 - Option to force dimensionless constants when fitting with dimensional constraints, via the `dimensionless_constants_only` option.
 - Default `maxsize` increased from 20 to 30.
 - Default `niterations` increased from 10 to 50, as many users seem to be unaware that this is small (and meant for testing), even in publications. I think this 50 is still low, but it should be a more accurate default for those who don't tune.
 - `MLJ.fit!(mach)` now records the number of iterations used, and, should `mach.model.niterations` be changed after the fit, the number of iterations passed to `equation_search` will be reduced accordingly.
+- Fundamental improvements to the underlying evolutionary algorithm
+    - New mutation operators introduced, `swap_operands` and `rotate_tree` – both of which seem to help kick the evolution out of local optima.
+    - New hyperparameter defaults created, based on a Pareto front volume calculation, rather than simply accuracy of the best expression.
+- Major refactoring of the codebase to improve readability and modularity
+- Identified and fixed a major internal bug involving unexpected aliasing produced by the crossover operator
+    - Segmentation faults caused by this are a likely culprit for some crashes reported during multi-day multi-node searches.
+    - Introduced a new test for aliasing throughout the entire search state to prevent this from happening again.
+- Improved progress bar and StyledStrings integration.
+- Julia 1.10 is now the minimum supported Julia version.
+- Also see the "Update Guide" below for more details on upgrading.
 
-### Update Guide
+#### Update Guide
 
-Note that most code should work without changes!
-Only if you are interacting with the return types of
-`equation_search` or `report(mach)`,
-or if you have modified any internals,
-should you need to make some changes.
+Note that most code should work without changes! Only if you are interacting with the return types of `equation_search` or `report(mach)`, or if you have modified any internals, should you need to make some changes.
 
-Also note that the "_hall of fame_" CSV file is now stored in
-a directory structure, of the form `outputs/<run_id>/hall_of_fame.csv`.
-This is to accommodate additional log files without polluting the current working directory.
-Multi-output runs are now stored in the format `.../hall_of_fame_output1.csv`, rather than
-the old format `hall_of_fame_{timestamp}.csv.out1`.
+Also note that the "_hall of fame_" CSV file is now stored in a directory structure, of the form `outputs/<run_id>/hall_of_fame.csv`. This is to accommodate additional log files without polluting the current working directory. Multi-output runs are now stored in the format `.../hall_of_fame_output1.csv`, rather than the old format `hall_of_fame_{timestamp}.csv.out1`.
 
-So, the key changes are, as discussed [above](#changed-the-core-expression-type-from-nodet--expressiontnodet), the change from `Node` to `Expression` as the default type for representing expressions.
-This includes the hall of fame object returned by `equation_search`, as well as the vector of
-expressions stored in `report(mach).equations` for the MLJ interface.
-If you need to interact with the internal tree structure, you can use `get_contents(expression)` (which returns the tree of an `Expression`, or the named tuple of a `ParametricExpression` - use `get_tree` to map it to a single tree format).
+So, the key changes are, as discussed above, the change from `Node` to `Expression` as the default type for representing expressions. This includes the hall of fame object returned by `equation_search`, as well as the vector of expressions stored in `report(mach).equations` for the MLJ interface. If you need to interact with the internal tree structure, you can use `get_contents(expression)` (which returns the tree of an `Expression`, or the named tuple of a `ParametricExpression` - use `get_tree` to map it to a single tree format).
 
 To access other info stored in expressions, such as the operators or variable names, use `get_metadata(expression)`.
 
-This also means that expressions are now basically self-contained.
-Functions like `eval_tree_array` no longer require options as arguments (though you can pass it to override the expression's stored options).
-This means you can also simply call the expression directly with input data (in `[n_features, n_rows]` format).
+This also means that expressions are now basically self-contained. Functions like `eval_tree_array` no longer require options as arguments (though you can pass it to override the expression's stored options). This means you can also simply call the expression directly with input data (in `[n_features, n_rows]` format).
 
 Before this change, you might have written something like this:
 
@@ -473,9 +473,7 @@ options = Options(; binary_operators=(+, *))
 tree = x1 * x1
 ```
 
-This had worked, but only because of some spooky action at a distance behavior
-involving a global store of last-used operators!
-(Noting that `Node` simply stores an index to the operator to be lightweight.)
+This had worked, but only because of some spooky action at a distance behavior involving a global store of last-used operators! (Noting that `Node` simply stores an index to the operator to be lightweight.)
 
 After this change, things are much cleaner:
 
@@ -488,9 +486,7 @@ x1 = Expression(Node{Float64}(; feature=1); operators, variable_names)
 tree = x1 * x1
 ```
 
-This is now a safe and explicit construction, since `*` can lookup what operators each expression uses, and infer the right indices!
-This `operators::OperatorEnum` is a tuple of functions, so does not incur dispatch costs at runtime.
-(The `variable_names` is optional, and gets stripped during the evolution process, but is embedded when returned to the user.)
+This is now a safe and explicit construction, since `*` can lookup what operators each expression uses, and infer the right indices! This `operators::OperatorEnum` is a tuple of functions, so does not incur dispatch costs at runtime. (The `variable_names` is optional, and gets stripped during the evolution process, but is embedded when returned to the user.)
 
 We can now use this directly:
 
@@ -499,15 +495,15 @@ println(tree)       # Uses the `variable_names`, if stored
 tree(randn(1, 50))  # Evaluates the expression using the stored operators
 ```
 
-Also note that the minimum supported version of Julia is now 1.10.
-This is because Julia 1.9 and earlier have now reached end-of-life status,
-and 1.10 is the new LTS release.
+Also note that the minimum supported version of Julia is now 1.10. This is because Julia 1.9 and earlier have now reached end-of-life status, and 1.10 is the new LTS release.
 
-### Additional Notes
+#### Additional Notes
 
 - **Custom Loss Functions**: Continue to define these on `AbstractExpressionNode`.
 - **General Usage**: Most existing code should work with minimal changes.
 - **CI Updates**: Tests are now split into parts for faster runs, and use TestItems.jl for better scoping of test variables.
+
+</details>
 
 **Full Changelog**: https://github.com/MilesCranmer/SymbolicRegression.jl/compare/v0.24.5...v1.0.0
 
