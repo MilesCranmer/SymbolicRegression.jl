@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Parameterized Expressions · SymbolicRegression.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link rel="canonical" href="https://ai.damtp.cam.ac.uk/symbolicregression/stable/examples/parameterized_function/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../index_base/"><img src="../../assets/logo.svg" alt="SymbolicRegression.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../index_base/">SymbolicRegression.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../index_base/">Contents</a></li><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../">Short Examples</a></li><li><a class="tocitem" href="../template_expression/">Template Expressions</a></li><li class="is-active"><a class="tocitem" href>Parameterized Expressions</a><ul class="internal"><li><a class="tocitem" href="#The-Problem"><span>The Problem</span></a></li><li><a class="tocitem" href="#Setting-up-the-Search"><span>Setting up the Search</span></a></li><li><a class="tocitem" href="#Key-Takeaways"><span>Key Takeaways</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../../api/">API</a></li><li><a class="tocitem" href="../../losses/">Losses</a></li><li><a class="tocitem" href="../../types/">Types</a></li><li><a class="tocitem" href="../../customization/">Customization</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Parameterized Expressions</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Parameterized Expressions</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/MilesCranmer/SymbolicRegression.jl/blob/master/examples/parameterized_function.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Learning-Parameterized-Expressions"><a class="docs-heading-anchor" href="#Learning-Parameterized-Expressions">Learning Parameterized Expressions</a><a id="Learning-Parameterized-Expressions-1"></a><a class="docs-heading-anchor-permalink" href="#Learning-Parameterized-Expressions" title="Permalink"></a></h1><p><em>Note: Parametric expressions are currently considered experimental and may change in the future.</em></p><p>Parameterized expressions in SymbolicRegression.jl allow you to discover symbolic expressions that contain optimizable parameters. This is particularly useful when you have data that follows different patterns based on some categorical variable, or when you want to learn an expression with constants that should be optimized during the search.</p><p>In this tutorial, we&#39;ll generate synthetic data with class-dependent parameters and use symbolic regression to discover the parameterized expressions.</p><h2 id="The-Problem"><a class="docs-heading-anchor" href="#The-Problem">The Problem</a><a id="The-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#The-Problem" title="Permalink"></a></h2><p>Let&#39;s create a synthetic dataset where the underlying function changes based on a class label:</p><p class="math-container">\[y = 2\cos(x_2 + 0.1) + x_1^2 - 3.2 \ \ \ \ \text{[class 1]} \\
+\text{OR} \\
+y = 2\cos(x_2 + 1.5) + x_1^2 - 0.5 \ \ \ \ \text{[class 2]}\]</p><p>We will need to simultaneously learn the symbolic expression and per-class parameters!</p><pre><code class="language-julia hljs">using SymbolicRegression
+using Random: MersenneTwister
+using Zygote
+using MLJBase: machine, fit!, predict, report
+using Test</code></pre><p>Now, we generate synthetic data, with these 2 different classes.</p><p>Note that the <code>class</code> feature is given special treatment for the <a href="../../api/#SymbolicRegression.MLJInterfaceModule.SRRegressor"><code>SRRegressor</code></a> as a categorical variable:</p><pre><code class="language-julia hljs">X = let rng = MersenneTwister(0), n = 30
+    (; x1=randn(rng, n), x2=randn(rng, n), class=rand(rng, 1:2, n))
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(x1 = [-0.7587307822993239, 0.03249717326229417, 0.04868971510118324, 0.426553609186312, -0.6455341387712752, 0.16047914065004126, -1.174243139542269, -0.8590577126607076, 0.8166486156723918, -1.3610991864137623  …  -1.4738536651017287, -2.3922557197621166, -1.004193438685409, -0.15671091559738035, -0.40851221296291546, -0.02542189385385727, -1.507668525428601, -0.14180202282588494, -1.1251781589718115, -1.6634915201296359],
+ x2 = [0.9225430229784556, -0.3431658216750271, 2.1494079717206267, -0.3614340720711092, -0.17101357024903552, 1.4044957064877326, -1.14561382828759, 1.199962308278444, -0.974684107278398, 0.517299511539031  …  0.15367872415413888, 0.1617663833102913, 1.6815067955745, 0.08878524390300123, 2.997069453443845, 1.3160268541638762, 0.10493050742285542, 0.17279914285302175, 0.39613226871496143, 1.2560661845396246],
+ class = [1, 1, 2, 2, 2, 2, 1, 2, 2, 1  …  1, 2, 2, 1, 1, 2, 1, 1, 1, 2],)</code></pre><p>Now, we generate target values using the true model that has class-dependent parameters:</p><pre><code class="language-julia hljs">y = let P1 = [0.1, 1.5], P2 = [3.2, 0.5]
+    [2 * cos(x2 + P1[class]) + x1^2 - P2[class] for (x1, x2, class) in zip(X.x1, X.x2, X.class)]
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">30-element Vector{Float64}:
+ -1.5819329379648106
+ -1.257782764921467
+ -2.2452471837347545
+  0.5197422215634926
+  0.3956348400637564
+ -2.4182943336237583
+ -0.8184112159299595
+ -1.5701319117010097
+  1.8972460993013578
+  0.28348012694263547
+  ⋮
+  5.041198154342794
+ -1.4900026104671513
+ -1.210975832899709
+ -5.031135783951781
+ -2.394293547335875
+  1.0312146396920676
+ -1.2538511817635862
+ -0.1751135457735593
+  0.4140028695829825</code></pre><h2 id="Setting-up-the-Search"><a class="docs-heading-anchor" href="#Setting-up-the-Search">Setting up the Search</a><a id="Setting-up-the-Search-1"></a><a class="docs-heading-anchor-permalink" href="#Setting-up-the-Search" title="Permalink"></a></h2><p>We&#39;ll configure the symbolic regression search to:</p><ul><li>Use parameterized expressions with up to 2 parameters</li><li>Use Zygote.jl for automatic differentiation during parameter optimization (important when using parametric expressions, as it is higher dimensional)</li></ul><pre><code class="language-julia hljs">model = SRRegressor(;
+    niterations=100,
+    binary_operators=[+, *, /, -],
+    unary_operators=[cos, exp],
+    populations=30,
+    expression_type=ParametricExpression,
+    expression_options=(; max_parameters=2),
+    autodiff_backend=:Zygote,
+);</code></pre><p>Now, let&#39;s set up the machine and fit it:</p><pre><code class="language-julia hljs">mach = machine(model, X, y)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">untrained Machine; caches model-specific representations of data
+  model: SRRegressor(defaults = nothing, …)
+  args: 
+    1:	Source @413 ⏎ ScientificTypesBase.Table{Union{AbstractVector{ScientificTypesBase.Continuous}, AbstractVector{ScientificTypesBase.Count}}}
+    2:	Source @849 ⏎ AbstractVector{ScientificTypesBase.Continuous}
+</code></pre><p>At this point, you would run:</p><pre><code class="language-julia hljs">fit!(mach)</code></pre><p>You can extract the best expression and parameters with:</p><pre><code class="language-julia hljs">report(mach).equations[end]</code></pre><h2 id="Key-Takeaways"><a class="docs-heading-anchor" href="#Key-Takeaways">Key Takeaways</a><a id="Key-Takeaways-1"></a><a class="docs-heading-anchor-permalink" href="#Key-Takeaways" title="Permalink"></a></h2><ol><li><a href="../../types/#DynamicExpressions.ParametricExpressionModule.ParametricExpression"><code>ParametricExpression</code></a>s allows us to discover symbolic expressions with optimizable parameters</li><li>The parameters can capture class-dependent variations in the underlying model</li></ol><p>This approach is particularly useful when you suspect your data follows a common functional form, but with varying parameters across different conditions or class!</p><hr/><details>
+<summary> Show raw source code </summary><pre><code class="language-julia hljs">#=
+# Learning Parameterized Expressions
+
+_Note: Parametric expressions are currently considered experimental and may change in the future._
+
+Parameterized expressions in SymbolicRegression.jl allow you to discover symbolic expressions that contain
+optimizable parameters. This is particularly useful when you have data that follows different patterns
+based on some categorical variable, or when you want to learn an expression with constants that should
+be optimized during the search.
+
+In this tutorial, we&#39;ll generate synthetic data with class-dependent parameters and use symbolic regression to discover the parameterized expressions.
+
+## The Problem
+
+Let&#39;s create a synthetic dataset where the underlying function changes based on a class label:
+
+\```math
+y = 2\cos(x_2 + 0.1) + x_1^2 - 3.2 \ \ \ \ \text{[class 1]} \\
+\text{OR} \\
+y = 2\cos(x_2 + 1.5) + x_1^2 - 0.5 \ \ \ \ \text{[class 2]}
+\```
+
+We will need to simultaneously learn the symbolic expression and per-class parameters!
+=#
+using SymbolicRegression
+using Random: MersenneTwister
+using Zygote
+using MLJBase: machine, fit!, predict, report
+using Test
+
+#=
+Now, we generate synthetic data, with these 2 different classes.
+
+Note that the `class` feature is given special treatment for the [`SRRegressor`](@ref)
+as a categorical variable:
+=#
+
+X = let rng = MersenneTwister(0), n = 30
+    (; x1=randn(rng, n), x2=randn(rng, n), class=rand(rng, 1:2, n))
+end
+
+#=
+Now, we generate target values using the true model that
+has class-dependent parameters:
+=#
+y = let P1 = [0.1, 1.5], P2 = [3.2, 0.5]
+    [2 * cos(x2 + P1[class]) + x1^2 - P2[class] for (x1, x2, class) in zip(X.x1, X.x2, X.class)]
+end
+
+#=
+## Setting up the Search
+
+We&#39;ll configure the symbolic regression search to:
+- Use parameterized expressions with up to 2 parameters
+- Use Zygote.jl for automatic differentiation during parameter optimization (important when using parametric expressions, as it is higher dimensional)
+=#
+
+stop_at = Ref(1e-4)  #src
+
+model = SRRegressor(;
+    niterations=100,
+    binary_operators=[+, *, /, -],
+    unary_operators=[cos, exp],
+    populations=30,
+    expression_type=ParametricExpression,
+    expression_options=(; max_parameters=2),
+    autodiff_backend=:Zygote,
+    early_stop_condition=(loss, _) -&gt; loss &lt; stop_at[],  #src
+);
+
+#=
+Now, let&#39;s set up the machine and fit it:
+=#
+
+mach = machine(model, X, y)
+
+#=
+At this point, you would run:
+
+\```julia
+fit!(mach)
+\```
+
+You can extract the best expression and parameters with:
+
+\```julia
+report(mach).equations[end]
+\```
+
+## Key Takeaways
+
+1. [`ParametricExpression`](@ref)s allows us to discover symbolic expressions with optimizable parameters
+2. The parameters can capture class-dependent variations in the underlying model
+
+This approach is particularly useful when you suspect your data follows a common
+functional form, but with varying parameters across different conditions or class!
+=#</code></pre><p>which uses Literate.jl to generate this page.</p></details></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../template_expression/">« Template Expressions</a><a class="docs-footer-nextpage" href="../../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Friday 15 November 2024 21:16">Friday 15 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
