@@ -162,7 +162,7 @@ y = [Force(F...) for F in data.F]
 y[1:3]
 
 #=
-Our variable names are the keys of the struct:
+Our input variable names are as follows:
 =#
 variable_names = ["t", "v_x", "v_y", "v_z", "T"]
 
