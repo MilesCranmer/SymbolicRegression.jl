@@ -15,10 +15,10 @@
     )
     X = ones(1, 1) * 2
     y = ones(1)
-    dataset = Dataset(X, y; extra=(; classes=[1]))
+    dataset = Dataset(X, y; extra=(; class=[1]))
 
     @test ex isa ParametricExpression
-    @test ex(dataset.X, dataset.extra.classes) ≈ ones(1, 1) * 6
+    @test ex(dataset.X, dataset.extra.class) ≈ ones(1, 1) * 6
 
     # Mistake in that we gave the wrong options!
     @test_throws(

@@ -1,18 +1,20 @@
 module LossFunctionsModule
 
+using DispatchDoctor: @stable
 using StatsBase: StatsBase
 using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, get_tree, eval_tree_array
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
-using ..InterfaceDynamicExpressionsModule: expected_array_type
-using ..CoreModule: AbstractOptions, Dataset, create_expression, DATA_TYPE, LOSS_TYPE
+using ..CoreModule:
+    AbstractOptions, Dataset, create_expression, DATA_TYPE, LOSS_TYPE, is_weighted
 using ..ComplexityModule: compute_complexity
 using ..DimensionalAnalysisModule: violates_dimensional_constraints
+using ..InterfaceDynamicExpressionsModule: expected_array_type
 
 function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
-) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
+) where {T,LT<:Union{Function,SupervisedLoss}}
     if loss isa SupervisedLoss
         return LossFunctions.mean(loss, x, y)
     else
@@ -23,7 +25,7 @@ end
 
 function _weighted_loss(
     x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::LT
-) where {T<:DATA_TYPE,LT<:Union{Function,SupervisedLoss}}
+) where {T,LT<:Union{Function,SupervisedLoss}}
     if loss isa SupervisedLoss
         return sum(loss, x, y, w; normalize=true)
     else
@@ -41,15 +43,38 @@ end
     end
 end
 
-function eval_tree_dispatch(
-    tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
-    dataset::Dataset{T},
-    options::AbstractOptions,
-    idx,
-) where {T<:DATA_TYPE}
-    A = expected_array_type(dataset.X)
-    return eval_tree_array(tree, maybe_getindex(dataset.X, :, idx), options)::Tuple{A,Bool}
-end
+@stable(
+    default_mode = "disable",
+    default_union_limit = 2,
+    begin
+        function eval_tree_dispatch(
+            tree::AbstractExpression, dataset::Dataset, options::AbstractOptions, idx
+        )
+            A = expected_array_type(dataset.X, typeof(tree))
+            out, complete = eval_tree_array(
+                tree, maybe_getindex(dataset.X, :, idx), options
+            )
+            if isnothing(out)
+                return out, false
+            else
+                return out::A, complete::Bool
+            end
+        end
+        function eval_tree_dispatch(
+            tree::AbstractExpressionNode, dataset::Dataset, options::AbstractOptions, idx
+        )
+            A = expected_array_type(dataset.X, typeof(tree))
+            out, complete = eval_tree_array(
+                tree, maybe_getindex(dataset.X, :, idx), options
+            )
+            if isnothing(out)
+                return out, false
+            else
+                return out::A, complete::Bool
+            end
+        end
+    end
+)
 
 # Evaluate the loss of a particular expression on the input dataset.
 function _eval_loss(
@@ -60,19 +85,23 @@ function _eval_loss(
     idx,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
     (prediction, completion) = eval_tree_dispatch(tree, dataset, options, idx)
-    if !completion
+    if !completion || isnothing(prediction)
         return L(Inf)
     end
 
-    loss_val = if dataset.weighted
+    loss_val = if is_weighted(dataset)
         _weighted_loss(
             prediction,
-            maybe_getindex(dataset.y, idx),
+            maybe_getindex(dataset.y::AbstractArray, idx),
             maybe_getindex(dataset.weights, idx),
             options.elementwise_loss,
         )
     else
-        _loss(prediction, maybe_getindex(dataset.y, idx), options.elementwise_loss)
+        _loss(
+            prediction,
+            maybe_getindex(dataset.y::AbstractArray, idx),
+            options.elementwise_loss,
+        )
     end
 
     if regularization
@@ -130,7 +159,7 @@ function eval_loss_batched(
     regularization::Bool=true,
     idx=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    _idx = idx === nothing ? batch_sample(dataset, options) : idx
+    _idx = @something(idx, batch_sample(dataset, options))
     return eval_loss(tree, dataset, options; regularization=regularization, idx=_idx)
 end
 
@@ -162,7 +191,7 @@ function loss_to_score(
         L(0.01)
     end
     loss_val = loss / normalization
-    size = complexity === nothing ? compute_complexity(member, options) : complexity
+    size = @something(complexity, compute_complexity(member, options))
     parsimony_term = size * options.parsimony
     loss_val += L(parsimony_term)
 
@@ -237,11 +266,8 @@ function dimensional_regularization(
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if !violates_dimensional_constraints(tree, dataset, options)
         return zero(L)
-    elseif options.dimensional_constraint_penalty === nothing
-        return L(1000)
-    else
-        return L(options.dimensional_constraint_penalty::Float32)
     end
+    return convert(L, something(options.dimensional_constraint_penalty, 1000))
 end
 
 end

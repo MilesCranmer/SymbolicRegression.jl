@@ -60,6 +60,25 @@ ParametricNode
 
 These types allow you to define expressions with parameters that can be tuned to fit the data better. You can specify the maximum number of parameters using the `expression_options` argument in `SRRegressor`.
 
+## Template Expressions
+
+Template expressions allow you to specify predefined structures and constraints for your expressions.
+These use `ComposableExpressions` as their internal expression type, which makes them
+flexible for creating a structure out of a single function.
+
+These use the `TemplateStructure` type to define how expressions should be combined and evaluated.
+
+```@docs
+TemplateExpression
+TemplateStructure
+```
+
+Composable expressions allow you to combine multiple expressions together.
+
+```@docs
+ComposableExpression
+```
+
 ## Population
 
 Groups of equations are given as a population, which is

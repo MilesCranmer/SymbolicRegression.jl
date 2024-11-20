@@ -298,8 +298,7 @@ end
         @test minimum(report.losses[2]) < 1e-7
 
         # Repeat with second run:
-        mach.model.niterations = 0
-        MLJ.fit!(mach)
+        MLJ.fit!(mach)  # (Will run with 0 iterations)
         report = MLJ.report(mach)
         @test minimum(report.losses[1]) < 1e-7
         @test minimum(report.losses[2]) < 1e-7
@@ -337,15 +336,15 @@ end
 
     @test string_tree(tree, options) ==
         "(1.0 * (x1 + ((x2 * x3) * 5.32))) - cos(1.5 * (x1 - 0.5))"
-    @test string_tree(tree, options; raw=false) ==
+    @test string_tree(tree, options; pretty=true) ==
         "(1 * (x₁ + ((x₂ * x₃) * 5.32))) - cos(1.5 * (x₁ - 0.5))"
     @test string_tree(
-        tree, options; raw=false, display_variable_names=dataset.display_variable_names
+        tree, options; pretty=true, display_variable_names=dataset.display_variable_names
     ) == "(1 * (x₁ + ((x₂ * x₃) * 5.32))) - cos(1.5 * (x₁ - 0.5))"
     @test string_tree(
         tree,
         options;
-        raw=false,
+        pretty=true,
         display_variable_names=dataset.display_variable_names,
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
@@ -355,7 +354,7 @@ end
     @test string_tree(
         x5 * 3.2,
         options;
-        raw=false,
+        pretty=true,
         display_variable_names=dataset.display_variable_names,
         X_sym_units=dataset.X_sym_units,
         y_sym_units=dataset.y_sym_units,
@@ -366,7 +365,7 @@ end
     @test string_tree(
         x5 * 3.2,
         options;
-        raw=false,
+        pretty=true,
         display_variable_names=dataset2.display_variable_names,
         X_sym_units=dataset2.X_sym_units,
         y_sym_units=dataset2.y_sym_units,
@@ -381,7 +380,7 @@ end
     @test string_tree(
         x5 * 3.2,
         options;
-        raw=false,
+        pretty=true,
         display_variable_names=dataset2.display_variable_names,
         X_sym_units=dataset2.X_sym_units,
         y_sym_units=dataset2.y_sym_units,

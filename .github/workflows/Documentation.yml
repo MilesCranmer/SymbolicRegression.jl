@@ -1,5 +1,4 @@
 name: Documentation
-# Modelled from DiffEqDocs
 
 on:
   push:
@@ -30,6 +29,7 @@ jobs:
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: "Build and deploy"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
-          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # For authentication with SSH deploy key
-        run: julia --project=docs/ docs/make.jl
+          DOCUMENTER_KEY_ASTROAUTOMATA: ${{ secrets.DOCUMENTER_KEY }}
+          DOCUMENTER_KEY_CAM: ${{ secrets.DAMTP_DEPLOY_KEY }}
+        run: |
+          julia --project=docs/ docs/make.jl

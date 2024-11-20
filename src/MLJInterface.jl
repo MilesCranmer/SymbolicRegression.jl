@@ -2,6 +2,7 @@ module MLJInterfaceModule
 
 using Optim: Optim
 using LineSearches: LineSearches
+using Logging: AbstractLogger
 using MLJModelInterface: MLJModelInterface as MMI
 using ADTypes: AbstractADType
 using DynamicExpressions:
@@ -24,11 +25,13 @@ using DynamicQuantities:
     dimension
 using LossFunctions: SupervisedLoss
 using ..InterfaceDynamicQuantitiesModule: get_dimensions_type
-using ..CoreModule: Options, Dataset, AbstractMutationWeights, MutationWeights, LOSS_TYPE
+using ..CoreModule:
+    Options, Dataset, AbstractMutationWeights, MutationWeights, LOSS_TYPE, ComplexityMapping
 using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
 using ..UtilsModule: subscriptify, @ignore
+using ..LoggingModule: AbstractSRLogger
 
 import ..equation_search
 
@@ -49,13 +52,15 @@ end
 function modelexpr(model_name::Symbol)
     struct_def = :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L} <:
                                  AbstractSRRegressor
-        niterations::Int = 10
+        niterations::Int = 100
         parallelism::Symbol = :multithreading
         numprocs::Union{Int,Nothing} = nothing
         procs::Union{Vector{Int},Nothing} = nothing
         addprocs_function::Union{Function,Nothing} = nothing
         heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
+        logger::Union{AbstractSRLogger,Nothing} = nothing
         runtests::Bool = true
+        run_id::Union{String,Nothing} = nothing
         loss_type::L = Nothing
         selection_method::Function = choose_best
         dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
@@ -101,9 +106,58 @@ function get_options(::AbstractSRRegressor) end
 eval(modelexpr(:SRRegressor))
 eval(modelexpr(:MultitargetSRRegressor))
 
+"""
+    SRFitResultTypes
+
+A struct referencing types in the `SRFitResult` struct,
+to be used in type inference during MLJ.update to speed up iterative fits.
+"""
+Base.@kwdef struct SRFitResultTypes{
+    _T,_X_t,_y_t,_w_t,_state,_X_units,_y_units,_X_units_clean,_y_units_clean
+}
+    T::Type{_T} = Any
+    X_t::Type{_X_t} = Any
+    y_t::Type{_y_t} = Any
+    w_t::Type{_w_t} = Any
+    state::Type{_state} = Any
+    X_units::Type{_X_units} = Any
+    y_units::Type{_y_units} = Any
+    X_units_clean::Type{_X_units_clean} = Any
+    y_units_clean::Type{_y_units_clean} = Any
+end
+
+"""
+    SRFitResult
+
+A struct containing the result of a fit of an `SRRegressor` or `MultitargetSRRegressor`.
+"""
+Base.@kwdef struct SRFitResult{
+    M<:AbstractSRRegressor,
+    S,
+    O<:Options,
+    XD<:Union{Vector{<:AbstractDimensions},Nothing},
+    YD<:Union{AbstractDimensions,Vector{<:AbstractDimensions},Nothing},
+    TYPES<:SRFitResultTypes,
+}
+    model::M
+    state::S
+    niterations::Int
+    num_targets::Int
+    options::O
+    variable_names::Vector{String}
+    y_variable_names::Union{Vector{String},Nothing}
+    y_is_table::Bool
+    has_class::Bool
+    X_units::XD
+    y_units::YD
+    types::TYPES
+end
+
 # Cleaning already taken care of by `Options` and `equation_search`
 function full_report(
-    m::AbstractSRRegressor, fitresult; v_with_strings::Val{with_strings}=Val(true)
+    m::AbstractSRRegressor,
+    fitresult::SRFitResult;
+    v_with_strings::Val{with_strings}=Val(true),
 ) where {with_strings}
     _, hof = fitresult.state
     # TODO: Adjust baseline loss
@@ -135,45 +189,51 @@ function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
     return MMI.update(m, verbosity, nothing, nothing, X, y, w)
 end
 function MMI.update(
-    m::AbstractSRRegressor, verbosity, old_fitresult, old_cache, X, y, w=nothing
+    m::AbstractSRRegressor,
+    verbosity,
+    old_fitresult::Union{SRFitResult,Nothing},
+    old_cache,
+    X,
+    y,
+    w=nothing,
 )
     options = old_fitresult === nothing ? get_options(m) : old_fitresult.options
     return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, nothing)
 end
-function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, classes)
-    if isnothing(classes) && MMI.istable(X) && haskey(X, :classes)
+function _update(
+    m,
+    verbosity,
+    old_fitresult::Union{SRFitResult,Nothing},
+    old_cache,
+    X,
+    y,
+    w,
+    options,
+    class,
+)
+    if isnothing(class) && MMI.istable(X) && haskey(X, :class)
         if !(X isa NamedTuple)
             error("Classes can only be specified with named tuples.")
         end
-        new_X = Base.structdiff(X, (; X.classes))
-        new_classes = X.classes
+        new_X = Base.structdiff(X, (; X.class))
+        new_class = X.class
         return _update(
-            m, verbosity, old_fitresult, old_cache, new_X, y, w, options, new_classes
+            m, verbosity, old_fitresult, old_cache, new_X, y, w, options, new_class
         )
     end
     if !isnothing(old_fitresult)
         @assert(
-            old_fitresult.has_classes == !isnothing(classes),
-            "If the first fit used classes, the second fit must also use classes."
+            old_fitresult.has_class == !isnothing(class),
+            "If the first fit used class, the second fit must also use class."
         )
     end
     # To speed up iterative fits, we cache the types:
     types = if isnothing(old_fitresult)
-        (;
-            T=Any,
-            X_t=Any,
-            y_t=Any,
-            w_t=Any,
-            state=Any,
-            X_units=Any,
-            y_units=Any,
-            X_units_clean=Any,
-            y_units_clean=Any,
-        )
+        SRFitResultTypes()
     else
         old_fitresult.types
     end
-    X_t::types.X_t, variable_names, X_units::types.X_units = get_matrix_and_info(
+    X_t::types.X_t, variable_names, display_variable_names, X_units::types.X_units = get_matrix_and_info(
         X, m.dimensions_type
     )
     y_t::types.y_t, y_variable_names, y_units::types.y_units = format_input_for(
@@ -187,12 +247,16 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, class
     else
         w
     end
+    niterations =
+        m.niterations - (old_fitresult === nothing ? 0 : old_fitresult.niterations)
+    @assert niterations >= 0
     search_state::types.state = equation_search(
         X_t,
         y_t;
-        niterations=m.niterations,
+        niterations=niterations,
         weights=w_t,
         variable_names=variable_names,
+        display_variable_names=display_variable_names,
         options=options,
         parallelism=m.parallelism,
         numprocs=m.numprocs,
@@ -202,25 +266,30 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, class
         runtests=m.runtests,
         saved_state=(old_fitresult === nothing ? nothing : old_fitresult.state),
         return_state=true,
+        run_id=m.run_id,
         loss_type=m.loss_type,
         X_units=X_units_clean,
         y_units=y_units_clean,
         verbosity=verbosity,
-        extra=isnothing(classes) ? (;) : (; classes),
+        extra=isnothing(class) ? (;) : (; class),
+        logger=m.logger,
         # Help out with inference:
         v_dim_out=isa(m, SRRegressor) ? Val(1) : Val(2),
     )
-    fitresult = (;
+    fitresult = SRFitResult(;
+        model=m,
         state=search_state,
+        niterations=niterations +
+                    (old_fitresult === nothing ? 0 : old_fitresult.niterations),
         num_targets=isa(m, SRRegressor) ? 1 : size(y_t, 1),
         options=options,
         variable_names=variable_names,
         y_variable_names=y_variable_names,
         y_is_table=MMI.istable(y),
-        has_classes=!isnothing(classes),
+        has_class=!isnothing(class),
         X_units=X_units_clean,
         y_units=y_units_clean,
-        types=(
+        types=SRFitResultTypes(;
             T=hof_eltype(search_state[2]),
             X_t=typeof(X_t),
             y_t=typeof(y_t),
@@ -231,7 +300,7 @@ function _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, class
             X_units_clean=typeof(X_units_clean),
             y_units_clean=typeof(y_units_clean),
         ),
-    )::(old_fitresult === nothing ? Any : typeof(old_fitresult))
+    )::(old_fitresult === nothing ? SRFitResult : typeof(old_fitresult))
     return (fitresult, nothing, full_report(m, fitresult))
 end
 hof_eltype(::Type{H}) where {T,H<:HallOfFame{T}} = T
@@ -252,14 +321,17 @@ end
 function get_matrix_and_info(X, ::Type{D}) where {D}
     sch = MMI.istable(X) ? MMI.schema(X) : nothing
     Xm_t = MMI.matrix(X; transpose=true)
-    colnames = if sch === nothing
-        [map(i -> "x$(subscriptify(i))", axes(Xm_t, 1))...]
+    colnames, display_colnames = if sch === nothing
+        (
+            ["x$(i)" for i in eachindex(axes(Xm_t, 1))],
+            ["x$(subscriptify(i))" for i in eachindex(axes(Xm_t, 1))],
+        )
     else
-        [string.(sch.names)...]
+        ([string(name) for name in sch.names], [string(name) for name in sch.names])
     end
     D_promoted = get_dimensions_type(Xm_t, D)
     Xm_t_strip, X_units = unwrap_units_single(Xm_t, D_promoted)
-    return Xm_t_strip, colnames, X_units
+    return Xm_t_strip, colnames, display_colnames, X_units
 end
 
 function format_input_for(::SRRegressor, y, ::Type{D}) where {D}
@@ -278,9 +350,10 @@ function format_input_for(::MultitargetSRRegressor, y, ::Type{D}) where {D}
         MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1),
         "For single-output regression, please use `SRRegressor`."
     )
-    return get_matrix_and_info(y, D)
+    out = get_matrix_and_info(y, D)
+    return out[1], out[2], out[4]
 end
-function validate_variable_names(variable_names, fitresult)
+function validate_variable_names(variable_names, fitresult::SRFitResult)
     @assert(
         variable_names == fitresult.variable_names,
         "Variable names do not match fitted regressor."
@@ -306,18 +379,30 @@ function prediction_warn()
     @warn "Evaluation failed either due to NaNs detected or due to unfinished search. Using 0s for prediction."
 end
 
-wrap_units(v, ::Nothing, ::Integer) = v
-wrap_units(v, ::Nothing, ::Nothing) = v
-wrap_units(v, y_units, i::Integer) = (yi -> Quantity(yi, y_units[i])).(v)
-wrap_units(v, y_units, ::Nothing) = (yi -> Quantity(yi, y_units)).(v)
+@inline function wrap_units(v, y_units, i::Integer)
+    if y_units === nothing
+        return v
+    else
+        return (yi -> Quantity(yi, y_units[i])).(v)
+    end
+end
+@inline function wrap_units(v, y_units, ::Nothing)
+    if y_units === nothing
+        return v
+    else
+        return (yi -> Quantity(yi, y_units)).(v)
+    end
+end
 
-function prediction_fallback(::Type{T}, ::SRRegressor, Xnew_t, fitresult, _) where {T}
+function prediction_fallback(
+    ::Type{T}, m::SRRegressor, Xnew_t, fitresult::SRFitResult, _
+) where {T}
     prediction_warn()
     out = fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T))
     return wrap_units(out, fitresult.y_units, nothing)
 end
 function prediction_fallback(
-    ::Type{T}, ::MultitargetSRRegressor, Xnew_t, fitresult, prototype
+    ::Type{T}, ::MultitargetSRRegressor, Xnew_t, fitresult::SRFitResult, prototype
 ) where {T}
     prediction_warn()
     out_cols = [
@@ -325,11 +410,11 @@ function prediction_fallback(
             fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T)), fitresult.y_units, i
         ) for i in 1:(fitresult.num_targets)
     ]
-    out_matrix = hcat(out_cols...)
+    out_matrix = reduce(hcat, out_cols)
     if !fitresult.y_is_table
         return out_matrix
     else
-        return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype)
+        return MMI.table(out_matrix; names=fitresult.y_variable_names, prototype=prototype)
     end
 end
 
@@ -357,7 +442,7 @@ function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
     return compat_ustrip(v)::AbstractVector, dims
 end
 
-function MMI.fitted_params(m::AbstractSRRegressor, fitresult)
+function MMI.fitted_params(m::AbstractSRRegressor, fitresult::SRFitResult)
     report = full_report(m, fitresult)
     return (;
         best_idx=report.best_idx,
@@ -369,17 +454,17 @@ end
 function eval_tree_mlj(
     tree::AbstractExpression,
     X_t,
-    classes,
+    class,
     m::AbstractSRRegressor,
     ::Type{T},
     fitresult,
     i,
     prototype,
 ) where {T}
-    out, completed = if isnothing(classes)
+    out, completed = if isnothing(class)
         eval_tree_array(tree, X_t, fitresult.options)
     else
-        eval_tree_array(tree, X_t, classes, fitresult.options)
+        eval_tree_array(tree, X_t, class, fitresult.options)
     end
     if completed
         return wrap_units(out, fitresult.y_units, i)
@@ -389,36 +474,35 @@ function eval_tree_mlj(
 end
 
 function MMI.predict(
-    m::M, fitresult, Xnew; idx=nothing, classes=nothing
+    m::M, fitresult, Xnew; idx=nothing, class=nothing
 ) where {M<:AbstractSRRegressor}
-    return _predict(m, fitresult, Xnew, idx, classes)
+    return _predict(m, fitresult, Xnew, idx, class)
 end
-function _predict(m::M, fitresult, Xnew, idx, classes) where {M<:AbstractSRRegressor}
+function _predict(m::M, fitresult, Xnew, idx, class) where {M<:AbstractSRRegressor}
     if Xnew isa NamedTuple && (haskey(Xnew, :idx) || haskey(Xnew, :data))
         @assert(
             haskey(Xnew, :idx) && haskey(Xnew, :data) && length(keys(Xnew)) == 2,
             "If specifying an equation index during prediction, you must use a named tuple with keys `idx` and `data`."
         )
-        return _predict(m, fitresult, Xnew.data, Xnew.idx, classes)
+        return _predict(m, fitresult, Xnew.data, Xnew.idx, class)
     end
-    if isnothing(classes) && MMI.istable(Xnew) && haskey(Xnew, :classes)
+    if isnothing(class) && MMI.istable(Xnew) && haskey(Xnew, :class)
         if !(Xnew isa NamedTuple)
             error("Classes can only be specified with named tuples.")
         end
-        Xnew2 = Base.structdiff(Xnew, (; Xnew.classes))
-        return _predict(m, fitresult, Xnew2, idx, Xnew.classes)
+        Xnew2 = Base.structdiff(Xnew, (; Xnew.class))
+        return _predict(m, fitresult, Xnew2, idx, Xnew.class)
     end
 
-    if fitresult.has_classes
+    if fitresult.has_class
         @assert(
-            !isnothing(classes),
-            "Classes must be specified if the model was fit with classes."
+            !isnothing(class), "Classes must be specified if the model was fit with class."
         )
     end
 
     params = full_report(m, fitresult; v_with_strings=Val(false))
     prototype = MMI.istable(Xnew) ? Xnew : nothing
-    Xnew_t, variable_names, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
+    Xnew_t, variable_names, _, X_units = get_matrix_and_info(Xnew, m.dimensions_type)
     T = promote_type(eltype(Xnew_t), fitresult.types.T)
 
     if isempty(params.equations) || any(isempty, params.equations)
@@ -430,17 +514,17 @@ function _predict(m::M, fitresult, Xnew, idx, classes) where {M<:AbstractSRRegre
     validate_variable_names(variable_names, fitresult)
     validate_units(X_units_clean, fitresult.X_units)
 
-    idx = idx === nothing ? params.best_idx : idx
+    _idx = something(idx, params.best_idx)
 
     if M <: SRRegressor
         return eval_tree_mlj(
-            params.equations[idx], Xnew_t, classes, m, T, fitresult, nothing, prototype
+            params.equations[_idx], Xnew_t, class, m, T, fitresult, nothing, prototype
         )
     elseif M <: MultitargetSRRegressor
         outs = [
             eval_tree_mlj(
-                params.equations[i][idx[i]], Xnew_t, classes, m, T, fitresult, i, prototype
-            ) for i in eachindex(idx, params.equations)
+                params.equations[i][_idx[i]], Xnew_t, class, m, T, fitresult, i, prototype
+            ) for i in eachindex(_idx, params.equations)
         ]
         out_matrix = reduce(hcat, outs)
         if !fitresult.y_is_table
@@ -452,11 +536,14 @@ function _predict(m::M, fitresult, Xnew, idx, classes) where {M<:AbstractSRRegre
 end
 
 function get_equation_strings_for(::SRRegressor, trees, options, variable_names)
-    return (t -> string_tree(t, options; variable_names=variable_names)).(trees)
+    return (
+        t -> string_tree(t, options; variable_names=variable_names, pretty=false)
+    ).(trees)
 end
 function get_equation_strings_for(::MultitargetSRRegressor, trees, options, variable_names)
     return [
-        (t -> string_tree(t, options; variable_names=variable_names)).(ts) for ts in trees
+        (t -> string_tree(t, options; variable_names=variable_names, pretty=false)).(ts) for
+        ts in trees
     ]
 end
 
@@ -508,7 +595,7 @@ const input_scitype = Union{
 MMI.metadata_model(
     SRRegressor;
     input_scitype,
-    target_scitype=AbstractVector{<:MMI.Continuous},
+    target_scitype=AbstractVector{<:Any},
     supports_weights=true,
     reports_feature_importances=false,
     load_path="SymbolicRegression.MLJInterfaceModule.SRRegressor",
@@ -517,7 +604,7 @@ MMI.metadata_model(
 MMI.metadata_model(
     MultitargetSRRegressor;
     input_scitype,
-    target_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
+    target_scitype=Union{MMI.Table(Any),AbstractMatrix{<:Any}},
     supports_weights=true,
     reports_feature_importances=false,
     load_path="SymbolicRegression.MLJInterfaceModule.MultitargetSRRegressor",
@@ -567,6 +654,9 @@ function tag_with_docstring(model_name::Symbol, description::String, bottom_matt
     - `runtests::Bool=true`: Whether to run (quick) tests before starting the
         search, to see if there will be any problems during the equation search
         related to the host environment.
+    - `run_id::Union{String,Nothing}=nothing`: A unique identifier for the run.
+        This will be used to store outputs from the run in the `outputs` directory.
+        If not specified, a unique ID will be generated.
     - `loss_type::Type=Nothing`: If you would like to use a different type
         for the loss than for the data you passed, specify the type here.
         Note that if you pass complex data `::Complex{L}`, then the loss

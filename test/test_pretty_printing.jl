@@ -63,11 +63,7 @@ end
     .exists[6] = false
     .members[6] = undef
     .exists[7] = false
-    .members[7] = undef
-    .exists[8] = false
-    .members[8] = undef
-    .exists[9] = false
-    .members[9] = undef"
+    .members[7] = undef"
 
     @test s_hof == true_s
 end
@@ -108,4 +104,37 @@ end
 
     s = sprint((io, ex) -> print_tree(io, ex, options), ex)
     @test strip(s) == "sin(x) / (y - y)"
+end
+
+@testitem "printing utilities" tags = [:part2] begin
+    using SymbolicRegression.UtilsModule: split_string
+    using SymbolicRegression.HallOfFameModule: wrap_equation_string
+
+    @test split_string("abc\ndefg", 3) == ["abc", "\nde", "fg"]
+
+    test_equation_string = "cos(x) + 1.5387438743 - y^2"
+    @test wrap_equation_string(test_equation_string, 0, 15) == """cos(x) + 1....
+    5387438743 ...
+    - y^2\n"""
+
+    # Note how we have special treatment of explicit newlines:
+    test_equation_string = "(\nB = ( -0.012549, 0.0086419, 0.6175 )\nF_d = (-0.051546) * v\n)"
+    @test wrap_equation_string(test_equation_string, 4, 1000) == """(
+    B = ( -0.012549, 0.0086419, 0.6175 )
+    F_d = (-0.051546) * v
+    )
+"""
+
+    @test startswith(wrap_equation_string(test_equation_string, 0, 10), "(\n")
+    @test wrap_equation_string(test_equation_string, 0, 12) == """(
+B = ( -0...
+.012549,...
+ 0.00864...
+19, 0.61...
+75 )
+F_d = (-...
+0.051546...
+) * v
+)
+"""
 end

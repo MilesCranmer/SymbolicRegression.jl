@@ -84,18 +84,18 @@ end
     true_params = [0.5 2.0]
     init_params = [0.1 0.2]
     init_constants = [2.5, -0.5]
-    classes = rand(rng, 1:2, 32)
+    class = rand(rng, 1:2, 32)
     y = [
-        X[1, i] * X[1, i] - cos(2.6 * X[2, i] - 0.2) + true_params[1, classes[i]] for
+        X[1, i] * X[1, i] - cos(2.6 * X[2, i] - 0.2) + true_params[1, class[i]] for
         i in 1:32
     ]
 
-    dataset = Dataset(X, y; extra=(; classes))
+    dataset = Dataset(X, y; extra=(; class))
 
     (true_val, (true_d_params, true_d_constants)) =
         value_and_gradient(AutoZygote(), (init_params, init_constants)) do (params, c)
             pred = [
-                X[1, i] * X[1, i] - cos(c[1] * X[2, i] + c[2]) + params[1, classes[i]] for
+                X[1, i] * X[1, i] - cos(c[1] * X[2, i] + c[2]) + params[1, class[i]] for
                 i in 1:32
             ]
             sum(abs2, pred .- y) / length(y)

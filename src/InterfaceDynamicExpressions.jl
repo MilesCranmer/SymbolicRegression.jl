@@ -1,21 +1,20 @@
 module InterfaceDynamicExpressionsModule
 
 using Printf: @sprintf
+using DispatchDoctor: @stable
+using Compat: Fix
 using DynamicExpressions:
     DynamicExpressions as DE,
     OperatorEnum,
     GenericOperatorEnum,
     AbstractExpression,
     AbstractExpressionNode,
-    ParametricExpression,
     Node,
     GraphNode
 using DynamicQuantities: dimension, ustrip
-using ..CoreModule: AbstractOptions
+using ..CoreModule: AbstractOptions, Dataset
 using ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
 using ..UtilsModule: subscriptify
-
-import ..deprecate_varmap
 
 """
     eval_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::AbstractOptions; kws...)
@@ -50,44 +49,38 @@ which speed up evaluation significantly.
     or nan was encountered, and a large loss should be assigned
     to the equation.
 """
-function DE.eval_tree_array(
-    tree::Union{AbstractExpressionNode,AbstractExpression},
-    X::AbstractMatrix,
-    options::AbstractOptions;
-    kws...,
-)
-    A = expected_array_type(X)
-    return DE.eval_tree_array(
-        tree,
-        X,
-        DE.get_operators(tree, options);
-        turbo=options.turbo,
-        bumper=options.bumper,
+@stable(
+    default_mode = "disable",
+    default_union_limit = 2,
+    function DE.eval_tree_array(
+        tree::Union{AbstractExpressionNode,AbstractExpression},
+        X::AbstractMatrix,
+        options::AbstractOptions;
         kws...,
-    )::Tuple{A,Bool}
-end
-function DE.eval_tree_array(
-    tree::ParametricExpression,
-    X::AbstractMatrix,
-    classes::AbstractVector{<:Integer},
-    options::AbstractOptions;
-    kws...,
+    )
+        A = expected_array_type(X, typeof(tree))
+        out, complete = DE.eval_tree_array(
+            tree,
+            X,
+            DE.get_operators(tree, options);
+            turbo=options.turbo,
+            bumper=options.bumper,
+            kws...,
+        )
+        if isnothing(out)
+            return nothing, false
+        else
+            return out::A, complete::Bool
+        end
+    end
 )
-    A = expected_array_type(X)
-    return DE.eval_tree_array(
-        tree,
-        X,
-        classes,
-        DE.get_operators(tree, options);
-        turbo=options.turbo,
-        bumper=options.bumper,
-        kws...,
-    )::Tuple{A,Bool}
-end
 
-# Improve type inference by telling Julia the expected array returned
-function expected_array_type(X::AbstractArray)
+"""Improve type inference by telling Julia the expected array returned."""
+function expected_array_type(X::AbstractArray, ::Type)
     return typeof(similar(X, axes(X, 2)))
+end
+function expected_array_type(X::AbstractArray, ::Type, ::Val{:eval_grad_tree_array})
+    return typeof(X)
 end
 
 """
@@ -116,11 +109,12 @@ function DE.eval_diff_tree_array(
     options::AbstractOptions,
     direction::Int,
 )
-    A = expected_array_type(X)
     # TODO: Add `AbstractExpression` implementation in `Expression.jl`
-    return DE.eval_diff_tree_array(
+    A = expected_array_type(X, typeof(tree))
+    out, grad, complete = DE.eval_diff_tree_array(
         DE.get_tree(tree), X, DE.get_operators(tree, options), direction
-    )::Tuple{A,A,Bool}
+    )
+    return out::A, grad::A, complete::Bool
 end
 
 """
@@ -150,11 +144,12 @@ function DE.eval_grad_tree_array(
     options::AbstractOptions;
     kws...,
 )
-    A = expected_array_type(X)
-    M = typeof(X)  # TODO: This won't work with StaticArrays!
-    return DE.eval_grad_tree_array(
+    A = expected_array_type(X, typeof(tree))
+    dA = expected_array_type(X, typeof(tree), Val(:eval_grad_tree_array))
+    out, grad, complete = DE.eval_grad_tree_array(
         tree, X, DE.get_operators(tree, options); kws...
-    )::Tuple{A,M,Bool}
+    )
+    return out::A, grad::dA, complete::Bool
 end
 
 """
@@ -167,11 +162,12 @@ function DE.differentiable_eval_tree_array(
     X::AbstractArray,
     options::AbstractOptions,
 )
-    A = expected_array_type(X)
     # TODO: Add `AbstractExpression` implementation in `Expression.jl`
-    return DE.differentiable_eval_tree_array(
+    A = expected_array_type(X, typeof(tree))
+    out, complete = DE.differentiable_eval_tree_array(
         DE.get_tree(tree), X, DE.get_operators(tree, options)
-    )::Tuple{A,Bool}
+    )
+    return out::A, complete::Bool
 end
 
 const WILDCARD_UNIT_STRING = "[?]"
@@ -191,38 +187,38 @@ Convert an equation to a string.
 @inline function DE.string_tree(
     tree::Union{AbstractExpression,AbstractExpressionNode},
     options::AbstractOptions;
-    raw::Bool=true,
+    pretty::Bool=false,
     X_sym_units=nothing,
     y_sym_units=nothing,
     variable_names=nothing,
     display_variable_names=variable_names,
-    varMap=nothing,
     kws...,
 )
-    variable_names = deprecate_varmap(variable_names, varMap, :string_tree)
-
-    if raw
+    if !pretty
         tree = tree isa GraphNode ? convert(Node, tree) : tree
         return DE.string_tree(
             tree,
             DE.get_operators(tree, options);
             f_variable=string_variable_raw,
             variable_names,
+            pretty,
         )
     end
 
-    vprecision = vals[options.print_precision]
     if X_sym_units !== nothing || y_sym_units !== nothing
         return DE.string_tree(
             tree,
             DE.get_operators(tree, options);
-            f_variable=(feature, vname) -> string_variable(feature, vname, X_sym_units),
+            f_variable=Fix{3}(string_variable, X_sym_units),
             f_constant=let
                 unit_placeholder =
                     options.dimensionless_constants_only ? "" : WILDCARD_UNIT_STRING
-                (val,) -> string_constant(val, vprecision, unit_placeholder)
+                Fix{2}(
+                    Fix{3}(string_constant, unit_placeholder), options.v_print_precision
+                )
             end,
             variable_names=display_variable_names,
+            pretty,
             kws...,
         )
     else
@@ -230,13 +226,13 @@ Convert an equation to a string.
             tree,
             DE.get_operators(tree, options);
             f_variable=string_variable,
-            f_constant=(val,) -> string_constant(val, vprecision, ""),
+            f_constant=Fix{2}(Fix{3}(string_constant, ""), options.v_print_precision),
             variable_names=display_variable_names,
+            pretty,
             kws...,
         )
     end
 end
-const vals = ntuple(Val, 8192)
 function string_variable_raw(feature, variable_names)
     if variable_names === nothing || feature > length(variable_names)
         return "x" * string(feature)

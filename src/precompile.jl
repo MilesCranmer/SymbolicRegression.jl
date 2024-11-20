@@ -44,6 +44,7 @@ function do_precompilation(::Val{mode}) where {mode}
                     unary_operators=[sin, cos, exp, log, sqrt, abs],
                     populations=3,
                     population_size=start ? 50 : 12,
+                    tournament_selection_n=6,
                     ncycles_per_iteration=start ? 30 : 1,
                     mutation_weights=MutationWeights(;
                         mutate_constant=1.0,

@@ -12,15 +12,17 @@ export Population,
     ParametricNode,
     Expression,
     ParametricExpression,
-    StructuredExpression,
+    TemplateExpression,
+    TemplateStructure,
+    ValidVector,
+    ComposableExpression,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
     EvalOptions,
     SRRegressor,
     MultitargetSRRegressor,
-    LOSS_TYPE,
-    DATA_TYPE,
+    SRLogger,
 
     #Functions:
     equation_search,
@@ -40,7 +42,6 @@ export Population,
     set_node!,
     copy_node,
     node_to_symbolic,
-    node_type,
     symbolic_to_node,
     simplify_tree!,
     tree_mapreduce,
@@ -51,6 +52,8 @@ export Population,
     get_tree,
     get_contents,
     get_metadata,
+    with_contents,
+    with_metadata,
 
     #Operators
     plus,
@@ -85,13 +88,13 @@ using Pkg: Pkg
 using TOML: parsefile
 using Random: seed!, shuffle!
 using Reexport
+using ProgressMeter: finish!
 using DynamicExpressions:
     Node,
     GraphNode,
     ParametricNode,
     Expression,
     ParametricExpression,
-    StructuredExpression,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
@@ -124,7 +127,9 @@ using DynamicExpressions:
     node_type,
     get_tree,
     get_contents,
-    get_metadata
+    get_metadata,
+    with_contents,
+    with_metadata
 using DynamicExpressions: with_type_parameters
 @reexport using LossFunctions:
     MarginLoss,
@@ -153,18 +158,19 @@ using DynamicExpressions: with_type_parameters
     LogitDistLoss,
     QuantileLoss,
     LogCoshLoss
-using Compat: @compat
+using Compat: @compat, Fix
 
-@compat public AbstractOptions,
-AbstractRuntimeOptions,
-RuntimeOptions,
-AbstractMutationWeights,
-mutate!,
-condition_mutation_weights!,
-sample_mutation,
-MutationResult,
-AbstractSearchState,
-SearchState
+#! format: off
+@compat(
+    public,
+    (
+        AbstractOptions, AbstractRuntimeOptions, RuntimeOptions,
+        AbstractMutationWeights, mutate!, condition_mutation_weights!,
+        sample_mutation, MutationResult, AbstractSearchState, SearchState,
+        LOSS_TYPE, DATA_TYPE, node_type,
+    )
+)
+#! format: on
 # ^ We can add new functions here based on requests from users.
 # However, I don't want to add many functions without knowing what
 # users will actually want to overload.
@@ -181,15 +187,6 @@ const PACKAGE_VERSION = try
     end
 catch
     VersionNumber(0, 0, 0)
-end
-
-function deprecate_varmap(variable_names, varMap, func_name)
-    if varMap !== nothing
-        Base.depwarn("`varMap` is deprecated; use `variable_names` instead", func_name)
-        @assert variable_names === nothing "Cannot pass both `varMap` and `variable_names`"
-        variable_names = varMap
-    end
-    return variable_names
 end
 
 using DispatchDoctor: @stable
@@ -216,21 +213,26 @@ using DispatchDoctor: @stable
     include("ProgressBars.jl")
     include("Migration.jl")
     include("SearchUtils.jl")
+    include("Logging.jl")
     include("ExpressionBuilder.jl")
+    include("ComposableExpression.jl")
+    include("TemplateExpression.jl")
+    include("ParametricExpression.jl")
 end
 
 using .CoreModule:
-    MAX_DEGREE,
-    BATCH_DIM,
-    FEATURE_DIM,
     DATA_TYPE,
     LOSS_TYPE,
     RecordType,
     Dataset,
     AbstractOptions,
     Options,
+    ComplexityMapping,
     AbstractMutationWeights,
     MutationWeights,
+    get_safe_op,
+    max_features,
+    is_weighted,
     sample_mutation,
     plus,
     sub,
@@ -255,7 +257,8 @@ using .CoreModule:
     erf,
     erfc,
     atanh_clip,
-    create_expression
+    create_expression,
+    has_units
 using .UtilsModule: is_anonymous_function, recursive_merge, json3_write, @ignore
 using .ComplexityModule: compute_complexity
 using .CheckConstraintsModule: check_constraints
@@ -307,7 +310,12 @@ using .SearchUtilsModule:
     construct_datasets,
     save_to_file,
     get_cur_maxsize,
-    update_hall_of_fame!
+    update_hall_of_fame!,
+    logging_callback!
+using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
+using .TemplateExpressionModule: TemplateExpression, TemplateStructure
+using .TemplateExpressionModule: TemplateExpression, TemplateStructure, ValidVector
+using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
@@ -331,7 +339,7 @@ which is useful for debugging and profiling.
 - `y::Union{AbstractMatrix{T}, AbstractVector{T}}`: The values to predict. The first dimension
     is the output feature to predict with each equation, and the
     second dimension is rows.
-- `niterations::Int=10`: The number of iterations to perform the search.
+- `niterations::Int=100`: The number of iterations to perform the search.
     More iterations will improve the results.
 - `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
     weight the loss for each `y` by this value (same shape as `y`).
@@ -362,7 +370,7 @@ which is useful for debugging and profiling.
     a distributed run manually with `procs = addprocs()` and `@everywhere`,
     pass the `procs` to this keyword argument.
 - `addprocs_function::Union{Function, Nothing}=nothing`: If using multiprocessing
-    (`parallelism=:multithreading`), and are not passing `procs` manually,
+    (`parallelism=:multiprocessing`), and are not passing `procs` manually,
     then they will be allocated dynamically using `addprocs`. However,
     you may also pass a custom function to use instead of `addprocs`.
     This function should take a single positional argument,
@@ -391,6 +399,9 @@ which is useful for debugging and profiling.
     Note that if you pass complex data `::Complex{L}`, then the loss
     type will automatically be set to `L`.
 - `verbosity`: Whether to print debugging statements or not.
+- `logger::Union{AbstractSRLogger,Nothing}=nothing`: An optional logger to record
+    the progress of the search. You can use an `SRLogger` to wrap a custom logger,
+    or pass `nothing` to disable logging.
 - `progress`: Whether to use a progress bar output. Only available for
     single target output.
 - `X_units::Union{AbstractVector,Nothing}=nothing`: The units of the dataset,
@@ -410,8 +421,8 @@ which is useful for debugging and profiling.
 """
 function equation_search(
     X::AbstractMatrix{T},
-    y::AbstractMatrix{T};
-    niterations::Int=10,
+    y::AbstractMatrix;
+    niterations::Int=100,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
     options::AbstractOptions=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
@@ -425,8 +436,10 @@ function equation_search(
     runtests::Bool=true,
     saved_state=nothing,
     return_state::Union{Bool,Nothing,Val}=nothing,
+    run_id::Union{String,Nothing}=nothing,
     loss_type::Type{L}=Nothing,
     verbosity::Union{Integer,Nothing}=nothing,
+    logger::Union{AbstractSRLogger,Nothing}=nothing,
     progress::Union{Bool,Nothing}=nothing,
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
@@ -434,7 +447,6 @@ function equation_search(
     v_dim_out::Val{DIM_OUT}=Val(nothing),
     # Deprecated:
     multithreaded=nothing,
-    varMap=nothing,
 ) where {T<:DATA_TYPE,L,DIM_OUT}
     if multithreaded !== nothing
         error(
@@ -442,7 +454,6 @@ function equation_search(
             "Choose one of :multithreaded, :multiprocessing, or :serial.",
         )
     end
-    variable_names = deprecate_varmap(variable_names, varMap, :equation_search)
 
     if weights !== nothing
         @assert length(weights) == length(y)
@@ -474,24 +485,17 @@ function equation_search(
         runtests=runtests,
         saved_state=saved_state,
         return_state=return_state,
+        run_id=run_id,
         verbosity=verbosity,
+        logger=logger,
         progress=progress,
         v_dim_out=Val(DIM_OUT),
     )
 end
 
 function equation_search(
-    X::AbstractMatrix{T1}, y::AbstractMatrix{T2}; kw...
-) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
-    U = promote_type(T1, T2)
-    return equation_search(
-        convert(AbstractMatrix{U}, X), convert(AbstractMatrix{U}, y); kw...
-    )
-end
-
-function equation_search(
-    X::AbstractMatrix{T1}, y::AbstractVector{T2}; kw...
-) where {T1<:DATA_TYPE,T2<:DATA_TYPE}
+    X::AbstractMatrix{T}, y::AbstractVector; kw...
+) where {T<:DATA_TYPE}
     return equation_search(X, reshape(y, (1, size(y, 1))); kw..., v_dim_out=Val(1))
 end
 
@@ -506,14 +510,19 @@ function equation_search(
     runtime_options::Union{AbstractRuntimeOptions,Nothing}=nothing,
     runtime_options_kws...,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
-    runtime_options = if runtime_options === nothing
-        RuntimeOptions(; options, nout=length(datasets), runtime_options_kws...)
-    else
-        runtime_options
-    end
+    _runtime_options = @something(
+        runtime_options,
+        RuntimeOptions(;
+            options_return_state=options.return_state,
+            options_verbosity=options.verbosity,
+            options_progress=options.progress,
+            nout=length(datasets),
+            runtime_options_kws...,
+        )
+    )
 
     # Underscores here mean that we have mutated the variable
-    return _equation_search(datasets, runtime_options, options, saved_state)
+    return _equation_search(datasets, _runtime_options, options, saved_state)
 end
 
 @noinline function _equation_search(
@@ -525,6 +534,7 @@ end
     _warmup_search!(state, datasets, ropt, options)
     _main_search_loop!(state, datasets, ropt, options)
     _tear_down!(state, ropt, options)
+    _info_dump(state, datasets, ropt, options)
     return _format_output(state, datasets, ropt, options)
 end
 
@@ -708,7 +718,7 @@ function _initialize_search!(
                                 population_size=options.population_size,
                                 nlength=3,
                                 options=options,
-                                nfeatures=datasets[j].nfeatures,
+                                nfeatures=max_features(datasets[j], options),
                             ),
                             HallOfFame(options, datasets[j]),
                             RecordType(),
@@ -777,13 +787,16 @@ function _main_search_loop!(
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
     start_time = time()
-    if ropt.progress
+    progress_bar = if ropt.progress
         #TODO: need to iterate this on the max cycles remaining!
         sum_cycle_remaining = sum(state.cycles_remaining)
-        progress_bar = WrappedProgressBar(
-            1:sum_cycle_remaining; width=options.terminal_width
+        WrappedProgressBar(
+            sum_cycle_remaining, ropt.niterations; barlen=options.terminal_width
         )
+    else
+        nothing
     end
+
     last_print_time = time()
     last_speed_recording_time = time()
     num_evals_last = sum(sum, state.num_evals)
@@ -865,7 +878,7 @@ function _main_search_loop!(
             dominating = calculate_pareto_frontier(state.halls_of_fame[j])
 
             if options.save_to_file
-                save_to_file(dominating, nout, j, dataset, options)
+                save_to_file(dominating, nout, j, dataset, options, ropt)
             end
             ###################################################################
             # Migration #######################################################
@@ -930,7 +943,7 @@ function _main_search_loop!(
                 options, total_cycles, cycles_remaining=state.cycles_remaining[j]
             )
             move_window!(state.all_running_search_statistics[j])
-            if ropt.progress
+            if !isnothing(progress_bar)
                 head_node_occupation = estimate_work_fraction(resource_monitor)
                 update_progress_bar!(
                     progress_bar,
@@ -941,6 +954,9 @@ function _main_search_loop!(
                     head_node_occupation,
                     ropt.parallelism,
                 )
+            end
+            if ropt.logger !== nothing
+                logging_callback!(ropt.logger; state, datasets, ropt, options)
             end
         end
         yield()
@@ -1000,6 +1016,9 @@ function _main_search_loop!(
         end
         ################################################################
     end
+    if !isnothing(progress_bar)
+        finish!(progress_bar)
+    end
     return nothing
 end
 function _tear_down!(
@@ -1028,13 +1047,10 @@ function _format_output(
     out_hof = if ropt.dim_out == 1
         embed_metadata(only(state.halls_of_fame), options, only(datasets))
     else
-        map(j -> embed_metadata(state.halls_of_fame[j], options, datasets[j]), 1:nout)
+        map(Fix{2}(embed_metadata, options), state.halls_of_fame, datasets)
     end
     if ropt.return_state
-        return (
-            map(j -> embed_metadata(state.last_pops[j], options, datasets[j]), 1:nout),
-            out_hof,
-        )
+        return (map(Fix{2}(embed_metadata, options), state.last_pops, datasets), out_hof)
     else
         return out_hof
     end
@@ -1073,7 +1089,7 @@ end
     )
     num_evals += evals_from_optimize
     if options.batching
-        for i_member in 1:(options.maxsize + MAX_DEGREE)
+        for i_member in 1:(options.maxsize)
             score, result_loss = score_func(dataset, best_seen.members[i_member], options)
             best_seen.members[i_member].score = score
             best_seen.members[i_member].loss = result_loss
@@ -1081,6 +1097,50 @@ end
         end
     end
     return (out_pop, best_seen, record, num_evals)
+end
+function _info_dump(
+    state::AbstractSearchState,
+    datasets::Vector{D},
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+) where {D<:Dataset}
+    ropt.verbosity <= 0 && return nothing
+
+    nout = length(state.halls_of_fame)
+    if nout > 1
+        @info "Final populations:"
+    else
+        @info "Final population:"
+    end
+    for (j, (hall_of_fame, dataset)) in enumerate(zip(state.halls_of_fame, datasets))
+        if nout > 1
+            @info "Output $j:"
+        end
+        equation_strings = string_dominating_pareto_curve(
+            hall_of_fame,
+            dataset,
+            options;
+            width=@something(
+                options.terminal_width,
+                ropt.progress ? displaysize(stdout)[2] : nothing,
+                Some(nothing)
+            )
+        )
+        println(equation_strings)
+    end
+
+    if options.save_to_file
+        output_directory = joinpath(
+            something(options.output_directory, "outputs"), ropt.run_id
+        )
+        @info "Results saved to:"
+        for j in 1:nout
+            filename = nout > 1 ? "hall_of_fame_output$(j).csv" : "hall_of_fame.csv"
+            output_file = joinpath(output_directory, filename)
+            println("  - ", output_file)
+        end
+    end
+    return nothing
 end
 
 include("MLJInterface.jl")

@@ -113,13 +113,16 @@ function ComplexityMapping(
     )
 end
 
-# Controls level of specialization we compile
-function operator_specialization end
-if VERSION >= v"1.10.0-DEV.0"
-    @eval operator_specialization(::Type{<:OperatorEnum}) = OperatorEnum
-else
-    @eval operator_specialization(O::Type{<:OperatorEnum}) = O
-end
+"""
+Controls level of specialization we compile into `Options`.
+
+Overload if needed for custom expression types.
+"""
+operator_specialization(
+    ::Type{O}, ::Type{<:AbstractExpression}
+) where {O<:AbstractOperatorEnum} = O
+@unstable operator_specialization(::Type{<:OperatorEnum}, ::Type{<:AbstractExpression}) =
+    OperatorEnum
 
 """
     AbstractOptions
@@ -175,7 +178,7 @@ all properties of `Options` available for internal methods in SymbolicRegression
 abstract type AbstractOptions end
 
 struct Options{
-    CM<:ComplexityMapping,
+    CM<:Union{ComplexityMapping,Function},
     OP<:AbstractOperatorEnum,
     N<:AbstractExpressionNode,
     E<:AbstractExpression,
@@ -185,6 +188,7 @@ struct Options{
     _bumper,
     _return_state,
     AD,
+    print_precision,
 } <: AbstractOptions
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
@@ -204,7 +208,7 @@ struct Options{
     hof_migration::Bool
     should_simplify::Bool
     should_optimize_constants::Bool
-    output_file::String
+    output_directory::Union{String,Nothing}
     populations::Int
     perturbation_factor::Float32
     annealing::Bool
@@ -222,7 +226,7 @@ struct Options{
     fraction_replaced_hof::Float32
     topn::Int
     verbosity::Union{Int,Nothing}
-    print_precision::Int
+    v_print_precision::Val{print_precision}
     save_to_file::Bool
     probability_negate_constant::Float32
     nuna::Int
@@ -253,7 +257,7 @@ struct Options{
     use_recorder::Bool
 end
 
-function Base.print(io::IO, options::Options)
+function Base.print(io::IO, @nospecialize(options::Options))
     return print(
         io,
         "Options(" *
@@ -275,21 +279,22 @@ function Base.print(io::IO, options::Options)
         ")",
     )
 end
-Base.show(io::IO, ::MIME"text/plain", options::Options) = Base.print(io, options)
+function Base.show(io::IO, ::MIME"text/plain", @nospecialize(options::Options))
+    return Base.print(io, options)
+end
 
 specialized_options(options::AbstractOptions) = options
 @unstable function specialized_options(options::Options)
-    return _specialized_options(options)
+    return _specialized_options(options, options.operators)
 end
-@generated function _specialized_options(options::O) where {O<:Options}
+@generated function _specialized_options(
+    options::O, operators::OP
+) where {O<:Options,OP<:AbstractOperatorEnum}
     # Return an options struct with concrete operators
     type_parameters = O.parameters
     fields = Any[:(getfield(options, $(QuoteNode(k)))) for k in fieldnames(O)]
     quote
-        operators = getfield(options, :operators)
-        Options{$(type_parameters[1]),typeof(operators),$(type_parameters[3:end]...)}(
-            $(fields...)
-        )
+        Options{$(type_parameters[1]),$(OP),$(type_parameters[3:end]...)}($(fields...))
     end
 end
 

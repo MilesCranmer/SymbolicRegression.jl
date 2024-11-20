@@ -1,6 +1,5 @@
-using SymbolicRegression
-using SymbolicRegression: string_tree
-using Random, Bumper, LoopVectorization
+using SymbolicRegression, Random, Bumper, LoopVectorization
+using SymbolicRegression: string_tree, node_type
 
 include("test_params.jl")
 

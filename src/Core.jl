@@ -10,12 +10,17 @@ include("OptionsStruct.jl")
 include("Operators.jl")
 include("Options.jl")
 
-using .ProgramConstantsModule:
-    MAX_DEGREE, BATCH_DIM, FEATURE_DIM, RecordType, DATA_TYPE, LOSS_TYPE
-using .DatasetModule: Dataset
+using .ProgramConstantsModule: RecordType, DATA_TYPE, LOSS_TYPE
+using .DatasetModule: Dataset, is_weighted, has_units, max_features
 using .MutationWeightsModule: AbstractMutationWeights, MutationWeights, sample_mutation
-using .OptionsStructModule: AbstractOptions, Options, ComplexityMapping, specialized_options
+using .OptionsStructModule:
+    AbstractOptions,
+    Options,
+    ComplexityMapping,
+    specialized_options,
+    operator_specialization
 using .OperatorsModule:
+    get_safe_op,
     plus,
     sub,
     mult,

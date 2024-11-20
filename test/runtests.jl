@@ -77,9 +77,7 @@ end
     include("test_nested_constraints.jl")
 end
 
-@testitem "Test complexity evaluation" tags = [:part3] begin
-    include("test_complexity.jl")
-end
+include("test_complexity.jl")
 
 @testitem "Test options" tags = [:part1] begin
     include("test_options.jl")
@@ -110,11 +108,7 @@ end
 end
 
 include("test_units.jl")
-
-@testitem "Dataset" tags = [:part3] begin
-    include("test_dataset.jl")
-end
-
+include("test_dataset.jl")
 include("test_mixed.jl")
 
 @testitem "Testing fast-cycle and custom variable names" tags = [:part2] begin
@@ -166,8 +160,10 @@ end
     include("test_abstract_numbers.jl")
 end
 
+include("test_logging.jl")
 include("test_pretty_printing.jl")
 include("test_expression_builder.jl")
+include("test_composable_expression.jl")
 
 @testitem "Aqua tests" tags = [:part2, :aqua] begin
     include("test_aqua.jl")
