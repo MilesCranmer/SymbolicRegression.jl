@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Home · SymbolicRegression.jl</title><script data-outdated-warner src="assets/warner.js"></script><link rel="canonical" href="https://ai.damtp.cam.ac.uk/symbolicregression/stable/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="index_base/"><img src="assets/logo.svg" alt="SymbolicRegression.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="index_base/">SymbolicRegression.jl</a></span></div><form class="docs-search" action="search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="index_base/">Contents</a></li><li class="is-active"><a class="tocitem" href>Home</a><ul class="internal"><li><a class="tocitem" href="#Quickstart"><span>Quickstart</span></a></li><li><a class="tocitem" href="#Constructing-expressions"><span>Constructing expressions</span></a></li><li><a class="tocitem" href="#Exporting-to-SymbolicUtils.jl"><span>Exporting to SymbolicUtils.jl</span></a></li><li><a class="tocitem" href="#Contributors"><span>Contributors ✨</span></a></li><li><a class="tocitem" href="#Code-structure"><span>Code structure</span></a></li><li><a class="tocitem" href="#Search-options"><span>Search options</span></a></li><li class="toplevel"><a class="tocitem" href="#Contents"><span>Contents</span></a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="examples/">Short Examples</a></li><li><a class="tocitem" href="examples/template_expression/">Template Expressions</a></li><li><a class="tocitem" href="examples/parameterized_function/">Parameterized Expressions</a></li></ul></li><li><a class="tocitem" href="api/">API</a></li><li><a class="tocitem" href="losses/">Losses</a></li><li><a class="tocitem" href="types/">Types</a></li><li><a class="tocitem" href="customization/">Customization</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Home</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Home</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/MilesCranmer/SymbolicRegression.jl/blob/master/docs/src/index.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true });
+</script><p>SymbolicRegression.jl searches for symbolic expressions which optimize a particular objective.</p><div align="center">
+<video width="800" height="600" controls>
+<source src="https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0" type="video/mp4">
+</video>
+</div><table><tr><th style="text-align: center">Latest release</th><th style="text-align: center">Documentation</th><th style="text-align: center">Forums</th><th style="text-align: center">Paper</th></tr><tr><td style="text-align: center"><a href="https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS"><img src="https://juliahub.com/docs/SymbolicRegression/version.svg" alt="version"/></a></td><td style="text-align: center"><a href="https://ai.damtp.cam.ac.uk/symbolicregression/dev/"><img src="https://img.shields.io/badge/docs-dev-blue.svg" alt="Dev"/></a></td><td style="text-align: center"><a href="https://github.com/MilesCranmer/PySR/discussions"><img src="https://img.shields.io/badge/discussions-github-informational" alt="Discussions"/></a></td><td style="text-align: center"><a href="https://arxiv.org/abs/2305.01582"><img src="https://img.shields.io/badge/arXiv-2305.01582-b31b1b" alt="Paper"/></a></td></tr></table><table><tr><th style="text-align: center">Build status</th><th style="text-align: center">Coverage</th></tr><tr><td style="text-align: center"><a href=".github/workflows/CI.yml"><img src="https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/CI/badge.svg" alt="CI"/></a></td><td style="text-align: center"><a href="https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master"><img src="https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master" alt="Coverage Status"/></a></td></tr></table><p>Check out <a href="https://github.com/MilesCranmer/PySR">PySR</a> for a Python frontend. <a href="https://arxiv.org/abs/2305.01582">Cite this software</a></p><p><strong>Contents</strong>:</p><ul><li><a href="#quickstart">Quickstart</a><ul><li><a href="#mlj-interface">MLJ Interface</a></li><li><a href="#low-level-interface">Low-Level Interface</a></li></ul></li><li><a href="#constructing-expressions">Constructing expressions</a></li><li><a href="#exporting-to-symbolicutilsjl">Exporting to SymbolicUtils.jl</a></li><li><a href="#contributors-">Contributors ✨</a></li><li><a href="#code-structure">Code structure</a></li><li><a href="#search-options">Search options</a></li></ul><h2 id="Quickstart"><a class="docs-heading-anchor" href="#Quickstart">Quickstart</a><a id="Quickstart-1"></a><a class="docs-heading-anchor-permalink" href="#Quickstart" title="Permalink"></a></h2><p>Install in Julia with:</p><pre><code class="language-julia hljs">using Pkg
+Pkg.add(&quot;SymbolicRegression&quot;)</code></pre><h3 id="MLJ-Interface"><a class="docs-heading-anchor" href="#MLJ-Interface">MLJ Interface</a><a id="MLJ-Interface-1"></a><a class="docs-heading-anchor-permalink" href="#MLJ-Interface" title="Permalink"></a></h3><p>The easiest way to use SymbolicRegression.jl is with <a href="https://github.com/alan-turing-institute/MLJ.jl">MLJ</a>. Let&#39;s see an example:</p><pre><code class="language-julia hljs">import SymbolicRegression: SRRegressor
+import MLJ: machine, fit!, predict, report
+
+# Dataset with two named features:
+X = (a = rand(500), b = rand(500))
+
+# and one target:
+y = @. 2 * cos(X.a * 23.5) - X.b ^ 2
+
+# with some noise:
+y = y .+ randn(500) .* 1e-3
+
+model = SRRegressor(
+    niterations=50,
+    binary_operators=[+, -, *],
+    unary_operators=[cos],
+)</code></pre><p>Now, let&#39;s create and train this model on our data:</p><pre><code class="language-julia hljs">mach = machine(model, X, y)
+
+fit!(mach)</code></pre><p>You will notice that expressions are printed using the column names of our table. If, instead of a table-like object, a simple array is passed (e.g., <code>X=randn(100, 2)</code>), <code>x1, ..., xn</code> will be used for variable names.</p><p>Let&#39;s look at the expressions discovered:</p><pre><code class="language-julia hljs">report(mach)</code></pre><p>Finally, we can make predictions with the expressions on new data:</p><pre><code class="language-julia hljs">predict(mach, X)</code></pre><p>This will make predictions using the expression selected by <code>model.selection_method</code>, which by default is a mix of accuracy and complexity.</p><p>You can override this selection and select an equation from the Pareto front manually with:</p><pre><code class="language-julia hljs">predict(mach, (data=X, idx=2))</code></pre><p>where here we choose to evaluate the second equation.</p><p>For fitting multiple outputs, one can use <code>MultitargetSRRegressor</code> (and pass an array of indices to <code>idx</code> in <code>predict</code> for selecting specific equations). For a full list of options available to each regressor, see the <a href="https://ai.damtp.cam.ac.uk/symbolicregression/dev/api/">API page</a>.</p><h3 id="Low-Level-Interface"><a class="docs-heading-anchor" href="#Low-Level-Interface">Low-Level Interface</a><a id="Low-Level-Interface-1"></a><a class="docs-heading-anchor-permalink" href="#Low-Level-Interface" title="Permalink"></a></h3><p>The heart of SymbolicRegression.jl is the <code>equation_search</code> function. This takes a 2D array and attempts to model a 1D array using analytic functional forms. <strong>Note:</strong> unlike the MLJ interface, this assumes column-major input of shape [features, rows].</p><pre><code class="language-julia hljs">import SymbolicRegression: Options, equation_search
+
+X = randn(2, 100)
+y = 2 * cos.(X[2, :]) + X[1, :] .^ 2 .- 2
+
+options = Options(
+    binary_operators=[+, *, /, -],
+    unary_operators=[cos, exp],
+    populations=20
+)
+
+hall_of_fame = equation_search(
+    X, y, niterations=40, options=options,
+    parallelism=:multithreading
+)</code></pre><p>You can view the resultant equations in the dominating Pareto front (best expression seen at each complexity) with:</p><pre><code class="language-julia hljs">import SymbolicRegression: calculate_pareto_frontier
+
+dominating = calculate_pareto_frontier(hall_of_fame)</code></pre><p>This is a vector of <code>PopMember</code> type - which contains the expression along with the score. We can get the expressions with:</p><pre><code class="language-julia hljs">trees = [member.tree for member in dominating]</code></pre><p>Each of these equations is an <code>Expression{T}</code> type for some constant type <code>T</code> (like <code>Float32</code>).</p><p>These expression objects are callable – you can simply pass in data:</p><pre><code class="language-julia hljs">tree = trees[end]
+output = tree(X)</code></pre><h2 id="Constructing-expressions"><a class="docs-heading-anchor" href="#Constructing-expressions">Constructing expressions</a><a id="Constructing-expressions-1"></a><a class="docs-heading-anchor-permalink" href="#Constructing-expressions" title="Permalink"></a></h2><p>Expressions are represented under-the-hood as the <code>Node</code> type which is developed in the <a href="https://github.com/SymbolicML/DynamicExpressions.jl/">DynamicExpressions.jl</a> package. The <code>Expression</code> type wraps this and includes metadata about operators and variable names.</p><p>You can manipulate and construct expressions directly. For example:</p><pre><code class="language-julia hljs">using SymbolicRegression: Options, Expression, Node
+
+options = Options(;
+    binary_operators=[+, -, *, /], unary_operators=[cos, exp, sin]
+)
+operators = options.operators
+variable_names = [&quot;x1&quot;, &quot;x2&quot;, &quot;x3&quot;]
+x1, x2, x3 = [Expression(Node(Float64; feature=i); operators, variable_names) for i=1:3]
+
+tree = cos(x1 - 3.2 * x2) - x1 * x1</code></pre><p>This tree has <code>Float64</code> constants, so the type of the entire tree will be promoted to <code>Node{Float64}</code>.</p><p>We can convert all constants (recursively) to <code>Float32</code>:</p><pre><code class="language-julia hljs">float32_tree = convert(Expression{Float32}, tree)</code></pre><p>We can then evaluate this tree on a dataset:</p><pre><code class="language-julia hljs">X = rand(Float32, 3, 100)
+
+tree(X)</code></pre><p>This callable format is the easy-to-use version which will automatically set all values to NaN if there were any Inf or NaN during evaluation. You can call the raw evaluation method with <code>eval_tree_array</code>:</p><pre><code class="language-julia hljs">output, did_succeed = eval_tree_array(tree, X)</code></pre><p>where <code>did_succeed</code> explicitly declares whether the evaluation was successful.</p><h2 id="Exporting-to-SymbolicUtils.jl"><a class="docs-heading-anchor" href="#Exporting-to-SymbolicUtils.jl">Exporting to SymbolicUtils.jl</a><a id="Exporting-to-SymbolicUtils.jl-1"></a><a class="docs-heading-anchor-permalink" href="#Exporting-to-SymbolicUtils.jl" title="Permalink"></a></h2><p>We can view the equations in the dominating Pareto frontier with:</p><pre><code class="language-julia hljs">dominating = calculate_pareto_frontier(hall_of_fame)</code></pre><p>We can convert the best equation to <a href="https://github.com/JuliaSymbolics/SymbolicUtils.jl">SymbolicUtils.jl</a> with the following function:</p><pre><code class="language-julia hljs">import SymbolicRegression: node_to_symbolic
+
+eqn = node_to_symbolic(dominating[end].tree)
+println(simplify(eqn*5 + 3))</code></pre><p>We can also print out the full pareto frontier like so:</p><pre><code class="language-julia hljs">import SymbolicRegression: compute_complexity, string_tree
+
+println(&quot;Complexity\tMSE\tEquation&quot;)
+
+for member in dominating
+    complexity = compute_complexity(member, options)
+    loss = member.loss
+    string = string_tree(member.tree, options)
+
+    println(&quot;$(complexity)\t$(loss)\t$(string)&quot;)
+end</code></pre><h2 id="Contributors"><a class="docs-heading-anchor" href="#Contributors">Contributors ✨</a><a id="Contributors-1"></a><a class="docs-heading-anchor-permalink" href="#Contributors" title="Permalink"></a></h2><p>We are eager to welcome new contributors! If you have an idea for a new feature, don&#39;t hesitate to share it on the <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues">issues</a> page or <a href="https://github.com/MilesCranmer/PySR/discussions">forums</a>.</p><table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="12.5%"><a href="https://www.linkedin.com/in/markkittisopikul/"><img src="https://avatars.githubusercontent.com/u/8062771?v=4?s=50" width="50px;" alt="Mark Kittisopikul"/><br /><sub><b>Mark Kittisopikul</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=mkitti" title="Code">💻</a> <a href="#ideas-mkitti" title="Ideas, planning, and feedback.">💡</a> <a href="#infra-mkitti" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#platform-mkitti" title="Packaging/porting to new platform">📦</a> <a href="#promotion-mkitti" title="Promotion">📣</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3Amkitti" title="Reviewed Pull Requests">👀</a> <a href="#tool-mkitti" title="Tools">🔧</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=mkitti" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/tttc3"><img src="https://avatars.githubusercontent.com/u/97948946?v=4?s=50" width="50px;" alt="T Coxon"/><br /><sub><b>T Coxon</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3Atttc3" title="Bug reports">🐛</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=tttc3" title="Code">💻</a> <a href="#plugin-tttc3" title="Plugin/utility libraries">🔌</a> <a href="#ideas-tttc3" title="Ideas, planning, and feedback.">💡</a> <a href="#infra-tttc3" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#maintenance-tttc3" title="Maintenance">🚧</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3Atttc3" title="Reviewed Pull Requests">👀</a> <a href="#tool-tttc3" title="Tools">🔧</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=tttc3" title="Tests">⚠️</a> <a href="#userTesting-tttc3" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/DhananjayAshok"><img src="https://avatars.githubusercontent.com/u/46792537?v=4?s=50" width="50px;" alt="Dhananjay Ashok"/><br /><sub><b>Dhananjay Ashok</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=DhananjayAshok" title="Code">💻</a> <a href="#example-DhananjayAshok" title="Examples.">🌍</a> <a href="#ideas-DhananjayAshok" title="Ideas, planning, and feedback.">💡</a> <a href="#maintenance-DhananjayAshok" title="Maintenance">🚧</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=DhananjayAshok" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://gitlab.com/johanbluecreek"><img src="https://avatars.githubusercontent.com/u/852554?v=4?s=50" width="50px;" alt="Johan Blåbäck"/><br /><sub><b>Johan Blåbäck</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3Ajohanbluecreek" title="Bug reports">🐛</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=johanbluecreek" title="Code">💻</a> <a href="#ideas-johanbluecreek" title="Ideas, planning, and feedback.">💡</a> <a href="#maintenance-johanbluecreek" title="Maintenance">🚧</a> <a href="#promotion-johanbluecreek" title="Promotion">📣</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3Ajohanbluecreek" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=johanbluecreek" title="Tests">⚠️</a> <a href="#userTesting-johanbluecreek" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://mathopt.de/people/martensen/index.php"><img src="https://avatars.githubusercontent.com/u/20998300?v=4?s=50" width="50px;" alt="JuliusMartensen"/><br /><sub><b>JuliusMartensen</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3AAlCap23" title="Bug reports">🐛</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=AlCap23" title="Code">💻</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=AlCap23" title="Documentation">📖</a> <a href="#plugin-AlCap23" title="Plugin/utility libraries">🔌</a> <a href="#ideas-AlCap23" title="Ideas, planning, and feedback.">💡</a> <a href="#infra-AlCap23" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#maintenance-AlCap23" title="Maintenance">🚧</a> <a href="#platform-AlCap23" title="Packaging/porting to new platform">📦</a> <a href="#promotion-AlCap23" title="Promotion">📣</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3AAlCap23" title="Reviewed Pull Requests">👀</a> <a href="#tool-AlCap23" title="Tools">🔧</a> <a href="#userTesting-AlCap23" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/ngam"><img src="https://avatars.githubusercontent.com/u/67342040?v=4?s=50" width="50px;" alt="ngam"/><br /><sub><b>ngam</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=ngam" title="Code">💻</a> <a href="#infra-ngam" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#platform-ngam" title="Packaging/porting to new platform">📦</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3Angam" title="Reviewed Pull Requests">👀</a> <a href="#tool-ngam" title="Tools">🔧</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=ngam" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/kazewong"><img src="https://avatars.githubusercontent.com/u/8803931?v=4?s=50" width="50px;" alt="Kaze Wong"/><br /><sub><b>Kaze Wong</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3Akazewong" title="Bug reports">🐛</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=kazewong" title="Code">💻</a> <a href="#ideas-kazewong" title="Ideas, planning, and feedback.">💡</a> <a href="#infra-kazewong" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#maintenance-kazewong" title="Maintenance">🚧</a> <a href="#promotion-kazewong" title="Promotion">📣</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3Akazewong" title="Reviewed Pull Requests">👀</a> <a href="#research-kazewong" title="Research">🔬</a> <a href="#userTesting-kazewong" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/ChrisRackauckas"><img src="https://avatars.githubusercontent.com/u/1814174?v=4?s=50" width="50px;" alt="Christopher Rackauckas"/><br /><sub><b>Christopher Rackauckas</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3AChrisRackauckas" title="Bug reports">🐛</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=ChrisRackauckas" title="Code">💻</a> <a href="#plugin-ChrisRackauckas" title="Plugin/utility libraries">🔌</a> <a href="#ideas-ChrisRackauckas" title="Ideas, planning, and feedback.">💡</a> <a href="#infra-ChrisRackauckas" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#promotion-ChrisRackauckas" title="Promotion">📣</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3AChrisRackauckas" title="Reviewed Pull Requests">👀</a> <a href="#research-ChrisRackauckas" title="Research">🔬</a> <a href="#tool-ChrisRackauckas" title="Tools">🔧</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=ChrisRackauckas" title="Tests">⚠️</a> <a href="#userTesting-ChrisRackauckas" title="User Testing">📓</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="12.5%"><a href="https://kidger.site/"><img src="https://avatars.githubusercontent.com/u/33688385?v=4?s=50" width="50px;" alt="Patrick Kidger"/><br /><sub><b>Patrick Kidger</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3Apatrick-kidger" title="Bug reports">🐛</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=patrick-kidger" title="Code">💻</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=patrick-kidger" title="Documentation">📖</a> <a href="#plugin-patrick-kidger" title="Plugin/utility libraries">🔌</a> <a href="#ideas-patrick-kidger" title="Ideas, planning, and feedback.">💡</a> <a href="#maintenance-patrick-kidger" title="Maintenance">🚧</a> <a href="#promotion-patrick-kidger" title="Promotion">📣</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3Apatrick-kidger" title="Reviewed Pull Requests">👀</a> <a href="#research-patrick-kidger" title="Research">🔬</a> <a href="#tool-patrick-kidger" title="Tools">🔧</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=patrick-kidger" title="Tests">⚠️</a> <a href="#userTesting-patrick-kidger" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/OkonSamuel"><img src="https://avatars.githubusercontent.com/u/39421418?v=4?s=50" width="50px;" alt="Okon Samuel"/><br /><sub><b>Okon Samuel</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3AOkonSamuel" title="Bug reports">🐛</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=OkonSamuel" title="Code">💻</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=OkonSamuel" title="Documentation">📖</a> <a href="#maintenance-OkonSamuel" title="Maintenance">🚧</a> <a href="#ideas-OkonSamuel" title="Ideas, planning, and feedback.">💡</a> <a href="#infra-OkonSamuel" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3AOkonSamuel" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=OkonSamuel" title="Tests">⚠️</a> <a href="#userTesting-OkonSamuel" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/w2ll2am"><img src="https://avatars.githubusercontent.com/u/16038228?v=4?s=50" width="50px;" alt="William Booth-Clibborn"/><br /><sub><b>William Booth-Clibborn</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=w2ll2am" title="Code">💻</a> <a href="#example-w2ll2am" title="Examples.">🌍</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=w2ll2am" title="Documentation">📖</a> <a href="#userTesting-w2ll2am" title="User Testing">📓</a> <a href="#maintenance-w2ll2am" title="Maintenance">🚧</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3Aw2ll2am" title="Reviewed Pull Requests">👀</a> <a href="#tool-w2ll2am" title="Tools">🔧</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=w2ll2am" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://pablo-lemos.github.io/"><img src="https://avatars.githubusercontent.com/u/38078898?v=4?s=50" width="50px;" alt="Pablo Lemos"/><br /><sub><b>Pablo Lemos</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3APablo-Lemos" title="Bug reports">🐛</a> <a href="#ideas-Pablo-Lemos" title="Ideas, planning, and feedback.">💡</a> <a href="#promotion-Pablo-Lemos" title="Promotion">📣</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3APablo-Lemos" title="Reviewed Pull Requests">👀</a> <a href="#research-Pablo-Lemos" title="Research">🔬</a> <a href="#userTesting-Pablo-Lemos" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/Moelf"><img src="https://avatars.githubusercontent.com/u/5306213?v=4?s=50" width="50px;" alt="Jerry Ling"/><br /><sub><b>Jerry Ling</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3AMoelf" title="Bug reports">🐛</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=Moelf" title="Code">💻</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=Moelf" title="Documentation">📖</a> <a href="#example-Moelf" title="Examples.">🌍</a> <a href="#ideas-Moelf" title="Ideas, planning, and feedback.">💡</a> <a href="#promotion-Moelf" title="Promotion">📣</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3AMoelf" title="Reviewed Pull Requests">👀</a> <a href="#userTesting-Moelf" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/CharFox1"><img src="https://avatars.githubusercontent.com/u/35052672?v=4?s=50" width="50px;" alt="Charles Fox"/><br /><sub><b>Charles Fox</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3ACharFox1" title="Bug reports">🐛</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=CharFox1" title="Code">💻</a> <a href="#ideas-CharFox1" title="Ideas, planning, and feedback.">💡</a> <a href="#maintenance-CharFox1" title="Maintenance">🚧</a> <a href="#promotion-CharFox1" title="Promotion">📣</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3ACharFox1" title="Reviewed Pull Requests">👀</a> <a href="#research-CharFox1" title="Research">🔬</a> <a href="#userTesting-CharFox1" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/johannbrehmer"><img src="https://avatars.githubusercontent.com/u/17068560?v=4?s=50" width="50px;" alt="Johann Brehmer"/><br /><sub><b>Johann Brehmer</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=johannbrehmer" title="Code">💻</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=johannbrehmer" title="Documentation">📖</a> <a href="#ideas-johannbrehmer" title="Ideas, planning, and feedback.">💡</a> <a href="#promotion-johannbrehmer" title="Promotion">📣</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3Ajohannbrehmer" title="Reviewed Pull Requests">👀</a> <a href="#research-johannbrehmer" title="Research">🔬</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=johannbrehmer" title="Tests">⚠️</a> <a href="#userTesting-johannbrehmer" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://www.cosmicmar.com/"><img src="https://avatars.githubusercontent.com/u/1510968?v=4?s=50" width="50px;" alt="Marius Millea"/><br /><sub><b>Marius Millea</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=marius311" title="Code">💻</a> <a href="#ideas-marius311" title="Ideas, planning, and feedback.">💡</a> <a href="#promotion-marius311" title="Promotion">📣</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3Amarius311" title="Reviewed Pull Requests">👀</a> <a href="#userTesting-marius311" title="User Testing">📓</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="12.5%"><a href="https://gitlab.com/cobac"><img src="https://avatars.githubusercontent.com/u/27872944?v=4?s=50" width="50px;" alt="Coba"/><br /><sub><b>Coba</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3Acobac" title="Bug reports">🐛</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=cobac" title="Code">💻</a> <a href="#ideas-cobac" title="Ideas, planning, and feedback.">💡</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3Acobac" title="Reviewed Pull Requests">👀</a> <a href="#userTesting-cobac" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/pitmonticone"><img src="https://avatars.githubusercontent.com/u/38562595?v=4?s=50" width="50px;" alt="Pietro Monticone"/><br /><sub><b>Pietro Monticone</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3Apitmonticone" title="Bug reports">🐛</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=pitmonticone" title="Documentation">📖</a> <a href="#ideas-pitmonticone" title="Ideas, planning, and feedback.">💡</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/sheevy"><img src="https://avatars.githubusercontent.com/u/1525683?v=4?s=50" width="50px;" alt="Mateusz Kubica"/><br /><sub><b>Mateusz Kubica</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=sheevy" title="Documentation">📖</a> <a href="#ideas-sheevy" title="Ideas, planning, and feedback.">💡</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://jaywadekar.github.io/"><img src="https://avatars.githubusercontent.com/u/5493388?v=4?s=50" width="50px;" alt="Jay Wadekar"/><br /><sub><b>Jay Wadekar</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3AJayWadekar" title="Bug reports">🐛</a> <a href="#ideas-JayWadekar" title="Ideas, planning, and feedback.">💡</a> <a href="#promotion-JayWadekar" title="Promotion">📣</a> <a href="#research-JayWadekar" title="Research">🔬</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/ablaom"><img src="https://avatars.githubusercontent.com/u/30517088?v=4?s=50" width="50px;" alt="Anthony Blaom, PhD"/><br /><sub><b>Anthony Blaom, PhD</b></sub></a><br /><a href="#infra-ablaom" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#ideas-ablaom" title="Ideas, planning, and feedback.">💡</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3Aablaom" title="Reviewed Pull Requests">👀</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/Jgmedina95"><img src="https://avatars.githubusercontent.com/u/97254349?v=4?s=50" width="50px;" alt="Jgmedina95"/><br /><sub><b>Jgmedina95</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3AJgmedina95" title="Bug reports">🐛</a> <a href="#ideas-Jgmedina95" title="Ideas, planning, and feedback.">💡</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3AJgmedina95" title="Reviewed Pull Requests">👀</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/mcabbott"><img src="https://avatars.githubusercontent.com/u/32575566?v=4?s=50" width="50px;" alt="Michael Abbott"/><br /><sub><b>Michael Abbott</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=mcabbott" title="Code">💻</a> <a href="#ideas-mcabbott" title="Ideas, planning, and feedback.">💡</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3Amcabbott" title="Reviewed Pull Requests">👀</a> <a href="#tool-mcabbott" title="Tools">🔧</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/oscardssmith"><img src="https://avatars.githubusercontent.com/u/11729272?v=4?s=50" width="50px;" alt="Oscar Smith"/><br /><sub><b>Oscar Smith</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=oscardssmith" title="Code">💻</a> <a href="#ideas-oscardssmith" title="Ideas, planning, and feedback.">💡</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="12.5%"><a href="https://ericphanson.com/"><img src="https://avatars.githubusercontent.com/u/5846501?v=4?s=50" width="50px;" alt="Eric Hanson"/><br /><sub><b>Eric Hanson</b></sub></a><br /><a href="#ideas-ericphanson" title="Ideas, planning, and feedback.">💡</a> <a href="#promotion-ericphanson" title="Promotion">📣</a> <a href="#userTesting-ericphanson" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/henriquebecker91"><img src="https://avatars.githubusercontent.com/u/14113435?v=4?s=50" width="50px;" alt="Henrique Becker"/><br /><sub><b>Henrique Becker</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=henriquebecker91" title="Code">💻</a> <a href="#ideas-henriquebecker91" title="Ideas, planning, and feedback.">💡</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/pulls?q=is%3Apr+reviewed-by%3Ahenriquebecker91" title="Reviewed Pull Requests">👀</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/qwertyjl"><img src="https://avatars.githubusercontent.com/u/110912592?v=4?s=50" width="50px;" alt="qwertyjl"/><br /><sub><b>qwertyjl</b></sub></a><br /><a href="https://github.com/MilesCranmer/SymbolicRegression.jl/issues?q=author%3Aqwertyjl" title="Bug reports">🐛</a> <a href="https://github.com/MilesCranmer/SymbolicRegression.jl/commits?author=qwertyjl" title="Documentation">📖</a> <a href="#ideas-qwertyjl" title="Ideas, planning, and feedback.">💡</a> <a href="#userTesting-qwertyjl" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://huijzer.xyz/"><img src="https://avatars.githubusercontent.com/u/20724914?v=4?s=50" width="50px;" alt="Rik Huijzer"/><br /><sub><b>Rik Huijzer</b></sub></a><br /><a href="#ideas-rikhuijzer" title="Ideas, planning, and feedback.">💡</a> <a href="#infra-rikhuijzer" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/GCaptainNemo"><img src="https://avatars.githubusercontent.com/u/43086239?v=4?s=50" width="50px;" alt="Hongyu Wang"/><br /><sub><b>Hongyu Wang</b></sub></a><br /><a href="#ideas-GCaptainNemo" title="Ideas, planning, and feedback.">💡</a> <a href="#promotion-GCaptainNemo" title="Promotion">📣</a> <a href="#research-GCaptainNemo" title="Research">🔬</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://sauravmaheshkar.github.io/"><img src="https://avatars.githubusercontent.com/u/61241031?v=4?s=50" width="50px;" alt="Saurav Maheshkar"/><br /><sub><b>Saurav Maheshkar</b></sub></a><br /><a href="#tool-SauravMaheshkar" title="Tools">🔧</a></td>
+    </tr>
+  </tbody>
+</table><h2 id="Code-structure"><a class="docs-heading-anchor" href="#Code-structure">Code structure</a><a id="Code-structure-1"></a><a class="docs-heading-anchor-permalink" href="#Code-structure" title="Permalink"></a></h2><p>SymbolicRegression.jl is organized roughly as follows. Rounded rectangles indicate objects, and rectangles indicate functions.</p><blockquote><p>(if you can&#39;t see this diagram being rendered, try pasting it into <a href="https://mermaid-js.github.io/mermaid-live-editor">mermaid-js.github.io/mermaid-live-editor</a>)</p></blockquote><div class="mermaid">
+
+flowchart TB
+    op([Options])
+    d([Dataset])
+    op --> ES
+    d --> ES
+    subgraph ES[equation_search]
+        direction TB
+        IP[sr_spawner]
+        IP --> p1
+        IP --> p2
+        subgraph p1[Thread 1]
+            direction LR
+            pop1([Population])
+            pop1 --> src[s_r_cycle]
+            src --> opt[optimize_and_simplify_population]
+            opt --> pop1
+        end
+        subgraph p2[Thread 2]
+            direction LR
+            pop2([Population])
+            pop2 --> src2[s_r_cycle]
+            src2 --> opt2[optimize_and_simplify_population]
+            opt2 --> pop2
+        end
+        pop1 --> hof
+        pop2 --> hof
+        hof([HallOfFame])
+        hof --> migration
+        pop1 <-.-> migration
+        pop2 <-.-> migration
+        migration[migrate!]
+    end
+    ES --> output([HallOfFame])
+
+</div><p>The <code>HallOfFame</code> objects store the expressions with the lowest loss seen at each complexity.</p><p>The dependency structure of the code itself is as follows:</p><div class="mermaid">
+
+stateDiagram-v2
+    AdaptiveParsimony --> Mutate
+    AdaptiveParsimony --> Population
+    AdaptiveParsimony --> RegularizedEvolution
+    AdaptiveParsimony --> SearchUtils
+    AdaptiveParsimony --> SingleIteration
+    AdaptiveParsimony --> SymbolicRegression
+    CheckConstraints --> Mutate
+    CheckConstraints --> SymbolicRegression
+    Complexity --> CheckConstraints
+    Complexity --> HallOfFame
+    Complexity --> LossFunctions
+    Complexity --> MLJInterface
+    Complexity --> Mutate
+    Complexity --> PopMember
+    Complexity --> Population
+    Complexity --> SearchUtils
+    Complexity --> SingleIteration
+    Complexity --> SymbolicRegression
+    ConstantOptimization --> ExpressionBuilder
+    ConstantOptimization --> Mutate
+    ConstantOptimization --> SingleIteration
+    Core --> AdaptiveParsimony
+    Core --> CheckConstraints
+    Core --> Complexity
+    Core --> ConstantOptimization
+    Core --> DimensionalAnalysis
+    Core --> ExpressionBuilder
+    Core --> ExpressionBuilder
+    Core --> HallOfFame
+    Core --> InterfaceDynamicExpressions
+    Core --> LossFunctions
+    Core --> MLJInterface
+    Core --> Migration
+    Core --> Mutate
+    Core --> MutationFunctions
+    Core --> PopMember
+    Core --> Population
+    Core --> Recorder
+    Core --> RegularizedEvolution
+    Core --> SearchUtils
+    Core --> SingleIteration
+    Core --> SymbolicRegression
+    Dataset --> Core
+    DimensionalAnalysis --> LossFunctions
+    ExpressionBuilder --> SymbolicRegression
+    HallOfFame --> ExpressionBuilder
+    HallOfFame --> MLJInterface
+    HallOfFame --> SearchUtils
+    HallOfFame --> SingleIteration
+    HallOfFame --> SymbolicRegression
+    HallOfFame --> deprecates
+    InterfaceDynamicExpressions --> ExpressionBuilder
+    InterfaceDynamicExpressions --> HallOfFame
+    InterfaceDynamicExpressions --> LossFunctions
+    InterfaceDynamicExpressions --> SymbolicRegression
+    InterfaceDynamicQuantities --> Dataset
+    InterfaceDynamicQuantities --> MLJInterface
+    LossFunctions --> ConstantOptimization
+    LossFunctions --> ExpressionBuilder
+    LossFunctions --> ExpressionBuilder
+    LossFunctions --> Mutate
+    LossFunctions --> PopMember
+    LossFunctions --> Population
+    LossFunctions --> SingleIteration
+    LossFunctions --> SymbolicRegression
+    MLJInterface --> SymbolicRegression
+    Migration --> SymbolicRegression
+    Mutate --> RegularizedEvolution
+    MutationFunctions --> ExpressionBuilder
+    MutationFunctions --> Mutate
+    MutationFunctions --> Population
+    MutationFunctions --> SymbolicRegression
+    MutationFunctions --> deprecates
+    MutationWeights --> Core
+    MutationWeights --> Options
+    MutationWeights --> OptionsStruct
+    Operators --> Core
+    Operators --> Options
+    Options --> Core
+    OptionsStruct --> Core
+    OptionsStruct --> Options
+    OptionsStruct --> Options
+    PopMember --> ConstantOptimization
+    PopMember --> ExpressionBuilder
+    PopMember --> HallOfFame
+    PopMember --> Migration
+    PopMember --> Mutate
+    PopMember --> Population
+    PopMember --> SearchUtils
+    PopMember --> SingleIteration
+    PopMember --> SymbolicRegression
+    Population --> ExpressionBuilder
+    Population --> Migration
+    Population --> RegularizedEvolution
+    Population --> SearchUtils
+    Population --> SingleIteration
+    Population --> SymbolicRegression
+    ProgramConstants --> Core
+    ProgramConstants --> Dataset
+    ProgramConstants --> Operators
+    ProgressBars --> SearchUtils
+    ProgressBars --> SymbolicRegression
+    Recorder --> Mutate
+    Recorder --> RegularizedEvolution
+    Recorder --> SingleIteration
+    Recorder --> SymbolicRegression
+    RegularizedEvolution --> SingleIteration
+    SearchUtils --> SymbolicRegression
+    SingleIteration --> SymbolicRegression
+    Utils --> ConstantOptimization
+    Utils --> Dataset
+    Utils --> DimensionalAnalysis
+    Utils --> HallOfFame
+    Utils --> InterfaceDynamicExpressions
+    Utils --> MLJInterface
+    Utils --> Migration
+    Utils --> Operators
+    Utils --> Options
+    Utils --> PopMember
+    Utils --> Population
+    Utils --> RegularizedEvolution
+    Utils --> SearchUtils
+    Utils --> SingleIteration
+    Utils --> SymbolicRegression
+
+</div><p>Bash command to generate dependency structure from <code>src</code> directory (requires <code>vim-stream</code>):</p><pre><code class="language-bash hljs">echo &#39;stateDiagram-v2&#39;
+IFS=$&#39;\n&#39;
+for f in *.jl; do
+    for line in $(cat $f | grep -e &#39;import \.\.&#39; -e &#39;import \.&#39; -e &#39;using \.&#39; -e &#39;using \.\.&#39;); do
+        echo $(echo $line | vims -s &#39;dwf:d$&#39; -t &#39;%s/^\.*//g&#39; &#39;%s/Module//g&#39;) $(basename &quot;$f&quot; .jl);
+    done;
+done | vims -l &#39;f a--&gt; &#39; | sort</code></pre><h2 id="Search-options"><a class="docs-heading-anchor" href="#Search-options">Search options</a><a id="Search-options-1"></a><a class="docs-heading-anchor-permalink" href="#Search-options" title="Permalink"></a></h2><p>See https://ai.damtp.cam.ac.uk/symbolicregression/stable/api/#Options</p><h1 id="Contents"><a class="docs-heading-anchor" href="#Contents">Contents</a><a id="Contents-1"></a><a class="docs-heading-anchor-permalink" href="#Contents" title="Permalink"></a></h1><ul><li><a href="examples/#Toy-Examples-with-Code">Toy Examples with Code</a></li><li class="no-marker"><ul><li><a href="examples/#.-Simple-search">1. Simple search</a></li><li><a href="examples/#.-Custom-operator">2. Custom operator</a></li><li><a href="examples/#.-Multiple-outputs">3. Multiple outputs</a></li><li><a href="examples/#.-Plotting-an-expression">4. Plotting an expression</a></li><li><a href="examples/#.-Other-types">5. Other types</a></li><li><a href="examples/#.-Dimensional-constraints">6. Dimensional constraints</a></li><li><a href="examples/#.-Working-with-Expressions">7. Working with Expressions</a></li><li><a href="examples/#.-Template-Expressions">8. Template Expressions</a></li><li><a href="examples/#.-Logging-with-TensorBoard">9. Logging with TensorBoard</a></li><li><a href="examples/#.-Additional-features">10. Additional features</a></li></ul></li><li><a href="examples/template_expression/#Searching-with-template-expressions">Searching with template expressions</a></li><li class="no-marker"><ul><li><a href="examples/template_expression/#The-Physical-Problem">The Physical Problem</a></li></ul></li><li><a href="api/#API">API</a></li><li class="no-marker"><ul><li><a href="api/#MLJ-interface">MLJ interface</a></li><li><a href="api/#Low-Level-API">Low-Level API</a></li><li><a href="api/#Options">Options</a></li><li><a href="api/#Printing">Printing</a></li><li><a href="api/#Evaluation">Evaluation</a></li><li><a href="api/#Derivatives">Derivatives</a></li><li><a href="api/#SymbolicUtils.jl-interface">SymbolicUtils.jl interface</a></li><li><a href="api/#Pareto-frontier">Pareto frontier</a></li><li><a href="api/#Logging">Logging</a></li></ul></li><li><a href="types/#Types">Types</a></li><li class="no-marker"><ul><li><a href="types/#Equations">Equations</a></li><li><a href="types/#Expressions">Expressions</a></li><li><a href="types/#Parametric-Expressions">Parametric Expressions</a></li><li><a href="types/#Template-Expressions">Template Expressions</a></li><li><a href="types/#Population">Population</a></li><li><a href="types/#Population-members">Population members</a></li><li><a href="types/#Hall-of-Fame">Hall of Fame</a></li><li><a href="types/#Dataset">Dataset</a></li></ul></li><li><a href="losses/#Losses">Losses</a></li><li class="no-marker"><ul><li><a href="losses/#Regression">Regression</a></li><li><a href="losses/#Classification">Classification</a></li></ul></li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="index_base/">« Contents</a><a class="docs-footer-nextpage" href="examples/">Short Examples »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Wednesday 20 November 2024 21:01">Wednesday 20 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
