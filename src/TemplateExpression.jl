@@ -330,11 +330,11 @@ end
     default_union_limit = 2,
     begin
         function DE.eval_tree_array(
-            tree::TemplateExpression{T},
-            cX::AbstractMatrix{T},
+            tree::TemplateExpression,
+            cX::AbstractMatrix,
             operators::Union{AbstractOperatorEnum,Nothing}=nothing;
             kws...,
-        ) where {T}
+        )
             raw_contents = get_contents(tree)
             if has_invalid_variables(tree)
                 return (nothing, false)
