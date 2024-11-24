@@ -7,41 +7,40 @@
 
     include("test_params.jl")
 
-    mktempdir() do dir
-        buf = IOBuffer()
-        simple_logger = SimpleLogger(buf)
-        tb_logger = TBLogger(dir, TensorBoardLogger.tb_overwrite)
+    dir = mktempdir()
+    buf = IOBuffer()
+    simple_logger = SimpleLogger(buf)
+    tb_logger = TBLogger(dir, TensorBoardLogger.tb_overwrite)
 
-        logger = SRLogger(; logger=TeeLogger(simple_logger, tb_logger), log_interval=2)
+    logger = SRLogger(; logger=TeeLogger(simple_logger, tb_logger), log_interval=2)
 
-        niterations = 4
-        populations = 36
-        model = SRRegressor(;
-            binary_operators=[+, -, *, mod],
-            unary_operators=[],
-            maxsize=40,
-            niterations,
-            populations,
-            logger,
-        )
+    niterations = 4
+    populations = 36
+    model = SRRegressor(;
+        binary_operators=[+, -, *, mod],
+        unary_operators=[],
+        maxsize=40,
+        niterations,
+        populations,
+        logger,
+    )
 
-        X = (a=rand(500), b=rand(500))
-        y = @. 2 * cos(X.a * 23.5) - X.b^2
-        mach = machine(model, X, y)
+    X = (a=rand(500), b=rand(500))
+    y = @. 2 * cos(X.a * 23.5) - X.b^2
+    mach = machine(model, X, y)
 
-        fit!(mach)
+    fit!(mach)
 
-        # Check TensorBoardLogger
-        b = TensorBoardLogger.steps(tb_logger)
-        @test length(b) == (niterations * populations//2) + 1
-        files_and_dirs = readdir(dir)
-        @test length(files_and_dirs) == 1
-        @test occursin(r"events\.out\.tfevents", only(files_and_dirs))
+    # Check TensorBoardLogger
+    b = TensorBoardLogger.steps(tb_logger)
+    @test length(b) == (niterations * populations//2) + 1
+    files_and_dirs = readdir(dir)
+    @test length(files_and_dirs) == 1
+    @test occursin(r"events\.out\.tfevents", only(files_and_dirs))
 
-        # Check SimpleLogger
-        s = String(take!(buf))
-        @test occursin(r"search\s*\n\s*│\s*data\s*=\s*", s)
-    end
+    # Check SimpleLogger
+    s = String(take!(buf))
+    @test occursin(r"search\s*\n\s*│\s*data\s*=\s*", s)
 end
 @testitem "Test convex hull calculation" tags = [:part1] begin
     using SymbolicRegression.LoggingModule: convex_hull, convex_hull_area
