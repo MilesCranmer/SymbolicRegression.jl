@@ -171,6 +171,11 @@ function (ex::AbstractComposableExpression)(
         return ValidVector(eval_tree_array(ex, X))
     end
 end
+function (ex::AbstractComposableExpression{T})() where {T}
+    X = Matrix{T}(undef, 0, 1)  # Value is irrelevant as it won't be used
+    out, _ = eval_tree_array(ex, X)  # TODO: The valid is not used; not sure how to incorporate
+    return only(out)::T
+end
 function (ex::AbstractComposableExpression)(
     x::AbstractComposableExpression, _xs::Vararg{AbstractComposableExpression,N}
 ) where {N}

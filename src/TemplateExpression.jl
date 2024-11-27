@@ -82,7 +82,7 @@ function _record_composable_expression!(variable_constraints, ::Val{k}, args...)
     elseif vc != length(args)
         throw(ArgumentError("Inconsistent number of arguments passed to $k"))
     end
-    return first(args)
+    return isempty(args) ? 0.0 : first(args)
 end
 
 """Infers number of features used by each subexpression, by passing in test data."""
