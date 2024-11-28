@@ -294,3 +294,27 @@ end
         ((; f, g), (x1, x2)) -> f(x1)
     )
 end
+
+@testitem "Test argument-less template structure" tags = [:part2] begin
+    using SymbolicRegression
+    using DynamicExpressions: OperatorEnum
+
+    operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    variable_names = ["x1", "x2"]
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+    x2 = ComposableExpression(Node{Float64}(; feature=2); operators, variable_names)
+    c1 = ComposableExpression(Node{Float64}(; val=3.0); operators, variable_names)
+
+    # We can evaluate an expression with no arguments:
+    @test c1() == 3.0
+    @test typeof(c1()) === Float64
+
+    # Create a structure where f takes no arguments and g takes two
+    structure = TemplateStructure{(:f, :g)}(((; f, g), (x1, x2)) -> f() + g(x1, x2))
+
+    @test structure.num_features == (; f=0, g=2)
+
+    X = [1.0 2.0]'
+    expr = TemplateExpression((; f=c1, g=x1 + x2); structure, operators, variable_names)
+    @test expr(X) ≈ [6.0]  # 3 + (1 + 2)
+end
