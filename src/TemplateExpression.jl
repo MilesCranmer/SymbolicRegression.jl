@@ -493,6 +493,10 @@ function contains_features_greater_than(tree::AbstractExpressionNode, max_featur
     end
 end
 
+function Base.isempty(ex::TemplateExpression)
+    return all(isempty, values(get_contents(ex)))
+end
+
 # TODO: Add custom behavior to adjust what feature nodes can be generated
 
 end

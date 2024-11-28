@@ -1,6 +1,6 @@
 using SymbolicRegression
 using Random: rand
-using MLJBase: machine, fit!, report
+using MLJBase: machine, fit!, report, predict
 using Test: @test
 
 options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
@@ -59,3 +59,13 @@ best_g2 = get_contents(best_expr).g2
 @test best_f(x1, x2) ≈ @. sin.(x1)
 @test best_g1(x3) ≈ (@. x3 * x3)
 @test best_g2(x3) ≈ (@. x3)
+
+# Test prediction
+x_test = rand(10, 3)
+y_test = [
+    (sin(x_test[i, 1]) + x_test[i, 3]^2, sin(x_test[i, 1]) + x_test[i, 3]) for
+    i in eachindex(axes(x_test, 1))
+]
+predictions = predict(mach, (data=x_test, idx=length(r.equations)))
+@test map(first, predictions) ≈ map(first, y_test)
+@test map(last, predictions) ≈ map(last, y_test)
