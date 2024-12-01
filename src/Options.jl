@@ -382,7 +382,7 @@ const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Op
     Options can be provided here as `NamedTuple`, e.g. `(iterations=16,)`, as a
     `Dict`, e.g. Dict(:x_tol => 1.0e-32,), or as an `Optim.Options` instance.
 - `autodiff_backend`: The backend to use for differentiation, which should be
-    an instance of `AbstractADType` (see `DifferentiationInterface.jl`).
+    an instance of `AbstractADType` (see `ADTypes.jl`).
     Default is `nothing`, which means `Optim.jl` will estimate gradients (likely
     with finite differences). You can also pass a symbolic version of the backend
     type, such as `:Zygote` for Zygote, `:Enzyme`, etc. Most backends will not
