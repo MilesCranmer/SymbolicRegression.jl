@@ -23,6 +23,7 @@
         niterations,
         populations,
         logger,
+        parallelism=:multiprocessing,
     )
 
     X = (a=rand(500), b=rand(500))

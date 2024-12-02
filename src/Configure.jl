@@ -244,6 +244,7 @@ function import_module_on_workers(procs, filename::String, verbosity)
         :Enzyme,
         :LoopVectorization,
         :SymbolicUtils,
+        :TensorBoardLogger,
         :Zygote,
     ]
     filter!(m -> String(m) ∈ loaded_modules_head_worker, relevant_extensions)
