@@ -24,6 +24,8 @@
         populations,
         logger,
         parallelism=:multiprocessing,
+        # Test we can load extra packages:
+        worker_imports=[:LoggingExtras],
     )
 
     X = (a=rand(500), b=rand(500))

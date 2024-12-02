@@ -55,6 +55,7 @@ struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE,LOGGER} <: AbstractRuntim
     init_procs::Union{Vector{Int},Nothing}
     addprocs_function::Function
     exeflags::Cmd
+    worker_imports::Union{Vector{Symbol},Nothing}
     runtests::Bool
     verbosity::Int64
     progress::Bool
@@ -89,6 +90,7 @@ end
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
     heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
+    worker_imports::Union{Vector{Symbol},Nothing}=nothing,
     runtests::Bool=true,
     return_state::VRS=nothing,
     run_id::Union{String,Nothing}=nothing,
@@ -182,6 +184,7 @@ end
         procs,
         _addprocs_function,
         exeflags,
+        worker_imports,
         runtests,
         _verbosity,
         _progress,
