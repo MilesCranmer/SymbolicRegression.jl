@@ -382,6 +382,9 @@ which is useful for debugging and profiling.
     is close to the recommended size. This is important for long-running distributed
     jobs where each process has an independent memory, and can help avoid
     out-of-memory errors. By default, this is set to `Sys.free_memory() / numprocs`.
+- `worker_imports::Union{Vector{Symbol},Nothing}=nothing`: If you want to import
+    additional modules on each worker, pass them here as a vector of symbols.
+    By default some of the extensions will automatically be loaded when needed.
 - `runtests::Bool=true`: Whether to run (quick) tests before starting the
     search, to see if there will be any problems during the equation search
     related to the host environment.
@@ -433,6 +436,7 @@ function equation_search(
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
     heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
+    worker_imports::Union{Vector{Symbol},Nothing}=nothing,
     runtests::Bool=true,
     saved_state=nothing,
     return_state::Union{Bool,Nothing,Val}=nothing,
@@ -482,6 +486,7 @@ function equation_search(
         procs=procs,
         addprocs_function=addprocs_function,
         heap_size_hint_in_bytes=heap_size_hint_in_bytes,
+        worker_imports=worker_imports,
         runtests=runtests,
         saved_state=saved_state,
         return_state=return_state,
@@ -599,6 +604,7 @@ end
             ropt.numprocs,
             ropt.addprocs_function,
             options,
+            worker_imports=ropt.worker_imports,
             project_path=splitdir(Pkg.project().path)[1],
             file=@__FILE__,
             ropt.exeflags,

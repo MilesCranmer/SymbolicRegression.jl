@@ -221,7 +221,12 @@ function activate_env_on_workers(
     end
 end
 
-function import_module_on_workers(procs, filename::String, verbosity)
+function import_module_on_workers(
+    procs,
+    filename::String,
+    @nospecialize(worker_imports::Union{Vector{Symbol},Nothing}),
+    verbosity,
+)
     loaded_modules_head_worker = [k.name for (k, _) in Base.loaded_modules]
 
     included_as_local = "SymbolicRegression" ∉ loaded_modules_head_worker
@@ -244,13 +249,16 @@ function import_module_on_workers(procs, filename::String, verbosity)
         :Enzyme,
         :LoopVectorization,
         :SymbolicUtils,
+        :TensorBoardLogger,
         :Zygote,
     ]
     filter!(m -> String(m) ∈ loaded_modules_head_worker, relevant_extensions)
     # HACK TODO – this workaround is very fragile. Likely need to submit a bug report
     #             to JuliaLang.
 
-    for ext in relevant_extensions
+    all_extensions = vcat(relevant_extensions, @something(worker_imports, Symbol[]))
+
+    for ext in all_extensions
         push!(
             expr.args,
             quote
@@ -329,6 +337,7 @@ function configure_workers(;
     numprocs::Int,
     addprocs_function::Function,
     options::AbstractOptions,
+    @nospecialize(worker_imports::Union{Vector{Symbol},Nothing}),
     project_path,
     file,
     exeflags::Cmd,
@@ -343,7 +352,7 @@ function configure_workers(;
     end
 
     if we_created_procs
-        import_module_on_workers(procs, file, verbosity)
+        import_module_on_workers(procs, file, worker_imports, verbosity)
     end
 
     move_functions_to_workers(procs, options, example_dataset, verbosity)
