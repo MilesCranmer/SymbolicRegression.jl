@@ -349,6 +349,15 @@ end
     @test D(cos(x1), 1)([1.0]) ≈ [-sin(1.0)]
     @test D(sin(x1) * cos(x2), 1)([1.0], [2.0]) ≈ [cos(1.0) * cos(2.0)]
     @test D(D(sin(x1) * cos(x2), 1), 2)([1.0], [2.0]) ≈ [cos(1.0) * -sin(2.0)]
+
+    # Printing should also be nice:
+    @test repr(D(x1 * x2, 1)) == "(∂₁*(x1, x2) * 1.0) + (∂₂*(x1, x2) * 0.0)"
+
+    # We also have special behavior when there is no dependence:
+    @test repr(D(sin(x2), 1)) == "0.0"
+    @test repr(D(x2 + sin(x2), 1)) == "0.0"
+    @test repr(D(x2 + sin(x2) - x1, 1)) ==
+        "(∂₁-(x2 + sin(x2), x1) * 0.0) + (∂₂-(x2 + sin(x2), x1) * 1.0)"
 end
 
 @testitem "Test template structure with derivatives" tags = [:part2] begin

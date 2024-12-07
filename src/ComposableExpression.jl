@@ -283,12 +283,17 @@ function _symbolic_derivative(
     tree::N, ctx::SymbolicDerivativeContext
 ) where {T,N<:AbstractExpressionNode{T}}
     # NOTE: We cannot mutate the tree here! Since we use it twice.
-    if tree.degree == 0
-        if !tree.constant && tree.feature == ctx.feature
-            return constructorof(N)(; val=one(T))
-        else
-            return constructorof(N)(; val=zero(T))
-        end
+
+    # Quick test to see if we have any dependence on the feature, so
+    # we can return 0 for the branch
+    any_dependence = any(tree) do node
+        node.degree == 0 && !node.constant && node.feature == ctx.feature
+    end
+
+    if !any_dependence
+        return constructorof(N)(; val=zero(T))
+    elseif tree.degree == 0
+        return constructorof(N)(; val=one(T))
     elseif tree.degree == 1
         # f(g(x)) => f'(g(x)) * g'(x)
         f_prime = constructorof(N)(; op=tree.op + ctx.nuna, l=tree.l)
