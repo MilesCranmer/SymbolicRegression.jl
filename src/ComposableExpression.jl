@@ -314,14 +314,25 @@ end
 function _expand_operators(operators::OperatorEnum)
     unaops = operators.unaops
     binops = operators.binops
-    d_unaops = map(Fix{2}(_zygote_gradient, Val(1)), unaops)
-    # TODO: We need to store different operators for left/right.
-    d_binops = map(Fix{2}(_zygote_gradient, Val(2)), binops)
-    d_binops_left = map(Fix{1}(∘, first), d_binops)
-    d_binops_right = map(Fix{1}(∘, last), d_binops)
-    return OperatorEnum(
-        (binops..., d_binops_left..., d_binops_right...), (unaops..., d_unaops...)
+    new_unaops = ntuple(
+        i -> if i <= length(unaops)
+            unaops[i]
+        else
+            _zygote_gradient(unaops[i - length(unaops)], Val(1))
+        end,
+        Val(2 * length(unaops)),
     )
+    new_binops = ntuple(
+        i -> if i <= length(binops)
+            binops[i]
+        elseif i <= 2 * length(binops)
+            _zygote_gradient(binops[i - length(binops)], Val(2), Val(1))
+        else
+            _zygote_gradient(binops[i - 2 * length(binops)], Val(2), Val(2))
+        end,
+        Val(3 * length(binops)),
+    )
+    return OperatorEnum(new_binops, new_unaops)
 end
 
 end
