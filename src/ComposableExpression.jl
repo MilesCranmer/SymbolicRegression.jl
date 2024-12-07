@@ -1,11 +1,13 @@
 module ComposableExpressionModule
 
+using Compat: Fix
 using DispatchDoctor: @unstable
 using DynamicExpressions:
     AbstractExpression,
     Expression,
     AbstractExpressionNode,
     AbstractOperatorEnum,
+    OperatorEnum,
     Metadata,
     constructorof,
     get_metadata,
@@ -13,10 +15,12 @@ using DynamicExpressions:
     set_node!,
     get_contents,
     with_contents,
+    with_metadata,
     DynamicExpressions as DE
 using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
 using DynamicExpressions.ValueInterfaceModule: is_valid_array
+using DynamicExpressions.ExtensionInterfaceModule: _zygote_gradient
 
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 using ..CoreModule: get_safe_op
@@ -243,5 +247,81 @@ for op in (
     @eval Base.$(op)(x::ValidVector) = apply_operator(Base.$(op), x)
 end
 #! format: on
+
+"""
+    D(ex::AbstractComposableExpression, feature::Integer)
+
+Compute the derivative of `ex` with respect to the `feature`-th variable.
+Returns a new `ComposableExpression` with an expanded set of operators.
+"""
+function D(ex::AbstractComposableExpression, feature::Integer)
+    metadata = DE.get_metadata(ex)
+    raw_metadata = getfield(metadata, :_data)  # TODO: Upstream this so we can load this
+    operators = DE.get_operators(ex)
+    mult_idx = findfirst(==(*), operators.binops)::Integer
+    plus_idx = findfirst(==(+), operators.binops)::Integer
+    nbin = length(operators.binops)
+    nuna = length(operators.unaops)
+    tree = DE.get_contents(ex)
+    ctx = SymbolicDerivativeContext(; feature, plus_idx, mult_idx, nbin, nuna)
+    d_tree = _symbolic_derivative(tree, ctx)
+    operators_with_derivatives = _expand_operators(operators)
+    return with_metadata(
+        with_contents(ex, d_tree); raw_metadata..., operators=operators_with_derivatives
+    )
+end
+
+Base.@kwdef struct SymbolicDerivativeContext
+    feature::Int
+    plus_idx::Int
+    mult_idx::Int
+    nbin::Int
+    nuna::Int
+end
+
+function _symbolic_derivative(
+    tree::N, ctx::SymbolicDerivativeContext
+) where {T,N<:AbstractExpressionNode{T}}
+    # NOTE: We cannot mutate the tree here! Since we use it twice.
+    if tree.degree == 0
+        if !tree.constant && tree.feature == ctx.feature
+            return constructorof(N)(; val=one(T))
+        else
+            return constructorof(N)(; val=zero(T))
+        end
+    elseif tree.degree == 1
+        # f(g(x)) => f'(g(x)) * g'(x)
+        f_prime = constructorof(N)(; op=tree.op + ctx.nuna, l=tree.l)
+        g_prime = _symbolic_derivative(tree.l, ctx)
+        return constructorof(N)(; op=ctx.mult_idx, l=f_prime, r=g_prime)
+    else  # tree.degree == 2
+        # f(g(x), h(x)) => f^(1,0)(g(x), h(x)) * g'(x) + f^(0,1)(g(x), h(x)) * h'(x)
+        f_prime_left = constructorof(N)(; op=tree.op + ctx.nbin, l=tree.l, r=tree.r)
+        f_prime_right = constructorof(N)(;
+            op=tree.op + 2 * ctx.nbin, # Note that we offset by double to pick the right derivative
+            l=tree.l,
+            r=tree.r,
+        )
+        g_prime = _symbolic_derivative(tree.l, ctx)
+        h_prime = _symbolic_derivative(tree.r, ctx)
+
+        first_term = constructorof(N)(; op=ctx.mult_idx, l=f_prime_left, r=g_prime)
+        second_term = constructorof(N)(; op=ctx.mult_idx, l=f_prime_right, r=h_prime)
+        return constructorof(N)(; op=ctx.plus_idx, l=first_term, r=second_term)
+    end
+end
+
+function _expand_operators(operators::OperatorEnum)
+    unaops = operators.unaops
+    binops = operators.binops
+    d_unaops = map(Fix{2}(_zygote_gradient, Val(1)), unaops)
+    # TODO: We need to store different operators for left/right.
+    d_binops = map(Fix{2}(_zygote_gradient, Val(2)), binops)
+    d_binops_left = map(Fix{1}(∘, first), d_binops)
+    d_binops_right = map(Fix{1}(∘, last), d_binops)
+    return OperatorEnum(
+        (binops..., d_binops_left..., d_binops_right...), (unaops..., d_unaops...)
+    )
+end
 
 end

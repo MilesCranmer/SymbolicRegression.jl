@@ -315,7 +315,7 @@ using .SearchUtilsModule:
 using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure, ValidVector
-using .ComposableExpressionModule: ComposableExpression
+using .ComposableExpressionModule: ComposableExpression, D
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
