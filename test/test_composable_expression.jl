@@ -350,3 +350,27 @@ end
     @test D(sin(x1) * cos(x2), 1)([1.0], [2.0]) ≈ [cos(1.0) * cos(2.0)]
     @test D(D(sin(x1) * cos(x2), 1), 2)([1.0], [2.0]) ≈ [cos(1.0) * -sin(2.0)]
 end
+
+@testitem "Test template structure with derivatives" tags = [:part2] begin
+    using SymbolicRegression:
+        ComposableExpression, Node, D, TemplateStructure, TemplateExpression
+    using DynamicExpressions: OperatorEnum
+
+    # Basic setup
+    operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    variable_names = ["x1", "x2"]
+    x1 = ComposableExpression(Node(Float64; feature=1); operators, variable_names)
+    x2 = ComposableExpression(Node(Float64; feature=2); operators, variable_names)
+
+    # Create a structure that computes f(x1, x2) and its derivative with respect to x1
+    structure = TemplateStructure{(:f,)}(((; f), (x1, x2)) -> f(x1, x2) + D(f, 1)(x1, x2))
+    # We pass the functions through:
+    @test structure.num_features == (; f=2)
+
+    # Test with a simple function and its derivative
+    expr = TemplateExpression((; f=x1 * sin(x2)); structure, operators, variable_names)
+
+    # Truth: x1 * sin(x2) + sin(x2)
+    X = randn(2, 32)
+    @test expr(X) ≈ X[1, :] .* sin.(X[2, :]) .+ sin.(X[2, :])
+end
