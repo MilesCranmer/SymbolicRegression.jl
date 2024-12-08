@@ -464,6 +464,9 @@ function DE.simplify_tree!(
     return with_contents(ex, new_contents)
 end
 
+function DE.count_scalar_constants(ex::TemplateExpression)
+    return sum(DE.count_scalar_constants, values(get_contents(ex)))
+end
 function CO.count_constants_for_optimization(ex::TemplateExpression)
     return sum(CO.count_constants_for_optimization, values(get_contents(ex)))
 end
