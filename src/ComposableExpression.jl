@@ -2,6 +2,7 @@ module ComposableExpressionModule
 
 using Compat: Fix
 using DispatchDoctor: @unstable
+using ForwardDiff: ForwardDiff
 using DynamicExpressions:
     AbstractExpression,
     Expression,
@@ -20,7 +21,6 @@ using DynamicExpressions:
 using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
 using DynamicExpressions.ValueInterfaceModule: is_valid_array
-using DynamicExpressions.ExtensionInterfaceModule: _zygote_gradient
 
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 using ..CoreModule: get_safe_op
@@ -316,6 +316,23 @@ function _symbolic_derivative(
     end
 end
 
+struct OperatorDerivative{F,degree,arg} <: Function
+    op::F
+
+    function OperatorDerivative(op::F, ::Val{degree}, ::Val{arg}) where {F,degree,arg}
+        return new{F,degree,arg}(op)
+    end
+end
+function (d::OperatorDerivative{F,1,1})(x) where {F}
+    return ForwardDiff.derivative(d.op, x)
+end
+function (d::OperatorDerivative{F,2,1})(x, y) where {F}
+    return ForwardDiff.derivative(Fix{2}(d.op, y), x)
+end
+function (d::OperatorDerivative{F,2,2})(x, y) where {F}
+    return ForwardDiff.derivative(Fix{1}(d.op, x), y)
+end
+
 function _expand_operators(operators::OperatorEnum)
     unaops = operators.unaops
     binops = operators.binops
@@ -323,7 +340,7 @@ function _expand_operators(operators::OperatorEnum)
         i -> if i <= length(unaops)
             unaops[i]
         else
-            _zygote_gradient(unaops[i - length(unaops)], Val(1))
+            OperatorDerivative(unaops[i - length(unaops)], Val(1), Val(1))
         end,
         Val(2 * length(unaops)),
     )
@@ -331,9 +348,9 @@ function _expand_operators(operators::OperatorEnum)
         i -> if i <= length(binops)
             binops[i]
         elseif i <= 2 * length(binops)
-            _zygote_gradient(binops[i - length(binops)], Val(2), Val(1))
+            OperatorDerivative(binops[i - length(binops)], Val(2), Val(1))
         else
-            _zygote_gradient(binops[i - 2 * length(binops)], Val(2), Val(2))
+            OperatorDerivative(binops[i - 2 * length(binops)], Val(2), Val(2))
         end,
         Val(3 * length(binops)),
     )
