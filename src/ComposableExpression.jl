@@ -308,7 +308,7 @@ function _symbolic_derivative(
 
     if !any_dependence
         return constructorof(N)(; val=zero(T))
-    elseif tree.degree == 0
+    elseif tree.degree == 0 # && any_dependence
         return constructorof(N)(; val=one(T))
     elseif tree.degree == 1
         # f(g(x)) => f'(g(x)) * g'(x)
@@ -479,6 +479,10 @@ DE.get_op_name(::typeof(first ∘ tuple)) = "first"
 DE.get_op_name(::typeof(last ∘ tuple)) = "last"
 DE.get_op_name(::typeof((-) ∘ sin)) = "-sin"
 DE.get_op_name(::typeof((-) ∘ cos)) = "-cos"
+
+function DE.get_op_name(::DivMonomial{C,XP,YNP}) where {C,XP,YNP}
+    return join(("((x, y) -> ", string(C), "x^", string(XP), "/y^", string(YNP), ")"))
+end
 
 function _expand_operators(operators::OperatorEnum)
     unaops = operators.unaops
