@@ -131,6 +131,8 @@ using DynamicExpressions:
     with_contents,
     with_metadata
 using DynamicExpressions: with_type_parameters
+# TODO: Reexport D once DynamicAutodiff is registered
+# @reexport using DynamicAutodiff: D
 @reexport using LossFunctions:
     MarginLoss,
     DistanceLoss,
@@ -272,7 +274,6 @@ using .MutationFunctionsModule:
     random_node_and_parent,
     crossover_trees
 using .InterfaceDynamicExpressionsModule: @extend_operators
-using .DynamicAutodiffModule: D
 using .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
 using .PopMemberModule: PopMember, reset_birth!
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
