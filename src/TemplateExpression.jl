@@ -19,7 +19,8 @@ using DynamicExpressions:
     get_variable_names,
     get_tree,
     node_type,
-    count_nodes
+    count_nodes,
+    preserve_sharing
 using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
 
@@ -372,7 +373,24 @@ function MM.condition_mutation_weights!(
     @nospecialize(options::AbstractOptions),
     curmaxsize::Int,
 ) where {T,L,N<:TemplateExpression,P<:PopMember{T,L,N}}
-    # HACK TODO
+    if !preserve_sharing(typeof(member.tree))
+        weights.form_connection = 0.0
+        weights.break_connection = 0.0
+    end
+
+    MM.condition_mutate_constant!(typeof(member.tree), weights, member, options, curmaxsize)
+
+    complexity = ComplexityModule.compute_complexity(member, options)
+
+    if complexity >= curmaxsize
+        # If equation is too big, don't add new operators
+        weights.add_node = 0.0
+        weights.insert_node = 0.0
+    end
+
+    if !options.should_simplify
+        weights.simplify = 0.0
+    end
     return nothing
 end
 
