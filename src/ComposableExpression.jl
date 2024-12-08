@@ -1,13 +1,11 @@
 module ComposableExpressionModule
 
-using Compat: Fix
 using DispatchDoctor: @unstable
 using DynamicExpressions:
     AbstractExpression,
     Expression,
     AbstractExpressionNode,
     AbstractOperatorEnum,
-    OperatorEnum,
     Metadata,
     constructorof,
     get_metadata,
@@ -15,7 +13,6 @@ using DynamicExpressions:
     set_node!,
     get_contents,
     with_contents,
-    with_metadata,
     DynamicExpressions as DE
 using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments

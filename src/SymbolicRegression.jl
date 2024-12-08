@@ -198,7 +198,6 @@ using DispatchDoctor: @stable
     include("InterfaceDynamicQuantities.jl")
     include("Core.jl")
     include("InterfaceDynamicExpressions.jl")
-    include("DynamicAutodiff.jl")
     include("Recorder.jl")
     include("Complexity.jl")
     include("DimensionalAnalysis.jl")
