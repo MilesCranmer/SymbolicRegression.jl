@@ -318,11 +318,8 @@ end
 
 struct OperatorDerivative{F,degree,arg} <: Function
     op::F
-
-    function OperatorDerivative(op::F, ::Val{degree}, ::Val{arg}) where {F,degree,arg}
-        return new{F,degree,arg}(op)
-    end
 end
+
 function Base.show(io::IO, g::OperatorDerivative{F,degree,arg}) where {F,degree,arg}
     print(io, "∂")
     if degree == 2
@@ -337,6 +334,7 @@ function Base.show(io::IO, g::OperatorDerivative{F,degree,arg}) where {F,degree,
 end
 Base.show(io::IO, ::MIME"text/plain", g::OperatorDerivative) = show(io, g)
 
+# Generic derivatives:
 function (d::OperatorDerivative{F,1,1})(x) where {F}
     return ForwardDiff.derivative(d.op, x)
 end
@@ -346,6 +344,57 @@ end
 function (d::OperatorDerivative{F,2,2})(x, y) where {F}
     return ForwardDiff.derivative(Fix{1}(d.op, x), y)
 end
+function operator_derivative(op::F, ::Val{degree}, ::Val{arg}) where {F,degree,arg}
+    return OperatorDerivative{F,degree,arg}(op)
+end
+
+#! format: off
+# Special Cases
+## Unary
+operator_derivative(::typeof(sin), ::Val{1}, ::Val{1}) = cos
+operator_derivative(::typeof(cos), ::Val{1}, ::Val{1}) = (-) ∘ sin
+operator_derivative(::typeof((-) ∘ sin), ::Val{1}, ::Val{1}) = (-) ∘ cos
+operator_derivative(::typeof((-) ∘ cos), ::Val{1}, ::Val{1}) = sin
+operator_derivative(::typeof(exp), ::Val{1}, ::Val{1}) = exp
+
+## Binary
+# TODO: We assume that left/right are symmetric here!
+_zero(x, _) = zero(x)
+_one(x, _) = one(x)
+_n_one(x, _) = -one(x)
+operator_derivative(::typeof(_zero), ::Val{2}, ::Val{1}) = _zero
+operator_derivative(::typeof(_zero), ::Val{2}, ::Val{2}) = _zero
+operator_derivative(::typeof(_one), ::Val{2}, ::Val{1}) = _zero
+operator_derivative(::typeof(_one), ::Val{2}, ::Val{2}) = _zero
+operator_derivative(::typeof(_n_one), ::Val{2}, ::Val{1}) = _zero
+operator_derivative(::typeof(_n_one), ::Val{2}, ::Val{2}) = _zero
+
+### Addition
+operator_derivative(::typeof(+), ::Val{2}, ::Val{1}) = _one
+operator_derivative(::typeof(+), ::Val{2}, ::Val{2}) = _one
+operator_derivative(::typeof(-), ::Val{2}, ::Val{1}) = _one
+operator_derivative(::typeof(-), ::Val{2}, ::Val{2}) = _n_one
+
+### Multiplication
+operator_derivative(::typeof(*), ::Val{2}, ::Val{1}) = last ∘ tuple
+operator_derivative(::typeof(*), ::Val{2}, ::Val{2}) = first ∘ tuple
+operator_derivative(::typeof(first ∘ tuple), ::Val{2}, ::Val{1}) = _one
+operator_derivative(::typeof(first ∘ tuple), ::Val{2}, ::Val{2}) = _zero
+operator_derivative(::typeof(last ∘ tuple), ::Val{2}, ::Val{1}) = _zero
+operator_derivative(::typeof(last ∘ tuple), ::Val{2}, ::Val{2}) = _one
+
+### Division
+struct DivMonomial{C,XP,YNP} <: Function end
+function (m::DivMonomial{C,XP,YNP})(x, y) where {C,XP,YNP}
+    return C * (XP == 0 ? one(x) : x^XP) / (y^YNP)
+end
+operator_derivative(::typeof(/), ::Val{2}, ::Val{1}) = DivMonomial{1,0,1}()
+operator_derivative(::typeof(/), ::Val{2}, ::Val{2}) = DivMonomial{-1,1,2}()
+operator_derivative(::DivMonomial{C,XP,YNP}, ::Val{2}, ::Val{1}) where {C,XP,YNP} =
+    iszero(XP) ? _zero : DivMonomial{C * XP,XP - 1,YNP}()
+operator_derivative(::DivMonomial{C,XP,YNP}, ::Val{2}, ::Val{2}) where {C,XP,YNP} =
+    DivMonomial{-C * YNP,XP,YNP + 1}()
+#! format: on
 
 function _expand_operators(operators::OperatorEnum)
     unaops = operators.unaops
@@ -354,7 +403,7 @@ function _expand_operators(operators::OperatorEnum)
         i -> if i <= length(unaops)
             unaops[i]
         else
-            OperatorDerivative(unaops[i - length(unaops)], Val(1), Val(1))
+            operator_derivative(unaops[i - length(unaops)], Val(1), Val(1))
         end,
         Val(2 * length(unaops)),
     )
@@ -362,9 +411,9 @@ function _expand_operators(operators::OperatorEnum)
         i -> if i <= length(binops)
             binops[i]
         elseif i <= 2 * length(binops)
-            OperatorDerivative(binops[i - length(binops)], Val(2), Val(1))
+            operator_derivative(binops[i - length(binops)], Val(2), Val(1))
         else
-            OperatorDerivative(binops[i - 2 * length(binops)], Val(2), Val(2))
+            operator_derivative(binops[i - 2 * length(binops)], Val(2), Val(2))
         end,
         Val(3 * length(binops)),
     )
