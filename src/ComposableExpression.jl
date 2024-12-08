@@ -323,6 +323,20 @@ struct OperatorDerivative{F,degree,arg} <: Function
         return new{F,degree,arg}(op)
     end
 end
+function Base.show(io::IO, g::OperatorDerivative{F,degree,arg}) where {F,degree,arg}
+    print(io, "∂")
+    if degree == 2
+        if arg == 1
+            print(io, "₁")
+        elseif arg == 2
+            print(io, "₂")
+        end
+    end
+    print(io, g.op)
+    return nothing
+end
+Base.show(io::IO, ::MIME"text/plain", g::OperatorDerivative) = show(io, g)
+
 function (d::OperatorDerivative{F,1,1})(x) where {F}
     return ForwardDiff.derivative(d.op, x)
 end
