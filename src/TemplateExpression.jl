@@ -39,6 +39,9 @@ using ..MutateModule: MutateModule as MM
 using ..PopMemberModule: PopMember
 using ..ComposableExpressionModule: ComposableExpression, ValidVector
 
+# TODO: Modify `D` once DynamicAutodiff is registered
+# import DynamicAutodiff: D
+
 """
     TemplateStructure{K,E,NF} <: Function
 
@@ -86,6 +89,16 @@ function _record_composable_expression!(variable_constraints, ::Val{k}, args...)
     return isempty(args) ? 0.0 : first(args)
 end
 
+struct ArgumentRecorder{F} <: Function
+    f::F
+end
+(f::ArgumentRecorder)(args...) = f.f(args...)
+
+# TODO: Modify `D` once DynamicAutodiff is registered
+# We pass through the derivative operators, since
+# we just want to record the number of arguments.
+# DA.D(f::ArgumentRecorder, _::Integer) = f
+
 """Infers number of features used by each subexpression, by passing in test data."""
 function infer_variable_constraints(::Val{K}, combiner::F) where {K,F}
     variable_constraints = NamedTuple{K}(map(_ -> Ref(-1), K))
@@ -93,7 +106,9 @@ function infer_variable_constraints(::Val{K}, combiner::F) where {K,F}
     # features are used for each function call. If unset, we record it.
     # If set, we validate.
     inner = Fix{1}(_record_composable_expression!, variable_constraints)
-    _recorders_of_composable_expressions = NamedTuple{K}(map(k -> Fix{1}(inner, Val(k)), K))
+    _recorders_of_composable_expressions = NamedTuple{K}(
+        map(k -> ArgumentRecorder(Fix{1}(inner, Val(k))), K)
+    )
     # We use an evaluation to get the variable constraints
     combiner(
         _recorders_of_composable_expressions,
