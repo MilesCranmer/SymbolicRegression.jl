@@ -196,6 +196,7 @@ using DispatchDoctor: @stable
     include("InterfaceDynamicQuantities.jl")
     include("Core.jl")
     include("InterfaceDynamicExpressions.jl")
+    include("DynamicAutodiff.jl")
     include("Recorder.jl")
     include("Complexity.jl")
     include("DimensionalAnalysis.jl")
@@ -271,6 +272,7 @@ using .MutationFunctionsModule:
     random_node_and_parent,
     crossover_trees
 using .InterfaceDynamicExpressionsModule: @extend_operators
+using .DynamicAutodiffModule: D
 using .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
 using .PopMemberModule: PopMember, reset_birth!
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
@@ -315,7 +317,7 @@ using .SearchUtilsModule:
 using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure, ValidVector
-using .ComposableExpressionModule: ComposableExpression, D
+using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 
 @stable default_mode = "disable" begin
