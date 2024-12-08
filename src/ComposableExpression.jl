@@ -263,20 +263,30 @@ function D(ex::AbstractComposableExpression, feature::Integer)
     nbin = length(operators.binops)
     nuna = length(operators.unaops)
     tree = DE.get_contents(ex)
-    ctx = SymbolicDerivativeContext(; feature, plus_idx, mult_idx, nbin, nuna)
-    d_tree = _symbolic_derivative(tree, ctx)
     operators_with_derivatives = _expand_operators(operators)
+    evaluates_to_zero = ntuple(
+        i -> operators_with_derivatives.binops[i] == _zero, Val(3 * nbin)
+    )
+    evaluates_to_one = ntuple(
+        i -> operators_with_derivatives.binops[i] == _one, Val(3 * nbin)
+    )
+    ctx = SymbolicDerivativeContext(;
+        feature, plus_idx, mult_idx, nbin, nuna, evaluates_to_zero, evaluates_to_one
+    )
+    d_tree = _symbolic_derivative(tree, ctx)
     return with_metadata(
         with_contents(ex, d_tree); raw_metadata..., operators=operators_with_derivatives
     )
 end
 
-Base.@kwdef struct SymbolicDerivativeContext
+Base.@kwdef struct SymbolicDerivativeContext{TUP}
     feature::Int
     plus_idx::Int
     mult_idx::Int
     nbin::Int
     nuna::Int
+    evaluates_to_zero::TUP
+    evaluates_to_one::TUP
 end
 
 function _symbolic_derivative(
@@ -296,22 +306,53 @@ function _symbolic_derivative(
         return constructorof(N)(; val=one(T))
     elseif tree.degree == 1
         # f(g(x)) => f'(g(x)) * g'(x)
-        f_prime = constructorof(N)(; op=tree.op + ctx.nuna, l=tree.l)
-        g_prime = _symbolic_derivative(tree.l, ctx)
-        return constructorof(N)(; op=ctx.mult_idx, l=f_prime, r=g_prime)
+        f_prime_op = tree.op + ctx.nuna
+
+        ### We do some simplification based on zero/one derivatives ###
+        if ctx.evaluates_to_zero[f_prime_op]
+            return constructorof(N)(; val=zero(T))
+        else
+            g_prime = _symbolic_derivative(tree.l, ctx)
+            if ctx.evaluates_to_one[f_prime_op]
+                return g_prime
+            else
+                f_prime = constructorof(N)(; op=f_prime_op, l=tree.l)
+                return constructorof(N)(; op=ctx.mult_idx, l=f_prime, r=g_prime)
+            end
+        end
     else  # tree.degree == 2
         # f(g(x), h(x)) => f^(1,0)(g(x), h(x)) * g'(x) + f^(0,1)(g(x), h(x)) * h'(x)
-        f_prime_left = constructorof(N)(; op=tree.op + ctx.nbin, l=tree.l, r=tree.r)
-        f_prime_right = constructorof(N)(;
-            op=tree.op + 2 * ctx.nbin, # Note that we offset by double to pick the right derivative
-            l=tree.l,
-            r=tree.r,
-        )
-        g_prime = _symbolic_derivative(tree.l, ctx)
-        h_prime = _symbolic_derivative(tree.r, ctx)
+        f_prime_left_op = tree.op + ctx.nbin
+        f_prime_right_op = tree.op + 2 * ctx.nbin
 
-        first_term = constructorof(N)(; op=ctx.mult_idx, l=f_prime_left, r=g_prime)
-        second_term = constructorof(N)(; op=ctx.mult_idx, l=f_prime_right, r=h_prime)
+        ### We do some simplification based on zero/one derivatives ###
+        first_term = if ctx.evaluates_to_zero[f_prime_left_op]
+            # Simplify and just give zero
+            constructorof(N)(; val=zero(T))
+        else
+            g_prime = _symbolic_derivative(tree.l, ctx)
+            if ctx.evaluates_to_one[f_prime_left_op]
+                # Simplify and just give g_prime
+                g_prime
+            else
+                f_prime_left = constructorof(N)(; op=f_prime_left_op, l=tree.l, r=tree.r)
+                constructorof(N)(; op=ctx.mult_idx, l=f_prime_left, r=g_prime)
+            end
+        end
+
+        second_term = if ctx.evaluates_to_zero[f_prime_right_op]
+            # Simplify and just give zero
+            constructorof(N)(; val=zero(T))
+        else
+            h_prime = _symbolic_derivative(tree.r, ctx)
+            if ctx.evaluates_to_one[f_prime_right_op]
+                # Simplify and just give h_prime
+                h_prime
+            else
+                f_prime_right = constructorof(N)(; op=f_prime_right_op, l=tree.l, r=tree.r)
+                constructorof(N)(; op=ctx.mult_idx, l=f_prime_right, r=h_prime)
+            end
+        end
         return constructorof(N)(; op=ctx.plus_idx, l=first_term, r=second_term)
     end
 end
