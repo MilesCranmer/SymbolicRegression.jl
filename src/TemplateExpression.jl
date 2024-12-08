@@ -28,7 +28,6 @@ using ..CoreModule:
     AbstractOptions, Options, Dataset, CoreModule as CM, AbstractMutationWeights, has_units
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
-using ..DynamicAutodiffModule: DynamicAutodiffModule as DA
 using ..MutationFunctionsModule: MutationFunctionsModule as MF
 using ..ExpressionBuilderModule: ExpressionBuilderModule as EB
 using ..HallOfFameModule: HallOfFameModule as HOF
@@ -39,6 +38,9 @@ using ..LossFunctionsModule: LossFunctionsModule as LF
 using ..MutateModule: MutateModule as MM
 using ..PopMemberModule: PopMember
 using ..ComposableExpressionModule: ComposableExpression, ValidVector
+
+# TODO: Modify `D` once DynamicAutodiff is registered
+# import DynamicAutodiff: D
 
 """
     TemplateStructure{K,E,NF} <: Function
@@ -92,9 +94,10 @@ struct ArgumentRecorder{F} <: Function
 end
 (f::ArgumentRecorder)(args...) = f.f(args...)
 
+# TODO: Modify `D` once DynamicAutodiff is registered
 # We pass through the derivative operators, since
 # we just want to record the number of arguments.
-DA.D(f::ArgumentRecorder, _::Integer) = f
+# DA.D(f::ArgumentRecorder, _::Integer) = f
 
 """Infers number of features used by each subexpression, by passing in test data."""
 function infer_variable_constraints(::Val{K}, combiner::F) where {K,F}
