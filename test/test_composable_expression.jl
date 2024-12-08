@@ -321,7 +321,7 @@ end
 
 @testitem "Test symbolic derivatives" tags = [:part2] begin
     using SymbolicRegression: ComposableExpression, Node, D
-    using DynamicExpressions: OperatorEnum
+    using DynamicExpressions: OperatorEnum, @declare_expression_operator, AbstractExpression
     using Zygote: gradient
 
     # Basic setup
@@ -351,13 +351,37 @@ end
     @test D(D(sin(x1) * cos(x2), 1), 2)([1.0], [2.0]) ≈ [cos(1.0) * -sin(2.0)]
 
     # Printing should also be nice:
-    @test repr(D(x1 * x2, 1)) == "(∂₁*(x1, x2) * 1.0) + (∂₂*(x1, x2) * 0.0)"
+    @test repr(D(x1 * x2, 1)) == "last(x1, x2)"
 
     # We also have special behavior when there is no dependence:
     @test repr(D(sin(x2), 1)) == "0.0"
     @test repr(D(x2 + sin(x2), 1)) == "0.0"
-    @test repr(D(x2 + sin(x2) - x1, 1)) ==
-        "(∂₁-(x2 + sin(x2), x1) * 0.0) + (∂₂-(x2 + sin(x2), x1) * 1.0)"
+    @test repr(D(x2 + sin(x2) - x1, 1)) == "-1.0"
+
+    # But still nice printing for things like -sin:
+    @test repr(D(D(sin(x1), 1), 1)) == "-sin(x1)"
+
+    # Without generating weird additional operators:
+    @test repr(D(D(D(sin(x1), 1), 1), 1)) == "-cos(x1)"
+
+    # Custom functions have nice printing:
+    my_op(x) = sin(x)
+    @declare_expression_operator(my_op, 1)
+    my_bin_op(x, y) = x + y
+    @declare_expression_operator(my_bin_op, 2)
+    operators = OperatorEnum(;
+        binary_operators=(+, -, *, /, my_bin_op), unary_operators=(my_op,)
+    )
+
+    x = ComposableExpression(Node(Float64; feature=1); operators, variable_names)
+    y = ComposableExpression(Node(Float64; feature=2); operators, variable_names)
+
+    @test repr(D(my_op(x), 1)) == "∂my_op(x1)"
+    @test repr(D(D(my_op(x), 1), 1)) == "∂∂my_op(x1)"
+
+    @test repr(D(my_bin_op(x, y), 1)) == "∂₁my_bin_op(x1, x2)"
+    @test repr(D(my_bin_op(x, y), 2)) == "∂₂my_bin_op(x1, x2)"
+    @test repr(D(my_bin_op(x, x - y), 2)) == "∂₂my_bin_op(x1, x1 - x2) * -1.0"
 end
 
 @testitem "Test template structure with derivatives" tags = [:part2] begin

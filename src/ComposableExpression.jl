@@ -248,6 +248,8 @@ for op in (
 end
 #! format: on
 
+Base.@enum ConstantDerivative::UInt8 Zero One NegOne Other
+
 """
     D(ex::AbstractComposableExpression, feature::Integer)
 
@@ -264,14 +266,19 @@ function D(ex::AbstractComposableExpression, feature::Integer)
     nuna = length(operators.unaops)
     tree = DE.get_contents(ex)
     operators_with_derivatives = _expand_operators(operators)
-    evaluates_to_zero = ntuple(
-        i -> operators_with_derivatives.binops[i] == _zero, Val(3 * nbin)
-    )
-    evaluates_to_one = ntuple(
-        i -> operators_with_derivatives.binops[i] == _one, Val(3 * nbin)
+    evaluates_to_constant = map(
+        op -> if op == _zero
+            Zero
+        elseif op == _one
+            One
+        elseif op == _n_one
+            NegOne
+        else
+            Other
+        end, operators_with_derivatives.binops
     )
     ctx = SymbolicDerivativeContext(;
-        feature, plus_idx, mult_idx, nbin, nuna, evaluates_to_zero, evaluates_to_one
+        feature, plus_idx, mult_idx, nbin, nuna, evaluates_to_constant
     )
     d_tree = _symbolic_derivative(tree, ctx)
     return with_metadata(
@@ -285,8 +292,7 @@ Base.@kwdef struct SymbolicDerivativeContext{TUP}
     mult_idx::Int
     nbin::Int
     nuna::Int
-    evaluates_to_zero::TUP
-    evaluates_to_one::TUP
+    evaluates_to_constant::TUP
 end
 
 function _symbolic_derivative(
@@ -309,14 +315,15 @@ function _symbolic_derivative(
         f_prime_op = tree.op + ctx.nuna
 
         ### We do some simplification based on zero/one derivatives ###
-        if ctx.evaluates_to_zero[f_prime_op]
-            return constructorof(N)(; val=zero(T))
+        g_prime = _symbolic_derivative(tree.l, ctx)
+        if g_prime.degree == 0 && g_prime.constant && iszero(g_prime.val)
+            return g_prime
         else
-            g_prime = _symbolic_derivative(tree.l, ctx)
-            if ctx.evaluates_to_one[f_prime_op]
-                return g_prime
+            f_prime = constructorof(N)(; op=f_prime_op, l=tree.l)
+
+            if g_prime.degree == 0 && g_prime.constant && isone(g_prime.val)
+                return f_prime
             else
-                f_prime = constructorof(N)(; op=f_prime_op, l=tree.l)
                 return constructorof(N)(; op=ctx.mult_idx, l=f_prime, r=g_prime)
             end
         end
@@ -324,36 +331,67 @@ function _symbolic_derivative(
         # f(g(x), h(x)) => f^(1,0)(g(x), h(x)) * g'(x) + f^(0,1)(g(x), h(x)) * h'(x)
         f_prime_left_op = tree.op + ctx.nbin
         f_prime_right_op = tree.op + 2 * ctx.nbin
+        f_prime_left_evaluates_to = ctx.evaluates_to_constant[f_prime_left_op]
+        f_prime_right_evaluates_to = ctx.evaluates_to_constant[f_prime_right_op]
 
         ### We do some simplification based on zero/one derivatives ###
-        first_term = if ctx.evaluates_to_zero[f_prime_left_op]
+        first_term = if f_prime_left_evaluates_to == Zero
+
             # Simplify and just give zero
             constructorof(N)(; val=zero(T))
         else
             g_prime = _symbolic_derivative(tree.l, ctx)
-            if ctx.evaluates_to_one[f_prime_left_op]
+
+            if f_prime_left_evaluates_to == One ||
+                (g_prime.degree == 0 && g_prime.constant && iszero(g_prime.val))
                 # Simplify and just give g_prime
                 g_prime
             else
-                f_prime_left = constructorof(N)(; op=f_prime_left_op, l=tree.l, r=tree.r)
-                constructorof(N)(; op=ctx.mult_idx, l=f_prime_left, r=g_prime)
+                f_prime_left = if f_prime_left_evaluates_to == NegOne
+                    constructorof(N)(; val=-one(T))
+                else
+                    constructorof(N)(; op=f_prime_left_op, l=tree.l, r=tree.r)
+                end
+
+                if g_prime.degree == 0 && g_prime.constant && isone(g_prime.val)
+                    f_prime_left
+                else
+                    constructorof(N)(; op=ctx.mult_idx, l=f_prime_left, r=g_prime)
+                end
             end
         end
 
-        second_term = if ctx.evaluates_to_zero[f_prime_right_op]
+        second_term = if f_prime_right_evaluates_to == Zero
             # Simplify and just give zero
             constructorof(N)(; val=zero(T))
         else
             h_prime = _symbolic_derivative(tree.r, ctx)
-            if ctx.evaluates_to_one[f_prime_right_op]
+            if f_prime_right_evaluates_to == One ||
+                (h_prime.degree == 0 && h_prime.constant && iszero(h_prime.val))
                 # Simplify and just give h_prime
                 h_prime
             else
-                f_prime_right = constructorof(N)(; op=f_prime_right_op, l=tree.l, r=tree.r)
-                constructorof(N)(; op=ctx.mult_idx, l=f_prime_right, r=h_prime)
+                f_prime_right = if f_prime_right_evaluates_to == NegOne
+                    constructorof(N)(; val=-one(T))
+                else
+                    constructorof(N)(; op=f_prime_right_op, l=tree.l, r=tree.r)
+                end
+                if h_prime.degree == 0 && h_prime.constant && isone(h_prime.val)
+                    f_prime_right
+                else
+                    constructorof(N)(; op=ctx.mult_idx, l=f_prime_right, r=h_prime)
+                end
             end
         end
-        return constructorof(N)(; op=ctx.plus_idx, l=first_term, r=second_term)
+
+        # Simplify if either term is zero
+        if first_term.degree == 0 && first_term.constant && iszero(first_term.val)
+            return second_term
+        elseif second_term.degree == 0 && second_term.constant && iszero(second_term.val)
+            return first_term
+        else
+            return constructorof(N)(; op=ctx.plus_idx, l=first_term, r=second_term)
+        end
     end
 end
 
@@ -436,6 +474,11 @@ operator_derivative(::DivMonomial{C,XP,YNP}, ::Val{2}, ::Val{1}) where {C,XP,YNP
 operator_derivative(::DivMonomial{C,XP,YNP}, ::Val{2}, ::Val{2}) where {C,XP,YNP} =
     DivMonomial{-C * YNP,XP,YNP + 1}()
 #! format: on
+
+DE.get_op_name(::typeof(first ∘ tuple)) = "first"
+DE.get_op_name(::typeof(last ∘ tuple)) = "last"
+DE.get_op_name(::typeof((-) ∘ sin)) = "-sin"
+DE.get_op_name(::typeof((-) ∘ cos)) = "-cos"
 
 function _expand_operators(operators::OperatorEnum)
     unaops = operators.unaops
