@@ -110,6 +110,9 @@ for name in (:combine_operators, :simplify_tree!)
     end
 end
 
+function DE.count_scalar_constants(ex::AbstractComposableExpression)
+    return DE.count_scalar_constants(convert(Expression, ex))
+end
 function CO.count_constants_for_optimization(ex::AbstractComposableExpression)
     return CO.count_constants_for_optimization(convert(Expression, ex))
 end
