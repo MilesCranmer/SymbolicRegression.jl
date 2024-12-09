@@ -419,6 +419,8 @@ const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Op
     Function - a function taking (loss, complexity) as arguments and returning true or false.
 - `timeout_in_seconds`: Float64 - the time in seconds after which to exit (as an alternative to the number of iterations).
 - `max_evals`: Int (or Nothing) - the maximum number of evaluations of expressions to perform.
+- `input_stream`: the stream to read user input from. By default, this is `stdin`. If you encounter issues
+    with reading from `stdin`, like a hang, you can simply pass `devnull` to this argument.
 - `skip_mutation_failures`: Whether to simply skip over mutations that fail or are rejected, rather than to replace the mutated
     expression with the original expression and proceed normally.
 - `nested_constraints`: Specifies how many times a combination of operators can be nested. For example,
@@ -574,6 +576,7 @@ $(OPTION_DESCRIPTIONS)
     ## 10. Stopping Criteria:
     timeout_in_seconds::Union{Nothing,Real}=nothing,
     max_evals::Union{Nothing,Integer}=nothing,
+    input_stream::IO=stdin,
     ## 11. Performance and Parallelization:
     turbo::Bool=false,
     bumper::Bool=false,
@@ -926,6 +929,7 @@ $(OPTION_DESCRIPTIONS)
         Val(deprecated_return_state),
         timeout_in_seconds,
         max_evals,
+        input_stream,
         skip_mutation_failures,
         _nested_constraints,
         deterministic,
