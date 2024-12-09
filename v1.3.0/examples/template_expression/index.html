@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Template Expressions · SymbolicRegression.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link rel="canonical" href="https://ai.damtp.cam.ac.uk/symbolicregression/stable/examples/template_expression/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../index_base/"><img src="../../assets/logo.svg" alt="SymbolicRegression.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../index_base/">SymbolicRegression.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../index_base/">Contents</a></li><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../">Short Examples</a></li><li class="is-active"><a class="tocitem" href>Template Expressions</a><ul class="internal"><li><a class="tocitem" href="#The-Physical-Problem"><span>The Physical Problem</span></a></li></ul></li><li><a class="tocitem" href="../parameterized_function/">Parameterized Expressions</a></li></ul></li><li><a class="tocitem" href="../../api/">API</a></li><li><a class="tocitem" href="../../losses/">Losses</a></li><li><a class="tocitem" href="../../types/">Types</a></li><li><a class="tocitem" href="../../customization/">Customization</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Template Expressions</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Template Expressions</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/MilesCranmer/SymbolicRegression.jl/blob/master/examples/template_expression_complex.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Searching-with-template-expressions"><a class="docs-heading-anchor" href="#Searching-with-template-expressions">Searching with template expressions</a><a id="Searching-with-template-expressions-1"></a><a class="docs-heading-anchor-permalink" href="#Searching-with-template-expressions" title="Permalink"></a></h1><p>Template expressions are a powerful feature in SymbolicRegression.jl that allow you to impose structure on the symbolic regression search. Rather than searching for a completely free-form expression, you can specify a template that combines multiple sub-expressions in a prescribed way.</p><p>This is particularly useful when any of the following are true:</p><ul><li>You have domain knowledge about the functional form of your solution</li><li>You want to learn expressions for a vector-valued output</li><li>You need to enforce constraints on which variables can appear in different parts of the expression</li><li>You want to share sub-expressions between multiple components</li></ul><p>For example, you might know that your system follows a pattern like: <code>sin(f(x1, x2)) + g(x3)^2</code> where <code>f</code> and <code>g</code> are unknown functions you want to learn. With template expressions, you can encode this structure while still letting the symbolic regression search discover the optimal form of the sub-expressions.</p><p>In this tutorial, we&#39;ll walk through a complete example of using template expressions to learn the components of a particle&#39;s motion under magnetic and drag forces. We&#39;ll see how to:</p><ol><li>Define the structure of our template</li><li>Specify constraints on which variables each sub-expression can access</li><li>Set up the symbolic regression search</li><li>Interpret and use the results</li></ol><p>Let&#39;s get started!</p><pre><code class="language-julia hljs">using SymbolicRegression
+using SymbolicRegression: ValidVector
+using Random
+using MLJBase: machine, fit!, predict, report</code></pre><h2 id="The-Physical-Problem"><a class="docs-heading-anchor" href="#The-Physical-Problem">The Physical Problem</a><a id="The-Physical-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#The-Physical-Problem" title="Permalink"></a></h2><p>We&#39;ll study a charged particle moving through a magnetic field with temperature-dependent drag. The total force on the particle will have two components:</p><p class="math-container">\[\mathbf{F} = \mathbf{F}_\text{drag} + \mathbf{F}_\text{magnetic} = -\eta(T)\mathbf{v} + q \mathbf{v} \times \mathbf{B}(t)\]</p><p>where we will take <span>$q = 1$</span> for simplicity.</p><p>From physics, we know:</p><ul><li>The magnetic force comes from a cross product with the field: <span>$\mathbf{F}_\text{magnetic} = \mathbf{v} \times \mathbf{B}$</span></li><li>The drag force opposes motion, and we&#39;ll define a simple model for it: <span>$\mathbf{F}_\text{drag} = -\eta(T)\mathbf{v}$</span></li></ul><p>Now, the parts of this model we don&#39;t know:</p><ul><li>The magnetic field <span>$\mathbf{B}(t)$</span> varies in time throughout the experiment, but this pattern repeats for each experiment. We want to learn the components of this field, symbolically!</li><li>The drag coefficient <span>$\eta(T)$</span> depends only on temperature. We also want to figure out what this is!</li></ul><p>We&#39;ll generate synthetic data from a known model and then try to rediscover these relationships, <strong>only knowing the total force</strong> on a particle for a given experiment, as well as the input variables: time, velocity, and temperature. We will do this with template expressions to encode the physical structure of the problem.</p><p>Let&#39;s say we run this experiment 1000 times:</p><pre><code class="language-julia hljs">n = 1000
+rng = Random.MersenneTwister(0);</code></pre><p>Each time we run the experiment, the temperature is a bit different:</p><pre><code class="language-julia hljs">T = 298.15 .+ 0.5 .* rand(rng, n)
+T[1:3]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Vector{Float64}:
+ 298.3718654224738
+ 298.1561708577222
+ 298.1894634079026</code></pre><p>We run the experiment, and record the velocity at a random time between 0 and 10 seconds.</p><pre><code class="language-julia hljs">t = 10 .* rand(rng, n)
+t[1:3]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Vector{Float64}:
+ 4.638978857758314
+ 5.0741312407383194
+ 6.2470995980837385</code></pre><p>We introduce a particle at a random velocity between -1 and 1</p><pre><code class="language-julia hljs">v = [ntuple(_ -&gt; 2 * rand(rng) - 1, 3) for _ in 1:n]
+v[1:3]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Vector{Tuple{Float64, Float64, Float64}}:
+ (0.04597744561694972, 0.3617761091511644, -0.7622618201519469)
+ (0.13929410233783868, 0.6246359182930323, -0.8802795769225171)
+ (0.024384606418089483, -0.2764887177675295, 0.5304044608519174)</code></pre><p><strong>Now, let&#39;s create the true unknown model.</strong></p><p>Let&#39;s assume the magnetic field is sinusoidal with frequency 1 Hz along axes x and y, and decays exponentially along the z-axis:</p><p class="math-container">\[\mathbf{B}(t) = \begin{pmatrix}
+\sin(\omega t) \\
+\cos(\omega t) \\
+e^{-t/10}
+\end{pmatrix}
+\quad \text{where} \quad \omega = 2\pi\]</p><p>This gives us a rotating magnetic field in the x-y plane that weakens along z:</p><pre><code class="language-julia hljs">omega = 2π
+B = [(sin(omega * ti), cos(omega * ti), exp(-ti / 10)) for ti in t]
+B[1:3]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Vector{Tuple{Float64, Float64, Float64}}:
+ (-0.7664076828044546, -0.642354468917518, 0.6288277634479177)
+ (0.4491201340287294, 0.8934713790659531, 0.6020509973388409)
+ (0.9998339518319687, 0.01822275401986526, 0.5354166983624471)</code></pre><p>We assume the drag force is linear in the velocity and depends on the temperature with a power law:</p><p class="math-container">\[\mathbf{F}_\text{drag} = -\alpha T^{1/2} \mathbf{v}
+\quad \text{where} \quad \alpha = 10^{-5}\]</p><p>This creates a temperature-dependent damping effect:</p><pre><code class="language-julia hljs">F_d = [-1e-5 * Ti^(1//2) .* vi for (Ti, vi) in zip(T, v)]
+F_d[1:3]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Vector{Tuple{Float64, Float64, Float64}}:
+ (-7.941888292012911e-6, -6.249119338936066e-5, 0.00013166886815220216)
+ (-2.405219023122198e-5, -0.00010785712876486136, 0.00015199962873839863)
+ (-4.210773653883972e-6, 4.7744523262348025e-5, -9.159110839701518e-5)</code></pre><p>Now, let&#39;s compute the true magnetic force, in 3D:</p><pre><code class="language-julia hljs">cross((a1, a2, a3), (b1, b2, b3)) = (a2 * b3 - a3 * b2, a3 * b1 - a1 * b3, a1 * b2 - a2 * b1)
+F_mag = [cross(vi, Bi) for (vi, Bi) in zip(v, B)]
+F_mag[1:3]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Vector{Tuple{Float64, Float64, Float64}}:
+ (-0.262147425073388, 0.5552914209766048, 0.24773417184709556)
+ (1.162567285138538, -0.47921343480610845, -0.1560812736313824)
+ (-0.15770210642270086, 0.5172604627036361, 0.2768871620070909)</code></pre><p>We then sum these to get the total force:</p><pre><code class="language-julia hljs">F = [fd .+ fm for (fd, fm) in zip(F_d, F_mag)]
+F[1:3]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Vector{Tuple{Float64, Float64, Float64}}:
+ (-0.26215536696168, 0.5552289297832154, 0.24786584071524775)
+ (1.1625432329483067, -0.47932129193487333, -0.155929274002644)
+ (-0.15770631719635475, 0.5173082072268985, 0.2767955708986939)</code></pre><p>This forms our dataset!</p><pre><code class="language-julia hljs">data = (; t, v, T, F, B, F_d, F_mag)
+keys(data)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(:t, :v, :T, :F, :B, :F_d, :F_mag)</code></pre><p>Now, let&#39;s format the input variables for input to the regressor:</p><pre><code class="language-julia hljs">X = (;
+    t=data.t,
+    v_x=[vi[1] for vi in data.v],
+    v_y=[vi[2] for vi in data.v],
+    v_z=[vi[3] for vi in data.v],
+    T=data.T,
+)
+keys(X)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(:t, :v_x, :v_y, :v_z, :T)</code></pre><p>Template expressions allow us to regress directly on a struct, so here we can define a <code>Force</code> type:</p><pre><code class="language-julia hljs">struct Force{T}
+    x::T
+    y::T
+    z::T
+end
+y = [Force(F...) for F in data.F]
+y[1:3]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Vector{Main.Force{Float64}}:
+ Main.Force{Float64}(-0.26215536696168, 0.5552289297832154, 0.24786584071524775)
+ Main.Force{Float64}(1.1625432329483067, -0.47932129193487333, -0.155929274002644)
+ Main.Force{Float64}(-0.15770631719635475, 0.5173082072268985, 0.2767955708986939)</code></pre><p>Our input variable names are as follows:</p><pre><code class="language-julia hljs">variable_names = [&quot;t&quot;, &quot;v_x&quot;, &quot;v_y&quot;, &quot;v_z&quot;, &quot;T&quot;]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{String}:
+ &quot;t&quot;
+ &quot;v_x&quot;
+ &quot;v_y&quot;
+ &quot;v_z&quot;
+ &quot;T&quot;</code></pre><p>Template expressions require you to define a <em>structure</em> function, which describes how to combine the sub-expressions into a single expression, numerically evaluate them, and print them. These are evaluated using <code>ComposableExpression</code> for the individual subexpressions (which allow them to be composed into new expressions), and <code>ValidVector</code> for carrying through evaluation results.</p><p>Let&#39;s define our structure function. Note that this takes two arguments, one being a named tuple of our expressions (<code>::ComposableExpression</code>), and the other being a tuple of the input variables (<code>::ValidVector</code>).</p><pre><code class="language-julia hljs">function compute_force((; B_x, B_y, B_z, F_d_scale), (t, v_x, v_y, v_z, T))
+    # First, we evaluate each subexpression on the variables we wish
+    # to have each depend on:
+    _B_x = B_x(t)
+    _B_y = B_y(t)
+    _B_z = B_z(t)
+    _F_d_scale = F_d_scale(T)
+    # Note that we can also evaluate an expression multiple times,
+    # including in a hierarchy!
+
+    # Now, let&#39;s do the same computation we did above to
+    # get the total force vectors. Note that the evaluation
+    # output is wrapped in `ValidVector`, so we need
+    # to extract the `.x` to get raw vectors:
+    B = [(bx, by, bz) for (bx, by, bz) in zip(_B_x.x, _B_y.x, _B_z.x)]
+    v = [(vx, vy, vz) for (vx, vy, vz) in zip(v_x.x, v_y.x, v_z.x)]
+
+
+    # Now, let&#39;s compute the drag force using our model:
+    F_d = [_F_d_scale .* vi for (vi, _F_d_scale) in zip(v, _F_d_scale.x)]
+
+    # Now, the magnetic force:
+    F_mag = [cross(vi, Bi) for (vi, Bi) in zip(v, B)]
+
+    # Finally, we combine the drag and magnetic forces into the total force:
+    F = [Force((fd .+ fm)...) for (fd, fm) in zip(F_d, F_mag)]
+
+    # The output of this function needs to be another `ValidVector`,
+    # which carries through the validity of the evaluation. We compute
+    # this below.
+    ValidVector(F, _B_x.valid &amp;&amp; _B_y.valid &amp;&amp; _B_z.valid &amp;&amp; _F_d_scale.valid)
+    # (Note that if you were doing operations that could not handle NaNs,
+    # you may need to return early - just be sure to also return the `ValidVector`!)
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">compute_force (generic function with 1 method)</code></pre><p>Note above that we have constrained what variables each subexpression depends on.</p><p>We have constrained the magnetic field to only depend on time, and the drag force scale to only depend on temperature. The other variables we simply pass through and use in the evaluation.</p><p>Now, we can create our template expression, with the subexpression symbols we wish to learn:</p><pre><code class="language-julia hljs">structure = TemplateStructure{(:B_x, :B_y, :B_z, :F_d_scale)}(compute_force)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(::TemplateStructure{(:B_x, :B_y, :B_z, :F_d_scale), typeof(Main.compute_force), @NamedTuple{B_x::Int64, B_y::Int64, B_z::Int64, F_d_scale::Int64}}) (generic function with 0 methods)</code></pre><p>First, let&#39;s look at an example of how this would be used in a TemplateExpression, for some guess at the form of the solution:</p><pre><code class="language-julia hljs">options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos, sqrt, exp))
+# The inner operators are an `DynamicExpressions.OperatorEnum` which is used by `Expression`:
+operators = options.operators
+t = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+T = ComposableExpression(Node{Float64}(; feature=5); operators, variable_names)
+B_x = B_y = B_z = 2.1 * cos(t)
+F_d_scale = 1.0 * sqrt(T)
+
+ex = TemplateExpression(
+    (; B_x, B_y, B_z, F_d_scale);
+    structure, operators, variable_names
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">B_x = 2.1 * cos(#1); B_y = 2.1 * cos(#1); B_z = 2.1 * cos(#1); F_d_scale = 1.0 * sqrt(x5)</code></pre><p>So we can see that it prints the expression as we&#39;ve defined it.</p><p>Now, we can create a regressor that builds template expressions which follow this structure!</p><pre><code class="language-julia hljs">model = SRRegressor(;
+    binary_operators=(+, -, *, /),
+    unary_operators=(sin, cos, sqrt, exp),
+    niterations=500,
+    maxsize=35,
+    expression_type=TemplateExpression,
+    expression_options=(; structure=structure),
+    # Note that the elementwise loss needs to operate directly on each row of `y`:
+    elementwise_loss=(F1, F2) -&gt; (F1.x - F2.x)^2 + (F1.y - F2.y)^2 + (F1.z - F2.z)^2,
+    batching=true,
+    batch_size=30,
+);</code></pre><p>Note how we also have to define the custom <code>elementwise_loss</code> function. This is because our <code>combine_vectors</code> function returns a <code>Force</code> struct, so we need to combine it against the truth!</p><p>Next, we can set up our machine and fit:</p><pre><code class="language-julia hljs">mach = machine(model, X, y)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">untrained Machine; caches model-specific representations of data
+  model: SRRegressor(defaults = nothing, …)
+  args: 
+    1:	Source @603 ⏎ ScientificTypesBase.Table{AbstractVector{ScientificTypesBase.Continuous}}
+    2:	Source @074 ⏎ AbstractVector{ScientificTypesBase.Unknown}
+</code></pre><p>At this point, you would run:</p><pre><code class="language-julia hljs">fit!(mach)</code></pre><p>which should print using your <code>combine_strings</code> function during the search. The final result is accessible with:</p><pre><code class="language-julia hljs">report(mach)</code></pre><p>which would return a named tuple of the fitted results, including the <code>.equations</code> field, which is a vector of <code>TemplateExpression</code> objects that dominated the Pareto front.</p><hr/><details>
+<summary> Show raw source code </summary><pre><code class="language-julia hljs">#=
+# Searching with template expressions
+
+Template expressions are a powerful feature in SymbolicRegression.jl that allow you to impose structure
+on the symbolic regression search. Rather than searching for a completely free-form expression, you can
+specify a template that combines multiple sub-expressions in a prescribed way.
+
+This is particularly useful when any of the following are true:
+- You have domain knowledge about the functional form of your solution
+- You want to learn expressions for a vector-valued output
+- You need to enforce constraints on which variables can appear in different parts of the expression
+- You want to share sub-expressions between multiple components
+
+For example, you might know that your system follows a pattern like:
+`sin(f(x1, x2)) + g(x3)^2`
+where `f` and `g` are unknown functions you want to learn. With template expressions, you can encode
+this structure while still letting the symbolic regression search discover the optimal form of the
+sub-expressions.
+
+In this tutorial, we&#39;ll walk through a complete example of using template expressions to learn
+the components of a particle&#39;s motion under magnetic and drag forces. We&#39;ll see how to:
+
+1. Define the structure of our template
+2. Specify constraints on which variables each sub-expression can access
+3. Set up the symbolic regression search
+4. Interpret and use the results
+
+Let&#39;s get started!
+=#
+using SymbolicRegression
+using SymbolicRegression: ValidVector
+using Random
+using MLJBase: machine, fit!, predict, report
+
+#=
+
+## The Physical Problem
+
+We&#39;ll study a charged particle moving through a magnetic field with temperature-dependent drag.
+The total force on the particle will have two components:
+
+\```math
+\mathbf{F} = \mathbf{F}_\text{drag} + \mathbf{F}_\text{magnetic} = -\eta(T)\mathbf{v} + q \mathbf{v} \times \mathbf{B}(t)
+\```
+where we will take ``q = 1`` for simplicity.
+
+From physics, we know:
+- The magnetic force comes from a cross product with the field: ``\mathbf{F}_\text{magnetic} = \mathbf{v} \times \mathbf{B}``
+- The drag force opposes motion, and we&#39;ll define a simple model for it: ``\mathbf{F}_\text{drag} = -\eta(T)\mathbf{v}``
+
+Now, the parts of this model we don&#39;t know:
+- The magnetic field ``\mathbf{B}(t)`` varies in time throughout the experiment, but this pattern repeats for each experiment. We want to learn the components of this field, symbolically!
+- The drag coefficient ``\eta(T)`` depends only on temperature. We also want to figure out what this is!
+
+We&#39;ll generate synthetic data from a known model and then try to rediscover these relationships,
+**only knowing the total force** on a particle for a given experiment, as well as the input variables:
+time, velocity, and temperature.
+We will do this with template expressions to encode the physical structure of the problem.
+
+Let&#39;s say we run this experiment 1000 times:
+=#
+n = 1000
+rng = Random.MersenneTwister(0);
+
+#=
+Each time we run the experiment, the temperature is a bit different:
+=#
+T = 298.15 .+ 0.5 .* rand(rng, n)
+T[1:3]
+
+#=
+We run the experiment, and record the velocity at a random time
+between 0 and 10 seconds.
+=#
+t = 10 .* rand(rng, n)
+t[1:3]
+
+#=
+We introduce a particle at a random velocity between -1 and 1
+=#
+v = [ntuple(_ -&gt; 2 * rand(rng) - 1, 3) for _ in 1:n]
+v[1:3]
+
+#=
+**Now, let&#39;s create the true unknown model.**
+
+Let&#39;s assume the magnetic field is sinusoidal with frequency 1 Hz along axes x and y,
+and decays exponentially along the z-axis:
+
+\```math
+\mathbf{B}(t) = \begin{pmatrix}
+\sin(\omega t) \\
+\cos(\omega t) \\
+e^{-t/10}
+\end{pmatrix}
+\quad \text{where} \quad \omega = 2\pi
+\```
+
+This gives us a rotating magnetic field in the x-y plane that weakens along z:
+=#
+omega = 2π
+B = [(sin(omega * ti), cos(omega * ti), exp(-ti / 10)) for ti in t]
+B[1:3]
+
+#=
+We assume the drag force is linear in the velocity and
+depends on the temperature with a power law:
+
+\```math
+\mathbf{F}_\text{drag} = -\alpha T^{1/2} \mathbf{v}
+\quad \text{where} \quad \alpha = 10^{-5}
+\```
+
+This creates a temperature-dependent damping effect:
+=#
+F_d = [-1e-5 * Ti^(1//2) .* vi for (Ti, vi) in zip(T, v)]
+F_d[1:3]
+
+#=
+Now, let&#39;s compute the true magnetic force, in 3D:
+=#
+cross((a1, a2, a3), (b1, b2, b3)) = (a2 * b3 - a3 * b2, a3 * b1 - a1 * b3, a1 * b2 - a2 * b1)
+F_mag = [cross(vi, Bi) for (vi, Bi) in zip(v, B)]
+F_mag[1:3]
+
+#=
+We then sum these to get the total force:
+=#
+F = [fd .+ fm for (fd, fm) in zip(F_d, F_mag)]
+F[1:3]
+
+#=
+This forms our dataset!
+=#
+data = (; t, v, T, F, B, F_d, F_mag)
+keys(data)
+
+#=
+Now, let&#39;s format the input variables for input to the regressor:
+=#
+X = (;
+    t=data.t,
+    v_x=[vi[1] for vi in data.v],
+    v_y=[vi[2] for vi in data.v],
+    v_z=[vi[3] for vi in data.v],
+    T=data.T,
+)
+keys(X)
+
+#=
+Template expressions allow us to regress directly on a struct,
+so here we can define a `Force` type:
+=#
+struct Force{T}
+    x::T
+    y::T
+    z::T
+end
+y = [Force(F...) for F in data.F]
+y[1:3]
+
+#=
+Our input variable names are as follows:
+=#
+variable_names = [&quot;t&quot;, &quot;v_x&quot;, &quot;v_y&quot;, &quot;v_z&quot;, &quot;T&quot;]
+
+#=
+Template expressions require you to define a _structure_ function,
+which describes how to combine the sub-expressions into a single
+expression, numerically evaluate them, and print them.
+These are evaluated using `ComposableExpression` for the individual
+subexpressions (which allow them to be composed into new expressions),
+and `ValidVector` for carrying through evaluation results.
+
+Let&#39;s define our structure function. Note that this takes two arguments,
+one being a named tuple of our expressions (`::ComposableExpression`), and the other being a tuple
+of the input variables (`::ValidVector`).
+=#
+function compute_force((; B_x, B_y, B_z, F_d_scale), (t, v_x, v_y, v_z, T))
+    ## First, we evaluate each subexpression on the variables we wish
+    ## to have each depend on:
+    _B_x = B_x(t)
+    _B_y = B_y(t)
+    _B_z = B_z(t)
+    _F_d_scale = F_d_scale(T)
+    ## Note that we can also evaluate an expression multiple times,
+    ## including in a hierarchy!
+
+    ## Now, let&#39;s do the same computation we did above to
+    ## get the total force vectors. Note that the evaluation
+    ## output is wrapped in `ValidVector`, so we need
+    ## to extract the `.x` to get raw vectors:
+    B = [(bx, by, bz) for (bx, by, bz) in zip(_B_x.x, _B_y.x, _B_z.x)]
+    v = [(vx, vy, vz) for (vx, vy, vz) in zip(v_x.x, v_y.x, v_z.x)]
+
+
+    ## Now, let&#39;s compute the drag force using our model:
+    F_d = [_F_d_scale .* vi for (vi, _F_d_scale) in zip(v, _F_d_scale.x)]
+
+    ## Now, the magnetic force:
+    F_mag = [cross(vi, Bi) for (vi, Bi) in zip(v, B)]
+
+    ## Finally, we combine the drag and magnetic forces into the total force:
+    F = [Force((fd .+ fm)...) for (fd, fm) in zip(F_d, F_mag)]
+
+    ## The output of this function needs to be another `ValidVector`,
+    ## which carries through the validity of the evaluation. We compute
+    ## this below.
+    ValidVector(F, _B_x.valid &amp;&amp; _B_y.valid &amp;&amp; _B_z.valid &amp;&amp; _F_d_scale.valid)
+    ## (Note that if you were doing operations that could not handle NaNs,
+    ## you may need to return early - just be sure to also return the `ValidVector`!)
+end
+
+#=
+Note above that we have constrained what variables each subexpression depends on.
+
+We have constrained the magnetic field to only depend on time,
+and the drag force scale to only depend on temperature.
+The other variables we simply pass through and use in the evaluation.
+
+Now, we can create our template expression, with the
+subexpression symbols we wish to learn:
+=#
+structure = TemplateStructure{(:B_x, :B_y, :B_z, :F_d_scale)}(compute_force)
+
+#=
+First, let&#39;s look at an example of how this would be used
+in a TemplateExpression, for some guess at the form of
+the solution:
+=#
+options = Options(; binary_operators=(+, *, /, -), unary_operators=(sin, cos, sqrt, exp))
+## The inner operators are an `DynamicExpressions.OperatorEnum` which is used by `Expression`:
+operators = options.operators
+t = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+T = ComposableExpression(Node{Float64}(; feature=5); operators, variable_names)
+B_x = B_y = B_z = 2.1 * cos(t)
+F_d_scale = 1.0 * sqrt(T)
+
+ex = TemplateExpression(
+    (; B_x, B_y, B_z, F_d_scale);
+    structure, operators, variable_names
+)
+
+#=
+So we can see that it prints the expression as we&#39;ve defined it.
+
+Now, we can create a regressor that builds template expressions
+which follow this structure!
+=#
+model = SRRegressor(;
+    binary_operators=(+, -, *, /),
+    unary_operators=(sin, cos, sqrt, exp),
+    niterations=500,
+    maxsize=35,
+    expression_type=TemplateExpression,
+    expression_options=(; structure=structure),
+    ## Note that the elementwise loss needs to operate directly on each row of `y`:
+    elementwise_loss=(F1, F2) -&gt; (F1.x - F2.x)^2 + (F1.y - F2.y)^2 + (F1.z - F2.z)^2,
+    batching=true,
+    batch_size=30,
+);
+
+#=
+Note how we also have to define the custom `elementwise_loss`
+function. This is because our `combine_vectors` function
+returns a `Force` struct, so we need to combine it against the truth!
+
+Next, we can set up our machine and fit:
+=#
+
+mach = machine(model, X, y)
+
+#=
+At this point, you would run:
+\```julia
+fit!(mach)
+\```
+
+which should print using your `combine_strings` function
+during the search. The final result is accessible with:
+\```julia
+report(mach)
+\```
+which would return a named tuple of the fitted results,
+including the `.equations` field, which is a vector
+of `TemplateExpression` objects that dominated the Pareto front.
+=#</code></pre><p>which uses Literate.jl to generate this page.</p></details></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Short Examples</a><a class="docs-footer-nextpage" href="../parameterized_function/">Parameterized Expressions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Monday 9 December 2024 17:54">Monday 9 December 2024</span>. Using Julia version 1.11.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
