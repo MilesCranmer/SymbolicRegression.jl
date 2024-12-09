@@ -868,7 +868,6 @@ $(OPTION_DESCRIPTIONS)
         deprecated_return_state::Union{Bool,Nothing},
         typeof(_autodiff_backend),
         print_precision,
-        typeof(input_stream),
     }(
         operators,
         _bin_constraints,

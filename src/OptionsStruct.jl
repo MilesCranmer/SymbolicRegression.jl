@@ -189,7 +189,6 @@ struct Options{
     _return_state,
     AD,
     print_precision,
-    ST,
 } <: AbstractOptions
     operators::OP
     bin_constraints::Vector{Tuple{Int,Int}}
@@ -251,7 +250,7 @@ struct Options{
     return_state::Val{_return_state}
     timeout_in_seconds::Union{Float64,Nothing}
     max_evals::Union{Int,Nothing}
-    input_stream::ST
+    input_stream::IO
     skip_mutation_failures::Bool
     nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
     deterministic::Bool
