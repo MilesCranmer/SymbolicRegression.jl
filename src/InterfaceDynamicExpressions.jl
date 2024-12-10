@@ -79,9 +79,8 @@ which speed up evaluation significantly.
 function expected_array_type(X::AbstractArray, ::Type)
     return typeof(similar(X, axes(X, 2)))
 end
-function expected_array_type(X::AbstractArray, ::Type, ::Val{:eval_grad_tree_array})
-    return typeof(X)
-end
+expected_array_type(X::AbstractArray, ::Type, ::Val{:eval_grad_tree_array}) = typeof(X)
+expected_array_type(::Matrix{T}, ::Type) where {T} = Vector{T}
 
 """
     eval_diff_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::AbstractOptions, direction::Int)
