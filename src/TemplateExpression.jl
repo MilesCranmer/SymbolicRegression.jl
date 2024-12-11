@@ -372,7 +372,10 @@ end
         end
     end
 )
-@unstable IDE.expected_array_type(::AbstractMatrix, ::Type{<:TemplateExpression}) = Any
+@unstable begin
+    IDE.expected_array_type(::AbstractArray, ::Type{<:TemplateExpression}) = Any
+    IDE.expected_array_type(::Matrix{T}, ::Type{<:TemplateExpression}) where {T} = Any
+end
 
 function DA.violates_dimensional_constraints(
     @nospecialize(tree::TemplateExpression),
