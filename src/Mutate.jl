@@ -2,6 +2,7 @@ module MutateModule
 
 using DynamicExpressions:
     AbstractExpression,
+    copy_node!,
     get_tree,
     preserve_sharing,
     count_scalar_constants,
@@ -187,13 +188,14 @@ function next_generation(
     successful_mutation = false
     attempts = 0
     max_attempts = 10
+    node_buffer = collect(copy(member.tree))
 
     #############################################
     # Mutations
     #############################################
     local tree
     while (!successful_mutation) && attempts < max_attempts
-        tree = copy(member.tree)
+        tree = attempts == 0 ? first(node_buffer) : copy_node!(node_buffer, member.tree)
 
         mutation_result = _dispatch_mutations!(
             tree,
