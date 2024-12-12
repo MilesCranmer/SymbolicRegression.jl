@@ -318,3 +318,25 @@ end
     expr = TemplateExpression((; f=c1, g=x1 + x2); structure, operators, variable_names)
     @test expr(X) ≈ [6.0]  # 3 + (1 + 2)
 end
+
+@testitem "Test TemplateExpression with differential operator" tags = [:part3] begin
+    using SymbolicRegression
+    using SymbolicRegression: D
+    using DynamicExpressions: OperatorEnum
+
+    operators = OperatorEnum(; binary_operators=(+, -, *, /), unary_operators=(sin, cos))
+    variable_names = ["x1", "x2"]
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+    x2 = ComposableExpression(Node{Float64}(; feature=2); operators, variable_names)
+    x3 = ComposableExpression(Node{Float64}(; feature=3); operators, variable_names)
+
+    structure = TemplateStructure{(:f, :g)}(
+        ((; f, g), (x1, x2, x3)) -> f(x1) + D(g, 1)(x2, x3)
+    )
+    expr = TemplateExpression(
+        (; f=x1, g=cos(x1 - x2) + 2.5 * x1); structure, operators, variable_names
+    )
+    # Truth: x1 - sin(x2 - x3) + 2.5
+    X = stack(([1.0, 2.0], [3.0, 4.0], [5.0, 6.0]); dims=1)
+    @test expr(X) ≈ [1.0, 2.0] .- sin.([3.0, 4.0] .- [5.0, 6.0]) .+ 2.5
+end

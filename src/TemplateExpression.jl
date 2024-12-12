@@ -2,7 +2,7 @@ module TemplateExpressionModule
 
 using Random: AbstractRNG
 using Compat: Fix
-using DynamicAutodiff: DynamicAutodiff
+using DynamicDiff: DynamicDiff
 using DispatchDoctor: @unstable, @stable
 using StyledStrings: @styled_str, annotatedstring
 using DynamicExpressions:
@@ -94,7 +94,7 @@ end
 
 # We pass through the derivative operators, since
 # we just want to record the number of arguments.
-DynamicAutodiff.D(f::ArgumentRecorder, ::Integer) = f
+DynamicDiff.D(f::ArgumentRecorder, ::Integer) = f
 
 """Infers number of features used by each subexpression, by passing in test data."""
 function infer_variable_constraints(::Val{K}, combiner::F) where {K,F}
