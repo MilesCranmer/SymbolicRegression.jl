@@ -549,7 +549,7 @@ end
 function DE.copy_node!(dest::NamedTuple, src::TemplateExpression)
     raw_contents = get_contents(src)
     new_trees = NamedTuple{keys(raw_contents)}(
-        map(DE.copy_node!, dest.trees, values(raw_contents))
+        map(DE.copy_node!, values(dest.trees), values(raw_contents))
     )
     return DE.with_contents(src, new_trees)
 end
