@@ -16,6 +16,7 @@ using ..CoreModule:
     sample_mutation,
     max_features
 using ..ComplexityModule: compute_complexity
+using ..InterfaceDynamicExpressionsModule: preallocate_expression
 using ..LossFunctionsModule: score_func, score_func_batched
 using ..CheckConstraintsModule: check_constraints
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
@@ -188,14 +189,14 @@ function next_generation(
     successful_mutation = false
     attempts = 0
     max_attempts = 10
-    node_buffer = collect(copy(member.tree))
+    node_storage = preallocate_expression(member.tree, curmaxsize)
 
     #############################################
     # Mutations
     #############################################
     local tree
     while (!successful_mutation) && attempts < max_attempts
-        tree = attempts == 0 ? first(node_buffer) : copy_node!(node_buffer, member.tree)
+        tree = copy_node!(node_storage, member.tree)
 
         mutation_result = _dispatch_mutations!(
             tree,
@@ -240,7 +241,7 @@ function next_generation(
         mutation_accepted = false
         return (
             PopMember(
-                copy(member.tree),
+                copy_node!(node_storage, member.tree),
                 beforeScore,
                 beforeLoss,
                 options,
@@ -269,7 +270,7 @@ function next_generation(
         mutation_accepted = false
         return (
             PopMember(
-                copy(member.tree),
+                copy_node!(node_storage, member.tree),
                 beforeScore,
                 beforeLoss,
                 options,
@@ -312,7 +313,7 @@ function next_generation(
         mutation_accepted = false
         return (
             PopMember(
-                copy(member.tree),
+                copy_node!(node_storage, member.tree),
                 beforeScore,
                 beforeLoss,
                 options,

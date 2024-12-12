@@ -181,4 +181,25 @@ function MF.mutate_constant(
     end
 end
 
+function EB.preallocate_expression(prototype::ParametricExpression, n::Integer)
+    return (;
+        tree=EB.preallocate_expression(get_contents(prototype), n),
+        parameters=similar(get_metadata(prototype).parameters),
+    )
+end
+function DE.copy_node!(dest::NamedTuple, src::ParametricExpression)
+    new_tree = DE.copy_node!(dest.tree, get_contents(src))
+    metadata = DE.get_metadata(src)
+    new_parameters = dest.parameters
+    new_parameters .= metadata.parameters
+    new_metadata = DE.Metadata((;
+        operators=metadata.operators,
+        variable_names=metadata.variable_names,
+        parameters=new_parameters,
+        parameter_names=metadata.parameter_names,
+    ))
+    # TODO: Better interface for this^
+    return DE.with_metadata(DE.with_contents(src, new_tree), new_metadata)
+end
+
 end

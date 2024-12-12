@@ -359,4 +359,7 @@ function DE.EvaluationHelpersModule._grad_evaluator(
     )
 end
 
+# TODO: Move this to DynamicExpressions.jl
+function preallocate_expression end
+
 end

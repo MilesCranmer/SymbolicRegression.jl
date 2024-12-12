@@ -20,6 +20,7 @@ using DynamicExpressions.ValueInterfaceModule: is_valid_array
 
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 using ..CoreModule: get_safe_op
+using ..ExpressionBuilderModule: ExpressionBuilderModule as EB
 
 abstract type AbstractComposableExpression{T,N} <: AbstractExpression{T,N} end
 
@@ -111,6 +112,13 @@ function DE.count_scalar_constants(ex::AbstractComposableExpression)
 end
 function CO.count_constants_for_optimization(ex::AbstractComposableExpression)
     return CO.count_constants_for_optimization(convert(Expression, ex))
+end
+function EB.preallocate_expression(prototype::ComposableExpression, n::Integer)
+    return (; tree=EB.preallocate_expression(get_contents(prototype), n))
+end
+function DE.copy_node!(dest::NamedTuple, src::ComposableExpression)
+    new_tree = DE.copy_node!(dest.tree, get_contents(src))
+    return DE.with_contents(src, new_tree)
 end
 
 @implements(
