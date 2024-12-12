@@ -195,13 +195,14 @@ end
 # We don't require users to overload this, as it's not part of the required interface.
 # Also, there's no way to generally do this from the required interface, so for backwards
 # compatibility, we just return nothing.
-function preallocate_expression(::AbstractExpression, n::Integer)
+function preallocate_expression(::AbstractExpression, n::Union{Nothing,Integer}=nothing)
     return nothing
 end
 function preallocate_expression(
-    prototype::N, n::Integer
+    prototype::N, n::Union{Nothing,Integer}=nothing
 ) where {T,N<:AbstractExpressionNode{T}}
-    return N[DE.with_type_parameters(N, T)() for _ in 1:n]
+    num_nodes = @something(n, length(prototype))
+    return N[DE.with_type_parameters(N, T)() for _ in 1:num_nodes]
 end
 function preallocate_expression(prototype::Expression, n::Integer)
     return (; tree=preallocate_expression(DE.get_contents(prototype), n))

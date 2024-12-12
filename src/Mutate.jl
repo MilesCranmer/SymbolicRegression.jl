@@ -189,7 +189,7 @@ function next_generation(
     successful_mutation = false
     attempts = 0
     max_attempts = 10
-    node_storage = preallocate_expression(member.tree, length(member.tree))
+    node_storage = preallocate_expression(member.tree)
 
     #############################################
     # Mutations

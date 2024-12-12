@@ -113,7 +113,9 @@ end
 function CO.count_constants_for_optimization(ex::AbstractComposableExpression)
     return CO.count_constants_for_optimization(convert(Expression, ex))
 end
-function EB.preallocate_expression(prototype::ComposableExpression, n::Integer)
+function EB.preallocate_expression(
+    prototype::ComposableExpression, n::Union{Nothing,Integer}=nothing
+)
     return (; tree=EB.preallocate_expression(get_contents(prototype), n))
 end
 function DE.copy_node!(dest::NamedTuple, src::ComposableExpression)

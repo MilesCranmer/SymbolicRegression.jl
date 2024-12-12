@@ -181,7 +181,9 @@ function MF.mutate_constant(
     end
 end
 
-function EB.preallocate_expression(prototype::ParametricExpression, n::Integer)
+function EB.preallocate_expression(
+    prototype::ParametricExpression, n::Union{Nothing,Integer}=nothing
+)
     return (;
         tree=EB.preallocate_expression(get_contents(prototype), n),
         parameters=similar(get_metadata(prototype).parameters),

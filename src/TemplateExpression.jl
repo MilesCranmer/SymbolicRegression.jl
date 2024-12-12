@@ -536,7 +536,9 @@ function Base.isempty(ex::TemplateExpression)
     return all(isempty, values(get_contents(ex)))
 end
 
-function EB.preallocate_expression(prototype::TemplateExpression, n::Integer)
+function EB.preallocate_expression(
+    prototype::TemplateExpression, n::Union{Nothing,Integer}=nothing
+)
     raw_contents = get_contents(prototype)
     return (;
         trees=NamedTuple{keys(raw_contents)}(
