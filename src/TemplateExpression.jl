@@ -2,6 +2,7 @@ module TemplateExpressionModule
 
 using Random: AbstractRNG
 using Compat: Fix
+using DynamicAutodiff: DynamicAutodiff
 using DispatchDoctor: @unstable, @stable
 using StyledStrings: @styled_str, annotatedstring
 using DynamicExpressions:
@@ -38,9 +39,6 @@ using ..LossFunctionsModule: LossFunctionsModule as LF
 using ..MutateModule: MutateModule as MM
 using ..PopMemberModule: PopMember
 using ..ComposableExpressionModule: ComposableExpression, ValidVector
-
-# TODO: Modify `D` once DynamicAutodiff is registered
-# import DynamicAutodiff: D
 
 """
     TemplateStructure{K,E,NF} <: Function
@@ -94,10 +92,9 @@ struct ArgumentRecorder{F} <: Function
 end
 (f::ArgumentRecorder)(args...) = f.f(args...)
 
-# TODO: Modify `D` once DynamicAutodiff is registered
 # We pass through the derivative operators, since
 # we just want to record the number of arguments.
-# DA.D(f::ArgumentRecorder, _::Integer) = f
+DynamicAutodiff.D(f::ArgumentRecorder, ::Integer) = f
 
 """Infers number of features used by each subexpression, by passing in test data."""
 function infer_variable_constraints(::Val{K}, combiner::F) where {K,F}

@@ -160,6 +160,7 @@ using DynamicExpressions: with_type_parameters
     LogitDistLoss,
     QuantileLoss,
     LogCoshLoss
+using DynamicAutodiff: D
 using Compat: @compat, Fix
 
 #! format: off
