@@ -112,6 +112,15 @@ end
 function CO.count_constants_for_optimization(ex::AbstractComposableExpression)
     return CO.count_constants_for_optimization(convert(Expression, ex))
 end
+function DE.allocate_container(
+    prototype::ComposableExpression, n::Union{Nothing,Integer}=nothing
+)
+    return (; tree=DE.allocate_container(get_contents(prototype), n))
+end
+function DE.copy_into!(dest::NamedTuple, src::ComposableExpression)
+    new_tree = DE.copy_into!(dest.tree, get_contents(src))
+    return DE.with_contents(src, new_tree)
+end
 
 @implements(
     ExpressionInterface{all_ei_methods_except(())}, ComposableExpression, [Arguments()]
