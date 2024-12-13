@@ -2,12 +2,13 @@ module MutateModule
 
 using DynamicExpressions:
     AbstractExpression,
-    copy_node!,
+    copy_into!,
     get_tree,
     preserve_sharing,
     count_scalar_constants,
     simplify_tree!,
-    combine_operators
+    combine_operators,
+    allocate_container
 using ..CoreModule:
     AbstractOptions,
     AbstractMutationWeights,
@@ -16,7 +17,6 @@ using ..CoreModule:
     sample_mutation,
     max_features
 using ..ComplexityModule: compute_complexity
-using ..InterfaceDynamicExpressionsModule: preallocate_expression
 using ..LossFunctionsModule: score_func, score_func_batched
 using ..CheckConstraintsModule: check_constraints
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
@@ -189,14 +189,14 @@ function next_generation(
     successful_mutation = false
     attempts = 0
     max_attempts = 10
-    node_storage = preallocate_expression(member.tree)
+    node_storage = allocate_container(member.tree)
 
     #############################################
     # Mutations
     #############################################
     local tree
     while (!successful_mutation) && attempts < max_attempts
-        tree = copy_node!(node_storage, member.tree)
+        tree = copy_into!(node_storage, member.tree)
 
         mutation_result = _dispatch_mutations!(
             tree,
@@ -241,7 +241,7 @@ function next_generation(
         mutation_accepted = false
         return (
             PopMember(
-                copy_node!(node_storage, member.tree),
+                copy_into!(node_storage, member.tree),
                 beforeScore,
                 beforeLoss,
                 options,
@@ -270,7 +270,7 @@ function next_generation(
         mutation_accepted = false
         return (
             PopMember(
-                copy_node!(node_storage, member.tree),
+                copy_into!(node_storage, member.tree),
                 beforeScore,
                 beforeLoss,
                 options,
@@ -313,7 +313,7 @@ function next_generation(
         mutation_accepted = false
         return (
             PopMember(
-                copy_node!(node_storage, member.tree),
+                copy_into!(node_storage, member.tree),
                 beforeScore,
                 beforeLoss,
                 options,

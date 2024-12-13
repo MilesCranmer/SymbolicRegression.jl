@@ -536,24 +536,6 @@ function Base.isempty(ex::TemplateExpression)
     return all(isempty, values(get_contents(ex)))
 end
 
-function EB.preallocate_expression(
-    prototype::TemplateExpression, n::Union{Nothing,Integer}=nothing
-)
-    raw_contents = get_contents(prototype)
-    return (;
-        trees=NamedTuple{keys(raw_contents)}(
-            map(Base.Fix2(EB.preallocate_expression, n), values(raw_contents))
-        ),
-    )
-end
-function DE.copy_node!(dest::NamedTuple, src::TemplateExpression)
-    raw_contents = get_contents(src)
-    new_trees = NamedTuple{keys(raw_contents)}(
-        map(DE.copy_node!, values(dest.trees), values(raw_contents))
-    )
-    return DE.with_contents(src, new_trees)
-end
-
 # TODO: Add custom behavior to adjust what feature nodes can be generated
 
 end

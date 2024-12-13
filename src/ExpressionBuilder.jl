@@ -7,19 +7,13 @@ module ExpressionBuilderModule
 using DispatchDoctor: @unstable
 using Compat: Fix
 using DynamicExpressions:
-    DynamicExpressions as DE,
-    AbstractExpressionNode,
-    AbstractExpression,
-    Expression,
-    constructorof,
-    with_metadata
+    AbstractExpressionNode, AbstractExpression, constructorof, with_metadata
 using StatsBase: StatsBase
 using ..CoreModule: AbstractOptions, Dataset
 using ..HallOfFameModule: HallOfFame
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
 
-import ..InterfaceDynamicExpressionsModule: preallocate_expression
 import DynamicExpressions: get_operators
 import ..CoreModule: create_expression
 
@@ -190,34 +184,6 @@ end
 end
 @unstable function get_operators(ex::AbstractExpressionNode, options::AbstractOptions)
     return get_operators(ex, options.operators)
-end
-
-# We don't require users to overload this, as it's not part of the required interface.
-# Also, there's no way to generally do this from the required interface, so for backwards
-# compatibility, we just return nothing.
-function preallocate_expression(::AbstractExpression, n::Union{Nothing,Integer}=nothing)
-    # return nothing
-    return error("Should not use this!")
-end
-function preallocate_expression(
-    prototype::N, n::Union{Nothing,Integer}=nothing
-) where {T,N<:AbstractExpressionNode{T}}
-    num_nodes = @something(n, length(prototype))
-    return N[DE.with_type_parameters(N, T)() for _ in 1:num_nodes]
-end
-function preallocate_expression(prototype::Expression, n::Union{Nothing,Integer}=nothing)
-    return (; tree=preallocate_expression(DE.get_contents(prototype), n))
-end
-
-# The fallback is to just copy:
-function DE.copy_node!(::Nothing, src::AbstractExpression)
-    # TODO: This is piracy
-    # return copy(src)
-    return error("Should not use this!")  # TODO HACK
-end
-function DE.copy_node!(dest::NamedTuple, src::Expression)
-    tree = DE.copy_node!(dest.tree, DE.get_contents(src))
-    return DE.with_contents(src, tree)
 end
 
 end
