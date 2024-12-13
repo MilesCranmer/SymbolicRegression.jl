@@ -196,7 +196,8 @@ end
 # Also, there's no way to generally do this from the required interface, so for backwards
 # compatibility, we just return nothing.
 function preallocate_expression(::AbstractExpression, n::Union{Nothing,Integer}=nothing)
-    return nothing
+    # return nothing
+    return error("Should not use this!")
 end
 function preallocate_expression(
     prototype::N, n::Union{Nothing,Integer}=nothing
@@ -204,14 +205,15 @@ function preallocate_expression(
     num_nodes = @something(n, length(prototype))
     return N[DE.with_type_parameters(N, T)() for _ in 1:num_nodes]
 end
-function preallocate_expression(prototype::Expression, n::Integer)
+function preallocate_expression(prototype::Expression, n::Union{Nothing,Integer}=nothing)
     return (; tree=preallocate_expression(DE.get_contents(prototype), n))
 end
 
 # The fallback is to just copy:
 function DE.copy_node!(::Nothing, src::AbstractExpression)
     # TODO: This is piracy
-    return copy(src)
+    # return copy(src)
+    return error("Should not use this!")  # TODO HACK
 end
 function DE.copy_node!(dest::NamedTuple, src::Expression)
     tree = DE.copy_node!(dest.tree, DE.get_contents(src))
