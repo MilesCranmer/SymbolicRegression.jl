@@ -23,8 +23,10 @@ using ..OperatorsModule:
     safe_log2,
     safe_log1p,
     safe_sqrt,
+    safe_asin,
+    safe_acos,
     safe_acosh,
-    atanh_clip
+    safe_atanh
 using ..MutationWeightsModule: AbstractMutationWeights, MutationWeights, mutations
 import ..OptionsStructModule: Options
 using ..OptionsStructModule: ComplexityMapping, operator_specialization
@@ -139,7 +141,7 @@ end
     ]
 end
 
-function binopmap(op::F) where {F}
+function binopmap(@nospecialize(op))
     if op == plus
         return +
     elseif op == mult
@@ -155,14 +157,14 @@ function binopmap(op::F) where {F}
     end
     return op
 end
-function inverse_binopmap(op::F) where {F}
+function inverse_binopmap(@nospecialize(op))
     if op == safe_pow
         return ^
     end
     return op
 end
 
-function unaopmap(op::F) where {F}
+function unaopmap(@nospecialize(op))
     if op == log
         return safe_log
     elseif op == log10
@@ -173,14 +175,18 @@ function unaopmap(op::F) where {F}
         return safe_log1p
     elseif op == sqrt
         return safe_sqrt
+    elseif op == asin
+        return safe_asin
+    elseif op == acos
+        return safe_acos
     elseif op == acosh
         return safe_acosh
     elseif op == atanh
-        return atanh_clip
+        return safe_atanh
     end
     return op
 end
-function inverse_unaopmap(op::F) where {F}
+function inverse_unaopmap(@nospecialize(op))
     if op == safe_log
         return log
     elseif op == safe_log10
@@ -191,9 +197,13 @@ function inverse_unaopmap(op::F) where {F}
         return log1p
     elseif op == safe_sqrt
         return sqrt
+    elseif op == safe_asin
+        return asin
+    elseif op == safe_acos
+        return acos
     elseif op == safe_acosh
         return acosh
-    elseif op == atanh_clip
+    elseif op == safe_atanh
         return atanh
     end
     return op

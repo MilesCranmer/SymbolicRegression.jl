@@ -37,6 +37,12 @@ include("test_params.jl")
         @test abs(safe_log1p(val) - log1p(val)) < 1e-6
         @test abs(safe_acosh(val2) - acosh(val2)) < 1e-6
         @test isnan(safe_acosh(-val2))
+        @test abs(safe_asin(val) - asin(val)) < 1e-6
+        @test isnan(safe_asin(val2))
+        @test abs(safe_acos(val) - acos(val)) < 1e-6
+        @test isnan(safe_acos(val2))
+        @test abs(safe_atanh(val) - atanh(val)) < 1e-6
+        @test isnan(safe_atanh(val2))
         @test neg(-val) == val
         @test safe_sqrt(val) == sqrt(val)
         @test isnan(safe_sqrt(-val))

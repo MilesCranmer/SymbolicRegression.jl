@@ -69,6 +69,10 @@ function safe_acosh(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:Abstract
     x < oneunit(x) && return T(NaN)
     return acosh(x)
 end
+function safe_atanh(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
+    -oneunit(x) <= x <= oneunit(x) || return T(NaN)
+    return atanh(x)
+end
 function safe_sqrt(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
     x < zero(x) && return T(NaN)
     return sqrt(x)
@@ -90,6 +94,7 @@ safe_log10(x) = log10(x)
 safe_log1p(x) = log1p(x)
 safe_asin(x) = asin(x)
 safe_acos(x) = acos(x)
+safe_atanh(x) = atanh(x)
 safe_acosh(x) = acosh(x)
 safe_sqrt(x) = sqrt(x)
 
@@ -121,6 +126,7 @@ DE.get_op_name(::typeof(safe_log1p)) = "log1p"
 DE.get_op_name(::typeof(safe_asin)) = "asin"
 DE.get_op_name(::typeof(safe_acos)) = "acos"
 DE.get_op_name(::typeof(safe_acosh)) = "acosh"
+DE.get_op_name(::typeof(safe_atanh)) = "atanh"
 DE.get_op_name(::typeof(safe_sqrt)) = "sqrt"
 
 # Expression algebra
@@ -132,6 +138,7 @@ DE.declare_operator_alias(::typeof(safe_log1p), ::Val{1}) = log1p
 DE.declare_operator_alias(::typeof(safe_asin), ::Val{1}) = asin
 DE.declare_operator_alias(::typeof(safe_acos), ::Val{1}) = acos
 DE.declare_operator_alias(::typeof(safe_acosh), ::Val{1}) = acosh
+DE.declare_operator_alias(::typeof(safe_atanh), ::Val{1}) = atanh
 DE.declare_operator_alias(::typeof(safe_sqrt), ::Val{1}) = sqrt
 
 # Deprecated operations:
@@ -153,5 +160,6 @@ get_safe_op(::typeof(asin)) = safe_asin
 get_safe_op(::typeof(acos)) = safe_acos
 get_safe_op(::typeof(sqrt)) = safe_sqrt
 get_safe_op(::typeof(acosh)) = safe_acosh
+get_safe_op(::typeof(atanh)) = safe_atanh
 
 end
