@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Short Examples · SymbolicRegression.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://ai.damtp.cam.ac.uk/symbolicregression/stable/examples/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../index_base/"><img src="../assets/logo.svg" alt="SymbolicRegression.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../index_base/">SymbolicRegression.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../index_base/">Contents</a></li><li><a class="tocitem" href="../">Home</a></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>Short Examples</a><ul class="internal"><li><a class="tocitem" href="#.-Simple-search"><span>1. Simple search</span></a></li><li><a class="tocitem" href="#.-Custom-operator"><span>2. Custom operator</span></a></li><li><a class="tocitem" href="#.-Multiple-outputs"><span>3. Multiple outputs</span></a></li><li><a class="tocitem" href="#.-Plotting-an-expression"><span>4. Plotting an expression</span></a></li><li><a class="tocitem" href="#.-Other-types"><span>5. Other types</span></a></li><li><a class="tocitem" href="#.-Dimensional-constraints"><span>6. Dimensional constraints</span></a></li><li><a class="tocitem" href="#.-Working-with-Expressions"><span>7. Working with Expressions</span></a></li><li><a class="tocitem" href="#.-Template-Expressions"><span>8. Template Expressions</span></a></li><li><a class="tocitem" href="#.-Logging-with-TensorBoard"><span>9. Logging with TensorBoard</span></a></li><li><a class="tocitem" href="#.-Additional-features"><span>10. Additional features</span></a></li></ul></li><li><a class="tocitem" href="template_expression/">Template Expressions</a></li><li><a class="tocitem" href="parameterized_function/">Parameterized Expressions</a></li></ul></li><li><a class="tocitem" href="../api/">API</a></li><li><a class="tocitem" href="../losses/">Losses</a></li><li><a class="tocitem" href="../types/">Types</a></li><li><a class="tocitem" href="../customization/">Customization</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Short Examples</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Short Examples</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/MilesCranmer/SymbolicRegression.jl/blob/master/docs/src/examples.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Toy-Examples-with-Code"><a class="docs-heading-anchor" href="#Toy-Examples-with-Code">Toy Examples with Code</a><a id="Toy-Examples-with-Code-1"></a><a class="docs-heading-anchor-permalink" href="#Toy-Examples-with-Code" title="Permalink"></a></h1><pre><code class="language-julia hljs">using SymbolicRegression
+using MLJ</code></pre><h2 id=".-Simple-search"><a class="docs-heading-anchor" href="#.-Simple-search">1. Simple search</a><a id=".-Simple-search-1"></a><a class="docs-heading-anchor-permalink" href="#.-Simple-search" title="Permalink"></a></h2><p>Here&#39;s a simple example where we find the expression <code>2 cos(x4) + x1^2 - 2</code>.</p><pre><code class="language-julia hljs">X = 2randn(1000, 5)
+y = @. 2*cos(X[:, 4]) + X[:, 1]^2 - 2
+
+model = SRRegressor(
+    binary_operators=[+, -, *, /],
+    unary_operators=[cos],
+    niterations=30
+)
+mach = machine(model, X, y)
+fit!(mach)</code></pre><p>Let&#39;s look at the returned table:</p><pre><code class="language-julia hljs">r = report(mach)
+r</code></pre><p>We can get the selected best tradeoff expression with:</p><pre><code class="language-julia hljs">r.equations[r.best_idx]</code></pre><h2 id=".-Custom-operator"><a class="docs-heading-anchor" href="#.-Custom-operator">2. Custom operator</a><a id=".-Custom-operator-1"></a><a class="docs-heading-anchor-permalink" href="#.-Custom-operator" title="Permalink"></a></h2><p>Here, we define a custom operator and use it to find an expression:</p><pre><code class="language-julia hljs">X = 2randn(1000, 5)
+y = @. 1/X[:, 1]
+
+my_inv(x) = 1/x
+
+model = SRRegressor(
+    binary_operators=[+, *],
+    unary_operators=[my_inv],
+)
+mach = machine(model, X, y)
+fit!(mach)
+r = report(mach)
+println(r.equations[r.best_idx])</code></pre><h2 id=".-Multiple-outputs"><a class="docs-heading-anchor" href="#.-Multiple-outputs">3. Multiple outputs</a><a id=".-Multiple-outputs-1"></a><a class="docs-heading-anchor-permalink" href="#.-Multiple-outputs" title="Permalink"></a></h2><p>Here, we do the same thing, but with multiple expressions at once, each requiring a different feature. This means that we need to use <code>MultitargetSRRegressor</code> instead of <code>SRRegressor</code>:</p><pre><code class="language-julia hljs">X = 2rand(1000, 5) .+ 0.1
+y = @. 1/X[:, 1:3]
+
+my_inv(x) = 1/x
+
+model = MultitargetSRRegressor(; binary_operators=[+, *], unary_operators=[my_inv])
+mach = machine(model, X, y)
+fit!(mach)</code></pre><p>The report gives us lists of expressions instead:</p><pre><code class="language-julia hljs">r = report(mach)
+for i in 1:3
+    println(&quot;y[$(i)] = &quot;, r.equations[i][r.best_idx[i]])
+end</code></pre><h2 id=".-Plotting-an-expression"><a class="docs-heading-anchor" href="#.-Plotting-an-expression">4. Plotting an expression</a><a id=".-Plotting-an-expression-1"></a><a class="docs-heading-anchor-permalink" href="#.-Plotting-an-expression" title="Permalink"></a></h2><p>For now, let&#39;s consider the expressions for output 1 from the previous example: We can get a SymbolicUtils version with:</p><pre><code class="language-julia hljs">using SymbolicUtils
+
+eqn = node_to_symbolic(r.equations[1][r.best_idx[1]])</code></pre><p>We can get the LaTeX version with <code>Latexify</code>:</p><pre><code class="language-julia hljs">using Latexify
+
+latexify(string(eqn))</code></pre><p>We can also plot the prediction against the truth:</p><pre><code class="language-julia hljs">using Plots
+
+ypred = predict(mach, X)
+scatter(y[1, :], ypred[1, :], xlabel=&quot;Truth&quot;, ylabel=&quot;Prediction&quot;)</code></pre><h2 id=".-Other-types"><a class="docs-heading-anchor" href="#.-Other-types">5. Other types</a><a id=".-Other-types-1"></a><a class="docs-heading-anchor-permalink" href="#.-Other-types" title="Permalink"></a></h2><p>SymbolicRegression.jl can handle most numeric types you wish to use. For example, passing a <code>Float32</code> array will result in the search using 32-bit precision everywhere in the codebase:</p><pre><code class="language-julia hljs">X = 2randn(Float32, 1000, 5)
+y = @. 2*cos(X[:, 4]) + X[:, 1]^2 - 2
+
+model = SRRegressor(binary_operators=[+, -, *, /], unary_operators=[cos], niterations=30)
+mach = machine(model, X, y)
+fit!(mach)</code></pre><p>we can see that the output types are <code>Float32</code>:</p><pre><code class="language-julia hljs">r = report(mach)
+best = r.equations[r.best_idx]
+println(typeof(best))
+# Expression{Float32,Node{Float32},...}</code></pre><p>We can also use <code>Complex</code> numbers (ignore the warning from MLJ):</p><pre><code class="language-julia hljs">cos_re(x::Complex{T}) where {T} = cos(abs(x)) + 0im
+
+X = 15 .* rand(ComplexF64, 1000, 5) .- 7.5
+y = @. 2*cos_re((2+1im) * X[:, 4]) + 0.1 * X[:, 1]^2 - 2
+
+model = SRRegressor(
+    binary_operators=[+, -, *, /],
+    unary_operators=[cos_re],
+    maxsize=30,
+    niterations=100
+)
+mach = machine(model, X, y)
+fit!(mach)</code></pre><h2 id=".-Dimensional-constraints"><a class="docs-heading-anchor" href="#.-Dimensional-constraints">6. Dimensional constraints</a><a id=".-Dimensional-constraints-1"></a><a class="docs-heading-anchor-permalink" href="#.-Dimensional-constraints" title="Permalink"></a></h2><p>One other feature we can exploit is dimensional analysis. Say that we know the physical units of each feature and output, and we want to find an expression that is dimensionally consistent.</p><p>We can do this as follows, using <code>DynamicQuantities</code> to assign units. First, let&#39;s make some data on Newton&#39;s law of gravitation:</p><pre><code class="language-julia hljs">using DynamicQuantities
+using SymbolicRegression
+
+M = (rand(100) .+ 0.1) .* Constants.M_sun
+m = 100 .* (rand(100) .+ 0.1) .* u&quot;kg&quot;
+r = (rand(100) .+ 0.1) .* Constants.R_earth
+
+G = Constants.G
+
+F = @. (G * M * m / r^2)</code></pre><p>(Note that the <code>u</code> macro from <code>DynamicQuantities</code> will automatically convert to SI units. To avoid this, use the <code>us</code> macro.)</p><p>Now, let&#39;s ready the data for MLJ:</p><pre><code class="language-julia hljs">X = (; M=M, m=m, r=r)
+y = F</code></pre><p>Since this data has such a large dynamic range, let&#39;s also create a custom loss function that looks at the error in log-space:</p><pre><code class="language-julia hljs">function loss_fnc(prediction, target)
+    # Useful loss for large dynamic range
+    scatter_loss = abs(log((abs(prediction)+1e-20) / (abs(target)+1e-20)))
+    sign_loss = 10 * (sign(prediction) - sign(target))^2
+    return scatter_loss + sign_loss
+end</code></pre><p>Now let&#39;s define and fit our model:</p><pre><code class="language-julia hljs">model = SRRegressor(
+    binary_operators=[+, -, *, /],
+    unary_operators=[square],
+    elementwise_loss=loss_fnc,
+    complexity_of_constants=2,
+    maxsize=25,
+    niterations=100,
+    populations=50,
+    dimensional_constraint_penalty=10^5,
+)
+mach = machine(model, X, y)
+fit!(mach)</code></pre><p>You can observe that all expressions with a loss under our penalty are dimensionally consistent! (The <code>&quot;[?]&quot;</code> indicates free units in a constant, which can cancel out other units in the expression.) For example,</p><pre><code class="language-julia hljs">&quot;y[m s⁻² kg] = (M[kg] * 2.6353e-22[?])&quot;</code></pre><p>would indicate that the expression is dimensionally consistent, with a constant <code>&quot;2.6353e-22[m s⁻²]&quot;</code>.</p><p>Note that you can also search for dimensionless units by settings <code>dimensionless_constants_only</code> to <code>true</code>.</p><h2 id=".-Working-with-Expressions"><a class="docs-heading-anchor" href="#.-Working-with-Expressions">7. Working with Expressions</a><a id=".-Working-with-Expressions-1"></a><a class="docs-heading-anchor-permalink" href="#.-Working-with-Expressions" title="Permalink"></a></h2><p>Expressions in <code>SymbolicRegression.jl</code> are represented using the <code>Expression{T,Node{T},...}</code> type, which provides a more robust way to combine structure, operators, and constraints. Here&#39;s an example:</p><pre><code class="language-julia hljs">using SymbolicRegression
+
+# Define options with operators and structure
+options = Options(
+    binary_operators=[+, -, *],
+    unary_operators=[cos],
+    expression_options=(
+        structure=TemplateStructure(),
+        variable_constraints=Dict(1 =&gt; [1, 2], 2 =&gt; [2])
+    )
+)
+
+# Create expression nodes with constraints
+operators = options.operators
+variable_names = [&quot;x1&quot;, &quot;x2&quot;]
+x1 = Expression(
+    Node{Float64}(feature=1),
+    operators=operators,
+    variable_names=variable_names,
+    structure=options.expression_options.structure
+)
+x2 = Expression(
+    Node{Float64}(feature=2),
+    operators=operators,
+    variable_names=variable_names,
+    structure=options.expression_options.structure
+)
+
+# Construct and evaluate expression
+expr = x1 * cos(x2 - 3.2)
+X = rand(Float64, 2, 100)
+output = expr(X)</code></pre><p>This <code>Expression</code> type, contains both the structure and the operators used in the expression. These are what are returned by the search. The raw <code>Node</code> type (which is what used to be output directly) is accessible with</p><pre><code class="language-julia hljs">get_contents(expr)</code></pre><h2 id=".-Template-Expressions"><a class="docs-heading-anchor" href="#.-Template-Expressions">8. Template Expressions</a><a id=".-Template-Expressions-1"></a><a class="docs-heading-anchor-permalink" href="#.-Template-Expressions" title="Permalink"></a></h2><p>Template expressions allow you to define structured expressions where different parts can be constrained to use specific variables. In this example, we&#39;ll create expressions that constrain the functional form in highly specific ways. (<em>For a more complex example, see [&quot;Searching with template expressions&quot;](examples/template</em>expression.md)_)</p><p>First, let&#39;s set up our basic configuration:</p><pre><code class="language-julia hljs">using SymbolicRegression
+using Random: rand, MersenneTwister
+using MLJBase: machine, fit!, report</code></pre><p>The key part is defining our template structure. This determines how different parts of the expression combine:</p><pre><code class="language-julia hljs">structure = TemplateStructure{(:f, :g)}(
+    ((; f, g), (x1, x2, x3)) -&gt; f(x1, x2) + g(x2) - g(x3)
+)</code></pre><p>With this structure, we are telling the algorithm that it can learn any symbolic expressions <code>f</code> and <code>g</code>, with <code>f</code> a function of two inputs, and <code>g</code> a function of one input. The result of</p><p class="math-container">\[f(x_1, x_2) + g(x_2) - g(x_3)\]</p><p>will be compared with the target <code>y</code>.</p><p>Let&#39;s generate some example data:</p><pre><code class="language-julia hljs">n = 100
+rng = MersenneTwister(0)
+x1 = 10rand(rng, n)
+x2 = 10rand(rng, n)
+x3 = 10rand(rng, n)
+X = (; x1, x2, x3)
+y = [
+    2 * cos(x1[i] + 3.2) + x2[i]^2 - 0.8 * x3[i]^2
+    for i in eachindex(x1)
+]</code></pre><p>Now, remember our structure: for the model to learn this, it would need to correctly disentangle the contribution of <code>f</code> and <code>g</code>!</p><p>Now we can set up and train our model. Note that we pass the structure in to <code>expression_options</code>:</p><pre><code class="language-julia hljs">model = SRRegressor(;
+    binary_operators=(+, -, *, /),
+    unary_operators=(cos,),
+    niterations=500,
+    maxsize=25,
+    expression_type=TemplateExpression,
+    expression_options=(; structure),
+)
+
+mach = machine(model, X, y)
+fit!(mach)</code></pre><p>If all goes well, you should see a printout with the following expression:</p><pre><code class="language-text hljs">y = ╭ f = ((#2 * 0.2) * #2) + (cos(#1 + 0.058407) * -2)
+    ╰ g = #1 * (#1 * 0.8)</code></pre><p>This is what we were looking for! We can see that under <span>$f(x_1, x_2) + g(x_2) - g(x_3)$</span>, this correctly expands to <span>$2 \cos(x_1 + 3.2) + x_2^2 - 0.8 x_3^2$</span>.</p><p>We can also access the individual parts of the template expression directly from the report:</p><pre><code class="language-julia hljs">r = report(mach)
+best_expr = r.equations[r.best_idx]
+
+# Access individual parts of the template expression
+println(&quot;f: &quot;, get_contents(best_expr).f)
+println(&quot;g: &quot;, get_contents(best_expr).g)</code></pre><p>The <code>TemplateExpression</code> combines these under the structure so we can directly and efficiently evaluate this:</p><pre><code class="language-julia hljs">best_expr(randn(3, 20))</code></pre><p>The above code demonstrates how template expressions can be used to:</p><ul><li>Define structured expressions with multiple components</li><li>Constrains which variables can be used in each component</li><li>Create expressions that can output multiple values</li></ul><p>You can even output custom structs - see the more detailed <a href="template_expression/">Template Expression example</a>!</p><p>Be sure to also check out the <a href="examples/parametric_expression.md">Parametric Expression example</a>.</p><h2 id=".-Logging-with-TensorBoard"><a class="docs-heading-anchor" href="#.-Logging-with-TensorBoard">9. Logging with TensorBoard</a><a id=".-Logging-with-TensorBoard-1"></a><a class="docs-heading-anchor-permalink" href="#.-Logging-with-TensorBoard" title="Permalink"></a></h2><p>You can track the progress of symbolic regression searches using TensorBoard or other logging backends. Here&#39;s an example using <code>TensorBoardLogger</code> and wrapping it with <a href="../api/#SymbolicRegression.LoggingModule.SRLogger"><code>SRLogger</code></a>:</p><pre><code class="language-julia hljs">using SymbolicRegression
+using TensorBoardLogger
+using MLJ
+
+logger = SRLogger(TBLogger(&quot;logs/sr_run&quot;))
+
+# Create and fit model with logger
+model = SRRegressor(
+    binary_operators=[+, -, *],
+    maxsize=40,
+    niterations=100,
+    logger=logger
+)
+
+X = (a=rand(500), b=rand(500))
+y = @. 2 * cos(X.a * 23.5) - X.b^2
+
+mach = machine(model, X, y)
+fit!(mach)</code></pre><p>You can then view the logs with:</p><pre><code class="language-bash hljs">tensorboard --logdir logs</code></pre><p>The TensorBoard interface will show the loss curves over time (at each complexity), as well as the Pareto frontier volume which can be used as an overall metric of the search performance.</p><h2 id=".-Additional-features"><a class="docs-heading-anchor" href="#.-Additional-features">10. Additional features</a><a id=".-Additional-features-1"></a><a class="docs-heading-anchor-permalink" href="#.-Additional-features" title="Permalink"></a></h2><p>For the many other features available in SymbolicRegression.jl, check out the API page for <code>Options</code>. You might also find it useful to browse the documentation for the Python frontend <a href="http://astroautomata.com/PySR">PySR</a>, which has additional documentation. In particular, the <a href="http://astroautomata.com/PySR/tuning">tuning page</a> is useful for improving search performance.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="template_expression/">Template Expressions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Saturday 14 December 2024 22:40">Saturday 14 December 2024</span>. Using Julia version 1.11.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
