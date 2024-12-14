@@ -139,6 +139,7 @@ end
         plus, sub, mult, square, cube, neg, relu, greater, logical_or, logical_and, cond
     using Random: MersenneTwister
     using Suppressor: @capture_err
+    using LoopVectorization: LoopVectorization as _
 
     binary_operators = [plus, sub, mult, /, ^, greater, logical_or, logical_and, cond]
     unary_operators = [square, cube, log, log2, log10, log1p, sqrt, atanh, acosh, neg, relu]
