@@ -140,6 +140,7 @@ end
     using Random: MersenneTwister
     using Suppressor: @capture_err
     using LoopVectorization: LoopVectorization as _
+    include("test_params.jl")
 
     binary_operators = [plus, sub, mult, /, ^, greater, logical_or, logical_and, cond]
     unary_operators = [square, cube, log, log2, log10, log1p, sqrt, atanh, acosh, neg, relu]
