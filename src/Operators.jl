@@ -52,6 +52,14 @@ function safe_log1p(x::T)::T where {T<:AbstractFloat}
     x <= -oneunit(x) && return T(NaN)
     return log1p(x)
 end
+function safe_asin(x::T)::T where {T<:AbstractFloat}
+    -oneunit(x) <= x <= oneunit(x) || return T(NaN)
+    return asin(x)
+end
+function safe_acos(x::T)::T where {T<:AbstractFloat}
+    -oneunit(x) <= x <= oneunit(x) || return T(NaN)
+    return acos(x)
+end
 function safe_acosh(x::T)::T where {T<:AbstractFloat}
     x < oneunit(x) && return T(NaN)
     return acosh(x)
@@ -75,6 +83,8 @@ safe_log(x) = log(x)
 safe_log2(x) = log2(x)
 safe_log10(x) = log10(x)
 safe_log1p(x) = log1p(x)
+safe_asin(x) = asin(x)
+safe_acos(x) = acos(x)
 safe_acosh(x) = acosh(x)
 safe_sqrt(x) = sqrt(x)
 
@@ -103,6 +113,8 @@ DE.get_op_name(::typeof(safe_log)) = "log"
 DE.get_op_name(::typeof(safe_log2)) = "log2"
 DE.get_op_name(::typeof(safe_log10)) = "log10"
 DE.get_op_name(::typeof(safe_log1p)) = "log1p"
+DE.get_op_name(::typeof(safe_asin)) = "asin"
+DE.get_op_name(::typeof(safe_acos)) = "acos"
 DE.get_op_name(::typeof(safe_acosh)) = "acosh"
 DE.get_op_name(::typeof(safe_sqrt)) = "sqrt"
 
@@ -112,6 +124,8 @@ DE.declare_operator_alias(::typeof(safe_log), ::Val{1}) = log
 DE.declare_operator_alias(::typeof(safe_log2), ::Val{1}) = log2
 DE.declare_operator_alias(::typeof(safe_log10), ::Val{1}) = log10
 DE.declare_operator_alias(::typeof(safe_log1p), ::Val{1}) = log1p
+DE.declare_operator_alias(::typeof(safe_asin), ::Val{1}) = asin
+DE.declare_operator_alias(::typeof(safe_acos), ::Val{1}) = acos
 DE.declare_operator_alias(::typeof(safe_acosh), ::Val{1}) = acosh
 DE.declare_operator_alias(::typeof(safe_sqrt), ::Val{1}) = sqrt
 
@@ -123,12 +137,15 @@ DE.declare_operator_alias(::typeof(safe_sqrt), ::Val{1}) = sqrt
 @ignore pow(x, y) = safe_pow(x, y)
 @ignore pow_abs(x, y) = safe_pow(x, y)
 
+# Actual mappings used for evaluation
 get_safe_op(op::F) where {F<:Function} = op
 get_safe_op(::typeof(^)) = safe_pow
 get_safe_op(::typeof(log)) = safe_log
 get_safe_op(::typeof(log2)) = safe_log2
 get_safe_op(::typeof(log10)) = safe_log10
 get_safe_op(::typeof(log1p)) = safe_log1p
+get_safe_op(::typeof(asin)) = safe_asin
+get_safe_op(::typeof(acos)) = safe_acos
 get_safe_op(::typeof(sqrt)) = safe_sqrt
 get_safe_op(::typeof(acosh)) = safe_acosh
 
