@@ -5,6 +5,7 @@ using SpecialFunctions: SpecialFunctions
 using DynamicQuantities: UnionAbstractQuantity
 using SpecialFunctions: erf, erfc
 using Base: @deprecate
+using DynamicDiff: ForwardDiff
 using ..ProgramConstantsModule: DATA_TYPE
 using ...UtilsModule: @ignore
 #TODO - actually add these operators to the module!
@@ -19,6 +20,8 @@ gamma(x) = SpecialFunctions.gamma(x)
 atanh_clip(x) = atanh(mod(x + oneunit(x), oneunit(x) + oneunit(x)) - oneunit(x)) * one(x)
 # == atanh((x + 1) % 2 - 1)
 
+const Dual = ForwardDiff.Dual
+
 # Implicitly defined:
 #binary: mod
 #unary: exp, abs, log1p, sin, cos, tan, sinh, cosh, tanh, asin, acos, atan, asinh, acosh, atanh, erf, erfc, gamma, relu, round, floor, ceil, round, sign.
@@ -27,7 +30,9 @@ atanh_clip(x) = atanh(mod(x + oneunit(x), oneunit(x) + oneunit(x)) - oneunit(x))
 # Define allowed operators. Any julia operator can also be used.
 # TODO: Add all of these operators to the precompilation.
 # TODO: Since simplification is done in DynamicExpressions.jl, are these names correct anymore?
-function safe_pow(x::T, y::T)::T where {T<:Union{AbstractFloat,UnionAbstractQuantity}}
+function safe_pow(
+    x::T, y::T
+)::T where {T<:Union{AbstractFloat,UnionAbstractQuantity,Dual{<:AbstractFloat}}}
     if isinteger(y)
         y < zero(y) && iszero(x) && return T(NaN)
     else
@@ -36,35 +41,35 @@ function safe_pow(x::T, y::T)::T where {T<:Union{AbstractFloat,UnionAbstractQuan
     end
     return x^y
 end
-function safe_log(x::T)::T where {T<:AbstractFloat}
+function safe_log(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
     x <= zero(x) && return T(NaN)
     return log(x)
 end
-function safe_log2(x::T)::T where {T<:AbstractFloat}
+function safe_log2(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
     x <= zero(x) && return T(NaN)
     return log2(x)
 end
-function safe_log10(x::T)::T where {T<:AbstractFloat}
+function safe_log10(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
     x <= zero(x) && return T(NaN)
     return log10(x)
 end
-function safe_log1p(x::T)::T where {T<:AbstractFloat}
+function safe_log1p(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
     x <= -oneunit(x) && return T(NaN)
     return log1p(x)
 end
-function safe_asin(x::T)::T where {T<:AbstractFloat}
+function safe_asin(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
     -oneunit(x) <= x <= oneunit(x) || return T(NaN)
     return asin(x)
 end
-function safe_acos(x::T)::T where {T<:AbstractFloat}
+function safe_acos(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
     -oneunit(x) <= x <= oneunit(x) || return T(NaN)
     return acos(x)
 end
-function safe_acosh(x::T)::T where {T<:AbstractFloat}
+function safe_acosh(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
     x < oneunit(x) && return T(NaN)
     return acosh(x)
 end
-function safe_sqrt(x::T)::T where {T<:AbstractFloat}
+function safe_sqrt(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
     x < zero(x) && return T(NaN)
     return sqrt(x)
 end
