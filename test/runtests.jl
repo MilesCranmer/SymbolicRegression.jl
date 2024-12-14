@@ -11,9 +11,7 @@ end
 @eval @run_package_tests filter = ti -> !isdisjoint(ti.tags, $tags_to_run) verbose = true
 
 # TODO: This is a very slow test
-@testitem "Test custom operators and additional types" tags = [:part2] begin
-    include("test_operators.jl")
-end
+include("test_operators.jl")
 
 @testitem "Test tree construction and scoring" tags = [:part3] begin
     include("test_tree_construction.jl")
