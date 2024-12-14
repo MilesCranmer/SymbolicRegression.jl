@@ -26,13 +26,19 @@ const Dual = ForwardDiff.Dual
 #binary: mod
 #unary: exp, abs, log1p, sin, cos, tan, sinh, cosh, tanh, asin, acos, atan, asinh, acosh, atanh, erf, erfc, gamma, relu, round, floor, ceil, round, sign.
 
+const FloatOrDual = Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}
+
 # Use some fast operators from https://github.com/JuliaLang/julia/blob/81597635c4ad1e8c2e1c5753fda4ec0e7397543f/base/fastmath.jl
 # Define allowed operators. Any julia operator can also be used.
 # TODO: Add all of these operators to the precompilation.
 # TODO: Since simplification is done in DynamicExpressions.jl, are these names correct anymore?
 function safe_pow(
-    x::T, y::T
-)::T where {T<:Union{AbstractFloat,UnionAbstractQuantity,Dual{<:AbstractFloat}}}
+    x::T1, y::T2
+) where {
+    T1<:Union{FloatOrDual,UnionAbstractQuantity},
+    T2<:Union{FloatOrDual,UnionAbstractQuantity},
+}
+    T = promote_type(T1, T2)
     if isinteger(y)
         y < zero(y) && iszero(x) && return T(NaN)
     else
@@ -41,41 +47,32 @@ function safe_pow(
     end
     return x^y
 end
-function safe_log(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
-    x <= zero(x) && return T(NaN)
-    return log(x)
+function safe_log(x::T)::T where {T<:FloatOrDual}
+    return x > zero(x) ? log(x) : T(NaN)
 end
-function safe_log2(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
-    x <= zero(x) && return T(NaN)
-    return log2(x)
+function safe_log2(x::T)::T where {T<:FloatOrDual}
+    return x > zero(x) ? log2(x) : T(NaN)
 end
-function safe_log10(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
-    x <= zero(x) && return T(NaN)
-    return log10(x)
+function safe_log10(x::T)::T where {T<:FloatOrDual}
+    return x > zero(x) ? log10(x) : T(NaN)
 end
-function safe_log1p(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
-    x <= -oneunit(x) && return T(NaN)
-    return log1p(x)
+function safe_log1p(x::T)::T where {T<:FloatOrDual}
+    return x > -oneunit(x) ? log1p(x) : T(NaN)
 end
-function safe_asin(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
-    -oneunit(x) <= x <= oneunit(x) || return T(NaN)
-    return asin(x)
+function safe_asin(x::T)::T where {T<:FloatOrDual}
+    return -oneunit(x) <= x <= oneunit(x) ? asin(x) : T(NaN)
 end
-function safe_acos(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
-    -oneunit(x) <= x <= oneunit(x) || return T(NaN)
-    return acos(x)
+function safe_acos(x::T)::T where {T<:FloatOrDual}
+    return -oneunit(x) <= x <= oneunit(x) ? acos(x) : T(NaN)
 end
-function safe_acosh(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
-    x < oneunit(x) && return T(NaN)
-    return acosh(x)
+function safe_acosh(x::T)::T where {T<:FloatOrDual}
+    return x >= oneunit(x) ? acosh(x) : T(NaN)
 end
-function safe_atanh(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
-    -oneunit(x) <= x <= oneunit(x) || return T(NaN)
-    return atanh(x)
+function safe_atanh(x::T)::T where {T<:FloatOrDual}
+    return -oneunit(x) <= x <= oneunit(x) ? atanh(x) : T(NaN)
 end
-function safe_sqrt(x::T)::T where {T<:Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}}
-    x < zero(x) && return T(NaN)
-    return sqrt(x)
+function safe_sqrt(x::T)::T where {T<:FloatOrDual}
+    return x >= zero(x) ? sqrt(x) : T(NaN)
 end
 # TODO: Should the above be made more generic, for, e.g., compatibility with units?
 
