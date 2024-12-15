@@ -421,7 +421,64 @@ the loss curves over time (at each complexity), as well
 as the Pareto frontier volume which can be used as an overall metric
 of the search performance.
 
-## 10. Additional features
+## 10. Using Differential Operators
+
+`SymbolicRegression.jl` supports differential operators via [`DynamicDiff.jl`](https://github.com/MilesCranmer/DynamicDiff.jl), allowing you to include derivatives directly within template expressions.
+Here is an example where we discover the integral of $\frac{1}{x^2 \sqrt{x^2 - 1}}$ in the range $x > 1$.
+
+First, let's generate some data for the integrand:
+
+```julia
+using SymbolicRegression
+using Random
+
+rng = MersenneTwister(42)
+x = 1 .+ rand(rng, 1000) * 9  # Sampling points in the range [1, 10]
+y = @. 1 / (x^2 * sqrt(x^2 - 1))  # Values of the integrand
+```
+
+Now, define the template for the derivative operator:
+
+```julia
+using DynamicDiff: D
+
+structure = TemplateStructure{(:f,)}(
+    ((; f), (x,)) -> D(f, 1)(x)  # Differentiate `f` with respect to its first argument
+)
+```
+
+We can now set up the model to find the symbolic expression for the integral:
+
+```julia
+using MLJ
+
+model = SRRegressor(
+    binary_operators=(+, -, *, /),
+    unary_operators=(sqrt,),
+    maxsize=20,
+    expression_type=TemplateExpression,
+    expression_options=(; structure),
+)
+
+X = (; x=x)
+mach = machine(model, X, y)
+fit!(mach)
+```
+
+The learned expression will represent $f(x)$, the indefinite integral of the given function. The derivative of $f(x)$ should match the target $\frac{1}{x^2 \sqrt{x^2 - 1}}$.
+
+You can access the best expression from the report:
+
+```julia
+r = report(mach)
+best_expr = r.equations[r.best_idx]
+
+println("Learned expression: ", best_expr)
+```
+
+If successful, the result should simplify to something like $\frac{\sqrt{x^2 - 1}}{x}$, which is the integral of the target function.
+
+## 11. Additional features
 
 For the many other features available in SymbolicRegression.jl,
 check out the API page for `Options`. You might also find it useful
