@@ -633,12 +633,12 @@ MMI.metadata_model(
 function MMI.target_scitype(
     ::Type{<:SRRegressor{D,L,E}}
 ) where {D<:AbstractDimensions,L,E<:TemplateExpression}
-    return AbstractVector{<:Any}
+    return AbstractVector{<:MMI.Unknown}
 end
 function MMI.target_scitype(
     ::Type{<:MultitargetSRRegressor{D,L,E}}
 ) where {D<:AbstractDimensions,L,E<:TemplateExpression}
-    return Union{MMI.Table(Any),AbstractMatrix{<:Any}}
+    return Union{MMI.Table(MMI.Unknown),AbstractMatrix{<:MMI.Unknown}}
 end
 
 function tag_with_docstring(model_name::Symbol, description::String, bottom_matter::String)
