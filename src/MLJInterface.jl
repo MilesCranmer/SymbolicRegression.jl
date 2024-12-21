@@ -630,12 +630,14 @@ MMI.metadata_model(
     human_name="Multi-Target Symbolic Regression via Evolutionary Search",
 )
 
-function MMI.target_scitype(::Type{<:SRRegressor{<:Any,<:Any,<:TemplateExpression}})
+function MMI.target_scitype(
+    ::Type{<:SRRegressor{D,L,E}}
+) where {D<:AbstractDimensions,L,E<:TemplateExpression}
     return AbstractVector{<:Any}
 end
 function MMI.target_scitype(
-    ::Type{<:MultitargetSRRegressor{<:Any,<:Any,<:TemplateExpression}}
-)
+    ::Type{<:MultitargetSRRegressor{D,L,E}}
+) where {D<:AbstractDimensions,L,E<:TemplateExpression}
     return Union{MMI.Table(Any),AbstractMatrix{<:Any}}
 end
 
