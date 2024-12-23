@@ -25,6 +25,7 @@ using DynamicQuantities:
     dimension
 using LossFunctions: SupervisedLoss
 using ..InterfaceDynamicQuantitiesModule: get_dimensions_type
+using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..CoreModule:
     Options, Dataset, AbstractMutationWeights, MutationWeights, LOSS_TYPE, ComplexityMapping
 using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
@@ -212,7 +213,10 @@ function _update(
     options,
     class,
 )
-    if isnothing(class) && MMI.istable(X) && :class in MMI.schema(X).names
+    if IDE.handles_class_column(m.expression_type) &&
+        isnothing(class) &&
+        MMI.istable(X) &&
+        :class in MMI.schema(X).names
         names_without_class = filter(!=(:class), MMI.schema(X).names)
         new_X = MMI.selectcols(X, collect(names_without_class))
         new_class = MMI.selectcols(X, :class)
@@ -486,12 +490,14 @@ function _predict(m::M, fitresult, Xnew, idx, class) where {M<:AbstractSRRegress
         )
         return _predict(m, fitresult, Xnew.data, Xnew.idx, class)
     end
-    if isnothing(class) && MMI.istable(Xnew) && haskey(Xnew, :class)
-        if !(Xnew isa NamedTuple)
-            error("Classes can only be specified with named tuples.")
-        end
-        Xnew2 = Base.structdiff(Xnew, (; Xnew.class))
-        return _predict(m, fitresult, Xnew2, idx, Xnew.class)
+    if IDE.handles_class_column(m.expression_type) &&
+        isnothing(class) &&
+        MMI.istable(Xnew) &&
+        :class in MMI.schema(Xnew).names
+        names_without_class = filter(!=(:class), MMI.schema(Xnew).names)
+        Xnew2 = MMI.selectcols(Xnew, collect(names_without_class))
+        class = MMI.selectcols(Xnew, :class)
+        return _predict(m, fitresult, Xnew2, idx, class)
     end
 
     if fitresult.has_class
