@@ -212,12 +212,10 @@ function _update(
     options,
     class,
 )
-    if isnothing(class) && MMI.istable(X) && haskey(X, :class)
-        if !(X isa NamedTuple)
-            error("Classes can only be specified with named tuples.")
-        end
-        new_X = Base.structdiff(X, (; X.class))
-        new_class = X.class
+    if isnothing(class) && MMI.istable(X) && :class in MMI.schema(X).names
+        names_without_class = filter(!=(:class), MMI.schema(X).names)
+        new_X = MMI.selectcols(X, collect(names_without_class))
+        new_class = MMI.selectcols(X, :class)
         return _update(
             m, verbosity, old_fitresult, old_cache, new_X, y, w, options, new_class
         )
