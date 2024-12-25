@@ -276,12 +276,14 @@ function TemplateExpression(
     example_tree = first(values(trees))::AbstractExpression
     operators = get_operators(example_tree, operators)
     variable_names = get_variable_names(example_tree, variable_names)
-    if has_params(structure)
+    parameters = if has_params(structure)
         @assert parameters !== nothing
         @assert length(parameters) == structure.num_parameters
         # TODO: Delete this extra check once we are confident that it works
+        parameters isa ParamVector ? parameters : ParamVector(parameters)
     else
         @assert parameters === nothing
+        nothing
     end
     metadata = (; structure, operators, variable_names, parameters)
     return TemplateExpression(trees, Metadata(metadata))
