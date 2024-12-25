@@ -163,7 +163,7 @@ function infer_variable_constraints(::Val{K}, num_params, combiner::F) where {K,
 end
 
 """
-    TemplateExpression{T,F,N,E,TS,D} <: AbstractStructuredExpression{T,F,N,E,D}
+    TemplateExpression{T,F,N,E,TS,D} <: AbstractExpression{T,N}
 
 A symbolic expression that allows the combination of multiple sub-expressions
 in a structured way, with constraints on variable usage.
@@ -221,7 +221,7 @@ struct TemplateExpression{
     D<:@NamedTuple{
         structure::F, operators::O, variable_names::V, parameters::P
     } where {O<:AbstractOperatorEnum,V,P},
-} <: AbstractStructuredExpression{T,F,N,E,D}
+} <: AbstractExpression{T,N}
     trees::TS
     metadata::Metadata{D}
 
@@ -270,6 +270,74 @@ end
 
 @unstable function combine(ex::TemplateExpression, args...)
     return combine(get_metadata(ex).structure, args...)
+end
+
+function Base.copy(e::TemplateExpression)
+    ts = get_contents(e)
+    meta = get_metadata(e)
+    meta_inner = unpack_metadata(meta)
+    copy_ts = NamedTuple{keys(ts)}(map(copy, values(ts)))
+    keys_except_structure = filter(!=(:structure), keys(meta_inner))
+    copy_metadata = (;
+        meta_inner.structure,
+        NamedTuple{keys_except_structure}(
+            map(_copy, values(meta_inner[keys_except_structure]))
+        )...,
+    )
+    return constructorof(typeof(e))(copy_ts, Metadata(copy_metadata))
+end
+function get_contents(e::TemplateExpression)
+    return e.trees
+end
+function get_metadata(e::TemplateExpression)
+    return e.metadata
+end
+function get_operators(
+    e::TemplateExpression, operators::Union{AbstractOperatorEnum,Nothing}=nothing
+)
+    return @something(operators, get_metadata(e).operators)
+end
+function get_variable_names(
+    e::TemplateExpression,
+    variable_names::Union{AbstractVector{<:AbstractString},Nothing}=nothing,
+)
+    return if variable_names !== nothing
+        variable_names
+    elseif hasproperty(get_metadata(e), :variable_names)
+        get_metadata(e).variable_names
+    else
+        nothing
+    end
+end
+function get_scalar_constants(e::TemplateExpression)
+    # Get constants for each inner expression
+    consts_and_refs = map(get_scalar_constants, values(get_contents(e)))
+    flat_constants = vcat(map(first, consts_and_refs)...)
+    # Collect info so we can put them back in the right place,
+    # like the indexes of the constants in the flattened array
+    refs = map(c_ref -> (; n=length(first(c_ref)), ref=last(c_ref)), consts_and_refs)
+    return flat_constants, refs
+end
+function set_scalar_constants!(e::TemplateExpression, constants, refs)
+    cursor = Ref(1)
+    foreach(values(get_contents(e)), refs) do tree, r
+        n = r.n
+        i = cursor[]
+        c = constants[i:(i + n - 1)]
+        set_scalar_constants!(tree, c, r.ref)
+        cursor[] += n
+    end
+    return e
+end
+
+function allocate_container(e::TemplateExpression, n::Union{Nothing,Integer}=nothing)
+    ts = get_contents(e)
+    return (; trees=NamedTuple{keys(ts)}(map(t -> allocate_container(t, n), values(ts))))
+end
+function copy_into!(dest::NamedTuple, src::TemplateExpression)
+    ts = get_contents(src)
+    new_contents = NamedTuple{keys(ts)}(map(copy_into!, values(dest.trees), values(ts)))
+    return with_contents(src, new_contents)
 end
 
 function DE.get_tree(ex::TemplateExpression{<:Any,<:Any,<:Any,E}) where {E}
