@@ -58,10 +58,11 @@ struct ComposableExpression{
 end
 
 @inline function ComposableExpression(
-    tree::AbstractExpressionNode{T}; metadata...
+    tree::AbstractExpressionNode{T};
+    operators::Union{AbstractOperatorEnum,Nothing}=nothing,
+    variable_names::Union{AbstractVector{<:AbstractString},Nothing}=nothing,
 ) where {T}
-    d = (; metadata...)
-    return ComposableExpression(tree, Metadata(d))
+    return ComposableExpression(tree, Metadata((; operators, variable_names)))
 end
 
 @unstable DE.constructorof(::Type{<:ComposableExpression}) = ComposableExpression
