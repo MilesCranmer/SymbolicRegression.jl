@@ -1,6 +1,7 @@
 module TemplateExpressionModule
 
 using Random: AbstractRNG
+using StatsBase: sample
 using Compat: Fix
 using DynamicDiff: DynamicDiff
 using DispatchDoctor: @unstable, @stable
@@ -28,7 +29,13 @@ using DynamicExpressions.InterfacesModule:
 using DynamicExpressions.ExpressionModule: _copy
 
 using ..CoreModule:
-    AbstractOptions, Options, Dataset, CoreModule as CM, AbstractMutationWeights, has_units
+    AbstractOptions,
+    Options,
+    Dataset,
+    CoreModule as CM,
+    AbstractMutationWeights,
+    has_units,
+    DATA_TYPE
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..MutationFunctionsModule: MutationFunctionsModule as MF
@@ -676,7 +683,35 @@ function DE.simplify_tree!(
     )
     return with_contents(ex, new_contents)
 end
-# TODO: mutate_constant for TemplateExpression
+function MF.mutate_constant(
+    ex::TemplateExpression{T},
+    temperature,
+    options::AbstractOptions,
+    rng::AbstractRNG=default_rng(),
+) where {T<:DATA_TYPE}
+    regular_constant_mutation = !has_params(ex) && rand(rng, Bool)
+    if regular_constant_mutation
+        # Normal mutation of inner constant
+        tree, context = MF.get_contents_for_mutation(ex, rng)
+        new_tree = MF.mutate_constant(tree, temperature, options, rng)
+        return MF.with_contents_for_mutation(ex, new_tree, context)
+    else # Mutate parameters
+
+        # We mutate between 1 and all of the parameter vector
+        num_params = get_metadata(ex).structure.num_parameters
+        num_params_to_mutate = rand(rng, 1:num_params)
+
+        idx_to_mutate = StatsBase.sample(
+            rng, 1:num_params, num_params_to_mutate; replace=false
+        )
+        parameters = get_metadata(ex).parameters
+        factors = [MF.mutate_factor(T, temperature, options, rng) for _ in idx_to_mutate]
+        @inbounds for (i, f) in zip(idx_to_mutate, factors)
+            parameters._data[i] *= f
+        end
+        return ex
+    end
+end
 # TODO: Look at other ParametricExpression behavior
 
 function CO.count_constants_for_optimization(ex::TemplateExpression)
