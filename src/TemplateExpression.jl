@@ -14,11 +14,12 @@ using DynamicExpressions:
     OperatorEnum,
     Metadata,
     get_contents,
-    with_contents,
     get_metadata,
     get_operators,
     get_variable_names,
     get_tree,
+    with_metadata,
+    with_contents,
     node_type,
     count_nodes,
     preserve_sharing
@@ -268,7 +269,7 @@ function TemplateExpression(
     example_tree = first(values(trees))::AbstractExpression
     operators = get_operators(example_tree, operators)
     variable_names = get_variable_names(example_tree, variable_names)
-    if structure.num_parameters !== nothing
+    if has_params(structure)
         @assert parameters !== nothing
         @assert length(parameters) == structure.num_parameters
         # TODO: Delete this extra check once we are confident that it works
@@ -284,6 +285,8 @@ end
 @implements(
     ExpressionInterface{all_ei_methods_except(())}, TemplateExpression, [Arguments()]
 )
+
+has_params(ex::TemplateExpression) = has_params(get_metadata(ex).structure)
 
 @unstable function combine(ex::TemplateExpression, args...)
     return combine(get_metadata(ex).structure, args...)
@@ -332,7 +335,7 @@ function DE.get_scalar_constants(e::TemplateExpression)
     consts_and_refs = map(DE.get_scalar_constants, values(get_contents(e)))
     parameters = get_metadata(e).parameters
     flat_constants = vcat(
-        map(first, consts_and_refs)..., (parameters === nothing ? () : (parameters,))...
+        map(first, consts_and_refs)..., (has_params(e) ? (parameters,) : ())...
     )
     # Collect info so we can put them back in the right place,
     # like the indexes of the constants in the flattened array
@@ -348,9 +351,9 @@ function DE.set_scalar_constants!(e::TemplateExpression, constants, refs)
         DE.set_scalar_constants!(tree, c, r.ref)
         cursor[] += n
     end
-    parameters = get_metadata(e).parameters
-    if parameters !== nothing
+    if has_params(e)
         i = cursor[]
+        parameters = get_metadata(e).parameters
         parameters._data[:] = constants[i:end]
     end
     return e
@@ -361,18 +364,19 @@ function DE.allocate_container(e::TemplateExpression, n::Union{Nothing,Integer}=
     parameters = get_metadata(e).parameters
     return (;
         trees=NamedTuple{keys(ts)}(map(t -> DE.allocate_container(t, n), values(ts))),
-        parameters=parameters === nothing ? nothing : similar(parameters),
+        parameters=has_params(e) ? similar(parameters) : nothing,
     )
 end
 function DE.copy_into!(dest::NamedTuple, src::TemplateExpression)
     ts = get_contents(src)
     parameters = get_metadata(src).parameters
     new_contents = NamedTuple{keys(ts)}(map(DE.copy_into!, values(dest.trees), values(ts)))
-    if parameters !== nothing
+    if has_params(src)
         dest.parameters[:] = parameters[:]
     end
-    return DE.with_metadata(
-        with_contents(src, new_contents); parameters=ParamVector(dest.parameters)
+    return with_metadata(
+        with_contents(src, new_contents);
+        parameters=has_params(src) ? ParamVector(dest.parameters) : nothing,
     )
 end
 
@@ -389,7 +393,7 @@ function DE.get_tree(ex::TemplateExpression{<:Any,<:Any,<:Any,E}) where {E}
         with_contents(inner_ex, variable_tree) for
         (inner_ex, variable_tree) in zip(values(raw_contents), variable_trees)
     ]
-    if get_metadata(ex).structure.num_parameters !== nothing
+    if has_params(ex)
         throw(
             ArgumentError(
                 "`get_tree` is not implemented for TemplateExpression with parameters"
@@ -527,10 +531,10 @@ end
             if has_invalid_variables(tree)
                 return (nothing, false)
             end
-            extra_args = if metadata.parameters === nothing
-                ()
-            else
+            extra_args = if has_params(tree)
                 (metadata.parameters,)
+            else
+                ()
             end
             result = combine(
                 tree,
@@ -676,10 +680,9 @@ end
 # TODO: Look at other ParametricExpression behavior
 
 function CO.count_constants_for_optimization(ex::TemplateExpression)
-    parameters = get_metadata(ex).parameters
     return (
         sum(CO.count_constants_for_optimization, values(get_contents(ex))) +
-        (parameters === nothing ? 0 : length(parameters))
+        (has_params(ex) ? get_metadata(ex).structure.num_parameters : 0)
     )
 end
 
