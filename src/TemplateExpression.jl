@@ -1,8 +1,9 @@
 module TemplateExpressionModule
 
 using Random: AbstractRNG
-using StatsBase: sample
+using StatsBase: StatsBase
 using Compat: Fix
+using Random: default_rng
 using DynamicDiff: DynamicDiff
 using DispatchDoctor: @unstable, @stable
 using StyledStrings: @styled_str, annotatedstring
