@@ -84,18 +84,21 @@ If not declared using the constructor `TemplateStructure{K}(...)`, the keys of t
     features used by each expression. If not provided, it will be inferred using the `combine`
     function. For example, if `f` takes two arguments, and `g` takes one, then
     `num_features = (; f=2, g=1)`.
-- `num_params`: Optional number of parameters to optimize as part of the expression. You can
+- `num_parameters`: Optional number of parameters to optimize as part of the expression. You can
     use these as extra class-dependent parameters or as manually-structured constants.
 """
 struct TemplateStructure{K,E<:Function,NF<:NamedTuple{K},NP<:Union{Integer,Nothing}} <:
        Function
     combine::E
     num_features::NF
-    num_params::NP
+    num_parameters::NP
 end
 
 function TemplateStructure{K}(
-    combine::E, _deprecated_num_features=nothing; num_features=nothing, num_params=nothing
+    combine::E,
+    _deprecated_num_features=nothing;
+    num_features=nothing,
+    num_parameters=nothing,
 ) where {K,E<:Function}
     if _deprecated_num_features !== nothing
         Base.depwarn(
@@ -106,10 +109,10 @@ function TemplateStructure{K}(
     num_features = @something(
         num_features,
         _deprecated_num_features,
-        infer_variable_constraints(Val(K), num_params, combine)
+        infer_variable_constraints(Val(K), num_parameters, combine)
     )
-    return TemplateStructure{K,E,typeof(num_features),typeof(num_params)}(
-        combine, num_features, num_params
+    return TemplateStructure{K,E,typeof(num_features),typeof(num_parameters)}(
+        combine, num_features, num_parameters
     )
 end
 
@@ -142,7 +145,7 @@ end
 DynamicDiff.D(f::ArgumentRecorder, ::Integer) = f
 
 """Infers number of features used by each subexpression, by passing in test data."""
-function infer_variable_constraints(::Val{K}, num_params, combiner::F) where {K,F}
+function infer_variable_constraints(::Val{K}, num_parameters, combiner::F) where {K,F}
     variable_constraints = NamedTuple{K}(map(_ -> Ref(-1), K))
     # Now, we need to evaluate the `combine` function to see how many
     # features are used for each function call. If unset, we record it.
@@ -158,15 +161,15 @@ function infer_variable_constraints(::Val{K}, num_params, combiner::F) where {K,
     _dummy_valid_vectors = Base.Iterators.repeated(ValidVector(ones(Float64, 1), true))
 
     # This part is like the params in the structure function
-    _extra_args = if num_params === nothing
+    _extra_args = if num_parameters === nothing
         ()
     else
-        (ParamVector(ones(Float64, num_params)),)
+        (ParamVector(ones(Float64, num_parameters)),)
     end
 
     # Now, we actually call the structure function
     combiner(_recorders_of_composable_expressions, _dummy_valid_vectors, _extra_args...)
-    # TODO: Add a helpful error message for the user if they forget to set `num_params`
+    # TODO: Add a helpful error message for the user if they forget to set `num_parameters`
 
     inferred = NamedTuple{K}(map(x -> x[], values(variable_constraints)))
     if any(==(-1), values(inferred))
@@ -265,9 +268,9 @@ function TemplateExpression(
     example_tree = first(values(trees))::AbstractExpression
     operators = get_operators(example_tree, operators)
     variable_names = get_variable_names(example_tree, variable_names)
-    if structure.num_params !== nothing
+    if structure.num_parameters !== nothing
         @assert parameters !== nothing
-        @assert length(parameters) == structure.num_params
+        @assert length(parameters) == structure.num_parameters
         # TODO: Delete this extra check once we are confident that it works
     else
         @assert parameters === nothing
@@ -386,7 +389,7 @@ function DE.get_tree(ex::TemplateExpression{<:Any,<:Any,<:Any,E}) where {E}
         with_contents(inner_ex, variable_tree) for
         (inner_ex, variable_tree) in zip(values(raw_contents), variable_trees)
     ]
-    if get_metadata(ex).structure.num_params !== nothing
+    if get_metadata(ex).structure.num_parameters !== nothing
         throw(
             ArgumentError(
                 "`get_tree` is not implemented for TemplateExpression with parameters"
@@ -429,12 +432,12 @@ function EB.extra_init_params(
     dataset::Dataset{T},
     ::Val{embed},
 ) where {T,embed,E<:TemplateExpression}
-    num_params = options.expression_options.structure.num_params
-    parameters = if num_params === nothing
+    num_parameters = options.expression_options.structure.num_parameters
+    parameters = if num_parameters === nothing
         nothing
     else
         if prototype === nothing
-            ParamVector(randn(T, (num_params,)))
+            ParamVector(randn(T, (num_parameters,)))
         else
             copy(get_metadata(prototype).parameters)
         end
