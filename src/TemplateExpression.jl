@@ -24,6 +24,7 @@ using DynamicExpressions:
     preserve_sharing
 using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
+using DynamicExpressions.ExpressionModule: _copy
 
 using ..CoreModule:
     AbstractOptions, Options, Dataset, CoreModule as CM, AbstractMutationWeights, has_units
@@ -45,11 +46,22 @@ struct ParamVector{T} <: AbstractVector{T}
 end
 Base.size(pv::ParamVector) = size(pv._data)
 Base.getindex(pv::ParamVector, i::Integer) = pv._data[i]
+
+# TODO: This likely slows down evaluation a bit. In the future
+#       we might want to have integers passed explicitly.
 Base.getindex(pv::ParamVector, i::Number) = pv[Int(i)]
+
 function Base.setindex!(::ParamVector, ::Integer, _)
     return error(
         "ParamVector should be treated as read-only. Create a new ParamVector instead."
     )
+end
+function Base.getindex(pv::ParamVector, I::ValidVector)
+    data = pv[I.x]
+    return ValidVector(data, I.valid)
+end
+function Base.copy(pv::ParamVector)
+    return ParamVector(copy(pv._data))
 end
 
 """
@@ -146,13 +158,15 @@ function infer_variable_constraints(::Val{K}, num_params, combiner::F) where {K,
     _dummy_valid_vectors = Base.Iterators.repeated(ValidVector(ones(Float64, 1), true))
 
     # This part is like the params in the structure function
-    _extra_args = ()
-    if num_params !== nothing
-        _extra_args = (ParamVector(ones(Float64, num_params)),)
+    _extra_args = if num_params === nothing
+        ()
+    else
+        (ParamVector(ones(Float64, num_params)),)
     end
 
     # Now, we actually call the structure function
     combiner(_recorders_of_composable_expressions, _dummy_valid_vectors, _extra_args...)
+    # TODO: Add a helpful error message for the user if they forget to set `num_params`
 
     inferred = NamedTuple{K}(map(x -> x[], values(variable_constraints)))
     if any(==(-1), values(inferred))
@@ -220,7 +234,7 @@ struct TemplateExpression{
     TS<:NamedTuple{<:Any,<:NTuple{<:Any,E}},
     D<:@NamedTuple{
         structure::F, operators::O, variable_names::V, parameters::P
-    } where {O<:AbstractOperatorEnum,V,P},
+    } where {O<:AbstractOperatorEnum,V,P<:Union{Nothing,ParamVector}},
 } <: AbstractExpression{T,N}
     trees::TS
     metadata::Metadata{D}
@@ -232,7 +246,7 @@ struct TemplateExpression{
         F<:TemplateStructure,
         D<:@NamedTuple{
             structure::F, operators::O, variable_names::V, parameters::P
-        } where {O,V,P},
+        } where {O,V,P<:Union{Nothing,ParamVector}},
     }
         @assert keys(trees) == get_function_keys(metadata.structure)
         E = typeof(first(values(trees)))
@@ -280,8 +294,9 @@ function Base.copy(e::TemplateExpression)
     keys_except_structure = filter(!=(:structure), keys(meta_inner))
     copy_metadata = (;
         meta_inner.structure,
+        # Note: this `_copy` is just `copy` but with handling for `nothing` and `NamedTuple`
         NamedTuple{keys_except_structure}(
-            map(DE.ExpressionModule._copy, values(meta_inner[keys_except_structure]))
+            map(_copy, values(meta_inner[keys_except_structure]))
         )...,
     )
     return DE.constructorof(typeof(e))(copy_ts, Metadata(copy_metadata))
@@ -333,7 +348,7 @@ function DE.set_scalar_constants!(e::TemplateExpression, constants, refs)
     parameters = get_metadata(e).parameters
     if parameters !== nothing
         i = cursor[]
-        parameters[:] = constants[i:end]
+        parameters._data[:] = constants[i:end]
     end
     return e
 end
@@ -353,7 +368,9 @@ function DE.copy_into!(dest::NamedTuple, src::TemplateExpression)
     if parameters !== nothing
         dest.parameters[:] = parameters[:]
     end
-    return DE.with_metadata(with_contents(src, new_contents); parameters=dest.parameters)
+    return DE.with_metadata(
+        with_contents(src, new_contents); parameters=ParamVector(dest.parameters)
+    )
 end
 
 function DE.get_tree(ex::TemplateExpression{<:Any,<:Any,<:Any,E}) where {E}
@@ -370,7 +387,11 @@ function DE.get_tree(ex::TemplateExpression{<:Any,<:Any,<:Any,E}) where {E}
         (inner_ex, variable_tree) in zip(values(raw_contents), variable_trees)
     ]
     if get_metadata(ex).structure.num_params !== nothing
-        throw(ArgumentError("Not implemented"))
+        throw(
+            ArgumentError(
+                "`get_tree` is not implemented for TemplateExpression with parameters"
+            ),
+        )
     end
 
     return DE.get_tree(
@@ -413,7 +434,7 @@ function EB.extra_init_params(
         nothing
     else
         if prototype === nothing
-            randn(T, (num_params,))
+            ParamVector(randn(T, (num_params,)))
         else
             copy(get_metadata(prototype).parameters)
         end
@@ -475,14 +496,14 @@ function DE.string_tree(
                 else
                     "├ "
                 end
-                annotatedstring(prefix * string(k) * " = ", _color_string(s, c))
+                annotatedstring(prefix, string(k), " = ", _color_string(s, c))
             end,
             function_keys,
             values(inner_strings),
             colors,
         ),
     )
-    return annotatedstring(join(strings, pretty ? styled"\n" : "; "))
+    return annotatedstring(join(strings, pretty ? styled"\n" : styled"; "))
 end
 function HOF.make_prefix(::TemplateExpression, ::AbstractOptions, ::Dataset)
     return ""
