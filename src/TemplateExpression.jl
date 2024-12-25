@@ -275,29 +275,29 @@ end
 function Base.copy(e::TemplateExpression)
     ts = get_contents(e)
     meta = get_metadata(e)
-    meta_inner = unpack_metadata(meta)
+    meta_inner = DE.ExpressionModule.unpack_metadata(meta)
     copy_ts = NamedTuple{keys(ts)}(map(copy, values(ts)))
     keys_except_structure = filter(!=(:structure), keys(meta_inner))
     copy_metadata = (;
         meta_inner.structure,
         NamedTuple{keys_except_structure}(
-            map(_copy, values(meta_inner[keys_except_structure]))
+            map(DE.ExpressionModule._copy, values(meta_inner[keys_except_structure]))
         )...,
     )
-    return constructorof(typeof(e))(copy_ts, Metadata(copy_metadata))
+    return DE.constructorof(typeof(e))(copy_ts, Metadata(copy_metadata))
 end
-function get_contents(e::TemplateExpression)
+function DE.get_contents(e::TemplateExpression)
     return e.trees
 end
-function get_metadata(e::TemplateExpression)
+function DE.get_metadata(e::TemplateExpression)
     return e.metadata
 end
-function get_operators(
+function DE.get_operators(
     e::TemplateExpression, operators::Union{AbstractOperatorEnum,Nothing}=nothing
 )
     return @something(operators, get_metadata(e).operators)
 end
-function get_variable_names(
+function DE.get_variable_names(
     e::TemplateExpression,
     variable_names::Union{AbstractVector{<:AbstractString},Nothing}=nothing,
 )
@@ -309,35 +309,51 @@ function get_variable_names(
         nothing
     end
 end
-function get_scalar_constants(e::TemplateExpression)
+function DE.get_scalar_constants(e::TemplateExpression)
     # Get constants for each inner expression
-    consts_and_refs = map(get_scalar_constants, values(get_contents(e)))
-    flat_constants = vcat(map(first, consts_and_refs)...)
+    consts_and_refs = map(DE.get_scalar_constants, values(get_contents(e)))
+    parameters = get_metadata(e).parameters
+    flat_constants = vcat(
+        map(first, consts_and_refs)..., (parameters === nothing ? () : (parameters,))...
+    )
     # Collect info so we can put them back in the right place,
     # like the indexes of the constants in the flattened array
     refs = map(c_ref -> (; n=length(first(c_ref)), ref=last(c_ref)), consts_and_refs)
     return flat_constants, refs
 end
-function set_scalar_constants!(e::TemplateExpression, constants, refs)
+function DE.set_scalar_constants!(e::TemplateExpression, constants, refs)
     cursor = Ref(1)
     foreach(values(get_contents(e)), refs) do tree, r
         n = r.n
         i = cursor[]
         c = constants[i:(i + n - 1)]
-        set_scalar_constants!(tree, c, r.ref)
+        DE.set_scalar_constants!(tree, c, r.ref)
         cursor[] += n
+    end
+    parameters = get_metadata(e).parameters
+    if parameters !== nothing
+        i = cursor[]
+        parameters[:] = constants[i:end]
     end
     return e
 end
 
-function allocate_container(e::TemplateExpression, n::Union{Nothing,Integer}=nothing)
+function DE.allocate_container(e::TemplateExpression, n::Union{Nothing,Integer}=nothing)
     ts = get_contents(e)
-    return (; trees=NamedTuple{keys(ts)}(map(t -> allocate_container(t, n), values(ts))))
+    parameters = get_metadata(e).parameters
+    return (;
+        trees=NamedTuple{keys(ts)}(map(t -> DE.allocate_container(t, n), values(ts))),
+        parameters=parameters === nothing ? nothing : similar(parameters),
+    )
 end
-function copy_into!(dest::NamedTuple, src::TemplateExpression)
+function DE.copy_into!(dest::NamedTuple, src::TemplateExpression)
     ts = get_contents(src)
-    new_contents = NamedTuple{keys(ts)}(map(copy_into!, values(dest.trees), values(ts)))
-    return with_contents(src, new_contents)
+    parameters = get_metadata(src).parameters
+    new_contents = NamedTuple{keys(ts)}(map(DE.copy_into!, values(dest.trees), values(ts)))
+    if parameters !== nothing
+        dest.parameters[:] = parameters[:]
+    end
+    return DE.with_metadata(with_contents(src, new_contents); parameters=dest.parameters)
 end
 
 function DE.get_tree(ex::TemplateExpression{<:Any,<:Any,<:Any,E}) where {E}
@@ -392,8 +408,18 @@ function EB.extra_init_params(
     dataset::Dataset{T},
     ::Val{embed},
 ) where {T,embed,E<:TemplateExpression}
+    num_params = options.expression_options.structure.num_params
+    parameters = if num_params === nothing
+        nothing
+    else
+        if prototype === nothing
+            randn(T, (num_params,))
+        else
+            copy(get_metadata(prototype).parameters)
+        end
+    end
     # We also need to include the operators here to be consistent with `create_expression`.
-    return (; options.operators, options.expression_options...)
+    return (; options.operators, options.expression_options..., parameters)
 end
 function EB.sort_params(params::NamedTuple, ::Type{<:TemplateExpression})
     return (; params.structure, params.operators, params.variable_names, params.parameters)
@@ -587,6 +613,17 @@ function MF.with_contents_for_mutation(
     )
     return with_contents(ex, new_contents)
 end
+function MM.condition_mutate_constant!(
+    ::Type{<:TemplateExpression},
+    weights::AbstractMutationWeights,
+    member::PopMember,
+    options::AbstractOptions,
+    curmaxsize::Int,
+)
+    # Avoid modifying the mutate_constant weight, since
+    # otherwise we would be mutating constants all the time!
+    return nothing
+end
 
 """We combine the operators of each inner expression."""
 function DE.combine_operators(
@@ -611,12 +648,15 @@ function DE.simplify_tree!(
     )
     return with_contents(ex, new_contents)
 end
+# TODO: mutate_constant for TemplateExpression
+# TODO: Look at other ParametricExpression behavior
 
-function DE.count_scalar_constants(ex::TemplateExpression)
-    return sum(DE.count_scalar_constants, values(get_contents(ex)))
-end
 function CO.count_constants_for_optimization(ex::TemplateExpression)
-    return sum(CO.count_constants_for_optimization, values(get_contents(ex)))
+    parameters = get_metadata(ex).parameters
+    return (
+        sum(CO.count_constants_for_optimization, values(get_contents(ex))) +
+        (parameters === nothing ? 0 : length(parameters))
+    )
 end
 
 function CC.check_constraints(
