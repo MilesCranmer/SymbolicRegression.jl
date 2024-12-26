@@ -390,7 +390,7 @@ function DE.allocate_container(e::TemplateExpression, n::Union{Nothing,Integer}=
     parameters = get_metadata(e).parameters
     return PreallocatedTemplateExpression(
         NamedTuple{keys(ts)}(map(t -> DE.allocate_container(t, n), values(ts))),
-        has_params(e) ? similar(parameters) : nothing,
+        has_params(e) ? similar(parameters::ParamVector) : nothing,
     )
 end
 function DE.copy_into!(dest::PreallocatedTemplateExpression, src::TemplateExpression)
@@ -398,7 +398,7 @@ function DE.copy_into!(dest::PreallocatedTemplateExpression, src::TemplateExpres
     parameters = get_metadata(src).parameters
     new_contents = NamedTuple{keys(ts)}(map(DE.copy_into!, values(dest.trees), values(ts)))
     if has_params(src)
-        dest.parameters[:] = parameters[:]
+        (dest.parameters::ParamVector)[:] = (parameters::ParamVector)[:]
     end
     return with_metadata(
         with_contents(src, new_contents);
@@ -723,7 +723,7 @@ function MF.mutate_constant(
         idx_to_mutate = StatsBase.sample(
             rng, 1:num_params, num_params_to_mutate; replace=false
         )
-        parameters = get_metadata(ex).parameters
+        parameters = get_metadata(ex).parameters::ParamVector
         factors = [MF.mutate_factor(T, temperature, options, rng) for _ in idx_to_mutate]
         @inbounds for (i, f) in zip(idx_to_mutate, factors)
             parameters._data[i] *= f
