@@ -235,3 +235,89 @@ end
     @test pred !== nothing
     @test isapprox(pred, y; atol=1e-3)
 end
+
+@testitem "Preallocated copying with parameters" begin
+    using SymbolicRegression
+    using Random: MersenneTwister
+    using DynamicExpressions:
+        allocate_container, copy_into!, get_contents, get_metadata, get_scalar_constants
+
+    struct_sum_params = TemplateStructure{(:f,)}(
+        ((; f), (x,), p) -> f(x) + sum(p); num_parameters=2
+    )
+
+    # Subexpression: single feature #1
+    subex = ComposableExpression(
+        Node{Float64}(; feature=1); operators=Options().operators, variable_names=["x"]
+    )
+
+    expr = TemplateExpression(
+        (; f=subex,);
+        structure=struct_sum_params,
+        operators=Options().operators,
+        variable_names=["x"],
+        parameters=[10.0, 20.0],  # distinct param values
+    )
+
+    # We'll mutate the original's parameters to check preallocated copying
+    preallocated_expr = allocate_container(expr)
+    get_metadata(expr).parameters._data .= [100.0, 200.0]
+
+    # Now copy over
+    new_expr = copy_into!(preallocated_expr, expr)
+
+    @test get_metadata(new_expr).parameters._data == [100.0, 200.0]
+
+    # Evaluate with shape [1, 1]
+    X1 = reshape([1.0], 1, 1)
+    # => subex(1.0)=1 => sum(params)=300 => total=[301]
+    @test expr(X1) == [1.0 + 300.0]
+
+    X2 = reshape([2.0], 1, 1)
+    @test new_expr(X2) == [2.0 + 300.0]
+end
+
+@testitem "Zero-parameter edge case" begin
+    using SymbolicRegression
+
+    struct_zero_params = TemplateStructure{(:f,)}(
+        ((; f), (x,), p) -> f(x) + sum(p) * 9999; num_parameters=0
+    )
+    x = ComposableExpression(Node{Float64}(; feature=1); operators=Options().operators)
+    expr_zero = TemplateExpression(
+        (; f=x,);
+        structure=struct_zero_params,
+        operators=Options().operators,
+        parameters=Float64[],  # typed empty array
+    )
+    @test length(get_metadata(expr_zero).parameters._data) == 0
+
+    # Evaluate => just f(x)
+    X_ones = reshape([10.0], 1, 1)
+
+    @test expr_zero(X_ones) == [10.0]
+end
+
+@testitem "Non-Float64 parameter types" begin
+    using SymbolicRegression
+
+    struct32 = TemplateStructure{(:f,)}(((; f), (x,), p) -> f(x) + sum(p); num_parameters=2)
+    # Subex as ComplexF32
+    subex_f32 = ComposableExpression(
+        Node{ComplexF32}(; feature=1); operators=Options().operators, variable_names=["x"]
+    )
+    param32 = ComplexF32[10.0 + 0im, 20.0 + 0im]
+
+    expr_f32 = TemplateExpression(
+        (; f=subex_f32,);
+        structure=struct32,
+        operators=Options().operators,
+        variable_names=["x"],
+        parameters=param32,
+    )
+    @test eltype(get_metadata(expr_f32).parameters._data) == ComplexF32
+
+    Xtest = reshape(ComplexF32[2.0 + 0im], 1, 1)
+    @test expr_f32(Xtest) == [ComplexF32(32.0 + 0im)]
+    @test expr_f32(Xtest) isa Vector{ComplexF32}
+end

@@ -293,7 +293,7 @@ function TemplateExpression(
     structure::F,
     operators::Union{AbstractOperatorEnum,Nothing}=nothing,
     variable_names::Union{AbstractVector{<:AbstractString},Nothing}=nothing,
-    parameters::Union{AbstractVector{<:Real},Nothing}=nothing,
+    parameters::Union{AbstractVector{<:DATA_TYPE},Nothing}=nothing,
 ) where {F<:TemplateStructure}
     example_tree = first(values(trees))::AbstractExpression
     operators = get_operators(example_tree, operators)
