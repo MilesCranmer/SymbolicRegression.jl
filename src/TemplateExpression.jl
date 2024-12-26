@@ -380,15 +380,20 @@ function DE.set_scalar_constants!(e::TemplateExpression, constants, refs)
     return e
 end
 
+Base.@kwdef struct PreallocatedTemplateExpression{A,B}
+    trees::A
+    parameters::B
+end
+
 function DE.allocate_container(e::TemplateExpression, n::Union{Nothing,Integer}=nothing)
     ts = get_contents(e)
     parameters = get_metadata(e).parameters
-    return (;
-        trees=NamedTuple{keys(ts)}(map(t -> DE.allocate_container(t, n), values(ts))),
-        parameters=has_params(e) ? similar(parameters) : nothing,
+    return PreallocatedTemplateExpression(
+        NamedTuple{keys(ts)}(map(t -> DE.allocate_container(t, n), values(ts))),
+        has_params(e) ? similar(parameters) : nothing,
     )
 end
-function DE.copy_into!(dest::NamedTuple, src::TemplateExpression)
+function DE.copy_into!(dest::PreallocatedTemplateExpression, src::TemplateExpression)
     ts = get_contents(src)
     parameters = get_metadata(src).parameters
     new_contents = NamedTuple{keys(ts)}(map(DE.copy_into!, values(dest.trees), values(ts)))
