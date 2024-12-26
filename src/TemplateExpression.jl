@@ -738,7 +738,7 @@ function MF.mutate_constant(
     else # Mutate parameters
 
         # We mutate between 1 and all of the parameter vector
-        num_params = get_metadata(ex).structure.num_parameters
+        num_params = get_metadata(ex).structure.num_parameters::Integer
         num_params_to_mutate = rand(rng, 1:num_params)
 
         idx_to_mutate = StatsBase.sample(
