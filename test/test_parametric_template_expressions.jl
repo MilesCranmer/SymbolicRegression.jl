@@ -1,50 +1,43 @@
-@testitem "Parametric TemplateExpressions - Creation & Parameter Counts" begin
-    using SymbolicRegression: TemplateStructure, TemplateExpression, ComposableExpression
-    using SymbolicRegression: Node, Options
+@testitem "creation & parameter counts" begin
+    using SymbolicRegression
 
     # A structure that expects 1 subexpression + param vector of length 2
     struct1 = TemplateStructure{(:f,)}(((; f), (x,), p) -> f(x) + sum(p); num_parameters=2)
 
-    # By default (no explicit num_features), we get (f=1,) for a single-argument subexpression
-    @test struct1.num_features == (f=1,)
+    @test struct1.num_features == (; f=1)
     @test struct1.num_parameters == 2
 
-    # Create a subexpression, specifying operators
     subex = ComposableExpression(Node{Float64}(; feature=1); operators=Options().operators)
 
-    # Provide correct parameters
     expr_correct = TemplateExpression(
-        (; f=subex);
-        structure=struct1,
-        operators=Options().operators,
-        parameters=[1.0, 2.0],  # length 2
+        (; f=subex); structure=struct1, operators=Options().operators, parameters=[1.0, 2.0]
     )
     @test expr_correct isa TemplateExpression
 end
 
-@testitem "Parametric TemplateExpressions - Error Conditions" begin
-    using SymbolicRegression: TemplateStructure, TemplateExpression, ComposableExpression
-    using SymbolicRegression: Node, Options
+@testitem "error conditions" begin
+    using SymbolicRegression
 
     struct_bad = TemplateStructure{(:f,)}(
         ((; f), (x,), p) -> f(x) + sum(p); num_parameters=2
     )
 
-    # Missing param vector => error
-    @test_throws AssertionError TemplateExpression(
+    variable_names = ["x"]
+
+    # Error for missing parameters
+    @test_throws "Expected `parameters` to be provided" TemplateExpression(
         (;
             f=ComposableExpression(
-                Node{Float64}(; feature=1); operators=Options().operators
+                Node{Float64}(; feature=1); operators=Options().operators, variable_names
             )
         );
         structure=struct_bad,
         operators=Options().operators,
-        variable_names=["x"],
-        parameters=nothing,  # library expects length=2
+        variable_names,
     )
 
-    # Wrong param vector length => error
-    @test_throws AssertionError TemplateExpression(
+    # Error for wrong parameter vector length
+    @test_throws "Expected `parameters` to have length 2, got 1" TemplateExpression(
         (;
             f=ComposableExpression(
                 Node{Float64}(; feature=1); operators=Options().operators
@@ -53,13 +46,26 @@ end
         structure=struct_bad,
         operators=Options().operators,
         variable_names=["x"],
-        parameters=[1.0],  # length=1, should be=2
+        parameters=[1.0],
+    )
+
+    # Now, for structure *not* having parameters, but using parameters:
+    structure = TemplateStructure{(:f,)}(((; f), (x,)) -> f(x))
+    @test_throws "Expected `parameters` to be `nothing` for `structure.num_parameters=nothing`" TemplateExpression(
+        (;
+            f=ComposableExpression(
+                Node{Float64}(; feature=1); operators=Options().operators
+            )
+        );
+        structure=structure,
+        operators=Options().operators,
+        variable_names=["x"],
+        parameters=[1.0],
     )
 end
 
-@testitem "Parametric TemplateExpressions - Basic Evaluation" begin
-    using SymbolicRegression: TemplateStructure, TemplateExpression, ComposableExpression
-    using SymbolicRegression: Node, Options
+@testitem "basic evaluation" begin
+    using SymbolicRegression
 
     # structure => f(x) + sum(params), with 2 parameters
     struct_eval = TemplateStructure{(:f,)}(

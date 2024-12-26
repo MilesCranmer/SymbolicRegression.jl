@@ -280,12 +280,21 @@ function TemplateExpression(
     operators = get_operators(example_tree, operators)
     variable_names = get_variable_names(example_tree, variable_names)
     parameters = if has_params(structure)
-        @assert parameters !== nothing
-        @assert length(parameters) == structure.num_parameters
+        @assert(
+            parameters !== nothing,
+            "Expected `parameters` to be provided for `structure.num_parameters=$(structure.num_parameters)`"
+        )
+        @assert(
+            length(parameters) == structure.num_parameters,
+            "Expected `parameters` to have length $(structure.num_parameters), got $(length(parameters))"
+        )
         # TODO: Delete this extra check once we are confident that it works
         parameters isa ParamVector ? parameters : ParamVector(parameters)
     else
-        @assert parameters === nothing
+        @assert(
+            parameters === nothing,
+            "Expected `parameters` to be `nothing` for `structure.num_parameters=$(structure.num_parameters)`"
+        )
         nothing
     end
     metadata = (; structure, operators, variable_names, parameters)
