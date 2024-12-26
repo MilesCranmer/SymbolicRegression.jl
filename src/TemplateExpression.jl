@@ -466,11 +466,13 @@ function EB.extra_init_params(
     parameters = if num_parameters === nothing
         nothing
     else
+        # COV_EXCL_START
         if prototype === nothing
             ParamVector(randn(T, (num_parameters,)))
         else
             copy(get_metadata(prototype).parameters::ParamVector)
         end
+        # COV_EXCL_STOP
     end
     # We also need to include the operators here to be consistent with `create_expression`.
     return (; options.operators, options.expression_options..., parameters)
