@@ -1,6 +1,7 @@
 module ComposableExpressionModule
 
 using DispatchDoctor: @unstable
+using Compat: Fix
 using DynamicExpressions:
     AbstractExpression,
     Expression,
@@ -238,6 +239,9 @@ for op in (
         Base.$(op)(x::ValidVector, y::Number) = apply_operator(Base.$(op), x, y)
         Base.$(op)(x::Number, y::ValidVector) = apply_operator(Base.$(op), x, y)
     end
+end
+function Base.literal_pow(::typeof(^), x::ValidVector, ::Val{p}) where {p}
+    return apply_operator(Fix{1}(Fix{3}(Base.literal_pow, Val(p)), ^), x)
 end
 
 for op in (

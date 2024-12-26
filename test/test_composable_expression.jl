@@ -340,3 +340,23 @@ end
     X = stack(([1.0, 2.0], [3.0, 4.0], [5.0, 6.0]); dims=1)
     @test expr(X) ≈ [1.0, 2.0] .- sin.([3.0, 4.0] .- [5.0, 6.0]) .+ 2.5
 end
+
+@testitem "Test literal_pow with ValidVector" tags = [:part2] begin
+    using SymbolicRegression: ValidVector
+
+    # Test with valid data
+    x = ValidVector([2.0, 3.0, 4.0], true)
+
+    # Test literal_pow with different powers
+    @test (x^2).x ≈ [4.0, 9.0, 16.0]
+    @test (x^3).x ≈ [8.0, 27.0, 64.0]
+
+    # And explicitly
+    @test Base.literal_pow(^, x, Val(2)).x ≈ [4.0, 9.0, 16.0]
+    @test Base.literal_pow(^, x, Val(3)).x ≈ [8.0, 27.0, 64.0]
+
+    # Test with invalid data
+    invalid_x = ValidVector([2.0, 3.0, 4.0], false)
+    @test (invalid_x^2).valid == false
+    @test Base.literal_pow(^, invalid_x, Val(2)).valid == false
+end
