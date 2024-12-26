@@ -129,10 +129,12 @@ end
     return template.combine(args...)
 end
 
+# COV_EXCL_START
 get_function_keys(::TemplateStructure{K}) where {K} = K
 
 has_params(::TemplateStructure{<:Any,<:Any,<:Any,<:Nothing}) = false
 has_params(::TemplateStructure{<:Any,<:Any,<:Any,<:Integer}) = true
+# COV_EXCL_STOP
 
 function _record_composable_expression!(variable_constraints, ::Val{k}, args...) where {k}
     vc = variable_constraints[k][]
@@ -290,7 +292,7 @@ function TemplateExpression(
     return TemplateExpression(trees, Metadata(metadata))
 end
 
-@unstable DE.constructorof(::Type{<:TemplateExpression}) = TemplateExpression
+@unstable DE.constructorof(::Type{<:TemplateExpression}) = TemplateExpression  # COV_EXCL_LINE
 
 @implements(
     ExpressionInterface{all_ei_methods_except(())}, TemplateExpression, [Arguments()]
