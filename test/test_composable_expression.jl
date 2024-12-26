@@ -360,3 +360,22 @@ end
     @test (invalid_x^2).valid == false
     @test Base.literal_pow(^, invalid_x, Val(2)).valid == false
 end
+
+@testitem "Test nan behavior with argument-less expressions" tags = [:part2] begin
+    using SymbolicRegression
+    using DynamicExpressions: OperatorEnum, Node
+
+    operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    variable_names = ["x1", "x2"]
+
+    # Test with floating point
+    c1 = ComposableExpression(Node{Float64}(; val=3.0); operators, variable_names)
+    invalid_const = (c1 / c1 - 1) / (c1 / c1 - 1)  # Creates 0/0
+    @test isnan(invalid_const())
+    @test typeof(invalid_const()) === Float64
+
+    # Test with integer constant
+    c2 = ComposableExpression(Node{Int}(; val=0); operators, variable_names)
+    @test c2() == 0
+    @test typeof(c2()) === Int
+end
