@@ -167,22 +167,23 @@ end
     @test param_changed == true
 end
 
-@testitem "Parametric TemplateExpressions - Mini Search Example" begin
-    using SymbolicRegression: TemplateStructure, TemplateExpression, ComposableExpression
-    using SymbolicRegression: Node, SRRegressor, Dataset, Options
+@testitem "search with parametric template expressions" begin
+    using SymbolicRegression
     using Random: MersenneTwister
     using MLJBase: machine, fit!, report, matrix
 
-    # structure => f(x) + p[1], single param
+    # structure => f(x) + p[1] * y, single param
     struct_search = TemplateStructure{(:f,)}(
-        ((; f), (x,), p) -> f(x) + p[1]; num_parameters=1
+        ((; f), (x, y, i), p) -> f(x) + p[i] * y; num_parameters=2
     )
 
     rng = MersenneTwister(0)
-    # We'll create 1 feature, 4 data points => shape: (1,4)
-    # X[1,:] = [1,2,3,4], and y = 2*x + 3 => [5,7,9,11]
-    X = (; x=[1.0, 2.0, 3.0, 4.0])
-    y = [2 * xi + 3 for xi in X.x]  # => [5,7,9,11]
+    # We'll create 2 feature, and 1 category
+    X = (; x=rand(rng, 32), y=rand(rng, 32), i=rand(rng, 1:2, 32))
+    true_params = [0.5, -3.0]
+    true_f(x) = 0.5 * x * x
+
+    y = [true_f(X.x[i]) + true_params[X.i[i]] * X.y[i] for i in 1:32]
 
     model = SRRegressor(;
         niterations=20,
@@ -190,17 +191,28 @@ end
         unary_operators=(),
         expression_type=TemplateExpression,
         expression_options=(; structure=struct_search),
+        early_stop_condition=(l, c) -> l < 1e-6 && c == 5,
     )
 
     mach = machine(model, X, y)
     fit!(mach)
 
     r = report(mach)
-    best_expr = r.equations[r.best_idx]
+    best_expr_idx = findfirst(
+        i -> r.losses[i] < 1e-6 && r.complexities[i] == 5, 1:length(r.equations)
+    )
+    @test best_expr_idx !== nothing
 
-    # Evaluate the best expression on the same X
-    # => hopefully near [5, 7, 9, 11]
+    best_expr = r.equations[best_expr_idx]
+    @test best_expr isa TemplateExpression
+
+    params = get_metadata(best_expr).parameters
+    @test isapprox(params, true_params; atol=1e-3)
+
+    # # Evaluate the best expression on the same X
+    # # => hopefully near [5, 7, 9, 11]
     pred = best_expr(matrix(X; transpose=true))
-    @test length(pred) == 4
+    @test length(pred) == 32
     @test pred !== nothing
+    @test isapprox(pred, y; atol=1e-3)
 end
