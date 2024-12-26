@@ -1,6 +1,7 @@
 module ComposableExpressionModule
 
 using DispatchDoctor: @unstable
+using Compat: Fix
 using DynamicExpressions:
     AbstractExpression,
     Expression,
@@ -185,9 +186,13 @@ function (ex::AbstractComposableExpression)(
 end
 function (ex::AbstractComposableExpression{T})() where {T}
     X = Matrix{T}(undef, 0, 1)  # Value is irrelevant as it won't be used
-    out, _ = eval_tree_array(ex, X)  # TODO: The valid is not used; not sure how to incorporate
-    return only(out)::T
+    out, complete = eval_tree_array(ex, X)  # TODO: The valid is not used; not sure how to incorporate
+    y = only(out)
+    return complete ? y::T : nan(y)::T
 end
+nan(::T) where {T<:AbstractFloat} = convert(T, NaN)
+nan(x) = x
+
 function (ex::AbstractComposableExpression)(
     x::AbstractComposableExpression, _xs::Vararg{AbstractComposableExpression,N}
 ) where {N}
@@ -238,6 +243,9 @@ for op in (
         Base.$(op)(x::ValidVector, y::Number) = apply_operator(Base.$(op), x, y)
         Base.$(op)(x::Number, y::ValidVector) = apply_operator(Base.$(op), x, y)
     end
+end
+function Base.literal_pow(::typeof(^), x::ValidVector, ::Val{p}) where {p}
+    return apply_operator(Fix{1}(Fix{3}(Base.literal_pow, Val(p)), ^), x)
 end
 
 for op in (
