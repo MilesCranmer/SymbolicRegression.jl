@@ -398,7 +398,7 @@ function DE.copy_into!(dest::PreallocatedTemplateExpression, src::TemplateExpres
     parameters = get_metadata(src).parameters
     new_contents = NamedTuple{keys(ts)}(map(DE.copy_into!, values(dest.trees), values(ts)))
     if has_params(src)
-        (dest.parameters::ParamVector)[:] = (parameters::ParamVector)[:]
+        dest.parameters[:] = (parameters::ParamVector)[:]
     end
     return with_metadata(
         with_contents(src, new_contents);
