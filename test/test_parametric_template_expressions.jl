@@ -306,6 +306,7 @@ end
     subex_f32 = ComposableExpression(
         Node{ComplexF32}(; feature=1); operators=Options().operators, variable_names=["x"]
     )
+    subex_f32 = 2.0 * subex_f32
     param32 = ComplexF32[10.0 + 0im, 20.0 + 0im]
 
     expr_f32 = TemplateExpression(
@@ -318,6 +319,6 @@ end
     @test eltype(get_metadata(expr_f32).parameters._data) == ComplexF32
 
     Xtest = reshape(ComplexF32[2.0 + 0im], 1, 1)
-    @test expr_f32(Xtest) == [ComplexF32(32.0 + 0im)]
+    @test expr_f32(Xtest) == [ComplexF32(34.0 + 0im)]
     @test expr_f32(Xtest) isa Vector{ComplexF32}
 end
