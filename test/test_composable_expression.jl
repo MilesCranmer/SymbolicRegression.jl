@@ -379,3 +379,41 @@ end
     @test c2() == 0
     @test typeof(c2()) === Int
 end
+
+@testitem "Test higher-order derivatives of safe_log with DynamicDiff" tags = [:part3] begin
+    using SymbolicRegression
+    using SymbolicRegression: D, safe_log, ValidVector
+    using DynamicExpressions: OperatorEnum
+    using ForwardDiff: DimensionMismatch
+
+    operators = OperatorEnum(; binary_operators=(+, -, *, /), unary_operators=(safe_log,))
+    variable_names = ["x"]
+    x = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+
+    # Test first and second derivatives of log(x)
+    structure = TemplateStructure{(:f,)}(
+        ((; f), (x,)) ->
+            ValidVector([(f(x).x[1], D(f, 1)(x).x[1], D(D(f, 1), 1)(x).x[1])], true),
+    )
+    expr = TemplateExpression((; f=log(x)); structure, operators, variable_names)
+
+    # Test at x = 2.0 where log(x) is well-defined
+    X = [2.0]'
+    result = only(expr(X))
+    @test result !== nothing
+    @test result[1] == log(2.0)  # function value
+    @test result[2] == 1 / 2.0     # first derivative
+    @test result[3] == -1 / 4.0    # second derivative
+
+    # We handle invalid ranges gracefully:
+    X_invalid = [-1.0]'
+    result = only(expr(X_invalid))
+    @test result !== nothing
+    @test isnan(result[1])
+    @test result[2] == 0.0
+    @test result[3] == 0.0
+
+    # Eventually we want to support complex numbers:
+    X_complex = [-1.0 - 1.0im]'
+    @test_throws DimensionMismatch expr(X_complex)
+end
