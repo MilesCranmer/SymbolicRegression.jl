@@ -64,6 +64,27 @@ end
     )
 end
 
+@testitem "check_combiner_applicability errors" begin
+    using SymbolicRegression
+
+    bad_combiner1 = ((; f), x) -> f(x[1])
+    @test_throws (
+        "Your template structure's `combine` function must accept\n" *
+        "\t1. A `NamedTuple` of `ComposableExpression`s (or `ArgumentRecorder`s)\n" *
+        "\t2. A tuple of `ValidVector`s\n" *
+        "\t3. A `ParamVector`"
+    ) TemplateStructure{(:f,)}(bad_combiner1; num_parameters=1)
+    # Your template structure's `combine` function must accept\n\t1. A `NamedTuple` of `ComposableExpression`s (or `ArgumentRecorder`s)\n\t2. A tuple of `ValidVector`s\n\t3. A `ParamVector`
+
+    # Test error when combiner doesn't accept parameters when it should
+    bad_combiner2 = ((; f), (x,), p) -> f(x)  # Missing param argument
+    @test_throws (
+        "Your template structure's `combine` function must accept\n" *
+        "\t1. A `NamedTuple` of `ComposableExpression`s (or `ArgumentRecorder`s)\n" *
+        "\t2. A tuple of `ValidVector`s"
+    ) TemplateStructure{(:f,)}(bad_combiner2)
+end
+
 @testitem "basic evaluation" begin
     using SymbolicRegression
 
