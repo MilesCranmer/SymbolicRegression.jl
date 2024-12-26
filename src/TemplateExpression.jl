@@ -469,7 +469,7 @@ function EB.extra_init_params(
         if prototype === nothing
             ParamVector(randn(T, (num_parameters,)))
         else
-            copy(get_metadata(prototype).parameters)
+            copy(get_metadata(prototype).parameters::ParamVector)
         end
     end
     # We also need to include the operators here to be consistent with `create_expression`.

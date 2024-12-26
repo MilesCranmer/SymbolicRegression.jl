@@ -161,7 +161,6 @@ end
         new_params = get_metadata(mutated_expr).parameters._data
         if new_params != old_params
             param_changed = true
-            break
         end
     end
     @test param_changed == true
