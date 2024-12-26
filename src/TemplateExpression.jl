@@ -703,7 +703,7 @@ function MF.mutate_constant(
     options::AbstractOptions,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
-    regular_constant_mutation = !has_params(ex) && rand(rng, Bool)
+    regular_constant_mutation = !has_params(ex) || rand(rng, Bool)
     if regular_constant_mutation
         # Normal mutation of inner constant
         tree, context = MF.get_contents_for_mutation(ex, rng)
