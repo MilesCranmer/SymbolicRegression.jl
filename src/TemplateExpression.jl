@@ -164,9 +164,7 @@ function infer_variable_constraints(::Val{K}, num_parameters, combiner::F) where
     inner = Fix{1}(_record_composable_expression!, variable_constraints)
 
     # This is like the (; f, g) in the structure function
-    _recorders_of_composable_expressions = NamedTuple{K}(
-        map(k -> ArgumentRecorder(Fix{1}(inner, Val(k))), K)
-    )
+    _dummy_expressions = NamedTuple{K}(map(k -> ArgumentRecorder(Fix{1}(inner, Val(k))), K))
 
     # This part is like the (x1, x2, x3) in the structure function
     _dummy_valid_vectors = Base.Iterators.repeated(ValidVector(ones(Float64, 1), true))
@@ -179,7 +177,7 @@ function infer_variable_constraints(::Val{K}, num_parameters, combiner::F) where
     end
 
     # Now, we actually call the structure function
-    combiner(_recorders_of_composable_expressions, _dummy_valid_vectors, _extra_args...)
+    combiner(_dummy_expressions, _dummy_valid_vectors, _extra_args...)
     # TODO: Add a helpful error message for the user if they forget to set `num_parameters`
 
     inferred = NamedTuple{K}(map(x -> x[], values(variable_constraints)))
