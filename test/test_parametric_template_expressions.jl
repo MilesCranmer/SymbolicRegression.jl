@@ -137,7 +137,7 @@ end
     struct_mut = TemplateStructure{(:f,)}(
         ((; f), (x,), p) -> f(x) + sum(p); num_parameters=2
     )
-    expr_mut = TemplateExpression(
+    expr = TemplateExpression(
         (;
             f=ComposableExpression(
                 Node{Float64}(; feature=1); operators=Options().operators
@@ -151,19 +151,18 @@ end
 
     rng = MersenneTwister(0)
     options = Options()
-    old_params = copy(get_metadata(expr_mut).parameters._data)
-    local mutated_expr = copy(expr_mut)
-    local param_changed = false
-
-    # Force enough trials to see if param vector changes:
-    for _ in 1:50
-        mutated_expr = mutate_constant(mutated_expr, 1.0, options, rng)
-        new_params = get_metadata(mutated_expr).parameters._data
-        if new_params != old_params
-            param_changed = true
+    old_params = copy(get_metadata(expr).parameters._data)
+    let param_changed = false
+        # Force enough trials to see if param vector changes:
+        for _ in 1:50
+            mutated_expr = mutate_constant(copy(expr), 1.0, options, rng)
+            new_params = get_metadata(mutated_expr).parameters._data
+            if new_params != old_params
+                param_changed = true
+            end
         end
+        @test param_changed == true
     end
-    @test param_changed == true
 end
 
 @testitem "search with parametric template expressions" begin
