@@ -340,3 +340,80 @@ end
     X = stack(([1.0, 2.0], [3.0, 4.0], [5.0, 6.0]); dims=1)
     @test expr(X) ≈ [1.0, 2.0] .- sin.([3.0, 4.0] .- [5.0, 6.0]) .+ 2.5
 end
+
+@testitem "Test literal_pow with ValidVector" tags = [:part2] begin
+    using SymbolicRegression: ValidVector
+
+    # Test with valid data
+    x = ValidVector([2.0, 3.0, 4.0], true)
+
+    # Test literal_pow with different powers
+    @test (x^2).x ≈ [4.0, 9.0, 16.0]
+    @test (x^3).x ≈ [8.0, 27.0, 64.0]
+
+    # And explicitly
+    @test Base.literal_pow(^, x, Val(2)).x ≈ [4.0, 9.0, 16.0]
+    @test Base.literal_pow(^, x, Val(3)).x ≈ [8.0, 27.0, 64.0]
+
+    # Test with invalid data
+    invalid_x = ValidVector([2.0, 3.0, 4.0], false)
+    @test (invalid_x^2).valid == false
+    @test Base.literal_pow(^, invalid_x, Val(2)).valid == false
+end
+
+@testitem "Test nan behavior with argument-less expressions" tags = [:part2] begin
+    using SymbolicRegression
+    using DynamicExpressions: OperatorEnum, Node
+
+    operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    variable_names = ["x1", "x2"]
+
+    # Test with floating point
+    c1 = ComposableExpression(Node{Float64}(; val=3.0); operators, variable_names)
+    invalid_const = (c1 / c1 - 1) / (c1 / c1 - 1)  # Creates 0/0
+    @test isnan(invalid_const())
+    @test typeof(invalid_const()) === Float64
+
+    # Test with integer constant
+    c2 = ComposableExpression(Node{Int}(; val=0); operators, variable_names)
+    @test c2() == 0
+    @test typeof(c2()) === Int
+end
+
+@testitem "Test higher-order derivatives of safe_log with DynamicDiff" tags = [:part3] begin
+    using SymbolicRegression
+    using SymbolicRegression: D, safe_log, ValidVector
+    using DynamicExpressions: OperatorEnum
+    using ForwardDiff: DimensionMismatch
+
+    operators = OperatorEnum(; binary_operators=(+, -, *, /), unary_operators=(safe_log,))
+    variable_names = ["x"]
+    x = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+
+    # Test first and second derivatives of log(x)
+    structure = TemplateStructure{(:f,)}(
+        ((; f), (x,)) ->
+            ValidVector([(f(x).x[1], D(f, 1)(x).x[1], D(D(f, 1), 1)(x).x[1])], true),
+    )
+    expr = TemplateExpression((; f=log(x)); structure, operators, variable_names)
+
+    # Test at x = 2.0 where log(x) is well-defined
+    X = [2.0]'
+    result = only(expr(X))
+    @test result !== nothing
+    @test result[1] == log(2.0)  # function value
+    @test result[2] == 1 / 2.0     # first derivative
+    @test result[3] == -1 / 4.0    # second derivative
+
+    # We handle invalid ranges gracefully:
+    X_invalid = [-1.0]'
+    result = only(expr(X_invalid))
+    @test result !== nothing
+    @test isnan(result[1])
+    @test result[2] == 0.0
+    @test result[3] == 0.0
+
+    # Eventually we want to support complex numbers:
+    X_complex = [-1.0 - 1.0im]'
+    @test_throws DimensionMismatch expr(X_complex)
+end

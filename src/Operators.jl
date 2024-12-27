@@ -26,7 +26,8 @@ const Dual = ForwardDiff.Dual
 #binary: mod
 #unary: exp, abs, log1p, sin, cos, tan, sinh, cosh, tanh, asin, acos, atan, asinh, acosh, atanh, erf, erfc, gamma, relu, round, floor, ceil, round, sign.
 
-const FloatOrDual = Union{AbstractFloat,Dual{<:Any,<:AbstractFloat}}
+const FloatOrDual = Union{AbstractFloat,Dual}
+# Note that a complex dual is Complex{<:Dual}, so we are safe to use this signature.
 
 # Use some fast operators from https://github.com/JuliaLang/julia/blob/81597635c4ad1e8c2e1c5753fda4ec0e7397543f/base/fastmath.jl
 # Define allowed operators. Any julia operator can also be used.
