@@ -168,8 +168,8 @@ const CACHED_WEIGHTS =
     end
 
 @unstable function get_tournament_selection_weights(@nospecialize(options::AbstractOptions))
-    n = options.tournament_selection_n
-    p = options.tournament_selection_p
+    n = options.tournament_selection_n::Int
+    p = options.tournament_selection_p::Float32
     # Computing the weights for the tournament becomes quite expensive,
     return get!(CACHED_WEIGHTS, (n, p)) do
         k = collect(0:(n - 1))
