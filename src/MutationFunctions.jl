@@ -100,7 +100,7 @@ end
 function mutate_constant(
     ex::AbstractExpression{T},
     temperature,
-    options::AbstractOptions,
+    @nospecialize(options::AbstractOptions),
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
@@ -112,7 +112,7 @@ end
 function mutate_constant(
     tree::AbstractExpressionNode{T},
     temperature,
-    options::AbstractOptions,
+    @nospecialize(options::AbstractOptions),
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     # T is between 0 and 1.
