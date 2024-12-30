@@ -24,13 +24,14 @@ using DynamicQuantities:
     ustrip,
     dimension
 using LossFunctions: SupervisedLoss
+using Compat: Fix
 using ..InterfaceDynamicQuantitiesModule: get_dimensions_type
 using ..CoreModule:
     Options, Dataset, AbstractMutationWeights, MutationWeights, LOSS_TYPE, ComplexityMapping
 using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
-using ..UtilsModule: subscriptify, @ignore
+using ..UtilsModule: subscriptify, @ignore, FixKws
 using ..LoggingModule: AbstractSRLogger
 
 import ..equation_search
@@ -385,14 +386,14 @@ end
     if y_units === nothing
         return v
     else
-        return (yi -> Quantity(yi, y_units[i])).(v)
+        return Fix{2}(Quantity, y_units[i]).(v)
     end
 end
 @inline function wrap_units(v, y_units, ::Nothing)
     if y_units === nothing
         return v
     else
-        return (yi -> Quantity(yi, y_units)).(v)
+        return Fix{2}(Quantity, y_units).(v)
     end
 end
 
@@ -537,19 +538,20 @@ function _predict(m::M, fitresult, Xnew, idx, class) where {M<:AbstractSRRegress
     end
 end
 
-function get_equation_strings_for(::SRRegressor, trees, options, variable_names)
-    return (
-        t -> string_tree(t, options; variable_names=variable_names, pretty=false)
-    ).(trees)
+function get_equation_strings_for(
+    ::SRRegressor, trees, @nospecialize(options), variable_names
+)
+    return map(FixKws(Fix{2}(string_tree, options); variable_names, pretty=false), trees)
 end
-function get_equation_strings_for(::MultitargetSRRegressor, trees, options, variable_names)
-    return [
-        (t -> string_tree(t, options; variable_names=variable_names, pretty=false)).(ts) for
-        ts in trees
-    ]
+function get_equation_strings_for(
+    ::MultitargetSRRegressor, trees, @nospecialize(options), variable_names
+)
+    return map(FixKws(Fix{2}(string_tree, options); variable_names, pretty=false), trees)
 end
 
-function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<:LOSS_TYPE}
+function choose_best(;
+    @nospecialize(trees), losses::Vector{L}, scores, complexities
+) where {L<:LOSS_TYPE}
     # Same as in PySR:
     # https://github.com/MilesCranmer/PySR/blob/e74b8ad46b163c799908b3aa4d851cf8457c79ef/pysr/sr.py#L2318-L2332
     # threshold = 1.5 * minimum_loss
@@ -560,16 +562,18 @@ function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<
     ])
 end
 
-function dispatch_selection_for(m::SRRegressor, trees, losses, scores, complexities)::Int
+function dispatch_selection_for(
+    m::SRRegressor, @nospecialize(trees), losses, scores, complexities
+)::Int
     length(trees) == 0 && return 0
     return m.selection_method(;
         trees=trees, losses=losses, scores=scores, complexities=complexities
     )
 end
 function dispatch_selection_for(
-    m::MultitargetSRRegressor, trees, losses, scores, complexities
+    m::MultitargetSRRegressor, @nospecialize(trees), losses, scores, complexities
 )
-    any(t -> length(t) == 0, trees) && return fill(0, length(trees))
+    any(isempty, trees) && return fill(0, length(trees))
     return [
         m.selection_method(;
             trees=trees[i], losses=losses[i], scores=scores[i], complexities=complexities[i]

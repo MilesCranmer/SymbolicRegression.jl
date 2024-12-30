@@ -412,6 +412,7 @@ function DE.get_variable_names(
         nothing
     end
 end
+_build_ref(c_ref) = (; n=length(first(c_ref)), ref=last(c_ref))
 function DE.get_scalar_constants(e::TemplateExpression)
     # Get constants for each inner expression
     consts_and_refs = map(DE.get_scalar_constants, values(get_contents(e)))
@@ -421,7 +422,7 @@ function DE.get_scalar_constants(e::TemplateExpression)
     )
     # Collect info so we can put them back in the right place,
     # like the indexes of the constants in the flattened array
-    refs = map(c_ref -> (; n=length(first(c_ref)), ref=last(c_ref)), consts_and_refs)
+    refs = map(_build_ref, consts_and_refs)
     return flat_constants, refs
 end
 function DE.set_scalar_constants!(e::TemplateExpression, constants, refs)
@@ -542,7 +543,7 @@ function EB.extra_init_params(
         # COV_EXCL_START
         if prototype === nothing
             NamedTuple{keys(num_parameters)}(
-                map(n -> ParamVector(randn(T, (n,))), values(num_parameters))
+                map(Fix{1}(_make_param_vector, T), values(num_parameters))
             )
         else
             _copy(get_metadata(prototype).parameters::NamedTuple)
@@ -552,6 +553,7 @@ function EB.extra_init_params(
     # We also need to include the operators here to be consistent with `create_expression`.
     return (; options.operators, options.expression_options..., parameters)
 end
+_make_param_vector(::Type{T}, n::Integer) where {T} = ParamVector(randn(T, (n,)))
 function EB.sort_params(params::NamedTuple, ::Type{<:TemplateExpression})
     return (; params.structure, params.operators, params.variable_names, params.parameters)
 end
