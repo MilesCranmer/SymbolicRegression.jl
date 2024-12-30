@@ -1,4 +1,4 @@
-@testitem "creation & parameter counts" begin
+@testitem "creation & parameter counts" tags = [:part1] begin
     using SymbolicRegression
 
     # A structure that expects 1 subexpression + param vector of length 2
@@ -20,7 +20,7 @@
     @test expr_correct isa TemplateExpression
 end
 
-@testitem "error conditions" begin
+@testitem "error conditions" tags = [:part2] begin
     using SymbolicRegression
 
     struct_bad = TemplateStructure{(:f,),(:p,)}(
@@ -69,7 +69,7 @@ end
     )
 end
 
-@testitem "check_combiner_applicability errors" begin
+@testitem "check_combiner_applicability errors" tags = [:part3] begin
     using SymbolicRegression
 
     bad_combiner1 = ((; f), x) -> f(x[1])
@@ -89,7 +89,7 @@ end
     ) TemplateStructure{(:f,)}(bad_combiner2)
 end
 
-@testitem "basic evaluation" begin
+@testitem "basic evaluation" tags = [:part1] begin
     using SymbolicRegression
 
     # structure => f(x) + sum(params), with 2 parameters
@@ -116,7 +116,7 @@ end
     @test out ≈ [8.0, 9.0]
 end
 
-@testitem "indexed evaluation" begin
+@testitem "indexed evaluation" tags = [:part2] begin
     using SymbolicRegression
     using Random: MersenneTwister
     using MLJBase: matrix
@@ -156,7 +156,7 @@ end
     @test expr_indexed(X) ≈ y_truth
 end
 
-@testitem "parameters get mutated" begin
+@testitem "parameters get mutated" tags = [:part3] begin
     using SymbolicRegression
     using SymbolicRegression.MutationFunctionsModule: mutate_constant
     using Random: MersenneTwister
@@ -192,7 +192,7 @@ end
     end
 end
 
-@testitem "search with parametric template expressions" begin
+@testitem "search with parametric template expressions" tags = [:part1] begin
     using SymbolicRegression
     using Random: MersenneTwister
     using MLJBase: machine, fit!, report, matrix
@@ -242,7 +242,7 @@ end
     @test isapprox(pred, y; atol=1e-3)
 end
 
-@testitem "Preallocated copying with parameters" begin
+@testitem "Preallocated copying with parameters" tags = [:part2] begin
     using SymbolicRegression
     using Random: MersenneTwister
     using DynamicExpressions:
@@ -283,7 +283,7 @@ end
     @test new_expr(X2) == [2.0 + 300.0]
 end
 
-@testitem "Zero-parameter edge case" begin
+@testitem "Zero-parameter edge case" tags = [:part3] begin
     using SymbolicRegression
 
     struct_zero_params = TemplateStructure{(:f,)}(
@@ -304,7 +304,7 @@ end
     @test expr_zero(X_ones) == [10.0]
 end
 
-@testitem "Non-Float64 parameter types" begin
+@testitem "Non-Float64 parameter types" tags = [:part1] begin
     using SymbolicRegression
 
     struct32 = TemplateStructure{(:f,),(:p,)}(
@@ -331,7 +331,7 @@ end
     @test expr_f32(Xtest) isa Vector{ComplexF32}
 end
 
-@testitem "multi-parameter expressions" begin
+@testitem "multi-parameter expressions" tags = [:part2] begin
     using SymbolicRegression
     using SymbolicRegression.MutationFunctionsModule: mutate_constant
     using DynamicExpressions:
@@ -404,7 +404,7 @@ end
     @test get_metadata(new_expr).parameters.p2._data == [-10.0, -20.0]
 end
 
-@testitem "printing" begin
+@testitem "printing" tags = [:part3] begin
     using SymbolicRegression
 
     struct1 = TemplateStructure{(:f,),(:p,)}(
@@ -429,7 +429,7 @@ end
     @test string(expr) == "f = #1; p1 = [1.0, 1.0, 1.0, ..., 1.0]; p2 = [2.0]"
 end
 
-@testitem "indexed multi-parameter expressions" begin
+@testitem "indexed multi-parameter expressions" tags = [:part1] begin
     using SymbolicRegression
     using Random: MersenneTwister
     using MLJBase: matrix
