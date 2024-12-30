@@ -426,7 +426,8 @@ end
     expr = TemplateExpression(
         (; f=x1); structure=structure, operators, parameters=(; p1=ones(10), p2=[2.0])
     )
-    @test string(expr) == "f = #1; p1 = [1.0, 1.0, 1.0, ..., 1.0]; p2 = [2.0]"
+    @test string(expr) ==
+        "f = #1; p1 = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]; p2 = [2.0]"
 end
 
 @testitem "indexed multi-parameter expressions" tags = [:part1] begin
