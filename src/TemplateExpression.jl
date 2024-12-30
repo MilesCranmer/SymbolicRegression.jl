@@ -564,8 +564,8 @@ _color_string(s::AbstractString, c::Symbol) = styled"{$c:$s}"
 function _format_component(ex::AbstractExpression, c::Symbol; operators, kws...)
     return _color_string(DE.string_tree(ex, operators; kws...), c)
 end
-function _format_component(param::ParamVector, c::Symbol; f_constant::FC) where {FC}
-    p_str = if length(param) <= 5
+function _format_component(param::ParamVector, c::Symbol; pretty, f_constant::FC) where {FC}
+    p_str = if !pretty || length(param) <= 5
         join(map(f_constant, param), ", ")
     else
         string(join(map(f_constant, param[1:3]), ", "), ", ..., ", f_constant(param[end]))
@@ -610,7 +610,7 @@ function DE.string_tree(
             colors[1:length(expressions)],
         )...,
         map(
-            FixKws(_format_component; f_constant),
+            FixKws(_format_component; pretty, f_constant),
             values(parameters),
             colors[(length(expressions) + 1):end],
         )...,
