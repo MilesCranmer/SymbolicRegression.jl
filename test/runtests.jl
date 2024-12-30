@@ -123,7 +123,7 @@ end
 end
 
 # TODO: This is the slowest test.
-@testitem "Running parameterized function example." tags = [:part2] begin
+@testitem "Running parameterized function example." tags = [:part3] begin
     ENV["SYMBOLIC_REGRESSION_IS_TESTING"] = "true"
     include("../examples/parameterized_function.jl")
 end
