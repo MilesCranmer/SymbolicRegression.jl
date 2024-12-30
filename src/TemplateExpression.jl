@@ -99,9 +99,7 @@ The `Kp` parameter is used to specify the symbols representing the parameters, i
 - `num_parameters`: Optional `NamedTuple` of parameter keys => integers representing the number of
     parameters required for each parameter vector.
 """
-struct TemplateStructure{
-    K,Kp,E<:Function,NF<:NamedTuple{K},NP<:Union{NamedTuple,Nothing}
-} <: Function
+struct TemplateStructure{K,Kp,E<:Function,NF<:NamedTuple{K},NP<:NamedTuple{Kp}} <: Function
     combine::E
     num_features::NF
     num_parameters::NP
@@ -113,14 +111,14 @@ function TemplateStructure{K}(
     num_features=nothing,
     num_parameters=nothing,
 ) where {K,E<:Function}
-    return TemplateStructure{K,nothing}(
+    return TemplateStructure{K,()}(
         combine, _deprecated_num_features; num_features, num_parameters
     )
 end
 function TemplateStructure{K,Kp}(
     combine::E,
     _deprecated_num_features=nothing;
-    num_features=nothing,
+    num_features::Union{NamedTuple{K},Nothing}=nothing,
     num_parameters::Union{NamedTuple{Kp},Nothing}=nothing,
 ) where {K,Kp,E<:Function}
     if _deprecated_num_features !== nothing
@@ -129,12 +127,13 @@ function TemplateStructure{K,Kp}(
             :TemplateStructure,
         )
     end
-    if Kp !== nothing
+    if !isempty(Kp)
         @assert(
             num_parameters !== nothing,
             "Expected `num_parameters` to be provided to indicate the number of parameters for each symbol in `$Kp`"
         )
     end
+    num_parameters = @something(num_parameters, NamedTuple(),)
     num_features = @something(
         num_features,
         _deprecated_num_features,
@@ -153,7 +152,7 @@ end
 get_function_keys(::TemplateStructure{K}) where {K} = K
 get_parameter_keys(::TemplateStructure{<:Any,Kp}) where {Kp} = Kp
 
-has_params(s::TemplateStructure) = get_parameter_keys(s) !== nothing
+has_params(s::TemplateStructure) = !isempty(get_parameter_keys(s))
 # COV_EXCL_STOP
 
 function _record_composable_expression!(variable_constraints, ::Val{k}, args...) where {k}
@@ -181,7 +180,7 @@ function check_combiner_applicability(
     @nospecialize(dummy_params),
     @nospecialize(dummy_valid_vectors),
 )
-    if dummy_params === nothing
+    if isempty(dummy_params)
         if !applicable(combiner, dummy_expressions, dummy_valid_vectors)
             throw(
                 ArgumentError(
@@ -208,28 +207,22 @@ end
 
 """Infers number of features used by each subexpression, by passing in test data."""
 function infer_variable_constraints(
-    ::Val{K},
-    @nospecialize(num_parameters::Union{NamedTuple,Nothing}),
-    @nospecialize(combiner)
+    ::Val{K}, @nospecialize(num_parameters::NamedTuple), @nospecialize(combiner)
 ) where {K}
     variable_constraints = NamedTuple{K}(map(_ -> Ref(-1), K))
     inner = Fix{1}(_record_composable_expression!, variable_constraints)
     dummy_expressions = NamedTuple{K}(map(k -> ArgumentRecorder(Fix{1}(inner, Val(k))), K))
     dummy_valid_vectors = Base.Iterators.repeated(ValidVector(ones(Float64, 1), true))
-    dummy_params = if num_parameters === nothing
-        nothing
-    else
-        NamedTuple{keys(num_parameters)}(
-            map(n -> ParamVector(ones(Float64, n)), values(num_parameters))
-        )
-    end
+    dummy_params = NamedTuple{keys(num_parameters)}(
+        map(n -> ParamVector(ones(Float64, n)), values(num_parameters))
+    )
 
     check_combiner_applicability(
         combiner, dummy_expressions, dummy_params, dummy_valid_vectors
     )
 
     # Actually call the combiner
-    if dummy_params === nothing
+    if isempty(dummy_params)
         combiner(dummy_expressions, dummy_valid_vectors)
     else
         combiner(dummy_expressions, dummy_params, dummy_valid_vectors)
@@ -301,11 +294,7 @@ struct TemplateExpression{
     TS<:NamedTuple{<:Any,<:NTuple{<:Any,E}},
     D<:@NamedTuple{
         structure::F, operators::O, variable_names::V, parameters::P
-    } where {
-        O<:AbstractOperatorEnum,
-        V,
-        P<:Union{Nothing,NamedTuple{<:Any,<:NTuple{<:Any,ParamVector}}},
-    },
+    } where {O<:AbstractOperatorEnum,V,P<:NamedTuple{<:Any,<:NTuple{<:Any,ParamVector}}},
 } <: AbstractExpression{T,N}
     trees::TS
     metadata::Metadata{D}
@@ -317,9 +306,10 @@ struct TemplateExpression{
         F<:TemplateStructure,
         D<:@NamedTuple{
             structure::F, operators::O, variable_names::V, parameters::P
-        } where {O,V,P<:Union{Nothing,NamedTuple{<:Any,<:NTuple{<:Any,ParamVector}}}},
+        } where {O,V,P<:NamedTuple{<:Any,<:NTuple{<:Any,ParamVector}}},
     }
         @assert keys(trees) == get_function_keys(metadata.structure)
+        @assert keys(metadata.parameters) == keys(metadata.structure.num_parameters)
         E = typeof(first(values(trees)))
         N = node_type(E)
         return new{eltype(N),F,N,E,TS,D}(trees, metadata)
@@ -353,10 +343,10 @@ function TemplateExpression(
         )
     else
         @assert(
-            parameters === nothing,
+            parameters === nothing || isempty(parameters),
             "Expected `parameters` to be `nothing` for `structure.num_parameters=$(structure.num_parameters)`"
         )
-        nothing
+        NamedTuple()
     end
     metadata = (; structure, operators, variable_names, parameters)
     return TemplateExpression(trees, Metadata(metadata))
@@ -457,25 +447,21 @@ function DE.allocate_container(e::TemplateExpression, n::Union{Nothing,Integer}=
     preallocated_trees = NamedTuple{keys(ts)}(
         map(t -> DE.allocate_container(t, n), values(ts))
     )
-    preallocated_parameters = if has_params(e)
-        NamedTuple{keys(parameters)}(map(p -> similar(p), values(parameters::NamedTuple)))
-    else
-        nothing
-    end
+    preallocated_parameters = NamedTuple{keys(parameters)}(
+        map(p -> similar(p), values(parameters))
+    )
     return PreallocatedTemplateExpression(preallocated_trees, preallocated_parameters)
 end
 function DE.copy_into!(dest::PreallocatedTemplateExpression, src::TemplateExpression)
     ts = get_contents(src)
     parameters = get_metadata(src).parameters
     new_contents = NamedTuple{keys(ts)}(map(DE.copy_into!, values(dest.trees), values(ts)))
-    new_parameters = if has_params(src)
-        for k in keys(parameters::NamedTuple)
-            dest.parameters[k][:] = (parameters[k]::ParamVector)[:]
-        end
-        NamedTuple{keys(parameters)}(map(p -> ParamVector(p), values(dest.parameters)))
-    else
-        nothing
+    for k in keys(parameters)
+        dest.parameters[k][:] = (parameters[k]::ParamVector)[:]
     end
+    new_parameters = NamedTuple{keys(parameters)}(
+        map(p -> ParamVector(p), values(dest.parameters))
+    )
     return with_metadata(with_contents(src, new_contents); parameters=new_parameters)
 end
 
@@ -536,8 +522,8 @@ function EB.extra_init_params(
     ::Val{embed},
 ) where {T,embed,E<:TemplateExpression}
     num_parameters = options.expression_options.structure.num_parameters
-    parameters = if num_parameters === nothing
-        nothing
+    parameters = if isempty(num_parameters)
+        NamedTuple()
     else
         # COV_EXCL_START
         if prototype === nothing
