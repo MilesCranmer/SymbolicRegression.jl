@@ -2,15 +2,20 @@
     using SymbolicRegression
 
     # A structure that expects 1 subexpression + param vector of length 2
-    struct1 = TemplateStructure{(:f,)}(((; f), (x,), p) -> f(x) + sum(p); num_parameters=2)
+    struct1 = TemplateStructure{(:f,),(:p,)}(
+        ((; f), (; p), (x,)) -> f(x) + sum(p); num_parameters=(; p=2)
+    )
 
     @test struct1.num_features == (; f=1)
-    @test struct1.num_parameters == 2
+    @test struct1.num_parameters == (; p=2)
 
     subex = ComposableExpression(Node{Float64}(; feature=1); operators=Options().operators)
 
     expr_correct = TemplateExpression(
-        (; f=subex); structure=struct1, operators=Options().operators, parameters=[1.0, 2.0]
+        (; f=subex);
+        structure=struct1,
+        operators=Options().operators,
+        parameters=(; p=[1.0, 2.0]),
     )
     @test expr_correct isa TemplateExpression
 end
@@ -18,8 +23,8 @@ end
 @testitem "error conditions" begin
     using SymbolicRegression
 
-    struct_bad = TemplateStructure{(:f,)}(
-        ((; f), (x,), p) -> f(x) + sum(p); num_parameters=2
+    struct_bad = TemplateStructure{(:f,),(:p,)}(
+        ((; f), (; p), (x,)) -> f(x) + sum(p); num_parameters=(; p=2)
     )
 
     variable_names = ["x"]
@@ -37,7 +42,7 @@ end
     )
 
     # Error for wrong parameter vector length
-    @test_throws "Expected `parameters` to have length 2, got 1" TemplateExpression(
+    @test_throws "Expected `parameters.p` to have length 2, got 1" TemplateExpression(
         (;
             f=ComposableExpression(
                 Node{Float64}(; feature=1); operators=Options().operators
@@ -46,7 +51,7 @@ end
         structure=struct_bad,
         operators=Options().operators,
         variable_names=["x"],
-        parameters=[1.0],
+        parameters=(; p=[1.0]),
     )
 
     # Now, for structure *not* having parameters, but using parameters:
@@ -60,7 +65,7 @@ end
         structure=structure,
         operators=Options().operators,
         variable_names=["x"],
-        parameters=[1.0],
+        parameters=(; p=[1.0]),
     )
 end
 
@@ -71,13 +76,12 @@ end
     @test_throws (
         "Your template structure's `combine` function must accept\n" *
         "\t1. A `NamedTuple` of `ComposableExpression`s (or `ArgumentRecorder`s)\n" *
-        "\t2. A tuple of `ValidVector`s\n" *
-        "\t3. A `ParamVector`"
-    ) TemplateStructure{(:f,)}(bad_combiner1; num_parameters=1)
-    # Your template structure's `combine` function must accept\n\t1. A `NamedTuple` of `ComposableExpression`s (or `ArgumentRecorder`s)\n\t2. A tuple of `ValidVector`s\n\t3. A `ParamVector`
+        "\t2. A `NamedTuple` of `ParamVector`s\n" *
+        "\t3. A tuple of `ValidVector`s"
+    ) TemplateStructure{(:f,),(:p,)}(bad_combiner1; num_parameters=(; p=1))
 
     # Test error when combiner doesn't accept parameters when it should
-    bad_combiner2 = ((; f), (x,), p) -> f(x)  # Missing param argument
+    bad_combiner2 = ((; f), (; p), (x,)) -> f(x)
     @test_throws (
         "Your template structure's `combine` function must accept\n" *
         "\t1. A `NamedTuple` of `ComposableExpression`s (or `ArgumentRecorder`s)\n" *
@@ -89,8 +93,8 @@ end
     using SymbolicRegression
 
     # structure => f(x) + sum(params), with 2 parameters
-    struct_eval = TemplateStructure{(:f,)}(
-        ((; f), (x,), p) -> f(x) + sum(p); num_parameters=2
+    struct_eval = TemplateStructure{(:f,),(:p,)}(
+        ((; f), (; p), (x,)) -> f(x) + sum(p); num_parameters=(; p=2)
     )
 
     expr_eval = TemplateExpression(
@@ -102,7 +106,7 @@ end
         structure=struct_eval,
         operators=Options().operators,
         variable_names=["x"],
-        parameters=[1.0, 2.0],
+        parameters=(; p=[1.0, 2.0]),
     )
 
     # We'll evaluate on a 1×2 matrix: 1 feature, 2 data points => shape: (1, 2)
@@ -119,14 +123,16 @@ end
 
     # Here, we assert that we can index the parameters,
     # and this creates another ValidVector
-    function fnc_struct_indexed((; f, g), (x, y, i), params)
-        p1 = params[i]
-        p2 = params[i + 3]
+    function fnc_struct_indexed((; f, g), (; p), (x, y, i))
+        p1 = p[i]
+        p2 = p[i + 3]
         @test p1 isa ValidVector
         @test p2 isa ValidVector
         return f(x) * p1 - g(y) * p2
     end
-    struct_indexed = TemplateStructure{(:f, :g)}(fnc_struct_indexed; num_parameters=6)
+    struct_indexed = TemplateStructure{(:f, :g),(:p,)}(
+        fnc_struct_indexed; num_parameters=(; p=6)
+    )
 
     operators =
         Options(; binary_operators=[*, +, -, /], unary_operators=[cos, exp]).operators
@@ -145,7 +151,7 @@ end
     ]
     X = matrix((; x, y, i); transpose=true)
     expr_indexed = TemplateExpression(
-        (; f, g); structure=struct_indexed, operators, parameters=params
+        (; f, g); structure=struct_indexed, operators, parameters=(; p=params)
     )
     @test expr_indexed(X) ≈ y_truth
 end
@@ -155,8 +161,8 @@ end
     using SymbolicRegression.MutationFunctionsModule: mutate_constant
     using Random: MersenneTwister
 
-    struct_mut = TemplateStructure{(:f,)}(
-        ((; f), (x,), p) -> f(x) + sum(p); num_parameters=2
+    struct_mut = TemplateStructure{(:f,),(:p,)}(
+        ((; f), (; p), (x,)) -> f(x) + sum(p); num_parameters=(; p=2)
     )
     expr = TemplateExpression(
         (;
@@ -167,17 +173,17 @@ end
         structure=struct_mut,
         operators=Options().operators,
         variable_names=["x"],
-        parameters=[1.0, 2.0],
+        parameters=(; p=[1.0, 2.0]),
     )
 
     rng = MersenneTwister(0)
     options = Options()
-    old_params = copy(get_metadata(expr).parameters._data)
+    old_params = copy(get_metadata(expr).parameters.p._data)
     let param_changed = false
         # Force enough trials to see if param vector changes:
         for _ in 1:50
             mutated_expr = mutate_constant(copy(expr), 1.0, options, rng)
-            new_params = get_metadata(mutated_expr).parameters._data
+            new_params = get_metadata(mutated_expr).parameters.p._data
             if new_params != old_params
                 param_changed = true
             end
@@ -192,8 +198,8 @@ end
     using MLJBase: machine, fit!, report, matrix
 
     # structure => f(x) + p[1] * y, single param
-    struct_search = TemplateStructure{(:f,)}(
-        ((; f), (x, y, i), p) -> f(x) + p[i] * y; num_parameters=2
+    struct_search = TemplateStructure{(:f,),(:p,)}(
+        ((; f), (; p), (x, y, i)) -> f(x) + p[i] * y; num_parameters=(; p=2)
     )
 
     rng = MersenneTwister(0)
@@ -225,11 +231,11 @@ end
     best_expr = r.equations[best_expr_idx]
     @test best_expr isa TemplateExpression
 
-    params = get_metadata(best_expr).parameters
+    params = get_metadata(best_expr).parameters.p
     @test isapprox(params, true_params; atol=1e-3)
 
-    # # Evaluate the best expression on the same X
-    # # => hopefully near [5, 7, 9, 11]
+    # Evaluate the best expression on the same X
+    # => hopefully near [5, 7, 9, 11]
     pred = best_expr(matrix(X; transpose=true))
     @test length(pred) == 32
     @test pred !== nothing
@@ -242,8 +248,8 @@ end
     using DynamicExpressions:
         allocate_container, copy_into!, get_contents, get_metadata, get_scalar_constants
 
-    struct_sum_params = TemplateStructure{(:f,)}(
-        ((; f), (x,), p) -> f(x) + sum(p); num_parameters=2
+    struct_sum_params = TemplateStructure{(:f,),(:p,)}(
+        ((; f), (; p), (x,)) -> f(x) + sum(p); num_parameters=(; p=2)
     )
 
     # Subexpression: single feature #1
@@ -256,17 +262,17 @@ end
         structure=struct_sum_params,
         operators=Options().operators,
         variable_names=["x"],
-        parameters=[10.0, 20.0],  # distinct param values
+        parameters=(; p=[10.0, 20.0]),  # distinct param values
     )
 
     # We'll mutate the original's parameters to check preallocated copying
     preallocated_expr = allocate_container(expr)
-    get_metadata(expr).parameters._data .= [100.0, 200.0]
+    get_metadata(expr).parameters.p._data .= [100.0, 200.0]
 
     # Now copy over
     new_expr = copy_into!(preallocated_expr, expr)
 
-    @test get_metadata(new_expr).parameters._data == [100.0, 200.0]
+    @test get_metadata(new_expr).parameters.p._data == [100.0, 200.0]
 
     # Evaluate with shape [1, 1]
     X1 = reshape([1.0], 1, 1)
@@ -281,16 +287,16 @@ end
     using SymbolicRegression
 
     struct_zero_params = TemplateStructure{(:f,)}(
-        ((; f), (x,), p) -> f(x) + sum(p) * 9999; num_parameters=0
+        ((; f), (x,)) -> f(x); num_parameters=nothing
     )
     x = ComposableExpression(Node{Float64}(; feature=1); operators=Options().operators)
     expr_zero = TemplateExpression(
         (; f=x,);
         structure=struct_zero_params,
         operators=Options().operators,
-        parameters=Float64[],  # typed empty array
+        parameters=nothing,
     )
-    @test length(get_metadata(expr_zero).parameters._data) == 0
+    @test get_metadata(expr_zero).parameters === nothing
 
     # Evaluate => just f(x)
     X_ones = reshape([10.0], 1, 1)
@@ -301,7 +307,9 @@ end
 @testitem "Non-Float64 parameter types" begin
     using SymbolicRegression
 
-    struct32 = TemplateStructure{(:f,)}(((; f), (x,), p) -> f(x) + sum(p); num_parameters=2)
+    struct32 = TemplateStructure{(:f,),(:p,)}(
+        ((; f), (; p), (x,)) -> f(x) + sum(p); num_parameters=(; p=2)
+    )
     # Subex as ComplexF32
     subex_f32 = ComposableExpression(
         Node{ComplexF32}(; feature=1); operators=Options().operators, variable_names=["x"]
@@ -314,9 +322,9 @@ end
         structure=struct32,
         operators=Options().operators,
         variable_names=["x"],
-        parameters=param32,
+        parameters=(; p=param32),
     )
-    @test eltype(get_metadata(expr_f32).parameters._data) == ComplexF32
+    @test eltype(get_metadata(expr_f32).parameters.p._data) == ComplexF32
 
     Xtest = reshape(ComplexF32[2.0 + 0im], 1, 1)
     @test expr_f32(Xtest) == [ComplexF32(34.0 + 0im)]

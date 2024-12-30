@@ -83,6 +83,8 @@ The `K` parameter is used to specify the symbols representing the inner expressi
 If not declared using the constructor `TemplateStructure{K}(...)`, the keys of the
 `variable_constraints` `NamedTuple` will be used to infer this.
 
+The `Kp` parameter is used to specify the symbols representing the parameters, if any.
+
 # Fields
 - `combine`: Required function taking a `NamedTuple` of `ComposableExpression`s (sharing the keys `K`),
     and then tuple representing the data of `ValidVector`s. For example,
@@ -93,11 +95,12 @@ If not declared using the constructor `TemplateStructure{K}(...)`, the keys of t
     features used by each expression. If not provided, it will be inferred using the `combine`
     function. For example, if `f` takes two arguments, and `g` takes one, then
     `num_features = (; f=2, g=1)`.
-- `num_parameters`: Optional number of parameters to optimize as part of the expression. You can
-    use these as extra class-dependent parameters or as manually-structured constants.
+- `num_parameters`: Optional `NamedTuple` of parameter keys => integers representing the number of
+    parameters required for each parameter vector.
 """
-struct TemplateStructure{K,E<:Function,NF<:NamedTuple{K},NP<:Union{Integer,Nothing}} <:
-       Function
+struct TemplateStructure{
+    K,Kp,E<:Function,NF<:NamedTuple{K},NP<:Union{NamedTuple{Kp},Nothing}
+} <: Function
     combine::E
     num_features::NF
     num_parameters::NP
@@ -109,10 +112,26 @@ function TemplateStructure{K}(
     num_features=nothing,
     num_parameters=nothing,
 ) where {K,E<:Function}
+    return TemplateStructure{K,nothing}(
+        combine, _deprecated_num_features; num_features, num_parameters
+    )
+end
+function TemplateStructure{K,Kp}(
+    combine::E,
+    _deprecated_num_features=nothing;
+    num_features=nothing,
+    num_parameters::Union{NamedTuple{Kp},Nothing}=nothing,
+) where {K,Kp,E<:Function}
     if _deprecated_num_features !== nothing
         Base.depwarn(
             "Passing `num_features` as an argument is deprecated, pass it explicitly as a keyword argument instead",
             :TemplateStructure,
+        )
+    end
+    if Kp !== nothing
+        @assert(
+            num_parameters !== nothing,
+            "Expected `num_parameters` to be provided to indicate the number of parameters for each symbol in `$Kp`"
         )
     end
     num_features = @something(
@@ -120,7 +139,7 @@ function TemplateStructure{K}(
         _deprecated_num_features,
         infer_variable_constraints(Val(K), num_parameters, combine)
     )
-    return TemplateStructure{K,E,typeof(num_features),typeof(num_parameters)}(
+    return TemplateStructure{K,Kp,E,typeof(num_features),typeof(num_parameters)}(
         combine, num_features, num_parameters
     )
 end
@@ -131,9 +150,9 @@ end
 
 # COV_EXCL_START
 get_function_keys(::TemplateStructure{K}) where {K} = K
+get_parameter_keys(::TemplateStructure{<:Any,Kp}) where {Kp} = Kp
 
-has_params(::TemplateStructure{<:Any,<:Any,<:Any,<:Nothing}) = false
-has_params(::TemplateStructure{<:Any,<:Any,<:Any,<:Integer}) = true
+has_params(s::TemplateStructure) = get_parameter_keys(s) !== nothing
 # COV_EXCL_STOP
 
 function _record_composable_expression!(variable_constraints, ::Val{k}, args...) where {k}
@@ -158,22 +177,29 @@ DynamicDiff.D(f::ArgumentRecorder, ::Integer) = f
 function check_combiner_applicability(
     @nospecialize(combiner),
     @nospecialize(dummy_expressions),
+    @nospecialize(dummy_params),
     @nospecialize(dummy_valid_vectors),
-    @nospecialize(dummy_params)
 )
-    base_error_msg = (
-        "Your template structure's `combine` function must accept",
-        "\t1. A `NamedTuple` of `ComposableExpression`s (or `ArgumentRecorder`s)",
-        "\t2. A tuple of `ValidVector`s",
-    )
-
     if dummy_params === nothing
         if !applicable(combiner, dummy_expressions, dummy_valid_vectors)
-            throw(ArgumentError(join(base_error_msg, '\n')))
+            throw(
+                ArgumentError(
+                    "Your template structure's `combine` function must accept\n" *
+                    "\t1. A `NamedTuple` of `ComposableExpression`s (or `ArgumentRecorder`s)\n" *
+                    "\t2. A tuple of `ValidVector`s",
+                ),
+            )
         end
     else
-        if !applicable(combiner, dummy_expressions, dummy_valid_vectors, dummy_params)
-            throw(ArgumentError(join((base_error_msg..., "\t3. A `ParamVector`"), '\n')))
+        if !applicable(combiner, dummy_expressions, dummy_params, dummy_valid_vectors)
+            throw(
+                ArgumentError(
+                    "Your template structure's `combine` function must accept\n" *
+                    "\t1. A `NamedTuple` of `ComposableExpression`s (or `ArgumentRecorder`s)\n" *
+                    "\t2. A `NamedTuple` of `ParamVector`s\n" *
+                    "\t3. A tuple of `ValidVector`s",
+                ),
+            )
         end
     end
     return nothing
@@ -181,24 +207,31 @@ end
 
 """Infers number of features used by each subexpression, by passing in test data."""
 function infer_variable_constraints(
-    ::Val{K}, num_parameters, @nospecialize(combiner)
+    ::Val{K},
+    @nospecialize(num_parameters::Union{NamedTuple,Nothing}),
+    @nospecialize(combiner)
 ) where {K}
     variable_constraints = NamedTuple{K}(map(_ -> Ref(-1), K))
     inner = Fix{1}(_record_composable_expression!, variable_constraints)
     dummy_expressions = NamedTuple{K}(map(k -> ArgumentRecorder(Fix{1}(inner, Val(k))), K))
     dummy_valid_vectors = Base.Iterators.repeated(ValidVector(ones(Float64, 1), true))
-    dummy_params =
-        num_parameters === nothing ? nothing : ParamVector(ones(Float64, num_parameters))
+    dummy_params = if num_parameters === nothing
+        nothing
+    else
+        NamedTuple{keys(num_parameters)}(
+            map(n -> ParamVector(ones(Float64, n)), values(num_parameters))
+        )
+    end
 
     check_combiner_applicability(
-        combiner, dummy_expressions, dummy_valid_vectors, dummy_params
+        combiner, dummy_expressions, dummy_params, dummy_valid_vectors
     )
 
     # Actually call the combiner
     if dummy_params === nothing
         combiner(dummy_expressions, dummy_valid_vectors)
     else
-        combiner(dummy_expressions, dummy_valid_vectors, dummy_params)
+        combiner(dummy_expressions, dummy_params, dummy_valid_vectors)
     end
 
     inferred = NamedTuple{K}(map(x -> x[], values(variable_constraints)))
@@ -267,7 +300,11 @@ struct TemplateExpression{
     TS<:NamedTuple{<:Any,<:NTuple{<:Any,E}},
     D<:@NamedTuple{
         structure::F, operators::O, variable_names::V, parameters::P
-    } where {O<:AbstractOperatorEnum,V,P<:Union{Nothing,ParamVector}},
+    } where {
+        O<:AbstractOperatorEnum,
+        V,
+        P<:Union{Nothing,NamedTuple{<:Any,<:NTuple{<:Any,ParamVector}}},
+    },
 } <: AbstractExpression{T,N}
     trees::TS
     metadata::Metadata{D}
@@ -279,7 +316,7 @@ struct TemplateExpression{
         F<:TemplateStructure,
         D<:@NamedTuple{
             structure::F, operators::O, variable_names::V, parameters::P
-        } where {O,V,P<:Union{Nothing,ParamVector}},
+        } where {O,V,P<:Union{Nothing,NamedTuple{<:Any,<:NTuple{<:Any,ParamVector}}}},
     }
         @assert keys(trees) == get_function_keys(metadata.structure)
         E = typeof(first(values(trees)))
@@ -290,11 +327,11 @@ end
 
 function TemplateExpression(
     trees::NamedTuple{<:Any,<:NTuple{<:Any,<:AbstractExpression}};
-    structure::F,
+    structure::TemplateStructure,
     operators::Union{AbstractOperatorEnum,Nothing}=nothing,
     variable_names::Union{AbstractVector{<:AbstractString},Nothing}=nothing,
-    parameters::Union{AbstractVector{<:DATA_TYPE},Nothing}=nothing,
-) where {F<:TemplateStructure}
+    parameters::Union{NamedTuple,Nothing}=nothing,
+)
     example_tree = first(values(trees))::AbstractExpression
     operators = get_operators(example_tree, operators)
     variable_names = get_variable_names(example_tree, variable_names)
@@ -303,12 +340,16 @@ function TemplateExpression(
             parameters !== nothing,
             "Expected `parameters` to be provided for `structure.num_parameters=$(structure.num_parameters)`"
         )
-        @assert(
-            length(parameters) == structure.num_parameters,
-            "Expected `parameters` to have length $(structure.num_parameters), got $(length(parameters))"
-        )
+        for k in keys(structure.num_parameters)
+            @assert(
+                length(parameters[k]) == structure.num_parameters[k],
+                "Expected `parameters.$k` to have length $(structure.num_parameters[k]), got $(length(parameters[k]))"
+            )
+        end
         # TODO: Delete this extra check once we are confident that it works
-        parameters isa ParamVector ? parameters : ParamVector(parameters)
+        NamedTuple{keys(structure.num_parameters)}(
+            map(p -> p isa ParamVector ? p : ParamVector(p::Vector), parameters)
+        )
     else
         @assert(
             parameters === nothing,
@@ -375,7 +416,7 @@ function DE.get_scalar_constants(e::TemplateExpression)
     consts_and_refs = map(DE.get_scalar_constants, values(get_contents(e)))
     parameters = get_metadata(e).parameters
     flat_constants = vcat(
-        map(first, consts_and_refs)..., (has_params(e) ? (parameters,) : ())...
+        map(first, consts_and_refs)..., (has_params(e) ? values(parameters) : ())...
     )
     # Collect info so we can put them back in the right place,
     # like the indexes of the constants in the flattened array
@@ -389,12 +430,17 @@ function DE.set_scalar_constants!(e::TemplateExpression, constants, refs)
         i = cursor[]
         c = constants[i:(i + n - 1)]
         DE.set_scalar_constants!(tree, c, r.ref)
-        cursor[] += n
+        cursor[] = i + n
     end
     if has_params(e)
-        i = cursor[]
+        num_parameters = get_metadata(e).structure.num_parameters
         parameters = get_metadata(e).parameters
-        parameters._data[:] = constants[i:end]
+        for k in keys(num_parameters)
+            n = num_parameters[k]
+            i = cursor[]
+            parameters[k]._data[:] = constants[i:(i + n - 1)]
+            cursor[] = i + n
+        end
     end
     return e
 end
@@ -407,22 +453,29 @@ end
 function DE.allocate_container(e::TemplateExpression, n::Union{Nothing,Integer}=nothing)
     ts = get_contents(e)
     parameters = get_metadata(e).parameters
-    return PreallocatedTemplateExpression(
-        NamedTuple{keys(ts)}(map(t -> DE.allocate_container(t, n), values(ts))),
-        has_params(e) ? similar(parameters::ParamVector) : nothing,
+    preallocated_trees = NamedTuple{keys(ts)}(
+        map(t -> DE.allocate_container(t, n), values(ts))
     )
+    preallocated_parameters = if has_params(e)
+        NamedTuple{keys(parameters)}(map(p -> similar(p), values(parameters::NamedTuple)))
+    else
+        nothing
+    end
+    return PreallocatedTemplateExpression(preallocated_trees, preallocated_parameters)
 end
 function DE.copy_into!(dest::PreallocatedTemplateExpression, src::TemplateExpression)
     ts = get_contents(src)
     parameters = get_metadata(src).parameters
     new_contents = NamedTuple{keys(ts)}(map(DE.copy_into!, values(dest.trees), values(ts)))
-    if has_params(src)
-        dest.parameters[:] = (parameters::ParamVector)[:]
+    new_parameters = if has_params(src)
+        for k in keys(parameters::NamedTuple)
+            dest.parameters[k][:] = (parameters[k]::ParamVector)[:]
+        end
+        NamedTuple{keys(parameters)}(map(p -> ParamVector(p), values(dest.parameters)))
+    else
+        nothing
     end
-    return with_metadata(
-        with_contents(src, new_contents);
-        parameters=has_params(src) ? ParamVector(dest.parameters) : nothing,
-    )
+    return with_metadata(with_contents(src, new_contents); parameters=new_parameters)
 end
 
 function DE.get_tree(ex::TemplateExpression{<:Any,<:Any,<:Any,E}) where {E}
@@ -487,9 +540,11 @@ function EB.extra_init_params(
     else
         # COV_EXCL_START
         if prototype === nothing
-            ParamVector(randn(T, (num_parameters,)))
+            NamedTuple{keys(num_parameters)}(
+                map(n -> ParamVector(randn(T, (n,))), values(num_parameters))
+            )
         else
-            copy(get_metadata(prototype).parameters::ParamVector)
+            _copy(get_metadata(prototype).parameters::NamedTuple)
         end
         # COV_EXCL_STOP
     end
@@ -527,36 +582,79 @@ function DE.string_tree(
     kws...,
 )
     raw_contents = get_contents(tree)
-    function_keys = keys(raw_contents)
-    num_features = get_metadata(tree).structure.num_features
-    total_num_features = max(values(num_features)...)
-    colors = _colors(Val(length(function_keys)))
-    variable_names = ["#" * string(i) for i in 1:total_num_features]
-    inner_strings = NamedTuple{function_keys}(
-        map(
-            ex -> DE.string_tree(ex, operators; pretty, variable_names, kws...),
-            values(raw_contents),
-        ),
-    )
-    strings = NamedTuple{function_keys}(
-        map(
-            (k, s, c) -> let
-                prefix = if !pretty || length(function_keys) == 1
-                    ""
-                elseif k == first(function_keys)
-                    "╭ "
-                elseif k == last(function_keys)
-                    "╰ "
-                else
-                    "├ "
-                end
-                annotatedstring(prefix, string(k), " = ", _color_string(s, c))
-            end,
-            function_keys,
-            values(inner_strings),
-            colors,
-        ),
-    )
+    metadata = get_metadata(tree)
+    # Create strings for functions
+    function_strings = let
+        function_keys = keys(raw_contents)
+        num_features = metadata.structure.num_features
+        total_num_features = max(values(num_features)...)
+        colors = _colors(Val(length(function_keys)))
+        variable_names = ["#" * string(i) for i in 1:total_num_features]
+        inner_strings = NamedTuple{function_keys}(
+            map(
+                ex -> DE.string_tree(ex, operators; pretty, variable_names, kws...),
+                values(raw_contents),
+            ),
+        )
+
+        NamedTuple{function_keys}(
+            map(
+                (k, s, c) -> let
+                    prefix = if !pretty || length(function_keys) == 1
+                        ""
+                    elseif k == first(function_keys)
+                        "╭ "
+                    elseif k == last(function_keys) && !has_params(tree)
+                        "╰ "
+                    else
+                        "├ "
+                    end
+                    annotatedstring(prefix, string(k), " = ", _color_string(s, c))
+                end,
+                function_keys,
+                values(inner_strings),
+                colors,
+            ),
+        )
+    end
+
+    # Add parameter strings if they exist
+    strings = if has_params(tree)
+        parameters = metadata.parameters
+        param_keys = keys(parameters)
+        param_colors = _colors(Val(length(param_keys)))
+
+        param_strings = NamedTuple{param_keys}(
+            map(
+                (k, c) -> let
+                    param_vec = parameters[k]._data
+                    n = length(param_vec)
+                    param_str = if n <= 4
+                        join(param_vec, ", ")
+                    else
+                        string(param_vec[1], ", ", param_vec[2], ", ..., ", param_vec[end])
+                    end
+                    prefix = if pretty
+                        ""
+                    elseif k == last(param_keys)
+                        "╰ "
+                    else
+                        "├ "
+                    end
+                    annotatedstring(
+                        prefix, string(k), " = [", _color_string(param_str, c), "]"
+                    )
+                end,
+                param_keys,
+                param_colors,
+            ),
+        )
+
+        (values(function_strings)..., values(param_strings)...)
+    else
+        values(function_strings)
+    end
+
     return annotatedstring(join(strings, pretty ? styled"\n" : styled"; "))
 end
 function HOF.make_prefix(::TemplateExpression, ::AbstractOptions, ::Dataset)
@@ -586,8 +684,8 @@ end
             result = combine(
                 tree,
                 raw_contents,
-                map(x -> ValidVector(copy(x), true), eachrow(cX)),
                 extra_args...,
+                map(x -> ValidVector(copy(x), true), eachrow(cX)),
             )
             return result.x, result.valid
         end
@@ -738,13 +836,16 @@ function MF.mutate_constant(
     else # Mutate parameters
 
         # We mutate between 1 and all of the parameter vector
-        num_params = get_metadata(ex).structure.num_parameters::Integer
+        key_to_mutate = rand(rng, keys(get_metadata(ex).parameters))
+        num_params = get_metadata(ex).structure.num_parameters[key_to_mutate]::Integer
         num_params_to_mutate = rand(rng, 1:num_params)
+        # TODO: I feel we should mutate all keys at once, and only randomize which
+        # parameters (of the combined list) to mutate.
 
         idx_to_mutate = StatsBase.sample(
             rng, 1:num_params, num_params_to_mutate; replace=false
         )
-        parameters = get_metadata(ex).parameters::ParamVector
+        parameters = get_metadata(ex).parameters[key_to_mutate]::ParamVector
         factors = [MF.mutate_factor(T, temperature, options, rng) for _ in idx_to_mutate]
         @inbounds for (i, f) in zip(idx_to_mutate, factors)
             parameters._data[i] *= f
@@ -757,7 +858,7 @@ end
 function CO.count_constants_for_optimization(ex::TemplateExpression)
     return (
         sum(CO.count_constants_for_optimization, values(get_contents(ex))) +
-        (has_params(ex) ? get_metadata(ex).structure.num_parameters : 0)
+        (has_params(ex) ? sum(values(get_metadata(ex).structure.num_parameters)) : 0)
     )
 end
 
