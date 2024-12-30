@@ -331,6 +331,79 @@ end
     @test expr_f32(Xtest) isa Vector{ComplexF32}
 end
 
+@testitem "multi-parameter expressions" begin
+    using SymbolicRegression
+    using SymbolicRegression.MutationFunctionsModule: mutate_constant
+    using DynamicExpressions:
+        allocate_container, copy_into!, get_metadata, get_scalar_constants
+    using Random: MersenneTwister
+    using MLJBase: matrix
+
+    function multi_param_combine((; f, g), (; p1, p2), (x, y))
+        return p1[1] * f(x)^2 + p1[2] * f(x) + p1[3] + p2[1] * g(y)^2 + p2[2] * g(y)
+    end
+    struct_multi = TemplateStructure{(:f, :g),(:p1, :p2)}(
+        multi_param_combine; num_parameters=(; p1=3, p2=2)
+    )
+
+    @test struct_multi.num_features == (; f=1, g=1)
+    @test struct_multi.num_parameters == (; p1=3, p2=2)
+
+    operators = Options().operators
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators)
+    x2 = ComposableExpression(Node{Float64}(; feature=1); operators)
+
+    expr_multi = TemplateExpression(
+        (; f=x1, g=x2 + 0.0);
+        structure=struct_multi,
+        operators=operators,
+        parameters=(; p1=[1.0, 2.0, 3.0], p2=[-1.0, -2.0]),
+    )
+    # Ensure scalar constants are correctly inferred:
+    @test get_scalar_constants(expr_multi)[1] == [0.0, 1.0, 2.0, 3.0, -1.0, -2.0]
+
+    # Test evaluation
+    X = [2.0 3.0; 4.0 5.0]  # 2×2 matrix: 2 features, 2 data points
+    out = expr_multi(X)
+    # For first data point:
+    # f(x)=2, g(y)=4 => 1*2^2 + 2*2 + 3 + (-1)*4^2 + (-2)*4 = 4 + 4 + 3 + -16 + -8 = -13
+    # For second data point:
+    # f(x)=3, g(y)=5 => 1*3^2 + 2*3 + 3 + (-1)*5^2 + (-2)*5 = 9 + 6 + 3 + -25 + -10 = -17
+    @test out ≈ [-13.0, -17.0]
+
+    # Test mutation
+    rng = MersenneTwister(0)
+    options = Options()
+    old_p1 = copy(get_metadata(expr_multi).parameters.p1._data)
+    old_p2 = copy(get_metadata(expr_multi).parameters.p2._data)
+    let param_changed = [false, false]
+        # Force enough trials to see if param vectors change:
+        for _ in 1:50
+            mutated_expr = mutate_constant(copy(expr_multi), 1.0, options, rng)
+            new_p1 = get_metadata(mutated_expr).parameters.p1._data
+            new_p2 = get_metadata(mutated_expr).parameters.p2._data
+            if new_p1 != old_p1
+                param_changed[1] = true
+            end
+            if new_p2 != old_p2
+                param_changed[2] = true
+            end
+        end
+        @test param_changed == [true, true]
+    end
+
+    # Test preallocated copying
+    preallocated_expr = allocate_container(expr_multi)
+    get_metadata(expr_multi).parameters.p1._data .= [10.0, 20.0, 30.0]
+    get_metadata(expr_multi).parameters.p2._data .= [-10.0, -20.0]
+
+    # Now copy over
+    new_expr = copy_into!(preallocated_expr, expr_multi)
+
+    @test get_metadata(new_expr).parameters.p1._data == [10.0, 20.0, 30.0]
+    @test get_metadata(new_expr).parameters.p2._data == [-10.0, -20.0]
+end
+
 @testitem "printing" begin
     using SymbolicRegression
 
