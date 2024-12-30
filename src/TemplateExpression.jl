@@ -29,6 +29,7 @@ using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
 using DynamicExpressions.ExpressionModule: _copy
 
+using ..UtilsModule: FixKws
 using ..CoreModule:
     AbstractOptions,
     Options,
@@ -99,7 +100,7 @@ The `Kp` parameter is used to specify the symbols representing the parameters, i
     parameters required for each parameter vector.
 """
 struct TemplateStructure{
-    K,Kp,E<:Function,NF<:NamedTuple{K},NP<:Union{NamedTuple{Kp},Nothing}
+    K,Kp,E<:Function,NF<:NamedTuple{K},NP<:Union{NamedTuple,Nothing}
 } <: Function
     combine::E
     num_features::NF
@@ -572,90 +573,66 @@ function _colors(::Val{n}) where {n}
         (i -> (:magenta, :green, :red, :blue, :yellow, :cyan)[mod1(i, n)]), Val(n)
     )
 end
-
 _color_string(s::AbstractString, c::Symbol) = styled"{$c:$s}"
+
+function _format_component(ex::AbstractExpression, c::Symbol; operators, kws...)
+    return _color_string(DE.string_tree(ex, operators; kws...), c)
+end
+function _format_component(param::ParamVector, c::Symbol; f_constant::FC) where {FC}
+    p_str = if length(param) <= 5
+        join(map(f_constant, param), ", ")
+    else
+        string(join(map(f_constant, param[1:3]), ", "), ", ..., ", f_constant(param[end]))
+    end
+
+    return _color_string('[' * p_str * ']', c)
+end
+function _prefix_string_with_pipe(k::Symbol, s; all_keys, pretty)
+    prefix = if !pretty || length(all_keys) == 1
+        ""
+    elseif k == first(all_keys)
+        "╭ "
+    elseif k == last(all_keys)
+        "╰ "
+    else
+        "├ "
+    end
+    return annotatedstring(prefix, string(k), " = ", s)
+end
 function DE.string_tree(
-    tree::TemplateExpression,
+    ex::TemplateExpression,
     operators::Union{AbstractOperatorEnum,Nothing}=nothing;
     pretty::Bool=false,
-    variable_names=nothing,
+    variable_names=nothing,  # ignored
+    f_constant::FC=string,
     kws...,
-)
-    raw_contents = get_contents(tree)
-    metadata = get_metadata(tree)
-    # Create strings for functions
-    function_strings = let
-        function_keys = keys(raw_contents)
-        num_features = metadata.structure.num_features
-        total_num_features = max(values(num_features)...)
-        colors = _colors(Val(length(function_keys)))
-        variable_names = ["#" * string(i) for i in 1:total_num_features]
-        inner_strings = NamedTuple{function_keys}(
-            map(
-                ex -> DE.string_tree(ex, operators; pretty, variable_names, kws...),
-                values(raw_contents),
+) where {FC}
+    expressions = get_contents(ex)
+    num_features = get_metadata(ex).structure.num_features
+    total_num_features = max(values(num_features)...)
+    variable_names = ['#' * string(i) for i in 1:total_num_features]
+    parameters = has_params(ex) ? get_metadata(ex).parameters : NamedTuple()
+    all_keys = (keys(num_features)..., keys(parameters)...)
+    colors = _colors(Val(length(all_keys)))
+
+    strings = NamedTuple{all_keys}((
+        map(
+            FixKws(
+                _format_component; operators, pretty, variable_names, f_constant, kws...
             ),
-        )
-
-        NamedTuple{function_keys}(
-            map(
-                (k, s, c) -> let
-                    prefix = if !pretty || length(function_keys) == 1
-                        ""
-                    elseif k == first(function_keys)
-                        "╭ "
-                    elseif k == last(function_keys) && !has_params(tree)
-                        "╰ "
-                    else
-                        "├ "
-                    end
-                    annotatedstring(prefix, string(k), " = ", _color_string(s, c))
-                end,
-                function_keys,
-                values(inner_strings),
-                colors,
-            ),
-        )
-    end
-
-    # Add parameter strings if they exist
-    strings = if has_params(tree)
-        parameters = metadata.parameters
-        param_keys = keys(parameters)
-        param_colors = _colors(Val(length(param_keys)))
-
-        param_strings = NamedTuple{param_keys}(
-            map(
-                (k, c) -> let
-                    param_vec = parameters[k]._data
-                    n = length(param_vec)
-                    param_str = if n <= 4
-                        join(param_vec, ", ")
-                    else
-                        string(param_vec[1], ", ", param_vec[2], ", ..., ", param_vec[end])
-                    end
-                    prefix = if pretty
-                        ""
-                    elseif k == last(param_keys)
-                        "╰ "
-                    else
-                        "├ "
-                    end
-                    annotatedstring(
-                        prefix, string(k), " = [", _color_string(param_str, c), "]"
-                    )
-                end,
-                param_keys,
-                param_colors,
-            ),
-        )
-
-        (values(function_strings)..., values(param_strings)...)
-    else
-        values(function_strings)
-    end
-
-    return annotatedstring(join(strings, pretty ? styled"\n" : styled"; "))
+            values(expressions),
+            colors[1:length(expressions)],
+        )...,
+        map(
+            FixKws(_format_component; f_constant),
+            values(parameters),
+            colors[(length(expressions) + 1):end],
+        )...,
+    ))
+    prefixed_strings = NamedTuple{all_keys}(
+        map(FixKws(_prefix_string_with_pipe; all_keys, pretty), all_keys, values(strings))
+    )
+    return annotatedstring(join(prefixed_strings, pretty ? styled"\n" : styled"; "))
 end
 function HOF.make_prefix(::TemplateExpression, ::AbstractOptions, ::Dataset)
     return ""

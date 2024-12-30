@@ -330,3 +330,28 @@ end
     @test expr_f32(Xtest) == [ComplexF32(34.0 + 0im)]
     @test expr_f32(Xtest) isa Vector{ComplexF32}
 end
+
+@testitem "printing" begin
+    using SymbolicRegression
+
+    struct1 = TemplateStructure{(:f,),(:p,)}(
+        ((; f), (; p), (x,)) -> f(x) + sum(p); num_parameters=(; p=2)
+    )
+    operators = Options().operators
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators)
+    expr = TemplateExpression(
+        (; f=x1); structure=struct1, operators, parameters=(; p=[1.0, 2.0])
+    )
+    # Parameters get printed too!
+    @test string(expr) == "f = #1; p = [1.0, 2.0]"
+
+    # But, if we have more than 4 params, there will be a ...:
+    structure = TemplateStructure{(:f,),(:p1, :p2)}(
+        ((; f), (; p1, p2), (x,)) -> f(x) + sum(p1) + sum(p2);
+        num_parameters=(; p1=10, p2=1),
+    )
+    expr = TemplateExpression(
+        (; f=x1); structure=structure, operators, parameters=(; p1=ones(10), p2=[2.0])
+    )
+    @test string(expr) == "f = #1; p1 = [1.0, 1.0, 1.0, ..., 1.0]; p2 = [2.0]"
+end
