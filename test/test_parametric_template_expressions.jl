@@ -56,7 +56,7 @@ end
 
     # Now, for structure *not* having parameters, but using parameters:
     structure = TemplateStructure{(:f,)}(((; f), (x,)) -> f(x))
-    @test_throws "Expected `parameters` to be `nothing` for `structure.num_parameters=nothing`" TemplateExpression(
+    @test_throws "Expected `parameters` to not be specified for `structure.num_parameters=NamedTuple()`" TemplateExpression(
         (;
             f=ComposableExpression(
                 Node{Float64}(; feature=1); operators=Options().operators
@@ -296,7 +296,7 @@ end
         operators=Options().operators,
         parameters=nothing,
     )
-    @test get_metadata(expr_zero).parameters === nothing
+    @test get_metadata(expr_zero).parameters === NamedTuple()
 
     # Evaluate => just f(x)
     X_ones = reshape([10.0], 1, 1)

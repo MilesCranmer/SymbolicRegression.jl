@@ -344,7 +344,7 @@ function TemplateExpression(
     else
         @assert(
             parameters === nothing || isempty(parameters),
-            "Expected `parameters` to be `nothing` for `structure.num_parameters=$(structure.num_parameters)`"
+            "Expected `parameters` to not be specified for `structure.num_parameters=$(structure.num_parameters)`"
         )
         NamedTuple()
     end
