@@ -428,3 +428,40 @@ end
     )
     @test string(expr) == "f = #1; p1 = [1.0, 1.0, 1.0, ..., 1.0]; p2 = [2.0]"
 end
+
+@testitem "indexed multi-parameter expressions" begin
+    using SymbolicRegression
+    using Random: MersenneTwister
+    using MLJBase: matrix
+
+    operators = Options().operators
+    x1, x2, x3 = map(i -> ComposableExpression(Node{Float64}(; feature=i); operators), 1:3)
+
+    f = x1 * x2 + x3 * 1.5
+
+    struct_indexed = TemplateStructure{(:f,),(:p1, :p2, :p3)}(
+        function ((; f), (; p1, p2, p3), (x, y, i1, i2))
+            return f(x, p1[i1], p2[i2]) + p3[1] * y
+        end;
+        num_parameters=(; p1=8, p2=3, p3=1),
+    )
+    parameters = (; p1=rand(8), p2=rand(3), p3=rand(1))
+    expr = TemplateExpression(
+        (; f);
+        structure=struct_indexed,
+        operators=operators,
+        parameters=NamedTuple{(:p1, :p2, :p3)}(map(copy, values(parameters))),
+    )
+
+    x = rand(32)
+    y = rand(32)
+    i1 = rand(1:8, 32)
+    i2 = rand(1:3, 32)
+
+    X = matrix((; x, y, i1, i2); transpose=true)
+    true_f(x1, x2, x3) = x1 * x2 + x3 * 1.5
+    @test expr(X) ≈ [
+        true_f(x[i], parameters.p1[i1[i]], parameters.p2[i2[i]]) + parameters.p3[1] * y[i]
+        for i in 1:32
+    ]
+end
