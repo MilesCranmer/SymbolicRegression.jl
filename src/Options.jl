@@ -33,9 +33,9 @@ using ..OptionsStructModule: ComplexityMapping, operator_specialization
 using ..UtilsModule: @save_kwargs, @ignore
 
 """Build constraints on operator-level complexity from a user-passed dict."""
-@unstable function build_constraints(;
-    una_constraints,
-    bin_constraints,
+@unstable function build_constraints(
+    @nospecialize(una_constraints),
+    @nospecialize(bin_constraints),
     @nospecialize(unary_operators),
     @nospecialize(binary_operators)
 )::Tuple{Vector{Int},Vector{Tuple{Int,Int}}}
@@ -83,8 +83,10 @@ using ..UtilsModule: @save_kwargs, @ignore
     return _una_constraints2, _bin_constraints2
 end
 
-@unstable function build_nested_constraints(;
-    @nospecialize(binary_operators), @nospecialize(unary_operators), nested_constraints
+@unstable function build_nested_constraints(
+    @nospecialize(binary_operators),
+    @nospecialize(unary_operators),
+    @nospecialize(nested_constraints)
 )
     nested_constraints === nothing && return nested_constraints
     # Check that intersection of binary operators and unary operators is empty:
@@ -760,7 +762,7 @@ $(OPTION_DESCRIPTIONS)
     @assert tournament_selection_n < population_size "`tournament_selection_n` must be less than `population_size`"
 
     # Make sure nested_constraints contains functions within our operator set:
-    _nested_constraints = build_nested_constraints(;
+    _nested_constraints = build_nested_constraints(
         binary_operators, unary_operators, nested_constraints
     )
 
@@ -781,7 +783,7 @@ $(OPTION_DESCRIPTIONS)
         una_constraints = constraints
     end
 
-    _una_constraints, _bin_constraints = build_constraints(;
+    _una_constraints, _bin_constraints = build_constraints(
         una_constraints, bin_constraints, unary_operators, binary_operators
     )
 
