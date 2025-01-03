@@ -55,22 +55,23 @@ end
 
 """Generate an `SRRegressor` struct containing all the fields in `Options`."""
 function modelexpr(model_name::Symbol, parent_type::Symbol=:AbstractSymbolicRegressor)
-    struct_def =
-        :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L,E<:AbstractExpression} <: $parent_type
-            niterations::Int = 100
-            parallelism::Symbol = :multithreading
-            numprocs::Union{Int,Nothing} = nothing
-            procs::Union{Vector{Int},Nothing} = nothing
-            addprocs_function::Union{Function,Nothing} = nothing
-            heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
-            worker_imports::Union{Vector{Symbol},Nothing} = nothing
-            logger::Union{AbstractSRLogger,Nothing} = nothing
-            runtests::Bool = true
-            run_id::Union{String,Nothing} = nothing
-            loss_type::Type{L} = Nothing
-            selection_method::Function = choose_best
-            dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
-        end)
+    struct_def = :(Base.@kwdef mutable struct $(model_name){
+        D<:AbstractDimensions,L,E<:AbstractExpression
+    } <: $parent_type
+        niterations::Int = 100
+        parallelism::Symbol = :multithreading
+        numprocs::Union{Int,Nothing} = nothing
+        procs::Union{Vector{Int},Nothing} = nothing
+        addprocs_function::Union{Function,Nothing} = nothing
+        heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
+        worker_imports::Union{Vector{Symbol},Nothing} = nothing
+        logger::Union{AbstractSRLogger,Nothing} = nothing
+        runtests::Bool = true
+        run_id::Union{String,Nothing} = nothing
+        loss_type::Type{L} = Nothing
+        selection_method::Function = choose_best
+        dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
+    end)
     # TODO: store `procs` from initial run if parallelism is `:multiprocessing`
     fields = last(last(struct_def.args).args).args
 
