@@ -25,6 +25,7 @@ using DynamicQuantities:
     dimension
 using LossFunctions: SupervisedLoss
 using ..InterfaceDynamicQuantitiesModule: get_dimensions_type
+using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..CoreModule:
     Options, Dataset, AbstractMutationWeights, MutationWeights, LOSS_TYPE, ComplexityMapping
 using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
@@ -32,6 +33,7 @@ using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
 using ..UtilsModule: subscriptify, @ignore
 using ..LoggingModule: AbstractSRLogger
+using ..TemplateExpressionModule: TemplateExpression
 
 import ..equation_search
 
@@ -54,7 +56,7 @@ end
 """Generate an `SRRegressor` struct containing all the fields in `Options`."""
 function modelexpr(model_name::Symbol, parent_type::Symbol=:AbstractSymbolicRegressor)
     struct_def =
-        :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L} <: $parent_type
+        :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L,E<:AbstractExpression} <: $parent_type
             niterations::Int = 100
             parallelism::Symbol = :multithreading
             numprocs::Union{Int,Nothing} = nothing
@@ -65,7 +67,7 @@ function modelexpr(model_name::Symbol, parent_type::Symbol=:AbstractSymbolicRegr
             logger::Union{AbstractSRLogger,Nothing} = nothing
             runtests::Bool = true
             run_id::Union{String,Nothing} = nothing
-            loss_type::L = Nothing
+            loss_type::Type{L} = Nothing
             selection_method::Function = choose_best
             dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
         end)
@@ -74,7 +76,14 @@ function modelexpr(model_name::Symbol, parent_type::Symbol=:AbstractSymbolicRegr
 
     # Add everything from `Options` constructor directly to struct:
     for (i, option) in enumerate(DEFAULT_OPTIONS)
+        if getsymb(first(option.args)) == :expression_type
+            continue
+        end
         insert!(fields, i, Expr(:(=), option.args...))
+        if getsymb(first(option.args)) == :node_type
+            # Manually add `expression_type` above, so it can be depended on by `node_type`
+            insert!(fields, i - 1, :(expression_type::Type{E} = Expression))
+        end
     end
 
     # We also need to create the `get_options` function, based on this:
@@ -215,12 +224,15 @@ function _update(
     options,
     class,
 )
-    if isnothing(class) && MMI.istable(X) && haskey(X, :class)
-        if !(X isa NamedTuple)
-            error("Classes can only be specified with named tuples.")
-        end
-        new_X = Base.structdiff(X, (; X.class))
-        new_class = X.class
+    if (
+        IDE.handles_class_column(m.expression_type) &&
+        isnothing(class) &&
+        MMI.istable(X) &&
+        :class in MMI.schema(X).names
+    )
+        names_without_class = filter(!=(:class), MMI.schema(X).names)
+        new_X = MMI.selectcols(X, collect(names_without_class))
+        new_class = MMI.selectcols(X, :class)
         return _update(
             m, verbosity, old_fitresult, old_cache, new_X, y, w, options, new_class
         )
@@ -491,12 +503,16 @@ function _predict(m::M, fitresult, Xnew, idx, class) where {M<:AbstractSymbolicR
         )
         return _predict(m, fitresult, Xnew.data, Xnew.idx, class)
     end
-    if isnothing(class) && MMI.istable(Xnew) && haskey(Xnew, :class)
-        if !(Xnew isa NamedTuple)
-            error("Classes can only be specified with named tuples.")
-        end
-        Xnew2 = Base.structdiff(Xnew, (; Xnew.class))
-        return _predict(m, fitresult, Xnew2, idx, Xnew.class)
+    if (
+        IDE.handles_class_column(m.expression_type) &&
+        isnothing(class) &&
+        MMI.istable(Xnew) &&
+        :class in MMI.schema(Xnew).names
+    )
+        names_without_class = filter(!=(:class), MMI.schema(Xnew).names)
+        Xnew2 = MMI.selectcols(Xnew, collect(names_without_class))
+        class = MMI.selectcols(Xnew, :class)
+        return _predict(m, fitresult, Xnew2, idx, class)
     end
 
     if fitresult.has_class
@@ -606,7 +622,7 @@ const input_scitype = Union{
 MMI.metadata_model(
     SRRegressor;
     input_scitype,
-    target_scitype=AbstractVector{<:Any},
+    target_scitype=AbstractVector{<:MMI.Continuous},
     supports_weights=true,
     reports_feature_importances=false,
     load_path="SymbolicRegression.MLJInterfaceModule.SRRegressor",
@@ -615,12 +631,23 @@ MMI.metadata_model(
 MMI.metadata_model(
     MultitargetSRRegressor;
     input_scitype,
-    target_scitype=Union{MMI.Table(Any),AbstractMatrix{<:Any}},
+    target_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
     supports_weights=true,
     reports_feature_importances=false,
     load_path="SymbolicRegression.MLJInterfaceModule.MultitargetSRRegressor",
     human_name="Multi-Target Symbolic Regression via Evolutionary Search",
 )
+
+function MMI.target_scitype(
+    ::Type{<:SRRegressor{D,L,E}}
+) where {D<:AbstractDimensions,L,E<:TemplateExpression}
+    return AbstractVector{<:MMI.Unknown}
+end
+function MMI.target_scitype(
+    ::Type{<:MultitargetSRRegressor{D,L,E}}
+) where {D<:AbstractDimensions,L,E<:TemplateExpression}
+    return Union{MMI.Table(MMI.Unknown),AbstractMatrix{<:MMI.Unknown}}
+end
 
 function tag_with_docstring(model_name::Symbol, description::String, bottom_matter::String)
     docstring = """$(MMI.doc_header(eval(model_name)))
