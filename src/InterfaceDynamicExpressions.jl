@@ -359,4 +359,7 @@ function DE.EvaluationHelpersModule._grad_evaluator(
     )
 end
 
+# Allows special handling of class columns in MLJInterface.jl
+handles_class_column(::Type{<:AbstractExpression}) = false
+
 end
