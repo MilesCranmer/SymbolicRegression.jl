@@ -8,6 +8,7 @@ using DynamicExpressions:
     AbstractExpressionNode,
     AbstractOperatorEnum,
     Metadata,
+    EvalOptions,
     constructorof,
     get_metadata,
     eval_tree_array,
@@ -51,16 +52,18 @@ f(f, f) # == (x1 * sin(x2)) * sin((x1 * sin(x2)))
 struct ComposableExpression{
     T,
     N<:AbstractExpressionNode{T},
-    D<:@NamedTuple{operators::O, variable_names::V} where {O<:AbstractOperatorEnum,V},
+    D<:@NamedTuple{
+        operators::O, variable_names::V, eval_options::E
+    } where {O<:AbstractOperatorEnum,V,E<:Union{Nothing,EvalOptions}},
 } <: AbstractComposableExpression{T,N}
     tree::N
     metadata::Metadata{D}
 end
 
 @inline function ComposableExpression(
-    tree::AbstractExpressionNode{T}; metadata...
+    tree::AbstractExpressionNode{T}; operators, variable_names=nothing, eval_options=nothing
 ) where {T}
-    d = (; metadata...)
+    d = (; operators, variable_names, eval_options)
     return ComposableExpression(tree, Metadata(d))
 end
 
@@ -152,6 +155,9 @@ struct ValidVector{A<:AbstractVector}
 end
 ValidVector(x::Tuple{Vararg{Any,2}}) = ValidVector(x...)
 
+function get_eval_options(ex::AbstractComposableExpression)
+    return @something(get_metadata(ex).eval_options, EvalOptions())
+end
 function (ex::AbstractComposableExpression)(x)
     return error("ComposableExpression does not support input of type $(typeof(x))")
 end
@@ -181,11 +187,15 @@ function (ex::AbstractComposableExpression)(
         return ValidVector(_get_value(first(xs)), false)
     else
         X = Matrix(stack(map(_get_value, xs))')
-        return ValidVector(eval_tree_array(ex, X))
+        eval_options = get_eval_options(ex)
+        return ValidVector(eval_tree_array(ex, X; eval_options))
     end
 end
 function (ex::AbstractComposableExpression{T})() where {T}
     X = Matrix{T}(undef, 0, 1)  # Value is irrelevant as it won't be used
+    # TODO: We force avoid the eval_options here,
+    #       to get a faster constant evaluation result...
+    #       but not sure if this is a good idea.
     out, complete = eval_tree_array(ex, X)  # TODO: The valid is not used; not sure how to incorporate
     y = only(out)
     return complete ? y::T : nan(y)::T

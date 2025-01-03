@@ -417,3 +417,29 @@ end
     X_complex = [-1.0 - 1.0im]'
     @test_throws DimensionMismatch expr(X_complex)
 end
+
+@testitem "Test eval_options with turbo mode" tags = [:part3] begin
+    using SymbolicRegression
+    using DynamicExpressions: OperatorEnum, EvalOptions
+    using LoopVectorization: LoopVectorization
+
+    operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    variable_names = ["x1", "x2"]
+    eval_options = EvalOptions(; turbo=true)
+
+    # Create expressions with turbo mode enabled
+    x1 = ComposableExpression(
+        Node{Float64}(; feature=1); operators, variable_names, eval_options
+    )
+    f = x1 + x1
+    g = x1
+    structure = TemplateStructure{(:f, :g)}(((; f, g), (x1, x2)) -> f(x1) * g(x2)^2)
+    expr = TemplateExpression((; f=x1 + x1, g=x1); structure, operators, variable_names)
+
+    n = 32
+    X = randn(2, n)
+    result = expr(X)
+    @test result ≈ @. (X[1, :] + X[1, :]) * (X[2, :] * X[2, :])
+    # n.b., we can't actually test whether turbo is used here,
+    # this is basically just a smoke test
+end

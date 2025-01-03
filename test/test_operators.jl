@@ -136,7 +136,18 @@ end
 @testitem "Turbo mode matches regular mode" tags = [:part3] begin
     using SymbolicRegression
     using SymbolicRegression:
-        plus, sub, mult, square, cube, neg, relu, greater, logical_or, logical_and, cond
+        Node,
+        plus,
+        sub,
+        mult,
+        square,
+        cube,
+        neg,
+        relu,
+        greater,
+        logical_or,
+        logical_and,
+        cond
     using Random: MersenneTwister
     using Suppressor: @capture_err
     using LoopVectorization: LoopVectorization as _
