@@ -57,10 +57,14 @@ which speed up evaluation significantly.
         tree::Union{AbstractExpressionNode,AbstractExpression},
         X::AbstractMatrix,
         options::AbstractOptions;
+        turbo=nothing,
+        bumper=nothing,
         kws...,
     )
         A = expected_array_type(X, typeof(tree))
-        eval_options = EvalOptions(; turbo=options.turbo, bumper=options.bumper)
+        eval_options = EvalOptions(;
+            turbo=something(turbo, options.turbo), bumper=something(bumper, options.bumper)
+        )
         out, complete = DE.eval_tree_array(
             tree, X, DE.get_operators(tree, options); eval_options, kws...
         )
