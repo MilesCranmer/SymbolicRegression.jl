@@ -18,7 +18,9 @@ function node_to_symbolic(
     return node_to_symbolic(get_tree(tree), get_operators(tree, options); kws...)
 end
 function node_to_symbolic(
-    tree::Union{AbstractExpressionNode,AbstractExpression}, m::AbstractSymbolicRegressor; kws...
+    tree::Union{AbstractExpressionNode,AbstractExpression},
+    m::AbstractSymbolicRegressor;
+    kws...,
 )
     return node_to_symbolic(tree, get_options(m); kws...)
 end
