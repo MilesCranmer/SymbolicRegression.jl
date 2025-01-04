@@ -59,12 +59,12 @@ function _depwarn_pareto_single(funcsym::Symbol)
     return nothing
 end
 
-function Base.getproperty(s::ParetoSingle, name::Symbol)
+@inline function Base.getproperty(s::ParetoSingle, name::Symbol)
     name == :member && return getfield(s, :member)
     _depwarn_pareto_single(:getproperty)
     return getproperty(s.member, name)
 end
-function Base.setproperty!(s::ParetoSingle, name::Symbol, value)
+@inline function Base.setproperty!(s::ParetoSingle, name::Symbol, value)
     name == :member && return setfield!(s, :member, value)
     _depwarn_pareto_single(:setproperty!)
     return setproperty!(s.member, name, value)
@@ -93,7 +93,7 @@ struct HallOfFame{
     exists::Vector{Bool}
 end
 pop_member_type(::Type{<:HallOfFame{T,L,N,H}}) where {T,L,N,H} = pop_member_type(H)
-function Base.getproperty(hof::HallOfFame, name::Symbol)
+@inline function Base.getproperty(hof::HallOfFame, name::Symbol)
     if name == :members
         Base.depwarn(
             "HallOfFame.members is deprecated. Use HallOfFame.elements instead.",
