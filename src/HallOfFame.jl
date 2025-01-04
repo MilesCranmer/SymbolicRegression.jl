@@ -205,10 +205,11 @@ end
 
 """
     calculate_pareto_frontier(hof::HallOfFame)
+
+Compute the dominating pareto curve - each returned member must be better than all simpler equations.
 """
 function calculate_pareto_frontier(hof::HallOfFame)
     P = pop_member_type(typeof(hof))
-    # Dominating pareto curve - must be better than all simpler equations
     dominating = P[]
     for i in eachindex(hof.elements)
         if !hof.exists[i]
