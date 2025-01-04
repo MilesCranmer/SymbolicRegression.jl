@@ -709,6 +709,9 @@ function _initialize_search!(
                 # frontier, we push them individually:
                 push!(new_hof, size => member)
             end
+            # TODO: Would be nice if there was a way to mark `init_hall_of_fame[j]`
+            # as being dead now. We want to make sure we never use it at this point
+            # in the code.
             state.halls_of_fame[j] = new_hof
         end
     end
@@ -1116,15 +1119,23 @@ end
         dataset, out_pop, options, cur_maxsize, record
     )
     num_evals += evals_from_optimize
-    if options.batching
-        for i_member in 1:(options.maxsize)
-            score, result_loss = score_func(dataset, best_seen.members[i_member], options)
-            best_seen.members[i_member].score = score
-            best_seen.members[i_member].loss = result_loss
+    return_hof = if options.batching
+        # Compute full-dataset scores for all members of the Pareto front.
+        new_hof = HallOfFame(options, dataset)::typeof(best_seen)
+        for el in best_seen.elements[best_seen.exists], member in el
+            size = compute_complexity(member, options)
+            score, result_loss = score_func(dataset, member, options)
+            member.score = score
+            member.loss = result_loss
             num_evals += 1
+
+            push!(new_hof, size => member)
         end
+        new_hof
+    else
+        best_seen
     end
-    return (out_pop, best_seen, record, num_evals)
+    return (out_pop, return_hof, record, num_evals)
 end
 function _info_dump(
     state::AbstractSearchState,
