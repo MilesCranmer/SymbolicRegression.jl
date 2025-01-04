@@ -53,7 +53,7 @@ end
 
 function _depwarn_pareto_single(funcsym::Symbol)
     return Base.depwarn(
-        "Hall of fame `.members` is now a vector of `AbstractParetoElement` objects. ",
+        "Hall of fame `.members` is now `.elements` which is a vector of `AbstractParetoElement` objects. ",
         funcsym,
     )
 end
@@ -153,7 +153,7 @@ function HallOfFame(
         [false for i in 1:(options.maxsize)],
     )
 end
-Base.copy(hof::HallOfFame) = HallOfFame(map(copy, hof.members), copy(hof.exists))
+Base.copy(hof::HallOfFame) = HallOfFame(map(copy, hof.elements), copy(hof.exists))
 
 function init_pareto_element(::Union{ParetoSingleOptions,ParetoSingle}, member::PopMember)
     return ParetoSingle(copy(member))

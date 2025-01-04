@@ -304,6 +304,7 @@ using .SearchUtilsModule:
     WorkerAssignments,
     DefaultWorkerOutputType,
     assign_next_worker!,
+    get_hall_of_fame_type,
     get_worker_output_type,
     extract_from_worker,
     @sr_spawner,
@@ -598,14 +599,9 @@ end
     nout = length(datasets)
     example_dataset = first(datasets)
     example_ex = create_expression(zero(T), options, example_dataset)
-    NT = typeof(example_ex)
-    PopType = Population{T,L,NT}
-    example_member = PopMember(example_ex, zero(L), zero(L); options.deterministic)
-    example_pareto_element = init_pareto_element(
-        options.pareto_element_options, example_member
-    )
-    ParetoElementType = typeof(example_pareto_element)
-    HallOfFameType = HallOfFame{T,L,NT,ParetoElementType}
+    ExpressionType = typeof(example_ex)
+    PopType = Population{T,L,ExpressionType}
+    HallOfFameType = get_hall_of_fame_type(T, L, example_ex, options.pareto_element_options)
     WorkerOutputType = get_worker_output_type(
         Val(ropt.parallelism), PopType, HallOfFameType
     )
@@ -662,7 +658,7 @@ end
         j in 1:nout
     ]
 
-    return SearchState{T,L,typeof(example_ex),WorkerOutputType,ChannelType}(;
+    return SearchState{T,L,typeof(example_ex),HallOfFameType,WorkerOutputType,ChannelType}(;
         procs=procs,
         we_created_procs=we_created_procs,
         worker_output=worker_output,
@@ -682,12 +678,12 @@ end
     )
 end
 function _initialize_search!(
-    state::AbstractSearchState{T,L,N},
+    state::AbstractSearchState{T,L,N,H},
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
     saved_state,
-) where {T,L,N}
+) where {T,L,N,H}
     nout = length(datasets)
 
     init_hall_of_fame = load_saved_hall_of_fame(saved_state)
@@ -768,11 +764,11 @@ function _initialize_search!(
     return nothing
 end
 function _warmup_search!(
-    state::AbstractSearchState{T,L,N},
+    state::AbstractSearchState{T,L,N,H},
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
-) where {T,L,N}
+) where {T,L,N,H}
     nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
         dataset = datasets[j]
@@ -789,9 +785,7 @@ function _warmup_search!(
         last_pop = state.worker_output[j][i]
         updated_pop = @sr_spawner(
             begin
-                in_pop = first(
-                    extract_from_worker(last_pop, Population{T,L,N}, HallOfFame{T,L,N})
-                )
+                in_pop = first(extract_from_worker(last_pop, Population{T,L,N}, H))
                 _dispatch_s_r_cycle(
                     in_pop,
                     dataset,

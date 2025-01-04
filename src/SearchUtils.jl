@@ -13,11 +13,12 @@ using Logging: AbstractLogger
 
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
-using ..CoreModule: Dataset, AbstractOptions, Options, RecordType, max_features
+using ..CoreModule:
+    Dataset, AbstractOptions, AbstractParetoOptions, Options, RecordType, max_features
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
-using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
+using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve, init_pareto_element
 using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 
@@ -231,6 +232,17 @@ end
 
 const DefaultWorkerOutputType{P,H} = Tuple{P,H,RecordType,Float64}
 
+function get_hall_of_fame_type(
+    ::Type{T},
+    ::Type{L},
+    example_ex::AbstractExpression,
+    pareto_element_options::AbstractParetoOptions,
+) where {T,L}
+    example_member = PopMember(example_ex, zero(L), zero(L); deterministic=false)
+    example_pareto_element = init_pareto_element(pareto_element_options, example_member)
+    ParetoElementType = typeof(example_pareto_element)
+    return HallOfFame{T,L,typeof(example_ex),ParetoElementType}
+end
 function get_worker_output_type(
     ::Val{PARALLELISM}, ::Type{PopType}, ::Type{HallOfFameType}
 ) where {PARALLELISM,PopType,HallOfFameType}
@@ -518,7 +530,7 @@ end
 load_saved_population(::Nothing; kws...) = nothing
 
 """
-    AbstractSearchState{T,L,N}
+    AbstractSearchState{T,L,N,H}
 
 An abstract type encapsulating the internal state of the search process during symbolic regression.
 
@@ -535,17 +547,18 @@ Look through the source of `equation_search` to see how this is used.
 - [`AbstractOptions`](@ref SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions): See how to extend abstract types for customizing options.
 
 """
-abstract type AbstractSearchState{T,L,N<:AbstractExpression{T}} end
+abstract type AbstractSearchState{T,L,N<:AbstractExpression{T},H<:HallOfFame{T,L,N}} end
 
 """
-    SearchState{T,L,N,WorkerOutputType,ChannelType} <: AbstractSearchState{T,L,N}
+    SearchState{T,L,N,H,WorkerOutputType,ChannelType} <: AbstractSearchState{T,L,N,H}
 
 The state of the search, including the populations, worker outputs, tasks, and
 channels. This is used to manage the search and keep track of runtime variables
 in a single struct.
 """
-Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,ChannelType} <:
-                   AbstractSearchState{T,L,N}
+Base.@kwdef struct SearchState{
+    T,L,N<:AbstractExpression{T},H<:HallOfFame{T,L,N},WorkerOutputType,ChannelType
+} <: AbstractSearchState{T,L,N,H}
     procs::Vector{Int}
     we_created_procs::Bool
     worker_output::Vector{Vector{WorkerOutputType}}
@@ -553,7 +566,7 @@ Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,Cha
     channels::Vector{Vector{ChannelType}}
     worker_assignment::WorkerAssignments
     task_order::Vector{Tuple{Int,Int}}
-    halls_of_fame::Vector{HallOfFame{T,L,N}}
+    halls_of_fame::Vector{H}
     last_pops::Vector{Vector{Population{T,L,N}}}
     best_sub_pops::Vector{Vector{Population{T,L,N}}}
     all_running_search_statistics::Vector{RunningSearchStatistics}
