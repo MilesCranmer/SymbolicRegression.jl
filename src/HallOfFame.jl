@@ -44,6 +44,13 @@ Base.iterate(::ParetoSingle, ::Nothing) = nothing
 Base.iterate(el::ParetoNeighborhood) = iterate(el.members)
 Base.iterate(el::ParetoNeighborhood, state) = iterate(el.members, state)
 
+function Base.show(io::IO, mime::MIME"text/plain", el::ParetoSingle)
+    print(io, "ParetoSingle(")
+    show(io, mime, el.member)
+    print(io, ")")
+    return nothing
+end
+
 function _depwarn_pareto_single(funcsym::Symbol)
     return Base.depwarn(
         "Hall of fame `.members` is now a vector of `AbstractParetoElement` objects. ",
@@ -97,17 +104,17 @@ function Base.getproperty(hof::HallOfFame, name::Symbol)
 end
 function Base.show(io::IO, mime::MIME"text/plain", hof::HallOfFame{T,L,N}) where {T,L,N}
     println(io, "HallOfFame{...}:")
-    for i in eachindex(hof.members, hof.exists)
-        s_member, s_exists = if hof.exists[i]
-            sprint((io, m) -> show(io, mime, m), hof.members[i]), "true"
+    for i in eachindex(hof.elements, hof.exists)
+        s_element, s_exists = if hof.exists[i]
+            sprint((io, m) -> show(io, mime, m), hof.elements[i]), "true"
         else
             "undef", "false"
         end
         println(io, " "^4 * ".exists[$i] = $s_exists")
-        print(io, " "^4 * ".members[$i] =")
-        splitted = split(strip(s_member), '\n')
+        print(io, " "^4 * ".elements[$i] =")
+        splitted = split(strip(s_element), '\n')
         if length(splitted) == 1
-            println(io, " " * s_member)
+            println(io, " " * s_element)
         else
             println(io)
             foreach(line -> println(io, " "^8 * line), splitted)
