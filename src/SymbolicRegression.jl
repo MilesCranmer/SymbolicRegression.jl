@@ -320,7 +320,6 @@ using .SearchUtilsModule:
     construct_datasets,
     save_to_file,
     get_cur_maxsize,
-    update_hall_of_fame!,
     logging_callback!
 using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure
@@ -691,12 +690,20 @@ function _initialize_search!(
         # case the dataset changed:
         for j in eachindex(init_hall_of_fame, datasets, state.halls_of_fame)
             hof = strip_metadata(init_hall_of_fame[j], options, datasets[j])
-            for member in hof.members[hof.exists]
-                score, result_loss = score_func(datasets[j], member, options)
+            new_hof = HallOfFame(options, datasets[j])
+            for el in hof.elements[hof.exists], member in el
+                size = compute_complexity(member, options)
+                score, result_loss = score_func(
+                    datasets[j], member, options; complexity=size
+                )
                 member.score = score
                 member.loss = result_loss
+
+                # In case the new loss changes the elements stored in the Pareto
+                # frontier, we push them individually:
+                push!(new_hof, size => member)
             end
-            state.halls_of_fame[j] = hof
+            state.halls_of_fame[j] = new_hof
         end
     end
 
@@ -886,9 +893,10 @@ function _main_search_loop!(
                 update_frequencies!(state.all_running_search_statistics[j]; size)
             end
             #! format: off
-            update_hall_of_fame!(state.halls_of_fame[j], cur_pop.members, options)
-            update_hall_of_fame!(state.halls_of_fame[j], best_seen.members[best_seen.exists], options)
+            push!(state.halls_of_fame[j], cur_pop; options)
+            merge!(state.halls_of_fame[j], best_seen)
             #! format: on
+            # TODO: Confirm that `best_seen.members` have full-batch scores
 
             # Dominating pareto curve - must be better than all simpler equations
             dominating = calculate_pareto_frontier(state.halls_of_fame[j])

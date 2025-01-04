@@ -56,9 +56,9 @@ function s_r_cycle(
         num_evals += tmp_num_evals
         for (i, member) in enumerate(pop.members)
             size = compute_complexity(member, options)
-            score = if options.batching
+            if options.batching
                 oid = member.tree
-                if loss_cache[i].oid != oid || first_loop
+                same_batch_score = if loss_cache[i].oid != oid || first_loop
                     # Evaluate on fixed batch so that we can more accurately
                     # compare expressions with a batched loss (though the batch
                     # changes each iteration, and we evaluate on full-batch outside,
@@ -73,8 +73,14 @@ function s_r_cycle(
                     # the cached score
                     loss_cache[i].score
                 end
+
+                stored_member = copy(member)
+                stored_member.score = same_batch_score
+                # ^I think we don't want to _store_ this score in this member
+                #  since it would fundamentally mutate the population
+                push!(best_examples_seen, size => stored_member)
             else
-                member.score
+                push!(best_examples_seen, size => member)
             end
             # TODO: Note that this per-population hall of fame only uses the batched
             #       loss, and is therefore inaccurate. Therefore, some expressions
@@ -83,13 +89,6 @@ function s_r_cycle(
             # - Could just recompute losses here (expensive)
             # - Average over a few batches
             # - Store multiple expressions in hall of fame
-            if 0 < size <= options.maxsize && (
-                !best_examples_seen.exists[size] ||
-                score < best_examples_seen.members[size].score
-            )
-                best_examples_seen.exists[size] = true
-                best_examples_seen.members[size] = copy(member)
-            end
         end
         first_loop = false
     end

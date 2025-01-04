@@ -2,13 +2,15 @@ module HallOfFameModule
 
 using StyledStrings: @styled_str
 using DynamicExpressions: AbstractExpression, string_tree
+# using DataStructures: PriorityQueue
+using Printf: @sprintf
 using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
 using ..CoreModule: ParetoSingleOptions, ParetoNeighborhoodOptions
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: PopMember
 using ..InterfaceDynamicExpressionsModule: format_dimensions, WILDCARD_UNIT_STRING
-using Printf: @sprintf
+using ..PopulationModule: Population
 
 """
     AbstractParetoElement{P<:PopMember}
@@ -21,13 +23,26 @@ Abstract type for storing elements on the Pareto frontier.
 """
 abstract type AbstractParetoElement{P<:PopMember} end
 
+pop_member_type(::Type{<:AbstractParetoElement{P}}) where {P} = P
+
 struct ParetoSingle{T,L,N,P<:PopMember{T,L,N}} <: AbstractParetoElement{P}
     member::P
 end
 struct ParetoNeighborhood{T,L,N,P<:PopMember{T,L,N}} <: AbstractParetoElement{P}
     members::Vector{P}
-    max_size::Int
+    bucket_size::Int
 end
+
+Base.copy(el::ParetoSingle) = ParetoSingle(copy(el.member))
+Base.copy(el::ParetoNeighborhood) = ParetoNeighborhood(copy(el.members), el.bucket_size)
+
+Base.first(el::ParetoSingle) = el.member
+Base.first(el::ParetoNeighborhood) = first(el.members)
+
+Base.iterate(el::ParetoSingle) = (el.member, nothing)
+Base.iterate(::ParetoSingle, ::Nothing) = nothing
+Base.iterate(el::ParetoNeighborhood) = iterate(el.members)
+Base.iterate(el::ParetoNeighborhood, state) = iterate(el.members, state)
 
 function _depwarn_pareto_single(funcsym::Symbol)
     return Base.depwarn(
@@ -48,6 +63,7 @@ function Base.setproperty!(s::ParetoSingle, name::Symbol, value)
 end
 
 """
+    HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
 
 List of the best members seen all time in `.members`, with `.members[c]` being
 the best member seen at complexity c. Including only the members which actually
@@ -59,9 +75,25 @@ have been set, you can run `.members[exists]`.
     These are ordered by complexity, with `.members[1]` the member with complexity 1.
 - `exists::Array{Bool,1}`: Whether the member at the given complexity has been set.
 """
-struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
-    members::Array{PopMember{T,L,N},1}
-    exists::Array{Bool,1} #Whether it has been set
+struct HallOfFame{
+    T<:DATA_TYPE,
+    L<:LOSS_TYPE,
+    N<:AbstractExpression{T},
+    H<:AbstractParetoElement{<:PopMember{T,L,N}},
+}
+    elements::Vector{H}
+    exists::Vector{Bool}
+end
+pop_member_type(::Type{<:HallOfFame{T,L,N,H}}) where {T,L,N,H} = pop_member_type(H)
+function Base.getproperty(hof::HallOfFame, name::Symbol)
+    if name == :members
+        Base.depwarn(
+            "HallOfFame.members is deprecated. Use HallOfFame.elements instead.",
+            :getproperty,
+        )
+        return getfield(hof, :elements)
+    end
+    return getfield(hof, name)
 end
 function Base.show(io::IO, mime::MIME"text/plain", hof::HallOfFame{T,L,N}) where {T,L,N}
     println(io, "HallOfFame{...}:")
@@ -98,58 +130,109 @@ Arguments:
 - `dataset`: Dataset containing the input data.
 """
 function HallOfFame(
-    options::AbstractOptions, dataset::Dataset{T,L}
+    options::AbstractOptions, dataset::Dataset{T,L};
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     base_tree = create_expression(zero(T), options, dataset)
+    N = typeof(base_tree)
+    member = PopMember(
+        base_tree, L(0), L(Inf), options; parent=-1, deterministic=options.deterministic
+    )
 
-    return HallOfFame{T,L,typeof(base_tree)}(
-        [
-            PopMember(
-                copy(base_tree),
-                L(0),
-                L(Inf),
-                options;
-                parent=-1,
-                deterministic=options.deterministic,
-            ) for i in 1:(options.maxsize)
-        ],
+    return HallOfFame(
+        [init_element(options.pareto_element_options, member) for i in 1:(options.maxsize)],
         [false for i in 1:(options.maxsize)],
     )
 end
+Base.copy(hof::HallOfFame) = HallOfFame(map(copy, hof.members), copy(hof.exists))
 
-function Base.copy(hof::HallOfFame)
-    return HallOfFame(
-        [copy(member) for member in hof.members], [exists for exists in hof.exists]
-    )
+function init_element(::Union{ParetoSingleOptions,ParetoSingle}, member::PopMember)
+    return ParetoSingle(copy(member))
+end
+function init_element(
+    opt::Union{ParetoNeighborhoodOptions,ParetoNeighborhood}, member::PopMember
+)
+    return ParetoNeighborhood([copy(member)], opt.bucket_size)
+end
+
+function Base.push!(hof::HallOfFame, (size, member)::Pair{<:Integer,<:PopMember})
+    maxsize = length(hof.elements)
+    if 0 < size <= maxsize
+        if !hof.exists[size]
+            hof.elements[size] = init_element(hof.elements[size], member)
+            hof.exists[size] = true
+        else
+            hof.elements[size] = push!(hof.elements[size], member.score => member)
+        end
+    end
+    return hof
+end
+
+function Base.push!(el::ParetoSingle, (score, member)::Pair{<:LOSS_TYPE,<:PopMember})
+    return el.member.score > score ? ParetoSingle(copy(member)) : el
+end
+function Base.push!(el::ParetoNeighborhood, (score, member)::Pair{<:LOSS_TYPE,<:PopMember})
+    return error("Not implemented")
+end
+
+function Base.push!(hof::HallOfFame, pop::Population; options::AbstractOptions)
+    for member in pop.members
+        size = compute_complexity(member, options)
+        push!(hof, size => member)
+    end
+    return hof
+end
+
+function Base.merge!(hof1::HallOfFame, hof2::HallOfFame)
+    for i in eachindex(hof1.elements, hof1.exists, hof2.elements, hof2.exists)
+        if hof1.exists[i] && hof2.exists[i]
+            hof1.elements[i] = merge(hof1.elements[i], hof2.elements[i])
+        elseif !hof1.exists[i] && hof2.exists[i]
+            hof1.elements[i] = copy(hof2.elements[i])
+            hof1.exists[i] = true
+        else
+            # do nothing, as !hof2.exists[i]
+        end
+    end
+    return hof1
+end
+function Base.merge(el1::ParetoSingle, el2::ParetoSingle)
+    # Remember: we want the MIN score (bad API choice, but we're stuck with it for now)
+    return el1.member.score <= el2.member.score ? el1 : el2
+end
+function Base.merge(el1::ParetoNeighborhood, el2::ParetoNeighborhood)
+    return error("Not implemented")
 end
 
 """
-    calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,P}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    calculate_pareto_frontier(hof::HallOfFame)
 """
-function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
-    # TODO - remove dataset from args.
-    P = PopMember{T,L,N}
+function calculate_pareto_frontier(hof::HallOfFame)
+    P = pop_member_type(typeof(hof))
     # Dominating pareto curve - must be better than all simpler equations
     dominating = P[]
-    for size in eachindex(hallOfFame.members)
-        if !hallOfFame.exists[size]
+    for i in eachindex(hof.elements)
+        if !hof.exists[i]
             continue
         end
-        member = hallOfFame.members[size]
-        # We check if this member is better than all members which are smaller than it and
-        # also exist.
-        betterThanAllSmaller = true
-        for i in 1:(size - 1)
-            if !hallOfFame.exists[i]
+        element = hof.elements[i]
+        member = first(element)
+        # We check if this member is better than all
+        # elements which are smaller than it and also exist.
+        is_dominating = true
+        for j in 1:(i - 1)
+            if !hof.exists[j]
                 continue
             end
-            simpler_member = hallOfFame.members[i]
-            if member.loss >= simpler_member.loss
-                betterThanAllSmaller = false
+            smaller_element = hof.elements[j]
+            smaller_member = first(smaller_element)
+            if member.loss >= smaller_member.loss
+                is_dominating = false
                 break
             end
+            # TODO: Why are we using loss and not score? In other words,
+            #       why are we _pushing_ based on score and not loss?
         end
-        if betterThanAllSmaller
+        if is_dominating
             push!(dominating, copy(member))
         end
     end

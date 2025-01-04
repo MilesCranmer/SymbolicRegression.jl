@@ -676,22 +676,4 @@ function construct_datasets(
     ]
 end
 
-function update_hall_of_fame!(
-    hall_of_fame::HallOfFame, members::Vector{PM}, options::AbstractOptions
-) where {PM<:PopMember}
-    for member in members
-        size = compute_complexity(member, options)
-        valid_size = 0 < size <= options.maxsize
-        if !valid_size
-            continue
-        end
-        not_filled = !hall_of_fame.exists[size]
-        better_than_current = member.score < hall_of_fame.members[size].score
-        if not_filled || better_than_current
-            hall_of_fame.members[size] = copy(member)
-            hall_of_fame.exists[size] = true
-        end
-    end
-end
-
 end

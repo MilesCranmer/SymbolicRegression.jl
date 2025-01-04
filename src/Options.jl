@@ -29,7 +29,8 @@ using ..OperatorsModule:
     safe_atanh
 using ..MutationWeightsModule: AbstractMutationWeights, MutationWeights, mutations
 import ..OptionsStructModule: Options
-using ..OptionsStructModule: ComplexityMapping, operator_specialization
+using ..OptionsStructModule:
+    ComplexityMapping, operator_specialization, AbstractParetoOptions, ParetoSingleOptions
 using ..UtilsModule: @save_kwargs, @ignore
 
 """Build constraints on operator-level complexity from a user-passed dict."""
@@ -523,6 +524,7 @@ $(OPTION_DESCRIPTIONS)
     ###           hof_migration
     ###           fraction_replaced
     ###           fraction_replaced_hof
+    ###           pareto_element_options
     ###           topn
     ## 9. Data Preprocessing:
     ###           [none]
@@ -581,6 +583,7 @@ $(OPTION_DESCRIPTIONS)
     hof_migration::Bool=true,
     fraction_replaced::Union{Real,Nothing}=nothing,
     fraction_replaced_hof::Union{Real,Nothing}=nothing,
+    pareto_element_options::AbstractParetoOptions=ParetoSingleOptions(),
     topn::Union{Nothing,Integer}=nothing,
     ## 9. Data Preprocessing:
     ## 10. Stopping Criteria:
@@ -873,6 +876,7 @@ $(OPTION_DESCRIPTIONS)
         expression_type,
         typeof(expression_options),
         typeof(set_mutation_weights),
+        typeof(pareto_element_options),
         turbo,
         bumper,
         deprecated_return_state::Union{Bool,Nothing},
@@ -913,6 +917,7 @@ $(OPTION_DESCRIPTIONS)
         ncycles_per_iteration,
         fraction_replaced,
         fraction_replaced_hof,
+        pareto_element_options,
         topn,
         verbosity,
         Val(print_precision),

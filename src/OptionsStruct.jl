@@ -200,6 +200,7 @@ struct Options{
     E<:AbstractExpression,
     EO<:NamedTuple,
     MW<:AbstractMutationWeights,
+    PO<:AbstractParetoOptions,
     _turbo,
     _bumper,
     _return_state,
@@ -240,6 +241,7 @@ struct Options{
     ncycles_per_iteration::Int
     fraction_replaced::Float32
     fraction_replaced_hof::Float32
+    pareto_element_options::PO
     topn::Int
     verbosity::Union{Int,Nothing}
     v_print_precision::Val{print_precision}
