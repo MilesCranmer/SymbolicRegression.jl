@@ -20,7 +20,7 @@ Abstract type for different Pareto front storage strategies.
 abstract type AbstractParetoOptions end
 
 struct ParetoSingleOptions <: AbstractParetoOptions end
-struct ParetoNeighborhoodOptions <: AbstractParetoOptions
+Base.@kwdef struct ParetoNeighborhoodOptions <: AbstractParetoOptions
     bucket_size::Int
 end
 

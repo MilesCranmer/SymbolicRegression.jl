@@ -162,7 +162,9 @@ end
 function init_pareto_element(
     opt::Union{ParetoNeighborhoodOptions,ParetoNeighborhood}, member::PopMember
 )
-    return ParetoNeighborhood([copy(member)], opt.bucket_size)
+    members = sizehint!(typeof(member)[], opt.bucket_size + 1)
+    push!(members, copy(member))
+    return ParetoNeighborhood(members, opt.bucket_size)
 end
 
 function Base.push!(hof::HallOfFame, (size, member)::Pair{<:Integer,<:PopMember})
@@ -182,7 +184,26 @@ function Base.push!(el::ParetoSingle, (score, member)::Pair{<:LOSS_TYPE,<:PopMem
     return el.member.score > score ? ParetoSingle(copy(member)) : el
 end
 function Base.push!(el::ParetoNeighborhood, (score, member)::Pair{<:LOSS_TYPE,<:PopMember})
-    return error("Not implemented")
+    if isempty(el.members)
+        push!(el.members, copy(member))
+        return el
+    elseif el.members[end].score <= score
+        # No update needed
+        return el
+    elseif el.members[1].score > score
+        pushfirst!(el.members, copy(member))
+    else
+        # Find the first member with worse score
+        i = findfirst(m -> m.score > score, el.members)::Int
+        # member assumes that position, and pushes the array forward
+        insert!(el.members, i, copy(member))
+    end
+
+    if length(el.members) > el.bucket_size
+        pop!(el.members)
+    end
+
+    return el
 end
 
 function Base.append!(hof::HallOfFame, pop::Population; options::AbstractOptions)
@@ -211,7 +232,28 @@ function Base.merge(el1::ParetoSingle, el2::ParetoSingle)
     return el1.member.score <= el2.member.score ? el1 : copy(el2)
 end
 function Base.merge(el1::ParetoNeighborhood, el2::ParetoNeighborhood)
-    return error("Not implemented")
+    P = pop_member_type(typeof(el1))
+    new_neighborhood = sizehint!(P[], el1.bucket_size + 1)
+    i1 = firstindex(el1.members)
+    n1 = length(el1.members)
+    i2 = firstindex(el2.members)
+    n2 = length(el2.members)
+    i = 1
+    while i1 <= n1 && i2 <= n2 && i <= el1.bucket_size
+        m1 = el1.members[i1]
+        m2 = el2.members[i2]
+        if m1.score <= m2.score
+            # TODO: Is it safe that we don't copy here? I think so; since we are merging
+            #       onto el1 (see `Base.merge!`), but perhaps someone could misuse this.
+            push!(new_neighborhood, m1)
+            i1 += 1
+        else
+            push!(new_neighborhood, copy(m2))
+            i2 += 1
+        end
+        i += 1
+    end
+    return ParetoNeighborhood(new_neighborhood, el1.bucket_size)
 end
 
 """
