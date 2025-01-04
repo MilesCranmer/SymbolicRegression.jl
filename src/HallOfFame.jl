@@ -3,6 +3,7 @@ module HallOfFameModule
 using StyledStrings: @styled_str
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
+using ..CoreModule: ParetoSingleOptions, ParetoNeighborhoodOptions
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: PopMember
@@ -10,7 +11,43 @@ using ..InterfaceDynamicExpressionsModule: format_dimensions, WILDCARD_UNIT_STRI
 using Printf: @sprintf
 
 """
-    HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE}
+    AbstractParetoElement{P<:PopMember}
+
+Abstract type for storing elements on the Pareto frontier.
+
+# Subtypes
+- `ParetoSingle`: Stores a single member at each complexity level
+- `ParetoNeighborhood`: Stores multiple members at each complexity level in a fixed-size bucket
+"""
+abstract type AbstractParetoElement{P<:PopMember} end
+
+struct ParetoSingle{T,L,N,P<:PopMember{T,L,N}} <: AbstractParetoElement{P}
+    member::P
+end
+struct ParetoNeighborhood{T,L,N,P<:PopMember{T,L,N}} <: AbstractParetoElement{P}
+    members::Vector{P}
+    max_size::Int
+end
+
+function _depwarn_pareto_single(funcsym::Symbol)
+    return Base.depwarn(
+        "Hall of fame `.members` is now a vector of `AbstractParetoElement` objects. ",
+        funcsym,
+    )
+end
+
+function Base.getproperty(s::ParetoSingle, name::Symbol)
+    name == :member && return getfield(s, :member)
+    _depwarn_pareto_single(:getproperty)
+    return getproperty(s.member, name)
+end
+function Base.setproperty!(s::ParetoSingle, name::Symbol, value)
+    name == :member && return setfield!(s, :member, value)
+    _depwarn_pareto_single(:setproperty!)
+    return setproperty!(s.member, name, value)
+end
+
+"""
 
 List of the best members seen all time in `.members`, with `.members[c]` being
 the best member seen at complexity c. Including only the members which actually

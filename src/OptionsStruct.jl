@@ -9,6 +9,22 @@ using LossFunctions: SupervisedLoss
 import ..MutationWeightsModule: AbstractMutationWeights
 
 """
+    AbstractParetoOptions
+
+Abstract type for different Pareto front storage strategies.
+
+# Subtypes
+- `ParetoSingleOptions`: Store only the single best member at each complexity
+- `ParetoNeighborhoodOptions`: Store multiple members at each complexity in a fixed-size bucket
+"""
+abstract type AbstractParetoOptions end
+
+struct ParetoSingleOptions <: AbstractParetoOptions end
+struct ParetoNeighborhoodOptions <: AbstractParetoOptions
+    bucket_size::Int
+end
+
+"""
 This struct defines how complexity is calculated.
 
 # Fields
