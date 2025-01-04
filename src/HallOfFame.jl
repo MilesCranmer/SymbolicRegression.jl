@@ -197,7 +197,7 @@ function Base.merge!(hof1::HallOfFame, hof2::HallOfFame)
 end
 function Base.merge(el1::ParetoSingle, el2::ParetoSingle)
     # Remember: we want the MIN score (bad API choice, but we're stuck with it for now)
-    return el1.member.score <= el2.member.score ? el1 : el2
+    return el1.member.score <= el2.member.score ? el1 : copy(el2)
 end
 function Base.merge(el1::ParetoNeighborhood, el2::ParetoNeighborhood)
     return error("Not implemented")
