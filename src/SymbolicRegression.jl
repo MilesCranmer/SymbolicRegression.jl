@@ -285,7 +285,12 @@ using .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
 using .PopMemberModule: PopMember, reset_birth!
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 using .HallOfFameModule:
-    HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
+    HallOfFame,
+    ParetoSingle,
+    ParetoNeighborhood,
+    calculate_pareto_frontier,
+    string_dominating_pareto_curve,
+    init_pareto_element
 using .MutateModule: mutate!, condition_mutation_weights!, MutationResult
 using .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
 using .ProgressBarsModule: WrappedProgressBar
@@ -595,7 +600,12 @@ end
     example_ex = create_expression(zero(T), options, example_dataset)
     NT = typeof(example_ex)
     PopType = Population{T,L,NT}
-    HallOfFameType = HallOfFame{T,L,NT}
+    example_member = PopMember(example_ex, zero(L), zero(L); options.deterministic)
+    example_pareto_element = init_pareto_element(
+        options.pareto_element_options, example_member
+    )
+    ParetoElementType = typeof(example_pareto_element)
+    HallOfFameType = HallOfFame{T,L,NT,ParetoElementType}
     WorkerOutputType = get_worker_output_type(
         Val(ropt.parallelism), PopType, HallOfFameType
     )
@@ -893,7 +903,7 @@ function _main_search_loop!(
                 update_frequencies!(state.all_running_search_statistics[j]; size)
             end
             #! format: off
-            push!(state.halls_of_fame[j], cur_pop; options)
+            append!(state.halls_of_fame[j], cur_pop; options)
             merge!(state.halls_of_fame[j], best_seen)
             #! format: on
             # TODO: Confirm that `best_seen.members` have full-batch scores

@@ -146,16 +146,19 @@ function HallOfFame(
     )
 
     return HallOfFame(
-        [init_element(options.pareto_element_options, member) for i in 1:(options.maxsize)],
+        [
+            init_pareto_element(options.pareto_element_options, member) for
+            i in 1:(options.maxsize)
+        ],
         [false for i in 1:(options.maxsize)],
     )
 end
 Base.copy(hof::HallOfFame) = HallOfFame(map(copy, hof.members), copy(hof.exists))
 
-function init_element(::Union{ParetoSingleOptions,ParetoSingle}, member::PopMember)
+function init_pareto_element(::Union{ParetoSingleOptions,ParetoSingle}, member::PopMember)
     return ParetoSingle(copy(member))
 end
-function init_element(
+function init_pareto_element(
     opt::Union{ParetoNeighborhoodOptions,ParetoNeighborhood}, member::PopMember
 )
     return ParetoNeighborhood([copy(member)], opt.bucket_size)
@@ -165,7 +168,7 @@ function Base.push!(hof::HallOfFame, (size, member)::Pair{<:Integer,<:PopMember}
     maxsize = length(hof.elements)
     if 0 < size <= maxsize
         if !hof.exists[size]
-            hof.elements[size] = init_element(hof.elements[size], member)
+            hof.elements[size] = init_pareto_element(hof.elements[size], member)
             hof.exists[size] = true
         else
             hof.elements[size] = push!(hof.elements[size], member.score => member)
@@ -181,7 +184,7 @@ function Base.push!(el::ParetoNeighborhood, (score, member)::Pair{<:LOSS_TYPE,<:
     return error("Not implemented")
 end
 
-function Base.push!(hof::HallOfFame, pop::Population; options::AbstractOptions)
+function Base.append!(hof::HallOfFame, pop::Population; options::AbstractOptions)
     for member in pop.members
         size = compute_complexity(member, options)
         push!(hof, size => member)

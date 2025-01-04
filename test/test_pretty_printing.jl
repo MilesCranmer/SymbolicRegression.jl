@@ -25,7 +25,7 @@ end
 
 @testitem "pretty print hall of fame" tags = [:part1] begin
     using SymbolicRegression
-    using SymbolicRegression: embed_metadata
+    using SymbolicRegression: embed_metadata, ParetoSingle
     using SymbolicRegression.CoreModule: safe_pow
 
     options = Options(; binary_operators=[+, safe_pow], maxsize=7)
