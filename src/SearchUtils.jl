@@ -368,8 +368,10 @@ function _check_for_loss_threshold(_, ::Nothing, ::AbstractOptions)
 end
 function _check_for_loss_threshold(halls_of_fame, f::F, options::AbstractOptions) where {F}
     return all(halls_of_fame) do hof
-        any(hof.members[hof.exists]) do member
-            f(member.loss, compute_complexity(member, options))::Bool
+        any(hof.elements[hof.exists]) do element
+            any(element) do member
+                f(member.loss, compute_complexity(member, options))::Bool
+            end
         end
     end
 end

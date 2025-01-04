@@ -432,10 +432,10 @@ which is useful for debugging and profiling.
 
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
-    hallOfFame.members gives an array of `PopMember` objects, which
-    have their tree (equation) stored in `.tree`. Their score (loss)
-    is given in `.score`. The array of `PopMember` objects
-    is enumerated by size from `1` to `options.maxsize`.
+    map(first, hallOfFame.elements) gives an array of `PopMember` objects
+    These have their tree (equation) stored in `.tree`. Their score (loss)
+    is given in `.score`. The array is enumerated by size from `1`
+    to `options.maxsize`.
 """
 function equation_search(
     X::AbstractMatrix{T},
