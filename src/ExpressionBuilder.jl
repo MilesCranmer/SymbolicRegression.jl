@@ -10,7 +10,7 @@ using DynamicExpressions:
     AbstractExpressionNode, AbstractExpression, constructorof, with_metadata
 using StatsBase: StatsBase
 using ..CoreModule: AbstractOptions, Dataset
-using ..HallOfFameModule: HallOfFame, ParetoSingle, ParetoNeighborhood
+using ..HallOfFameModule: HallOfFame, ParetoSingle, ParetoTopK
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
 
@@ -133,11 +133,10 @@ end
         return ParetoSingle(embed_metadata(el.member, options, dataset))
     end
     function embed_metadata(
-        el::ParetoNeighborhood, options::AbstractOptions, dataset::Dataset{T,L}
+        el::ParetoTopK, options::AbstractOptions, dataset::Dataset{T,L}
     ) where {T,L}
-        return ParetoNeighborhood(
-            map(member -> embed_metadata(member, options, dataset), el.members),
-            el.bucket_size,
+        return ParetoTopK(
+            map(member -> embed_metadata(member, options, dataset), el.members), el.k
         )
     end
     function embed_metadata(
@@ -190,10 +189,10 @@ function strip_metadata(
     return ParetoSingle(strip_metadata(el.member, options, dataset))
 end
 function strip_metadata(
-    el::ParetoNeighborhood, options::AbstractOptions, dataset::Dataset{T,L}
+    el::ParetoTopK, options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T,L}
-    return ParetoNeighborhood(
-        map(member -> strip_metadata(member, options, dataset), el.members), el.bucket_size
+    return ParetoTopK(
+        map(member -> strip_metadata(member, options, dataset), el.members), el.k
     )
 end
 function strip_metadata(

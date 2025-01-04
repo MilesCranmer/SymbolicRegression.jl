@@ -19,7 +19,7 @@ using .OptionsStructModule:
     ComplexityMapping,
     AbstractParetoOptions,
     ParetoSingleOptions,
-    ParetoNeighborhoodOptions,
+    ParetoTopKOptions,
     specialized_options,
     operator_specialization
 using .OperatorsModule:

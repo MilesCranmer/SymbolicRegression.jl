@@ -2,10 +2,9 @@ module HallOfFameModule
 
 using StyledStrings: @styled_str
 using DynamicExpressions: AbstractExpression, string_tree
-# using DataStructures: PriorityQueue
 using Printf: @sprintf
 using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
-using ..CoreModule: ParetoSingleOptions, ParetoNeighborhoodOptions
+using ..CoreModule: ParetoSingleOptions, ParetoTopKOptions
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: PopMember
@@ -19,7 +18,7 @@ Abstract type for storing elements on the Pareto frontier.
 
 # Subtypes
 - `ParetoSingle`: Stores a single member at each complexity level
-- `ParetoNeighborhood`: Stores multiple members at each complexity level in a fixed-size bucket
+- `ParetoTopK`: Stores multiple members at each complexity level in a fixed-size bucket
 """
 abstract type AbstractParetoElement{P<:PopMember} end
 
@@ -28,21 +27,21 @@ pop_member_type(::Type{<:AbstractParetoElement{P}}) where {P} = P
 struct ParetoSingle{T,L,N,P<:PopMember{T,L,N}} <: AbstractParetoElement{P}
     member::P
 end
-struct ParetoNeighborhood{T,L,N,P<:PopMember{T,L,N}} <: AbstractParetoElement{P}
+struct ParetoTopK{T,L,N,P<:PopMember{T,L,N}} <: AbstractParetoElement{P}
     members::Vector{P}
-    bucket_size::Int
+    k::Int
 end
 
 Base.copy(el::ParetoSingle) = ParetoSingle(copy(el.member))
-Base.copy(el::ParetoNeighborhood) = ParetoNeighborhood(copy(el.members), el.bucket_size)
+Base.copy(el::ParetoTopK) = ParetoTopK(copy(el.members), el.k)
 
 Base.first(el::ParetoSingle) = el.member
-Base.first(el::ParetoNeighborhood) = first(el.members)
+Base.first(el::ParetoTopK) = first(el.members)
 
 Base.iterate(el::ParetoSingle) = (el.member, nothing)
 Base.iterate(::ParetoSingle, ::Nothing) = nothing
-Base.iterate(el::ParetoNeighborhood) = iterate(el.members)
-Base.iterate(el::ParetoNeighborhood, state) = iterate(el.members, state)
+Base.iterate(el::ParetoTopK) = iterate(el.members)
+Base.iterate(el::ParetoTopK, state) = iterate(el.members, state)
 
 function Base.show(io::IO, mime::MIME"text/plain", el::ParetoSingle)
     print(io, "ParetoSingle(")
@@ -159,12 +158,10 @@ Base.copy(hof::HallOfFame) = HallOfFame(map(copy, hof.elements), copy(hof.exists
 function init_pareto_element(::Union{ParetoSingleOptions,ParetoSingle}, member::PopMember)
     return ParetoSingle(copy(member))
 end
-function init_pareto_element(
-    opt::Union{ParetoNeighborhoodOptions,ParetoNeighborhood}, member::PopMember
-)
-    members = sizehint!(typeof(member)[], opt.bucket_size + 1)
+function init_pareto_element(opt::Union{ParetoTopKOptions,ParetoTopK}, member::PopMember)
+    members = sizehint!(typeof(member)[], opt.k + 1)
     push!(members, copy(member))
-    return ParetoNeighborhood(members, opt.bucket_size)
+    return ParetoTopK(members, opt.k)
 end
 
 function Base.push!(hof::HallOfFame, (size, member)::Pair{<:Integer,<:PopMember})
@@ -183,7 +180,7 @@ end
 function Base.push!(el::ParetoSingle, (score, member)::Pair{<:LOSS_TYPE,<:PopMember})
     return el.member.score > score ? ParetoSingle(copy(member)) : el
 end
-function Base.push!(el::ParetoNeighborhood, (score, member)::Pair{<:LOSS_TYPE,<:PopMember})
+function Base.push!(el::ParetoTopK, (score, member)::Pair{<:LOSS_TYPE,<:PopMember})
     if isempty(el.members)
         push!(el.members, copy(member))
         return el
@@ -199,7 +196,7 @@ function Base.push!(el::ParetoNeighborhood, (score, member)::Pair{<:LOSS_TYPE,<:
         insert!(el.members, i, copy(member))
     end
 
-    if length(el.members) > el.bucket_size
+    if length(el.members) > el.k
         pop!(el.members)
     end
 
@@ -231,15 +228,15 @@ function Base.merge(el1::ParetoSingle, el2::ParetoSingle)
     # Remember: we want the MIN score (bad API choice, but we're stuck with it for now)
     return el1.member.score <= el2.member.score ? el1 : copy(el2)
 end
-function Base.merge(el1::ParetoNeighborhood, el2::ParetoNeighborhood)
+function Base.merge(el1::ParetoTopK, el2::ParetoTopK)
     P = pop_member_type(typeof(el1))
-    new_neighborhood = sizehint!(P[], el1.bucket_size + 1)
+    new_neighborhood = sizehint!(P[], el1.k + 1)
     i1 = firstindex(el1.members)
     n1 = length(el1.members)
     i2 = firstindex(el2.members)
     n2 = length(el2.members)
     i = 1
-    while i1 <= n1 && i2 <= n2 && i <= el1.bucket_size
+    while i1 <= n1 && i2 <= n2 && i <= el1.k
         m1 = el1.members[i1]
         m2 = el2.members[i2]
         if m1.score <= m2.score
@@ -253,7 +250,7 @@ function Base.merge(el1::ParetoNeighborhood, el2::ParetoNeighborhood)
         end
         i += 1
     end
-    return ParetoNeighborhood(new_neighborhood, el1.bucket_size)
+    return ParetoTopK(new_neighborhood, el1.k)
 end
 
 """

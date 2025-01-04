@@ -236,7 +236,7 @@ using .CoreModule:
     MutationWeights,
     AbstractParetoOptions,
     ParetoSingleOptions,
-    ParetoNeighborhoodOptions,
+    ParetoTopKOptions,
     get_safe_op,
     max_features,
     is_weighted,
@@ -287,7 +287,7 @@ using .PopulationModule: Population, best_sub_pop, record_population, best_of_sa
 using .HallOfFameModule:
     HallOfFame,
     ParetoSingle,
-    ParetoNeighborhood,
+    ParetoTopK,
     calculate_pareto_frontier,
     string_dominating_pareto_curve,
     init_pareto_element

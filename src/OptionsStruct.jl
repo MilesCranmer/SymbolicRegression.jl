@@ -15,13 +15,13 @@ Abstract type for different Pareto front storage strategies.
 
 # Subtypes
 - `ParetoSingleOptions`: Store only the single best member at each complexity
-- `ParetoNeighborhoodOptions`: Store multiple members at each complexity in a fixed-size bucket
+- `ParetoTopKOptions`: Store multiple members at each complexity in a fixed-size bucket
 """
 abstract type AbstractParetoOptions end
 
 struct ParetoSingleOptions <: AbstractParetoOptions end
-Base.@kwdef struct ParetoNeighborhoodOptions <: AbstractParetoOptions
-    bucket_size::Int
+Base.@kwdef struct ParetoTopKOptions <: AbstractParetoOptions
+    k::Int
 end
 
 """
