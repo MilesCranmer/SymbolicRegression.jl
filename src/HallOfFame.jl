@@ -33,7 +33,7 @@ struct ParetoTopK{T,L,N,P<:PopMember{T,L,N}} <: AbstractParetoElement{P}
 end
 
 Base.copy(el::ParetoSingle) = ParetoSingle(copy(el.member))
-Base.copy(el::ParetoTopK) = ParetoTopK(sizehint!(copy(el.members), el.k + 1), el.k)
+Base.copy(el::ParetoTopK) = ParetoTopK(sizehint!(map(copy, el.members), el.k + 1), el.k)
 
 Base.first(el::ParetoSingle) = el.member
 Base.first(el::ParetoTopK) = first(el.members)
