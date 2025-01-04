@@ -922,7 +922,12 @@ function _main_search_loop!(
                 )
             end
             if options.hof_migration && length(dominating) > 0
-                migrate!(dominating => cur_pop, options; frac=options.fraction_replaced_hof)
+                all_hof_members = [
+                    member for el in state.halls_of_fame[j].elements for member in el
+                ]
+                migrate!(
+                    all_hof_members => cur_pop, options; frac=options.fraction_replaced_hof
+                )
             end
             ###################################################################
 
