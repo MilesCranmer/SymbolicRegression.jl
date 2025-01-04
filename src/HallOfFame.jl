@@ -52,10 +52,11 @@ function Base.show(io::IO, mime::MIME"text/plain", el::ParetoSingle)
 end
 
 function _depwarn_pareto_single(funcsym::Symbol)
-    return Base.depwarn(
+    Base.depwarn(
         "Hall of fame `.members` is now `.elements` which is a vector of `AbstractParetoElement` objects. ",
         funcsym,
     )
+    return nothing
 end
 
 function Base.getproperty(s::ParetoSingle, name::Symbol)
