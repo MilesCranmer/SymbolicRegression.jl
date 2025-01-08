@@ -215,16 +215,17 @@ struct PerThreadCache{T}
 end
 
 function _get_thread_cache(cache::PerThreadCache{T}) where {T}
-    if cache.num_threads[] < Threads.nthreads()
+    nthreads = Threads.nthreads()
+    if cache.num_threads[] < nthreads
         Base.@lock cache.lock begin
             # The reason we have this extra `.num_threads[]` parameter is to avoid
             # a race condition between a thread resizing the array concurrent
             # to the check above. Basically we want to make sure the array is
             # always big enough by the time we get to using it. Since `.num_threads[]`
             # is set last, we can safely use the array.
-            if cache.num_threads[] < Threads.nthreads()
-                resize!(cache.x, Threads.nthreads())
-                cache.num_threads[] = Threads.nthreads()
+            if cache.num_threads[] < nthreads
+                resize!(cache.x, nthreads)
+                cache.num_threads[] = nthreads
             end
         end
     end
