@@ -44,7 +44,7 @@ SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
 
 [compat]
 ADTypes = "^1.4.0"
-BorrowChecker = "=0.0.4"
+BorrowChecker = "=0.0.5"
 Compat = "^4.16"
 ConstructionBase = "1.0.0 - 1.5.6, 1.5.8 - 1"
 Dates = "1"

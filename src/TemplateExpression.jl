@@ -3,6 +3,7 @@ module TemplateExpressionModule
 using Random: AbstractRNG
 using Compat: Fix
 using DynamicDiff: DynamicDiff
+using BorrowChecker: OrBorrowed, @take
 using DispatchDoctor: @unstable, @stable
 using StyledStrings: @styled_str, annotatedstring
 using DynamicExpressions:
@@ -241,18 +242,18 @@ end
 
 function EB.create_expression(
     t::AbstractExpressionNode{T},
-    options::AbstractOptions,
-    dataset::Dataset{T,L},
+    options::OrBorrowed{AbstractOptions},
+    dataset::OrBorrowed{Dataset{T,L}},
     ::Type{<:AbstractExpressionNode},
     ::Type{E},
     ::Val{embed}=Val(false),
 ) where {T,L,embed,E<:TemplateExpression}
-    function_keys = get_function_keys(options.expression_options.structure)
+    function_keys = get_function_keys(@take(options.expression_options.structure))
 
     # NOTE: We need to copy over the operators so we can call the structure function
-    operators = options.operators
-    variable_names = embed ? dataset.variable_names : nothing
-    eval_options = EvalOptions(; turbo=options.turbo, bumper=options.bumper)
+    operators = @take(options.operators)
+    variable_names = embed ? @take(dataset.variable_names) : nothing
+    eval_options = EvalOptions(; turbo=@take(options.turbo), bumper=@take(options.bumper))
     inner_expressions = ntuple(
         _ -> ComposableExpression(copy(t); operators, variable_names, eval_options),
         Val(length(function_keys)),
@@ -266,19 +267,19 @@ end
 function EB.extra_init_params(
     ::Type{E},
     prototype::Union{Nothing,AbstractExpression},
-    options::AbstractOptions,
-    dataset::Dataset{T},
+    options::OrBorrowed{AbstractOptions},
+    dataset::OrBorrowed{Dataset{T}},
     ::Val{embed},
 ) where {T,embed,E<:TemplateExpression}
     # We also need to include the operators here to be consistent with `create_expression`.
-    return (; options.operators, options.expression_options...)
+    return (; operators=@take(options.operators), @take(options.expression_options)...)
 end
 function EB.sort_params(params::NamedTuple, ::Type{<:TemplateExpression})
     return (; params.structure, params.operators, params.variable_names)
 end
 
 function ComplexityModule.compute_complexity(
-    tree::TemplateExpression, options::AbstractOptions; break_sharing=Val(false)
+    tree::TemplateExpression, options::OrBorrowed{AbstractOptions}; break_sharing=Val(false)
 )
     # Rather than including the complexity of the combined tree,
     # we only sum the complexity of each inner expression, which will be smaller.
@@ -372,14 +373,16 @@ end
     end
 )
 @unstable begin
-    IDE.expected_array_type(::AbstractArray, ::Type{<:TemplateExpression}) = Any
-    IDE.expected_array_type(::Matrix{T}, ::Type{<:TemplateExpression}) where {T} = Any
+    IDE.expected_array_type(::OrBorrowed{AbstractArray}, ::Type{<:TemplateExpression}) = Any
+    IDE.expected_array_type(
+        ::OrBorrowed{Matrix{T}}, ::Type{<:TemplateExpression}
+    ) where {T} = Any
 end
 
 function DA.violates_dimensional_constraints(
     @nospecialize(tree::TemplateExpression),
-    dataset::Dataset,
-    @nospecialize(options::AbstractOptions)
+    dataset::OrBorrowed{Dataset},
+    @nospecialize(options::OrBorrowed{AbstractOptions})
 )
     @assert !has_units(dataset)
     return false
@@ -421,9 +424,10 @@ function CM.operator_specialization(
 end
 
 function CM.max_features(
-    dataset::Dataset, options::Options{<:Any,<:Any,<:Any,<:TemplateExpression}
+    dataset::OrBorrowed{Dataset},
+    options::OrBorrowed{Options{<:Any,<:Any,<:Any,<:TemplateExpression}},
 )
-    num_features = options.expression_options.structure.num_features
+    num_features = @take(options.expression_options.structure.num_features)
     return max(values(num_features)...)
 end
 

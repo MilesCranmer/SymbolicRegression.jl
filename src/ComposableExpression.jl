@@ -2,6 +2,7 @@ module ComposableExpressionModule
 
 using DispatchDoctor: @unstable
 using Compat: Fix
+using BorrowChecker: OrBorrowed, @take
 using DynamicExpressions:
     AbstractExpression,
     Expression,

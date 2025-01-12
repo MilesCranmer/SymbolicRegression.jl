@@ -701,8 +701,8 @@ function _initialize_search!(
                 @bind :mut hof = strip_metadata(
                     @take(init_hall_of_fame[j]), roptions, rdatasets[j]
                 )
-                @lifetime a begin
-                    @ref a :mut for member in hof.members[hof.exists]
+                @lifetime b begin
+                    @ref b :mut for member in hof.members[hof.exists]
                         @bind score, result_loss = score_func(
                             rdatasets[j], @take(member), roptions
                         )
@@ -721,9 +721,9 @@ function _initialize_search!(
         @ref(a, roptions = options)
 
         for j in 1:nout, i in 1:(options.populations)
-            @lifetime b begin
+            @bind worker_idx = @lifetime b begin
                 @ref b :mut w = worker_assignment
-                @bind worker_idx = assign_next_worker!(
+                assign_next_worker!(
                     w;
                     out=j,
                     pop=i,

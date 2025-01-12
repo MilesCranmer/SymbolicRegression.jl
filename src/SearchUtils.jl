@@ -4,7 +4,7 @@ This includes: process management, stdin reading, checking for early stops."""
 module SearchUtilsModule
 
 using Printf: @printf, @sprintf
-using BorrowChecker: Borrowed, BorrowedMut, @take
+using BorrowChecker: OrBorrowedMut, @take
 using BorrowChecker.TypesModule: AllWrappers
 using Dates: Dates
 using Distributed: Distributed, @spawnat, Future, procs, addprocs
@@ -220,8 +220,8 @@ function next_worker(worker_assignment::WorkerAssignments, procs::Vector{Int})::
 end
 
 function assign_next_worker!(
-    worker_assignment::Union{W,BorrowedMut{W}}; pop, out, parallelism, procs
-)::Int where {W<:WorkerAssignments}
+    worker_assignment::OrBorrowedMut{WorkerAssignments}; pop, out, parallelism, procs
+)::Int
     if parallelism == :multiprocessing
         worker_idx = next_worker(@take(worker_assignment), procs)
         worker_assignment[(out, pop)] = worker_idx

@@ -12,6 +12,7 @@ using DynamicExpressions:
     get_contents,
     with_contents,
     get_tree
+using BorrowChecker: OrBorrowed, @take
 using StatsBase: StatsBase
 using Random: default_rng, AbstractRNG
 
@@ -27,12 +28,12 @@ using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 function EB.extra_init_params(
     ::Type{E},
     prototype::Union{Nothing,ParametricExpression},
-    options::AbstractOptions,
-    dataset::Dataset{T},
+    options::OrBorrowed{AbstractOptions},
+    dataset::OrBorrowed{Dataset{T}},
     ::Val{embed},
 ) where {T,embed,E<:ParametricExpression}
-    num_params = options.expression_options.max_parameters
-    num_classes = length(unique(dataset.extra.class))
+    num_params = @take(options.expression_options.max_parameters)
+    num_classes = length(unique(@take(dataset.extra.class)))
     parameter_names = embed ? ["p$i" for i in 1:num_params] : nothing
     _parameters = if prototype === nothing
         randn(T, (num_params, num_classes))
@@ -41,10 +42,12 @@ function EB.extra_init_params(
     end
     return (; parameters=_parameters, parameter_names)
 end
-function EB.consistency_checks(options::AbstractOptions, prototype::ParametricExpression)
+function EB.consistency_checks(
+    options::OrBorrowed{AbstractOptions}, prototype::ParametricExpression
+)
     @assert(
-        options.expression_type <: ParametricExpression,
-        "Need prototype to be of type $(options.expression_type), but got $(prototype)::$(typeof(prototype))"
+        @take(options.expression_type) <: ParametricExpression,
+        "Need prototype to be of type $(@take(options.expression_type)), but got $(prototype)::$(typeof(prototype))"
     )
     if get_metadata(prototype).parameter_names !== nothing
         @assert(
@@ -62,7 +65,7 @@ function DE.eval_tree_array(
     tree::ParametricExpression,
     X::AbstractMatrix,
     class::AbstractVector{<:Integer},
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     kws...,
 )
     A = IDE.expected_array_type(X, typeof(tree))
@@ -71,21 +74,24 @@ function DE.eval_tree_array(
         X,
         class,
         DE.get_operators(tree, options);
-        turbo=options.turbo,
-        bumper=options.bumper,
+        turbo=@take(options.turbo),
+        bumper=@take(options.bumper),
         kws...,
     )
     return out::A, complete::Bool
 end
 function LF.eval_tree_dispatch(
-    tree::ParametricExpression, dataset::Dataset, options::AbstractOptions, idx
+    tree::ParametricExpression,
+    dataset::OrBorrowed{Dataset},
+    options::OrBorrowed{AbstractOptions},
+    idx,
 )
     A = IDE.expected_array_type(dataset.X, typeof(tree))
     out, complete = DE.eval_tree_array(
         tree,
-        LF.maybe_getindex(dataset.X, :, idx),
-        LF.maybe_getindex(dataset.extra.class, idx),
-        options.operators,
+        @take(LF.maybe_getindex(dataset.X, :, idx)),
+        @take(LF.maybe_getindex(dataset.extra.class, idx)),
+        @take(options.operators),
     )
     return out::A, complete::Bool
 end

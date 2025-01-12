@@ -219,8 +219,8 @@ function error_on_mismatched_size(nfeatures, X_units::AbstractVector)
     return nothing
 end
 
-function has_units(dataset::Dataset)
-    return dataset.X_units !== nothing || dataset.y_units !== nothing
+function has_units(dataset::OrBorrowed{Dataset})
+    return !isnothing(dataset.X_units) || !isnothing(dataset.y_units)
 end
 
 # Used for Enzyme
