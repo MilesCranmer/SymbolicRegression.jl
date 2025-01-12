@@ -2,6 +2,7 @@ module ComplexityModule
 
 using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, get_tree, count_nodes, tree_mapreduce
+using BorrowChecker: OrBorrowed, @take
 using ..CoreModule: AbstractOptions, ComplexityMapping
 
 function past_complexity_limit(
@@ -18,7 +19,7 @@ However, it could use the custom settings in options.complexity_mapping
 if these are defined.
 """
 function compute_complexity(
-    tree::AbstractExpression, options::AbstractOptions; break_sharing=Val(false)
+    tree::AbstractExpression, options::OrBorrowed{AbstractOptions}; break_sharing=Val(false)
 )
     if options.complexity_mapping isa Function
         return options.complexity_mapping(tree)::Int
@@ -27,13 +28,13 @@ function compute_complexity(
     end
 end
 function compute_complexity(
-    tree::AbstractExpressionNode, options::AbstractOptions; break_sharing=Val(false)
+    tree::AbstractExpressionNode,
+    options::OrBorrowed{AbstractOptions};
+    break_sharing=Val(false),
 )::Int
-    complexity_mapping = options.complexity_mapping
+    complexity_mapping = @take(options.complexity_mapping)
     if complexity_mapping isa ComplexityMapping && complexity_mapping.use
-        raw_complexity = _compute_complexity(
-            tree, options.complexity_mapping; break_sharing
-        )
+        raw_complexity = _compute_complexity(tree, complexity_mapping; break_sharing)
         return round(Int, raw_complexity)
     else
         return count_nodes(tree; break_sharing)

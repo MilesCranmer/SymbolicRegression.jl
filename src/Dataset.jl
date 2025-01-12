@@ -1,6 +1,7 @@
 module DatasetModule
 
 using DynamicQuantities: Quantity
+using BorrowChecker: OrBorrowed, @take
 
 using ..UtilsModule: subscriptify, get_base_type
 using ..ProgramConstantsModule: DATA_TYPE, LOSS_TYPE
@@ -204,7 +205,7 @@ function Dataset(
     )
 end
 
-is_weighted(dataset::Dataset) = dataset.weights !== nothing
+is_weighted(dataset::OrBorrowed{Dataset}) = !isnothing(dataset.weights)
 
 function error_on_mismatched_size(_, ::Nothing)
     return nothing
@@ -235,8 +236,8 @@ _fill!(x::NamedTuple, val) = foreach(v -> _fill!(v, val), values(x))
 _fill!(::Nothing, val) = nothing
 _fill!(x, val) = x
 
-function max_features(dataset::Dataset, _)
-    return dataset.nfeatures
+function max_features(dataset::OrBorrowed{Dataset}, _)
+    return @take(dataset.nfeatures)
 end
 
 end

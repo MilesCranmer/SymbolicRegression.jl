@@ -4,6 +4,8 @@ This includes: process management, stdin reading, checking for early stops."""
 module SearchUtilsModule
 
 using Printf: @printf, @sprintf
+using BorrowChecker: Borrowed, BorrowedMut, @take
+using BorrowChecker.TypesModule: AllWrappers
 using Dates: Dates
 using Distributed: Distributed, @spawnat, Future, procs, addprocs
 using StatsBase: mean
@@ -218,10 +220,10 @@ function next_worker(worker_assignment::WorkerAssignments, procs::Vector{Int})::
 end
 
 function assign_next_worker!(
-    worker_assignment::WorkerAssignments; pop, out, parallelism, procs
-)::Int
+    worker_assignment::Union{W,BorrowedMut{W}}; pop, out, parallelism, procs
+)::Int where {W<:WorkerAssignments}
     if parallelism == :multiprocessing
-        worker_idx = next_worker(worker_assignment, procs)
+        worker_idx = next_worker(@take(worker_assignment), procs)
         worker_assignment[(out, pop)] = worker_idx
         return worker_idx
     else
@@ -504,18 +506,21 @@ end
 load_saved_hall_of_fame(::Nothing)::Nothing = nothing
 
 function get_population(
-    pops::Vector{Vector{P}}; out::Int, pop::Int
-)::P where {P<:Population}
-    return pops[out][pop]
+    pops::Union{M,AllWrappers{M}}; out::Int, pop::Int
+)::P where {P<:Population,M<:Vector{Vector{P}}}
+    return @take(pops[out][pop])
 end
-function get_population(pops::Matrix{P}; out::Int, pop::Int)::P where {P<:Population}
-    return pops[out, pop]
+function get_population(
+    pops::Union{M,AllWrappers{M}}; out::Int, pop::Int
+)::P where {P<:Population,M<:Matrix{P}}
+    return @take(pops[out, pop])
 end
 function load_saved_population(saved_state; out::Int, pop::Int)
-    saved_pop = get_population(saved_state[1]; out=out, pop=pop)
-    return copy(saved_pop)
+    return get_population(saved_state[1]; out=out, pop=pop)
 end
-load_saved_population(::Nothing; kws...) = nothing
+function load_saved_population(::Union{Nothing,AllWrappers{Nothing}}; kws...)
+    return nothing
+end
 
 """
     AbstractSearchState{T,L,N}

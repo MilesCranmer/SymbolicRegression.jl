@@ -1,5 +1,6 @@
 module PopMemberModule
 
+using BorrowChecker: OrBorrowed, @take
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, AbstractExpressionNode, string_tree
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, create_expression
@@ -61,7 +62,7 @@ function PopMember(
     t::AbstractExpression{T},
     score::L,
     loss::L,
-    options::Union{AbstractOptions,Nothing}=nothing,
+    options::Union{OrBorrowed{AbstractOptions},Nothing}=nothing,
     complexity::Union{Int,Nothing}=nothing;
     ref::Int=-1,
     parent::Int=-1,
@@ -106,9 +107,9 @@ Automatically compute the score for this tree.
 - `options::AbstractOptions`: What options to use.
 """
 function PopMember(
-    dataset::Dataset{T,L},
+    dataset::OrBorrowed{Dataset{T,L}},
     tree::Union{AbstractExpressionNode{T},AbstractExpression{T}},
-    options::AbstractOptions,
+    options::OrBorrowed{AbstractOptions},
     complexity::Union{Int,Nothing}=nothing;
     ref::Int=-1,
     parent::Int=-1,
@@ -148,7 +149,7 @@ end
 
 # Can read off complexity directly from pop members
 function compute_complexity(
-    member::PopMember, options::AbstractOptions; break_sharing=Val(false)
+    member::PopMember, options::OrBorrowed{AbstractOptions}; break_sharing=Val(false)
 )::Int
     complexity = getfield(member, :complexity)
     complexity == -1 && return recompute_complexity!(member, options; break_sharing)
@@ -156,7 +157,7 @@ function compute_complexity(
     return complexity
 end
 function recompute_complexity!(
-    member::PopMember, options::AbstractOptions; break_sharing=Val(false)
+    member::PopMember, options::OrBorrowed{AbstractOptions}; break_sharing=Val(false)
 )::Int
     complexity = compute_complexity(member.tree, options; break_sharing)
     setfield!(member, :complexity, complexity)

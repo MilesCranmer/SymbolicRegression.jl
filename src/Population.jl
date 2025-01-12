@@ -1,6 +1,7 @@
 module PopulationModule
 
 using StatsBase: StatsBase
+using BorrowChecker: OrBorrowed, @take
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, string_tree
 using ..CoreModule: AbstractOptions, Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
@@ -33,7 +34,7 @@ end
 Create random population and score them on the dataset.
 """
 function Population(
-    dataset::Dataset{T,L};
+    dataset::OrBorrowed{Dataset{T,L}};
     options::AbstractOptions,
     population_size=nothing,
     nlength::Int=3,

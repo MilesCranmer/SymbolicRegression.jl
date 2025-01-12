@@ -1,6 +1,7 @@
 module LossFunctionsModule
 
 using DispatchDoctor: @stable
+using BorrowChecker: OrBorrowed, @take
 using StatsBase: StatsBase
 using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, get_tree, eval_tree_array
@@ -48,11 +49,14 @@ end
     default_union_limit = 2,
     begin
         function eval_tree_dispatch(
-            tree::AbstractExpression, dataset::Dataset, options::AbstractOptions, idx
+            tree::AbstractExpression,
+            dataset::OrBorrowed{Dataset},
+            options::OrBorrowed{AbstractOptions},
+            idx,
         )
             A = expected_array_type(dataset.X, typeof(tree))
             out, complete = eval_tree_array(
-                tree, maybe_getindex(dataset.X, :, idx), options
+                tree, @take(maybe_getindex(dataset.X, :, idx)), options
             )
             if isnothing(out)
                 return out, false
@@ -61,11 +65,14 @@ end
             end
         end
         function eval_tree_dispatch(
-            tree::AbstractExpressionNode, dataset::Dataset, options::AbstractOptions, idx
+            tree::AbstractExpressionNode,
+            dataset::OrBorrowed{Dataset},
+            options::OrBorrowed{AbstractOptions},
+            idx,
         )
             A = expected_array_type(dataset.X, typeof(tree))
             out, complete = eval_tree_array(
-                tree, maybe_getindex(dataset.X, :, idx), options
+                tree, @take(maybe_getindex(dataset.X, :, idx)), options
             )
             if isnothing(out)
                 return out, false
@@ -79,8 +86,8 @@ end
 # Evaluate the loss of a particular expression on the input dataset.
 function _eval_loss(
     tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
-    dataset::Dataset{T,L},
-    options::AbstractOptions,
+    dataset::OrBorrowed{Dataset{T,L}},
+    options::OrBorrowed{AbstractOptions},
     regularization::Bool,
     idx,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -92,15 +99,15 @@ function _eval_loss(
     loss_val = if is_weighted(dataset)
         _weighted_loss(
             prediction,
-            maybe_getindex(dataset.y::AbstractArray, idx),
-            maybe_getindex(dataset.weights, idx),
-            options.elementwise_loss,
+            maybe_getindex(@take(dataset.y)::AbstractArray, idx),
+            @take(maybe_getindex(dataset.weights, idx)),
+            @take(options.elementwise_loss),
         )
     else
         _loss(
             prediction,
-            maybe_getindex(dataset.y::AbstractArray, idx),
-            options.elementwise_loss,
+            maybe_getindex(@take(dataset.y)::AbstractArray, idx),
+            @take(options.elementwise_loss),
         )
     end
 
@@ -115,8 +122,8 @@ end
 function evaluator(
     f::F,
     tree::AbstractExpressionNode{T},
-    dataset::Dataset{T,L},
-    options::AbstractOptions,
+    dataset::OrBorrowed{Dataset{T,L}},
+    options::OrBorrowed{AbstractOptions},
     idx,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE,F}
     if hasmethod(f, typeof((tree, dataset, options, idx)))
@@ -137,15 +144,15 @@ end
 # Evaluate the loss of a particular expression on the input dataset.
 function eval_loss(
     tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
-    dataset::Dataset{T,L},
-    options::AbstractOptions;
+    dataset::OrBorrowed{Dataset{T,L}},
+    options::OrBorrowed{AbstractOptions};
     regularization::Bool=true,
     idx=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    loss_val = if options.loss_function === nothing
+    loss_val = if isnothing(options.loss_function)
         _eval_loss(tree, dataset, options, regularization, idx)
     else
-        f = options.loss_function::Function
+        f = @take(options.loss_function)::Function
         evaluator(f, get_tree(tree), dataset, options, idx)
     end
 
@@ -154,8 +161,8 @@ end
 
 function eval_loss_batched(
     tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
-    dataset::Dataset{T,L},
-    options::AbstractOptions;
+    dataset::OrBorrowed{Dataset{T,L}},
+    options::OrBorrowed{AbstractOptions};
     regularization::Bool=true,
     idx=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -181,7 +188,7 @@ function loss_to_score(
     use_baseline::Bool,
     baseline::L,
     member,
-    options::AbstractOptions,
+    options::OrBorrowed{AbstractOptions},
     complexity::Union{Int,Nothing}=nothing,
 )::L where {L<:LOSS_TYPE}
     # TODO: Come up with a more general normalization scheme.
@@ -200,16 +207,16 @@ end
 
 # Score an equation
 function score_func(
-    dataset::Dataset{T,L},
+    dataset::OrBorrowed{Dataset{T,L}},
     member,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     complexity::Union{Int,Nothing}=nothing,
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     result_loss = eval_loss(get_tree_from_member(member), dataset, options)
     score = loss_to_score(
         result_loss,
-        dataset.use_baseline,
-        dataset.baseline_loss,
+        @take(dataset.use_baseline),
+        @take(dataset.baseline_loss),
         member,
         options,
         complexity,
@@ -219,17 +226,17 @@ end
 
 # Score an equation with a small batch
 function score_func_batched(
-    dataset::Dataset{T,L},
+    dataset::OrBorrowed{Dataset{T,L}},
     member,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     complexity::Union{Int,Nothing}=nothing,
     idx=nothing,
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     result_loss = eval_loss_batched(get_tree_from_member(member), dataset, options; idx=idx)
     score = loss_to_score(
         result_loss,
-        dataset.use_baseline,
-        dataset.baseline_loss,
+        @take(dataset.use_baseline),
+        @take(dataset.baseline_loss),
         member,
         options,
         complexity,
@@ -243,7 +250,7 @@ end
 Update the baseline loss of the dataset using the loss function specified in `options`.
 """
 function update_baseline_loss!(
-    dataset::Dataset{T,L}, options::AbstractOptions
+    dataset::Dataset{T,L}, options::OrBorrowed{AbstractOptions}
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     example_tree = create_expression(zero(T), options, dataset)
     # constructorof(options.node_type)(T; val=dataset.avg_y)
@@ -261,13 +268,13 @@ end
 
 function dimensional_regularization(
     tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
-    dataset::Dataset{T,L},
-    options::AbstractOptions,
+    dataset::OrBorrowed{Dataset{T,L}},
+    options::OrBorrowed{AbstractOptions},
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if !violates_dimensional_constraints(tree, dataset, options)
         return zero(L)
     end
-    return convert(L, something(options.dimensional_constraint_penalty, 1000))
+    return convert(L, something(@take(options.dimensional_constraint_penalty), 1000))
 end
 
 end

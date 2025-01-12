@@ -1,6 +1,7 @@
 module HallOfFameModule
 
 using StyledStrings: @styled_str
+using BorrowChecker: OrBorrowed, @take
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
@@ -61,7 +62,7 @@ Arguments:
 - `dataset`: Dataset containing the input data.
 """
 function HallOfFame(
-    options::AbstractOptions, dataset::Dataset{T,L}
+    options::OrBorrowed{AbstractOptions}, dataset::OrBorrowed{Dataset{T,L}}
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     base_tree = create_expression(zero(T), options, dataset)
 
@@ -73,7 +74,7 @@ function HallOfFame(
                 L(Inf),
                 options;
                 parent=-1,
-                deterministic=options.deterministic,
+                deterministic=@take(options.deterministic),
             ) for i in 1:(options.maxsize)
         ],
         [false for i in 1:(options.maxsize)],

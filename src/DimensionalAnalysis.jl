@@ -1,5 +1,6 @@
 module DimensionalAnalysisModule
 
+using BorrowChecker: OrBorrowed, @take
 using DynamicExpressions: AbstractExpression, AbstractExpressionNode, get_tree
 using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, constructorof
 
@@ -185,15 +186,19 @@ end
 Checks whether an expression violates dimensional constraints.
 """
 function violates_dimensional_constraints(
-    tree::AbstractExpressionNode, dataset::Dataset, options::AbstractOptions
+    tree::AbstractExpressionNode,
+    dataset::OrBorrowed{Dataset},
+    options::OrBorrowed{AbstractOptions},
 )
     X = dataset.X
     return violates_dimensional_constraints(
-        tree, dataset.X_units, dataset.y_units, (@view X[:, 1]), options
+        tree, @take(dataset.X_units), @take(dataset.y_units), @take(@view X[:, 1]), options
     )
 end
 function violates_dimensional_constraints(
-    tree::AbstractExpression, dataset::Dataset, options::AbstractOptions
+    tree::AbstractExpression,
+    dataset::OrBorrowed{Dataset},
+    options::OrBorrowed{AbstractOptions},
 )
     return violates_dimensional_constraints(get_tree(tree), dataset, options)
 end
@@ -202,11 +207,11 @@ function violates_dimensional_constraints(
     X_units::AbstractVector{<:Quantity},
     y_units::Union{Quantity,Nothing},
     x::AbstractVector{T},
-    options::AbstractOptions,
+    options::OrBorrowed{AbstractOptions},
 ) where {T}
     allow_wildcards = !(options.dimensionless_constants_only)
     dimensional_output = violates_dimensional_constraints_dispatch(
-        tree, X_units, x, options.operators, allow_wildcards
+        tree, X_units, x, @take(options.operators), allow_wildcards
     )
     # ^ Eventually do this with map_treereduce. However, right now it seems
     # like we are passing around too many arguments, which slows things down.
@@ -224,7 +229,7 @@ function violates_dimensional_constraints(
     ::Nothing,
     ::Quantity,
     ::AbstractVector{T},
-    ::AbstractOptions,
+    ::OrBorrowed{AbstractOptions},
 ) where {T}
     return error("This should never happen. Please submit a bug report.")
 end
@@ -233,7 +238,7 @@ function violates_dimensional_constraints(
     ::Nothing,
     ::Nothing,
     ::AbstractVector{T},
-    ::AbstractOptions,
+    ::OrBorrowed{AbstractOptions},
 ) where {T}
     return false
 end

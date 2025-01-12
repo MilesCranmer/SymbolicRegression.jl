@@ -1,5 +1,9 @@
 module SymbolicRegression
 
+using BorrowChecker: disable_borrow_checker!
+
+disable_borrow_checker!(@__MODULE__)
+
 # Types
 export Population,
     PopMember,
@@ -85,6 +89,7 @@ export Population,
     erfc,
     atanh_clip
 
+using BorrowChecker: @bind, @move, @lifetime, @ref, @clone, @take, @take!, @set
 using Distributed
 using Printf: @printf, @sprintf
 using Pkg: Pkg
@@ -670,81 +675,131 @@ end
     )
 end
 function _initialize_search!(
-    state::AbstractSearchState{T,L,N},
-    datasets,
-    ropt::AbstractRuntimeOptions,
-    options::AbstractOptions,
-    saved_state,
+    _state::AbstractSearchState{T,L,N},
+    _datasets,
+    _ropt::AbstractRuntimeOptions,
+    _options::AbstractOptions,
+    _saved_state,
 ) where {T,L,N}
-    nout = length(datasets)
+    @bind :mut state = _state
+    @bind datasets = _datasets
+    @bind ropt = _ropt
+    @bind options = _options
+    @bind saved_state = _saved_state
+    @bind nout = length(datasets)
 
-    init_hall_of_fame = load_saved_hall_of_fame(saved_state)
-    if init_hall_of_fame === nothing
-        for j in 1:nout
-            state.halls_of_fame[j] = HallOfFame(options, datasets[j])
-        end
-    else
-        # Recompute losses for the hall of fame, in
-        # case the dataset changed:
-        for j in eachindex(init_hall_of_fame, datasets, state.halls_of_fame)
-            hof = strip_metadata(init_hall_of_fame[j], options, datasets[j])
-            for member in hof.members[hof.exists]
-                score, result_loss = score_func(datasets[j], member, options)
-                member.score = score
-                member.loss = result_loss
+    @bind init_hall_of_fame = load_saved_hall_of_fame(@take(saved_state))
+    @lifetime a let @ref(a, rdatasets = datasets), @ref(a, roptions = options)
+        if isnothing(init_hall_of_fame)
+            @bind for j in 1:nout
+                state.halls_of_fame[j] = HallOfFame(roptions, rdatasets[j])
             end
-            state.halls_of_fame[j] = hof
-        end
-    end
-
-    for j in 1:nout, i in 1:(options.populations)
-        worker_idx = assign_next_worker!(
-            state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
-        )
-        saved_pop = load_saved_population(saved_state; out=j, pop=i)
-        new_pop =
-            if saved_pop !== nothing && length(saved_pop.members) == options.population_size
-                _saved_pop = strip_metadata(saved_pop, options, datasets[j])
-                ## Update losses:
-                for member in _saved_pop.members
-                    score, result_loss = score_func(datasets[j], member, options)
-                    member.score = score
-                    member.loss = result_loss
-                end
-                copy_pop = copy(_saved_pop)
-                @sr_spawner(
-                    begin
-                        (copy_pop, HallOfFame(options, datasets[j]), RecordType(), 0.0)
-                    end,
-                    parallelism = ropt.parallelism,
-                    worker_idx = worker_idx
+        else
+            # Recompute losses for the hall of fame, in
+            # case the dataset changed:
+            @bind for j in 1:nout
+                @bind :mut hof = strip_metadata(
+                    @take(init_hall_of_fame[j]), roptions, rdatasets[j]
                 )
-            else
-                if saved_pop !== nothing && ropt.verbosity > 0
-                    @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
-                end
-                @sr_spawner(
-                    begin
-                        (
-                            Population(
-                                datasets[j];
-                                population_size=options.population_size,
-                                nlength=3,
-                                options=options,
-                                nfeatures=max_features(datasets[j], options),
-                            ),
-                            HallOfFame(options, datasets[j]),
-                            RecordType(),
-                            Float64(options.population_size),
+                @lifetime a begin
+                    @ref a :mut for member in hof.members[hof.exists]
+                        @bind score, result_loss = score_func(
+                            rdatasets[j], @take(member), roptions
                         )
-                    end,
-                    parallelism = ropt.parallelism,
-                    worker_idx = worker_idx
-                )
-                # This involves population_size evaluations, on the full dataset:
+                        member.score = @take!(score)
+                        member.loss = @take!(result_loss)
+                    end
+                end
+                state.halls_of_fame[j] = @take(hof)
             end
-        push!(state.worker_output[j], new_pop)
+        end
     end
+
+    @clone :mut worker_assignment = state.worker_assignment
+    @lifetime a let @ref(a, sstate = saved_state),
+        @ref(a, rdatasets = datasets),
+        @ref(a, roptions = options)
+
+        for j in 1:nout, i in 1:(options.populations)
+            @lifetime b begin
+                @ref b :mut w = worker_assignment
+                @bind worker_idx = assign_next_worker!(
+                    w;
+                    out=j,
+                    pop=i,
+                    parallelism=@take(ropt.parallelism),
+                    procs=@take(state.procs),
+                )
+            end
+            @bind saved_pop = load_saved_population(sstate; out=j, pop=i)
+            @bind new_pop =
+                if !isnothing(saved_pop) &&
+                    length(saved_pop.members) == options.population_size
+                    # TODO: Need bind
+                    @bind :mut _saved_pop = strip_metadata(
+                        @take!(saved_pop), roptions, rdatasets[j]
+                    )
+                    # Update losses:
+                    @lifetime b begin
+                        @ref b :mut for member in _saved_pop.members
+                            @bind score, result_loss = score_func(
+                                rdatasets[j], @take(member), roptions
+                            )
+                            member.score = @take!(score)
+                            member.loss = @take!(result_loss)
+                        end
+                    end
+                    @sr_spawner(
+                        begin
+                            @lifetime c let @ref(c, spawn_dataset = datasets[j]),
+                                @ref(c, spawn_options = options)
+
+                                (
+                                    @take(_saved_pop),
+                                    HallOfFame(spawn_options, spawn_dataset),
+                                    RecordType(),
+                                    0.0,
+                                )
+                            end
+                        end,
+                        parallelism = @take(ropt.parallelism),
+                        worker_idx = @take!(worker_idx)
+                    )
+                else
+                    if !isnothing(saved_pop) && ropt.verbosity > 0
+                        @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
+                    end
+                    @bind nfeatures = max_features(rdatasets[j], roptions)
+                    @sr_spawner(
+                        begin
+                            @lifetime b let @ref(b, spawn_dataset = datasets[j]),
+                                @ref(b, spawn_options = options)
+
+                                (
+                                    Population(
+                                        spawn_dataset;
+                                        population_size=@take(
+                                            spawn_options.population_size
+                                        ),
+                                        nlength=3,
+                                        options=@take(spawn_options),
+                                        nfeatures=@take(nfeatures),
+                                    ),
+                                    HallOfFame(spawn_options, spawn_dataset),
+                                    RecordType(),
+                                    Float64(@take(spawn_options.population_size)),
+                                )
+                            end
+                        end,
+                        parallelism = @take(ropt.parallelism),
+                        worker_idx = @take!(worker_idx)
+                    )
+                    # This involves population_size evaluations, on the full dataset:
+                end
+            push!(state.worker_output[j], @take!(new_pop))
+        end
+    end
+    copy!(state.worker_assignment, worker_assignment)
     return nothing
 end
 function _warmup_search!(
@@ -968,7 +1023,7 @@ function _main_search_loop!(
                     ropt.parallelism,
                 )
             end
-            if ropt.logger !== nothing
+            if !isnothing(ropt.logger)
                 logging_callback!(ropt.logger; state, datasets, ropt, options)
             end
         end

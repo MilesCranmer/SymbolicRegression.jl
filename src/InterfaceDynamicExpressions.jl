@@ -3,6 +3,7 @@ module InterfaceDynamicExpressionsModule
 using Printf: @sprintf
 using DispatchDoctor: @stable
 using Compat: Fix
+using BorrowChecker: OrBorrowed, @take
 using DynamicExpressions:
     DynamicExpressions as DE,
     OperatorEnum,
@@ -56,14 +57,15 @@ which speed up evaluation significantly.
     function DE.eval_tree_array(
         tree::Union{AbstractExpressionNode,AbstractExpression},
         X::AbstractMatrix,
-        options::AbstractOptions;
+        options::OrBorrowed{AbstractOptions};
         turbo=nothing,
         bumper=nothing,
         kws...,
     )
         A = expected_array_type(X, typeof(tree))
         eval_options = EvalOptions(;
-            turbo=something(turbo, options.turbo), bumper=something(bumper, options.bumper)
+            turbo=something(turbo, @take(options.turbo)),
+            bumper=something(bumper, @take(options.bumper)),
         )
         out, complete = DE.eval_tree_array(
             tree, X, DE.get_operators(tree, options); eval_options, kws...
@@ -77,11 +79,15 @@ which speed up evaluation significantly.
 )
 
 """Improve type inference by telling Julia the expected array returned."""
-function expected_array_type(X::AbstractArray, ::Type)
+function expected_array_type(X::OrBorrowed{AbstractArray}, ::Type)
     return typeof(similar(X, axes(X, 2)))
 end
-expected_array_type(X::AbstractArray, ::Type, ::Val{:eval_grad_tree_array}) = typeof(X)
-expected_array_type(::Matrix{T}, ::Type) where {T} = Vector{T}
+function expected_array_type(
+    X::OrBorrowed{AbstractArray}, ::Type, ::Val{:eval_grad_tree_array}
+)
+    return typeof(X)
+end
+expected_array_type(::OrBorrowed{Matrix{T}}, ::Type) where {T} = Vector{T}
 
 """
     eval_diff_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::AbstractOptions, direction::Int)
@@ -106,7 +112,7 @@ respect to `x1`.
 function DE.eval_diff_tree_array(
     tree::Union{AbstractExpression,AbstractExpressionNode},
     X::AbstractArray,
-    options::AbstractOptions,
+    options::OrBorrowed{AbstractOptions},
     direction::Int,
 )
     # TODO: Add `AbstractExpression` implementation in `Expression.jl`
@@ -141,7 +147,7 @@ to every constant in the expression.
 function DE.eval_grad_tree_array(
     tree::Union{AbstractExpression,AbstractExpressionNode},
     X::AbstractArray,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     kws...,
 )
     A = expected_array_type(X, typeof(tree))
@@ -160,7 +166,7 @@ Evaluate an expression tree in a way that can be auto-differentiated.
 function DE.differentiable_eval_tree_array(
     tree::Union{AbstractExpression,AbstractExpressionNode},
     X::AbstractArray,
-    options::AbstractOptions,
+    options::OrBorrowed{AbstractOptions},
 )
     # TODO: Add `AbstractExpression` implementation in `Expression.jl`
     A = expected_array_type(X, typeof(tree))
@@ -186,7 +192,7 @@ Convert an equation to a string.
 """
 @inline function DE.string_tree(
     tree::Union{AbstractExpression,AbstractExpressionNode},
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     pretty::Bool=false,
     X_sym_units=nothing,
     y_sym_units=nothing,
@@ -291,14 +297,16 @@ Print an equation
     to print for each feature.
 """
 function DE.print_tree(
-    tree::Union{AbstractExpression,AbstractExpressionNode}, options::AbstractOptions; kws...
+    tree::Union{AbstractExpression,AbstractExpressionNode},
+    options::OrBorrowed{AbstractOptions};
+    kws...,
 )
     return DE.print_tree(tree, DE.get_operators(tree, options); kws...)
 end
 function DE.print_tree(
     io::IO,
     tree::Union{AbstractExpression,AbstractExpressionNode},
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     kws...,
 )
     return DE.print_tree(io, tree, DE.get_operators(tree, options); kws...)
