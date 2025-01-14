@@ -48,6 +48,6 @@ hof = equation_search(
 )
 
 @test any(
-    early_stop(member.loss, my_complexity(member.tree)) for
-    member in hof.members[hof.exists]
+    early_stop(member.loss, my_complexity(member.tree)) for el in hof.elements[hof.exists],
+    member in el
 )

@@ -25,7 +25,7 @@ end
 
 @testitem "pretty print hall of fame" tags = [:part1] begin
     using SymbolicRegression
-    using SymbolicRegression: embed_metadata
+    using SymbolicRegression: embed_metadata, ParetoSingle
     using SymbolicRegression.CoreModule: safe_pow
 
     options = Options(; binary_operators=[+, safe_pow], maxsize=7)
@@ -46,24 +46,24 @@ end
 
     hof = HallOfFame(options, dataset)
     hof = embed_metadata(hof, options, dataset)
-    hof.members[5] = member
+    hof.elements[5] = ParetoSingle(member)
     hof.exists[5] = true
     s_hof = strip(shower(hof))
     true_s = "HallOfFame{...}:
     .exists[1] = false
-    .members[1] = undef
+    .elements[1] = undef
     .exists[2] = false
-    .members[2] = undef
+    .elements[2] = undef
     .exists[3] = false
-    .members[3] = undef
+    .elements[3] = undef
     .exists[4] = false
-    .members[4] = undef
+    .elements[4] = undef
     .exists[5] = true
-    .members[5] = PopMember(tree = ((x ^ 2.0) + 1.5), loss = 16.25, score = 1.0)
+    .elements[5] = ParetoSingle(PopMember(tree = ((x ^ 2.0) + 1.5), loss = 16.25, score = 1.0))
     .exists[6] = false
-    .members[6] = undef
+    .elements[6] = undef
     .exists[7] = false
-    .members[7] = undef"
+    .elements[7] = undef"
 
     @test s_hof == true_s
 end

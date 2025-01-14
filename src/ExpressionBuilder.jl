@@ -10,7 +10,7 @@ using DynamicExpressions:
     AbstractExpressionNode, AbstractExpression, constructorof, with_metadata
 using StatsBase: StatsBase
 using ..CoreModule: AbstractOptions, Dataset
-using ..HallOfFameModule: HallOfFame
+using ..HallOfFameModule: HallOfFame, ParetoSingle, ParetoTopK
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
 
@@ -124,20 +124,32 @@ end
         pop::Population, options::AbstractOptions, dataset::Dataset{T,L}
     ) where {T,L}
         return Population(
-            map(Fix{2}(Fix{3}(embed_metadata, dataset), options), pop.members)
+            map(member -> embed_metadata(member, options, dataset), pop.members)
+        )
+    end
+    function embed_metadata(
+        el::ParetoSingle, options::AbstractOptions, dataset::Dataset{T,L}
+    ) where {T,L}
+        return ParetoSingle(embed_metadata(el.member, options, dataset))
+    end
+    function embed_metadata(
+        el::ParetoTopK, options::AbstractOptions, dataset::Dataset{T,L}
+    ) where {T,L}
+        return ParetoTopK(
+            map(member -> embed_metadata(member, options, dataset), el.members), el.k
         )
     end
     function embed_metadata(
         hof::HallOfFame, options::AbstractOptions, dataset::Dataset{T,L}
     ) where {T,L}
         return HallOfFame(
-            map(Fix{2}(Fix{3}(embed_metadata, dataset), options), hof.members), hof.exists
+            map(el -> embed_metadata(el, options, dataset), hof.elements), hof.exists
         )
     end
     function embed_metadata(
-        vec::Vector{H}, options::AbstractOptions, dataset::Dataset{T,L}
+        sets::Vector{H}, options::AbstractOptions, dataset::Dataset{T,L}
     ) where {T,L,H<:Union{HallOfFame,Population,PopMember}}
-        return map(Fix{2}(Fix{3}(embed_metadata, dataset), options), vec)
+        return map(set -> embed_metadata(set, options, dataset), sets)
     end
 end
 
@@ -172,10 +184,22 @@ function strip_metadata(
     return Population(map(member -> strip_metadata(member, options, dataset), pop.members))
 end
 function strip_metadata(
+    el::ParetoSingle, options::AbstractOptions, dataset::Dataset{T,L}
+) where {T,L}
+    return ParetoSingle(strip_metadata(el.member, options, dataset))
+end
+function strip_metadata(
+    el::ParetoTopK, options::AbstractOptions, dataset::Dataset{T,L}
+) where {T,L}
+    return ParetoTopK(
+        map(member -> strip_metadata(member, options, dataset), el.members), el.k
+    )
+end
+function strip_metadata(
     hof::HallOfFame, options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T,L}
     return HallOfFame(
-        map(member -> strip_metadata(member, options, dataset), hof.members), hof.exists
+        map(el -> strip_metadata(el, options, dataset), hof.elements), hof.exists
     )
 end
 

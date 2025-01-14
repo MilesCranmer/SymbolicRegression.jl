@@ -17,6 +17,9 @@ using .OptionsStructModule:
     AbstractOptions,
     Options,
     ComplexityMapping,
+    AbstractParetoOptions,
+    ParetoSingleOptions,
+    ParetoTopKOptions,
     specialized_options,
     operator_specialization
 using .OperatorsModule:

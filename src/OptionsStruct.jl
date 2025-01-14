@@ -9,6 +9,22 @@ using LossFunctions: SupervisedLoss
 import ..MutationWeightsModule: AbstractMutationWeights
 
 """
+    AbstractParetoOptions
+
+Abstract type for different Pareto front storage strategies.
+
+# Subtypes
+- `ParetoSingleOptions`: Store only the single best member at each complexity
+- `ParetoTopKOptions`: Store multiple members at each complexity in a fixed-size bucket
+"""
+abstract type AbstractParetoOptions end
+
+struct ParetoSingleOptions <: AbstractParetoOptions end
+Base.@kwdef struct ParetoTopKOptions <: AbstractParetoOptions
+    k::Int
+end
+
+"""
 This struct defines how complexity is calculated.
 
 # Fields
@@ -184,6 +200,7 @@ struct Options{
     E<:AbstractExpression,
     EO<:NamedTuple,
     MW<:AbstractMutationWeights,
+    PO<:AbstractParetoOptions,
     _turbo,
     _bumper,
     _return_state,
@@ -224,6 +241,7 @@ struct Options{
     ncycles_per_iteration::Int
     fraction_replaced::Float32
     fraction_replaced_hof::Float32
+    pareto_element_options::PO
     topn::Int
     verbosity::Union{Int,Nothing}
     v_print_precision::Val{print_precision}

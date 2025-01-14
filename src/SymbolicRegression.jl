@@ -234,6 +234,9 @@ using .CoreModule:
     ComplexityMapping,
     AbstractMutationWeights,
     MutationWeights,
+    AbstractParetoOptions,
+    ParetoSingleOptions,
+    ParetoTopKOptions,
     get_safe_op,
     max_features,
     is_weighted,
@@ -282,7 +285,12 @@ using .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
 using .PopMemberModule: PopMember, reset_birth!
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 using .HallOfFameModule:
-    HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
+    HallOfFame,
+    ParetoSingle,
+    ParetoTopK,
+    calculate_pareto_frontier,
+    string_dominating_pareto_curve,
+    init_pareto_element
 using .MutateModule: mutate!, condition_mutation_weights!, MutationResult
 using .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
 using .ProgressBarsModule: WrappedProgressBar
@@ -296,6 +304,7 @@ using .SearchUtilsModule:
     WorkerAssignments,
     DefaultWorkerOutputType,
     assign_next_worker!,
+    get_hall_of_fame_type,
     get_worker_output_type,
     extract_from_worker,
     @sr_spawner,
@@ -317,7 +326,6 @@ using .SearchUtilsModule:
     construct_datasets,
     save_to_file,
     get_cur_maxsize,
-    update_hall_of_fame!,
     logging_callback!
 using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
 using .TemplateExpressionModule: TemplateExpression, TemplateStructure
@@ -424,10 +432,10 @@ which is useful for debugging and profiling.
 
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
-    hallOfFame.members gives an array of `PopMember` objects, which
-    have their tree (equation) stored in `.tree`. Their score (loss)
-    is given in `.score`. The array of `PopMember` objects
-    is enumerated by size from `1` to `options.maxsize`.
+    map(first, hallOfFame.elements) gives an array of `PopMember` objects
+    These have their tree (equation) stored in `.tree`. Their score (loss)
+    is given in `.score`. The array is enumerated by size from `1`
+    to `options.maxsize`.
 """
 function equation_search(
     X::AbstractMatrix{T},
@@ -591,9 +599,9 @@ end
     nout = length(datasets)
     example_dataset = first(datasets)
     example_ex = create_expression(zero(T), options, example_dataset)
-    NT = typeof(example_ex)
-    PopType = Population{T,L,NT}
-    HallOfFameType = HallOfFame{T,L,NT}
+    ExpressionType = typeof(example_ex)
+    PopType = Population{T,L,ExpressionType}
+    HallOfFameType = get_hall_of_fame_type(T, L, example_ex, options.pareto_element_options)
     WorkerOutputType = get_worker_output_type(
         Val(ropt.parallelism), PopType, HallOfFameType
     )
@@ -650,7 +658,7 @@ end
         j in 1:nout
     ]
 
-    return SearchState{T,L,typeof(example_ex),WorkerOutputType,ChannelType}(;
+    return SearchState{T,L,typeof(example_ex),HallOfFameType,WorkerOutputType,ChannelType}(;
         procs=procs,
         we_created_procs=we_created_procs,
         worker_output=worker_output,
@@ -670,12 +678,12 @@ end
     )
 end
 function _initialize_search!(
-    state::AbstractSearchState{T,L,N},
+    state::AbstractSearchState{T,L,N,H},
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
     saved_state,
-) where {T,L,N}
+) where {T,L,N,H}
     nout = length(datasets)
 
     init_hall_of_fame = load_saved_hall_of_fame(saved_state)
@@ -688,12 +696,23 @@ function _initialize_search!(
         # case the dataset changed:
         for j in eachindex(init_hall_of_fame, datasets, state.halls_of_fame)
             hof = strip_metadata(init_hall_of_fame[j], options, datasets[j])
-            for member in hof.members[hof.exists]
-                score, result_loss = score_func(datasets[j], member, options)
+            new_hof = HallOfFame(options, datasets[j])
+            for el in hof.elements[hof.exists], member in el
+                size = compute_complexity(member, options)
+                score, result_loss = score_func(
+                    datasets[j], member, options; complexity=size
+                )
                 member.score = score
                 member.loss = result_loss
+
+                # In case the new loss changes the elements stored in the Pareto
+                # frontier, we push them individually:
+                push!(new_hof, size => member)
             end
-            state.halls_of_fame[j] = hof
+            # TODO: Would be nice if there was a way to mark `init_hall_of_fame[j]`
+            # as being dead now. We want to make sure we never use it at this point
+            # in the code.
+            state.halls_of_fame[j] = new_hof
         end
     end
 
@@ -748,11 +767,11 @@ function _initialize_search!(
     return nothing
 end
 function _warmup_search!(
-    state::AbstractSearchState{T,L,N},
+    state::AbstractSearchState{T,L,N,H},
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
-) where {T,L,N}
+) where {T,L,N,H}
     nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
         dataset = datasets[j]
@@ -769,9 +788,7 @@ function _warmup_search!(
         last_pop = state.worker_output[j][i]
         updated_pop = @sr_spawner(
             begin
-                in_pop = first(
-                    extract_from_worker(last_pop, Population{T,L,N}, HallOfFame{T,L,N})
-                )
+                in_pop = first(extract_from_worker(last_pop, Population{T,L,N}, H))
                 _dispatch_s_r_cycle(
                     in_pop,
                     dataset,
@@ -883,9 +900,10 @@ function _main_search_loop!(
                 update_frequencies!(state.all_running_search_statistics[j]; size)
             end
             #! format: off
-            update_hall_of_fame!(state.halls_of_fame[j], cur_pop.members, options)
-            update_hall_of_fame!(state.halls_of_fame[j], best_seen.members[best_seen.exists], options)
+            append!(state.halls_of_fame[j], cur_pop; options)
+            merge!(state.halls_of_fame[j], best_seen)
             #! format: on
+            # TODO: Confirm that `best_seen.members` have full-batch scores
 
             # Dominating pareto curve - must be better than all simpler equations
             dominating = calculate_pareto_frontier(state.halls_of_fame[j])
@@ -904,7 +922,12 @@ function _main_search_loop!(
                 )
             end
             if options.hof_migration && length(dominating) > 0
-                migrate!(dominating => cur_pop, options; frac=options.fraction_replaced_hof)
+                all_hof_members = [
+                    member for el in state.halls_of_fame[j].elements for member in el
+                ]
+                migrate!(
+                    all_hof_members => cur_pop, options; frac=options.fraction_replaced_hof
+                )
             end
             ###################################################################
 
@@ -1101,15 +1124,23 @@ end
         dataset, out_pop, options, cur_maxsize, record
     )
     num_evals += evals_from_optimize
-    if options.batching
-        for i_member in 1:(options.maxsize)
-            score, result_loss = score_func(dataset, best_seen.members[i_member], options)
-            best_seen.members[i_member].score = score
-            best_seen.members[i_member].loss = result_loss
+    return_hof = if options.batching
+        # Compute full-dataset scores for all members of the Pareto front.
+        new_hof = HallOfFame(options, dataset)::typeof(best_seen)
+        for el in best_seen.elements[best_seen.exists], member in el
+            size = compute_complexity(member, options)
+            score, result_loss = score_func(dataset, member, options)
+            member.score = score
+            member.loss = result_loss
             num_evals += 1
+
+            push!(new_hof, size => member)
         end
+        new_hof
+    else
+        best_seen
     end
-    return (out_pop, best_seen, record, num_evals)
+    return (out_pop, return_hof, record, num_evals)
 end
 function _info_dump(
     state::AbstractSearchState,
