@@ -688,8 +688,7 @@ function _initialize_search!(
     @own init_hall_of_fame = load_saved_hall_of_fame(@take(saved_state))
 
     @lifetime a let
-        @ref ~a rdatasets = datasets
-        @ref ~a roptions = options
+        @ref ~a (rdatasets, roptions) = (datasets, options)
         if isnothing(init_hall_of_fame)
             @own for j in 1:nout
                 state.halls_of_fame[j] = HallOfFame(roptions, rdatasets[j])
@@ -717,9 +716,7 @@ function _initialize_search!(
 
     @clone :mut worker_assignment = state.worker_assignment
     @lifetime a let
-        @ref ~a sstate = saved_state
-        @ref ~a rdatasets = datasets
-        @ref ~a roptions = options
+        @ref ~a (sstate, rdatasets, roptions) = (saved_state, datasets, options)
 
         for j in 1:nout, i in 1:(options.populations)
             @own worker_idx = @lifetime b begin
@@ -753,8 +750,9 @@ function _initialize_search!(
                     @sr_spawner(
                         begin
                             @lifetime c let
-                                @ref ~c spawn_dataset = datasets[j]
-                                @ref ~c spawn_options = options
+                                @ref ~c (spawn_dataset, spawn_options) = (
+                                    datasets[j], options
+                                )
 
                                 (
                                     @take(_saved_pop),
@@ -775,8 +773,9 @@ function _initialize_search!(
                     @sr_spawner(
                         begin
                             @lifetime b let
-                                @ref ~b spawn_dataset = datasets[j]
-                                @ref ~b spawn_options = options
+                                @ref ~b (spawn_dataset, spawn_options) = (
+                                    datasets[j], options
+                                )
 
                                 (
                                     Population(
