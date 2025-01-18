@@ -1,8 +1,8 @@
 module SymbolicRegression
 
-using BorrowChecker: disable_borrow_checker!
+using BorrowChecker: disable_by_default!
 
-disable_borrow_checker!(@__MODULE__)
+disable_by_default!(@__MODULE__)
 
 # Types
 export Population,
@@ -89,7 +89,7 @@ export Population,
     erfc,
     atanh_clip
 
-using BorrowChecker: @bind, @move, @lifetime, @ref, @clone, @take, @take!, @set
+using BorrowChecker: @own, @move, @lifetime, @ref, @clone, @take, @take!, @set
 using Distributed
 using Printf: @printf, @sprintf
 using Pkg: Pkg
@@ -681,29 +681,29 @@ function _initialize_search!(
     _options::AbstractOptions,
     _saved_state,
 ) where {T,L,N}
-    @bind :mut state = _state
-    @bind datasets = _datasets
-    @bind ropt = _ropt
-    @bind options = _options
-    @bind saved_state = _saved_state
-    @bind nout = length(datasets)
+    @own :mut state = _state
+    @own (datasets, ropt, options, saved_state, nout) = (
+        _datasets, _ropt, _options, _saved_state, length(_datasets)
+    )
+    @own init_hall_of_fame = load_saved_hall_of_fame(@take(saved_state))
 
-    @bind init_hall_of_fame = load_saved_hall_of_fame(@take(saved_state))
-    @lifetime a let @ref(a, rdatasets = datasets), @ref(a, roptions = options)
+    @lifetime a let
+        @ref ~a rdatasets = datasets
+        @ref ~a roptions = options
         if isnothing(init_hall_of_fame)
-            @bind for j in 1:nout
+            @own for j in 1:nout
                 state.halls_of_fame[j] = HallOfFame(roptions, rdatasets[j])
             end
         else
             # Recompute losses for the hall of fame, in
             # case the dataset changed:
-            @bind for j in 1:nout
-                @bind :mut hof = strip_metadata(
+            @own for j in 1:nout
+                @own :mut hof = strip_metadata(
                     @take(init_hall_of_fame[j]), roptions, rdatasets[j]
                 )
                 @lifetime b begin
-                    @ref b :mut for member in hof.members[hof.exists]
-                        @bind score, result_loss = score_func(
+                    @ref ~b :mut for member in hof.members[hof.exists]
+                        @own score, result_loss = score_func(
                             rdatasets[j], @take(member), roptions
                         )
                         member.score = @take!(score)
@@ -716,13 +716,14 @@ function _initialize_search!(
     end
 
     @clone :mut worker_assignment = state.worker_assignment
-    @lifetime a let @ref(a, sstate = saved_state),
-        @ref(a, rdatasets = datasets),
-        @ref(a, roptions = options)
+    @lifetime a let
+        @ref ~a sstate = saved_state
+        @ref ~a rdatasets = datasets
+        @ref ~a roptions = options
 
         for j in 1:nout, i in 1:(options.populations)
-            @bind worker_idx = @lifetime b begin
-                @ref b :mut w = worker_assignment
+            @own worker_idx = @lifetime b begin
+                @ref ~b :mut w = worker_assignment
                 assign_next_worker!(
                     w;
                     out=j,
@@ -731,18 +732,18 @@ function _initialize_search!(
                     procs=@take(state.procs),
                 )
             end
-            @bind saved_pop = load_saved_population(sstate; out=j, pop=i)
-            @bind new_pop =
+            @own saved_pop = load_saved_population(sstate; out=j, pop=i)
+            @own new_pop =
                 if !isnothing(saved_pop) &&
                     length(saved_pop.members) == options.population_size
                     # TODO: Need bind
-                    @bind :mut _saved_pop = strip_metadata(
+                    @own :mut _saved_pop = strip_metadata(
                         @take!(saved_pop), roptions, rdatasets[j]
                     )
                     # Update losses:
                     @lifetime b begin
-                        @ref b :mut for member in _saved_pop.members
-                            @bind score, result_loss = score_func(
+                        @ref ~b :mut for member in _saved_pop.members
+                            @own score, result_loss = score_func(
                                 rdatasets[j], @take(member), roptions
                             )
                             member.score = @take!(score)
@@ -751,8 +752,9 @@ function _initialize_search!(
                     end
                     @sr_spawner(
                         begin
-                            @lifetime c let @ref(c, spawn_dataset = datasets[j]),
-                                @ref(c, spawn_options = options)
+                            @lifetime c let
+                                @ref ~c spawn_dataset = datasets[j]
+                                @ref ~c spawn_options = options
 
                                 (
                                     @take(_saved_pop),
@@ -769,11 +771,12 @@ function _initialize_search!(
                     if !isnothing(saved_pop) && ropt.verbosity > 0
                         @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
                     end
-                    @bind nfeatures = max_features(rdatasets[j], roptions)
+                    @own nfeatures = max_features(rdatasets[j], roptions)
                     @sr_spawner(
                         begin
-                            @lifetime b let @ref(b, spawn_dataset = datasets[j]),
-                                @ref(b, spawn_options = options)
+                            @lifetime b let
+                                @ref ~b spawn_dataset = datasets[j]
+                                @ref ~b spawn_options = options
 
                                 (
                                     Population(
