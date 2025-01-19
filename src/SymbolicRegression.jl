@@ -675,16 +675,15 @@ end
     )
 end
 function _initialize_search!(
-    _state::AbstractSearchState{T,L,N},
-    _datasets,
-    _ropt::AbstractRuntimeOptions,
-    _options::AbstractOptions,
-    _saved_state,
+    state::AbstractSearchState{T,L,N},
+    datasets,
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+    saved_state,
 ) where {T,L,N}
-    @own :mut state = _state
-    @own (datasets, ropt, options, saved_state, nout) = (
-        _datasets, _ropt, _options, _saved_state, length(_datasets)
-    )
+    @own :mut state
+    @own datasets, ropt, options, saved_state
+    @own nout = length(datasets)
     @own init_hall_of_fame = load_saved_hall_of_fame(@take(saved_state))
 
     @lifetime a let
@@ -709,7 +708,7 @@ function _initialize_search!(
                         member.loss = @take!(result_loss)
                     end
                 end
-                state.halls_of_fame[j] = @take(hof)
+                state.halls_of_fame[j] = @take!(hof)
             end
         end
     end
