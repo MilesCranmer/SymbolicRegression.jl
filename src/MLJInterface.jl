@@ -27,7 +27,13 @@ using LossFunctions: SupervisedLoss
 using ..InterfaceDynamicQuantitiesModule: get_dimensions_type
 using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..CoreModule:
-    Options, Dataset, AbstractMutationWeights, MutationWeights, LOSS_TYPE, ComplexityMapping
+    AbstractOptions,
+    Options,
+    Dataset,
+    AbstractMutationWeights,
+    MutationWeights,
+    LOSS_TYPE,
+    ComplexityMapping
 using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
@@ -148,7 +154,7 @@ A struct containing the result of a fit of an `SRRegressor` or `MultitargetSRReg
 Base.@kwdef struct SRFitResult{
     M<:AbstractSymbolicRegressor,
     S,
-    O<:Options,
+    O<:AbstractOptions,
     XD<:Union{Vector{<:AbstractDimensions},Nothing},
     YD<:Union{AbstractDimensions,Vector{<:AbstractDimensions},Nothing},
     TYPES<:SRFitResultTypes,
