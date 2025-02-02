@@ -32,4 +32,4 @@ TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [preferences.SymbolicRegression]
-instability_check = "error"
+dispatch_doctor_mode = "error"
