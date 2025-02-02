@@ -5,6 +5,7 @@ export Population,
     PopMember,
     HallOfFame,
     Options,
+    OperatorEnum,
     Dataset,
     MutationWeights,
     Node,
@@ -17,6 +18,7 @@ export Population,
     TemplateExpression,
     TemplateStructure,
     TemplateExpressionSpec,
+    @template,
     ValidVector,
     ComposableExpression,
     NodeSampler,
@@ -106,6 +108,7 @@ using DynamicExpressions:
     AbstractExpression,
     AbstractExpressionNode,
     ExpressionInterface,
+    OperatorEnum,
     @parse_expression,
     parse_expression,
     @declare_expression_operator,
@@ -225,6 +228,7 @@ using DispatchDoctor: @stable
     include("ExpressionBuilder.jl")
     include("ComposableExpression.jl")
     include("TemplateExpression.jl")
+    include("TemplateExpressionMacro.jl")
     include("ParametricExpression.jl")
 end
 
@@ -332,6 +336,7 @@ using .TemplateExpressionModule: ValidVector
 using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 using .ParametricExpressionModule: ParametricExpressionSpec
+using .TemplateExpressionMacroModule: @template
 
 @stable default_mode = "disable" begin
     include("deprecates.jl")
