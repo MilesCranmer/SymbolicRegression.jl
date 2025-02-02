@@ -320,7 +320,7 @@ it would need to correctly disentangle the contribution
 of `f` and `g`!
 
 Now we can set up and train our model.
-Note that we pass the structure in to `expression_options`:
+Note that we pass the structure in to `expression_spec`:
 
 ```julia
 model = SRRegressor(;
@@ -328,8 +328,7 @@ model = SRRegressor(;
     unary_operators=(cos,),
     niterations=500,
     maxsize=25,
-    expression_type=TemplateExpression,
-    expression_options=(; structure),
+    expression_spec=TemplateExpressionSpec(; structure),
 )
 
 mach = machine(model, X, y)
@@ -448,8 +447,7 @@ model = SRRegressor(
     binary_operators=(+, -, *, /),
     unary_operators=(sqrt,),
     maxsize=20,
-    expression_type=TemplateExpression,
-    expression_options=(; structure),
+    expression_spec=TemplateExpressionSpec(; structure),
 )
 
 X = (; x=x)

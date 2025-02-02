@@ -214,8 +214,7 @@ end
         niterations=20,
         binary_operators=(+, *, -),
         unary_operators=(),
-        expression_type=TemplateExpression,
-        expression_options=(; structure=struct_search),
+        expression_spec=TemplateExpressionSpec(; structure=struct_search),
         early_stop_condition=(l, c) -> l < 1e-6 && c == 5,
     )
 
