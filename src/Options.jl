@@ -31,6 +31,8 @@ using ..MutationWeightsModule: AbstractMutationWeights, MutationWeights, mutatio
 import ..OptionsStructModule: Options
 using ..OptionsStructModule: ComplexityMapping, operator_specialization
 using ..UtilsModule: @save_kwargs, @ignore
+using ..ExpressionSpecModule:
+    AbstractExpressionSpec, get_expression_type, get_expression_options, get_node_type
 
 """Build constraints on operator-level complexity from a user-passed dict."""
 @unstable function build_constraints(;
@@ -468,11 +470,10 @@ $(OPTION_DESCRIPTIONS)
     @nospecialize(unary_operators = nothing),
     @nospecialize(maxsize::Union{Nothing,Integer} = nothing),
     @nospecialize(maxdepth::Union{Nothing,Integer} = nothing),
-    @nospecialize(expression_type::Type{<:AbstractExpression} = Expression),
-    @nospecialize(expression_options::NamedTuple = NamedTuple()),
-    @nospecialize(
-        node_type::Type{<:AbstractExpressionNode} = default_node_type(expression_type)
-    ),
+    @nospecialize(expression_spec::Union{Nothing,AbstractExpressionSpec} = nothing),
+    @nospecialize(expression_type::Union{Nothing,Type{<:AbstractExpression}} = nothing),
+    @nospecialize(expression_options::Union{Nothing,NamedTuple} = nothing),
+    @nospecialize(node_type::Union{Nothing,Type{<:AbstractExpressionNode}} = nothing),
     ## 2. Setting the Search Size:
     @nospecialize(populations::Union{Nothing,Integer} = nothing),
     @nospecialize(population_size::Union{Nothing,Integer} = nothing),
@@ -505,7 +506,7 @@ $(OPTION_DESCRIPTIONS)
     @nospecialize(annealing::Union{Bool,Nothing} = nothing),
     @nospecialize(alpha::Union{Nothing,Real} = nothing),
     ###           perturbation_factor
-    @nospecialize(probability_negate_constant::Union{Real,Nothing} = nothing),
+    ###           probability_negate_constant
     ###           skip_mutation_failures
     ## 6. Tournament Selection:
     @nospecialize(tournament_selection_n::Union{Nothing,Integer} = nothing),
@@ -564,6 +565,7 @@ $(OPTION_DESCRIPTIONS)
     should_simplify::Union{Nothing,Bool}=nothing,
     ## 5. Mutations:
     perturbation_factor::Union{Nothing,Real}=nothing,
+    probability_negate_constant::Union{Real,Nothing}=nothing,
     skip_mutation_failures::Bool=true,
     ## 6. Tournament Selection
     ## 7. Constant Optimization:
@@ -779,6 +781,20 @@ $(OPTION_DESCRIPTIONS)
         end
         bin_constraints = constraints
         una_constraints = constraints
+    end
+
+    if expression_spec !== nothing
+        @assert expression_type === nothing
+        @assert expression_options === nothing
+        @assert node_type === nothing
+
+        expression_type = get_expression_type(expression_spec)
+        expression_options = get_expression_options(expression_spec)
+        node_type = get_node_type(expression_spec)
+    else
+        expression_type = @something(expression_type, Expression)
+        expression_options = @something(expression_options, NamedTuple())
+        node_type = @something(node_type, default_node_type(expression_type))
     end
 
     _una_constraints, _bin_constraints = build_constraints(;

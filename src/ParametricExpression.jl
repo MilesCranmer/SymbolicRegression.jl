@@ -15,7 +15,13 @@ using DynamicExpressions:
 using StatsBase: StatsBase
 using Random: default_rng, AbstractRNG
 
-using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, AbstractMutationWeights
+using ..CoreModule:
+    AbstractOptions,
+    Dataset,
+    DATA_TYPE,
+    AbstractMutationWeights,
+    AbstractExpressionSpec,
+    ExpressionSpecModule as ES
 using ..PopMemberModule: PopMember
 using ..InterfaceDynamicExpressionsModule: expected_array_type
 using ..LossFunctionsModule: LossFunctionsModule as LF
@@ -180,5 +186,18 @@ function MF.mutate_constant(
         return ex
     end
 end
+
+"""
+    ParametricExpressionSpec <: AbstractExpressionSpec
+
+(Experimental) Specification for parametric expressions with configurable maximum parameters.
+"""
+Base.@kwdef struct ParametricExpressionSpec <: AbstractExpressionSpec
+    max_parameters::Int
+end
+
+ES.get_expression_type(::ParametricExpressionSpec) = ParametricExpression
+ES.get_expression_options(spec::ParametricExpressionSpec) = (; spec.max_parameters)
+ES.get_node_type(::ParametricExpressionSpec) = ParametricNode
 
 end

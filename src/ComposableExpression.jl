@@ -218,6 +218,8 @@ function (ex::AbstractComposableExpression)(
     return with_contents(ex, tree)
 end
 
+# TODO: More methods for passing simple numbers to ComposableExpression (in combination with other inputs as well)
+
 # Basically we want to vectorize every single operation on ValidVector,
 # so that the user can use it easily.
 

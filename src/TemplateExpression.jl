@@ -37,7 +37,9 @@ using ..CoreModule:
     CoreModule as CM,
     AbstractMutationWeights,
     has_units,
-    DATA_TYPE
+    DATA_TYPE,
+    AbstractExpressionSpec,
+    ExpressionSpecModule as ES
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..MutationFunctionsModule: MutationFunctionsModule as MF
@@ -873,5 +875,21 @@ function Base.isempty(ex::TemplateExpression)
 end
 
 # TODO: Add custom behavior to adjust what feature nodes can be generated
+
+"""
+    TemplateExpressionSpec <: AbstractExpressionSpec
+
+(Experimental) Specification for template expressions with pre-defined structure.
+"""
+Base.@kwdef struct TemplateExpressionSpec{
+    ST<:TemplateStructure,NT<:Type{<:AbstractExpressionNode}
+} <: AbstractExpressionSpec
+    structure::ST
+    node_type::NT = Node
+end
+
+ES.get_expression_type(::TemplateExpressionSpec) = TemplateExpression
+ES.get_expression_options(spec::TemplateExpressionSpec) = (; structure=spec.structure)
+ES.get_node_type(spec::TemplateExpressionSpec) = spec.node_type
 
 end
