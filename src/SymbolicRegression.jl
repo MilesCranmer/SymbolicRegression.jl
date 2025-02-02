@@ -11,14 +11,18 @@ export Population,
     GraphNode,
     ParametricNode,
     Expression,
+    ExpressionSpec,
     ParametricExpression,
+    ParametricExpressionSpec,
     TemplateExpression,
     TemplateStructure,
+    TemplateExpressionSpec,
     ValidVector,
     ComposableExpression,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
+    AbstractExpressionSpec,
     EvalOptions,
     SRRegressor,
     MultitargetSRRegressor,
@@ -234,6 +238,8 @@ using .CoreModule:
     ComplexityMapping,
     AbstractMutationWeights,
     MutationWeights,
+    AbstractExpressionSpec,
+    ExpressionSpec,
     get_safe_op,
     max_features,
     is_weighted,
@@ -320,10 +326,12 @@ using .SearchUtilsModule:
     update_hall_of_fame!,
     logging_callback!
 using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
-using .TemplateExpressionModule: TemplateExpression, TemplateStructure
+using .TemplateExpressionModule:
+    TemplateExpression, TemplateStructure, TemplateExpressionSpec
 using .TemplateExpressionModule: ValidVector
 using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
+using .ParametricExpressionModule: ParametricExpressionSpec
 
 @stable default_mode = "disable" begin
     include("deprecates.jl")
