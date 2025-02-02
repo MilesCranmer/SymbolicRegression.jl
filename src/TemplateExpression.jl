@@ -882,14 +882,12 @@ end
 
 (Experimental) Specification for template expressions with pre-defined structure.
 """
-Base.@kwdef struct TemplateExpressionSpec{ST<:TemplateStructure,NT<:Type} <:
-                   AbstractExpressionSpec
+Base.@kwdef struct TemplateExpressionSpec{ST<:TemplateStructure} <: AbstractExpressionSpec
     structure::ST
-    node_type::NT = Node
 end
 
 ES.get_expression_type(::TemplateExpressionSpec) = TemplateExpression
 ES.get_expression_options(spec::TemplateExpressionSpec) = (; structure=spec.structure)
-ES.get_node_type(spec::TemplateExpressionSpec) = spec.node_type
+ES.get_node_type(::TemplateExpressionSpec) = Node
 
 end
