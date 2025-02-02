@@ -315,10 +315,9 @@ const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Op
             return sum((prediction .- dataset.y) .^ 2) / dataset.n
         end
 
-- `expression_type::Type{E}=Expression`: The type of expression to use.
-    For example, `Expression`.
-- `node_type::Type{N}=default_node_type(Expression)`: The type of node to use for the search.
-    For example, `Node` or `GraphNode`. The default is computed by `default_node_type(expression_type)`.
+- `expression_spec::AbstractExpressionSpec`: A specification of what types of expressions to use in the
+    search. For example, `ExpressionSpec()` (default). You can also see `TemplateExpressionSpec` and
+    `ParametricExpressionSpec` for specialized cases.
 - `populations`: How many populations of equations to use.
 - `population_size`: How many equations in each population.
 - `ncycles_per_iteration`: How many generations to consider per iteration.
@@ -471,9 +470,6 @@ $(OPTION_DESCRIPTIONS)
     @nospecialize(maxsize::Union{Nothing,Integer} = nothing),
     @nospecialize(maxdepth::Union{Nothing,Integer} = nothing),
     @nospecialize(expression_spec::Union{Nothing,AbstractExpressionSpec} = nothing),
-    @nospecialize(expression_type::Union{Nothing,Type{<:AbstractExpression}} = nothing),
-    @nospecialize(expression_options::Union{Nothing,NamedTuple} = nothing),
-    @nospecialize(node_type::Union{Nothing,Type{<:AbstractExpressionNode}} = nothing),
     ## 2. Setting the Search Size:
     @nospecialize(populations::Union{Nothing,Integer} = nothing),
     @nospecialize(population_size::Union{Nothing,Integer} = nothing),
@@ -614,6 +610,9 @@ $(OPTION_DESCRIPTIONS)
     define_helper_functions::Bool=true,
     #########################################
     # Deprecated args: ######################
+    expression_type::Union{Nothing,Type{<:AbstractExpression}}=nothing,
+    expression_options::Union{Nothing,NamedTuple}=nothing,
+    node_type::Union{Nothing,Type{<:AbstractExpressionNode}}=nothing,
     output_file::Union{Nothing,AbstractString}=nothing,
     fast_cycle::Bool=false,
     npopulations::Union{Nothing,Integer}=nothing,
@@ -792,6 +791,12 @@ $(OPTION_DESCRIPTIONS)
         expression_options = get_expression_options(expression_spec)
         node_type = get_node_type(expression_spec)
     else
+        if !all(isnothing, (expression_type, expression_options, node_type))
+            Base.depwarn(
+                "The `expression_type`, `expression_options`, and `node_type` arguments are deprecated. Use `expression_spec` instead, which populates these automatically.",
+                :Options,
+            )
+        end
         expression_type = @something(expression_type, Expression)
         expression_options = @something(expression_options, NamedTuple())
         node_type = @something(node_type, default_node_type(expression_type))
