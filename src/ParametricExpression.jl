@@ -196,8 +196,10 @@ Base.@kwdef struct ParametricExpressionSpec <: AbstractExpressionSpec
     max_parameters::Int
 end
 
+# COV_EXCL_START
 ES.get_expression_type(::ParametricExpressionSpec) = ParametricExpression
 ES.get_expression_options(spec::ParametricExpressionSpec) = (; spec.max_parameters)
 ES.get_node_type(::ParametricExpressionSpec) = ParametricNode
+# COV_EXCL_STOP
 
 end

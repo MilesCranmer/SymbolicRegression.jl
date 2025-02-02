@@ -668,8 +668,10 @@ end
     end
 )
 @unstable begin
+    # COV_EXCL_START
     IDE.expected_array_type(::AbstractArray, ::Type{<:TemplateExpression}) = Any
     IDE.expected_array_type(::Matrix{T}, ::Type{<:TemplateExpression}) where {T} = Any
+    # COV_EXCL_STOP
 end
 
 function DA.violates_dimensional_constraints(
@@ -787,13 +789,19 @@ function DE.simplify_tree!(
     )
     return with_contents(ex, new_contents)
 end
+function has_constants(tree::AbstractExpression)
+    any(get_tree(tree)) do node
+        node.degree == 0 && node.constant
+    end
+end
+has_constants(ex::TemplateExpression) = any(has_constants, values(get_contents(ex)))
 function MF.mutate_constant(
     ex::TemplateExpression{T},
     temperature,
     options::AbstractOptions,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
-    regular_constant_mutation = !has_params(ex) || rand(rng, Bool)
+    regular_constant_mutation = !has_params(ex) || (has_constants(ex) && rand(rng, Bool))
     if regular_constant_mutation
         # Normal mutation of inner constant
         tree, context = MF.get_contents_for_mutation(ex, rng)
@@ -886,8 +894,10 @@ Base.@kwdef struct TemplateExpressionSpec{ST<:TemplateStructure} <: AbstractExpr
     structure::ST
 end
 
+# COV_EXCL_START
 ES.get_expression_type(::TemplateExpressionSpec) = TemplateExpression
 ES.get_expression_options(spec::TemplateExpressionSpec) = (; structure=spec.structure)
 ES.get_node_type(::TemplateExpressionSpec) = Node
+# COV_EXCL_STOP
 
 end

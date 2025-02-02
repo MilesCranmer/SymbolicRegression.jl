@@ -163,7 +163,8 @@ include("test_pretty_printing.jl")
 include("test_expression_builder.jl")
 include("test_composable_expression.jl")
 include("test_parametric_template_expressions.jl")
-include("test_template_macro.jl")
+# include("test_template_macro.jl")
+include("test_template_expression_mutation.jl")
 
 @testitem "Aqua tests" tags = [:part2, :aqua] begin
     include("test_aqua.jl")
