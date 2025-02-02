@@ -239,26 +239,19 @@ using SymbolicRegression
 options = Options(
     binary_operators=[+, -, *],
     unary_operators=[cos],
-    expression_options=(
-        structure=TemplateStructure(),
-        variable_constraints=Dict(1 => [1, 2], 2 => [2])
-    )
 )
 
-# Create expression nodes with constraints
 operators = options.operators
 variable_names = ["x1", "x2"]
 x1 = Expression(
     Node{Float64}(feature=1),
     operators=operators,
     variable_names=variable_names,
-    structure=options.expression_options.structure
 )
 x2 = Expression(
     Node{Float64}(feature=2),
     operators=operators,
     variable_names=variable_names,
-    structure=options.expression_options.structure
 )
 
 # Construct and evaluate expression
@@ -267,9 +260,8 @@ X = rand(Float64, 2, 100)
 output = expr(X)
 ```
 
-This `Expression` type, contains both the structure
-and the operators used in the expression. These are what
-are returned by the search. The raw `Node` type (which is
+This `Expression` type, contains the operators used in the expression.
+These are what are returned by the search. The raw `Node` type (which is
 what used to be output directly) is accessible with
 
 ```julia
