@@ -13,6 +13,7 @@ using DynamicExpressions:
     AbstractExpressionNode,
     AbstractExpression,
     AbstractOperatorEnum,
+    Node,
     OperatorEnum,
     Metadata,
     get_contents,
