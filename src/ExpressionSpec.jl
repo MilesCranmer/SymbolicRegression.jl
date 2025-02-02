@@ -9,8 +9,7 @@ abstract type AbstractExpressionSpec end
 
 (Experimental) Default specification for basic expressions without special options.
 """
-Base.@kwdef struct ExpressionSpec{NT<:Type{<:AbstractExpressionNode}} <:
-                   AbstractExpressionSpec
+Base.@kwdef struct ExpressionSpec{NT<:Type} <: AbstractExpressionSpec
     node_type::NT = Node
 end
 
