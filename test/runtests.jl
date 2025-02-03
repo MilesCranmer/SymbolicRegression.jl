@@ -165,6 +165,7 @@ include("test_composable_expression.jl")
 include("test_parametric_template_expressions.jl")
 include("test_template_macro.jl")
 include("test_template_expression_mutation.jl")
+include("test_template_expression_string.jl")
 
 @testitem "Aqua tests" tags = [:part2, :aqua] begin
     include("test_aqua.jl")
