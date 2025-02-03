@@ -63,8 +63,7 @@ model = SRRegressor(;
     binary_operators=[+, *, /, -],
     unary_operators=[cos, exp],
     populations=30,
-    expression_type=ParametricExpression,
-    expression_options=(; max_parameters=2),
+    expression_spec=ParametricExpressionSpec(; max_parameters=2),
     autodiff_backend=:Zygote,
     early_stop_condition=(loss, _) -> loss < stop_at[],  #src
 );
