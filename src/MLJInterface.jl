@@ -63,10 +63,14 @@ end
 #       `equation_search`, similar to what we do for `Options`.
 
 """Generate an `SRRegressor` struct containing all the fields in `Options`."""
-function modelexpr(model_name::Symbol, parent_type::Symbol=:AbstractSymbolicRegressor)
+function modelexpr(
+    model_name::Symbol,
+    parent_type::Symbol=:AbstractSymbolicRegressor;
+    default_niterations=100,
+)
     struct_def =
         :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L} <: $parent_type
-            niterations::Int = 100
+            niterations::Int = $(default_niterations)
             parallelism::Symbol = :multithreading
             numprocs::Union{Int,Nothing} = nothing
             procs::Union{Vector{Int},Nothing} = nothing
@@ -118,8 +122,14 @@ end
 """Get an equivalent `Options()` object for a particular regressor."""
 function get_options(::AbstractSymbolicRegressor) end
 
+#! format: off
 eval(modelexpr(:SRRegressor, :AbstractSingletargetSRRegressor))
 eval(modelexpr(:MultitargetSRRegressor, :AbstractMultitargetSRRegressor))
+
+# These are exactly the same but have fewer iterations
+eval(modelexpr(:SRTestRegressor, :AbstractSingletargetSRRegressor; default_niterations=1))
+eval(modelexpr(:MultitargetSRTestRegressor, :AbstractMultitargetSRRegressor; default_niterations=1))
+#! format: on
 
 """
     SRFitResultTypes
@@ -629,32 +639,33 @@ const input_scitype = Union{
 }
 
 # TODO: Allow for Count data, and coerce it into Continuous as needed.
-MMI.metadata_model(
-    SRRegressor;
-    input_scitype,
-    target_scitype=AbstractVector{<:MMI.Continuous},
-    supports_weights=true,
-    reports_feature_importances=false,
-    load_path="SymbolicRegression.MLJInterfaceModule.SRRegressor",
-    human_name="Symbolic Regression via Evolutionary Search",
-)
-MMI.metadata_model(
-    MultitargetSRRegressor;
-    input_scitype,
-    target_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
-    supports_weights=true,
-    reports_feature_importances=false,
-    load_path="SymbolicRegression.MLJInterfaceModule.MultitargetSRRegressor",
-    human_name="Multi-Target Symbolic Regression via Evolutionary Search",
-)
-
-function MMI.target_scitype(::Type{<:SRRegressor{D,L}}) where {D<:AbstractDimensions,L}
-    return AbstractVector{<:MMI.Unknown}
+for model in [:SRRegressor, :SRTestRegressor]
+    @eval begin
+        MMI.metadata_model(
+            $model;
+            input_scitype,
+            target_scitype=AbstractVector{<:MMI.Continuous},
+            supports_weights=true,
+            reports_feature_importances=false,
+            load_path=$("SymbolicRegression.MLJInterfaceModule." * string(model)),
+            human_name="Symbolic Regression via Evolutionary Search",
+        )
+    end
 end
-function MMI.target_scitype(
-    ::Type{<:MultitargetSRRegressor{D,L}}
-) where {D<:AbstractDimensions,L}
-    return Union{MMI.Table(MMI.Unknown),AbstractMatrix{<:MMI.Unknown}}
+for model in [:MultitargetSRRegressor, :MultitargetSRTestRegressor]
+    @eval begin
+        MMI.metadata_model(
+            $model;
+            input_scitype,
+            target_scitype=Union{
+                MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}
+            },
+            supports_weights=true,
+            reports_feature_importances=false,
+            load_path=$("SymbolicRegression.MLJInterfaceModule." * string(model)),
+            human_name="Multi-Target Symbolic Regression via Evolutionary Search",
+        )
+    end
 end
 
 function tag_with_docstring(model_name::Symbol, description::String, bottom_matter::String)

@@ -1170,7 +1170,8 @@ function _info_dump(
 end
 
 include("MLJInterface.jl")
-using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
+using .MLJInterfaceModule:
+    SRRegressor, MultitargetSRRegressor, SRTestRegressor, MultitargetSRTestRegressor
 
 # Hack to get static analysis to work from within tests:
 @ignore include("../test/runtests.jl")
