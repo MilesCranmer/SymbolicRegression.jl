@@ -25,29 +25,37 @@ using DynamicQuantities:
     dimension
 using LossFunctions: SupervisedLoss
 using ..InterfaceDynamicQuantitiesModule: get_dimensions_type
+using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..CoreModule:
+    AbstractOptions,
     Options,
     Dataset,
     AbstractMutationWeights,
     MutationWeights,
     LOSS_TYPE,
     ComplexityMapping,
-    AbstractExpressionSpec
+    AbstractExpressionSpec,
+    ExpressionSpec,
+    get_expression_type
 using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
 using ..UtilsModule: subscriptify, @ignore
 using ..LoggingModule: AbstractSRLogger
+using ..TemplateExpressionModule: TemplateExpression
 
 import ..equation_search
 
-abstract type AbstractSRRegressor <: MMI.Deterministic end
+abstract type AbstractSymbolicRegressor <: MMI.Deterministic end
+
+abstract type AbstractSingletargetSRRegressor <: AbstractSymbolicRegressor end
+abstract type AbstractMultitargetSRRegressor <: AbstractSymbolicRegressor end
 
 # For static analysis tools:
-@ignore mutable struct SRRegressor <: AbstractSRRegressor
+@ignore mutable struct SRRegressor <: AbstractSingletargetSRRegressor
     selection_method::Function
 end
-@ignore mutable struct MultitargetSRRegressor <: AbstractSRRegressor
+@ignore mutable struct MultitargetSRRegressor <: AbstractMultitargetSRRegressor
     selection_method::Function
 end
 
@@ -55,23 +63,23 @@ end
 #       `equation_search`, similar to what we do for `Options`.
 
 """Generate an `SRRegressor` struct containing all the fields in `Options`."""
-function modelexpr(model_name::Symbol)
-    struct_def = :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L} <:
-                                 AbstractSRRegressor
-        niterations::Int = 100
-        parallelism::Symbol = :multithreading
-        numprocs::Union{Int,Nothing} = nothing
-        procs::Union{Vector{Int},Nothing} = nothing
-        addprocs_function::Union{Function,Nothing} = nothing
-        heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
-        worker_imports::Union{Vector{Symbol},Nothing} = nothing
-        logger::Union{AbstractSRLogger,Nothing} = nothing
-        runtests::Bool = true
-        run_id::Union{String,Nothing} = nothing
-        loss_type::L = Nothing
-        selection_method::Function = choose_best
-        dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
-    end)
+function modelexpr(model_name::Symbol, parent_type::Symbol=:AbstractSymbolicRegressor)
+    struct_def =
+        :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L} <: $parent_type
+            niterations::Int = 100
+            parallelism::Symbol = :multithreading
+            numprocs::Union{Int,Nothing} = nothing
+            procs::Union{Vector{Int},Nothing} = nothing
+            addprocs_function::Union{Function,Nothing} = nothing
+            heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
+            worker_imports::Union{Vector{Symbol},Nothing} = nothing
+            logger::Union{AbstractSRLogger,Nothing} = nothing
+            runtests::Bool = true
+            run_id::Union{String,Nothing} = nothing
+            loss_type::Type{L} = Nothing
+            selection_method::Function = choose_best
+            dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
+        end)
     # TODO: store `procs` from initial run if parallelism is `:multiprocessing`
     fields = last(last(struct_def.args).args).args
 
@@ -108,10 +116,10 @@ function getsymb(ex::Expr)
 end
 
 """Get an equivalent `Options()` object for a particular regressor."""
-function get_options(::AbstractSRRegressor) end
+function get_options(::AbstractSymbolicRegressor) end
 
-eval(modelexpr(:SRRegressor))
-eval(modelexpr(:MultitargetSRRegressor))
+eval(modelexpr(:SRRegressor, :AbstractSingletargetSRRegressor))
+eval(modelexpr(:MultitargetSRRegressor, :AbstractMultitargetSRRegressor))
 
 """
     SRFitResultTypes
@@ -139,9 +147,9 @@ end
 A struct containing the result of a fit of an `SRRegressor` or `MultitargetSRRegressor`.
 """
 Base.@kwdef struct SRFitResult{
-    M<:AbstractSRRegressor,
+    M<:AbstractSymbolicRegressor,
     S,
-    O<:Options,
+    O<:AbstractOptions,
     XD<:Union{Vector{<:AbstractDimensions},Nothing},
     YD<:Union{AbstractDimensions,Vector{<:AbstractDimensions},Nothing},
     TYPES<:SRFitResultTypes,
@@ -162,7 +170,7 @@ end
 
 # Cleaning already taken care of by `Options` and `equation_search`
 function full_report(
-    m::AbstractSRRegressor,
+    m::AbstractSymbolicRegressor,
     fitresult::SRFitResult;
     v_with_strings::Val{with_strings}=Val(true),
 ) where {with_strings}
@@ -189,14 +197,14 @@ function full_report(
     )
 end
 
-MMI.clean!(::AbstractSRRegressor) = ""
+MMI.clean!(::AbstractSymbolicRegressor) = ""
 
 # TODO: Enable `verbosity` being passed to `equation_search`
-function MMI.fit(m::AbstractSRRegressor, verbosity, X, y, w=nothing)
+function MMI.fit(m::AbstractSymbolicRegressor, verbosity, X, y, w=nothing)
     return MMI.update(m, verbosity, nothing, nothing, X, y, w)
 end
 function MMI.update(
-    m::AbstractSRRegressor,
+    m::AbstractSymbolicRegressor,
     verbosity,
     old_fitresult::Union{SRFitResult,Nothing},
     old_cache,
@@ -218,12 +226,15 @@ function _update(
     options,
     class,
 )
-    if isnothing(class) && MMI.istable(X) && haskey(X, :class)
-        if !(X isa NamedTuple)
-            error("Classes can only be specified with named tuples.")
-        end
-        new_X = Base.structdiff(X, (; X.class))
-        new_class = X.class
+    if (
+        IDE.handles_class_column(m) &&
+        isnothing(class) &&
+        MMI.istable(X) &&
+        :class in MMI.schema(X).names
+    )
+        names_without_class = filter(!=(:class), MMI.schema(X).names)
+        new_X = MMI.selectcols(X, collect(names_without_class))
+        new_class = MMI.selectcols(X, :class)
         return _update(
             m, verbosity, old_fitresult, old_cache, new_X, y, w, options, new_class
         )
@@ -248,7 +259,7 @@ function _update(
     )
     X_units_clean::types.X_units_clean = clean_units(X_units)
     y_units_clean::types.y_units_clean = clean_units(y_units)
-    w_t::types.w_t = if w !== nothing && isa(m, MultitargetSRRegressor)
+    w_t::types.w_t = if w !== nothing && isa(m, AbstractMultitargetSRRegressor)
         @assert(isa(w, AbstractVector) && ndims(w) == 1, "Unexpected input for `w`.")
         repeat(w', size(y_t, 1))
     else
@@ -282,14 +293,14 @@ function _update(
         extra=isnothing(class) ? (;) : (; class),
         logger=m.logger,
         # Help out with inference:
-        v_dim_out=isa(m, SRRegressor) ? Val(1) : Val(2),
+        v_dim_out=isa(m, AbstractSingletargetSRRegressor) ? Val(1) : Val(2),
     )
     fitresult = SRFitResult(;
         model=m,
         state=search_state,
         niterations=niterations +
                     (old_fitresult === nothing ? 0 : old_fitresult.niterations),
-        num_targets=isa(m, SRRegressor) ? 1 : size(y_t, 1),
+        num_targets=isa(m, AbstractSingletargetSRRegressor) ? 1 : size(y_t, 1),
         options=options,
         variable_names=variable_names,
         y_variable_names=y_variable_names,
@@ -342,7 +353,7 @@ function get_matrix_and_info(X, ::Type{D}) where {D}
     return Xm_t_strip, colnames, display_colnames, X_units
 end
 
-function format_input_for(::SRRegressor, y, ::Type{D}) where {D}
+function format_input_for(::AbstractSingletargetSRRegressor, y, ::Type{D}) where {D}
     @assert(
         !(MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1)),
         "For multi-output regression, please use `MultitargetSRRegressor`."
@@ -353,7 +364,7 @@ function format_input_for(::SRRegressor, y, ::Type{D}) where {D}
     y_t_strip, y_units = unwrap_units_single(y_t, D_promoted)
     return y_t_strip, colnames, y_units
 end
-function format_input_for(::MultitargetSRRegressor, y, ::Type{D}) where {D}
+function format_input_for(::AbstractMultitargetSRRegressor, y, ::Type{D}) where {D}
     @assert(
         MMI.istable(y) || (length(size(y)) == 2 && size(y, 2) > 1),
         "For single-output regression, please use `SRRegressor`."
@@ -374,6 +385,14 @@ function validate_units(X_units, old_X_units)
         "Units of new data do not match units of fitted regressor."
     )
     return nothing
+end
+
+function IDE.handles_class_column(m::AbstractSymbolicRegressor)
+    expression_type = @something(
+        m.expression_type,
+        get_expression_type(@something(m.expression_spec, ExpressionSpec()))
+    )
+    return IDE.handles_class_column(expression_type)
 end
 
 # TODO: Test whether this conversion poses any issues in data normalization...
@@ -403,14 +422,14 @@ end
 end
 
 function prediction_fallback(
-    ::Type{T}, m::SRRegressor, Xnew_t, fitresult::SRFitResult, _
+    ::Type{T}, m::AbstractSingletargetSRRegressor, Xnew_t, fitresult::SRFitResult, _
 ) where {T}
     prediction_warn()
     out = fill!(similar(Xnew_t, T, axes(Xnew_t, 2)), zero(T))
     return wrap_units(out, fitresult.y_units, nothing)
 end
 function prediction_fallback(
-    ::Type{T}, ::MultitargetSRRegressor, Xnew_t, fitresult::SRFitResult, prototype
+    ::Type{T}, ::AbstractMultitargetSRRegressor, Xnew_t, fitresult::SRFitResult, prototype
 ) where {T}
     prediction_warn()
     out_cols = [
@@ -450,7 +469,7 @@ function unwrap_units_single(v::AbstractVector, ::Type{D}) where {D}
     return compat_ustrip(v)::AbstractVector, dims
 end
 
-function MMI.fitted_params(m::AbstractSRRegressor, fitresult::SRFitResult)
+function MMI.fitted_params(m::AbstractSymbolicRegressor, fitresult::SRFitResult)
     report = full_report(m, fitresult)
     return (;
         best_idx=report.best_idx,
@@ -463,7 +482,7 @@ function eval_tree_mlj(
     tree::AbstractExpression,
     X_t,
     class,
-    m::AbstractSRRegressor,
+    m::AbstractSymbolicRegressor,
     ::Type{T},
     fitresult,
     i,
@@ -483,10 +502,10 @@ end
 
 function MMI.predict(
     m::M, fitresult, Xnew; idx=nothing, class=nothing
-) where {M<:AbstractSRRegressor}
+) where {M<:AbstractSymbolicRegressor}
     return _predict(m, fitresult, Xnew, idx, class)
 end
-function _predict(m::M, fitresult, Xnew, idx, class) where {M<:AbstractSRRegressor}
+function _predict(m::M, fitresult, Xnew, idx, class) where {M<:AbstractSymbolicRegressor}
     if Xnew isa NamedTuple && (haskey(Xnew, :idx) || haskey(Xnew, :data))
         @assert(
             haskey(Xnew, :idx) && haskey(Xnew, :data) && length(keys(Xnew)) == 2,
@@ -494,12 +513,16 @@ function _predict(m::M, fitresult, Xnew, idx, class) where {M<:AbstractSRRegress
         )
         return _predict(m, fitresult, Xnew.data, Xnew.idx, class)
     end
-    if isnothing(class) && MMI.istable(Xnew) && haskey(Xnew, :class)
-        if !(Xnew isa NamedTuple)
-            error("Classes can only be specified with named tuples.")
-        end
-        Xnew2 = Base.structdiff(Xnew, (; Xnew.class))
-        return _predict(m, fitresult, Xnew2, idx, Xnew.class)
+    if (
+        IDE.handles_class_column(m) &&
+        isnothing(class) &&
+        MMI.istable(Xnew) &&
+        :class in MMI.schema(Xnew).names
+    )
+        names_without_class = filter(!=(:class), MMI.schema(Xnew).names)
+        Xnew2 = MMI.selectcols(Xnew, collect(names_without_class))
+        class = MMI.selectcols(Xnew, :class)
+        return _predict(m, fitresult, Xnew2, idx, class)
     end
 
     if fitresult.has_class
@@ -524,11 +547,11 @@ function _predict(m::M, fitresult, Xnew, idx, class) where {M<:AbstractSRRegress
 
     _idx = something(idx, params.best_idx)
 
-    if M <: SRRegressor
+    if M <: AbstractSingletargetSRRegressor
         return eval_tree_mlj(
             params.equations[_idx], Xnew_t, class, m, T, fitresult, nothing, prototype
         )
-    elseif M <: MultitargetSRRegressor
+    elseif M <: AbstractMultitargetSRRegressor
         outs = [
             eval_tree_mlj(
                 params.equations[i][_idx[i]], Xnew_t, class, m, T, fitresult, i, prototype
@@ -543,12 +566,16 @@ function _predict(m::M, fitresult, Xnew, idx, class) where {M<:AbstractSRRegress
     end
 end
 
-function get_equation_strings_for(::SRRegressor, trees, options, variable_names)
+function get_equation_strings_for(
+    ::AbstractSingletargetSRRegressor, trees, options, variable_names
+)
     return (
         t -> string_tree(t, options; variable_names=variable_names, pretty=false)
     ).(trees)
 end
-function get_equation_strings_for(::MultitargetSRRegressor, trees, options, variable_names)
+function get_equation_strings_for(
+    ::AbstractMultitargetSRRegressor, trees, options, variable_names
+)
     return [
         (t -> string_tree(t, options; variable_names=variable_names, pretty=false)).(ts) for
         ts in trees
@@ -566,14 +593,16 @@ function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<
     ])
 end
 
-function dispatch_selection_for(m::SRRegressor, trees, losses, scores, complexities)::Int
+function dispatch_selection_for(
+    m::AbstractSingletargetSRRegressor, trees, losses, scores, complexities
+)::Int
     length(trees) == 0 && return 0
     return m.selection_method(;
         trees=trees, losses=losses, scores=scores, complexities=complexities
     )
 end
 function dispatch_selection_for(
-    m::MultitargetSRRegressor, trees, losses, scores, complexities
+    m::AbstractMultitargetSRRegressor, trees, losses, scores, complexities
 )
     any(t -> length(t) == 0, trees) && return fill(0, length(trees))
     return [
@@ -584,7 +613,7 @@ function dispatch_selection_for(
 end
 
 MMI.metadata_pkg(
-    AbstractSRRegressor;
+    AbstractSymbolicRegressor;
     name="SymbolicRegression",
     uuid="8254be44-1295-4e6a-a16d-46603ac705cb",
     url="https://github.com/MilesCranmer/SymbolicRegression.jl",
@@ -603,7 +632,7 @@ const input_scitype = Union{
 MMI.metadata_model(
     SRRegressor;
     input_scitype,
-    target_scitype=AbstractVector{<:Any},
+    target_scitype=AbstractVector{<:MMI.Continuous},
     supports_weights=true,
     reports_feature_importances=false,
     load_path="SymbolicRegression.MLJInterfaceModule.SRRegressor",
@@ -612,12 +641,21 @@ MMI.metadata_model(
 MMI.metadata_model(
     MultitargetSRRegressor;
     input_scitype,
-    target_scitype=Union{MMI.Table(Any),AbstractMatrix{<:Any}},
+    target_scitype=Union{MMI.Table(MMI.Continuous),AbstractMatrix{<:MMI.Continuous}},
     supports_weights=true,
     reports_feature_importances=false,
     load_path="SymbolicRegression.MLJInterfaceModule.MultitargetSRRegressor",
     human_name="Multi-Target Symbolic Regression via Evolutionary Search",
 )
+
+function MMI.target_scitype(::Type{<:SRRegressor{D,L}}) where {D<:AbstractDimensions,L}
+    return AbstractVector{<:MMI.Unknown}
+end
+function MMI.target_scitype(
+    ::Type{<:MultitargetSRRegressor{D,L}}
+) where {D<:AbstractDimensions,L}
+    return Union{MMI.Table(MMI.Unknown),AbstractMatrix{<:MMI.Unknown}}
+end
 
 function tag_with_docstring(model_name::Symbol, description::String, bottom_matter::String)
     docstring = """$(MMI.doc_header(eval(model_name)))

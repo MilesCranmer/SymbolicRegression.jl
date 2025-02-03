@@ -16,6 +16,7 @@ using DynamicExpressions:
     Node,
     OperatorEnum,
     Metadata,
+    EvalOptions,
     get_contents,
     get_metadata,
     get_operators,
@@ -507,8 +508,9 @@ function EB.create_expression(
     # NOTE: We need to copy over the operators so we can call the structure function
     operators = options.operators
     variable_names = embed ? dataset.variable_names : nothing
+    eval_options = EvalOptions(; turbo=options.turbo, bumper=options.bumper)
     inner_expressions = ntuple(
-        _ -> ComposableExpression(copy(t); operators, variable_names),
+        _ -> ComposableExpression(copy(t); operators, variable_names, eval_options),
         Val(length(function_keys)),
     )
     # TODO: Generalize to other inner expression types

@@ -23,7 +23,7 @@ using ..CoreModule:
     AbstractExpressionSpec,
     ExpressionSpecModule as ES
 using ..PopMemberModule: PopMember
-using ..InterfaceDynamicExpressionsModule: expected_array_type
+using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..LossFunctionsModule: LossFunctionsModule as LF
 using ..ExpressionBuilderModule: ExpressionBuilderModule as EB
 using ..MutateModule: MutateModule as MM
@@ -71,7 +71,7 @@ function DE.eval_tree_array(
     options::AbstractOptions;
     kws...,
 )
-    A = expected_array_type(X, typeof(tree))
+    A = IDE.expected_array_type(X, typeof(tree))
     out, complete = DE.eval_tree_array(
         tree,
         X,
@@ -86,7 +86,7 @@ end
 function LF.eval_tree_dispatch(
     tree::ParametricExpression, dataset::Dataset, options::AbstractOptions, idx
 )
-    A = expected_array_type(dataset.X, typeof(tree))
+    A = IDE.expected_array_type(dataset.X, typeof(tree))
     out, complete = DE.eval_tree_array(
         tree,
         LF.maybe_getindex(dataset.X, :, idx),
@@ -186,6 +186,9 @@ function MF.mutate_constant(
         return ex
     end
 end
+
+# ParametricExpression handles class columns
+IDE.handles_class_column(::Type{<:ParametricExpression}) = true
 
 """
     ParametricExpressionSpec <: AbstractExpressionSpec

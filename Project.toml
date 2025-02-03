@@ -1,7 +1,7 @@
 name = "SymbolicRegression"
 uuid = "8254be44-1295-4e6a-a16d-46603ac705cb"
 authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
-version = "1.5.1"
+version = "1.6.0"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -46,11 +46,11 @@ ADTypes = "^1.4.0"
 Compat = "^4.16"
 ConstructionBase = "1.0.0 - 1.5.6, 1.5.8 - 1"
 Dates = "1"
-DifferentiationInterface = "0.5, 0.6"
+DifferentiationInterface = "0.6.39"
 DispatchDoctor = "^0.4.17"
 Distributed = "<0.0.1, 1"
 DynamicDiff = "0.2"
-DynamicExpressions = "~1.9"
+DynamicExpressions = "~1.9.2"
 DynamicQuantities = "1"
 Enzyme = "0.12, 0.13"
 JSON3 = "1"

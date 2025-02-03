@@ -32,7 +32,11 @@ import ..OptionsStructModule: Options
 using ..OptionsStructModule: ComplexityMapping, operator_specialization
 using ..UtilsModule: @save_kwargs, @ignore
 using ..ExpressionSpecModule:
-    AbstractExpressionSpec, get_expression_type, get_expression_options, get_node_type
+    AbstractExpressionSpec,
+    ExpressionSpec,
+    get_expression_type,
+    get_expression_options,
+    get_node_type
 
 """Build constraints on operator-level complexity from a user-passed dict."""
 @unstable function build_constraints(;
@@ -797,8 +801,13 @@ $(OPTION_DESCRIPTIONS)
                 :Options,
             )
         end
-        expression_type = @something(expression_type, Expression)
-        expression_options = @something(expression_options, NamedTuple())
+        _default_expression_spec = ExpressionSpec()
+        expression_type = @something(
+            expression_type, get_expression_type(_default_expression_spec)
+        )
+        expression_options = @something(
+            expression_options, get_expression_options(_default_expression_spec)
+        )
         node_type = @something(node_type, default_node_type(expression_type))
     end
 

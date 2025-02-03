@@ -10,7 +10,8 @@ using DynamicExpressions:
     AbstractExpression,
     AbstractExpressionNode,
     Node,
-    GraphNode
+    GraphNode,
+    EvalOptions
 using DynamicQuantities: dimension, ustrip
 using ..CoreModule: AbstractOptions, Dataset
 using ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
@@ -56,16 +57,16 @@ which speed up evaluation significantly.
         tree::Union{AbstractExpressionNode,AbstractExpression},
         X::AbstractMatrix,
         options::AbstractOptions;
+        turbo=nothing,
+        bumper=nothing,
         kws...,
     )
         A = expected_array_type(X, typeof(tree))
+        eval_options = EvalOptions(;
+            turbo=something(turbo, options.turbo), bumper=something(bumper, options.bumper)
+        )
         out, complete = DE.eval_tree_array(
-            tree,
-            X,
-            DE.get_operators(tree, options);
-            turbo=options.turbo,
-            bumper=options.bumper,
-            kws...,
+            tree, X, DE.get_operators(tree, options); eval_options, kws...
         )
         if isnothing(out)
             return nothing, false
@@ -358,5 +359,8 @@ function DE.EvaluationHelpersModule._grad_evaluator(
         tree, X, DE.get_operators(tree, options); turbo=options.turbo, kws...
     )
 end
+
+# Allows special handling of class columns in MLJInterface.jl
+handles_class_column(::Type{<:AbstractExpression}) = false
 
 end
