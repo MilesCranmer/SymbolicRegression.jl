@@ -39,14 +39,9 @@ end
     using SymbolicRegression
     using SymbolicRegression.TemplateExpressionMacroModule: template
 
-    # Test missing parameters/expressions
+    # Test missing expressions
     @test_throws(
-        ArgumentError("Both parameters and expressions must be specified"),
-        template(:((x,) -> f(x)), :(expressions = (f,)))
-    )
-
-    @test_throws(
-        ArgumentError("Both parameters and expressions must be specified"),
+        ArgumentError("expressions must be specified"),
         template(:((x,) -> f(x)), :(parameters = (p1=1,)))
     )
 
@@ -76,6 +71,18 @@ end
     @test_throws(
         ArgumentError("Expected a tuple of arguments for the function arguments"),
         template(:(x -> f(x)), :(parameters = (p1=1,)), :(expressions = (f,)))
+    )
+
+    # Test missing expressions (but having parameters)
+    @test_throws(
+        ArgumentError("expressions must be specified"),
+        template(:((x,) -> f(x)), :(parameters = (p1=1,)))
+    )
+
+    # Test invalid expressions format without parameters
+    @test_throws(
+        "expressions must be a tuple of the form `(f, g, ...)`",
+        template(:((x,) -> f(x)), :(expressions = f))
     )
 end
 
@@ -112,4 +119,36 @@ end
     X = [2.0 3.0 4.0]'
     result = expr(X)
     @test result[1] ≈ 7.0
+end
+
+@testitem "Template macro without parameters" tags = [:part1, :template_macro] begin
+    using SymbolicRegression
+    using DynamicExpressions: OperatorEnum, Node
+
+    # Test template without parameters
+    expr_spec = @template(expressions = (f, g)) do x1, x2
+        return x1^2 + f(x1, x2) - g(x1)
+    end
+
+    # Verify spec structure
+    @test expr_spec.structure isa TemplateStructure{(:f, :g),()}
+
+    # Test expression construction through spec
+    operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    variable_names = ["x1", "x2"]
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+
+    expr = TemplateExpression(
+        (; f=x1, g=x1); expr_spec.structure, operators, variable_names
+    )
+
+    # Validate structure
+    @test expr isa TemplateExpression
+    @test keys(get_contents(expr)) == (:f, :g)
+    @test !hasfield(typeof(get_metadata(expr)), :parameters)
+
+    # Test evaluation
+    X = [1.0 2.0]'
+    result = expr(X)
+    @test result isa Vector{Float64}
 end
