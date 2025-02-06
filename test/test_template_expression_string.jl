@@ -24,7 +24,9 @@
 
     # Test string representation with pretty=false (compact form)
     str_compact = string_tree(expr; pretty=false)
-    @test str_compact isa AnnotatedString
+    if VERSION >= v"1.11.0-"
+        @test str_compact isa AnnotatedString
+    end
     # Should be something like: "f = #1; p = [1.0, 2.0]"
     @test occursin("f = ", str_compact)
     @test occursin("; p = ", str_compact)
@@ -32,7 +34,9 @@
 
     # Test string representation with pretty=true (tree form)
     str_pretty = string_tree(expr; pretty=true)
-    @test str_pretty isa AnnotatedString
+    if VERSION >= v"1.11.0-"
+        @test str_pretty isa AnnotatedString
+    end
     # Should be something like:
     # ╭ f = #1
     # ╰ p = [1.0, 2.0]
@@ -45,18 +49,20 @@
     # based on the _colors function in TemplateExpression.jl
 
     # Test color presence by checking annotations directly
-    @test any(
-        annotation.label == :face && annotation.value == :magenta for
-        annotation in str_pretty.annotations
-    )
-    @test any(
-        annotation.label == :face && annotation.value == :green for
-        annotation in str_pretty.annotations
-    )
-    @test !any(
-        annotation.label == :face && annotation.value == :red for
-        annotation in str_pretty.annotations
-    )
+    if VERSION >= v"1.11.0-"
+        @test any(
+            annotation.label == :face && annotation.value == :magenta for
+            annotation in str_pretty.annotations
+        )
+        @test any(
+            annotation.label == :face && annotation.value == :green for
+            annotation in str_pretty.annotations
+        )
+        @test !any(
+            annotation.label == :face && annotation.value == :red for
+            annotation in str_pretty.annotations
+        )
+    end
 
     # Test with longer parameter vector to verify truncation
     expr_long = TemplateExpression(
