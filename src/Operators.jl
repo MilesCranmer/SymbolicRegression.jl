@@ -132,6 +132,12 @@ end
 
 # Strings
 DE.get_op_name(::typeof(safe_pow)) = "^"
+DE.get_op_name(::typeof(greater)) = ">"
+DE.get_op_name(::typeof(less)) = "<"
+DE.get_op_name(::typeof(greater_equal)) = ">="
+DE.get_op_name(::typeof(less_equal)) = "<="
+DE.get_op_name(::typeof(equals)) = "=="
+DE.get_op_name(::typeof(not_equals)) = "!="
 DE.get_op_name(::typeof(safe_log)) = "log"
 DE.get_op_name(::typeof(safe_log2)) = "log2"
 DE.get_op_name(::typeof(safe_log10)) = "log10"
@@ -144,6 +150,12 @@ DE.get_op_name(::typeof(safe_sqrt)) = "sqrt"
 
 # Expression algebra
 DE.declare_operator_alias(::typeof(safe_pow), ::Val{2}) = ^
+DE.declare_operator_alias(::typeof(greater), ::Val{2}) = >
+DE.declare_operator_alias(::typeof(less), ::Val{2}) = <
+DE.declare_operator_alias(::typeof(greater_equal), ::Val{2}) = >=
+DE.declare_operator_alias(::typeof(less_equal), ::Val{2}) = <=
+DE.declare_operator_alias(::typeof(equals), ::Val{2}) = ==
+DE.declare_operator_alias(::typeof(not_equals), ::Val{2}) = !=
 DE.declare_operator_alias(::typeof(safe_log), ::Val{1}) = log
 DE.declare_operator_alias(::typeof(safe_log2), ::Val{1}) = log2
 DE.declare_operator_alias(::typeof(safe_log10), ::Val{1}) = log10
