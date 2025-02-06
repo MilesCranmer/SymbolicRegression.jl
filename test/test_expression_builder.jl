@@ -28,9 +28,7 @@
         init_params(options, dataset, ex, Val(true))
     )
 
-    options = Options(;
-        expression_type=ParametricExpression, expression_options=(; max_parameters=2)
-    )
+    options = Options(; expression_spec=ParametricExpressionSpec(; max_parameters=2))
 
     # Mistake in that we also gave the wrong number of parameter names!
     pop!(ex.metadata.parameter_names)
