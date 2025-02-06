@@ -5,35 +5,12 @@ module TemplateExpressionMacroModule
         parameters=(p1=10, p2=10, p3=1),
         expressions=(f, g),
     ) do x1, x2, class
-        return p1[class] * x1^2 + f(x1, x2, p2[class]) - p3[1],
+        return p1[class] * g(x1^2) + f(x1, x2, p2[class]) - p3[1],
     end
 
-Creates a template expression with the given parameters and expressions.
+(Experimental) Creates a TemplateExpressionSpec with the given parameters and expressions.
 The parameters are used to define constants that can be indexed, and the
 expressions define the function keys for the template structure.
-
-# Arguments
-- `parameters`: A NamedTuple of parameter names and their sizes
-- `expressions`: A Tuple of function names to use in the template
-- `do` block: A function that takes arguments and returns an expression
-
-# Returns
-A function that takes operators and variable_names and returns a TemplateExpression.
-
-# Example
-```julia
-template = @template(
-    parameters=(p1=10, p2=10, p3=1),
-    expressions=(f, g),
-) do x1, x2, class
-    return p1[class] * x1^2 + f(x1, x2, p2[class]) - p3[1]
-end
-
-# Then use it with:
-operators = Options().operators
-variable_names = ["x1", "x2", "class"]
-expr = template(operators, variable_names)
-```
 """
 macro template(f, args...)
     return esc(template(f, args...))
