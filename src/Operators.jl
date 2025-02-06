@@ -102,6 +102,21 @@ end
 function greater(x, y)
     return (x > y) * one(x)
 end
+function less(x, y)
+    return (x < y) * one(x)
+end
+function greater_equal(x, y)
+    return (x >= y) * one(x)
+end
+function less_equal(x, y)
+    return (x <= y) * one(x)
+end
+function equals(x, y)
+    return (x == y) * one(x)
+end
+function not_equals(x, y)
+    return (x != y) * one(x)
+end
 function cond(x, y)
     return (x > zero(x)) * y
 end
@@ -159,5 +174,11 @@ get_safe_op(::typeof(acos)) = safe_acos
 get_safe_op(::typeof(sqrt)) = safe_sqrt
 get_safe_op(::typeof(acosh)) = safe_acosh
 get_safe_op(::typeof(atanh)) = safe_atanh
+get_safe_op(::typeof(>)) = greater
+get_safe_op(::typeof(<)) = less
+get_safe_op(::typeof(>=)) = greater_equal
+get_safe_op(::typeof(<=)) = less_equal
+get_safe_op(::typeof(==)) = equals
+get_safe_op(::typeof(!=)) = not_equals
 
 end
