@@ -77,19 +77,77 @@ end
 
 @testitem "Built-in operators pass validation" tags = [:part3] begin
     using SymbolicRegression
+    using SymbolicRegression: plus, sub, mult, square, cube, neg, relu, greater, less
     using SymbolicRegression:
-        plus, sub, mult, square, cube, neg, relu, greater, logical_or, logical_and, cond
+        greater_equal, less_equal, equals, not_equals, logical_or, logical_and, cond
 
     types_to_test = [Float16, Float32, Float64, BigFloat]
     options = Options(;
-        binary_operators=[plus, sub, mult, /, ^, greater, logical_or, logical_and, cond],
+        binary_operators=[
+            plus,
+            sub,
+            mult,
+            /,
+            ^,
+            greater,
+            less,
+            greater_equal,
+            less_equal,
+            equals,
+            not_equals,
+            logical_or,
+            logical_and,
+            cond,
+        ],
         unary_operators=[
-            square, cube, log, log2, log10, log1p, sqrt, atanh, acosh, neg, relu
+            square, cube, log, log2, log10, log1p, sqrt, asin, acos, atanh, acosh, neg, relu
         ],
     )
+    @test options.operators.binops == (
+        +,
+        -,
+        *,
+        /,
+        safe_pow,
+        greater,
+        less,
+        greater_equal,
+        less_equal,
+        equals,
+        not_equals,
+        logical_or,
+        logical_and,
+        cond,
+    )
+    @test options.operators.unaops == (
+        square,
+        cube,
+        safe_log,
+        safe_log2,
+        safe_log10,
+        safe_log1p,
+        safe_sqrt,
+        safe_asin,
+        safe_acos,
+        safe_atanh,
+        safe_acosh,
+        neg,
+        relu,
+    )
+
     for T in types_to_test
         @test_nowarn SymbolicRegression.assert_operators_well_defined(T, options)
     end
+
+    using SymbolicRegression.CoreModule.OptionsModule: inverse_binopmap
+
+    # Test inverse mapping for comparison operators
+    @test inverse_binopmap(greater) == (>)
+    @test inverse_binopmap(less) == (<)
+    @test inverse_binopmap(greater_equal) == (>=)
+    @test inverse_binopmap(less_equal) == (<=)
+    @test inverse_binopmap(equals) == (==)
+    @test inverse_binopmap(not_equals) == (!=)
 end
 
 @testitem "Built-in operators pass validation for complex numbers" tags = [:part2] begin
