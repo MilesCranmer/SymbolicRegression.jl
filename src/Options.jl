@@ -22,8 +22,6 @@ using ..OperatorsModule:
     less,
     greater_equal,
     less_equal,
-    equals,
-    not_equals,
     safe_log,
     safe_log10,
     safe_log2,
@@ -168,10 +166,6 @@ function binopmap(@nospecialize(op))
         return greater_equal
     elseif op == Base.:(<=)
         return less_equal
-    elseif op == Base.:(==)
-        return equals
-    elseif op == Base.:(!=)
-        return not_equals
     end
     return op
 end
@@ -186,10 +180,6 @@ function inverse_binopmap(@nospecialize(op))
         return Base.:(>=)
     elseif op == less_equal
         return Base.:(<=)
-    elseif op == equals
-        return Base.:(==)
-    elseif op == not_equals
-        return Base.:(!=)
     end
     return op
 end

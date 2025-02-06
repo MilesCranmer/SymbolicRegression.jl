@@ -78,8 +78,7 @@ end
 @testitem "Built-in operators pass validation" tags = [:part3] begin
     using SymbolicRegression
     using SymbolicRegression: plus, sub, mult, square, cube, neg, relu, greater, less
-    using SymbolicRegression:
-        greater_equal, less_equal, equals, not_equals, logical_or, logical_and, cond
+    using SymbolicRegression: greater_equal, less_equal, logical_or, logical_and, cond
 
     types_to_test = [Float16, Float32, Float64, BigFloat]
     options = Options(;
@@ -93,8 +92,6 @@ end
             less,
             greater_equal,
             less_equal,
-            equals,
-            not_equals,
             logical_or,
             logical_and,
             cond,
@@ -113,8 +110,6 @@ end
         less,
         greater_equal,
         less_equal,
-        equals,
-        not_equals,
         logical_or,
         logical_and,
         cond,
@@ -146,8 +141,6 @@ end
     @test inverse_binopmap(less) == (<)
     @test inverse_binopmap(greater_equal) == (>=)
     @test inverse_binopmap(less_equal) == (<=)
-    @test inverse_binopmap(equals) == (==)
-    @test inverse_binopmap(not_equals) == (!=)
 end
 
 @testitem "Built-in operators pass validation for complex numbers" tags = [:part2] begin

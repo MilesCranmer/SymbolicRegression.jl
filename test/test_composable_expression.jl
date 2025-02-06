@@ -33,6 +33,28 @@ end
     @test Interfaces.test(ExpressionInterface, ComposableExpression, [f, g])
 end
 
+@testitem "Cover other operators" tags = [:part2] begin
+    using SymbolicRegression
+    using SymbolicRegression: ComposableExpression, Node
+    using DynamicExpressions: OperatorEnum
+
+    operators = OperatorEnum(; binary_operators=(>, >=, <, <=))
+    x1 = ComposableExpression(Node(Float64; feature=1); operators)
+    x2 = ComposableExpression(Node(Float64; feature=2); operators)
+
+    expr = x1 > x2
+    @test string_tree(expr) == "x1 > x2"
+    expr = x1 >= x2
+    @test string_tree(expr) == "x1 >= x2"
+    expr = x1 < x2
+    @test string_tree(expr) == "x1 < x2"
+    expr = x1 <= x2
+    @test string_tree(expr) == "x1 <= x2"
+    expr = x1 > 1.0
+    @test string_tree(expr) == "x1 > 1.0"
+    expr = x1 >= 1.0
+end
+
 @testitem "Test interface for TemplateExpression" tags = [:part2] begin
     using SymbolicRegression
     using SymbolicRegression: TemplateExpression
@@ -130,8 +152,6 @@ end
     @test (x <= y).x ≈ [0.0, 1.0, 1.0]
     @test (x > 1.5).x ≈ [0.0, 1.0, 1.0]
     @test (1.5 > x).x ≈ [1.0, 0.0, 0.0]
-    @test (x == y).x ≈ [0.0, 1.0, 0.0]
-    @test (x != y).x ≈ [1.0, 0.0, 1.0]
     @test max(x, y).x ≈ [1.0, 2.0, 4.0]
     @test min(x, y).x ≈ [0.0, 2.0, 3.0]
     @test max(x, 2.0).x ≈ [2.0, 2.0, 3.0]

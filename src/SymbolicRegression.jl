@@ -259,8 +259,6 @@ using .CoreModule:
     less,
     greater_equal,
     less_equal,
-    equals,
-    not_equals,
     cond,
     relu,
     logical_or,

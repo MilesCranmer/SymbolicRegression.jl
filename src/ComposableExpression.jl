@@ -247,8 +247,7 @@ for op in (
     :*, :/, :+, :-, :^, :÷, :mod, :log,
     :atan, :atand, :copysign, :flipsign,
     :&, :|, :⊻, ://, :\, :rem,
-    :(>), :(<), :(>=), :(<=), :(==), :(!=),
-    :max, :min
+    :(>), :(<), :(>=), :(<=), :max, :min
 )
     @eval begin
         Base.$(op)(x::ValidVector, y::ValidVector) = apply_operator(Base.$(op), x, y)
