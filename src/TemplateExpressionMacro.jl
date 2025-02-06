@@ -48,10 +48,16 @@ function template(f, args...)
         if Meta.isexpr(arg, :(=))
             name, value = arg.args
             if name == :parameters
+                !isnothing(parameters) && error("cannot set `parameters` keyword twice")
                 parameters = value
             elseif name == :expressions
+                !isnothing(expressions) && error("cannot set `expressions` keyword twice")
                 expressions = value
+            else
+                error("unrecognized keyword $(name)")
             end
+        else
+            error("no positional args accepted after the first")
         end
     end
 

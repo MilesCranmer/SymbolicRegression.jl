@@ -152,3 +152,37 @@ end
     result = expr(X)
     @test result isa Vector{Float64}
 end
+
+@testitem "Template macro additional error handling" tags = [:part1, :template_macro] begin
+    using SymbolicRegression
+    using SymbolicRegression.TemplateExpressionMacroModule: template
+
+    # Test setting parameters keyword twice
+    @test_throws(
+        "cannot set `parameters` keyword twice",
+        template(
+            :((x,) -> f(x)),
+            :(parameters = (p1=1,)),
+            :(parameters = (p2=1,)),
+            :(expressions = (f,)),
+        )
+    )
+
+    # Test setting expressions keyword twice
+    @test_throws(
+        "cannot set `expressions` keyword twice",
+        template(:((x,) -> f(x)), :(expressions = (f,)), :(expressions = (g,)))
+    )
+
+    # Test unrecognized keyword
+    @test_throws(
+        "unrecognized keyword invalid_keyword",
+        template(:((x,) -> f(x)), :(invalid_keyword = 1), :(expressions = (f,)))
+    )
+
+    # Test positional args after first
+    @test_throws(
+        "no positional args accepted after the first",
+        template(:((x,) -> f(x)), :(expressions = (f,)), :extra_arg)
+    )
+end
