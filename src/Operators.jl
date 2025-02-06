@@ -102,6 +102,21 @@ end
 function greater(x, y)
     return (x > y) * one(x)
 end
+function less(x, y)
+    return (x < y) * one(x)
+end
+function greater_equal(x, y)
+    return (x >= y) * one(x)
+end
+function less_equal(x, y)
+    return (x <= y) * one(x)
+end
+function equals(x, y)
+    return (x == y) * one(x)
+end
+function not_equals(x, y)
+    return (x != y) * one(x)
+end
 function cond(x, y)
     return (x > zero(x)) * y
 end
@@ -117,6 +132,12 @@ end
 
 # Strings
 DE.get_op_name(::typeof(safe_pow)) = "^"
+DE.get_op_name(::typeof(greater)) = ">"
+DE.get_op_name(::typeof(less)) = "<"
+DE.get_op_name(::typeof(greater_equal)) = ">="
+DE.get_op_name(::typeof(less_equal)) = "<="
+DE.get_op_name(::typeof(equals)) = "=="
+DE.get_op_name(::typeof(not_equals)) = "!="
 DE.get_op_name(::typeof(safe_log)) = "log"
 DE.get_op_name(::typeof(safe_log2)) = "log2"
 DE.get_op_name(::typeof(safe_log10)) = "log10"
@@ -129,6 +150,12 @@ DE.get_op_name(::typeof(safe_sqrt)) = "sqrt"
 
 # Expression algebra
 DE.declare_operator_alias(::typeof(safe_pow), ::Val{2}) = ^
+DE.declare_operator_alias(::typeof(greater), ::Val{2}) = >
+DE.declare_operator_alias(::typeof(less), ::Val{2}) = <
+DE.declare_operator_alias(::typeof(greater_equal), ::Val{2}) = >=
+DE.declare_operator_alias(::typeof(less_equal), ::Val{2}) = <=
+DE.declare_operator_alias(::typeof(equals), ::Val{2}) = ==
+DE.declare_operator_alias(::typeof(not_equals), ::Val{2}) = !=
 DE.declare_operator_alias(::typeof(safe_log), ::Val{1}) = log
 DE.declare_operator_alias(::typeof(safe_log2), ::Val{1}) = log2
 DE.declare_operator_alias(::typeof(safe_log10), ::Val{1}) = log10
@@ -159,5 +186,11 @@ get_safe_op(::typeof(acos)) = safe_acos
 get_safe_op(::typeof(sqrt)) = safe_sqrt
 get_safe_op(::typeof(acosh)) = safe_acosh
 get_safe_op(::typeof(atanh)) = safe_atanh
+get_safe_op(::typeof(>)) = greater
+get_safe_op(::typeof(<)) = less
+get_safe_op(::typeof(>=)) = greater_equal
+get_safe_op(::typeof(<=)) = less_equal
+get_safe_op(::typeof(==)) = equals
+get_safe_op(::typeof(!=)) = not_equals
 
 end
