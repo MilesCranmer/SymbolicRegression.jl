@@ -65,7 +65,7 @@ Base.getindex(pv::ParamVector, i::Integer) = pv._data[i]
 #       we might want to have integers passed explicitly.
 Base.getindex(pv::ParamVector, i::Number) = pv[Int(i)]
 
-function Base.setindex!(::ParamVector, ::Integer, _)
+function Base.setindex!(::ParamVector, _, _)
     return error(
         "ParamVector should be treated as read-only. Create a new ParamVector instead."
     )

@@ -16,7 +16,7 @@ macro template(f, args...)
     return esc(template(f, args...))
 end
 
-function template(f, args...)
+function template(func, args...)
     # Extract the parameters and expressions from the arguments
     parameters = nothing
     expressions = nothing
@@ -68,13 +68,6 @@ function template(f, args...)
                 )
             end
         end
-    end
-
-    # Extract the function body and arguments
-    if Meta.isexpr(f, :do)
-        func = f.args[2]
-    else
-        func = f
     end
 
     if !Meta.isexpr(func, :->)
