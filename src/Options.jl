@@ -18,6 +18,10 @@ using ..OperatorsModule:
     safe_pow,
     mult,
     sub,
+    greater,
+    less,
+    greater_equal,
+    less_equal,
     safe_log,
     safe_log10,
     safe_log2,
@@ -160,12 +164,28 @@ function binopmap(@nospecialize(op))
         return safe_pow
     elseif op == pow
         return safe_pow
+    elseif op == Base.:(>)
+        return greater
+    elseif op == Base.:(<)
+        return less
+    elseif op == Base.:(>=)
+        return greater_equal
+    elseif op == Base.:(<=)
+        return less_equal
     end
     return op
 end
 function inverse_binopmap(@nospecialize(op))
     if op == safe_pow
         return ^
+    elseif op == greater
+        return Base.:(>)
+    elseif op == less
+        return Base.:(<)
+    elseif op == greater_equal
+        return Base.:(>=)
+    elseif op == less_equal
+        return Base.:(<=)
     end
     return op
 end
