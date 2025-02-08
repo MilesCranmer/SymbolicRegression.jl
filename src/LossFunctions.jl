@@ -144,10 +144,12 @@ function eval_loss(
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
     loss_val = if !isnothing(options.loss_function)
         f = options.loss_function::Function
-        evaluator(f, get_tree(tree)::AbstractExpressionNode, dataset, options, idx)
+        inner_tree = tree isa AbstractExpression ? get_tree(tree) : tree
+        evaluator(f, inner_tree, dataset, options, idx)
     elseif !isnothing(options.loss_function_expression)
         f = options.loss_function_expression::Function
-        evaluator(f, tree::AbstractExpression, dataset, options, idx)
+        @assert tree isa AbstractExpression
+        evaluator(f, tree, dataset, options, idx)
     else
         _eval_loss(tree, dataset, options, regularization, idx)
     end

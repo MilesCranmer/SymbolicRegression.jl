@@ -506,7 +506,7 @@ end
     @test expr_loss(ex, d, options) < 1e-10
 
     # Test that it errors with a tree instead of expression
-    @test_throws TypeError eval_loss(Node{Float32}(; val=1.0), d, options)
+    @test_throws AssertionError eval_loss(Node{Float32}(; val=1.0), d, options)
 
     # Test batched version
     options = Options(;
