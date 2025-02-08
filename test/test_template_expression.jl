@@ -447,3 +447,132 @@ end
     # n.b., we can't actually test whether turbo is used here,
     # this is basically just a smoke test
 end
+
+@testitem "loss_function_expression with expressions and templates" tags = [:part3] begin
+    using SymbolicRegression
+    using SymbolicRegression: AbstractOptions
+    using SymbolicRegression.LossFunctionsModule: eval_loss
+
+    # Define realistic loss functions for testing
+    function tree_loss(
+        tree::AbstractExpressionNode, dataset::Dataset, options::AbstractOptions
+    )
+        output, completed = eval_tree_array(tree, dataset.X, options)
+        !completed && return Inf
+        return sum(abs2, output .- dataset.y) / length(dataset.y)
+    end
+
+    function expr_loss(ex::AbstractExpression, dataset::Dataset, options::AbstractOptions)
+        output, completed = eval_tree_array(ex, dataset.X, options)
+        !completed && return Inf
+        return sum(abs2, output .- dataset.y) / length(dataset.y)
+    end
+
+    function expr_loss_batched(
+        ex::AbstractExpression, dataset::Dataset, options::AbstractOptions, idx
+    )
+        if idx === nothing
+            return expr_loss(ex, dataset, options)
+        end
+        output, completed = eval_tree_array(ex, dataset.X[:, idx], options)
+        !completed && return Inf
+        return sum(abs2, output .- dataset.y[idx]) / length(idx)
+    end
+
+    # Test they can't be used together
+    @test_throws "You cannot specify more than one" Options(;
+        binary_operators=[+, *], loss_function=tree_loss, loss_function_expression=expr_loss
+    )
+
+    # Test regular expression loss
+    options = Options(; binary_operators=[+, *], loss_function_expression=expr_loss)
+
+    # Create a simple dataset where y = 2x₁ + x₂²
+    X = Float32[1.0 2.0 3.0; 2.0 3.0 4.0; 0.0 0.0 0.0]  # 3x3 array
+    y = Float32[2.0 * X[1, i] + X[2, i]^2 for i in 1:3]  # y = 2x₁ + x₂²
+    d = Dataset(X, y)
+
+    # Create an expression that should give a constant 1.0
+    ex = Expression(Node{Float32}(; val=1.0); operators=options.operators)
+    expected_loss = sum(abs2, ones(Float32, 3) .- y) / 3  # MSE for constant 1.0
+    @test eval_loss(ex, d, options) ≈ expected_loss
+
+    # Create an expression that matches the true function: 2x₁ + x₂²
+    ex = Expression(
+        2.0f0 * Node{Float32}(; feature=1) +
+        Node{Float32}(; feature=2) * Node{Float32}(; feature=2);
+        operators=options.operators,
+    )
+    @test expr_loss(ex, d, options) < 1e-10
+
+    # Test that it errors with a tree instead of expression
+    @test_throws AssertionError eval_loss(Node{Float32}(; val=1.0), d, options)
+
+    # Test batched version
+    options = Options(;
+        binary_operators=[+, *],
+        loss_function_expression=expr_loss_batched,
+        batching=true,
+        batch_size=5,
+    )
+
+    @test eval_loss(ex, d, options) < 1e-10
+
+    # Test with subset of data:
+    idx = [1, 2]
+    @test eval_loss(ex, d, options; idx=idx) < 1e-10
+
+    # Test with template expressions
+    template = @template(expressions = (f,), parameters = (p=2,)) do x
+        f(x) + sum(p)
+    end
+
+    # Create template expression with parameters
+    options = Options(;
+        binary_operators=[+, *],
+        expression_spec=template,
+        loss_function_expression=expr_loss,
+    )
+    x = ComposableExpression(Node{Float32}(; feature=1); operators=options.operators)
+    template_ex = TemplateExpression(
+        (; f=x);
+        structure=template.structure,
+        operators=options.operators,
+        parameters=(; p=[1.0f0, 2.0f0]),
+    )
+
+    # Test template expression works with loss_function_expression
+    # Template evaluates to: x₁ + (1.0 + 2.0)
+    # Expected output: [4.0, 5.0, 6.0]
+    expected_template_loss = sum(abs2, [4.0f0, 5.0f0, 6.0f0] .- y) / 3
+    loss = eval_loss(template_ex, d, options)
+    @test loss ≈ expected_template_loss
+
+    # Test batched version with template expression
+    options = Options(;
+        binary_operators=[+, *],
+        expression_spec=template,
+        loss_function_expression=expr_loss_batched,
+        batching=true,
+        batch_size=5,
+    )
+    # Test with subset of data:
+    idx = [1, 2]
+    expected_batch_loss = sum(abs2, [4.0f0, 5.0f0] .- y[idx]) / 2
+
+    loss_batch = eval_loss(template_ex, d, options; idx=idx)
+    @test loss_batch ≈ expected_batch_loss
+end
+
+@testitem "warning for loss_function with TemplateExpression" begin
+    using SymbolicRegression
+
+    @test_warn(
+        "You are using `loss_function` with",
+        Options(;
+            binary_operators=[+, *],
+            loss_function=Returns(1.0),
+            expression_type=TemplateExpression,
+        )
+    )
+end

@@ -235,6 +235,8 @@ function inverse_unaopmap(@nospecialize(op))
     return op
 end
 
+recommend_loss_function_expression(expression_type) = false
+
 create_mutation_weights(w::AbstractMutationWeights) = w
 create_mutation_weights(w::NamedTuple) = MutationWeights(; w...)
 
@@ -339,6 +341,7 @@ const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Op
             return sum((prediction .- dataset.y) .^ 2) / dataset.n
         end
 
+- `loss_function_expression`: Similar to `loss_function`, but takes `AbstractExpression` instead of `AbstractExpressionNode` as its first argument. Useful for `TemplateExpressionSpec`.
 - `expression_spec::AbstractExpressionSpec`: A specification of what types of expressions to use in the
     search. For example, `ExpressionSpec()` (default). You can also see `TemplateExpressionSpec` and
     `ParametricExpressionSpec` for specialized cases.
@@ -501,6 +504,7 @@ $(OPTION_DESCRIPTIONS)
     ## 3. The Objective:
     @nospecialize(elementwise_loss::Union{Function,SupervisedLoss,Nothing} = nothing),
     @nospecialize(loss_function::Union{Function,Nothing} = nothing),
+    @nospecialize(loss_function_expression::Union{Function,Nothing} = nothing),
     ###           [model_selection - only used in MLJ interface]
     @nospecialize(dimensional_constraint_penalty::Union{Nothing,Real} = nothing),
     ###           dimensionless_constants_only
@@ -726,17 +730,25 @@ $(OPTION_DESCRIPTIONS)
         error("`output_file` is deprecated. Use `output_directory` instead.")
     end
 
-    if elementwise_loss === nothing
-        elementwise_loss = L2DistLoss()
-    else
-        if loss_function !== nothing
-            error("You cannot specify both `elementwise_loss` and `loss_function`.")
-        end
+    @assert(
+        count(!isnothing, [elementwise_loss, loss_function, loss_function_expression]) <= 1,
+        "You cannot specify more than one of `elementwise_loss`, `loss_function`, and `loss_function_expression`."
+    )
+
+    if !isnothing(loss_function) && recommend_loss_function_expression(expression_type)
+        @warn(
+            "You are using `loss_function` with `$(expression_type)`. " *
+                "You should use `loss_function_expression` instead, as it is designed to work with expressions directly."
+        )
     end
+
+    elementwise_loss = something(elementwise_loss, L2DistLoss())
+
     if complexity_mapping !== nothing
-        @assert complexity_of_operators === nothing &&
-            complexity_of_constants === nothing &&
-            complexity_of_variables === nothing
+        @assert all(
+            isnothing,
+            [complexity_of_operators, complexity_of_constants, complexity_of_variables],
+        )
     end
 
     #################################
@@ -973,6 +985,7 @@ $(OPTION_DESCRIPTIONS)
         seed,
         elementwise_loss,
         loss_function,
+        loss_function_expression,
         node_type,
         expression_type,
         expression_options,

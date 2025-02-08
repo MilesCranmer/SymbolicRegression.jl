@@ -720,6 +720,8 @@ function CM.operator_specialization(
     return O
 end
 
+CM.OptionsModule.recommend_loss_function_expression(::Type{<:TemplateExpression}) = true
+
 function CM.max_features(
     dataset::Dataset, options::Options{<:Any,<:Any,<:Any,<:TemplateExpression}
 )
