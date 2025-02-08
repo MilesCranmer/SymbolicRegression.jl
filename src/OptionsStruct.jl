@@ -234,6 +234,7 @@ struct Options{
     seed::Union{Int,Nothing}
     elementwise_loss::Union{SupervisedLoss,Function}
     loss_function::Union{Nothing,Function}
+    loss_function_expression::Union{Nothing,Function}
     node_type::Type{N}
     expression_type::Type{E}
     expression_options::EO

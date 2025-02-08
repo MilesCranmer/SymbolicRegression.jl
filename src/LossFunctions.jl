@@ -114,7 +114,7 @@ end
 # This evaluates function F:
 function evaluator(
     f::F,
-    tree::AbstractExpressionNode{T},
+    tree::Union{AbstractExpressionNode{T},AbstractExpression{T}},
     dataset::Dataset{T,L},
     options::AbstractOptions,
     idx,
@@ -142,11 +142,14 @@ function eval_loss(
     regularization::Bool=true,
     idx=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    loss_val = if options.loss_function === nothing
-        _eval_loss(tree, dataset, options, regularization, idx)
-    else
+    loss_val = if !isnothing(options.loss_function)
         f = options.loss_function::Function
-        evaluator(f, get_tree(tree), dataset, options, idx)
+        evaluator(f, get_tree(tree)::AbstractExpressionNode, dataset, options, idx)
+    elseif !isnothing(options.loss_function_expression)
+        f = options.loss_function_expression::Function
+        evaluator(f, tree::AbstractExpression, dataset, options, idx)
+    else
+        _eval_loss(tree, dataset, options, regularization, idx)
     end
 
     return loss_val
