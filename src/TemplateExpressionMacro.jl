@@ -1,7 +1,7 @@
 module TemplateExpressionMacroModule
 
 """
-    @template(
+    @template_spec(
         parameters=(p1=10, p2=10, p3=1),
         expressions=(f, g),
     ) do x1, x2, class
@@ -12,11 +12,11 @@ module TemplateExpressionMacroModule
 The parameters are used to define constants that can be indexed, and the
 expressions define the function keys for the template structure.
 """
-macro template(f, args...)
-    return esc(template(f, args...))
+macro template_spec(f, args...)
+    return esc(template_spec(f, args...))
 end
 
-function template(func, args...)
+function template_spec(func, args...)
     # Extract the parameters and expressions from the arguments
     parameters = nothing
     expressions = nothing

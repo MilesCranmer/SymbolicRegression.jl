@@ -1,12 +1,13 @@
-@testitem "Basic @template macro functionality" tags = [:part1, :template_macro] begin
+@testitem "Basic @template_spec macro functionality" tags = [:part1, :template_macro] begin
     using SymbolicRegression
     using DynamicExpressions: OperatorEnum, Node
 
     # Test basic parameter/expression handling
-    expr_spec =
-        @template(parameters = (p1=10, p2=10, p3=1), expressions = (f, g)) do x1, x2, class
-            return p1[class] * x1^2 + f(x1, x2, p2[class]) - g(p3[1] * x1)
-        end
+    expr_spec = @template_spec(
+        parameters = (p1=10, p2=10, p3=1), expressions = (f, g)
+    ) do x1, x2, class
+        return p1[class] * x1^2 + f(x1, x2, p2[class]) - g(p3[1] * x1)
+    end
 
     # Verify spec structure
     @test expr_spec.structure isa TemplateStructure{(:f, :g),(:p1, :p2, :p3)}
@@ -37,52 +38,52 @@ end
 
 @testitem "Template macro error handling" tags = [:part1, :template_macro] begin
     using SymbolicRegression
-    using SymbolicRegression.TemplateExpressionMacroModule: template
+    using SymbolicRegression.TemplateExpressionMacroModule: template_spec
 
     # Test missing expressions
     @test_throws(
         ArgumentError("expressions must be specified"),
-        template(:((x,) -> f(x)), :(parameters = (p1=1,)))
+        template_spec(:((x,) -> f(x)), :(parameters = (p1=1,)))
     )
 
     # Test invalid parameters format
     @test_throws(
         "parameters must be a tuple of parameter name-size pairs like `(p1=10, p2=10, p3=1)`",
-        template(:((x,) -> f(x)), :(parameters = 1), :(expressions = (f,)))
+        template_spec(:((x,) -> f(x)), :(parameters = 1), :(expressions = (f,)))
     )
 
     @test_throws(
         "parameters must be a tuple of parameter name-size pairs like `(p1=10, p2=10, p3=1)`",
-        template(:((x,) -> f(x)), :(parameters = (1, 2)), :(expressions = (f,)))
+        template_spec(:((x,) -> f(x)), :(parameters = (1, 2)), :(expressions = (f,)))
     )
 
     # Test invalid expressions format
     @test_throws(
         "expressions must be a tuple of the form `(f, g, ...)`",
-        template(:((x,) -> f(x)), :(parameters = (p1=1,)), :(expressions = f))
+        template_spec(:((x,) -> f(x)), :(parameters = (p1=1,)), :(expressions = f))
     )
 
     # Test invalid function format
     @test_throws(
         ArgumentError("Expected a do block"),
-        template(:(f(x)), :(parameters = (p1=1,)), :(expressions = (f,)))
+        template_spec(:(f(x)), :(parameters = (p1=1,)), :(expressions = (f,)))
     )
 
     @test_throws(
         ArgumentError("Expected a tuple of arguments for the function arguments"),
-        template(:(x -> f(x)), :(parameters = (p1=1,)), :(expressions = (f,)))
+        template_spec(:(x -> f(x)), :(parameters = (p1=1,)), :(expressions = (f,)))
     )
 
     # Test missing expressions (but having parameters)
     @test_throws(
         ArgumentError("expressions must be specified"),
-        template(:((x,) -> f(x)), :(parameters = (p1=1,)))
+        template_spec(:((x,) -> f(x)), :(parameters = (p1=1,)))
     )
 
     # Test invalid expressions format without parameters
     @test_throws(
         "expressions must be a tuple of the form `(f, g, ...)`",
-        template(:((x,) -> f(x)), :(expressions = f))
+        template_spec(:((x,) -> f(x)), :(expressions = f))
     )
 end
 
@@ -92,12 +93,13 @@ end
     using Test
 
     # Multi-output template with parameter reuse
-    template =
-        @template(parameters = (coeff=5,), expressions = (base, modifier)) do x, y, class
-            base_val = base(x, coeff[class])
-            modified = modifier(y, coeff[class])
-            return coeff[class] * x * base_val + modified
-        end
+    template = @template_spec(
+        parameters = (coeff=5,), expressions = (base, modifier)
+    ) do x, y, class
+        base_val = base(x, coeff[class])
+        modified = modifier(y, coeff[class])
+        return coeff[class] * x * base_val + modified
+    end
 
     # Verify structure
     @test template.structure isa TemplateStructure{(:base, :modifier),(:coeff,)}
@@ -126,7 +128,7 @@ end
     using DynamicExpressions: OperatorEnum, Node
 
     # Test template without parameters
-    expr_spec = @template(expressions = (f, g)) do x1, x2
+    expr_spec = @template_spec(expressions = (f, g)) do x1, x2
         return x1^2 + f(x1, x2) - g(x1)
     end
 
@@ -155,12 +157,12 @@ end
 
 @testitem "Template macro additional error handling" tags = [:part1, :template_macro] begin
     using SymbolicRegression
-    using SymbolicRegression.TemplateExpressionMacroModule: template
+    using SymbolicRegression.TemplateExpressionMacroModule: template_spec
 
     # Test setting parameters keyword twice
     @test_throws(
         "cannot set `parameters` keyword twice",
-        template(
+        template_spec(
             :((x,) -> f(x)),
             :(parameters = (p1=1,)),
             :(parameters = (p2=1,)),
@@ -171,18 +173,18 @@ end
     # Test setting expressions keyword twice
     @test_throws(
         "cannot set `expressions` keyword twice",
-        template(:((x,) -> f(x)), :(expressions = (f,)), :(expressions = (g,)))
+        template_spec(:((x,) -> f(x)), :(expressions = (f,)), :(expressions = (g,)))
     )
 
     # Test unrecognized keyword
     @test_throws(
         "unrecognized keyword invalid_keyword",
-        template(:((x,) -> f(x)), :(invalid_keyword = 1), :(expressions = (f,)))
+        template_spec(:((x,) -> f(x)), :(invalid_keyword = 1), :(expressions = (f,)))
     )
 
     # Test positional args after first
     @test_throws(
         "no positional args accepted after the first",
-        template(:((x,) -> f(x)), :(expressions = (f,)), :extra_arg)
+        template_spec(:((x,) -> f(x)), :(expressions = (f,)), :extra_arg)
     )
 end

@@ -18,7 +18,7 @@ export Population,
     TemplateExpression,
     TemplateStructure,
     TemplateExpressionSpec,
-    @template,
+    @template_spec,
     ValidVector,
     ComposableExpression,
     NodeSampler,
@@ -339,7 +339,7 @@ using .TemplateExpressionModule: ValidVector
 using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 using .ParametricExpressionModule: ParametricExpressionSpec
-using .TemplateExpressionMacroModule: @template
+using .TemplateExpressionMacroModule: @template_spec
 
 @stable default_mode = "disable" begin
     include("deprecates.jl")
