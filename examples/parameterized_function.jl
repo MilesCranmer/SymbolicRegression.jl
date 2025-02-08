@@ -87,13 +87,6 @@ You can extract the best expression and parameters with:
 report(mach).equations[end]
 ```
 
-## Key Takeaways
-
-1. [`ParametricExpression`](@ref)s allows us to discover symbolic expressions with optimizable parameters
-2. The parameters can capture class-dependent variations in the underlying model
-
-This approach is particularly useful when you suspect your data follows a common
-functional form, but with varying parameters across different conditions or class!
 =#
 #literate_end
 
