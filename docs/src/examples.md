@@ -285,7 +285,7 @@ using MLJBase: machine, fit!, report
 The key part is defining our template structure. This determines how different parts of the expression combine:
 
 ```julia
-expression_spec = @template(expressions=(f, g)) do x1, x2, x3
+expression_spec = @template_spec(expressions=(f, g)) do x1, x2, x3
     f(x1, x2) + g(x2) - g(x3)
 end
 ```
@@ -432,7 +432,7 @@ Now, define the template for the derivative operator:
 ```julia
 using SymbolicRegression: D
 
-expression_spec = @template(expressions=(f,)) do x
+expression_spec = @template_spec(expressions=(f,)) do x
     D(f, 1)(x)
 end
 ```

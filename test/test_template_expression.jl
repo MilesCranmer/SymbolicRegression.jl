@@ -523,7 +523,7 @@ end
     @test eval_loss(ex, d, options; idx=idx) < 1e-10
 
     # Test with template expressions
-    template = @template(expressions = (f,), parameters = (p=2,)) do x
+    template = @template_spec(expressions = (f,), parameters = (p=2,)) do x
         f(x) + sum(p)
     end
 

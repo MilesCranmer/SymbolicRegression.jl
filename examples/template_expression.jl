@@ -3,7 +3,7 @@ using Random: rand
 using MLJBase: machine, fit!, report, predict
 using Test: @test
 
-expression_spec = @template(expressions = (f, g1, g2)) do x1, x2, x3
+expression_spec = @template_spec(expressions = (f, g1, g2)) do x1, x2, x3
     _f = f(x1, x2)
     _g1 = g1(x3)
     _g2 = g2(x3)

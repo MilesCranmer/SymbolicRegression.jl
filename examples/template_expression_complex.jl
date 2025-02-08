@@ -226,7 +226,7 @@ subexpression symbols we wish to learn:
 structure = TemplateStructure{(:B_x, :B_y, :B_z, :F_d_scale)}(compute_force)
 
 #=
-Note that we could have also used the `@template` macro which is
+Note that we could have also used the `@template_spec` macro which is
 more convenient.
 
 First, let's look at an example of how this would be used

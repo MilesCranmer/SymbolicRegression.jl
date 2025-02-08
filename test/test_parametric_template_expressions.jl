@@ -271,12 +271,12 @@ end
     #=
     ## Defining the Template
 
-    Now we'll use the `@template` macro to encode this structure, which will create
+    Now we'll use the `@template_spec` macro to encode this structure, which will create
     a `TemplateExpressionSpec` object.
     =#
 
     ## Define the template structure with sub-expressions f and g
-    template = @template(
+    template = @template_spec(
         expressions=(f, g),
         parameters=(p1=2, p2=2)
     ) do x1, x2, class

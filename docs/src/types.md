@@ -64,10 +64,10 @@ TemplateStructure
 TemplateExpressionSpec
 ```
 
-You can use the `@template` macro as an easy way to create a `TemplateExpressionSpec`:
+You can use the `@template_spec` macro as an easy way to create a `TemplateExpressionSpec`:
 
 ```@docs
-@template
+@template_spec
 ```
 
 Composable expressions are used internally by `TemplateExpression` and allow you to combine multiple expressions together.
