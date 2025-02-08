@@ -493,20 +493,20 @@ end
     d = Dataset(X, y)
 
     # Create an expression that should give a constant 1.0
-    ex = Expression(Node(Float32; val=1.0); operators=options.operators)
+    ex = Expression(Node{Float32}(; val=1.0); operators=options.operators)
     expected_loss = sum(abs2, ones(Float32, 3) .- y) / 3  # MSE for constant 1.0
-    @test expr_loss(ex, d, options) ≈ expected_loss
+    @test eval_loss(ex, d, options) ≈ expected_loss
 
     # Create an expression that matches the true function: 2x₁ + x₂²
     ex = Expression(
-        2.0f0 * Node(Float32; feature=1) +
-        Node(Float32; feature=2) * Node(Float32; feature=2);
+        2.0f0 * Node{Float32}(; feature=1) +
+        Node{Float32}(; feature=2) * Node{Float32}(; feature=2);
         operators=options.operators,
     )
     @test expr_loss(ex, d, options) < 1e-10
 
     # Test that it errors with a tree instead of expression
-    @test_throws ErrorException eval_loss(Node(Float32; val=1.0), d, options)
+    @test_throws TypeError eval_loss(Node{Float32}(; val=1.0), d, options)
 
     # Test batched version
     options = Options(;
@@ -515,11 +515,12 @@ end
         batching=true,
         batch_size=5,
     )
-    # Test with full dataset (idx=nothing):
-    @test expr_loss_batched(ex, d, options, nothing) < 1e-10
+
+    @test eval_loss(ex, d, options) < 1e-10
+
     # Test with subset of data:
     idx = [1, 2]
-    @test expr_loss_batched(ex, d, options, idx) < 1e-10
+    @test eval_loss(ex, d, options; idx=idx) < 1e-10
 
     # Test with template expressions
     template = @template(expressions = (f,), parameters = (p=2,)) do x
@@ -544,7 +545,7 @@ end
     # Template evaluates to: x₁ + (1.0 + 2.0)
     # Expected output: [4.0, 5.0, 6.0]
     expected_template_loss = sum(abs2, [4.0f0, 5.0f0, 6.0f0] .- y) / 3
-    loss = expr_loss(template_ex, d, options)
+    loss = eval_loss(template_ex, d, options)
     @test loss ≈ expected_template_loss
 
     # Test batched version with template expression
@@ -558,7 +559,8 @@ end
     # Test with subset of data:
     idx = [1, 2]
     expected_batch_loss = sum(abs2, [4.0f0, 5.0f0] .- y[idx]) / 2
-    loss_batch = expr_loss_batched(template_ex, d, options, idx)
+
+    loss_batch = eval_loss(template_ex, d, options; idx=idx)
     @test loss_batch ≈ expected_batch_loss
 end
 
