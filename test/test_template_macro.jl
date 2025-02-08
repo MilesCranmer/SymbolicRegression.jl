@@ -157,7 +157,7 @@ end
 
 @testitem "Template macro additional error handling" tags = [:part1, :template_macro] begin
     using SymbolicRegression
-    using SymbolicRegression.TemplateExpressionMacroModule: template
+    using SymbolicRegression.TemplateExpressionMacroModule: template_spec
 
     # Test setting parameters keyword twice
     @test_throws(
