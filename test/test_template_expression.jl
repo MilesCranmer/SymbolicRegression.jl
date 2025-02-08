@@ -561,3 +561,16 @@ end
     loss_batch = expr_loss_batched(template_ex, d, options, idx)
     @test loss_batch ≈ expected_batch_loss
 end
+
+@testitem "warning for loss_function with TemplateExpression" begin
+    using SymbolicRegression
+
+    @test_warn(
+        "You are using `loss_function` with",
+        Options(;
+            binary_operators=[+, *],
+            loss_function=Returns(1.0),
+            expression_type=TemplateExpression,
+        )
+    )
+end

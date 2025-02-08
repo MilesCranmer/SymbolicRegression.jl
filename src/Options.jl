@@ -235,6 +235,8 @@ function inverse_unaopmap(@nospecialize(op))
     return op
 end
 
+recommend_loss_function_expression(expression_type) = false
+
 create_mutation_weights(w::AbstractMutationWeights) = w
 create_mutation_weights(w::NamedTuple) = MutationWeights(; w...)
 
@@ -732,6 +734,13 @@ $(OPTION_DESCRIPTIONS)
         count(!isnothing, [elementwise_loss, loss_function, loss_function_expression]) <= 1,
         "You cannot specify more than one of `elementwise_loss`, `loss_function`, and `loss_function_expression`."
     )
+
+    if !isnothing(loss_function) && recommend_loss_function_expression(expression_type)
+        @warn(
+            "You are using `loss_function` with `$(expression_type)`. " *
+                "You should use `loss_function_expression` instead, as it is designed to work with expressions directly."
+        )
+    end
 
     elementwise_loss = something(elementwise_loss, L2DistLoss())
 
