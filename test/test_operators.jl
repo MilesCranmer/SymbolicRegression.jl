@@ -184,7 +184,7 @@ end
     @test_nowarn SymbolicRegression.assert_operators_well_defined(Float32, options)
 end
 
-@testitem "Turbo mode matches regular mode" tags = [:part3] begin
+@testitem "Turbo mode matches regular mode" tags = [:part1] begin
     using SymbolicRegression
     using SymbolicRegression:
         Node,

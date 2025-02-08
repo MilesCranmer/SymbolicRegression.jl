@@ -239,26 +239,19 @@ using SymbolicRegression
 options = Options(
     binary_operators=[+, -, *],
     unary_operators=[cos],
-    expression_options=(
-        structure=TemplateStructure(),
-        variable_constraints=Dict(1 => [1, 2], 2 => [2])
-    )
 )
 
-# Create expression nodes with constraints
 operators = options.operators
 variable_names = ["x1", "x2"]
 x1 = Expression(
     Node{Float64}(feature=1),
     operators=operators,
     variable_names=variable_names,
-    structure=options.expression_options.structure
 )
 x2 = Expression(
     Node{Float64}(feature=2),
     operators=operators,
     variable_names=variable_names,
-    structure=options.expression_options.structure
 )
 
 # Construct and evaluate expression
@@ -267,9 +260,8 @@ X = rand(Float64, 2, 100)
 output = expr(X)
 ```
 
-This `Expression` type, contains both the structure
-and the operators used in the expression. These are what
-are returned by the search. The raw `Node` type (which is
+This `Expression` type, contains the operators used in the expression.
+These are what are returned by the search. The raw `Node` type (which is
 what used to be output directly) is accessible with
 
 ```julia
@@ -280,7 +272,7 @@ get_contents(expr)
 
 Template expressions allow you to define structured expressions where different parts can be constrained to use specific variables.
 In this example, we'll create expressions that constrain the functional form in highly specific ways.
-(_For a more complex example, see ["Searching with template expressions"](examples/template_expression.md)_)
+(_For more complex examples, see ["Searching with template expressions"](examples/template_expression.md)_ and ["Parameterized Template Expressions"](examples/template_parametric_expression.md)\_)
 
 First, let's set up our basic configuration:
 
@@ -293,9 +285,9 @@ using MLJBase: machine, fit!, report
 The key part is defining our template structure. This determines how different parts of the expression combine:
 
 ```julia
-structure = TemplateStructure{(:f, :g)}(
-    ((; f, g), (x1, x2, x3)) -> f(x1, x2) + g(x2) - g(x3)
-)
+expression_spec = @template(expressions=(f, g)) do x1, x2, x3
+    f(x1, x2) + g(x2) - g(x3)
+end
 ```
 
 With this structure, we are telling the algorithm that it can learn
@@ -327,8 +319,7 @@ Now, remember our structure: for the model to learn this,
 it would need to correctly disentangle the contribution
 of `f` and `g`!
 
-Now we can set up and train our model.
-Note that we pass the structure in to `expression_options`:
+Now we can set up and train our model by passing the structure in to `expression_spec`:
 
 ```julia
 model = SRRegressor(;
@@ -336,8 +327,7 @@ model = SRRegressor(;
     unary_operators=(cos,),
     niterations=500,
     maxsize=25,
-    expression_type=TemplateExpression,
-    expression_options=(; structure),
+    expression_spec=expression_spec,
 )
 
 mach = machine(model, X, y)
@@ -382,7 +372,7 @@ The above code demonstrates how template expressions can be used to:
 
 You can even output custom structs - see the more detailed [Template Expression example](examples/template_expression.md)!
 
-Be sure to also check out the [Parametric Expression example](examples/parametric_expression.md).
+Be sure to also check out the [Parametric Template Expressions example](examples/template_parametric_expression.md).
 
 ## 9. Logging with TensorBoard
 
@@ -440,11 +430,11 @@ y = @. 1 / (x^2 * sqrt(x^2 - 1))  # Values of the integrand
 Now, define the template for the derivative operator:
 
 ```julia
-using DynamicDiff: D
+using SymbolicRegression: D
 
-structure = TemplateStructure{(:f,)}(
-    ((; f), (x,)) -> D(f, 1)(x)  # Differentiate `f` with respect to its first argument
-)
+expression_spec = @template(expressions=(f,)) do x
+    D(f, 1)(x)
+end
 ```
 
 We can now set up the model to find the symbolic expression for the integral:
@@ -456,8 +446,7 @@ model = SRRegressor(
     binary_operators=(+, -, *, /),
     unary_operators=(sqrt,),
     maxsize=20,
-    expression_type=TemplateExpression,
-    expression_options=(; structure),
+    expression_spec=expression_spec,
 )
 
 X = (; x=x)

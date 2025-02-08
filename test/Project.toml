@@ -22,6 +22,7 @@ Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
+StyledStrings = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
 Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 SymbolicRegression = "8254be44-1295-4e6a-a16d-46603ac705cb"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
@@ -32,4 +33,4 @@ TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [preferences.SymbolicRegression]
-instability_check = "error"
+dispatch_doctor_mode = "error"

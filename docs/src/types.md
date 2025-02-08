@@ -45,22 +45,12 @@ Expressions are represented using the `Expression` type, which combines the raw 
 
 ```@docs
 Expression
+ExpressionSpec
 ```
 
 These types allow you to define and manipulate expressions with a clear separation between the structure and the operators used.
 
-## Parametric Expressions
-
-Parametric expressions are a type of expression that includes parameters which can be optimized during the search.
-
-```@docs
-ParametricExpression
-ParametricNode
-```
-
-These types allow you to define expressions with parameters that can be tuned to fit the data better. You can specify the maximum number of parameters using the `expression_options` argument in `SRRegressor`.
-
-## Template Expressions
+### Template Expressions
 
 Template expressions allow you to specify predefined structures and constraints for your expressions.
 These use `ComposableExpressions` as their internal expression type, which makes them
@@ -71,13 +61,32 @@ These use the `TemplateStructure` type to define how expressions should be combi
 ```@docs
 TemplateExpression
 TemplateStructure
+TemplateExpressionSpec
 ```
 
-Composable expressions allow you to combine multiple expressions together.
+You can use the `@template` macro as an easy way to create a `TemplateExpressionSpec`:
+
+```@docs
+@template
+```
+
+Composable expressions are used internally by `TemplateExpression` and allow you to combine multiple expressions together.
 
 ```@docs
 ComposableExpression
 ```
+
+### Parametric Expressions
+
+Parametric expressions are a type of expression that includes parameters which can be optimized during the search.
+
+```@docs
+ParametricExpression
+ParametricNode
+ParametricExpressionSpec
+```
+
+These types allow you to define expressions with parameters that can be tuned to fit the data better. You can specify the maximum number of parameters using the `expression_options` argument in `SRRegressor`.
 
 ## Population
 
