@@ -146,6 +146,10 @@ include("test_mlj.jl")
     include("test_custom_operators_multiprocessing.jl")
 end
 
+@testitem "Testing whether we can move loss function expression to workers." tags = [:part2] begin
+    include("test_loss_function_expression_multiprocessing.jl")
+end
+
 @testitem "Test whether the precompilation script works." tags = [:part2] begin
     include("test_precompilation.jl")
 end
