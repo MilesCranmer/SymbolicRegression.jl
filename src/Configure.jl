@@ -163,9 +163,8 @@ function move_functions_to_workers(
                 continue
             end
             ops = (options.loss_function_expression,)
-            example_inputs = (
-                create_expression(zero(T), options, dataset), dataset, options
-            )
+            ex = create_expression(zero(T), options, dataset)
+            example_inputs = (ex, dataset, options)
         elseif function_set == :complexity_mapping
             if !(options.complexity_mapping isa Function)
                 continue
