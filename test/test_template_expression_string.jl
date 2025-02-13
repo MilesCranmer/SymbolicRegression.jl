@@ -1,3 +1,25 @@
+@testitem "template expression color function" tags = [:part1, :template_colors] begin
+    using SymbolicRegression.TemplateExpressionModule: _colors
+
+    # Test empty case
+    @test _colors(Val(0)) == ()
+
+    # Test n <= 6 cases
+    @test _colors(Val(1)) == (:magenta,)
+    @test _colors(Val(2)) == (:magenta, :green)
+    @test _colors(Val(6)) == (:magenta, :green, :red, :blue, :yellow, :cyan)
+
+    # Test n > 6 cases to verify color cycling
+    colors_7 = _colors(Val(7))
+    @test length(colors_7) == 7
+    @test colors_7[1:6] == (:magenta, :green, :red, :blue, :yellow, :cyan)
+    @test colors_7[7] == :magenta  # Should cycle back to first color
+
+    colors_8 = _colors(Val(8))
+    @test length(colors_8) == 8
+    @test colors_8[7:8] == (:magenta, :green)  # Should cycle colors properly
+end
+
 @testitem "template expression string representation" tags = [:part1, :template_string] begin
     using SymbolicRegression
     using StyledStrings: @styled_str, annotatedstring, AnnotatedString

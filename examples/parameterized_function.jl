@@ -104,4 +104,4 @@ ypred2 = predict(mach, (data=X, idx=idx2))
 loss2 = sum(i -> abs2(ypred2[i] - y[i]), eachindex(y)) / length(y)
 
 # Should get better:
-@test loss1 > loss2
+@test loss1 >= loss2

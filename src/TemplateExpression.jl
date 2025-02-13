@@ -561,7 +561,7 @@ end
 # Rather than using iterator with repeat, just make a tuple:
 function _colors(::Val{n}) where {n}
     return ntuple(
-        (i -> (:magenta, :green, :red, :blue, :yellow, :cyan)[mod1(i, n)]), Val(n)
+        (i -> (:magenta, :green, :red, :blue, :yellow, :cyan)[mod1(i, 6)]), Val(n)
     )
 end
 _color_string(s::AbstractString, c::Symbol) = styled"{$c:$s}"
