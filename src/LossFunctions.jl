@@ -13,6 +13,22 @@ using ..DimensionalAnalysisModule: violates_dimensional_constraints
 using ..InterfaceDynamicExpressionsModule: expected_array_type
 
 function _loss(
+    ::AbstractArray{T1}, ::AbstractArray{T2}, ::LT
+) where {T1,T2,LT<:Union{Function,SupervisedLoss}}
+    return error(
+        "Element type of `x` is $(T1) is different from element type of `y` which is $(T2)."
+    )
+end
+function _weighted_loss(
+    ::AbstractArray{T1}, ::AbstractArray{T2}, ::AbstractArray{T3}, ::LT
+) where {T1,T2,T3,LT<:Union{Function,SupervisedLoss}}
+    return error(
+        "Element type of `x` is $(T1), element type of `y` is $(T2), and element type of `w` is $(T3). " *
+        "All element types must be the same.",
+    )
+end
+
+function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
 ) where {T,LT<:Union{Function,SupervisedLoss}}
     if loss isa SupervisedLoss
