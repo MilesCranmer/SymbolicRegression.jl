@@ -836,7 +836,9 @@ function _main_search_loop!(
     if ropt.parallelism in (:multiprocessing, :multithreading)
         for j in 1:nout, i in 1:(options.populations)
             # Start listening for each population to finish:
-            t = @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
+            t = Base.errormonitor(
+                @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
+            )
             push!(state.tasks[j], t)
         end
     end
@@ -962,8 +964,8 @@ function _main_search_loop!(
                 worker_idx = worker_idx
             )
             if ropt.parallelism in (:multiprocessing, :multithreading)
-                state.tasks[j][i] = @async put!(
-                    state.channels[j][i], fetch(state.worker_output[j][i])
+                state.tasks[j][i] = Base.errormonitor(
+                    @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
                 )
             end
 
