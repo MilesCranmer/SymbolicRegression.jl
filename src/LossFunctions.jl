@@ -13,6 +13,22 @@ using ..DimensionalAnalysisModule: violates_dimensional_constraints
 using ..InterfaceDynamicExpressionsModule: expected_array_type
 
 function _loss(
+    ::AbstractArray{T1}, ::AbstractArray{T2}, ::LT
+) where {T1,T2,LT<:Union{Function,SupervisedLoss}}
+    return error(
+        "Element type of `x` is $(T1) is different from element type of `y` which is $(T2)."
+    )
+end
+function _weighted_loss(
+    ::AbstractArray{T1}, ::AbstractArray{T2}, ::AbstractArray{T3}, ::LT
+) where {T1,T2,T3,LT<:Union{Function,SupervisedLoss}}
+    return error(
+        "Element type of `x` is $(T1), element type of `y` is $(T2), and element type of `w` is $(T3). " *
+        "All element types must be the same.",
+    )
+end
+
+function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
 ) where {T,LT<:Union{Function,SupervisedLoss}}
     if loss isa SupervisedLoss
@@ -114,7 +130,7 @@ end
 # This evaluates function F:
 function evaluator(
     f::F,
-    tree::AbstractExpressionNode{T},
+    tree::Union{AbstractExpressionNode{T},AbstractExpression{T}},
     dataset::Dataset{T,L},
     options::AbstractOptions,
     idx,
@@ -142,11 +158,16 @@ function eval_loss(
     regularization::Bool=true,
     idx=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    loss_val = if options.loss_function === nothing
-        _eval_loss(tree, dataset, options, regularization, idx)
-    else
+    loss_val = if !isnothing(options.loss_function)
         f = options.loss_function::Function
-        evaluator(f, get_tree(tree), dataset, options, idx)
+        inner_tree = tree isa AbstractExpression ? get_tree(tree) : tree
+        evaluator(f, inner_tree, dataset, options, idx)
+    elseif !isnothing(options.loss_function_expression)
+        f = options.loss_function_expression::Function
+        @assert tree isa AbstractExpression
+        evaluator(f, tree, dataset, options, idx)
+    else
+        _eval_loss(tree, dataset, options, regularization, idx)
     end
 
     return loss_val

@@ -1,6 +1,7 @@
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 Bumper = "8ce10254-0962-460f-a3d8-1f77fea1446e"
+Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
 DispatchDoctor = "8d63f2c5-f18a-4cf2-ba9d-b3f60fc568c8"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
@@ -22,6 +23,7 @@ Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
+StyledStrings = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
 Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 SymbolicRegression = "8254be44-1295-4e6a-a16d-46603ac705cb"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
@@ -32,4 +34,4 @@ TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [preferences.SymbolicRegression]
-instability_check = "error"
+dispatch_doctor_mode = "error"

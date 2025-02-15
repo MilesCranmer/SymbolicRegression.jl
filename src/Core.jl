@@ -8,6 +8,7 @@ include("Dataset.jl")
 include("MutationWeights.jl")
 include("OptionsStruct.jl")
 include("Operators.jl")
+include("ExpressionSpec.jl")
 include("Options.jl")
 
 using .ProgramConstantsModule: RecordType, DATA_TYPE, LOSS_TYPE
@@ -39,6 +40,9 @@ using .OperatorsModule:
     safe_atanh,
     neg,
     greater,
+    less,
+    greater_equal,
+    less_equal,
     cond,
     relu,
     logical_or,
@@ -47,5 +51,11 @@ using .OperatorsModule:
     erf,
     erfc,
     atanh_clip
+using .ExpressionSpecModule:
+    AbstractExpressionSpec,
+    ExpressionSpec,
+    get_expression_type,
+    get_expression_options,
+    get_node_type
 
 end

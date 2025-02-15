@@ -18,6 +18,10 @@ using ..OperatorsModule:
     safe_pow,
     mult,
     sub,
+    greater,
+    less,
+    greater_equal,
+    less_equal,
     safe_log,
     safe_log10,
     safe_log2,
@@ -31,6 +35,12 @@ using ..MutationWeightsModule: AbstractMutationWeights, MutationWeights, mutatio
 import ..OptionsStructModule: Options
 using ..OptionsStructModule: ComplexityMapping, operator_specialization
 using ..UtilsModule: @save_kwargs, @ignore
+using ..ExpressionSpecModule:
+    AbstractExpressionSpec,
+    ExpressionSpec,
+    get_expression_type,
+    get_expression_options,
+    get_node_type
 
 """Build constraints on operator-level complexity from a user-passed dict."""
 @unstable function build_constraints(;
@@ -154,12 +164,28 @@ function binopmap(@nospecialize(op))
         return safe_pow
     elseif op == pow
         return safe_pow
+    elseif op == Base.:(>)
+        return greater
+    elseif op == Base.:(<)
+        return less
+    elseif op == Base.:(>=)
+        return greater_equal
+    elseif op == Base.:(<=)
+        return less_equal
     end
     return op
 end
 function inverse_binopmap(@nospecialize(op))
     if op == safe_pow
         return ^
+    elseif op == greater
+        return Base.:(>)
+    elseif op == less
+        return Base.:(<)
+    elseif op == greater_equal
+        return Base.:(>=)
+    elseif op == less_equal
+        return Base.:(<=)
     end
     return op
 end
@@ -208,6 +234,8 @@ function inverse_unaopmap(@nospecialize(op))
     end
     return op
 end
+
+recommend_loss_function_expression(expression_type) = false
 
 create_mutation_weights(w::AbstractMutationWeights) = w
 create_mutation_weights(w::NamedTuple) = MutationWeights(; w...)
@@ -313,10 +341,10 @@ const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Op
             return sum((prediction .- dataset.y) .^ 2) / dataset.n
         end
 
-- `expression_type::Type{E}=Expression`: The type of expression to use.
-    For example, `Expression`.
-- `node_type::Type{N}=default_node_type(Expression)`: The type of node to use for the search.
-    For example, `Node` or `GraphNode`. The default is computed by `default_node_type(expression_type)`.
+- `loss_function_expression`: Similar to `loss_function`, but takes `AbstractExpression` instead of `AbstractExpressionNode` as its first argument. Useful for `TemplateExpressionSpec`.
+- `expression_spec::AbstractExpressionSpec`: A specification of what types of expressions to use in the
+    search. For example, `ExpressionSpec()` (default). You can also see `TemplateExpressionSpec` and
+    `ParametricExpressionSpec` for specialized cases.
 - `populations`: How many populations of equations to use.
 - `population_size`: How many equations in each population.
 - `ncycles_per_iteration`: How many generations to consider per iteration.
@@ -468,11 +496,7 @@ $(OPTION_DESCRIPTIONS)
     @nospecialize(unary_operators = nothing),
     @nospecialize(maxsize::Union{Nothing,Integer} = nothing),
     @nospecialize(maxdepth::Union{Nothing,Integer} = nothing),
-    @nospecialize(expression_type::Type{<:AbstractExpression} = Expression),
-    @nospecialize(expression_options::NamedTuple = NamedTuple()),
-    @nospecialize(
-        node_type::Type{<:AbstractExpressionNode} = default_node_type(expression_type)
-    ),
+    @nospecialize(expression_spec::Union{Nothing,AbstractExpressionSpec} = nothing),
     ## 2. Setting the Search Size:
     @nospecialize(populations::Union{Nothing,Integer} = nothing),
     @nospecialize(population_size::Union{Nothing,Integer} = nothing),
@@ -480,6 +504,7 @@ $(OPTION_DESCRIPTIONS)
     ## 3. The Objective:
     @nospecialize(elementwise_loss::Union{Function,SupervisedLoss,Nothing} = nothing),
     @nospecialize(loss_function::Union{Function,Nothing} = nothing),
+    @nospecialize(loss_function_expression::Union{Function,Nothing} = nothing),
     ###           [model_selection - only used in MLJ interface]
     @nospecialize(dimensional_constraint_penalty::Union{Nothing,Real} = nothing),
     ###           dimensionless_constants_only
@@ -505,7 +530,7 @@ $(OPTION_DESCRIPTIONS)
     @nospecialize(annealing::Union{Bool,Nothing} = nothing),
     @nospecialize(alpha::Union{Nothing,Real} = nothing),
     ###           perturbation_factor
-    @nospecialize(probability_negate_constant::Union{Real,Nothing} = nothing),
+    ###           probability_negate_constant
     ###           skip_mutation_failures
     ## 6. Tournament Selection:
     @nospecialize(tournament_selection_n::Union{Nothing,Integer} = nothing),
@@ -564,6 +589,7 @@ $(OPTION_DESCRIPTIONS)
     should_simplify::Union{Nothing,Bool}=nothing,
     ## 5. Mutations:
     perturbation_factor::Union{Nothing,Real}=nothing,
+    probability_negate_constant::Union{Real,Nothing}=nothing,
     skip_mutation_failures::Bool=true,
     ## 6. Tournament Selection
     ## 7. Constant Optimization:
@@ -612,6 +638,9 @@ $(OPTION_DESCRIPTIONS)
     define_helper_functions::Bool=true,
     #########################################
     # Deprecated args: ######################
+    expression_type::Union{Nothing,Type{<:AbstractExpression}}=nothing,
+    expression_options::Union{Nothing,NamedTuple}=nothing,
+    node_type::Union{Nothing,Type{<:AbstractExpressionNode}}=nothing,
     output_file::Union{Nothing,AbstractString}=nothing,
     fast_cycle::Bool=false,
     npopulations::Union{Nothing,Integer}=nothing,
@@ -701,17 +730,25 @@ $(OPTION_DESCRIPTIONS)
         error("`output_file` is deprecated. Use `output_directory` instead.")
     end
 
-    if elementwise_loss === nothing
-        elementwise_loss = L2DistLoss()
-    else
-        if loss_function !== nothing
-            error("You cannot specify both `elementwise_loss` and `loss_function`.")
-        end
+    @assert(
+        count(!isnothing, [elementwise_loss, loss_function, loss_function_expression]) <= 1,
+        "You cannot specify more than one of `elementwise_loss`, `loss_function`, and `loss_function_expression`."
+    )
+
+    if !isnothing(loss_function) && recommend_loss_function_expression(expression_type)
+        @warn(
+            "You are using `loss_function` with `$(expression_type)`. " *
+                "You should use `loss_function_expression` instead, as it is designed to work with expressions directly."
+        )
     end
+
+    elementwise_loss = something(elementwise_loss, L2DistLoss())
+
     if complexity_mapping !== nothing
-        @assert complexity_of_operators === nothing &&
-            complexity_of_constants === nothing &&
-            complexity_of_variables === nothing
+        @assert all(
+            isnothing,
+            [complexity_of_operators, complexity_of_constants, complexity_of_variables],
+        )
     end
 
     #################################
@@ -779,6 +816,31 @@ $(OPTION_DESCRIPTIONS)
         end
         bin_constraints = constraints
         una_constraints = constraints
+    end
+
+    if expression_spec !== nothing
+        @assert expression_type === nothing
+        @assert expression_options === nothing
+        @assert node_type === nothing
+
+        expression_type = get_expression_type(expression_spec)
+        expression_options = get_expression_options(expression_spec)
+        node_type = get_node_type(expression_spec)
+    else
+        if !all(isnothing, (expression_type, expression_options, node_type))
+            Base.depwarn(
+                "The `expression_type`, `expression_options`, and `node_type` arguments are deprecated. Use `expression_spec` instead, which populates these automatically.",
+                :Options,
+            )
+        end
+        _default_expression_spec = ExpressionSpec()
+        expression_type = @something(
+            expression_type, get_expression_type(_default_expression_spec)
+        )
+        expression_options = @something(
+            expression_options, get_expression_options(_default_expression_spec)
+        )
+        node_type = @something(node_type, default_node_type(expression_type))
     end
 
     _una_constraints, _bin_constraints = build_constraints(;
@@ -923,6 +985,7 @@ $(OPTION_DESCRIPTIONS)
         seed,
         elementwise_loss,
         loss_function,
+        loss_function_expression,
         node_type,
         expression_type,
         expression_options,

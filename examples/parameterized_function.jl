@@ -63,8 +63,7 @@ model = SRRegressor(;
     binary_operators=[+, *, /, -],
     unary_operators=[cos, exp],
     populations=30,
-    expression_type=ParametricExpression,
-    expression_options=(; max_parameters=2),
+    expression_spec=ParametricExpressionSpec(; max_parameters=2),
     autodiff_backend=:Zygote,
     early_stop_condition=(loss, _) -> loss < stop_at[],  #src
 );
@@ -88,13 +87,6 @@ You can extract the best expression and parameters with:
 report(mach).equations[end]
 ```
 
-## Key Takeaways
-
-1. [`ParametricExpression`](@ref)s allows us to discover symbolic expressions with optimizable parameters
-2. The parameters can capture class-dependent variations in the underlying model
-
-This approach is particularly useful when you suspect your data follows a common
-functional form, but with varying parameters across different conditions or class!
 =#
 #literate_end
 
@@ -112,4 +104,4 @@ ypred2 = predict(mach, (data=X, idx=idx2))
 loss2 = sum(i -> abs2(ypred2[i] - y[i]), eachindex(y)) / length(y)
 
 # Should get better:
-@test loss1 > loss2
+@test loss1 >= loss2

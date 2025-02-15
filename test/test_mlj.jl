@@ -1,10 +1,15 @@
-@testitem "Generic interface tests" tags = [:part1] begin
+@testitem "Generic interface tests" tags = [:part3] begin
     using SymbolicRegression
+    using SymbolicRegression: SRTestRegressor, MultitargetSRTestRegressor
     using MLJTestInterface: MLJTestInterface as MTI
     include("test_params.jl")
 
     failures, summary = MTI.test(
-        [SRRegressor], MTI.make_regression()...; mod=@__MODULE__, verbosity=0, throw=true
+        [SRTestRegressor],
+        MTI.make_regression()...;
+        mod=@__MODULE__,
+        verbosity=0,
+        throw=true,
     )
     @test isempty(failures)
 
@@ -13,7 +18,7 @@
     (X, Y) = MTI.table.((X, Y))
     w = ones(100)
     failures, summary = MTI.test(
-        [MultitargetSRRegressor], X, Y, w; mod=@__MODULE__, verbosity=0, throw=true
+        [MultitargetSRTestRegressor], X, Y, w; mod=@__MODULE__, verbosity=0, throw=true
     )
     @test isempty(failures)
 end

@@ -1,24 +1,31 @@
 using SymbolicRegression
 using Random
+using Compat: Fix
 using SymbolicRegression: eval_loss, score_func, Dataset
 using ForwardDiff
 include("test_params.jl")
 
 x1 = 2.0
 
+function make_options_maker(binop, unaop; kw...)
+    @nospecialize binop unaop kw
+    return Options(;
+        default_params...,
+        binary_operators=(+, *, ^, /, binop),
+        unary_operators=(unaop, abs),
+        populations=4,
+        verbosity=(unaop == gamma) ? 0 : Int(1e9),
+        kw...,
+    )
+end
+
 # Initialize functions in Base....
-for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma, safe_acosh]
-    for binop in [sub]
-        function make_options(; kw...)
-            return Options(;
-                default_params...,
-                binary_operators=(+, *, ^, /, binop),
-                unary_operators=(unaop, abs),
-                populations=4,
-                verbosity=(unaop == gamma) ? 0 : Int(1e9),
-                kw...,
-            )
-        end
+for unaop in
+    [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma, safe_acosh],
+    binop in [sub]
+
+    let
+        make_options = Fix{1}(Fix{2}(make_options_maker, unaop), binop)
         options = make_options()
         @extend_operators options
 
@@ -36,7 +43,7 @@ for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma,
 
         true_result = f_true(x1)
 
-        result = eval(Meta.parse(string_tree(const_tree, make_options())))
+        result = eval(Meta.parse(string_tree(const_tree, options)))
 
         # Test Basics
         @test n == 9

@@ -77,19 +77,70 @@ end
 
 @testitem "Built-in operators pass validation" tags = [:part3] begin
     using SymbolicRegression
-    using SymbolicRegression:
-        plus, sub, mult, square, cube, neg, relu, greater, logical_or, logical_and, cond
+    using SymbolicRegression: plus, sub, mult, square, cube, neg, relu, greater, less
+    using SymbolicRegression: greater_equal, less_equal, logical_or, logical_and, cond
 
     types_to_test = [Float16, Float32, Float64, BigFloat]
     options = Options(;
-        binary_operators=[plus, sub, mult, /, ^, greater, logical_or, logical_and, cond],
+        binary_operators=[
+            plus,
+            sub,
+            mult,
+            /,
+            ^,
+            greater,
+            less,
+            greater_equal,
+            less_equal,
+            logical_or,
+            logical_and,
+            cond,
+        ],
         unary_operators=[
-            square, cube, log, log2, log10, log1p, sqrt, atanh, acosh, neg, relu
+            square, cube, log, log2, log10, log1p, sqrt, asin, acos, atanh, acosh, neg, relu
         ],
     )
+    @test options.operators.binops == (
+        +,
+        -,
+        *,
+        /,
+        safe_pow,
+        greater,
+        less,
+        greater_equal,
+        less_equal,
+        logical_or,
+        logical_and,
+        cond,
+    )
+    @test options.operators.unaops == (
+        square,
+        cube,
+        safe_log,
+        safe_log2,
+        safe_log10,
+        safe_log1p,
+        safe_sqrt,
+        safe_asin,
+        safe_acos,
+        safe_atanh,
+        safe_acosh,
+        neg,
+        relu,
+    )
+
     for T in types_to_test
         @test_nowarn SymbolicRegression.assert_operators_well_defined(T, options)
     end
+
+    using SymbolicRegression.CoreModule.OptionsModule: inverse_binopmap
+
+    # Test inverse mapping for comparison operators
+    @test inverse_binopmap(greater) == (>)
+    @test inverse_binopmap(less) == (<)
+    @test inverse_binopmap(greater_equal) == (>=)
+    @test inverse_binopmap(less_equal) == (<=)
 end
 
 @testitem "Built-in operators pass validation for complex numbers" tags = [:part2] begin
@@ -133,7 +184,7 @@ end
     @test_nowarn SymbolicRegression.assert_operators_well_defined(Float32, options)
 end
 
-@testitem "Turbo mode matches regular mode" tags = [:part3] begin
+@testitem "Turbo mode matches regular mode" tags = [:part1] begin
     using SymbolicRegression
     using SymbolicRegression:
         Node,
@@ -153,9 +204,10 @@ end
     using LoopVectorization: LoopVectorization as _
     include("test_params.jl")
 
-    binary_operators = [plus, sub, mult, /, ^, greater, logical_or, logical_and, cond]
-    unary_operators = [square, cube, log, log2, log10, log1p, sqrt, atanh, acosh, neg, relu]
-    options = Options(; binary_operators, unary_operators)
+    all_binary_operators = [plus, sub, mult, /, ^, greater, logical_or, logical_and, cond]
+    all_unary_operators = [
+        square, cube, log, log2, log10, log1p, sqrt, atanh, acosh, neg, relu
+    ]
 
     function test_part(tree, Xpart, options)
         y, completed = eval_tree_array(tree, Xpart, options)
@@ -165,21 +217,24 @@ end
         eval_warnings = @capture_err begin
             y_turbo, _ = eval_tree_array(tree, Xpart, options; turbo=true)
         end
-        test_info(@test(y[1] ≈ y_turbo[1] && eval_warnings == "")) do
+        test_info(@test(y ≈ y_turbo && eval_warnings == "")) do
             @info T tree X[:, seed] y y_turbo eval_warnings
         end
     end
 
     for T in (Float32, Float64),
-        index_bin in 1:length(binary_operators),
-        index_una in 1:length(unary_operators)
+        index_bin in 1:length(all_binary_operators),
+        index_una in 1:length(all_unary_operators)
 
-        x1, x2 = Node(T; feature=1), Node(T; feature=2)
-        tree = Node(index_bin, x1, Node(index_una, x2))
-        X = rand(MersenneTwister(0), T, 2, 20)
-        for seed in 1:20
-            Xpart = X[:, [seed]]
-            test_part(tree, Xpart, options)
+        let
+            x1, x2 = Node(T; feature=1), Node(T; feature=2)
+            tree = Node(index_bin, x1, Node(index_una, x2))
+            options = Options(;
+                binary_operators=all_binary_operators[[index_bin]],
+                unary_operators=all_unary_operators[[index_una]],
+            )
+            X = rand(MersenneTwister(0), T, 2, 20)
+            test_part(tree, X, options)
         end
     end
 end

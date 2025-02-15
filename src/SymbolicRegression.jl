@@ -5,20 +5,26 @@ export Population,
     PopMember,
     HallOfFame,
     Options,
+    OperatorEnum,
     Dataset,
     MutationWeights,
     Node,
     GraphNode,
     ParametricNode,
     Expression,
+    ExpressionSpec,
     ParametricExpression,
+    ParametricExpressionSpec,
     TemplateExpression,
     TemplateStructure,
+    TemplateExpressionSpec,
+    @template_spec,
     ValidVector,
     ComposableExpression,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
+    AbstractExpressionSpec,
     EvalOptions,
     SRRegressor,
     MultitargetSRRegressor,
@@ -102,6 +108,7 @@ using DynamicExpressions:
     AbstractExpression,
     AbstractExpressionNode,
     ExpressionInterface,
+    OperatorEnum,
     @parse_expression,
     parse_expression,
     @declare_expression_operator,
@@ -221,6 +228,7 @@ using DispatchDoctor: @stable
     include("ExpressionBuilder.jl")
     include("ComposableExpression.jl")
     include("TemplateExpression.jl")
+    include("TemplateExpressionMacro.jl")
     include("ParametricExpression.jl")
 end
 
@@ -234,6 +242,8 @@ using .CoreModule:
     ComplexityMapping,
     AbstractMutationWeights,
     MutationWeights,
+    AbstractExpressionSpec,
+    ExpressionSpec,
     get_safe_op,
     max_features,
     is_weighted,
@@ -256,6 +266,9 @@ using .CoreModule:
     safe_atanh,
     neg,
     greater,
+    less,
+    greater_equal,
+    less_equal,
     cond,
     relu,
     logical_or,
@@ -320,10 +333,13 @@ using .SearchUtilsModule:
     update_hall_of_fame!,
     logging_callback!
 using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
-using .TemplateExpressionModule: TemplateExpression, TemplateStructure
-using .TemplateExpressionModule: TemplateExpression, TemplateStructure, ValidVector
+using .TemplateExpressionModule:
+    TemplateExpression, TemplateStructure, TemplateExpressionSpec, ParamVector
+using .TemplateExpressionModule: ValidVector
 using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
+using .ParametricExpressionModule: ParametricExpressionSpec
+using .TemplateExpressionMacroModule: @template_spec
 
 @stable default_mode = "disable" begin
     include("deprecates.jl")
@@ -1157,7 +1173,8 @@ function _info_dump(
 end
 
 include("MLJInterface.jl")
-using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
+using .MLJInterfaceModule:
+    SRRegressor, MultitargetSRRegressor, SRTestRegressor, MultitargetSRTestRegressor
 
 # Hack to get static analysis to work from within tests:
 @ignore include("../test/runtests.jl")
