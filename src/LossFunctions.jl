@@ -1,7 +1,6 @@
 module LossFunctionsModule
 
 using DispatchDoctor: @stable
-using StatsBase: StatsBase
 using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, get_tree, eval_tree_array
 using LossFunctions: LossFunctions

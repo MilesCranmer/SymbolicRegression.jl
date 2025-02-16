@@ -2,7 +2,6 @@ module OptionsModule
 
 using DispatchDoctor: @unstable
 using Optim: Optim
-using StatsBase: StatsBase
 using DynamicExpressions:
     OperatorEnum, Expression, default_node_type, AbstractExpression, AbstractExpressionNode
 using ADTypes: AbstractADType, ADTypes
