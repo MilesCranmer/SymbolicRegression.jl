@@ -564,6 +564,54 @@ end
     @test loss_batch ≈ expected_batch_loss
 end
 
+@testitem "New batching syntax" tags = [:part3] begin
+    using SymbolicRegression
+    using SymbolicRegression: Dataset, batch
+    using SymbolicRegression: BatchedDataset, eval_loss
+
+    function expr_loss(ex::AbstractExpression, dataset::Dataset, options::Options)
+        @test dataset isa BatchedDataset
+        output, completed = eval_tree_array(ex, dataset.X, options)
+        !completed && return Inf
+        return sum(abs2, output .- dataset.y) / length(dataset.y)
+    end
+
+    template = @template_spec(expressions = (f,), parameters = (p=2,)) do x
+        f(x) + sum(p)
+    end
+
+    options = Options(;
+        binary_operators=[+, *],
+        expression_spec=template,
+        loss_function_expression=expr_loss,
+        batching=true,
+        batch_size=2,
+    )
+
+    x = ComposableExpression(Node{Float32}(; feature=1); operators=options.operators)
+
+    X = Float32[1.0 2.0 3.0; 2.0 3.0 4.0; 0.0 0.0 0.0]  # 3x3 array
+    y = Float32[2.0 * X[1, i] + X[2, i]^2 for i in 1:3]  # y = 2x₁ + x₂²
+    d = Dataset(X, y)
+    batched_d = batch(d, [1, 2])
+    # For indices 1,2:
+    # x₁ values are [1.0, 2.0]
+    # x₂ values are [2.0, 3.0]
+    # y = 2x₁ + x₂² gives [6.0, 13.0]
+    template_ex = TemplateExpression(
+        (; f=x);
+        structure=template.structure,
+        operators=options.operators,
+        parameters=(; p=[1.0f0, 2.0f0]),
+    )
+    # Our expression is f(x) + sum(p) where f(x)=x and p=[1,2]
+    # So output is [4.0, 5.0] for the two points
+    # Loss is mean squared error
+    expected_batch_loss = sum(abs2, [4.0f0, 5.0f0] .- [6.0f0, 13.0f0]) / 2
+    loss_batch = eval_loss(template_ex, batched_d, options)
+    @test loss_batch ≈ expected_batch_loss
+end
+
 @testitem "warning for loss_function with TemplateExpression" begin
     using SymbolicRegression
 
