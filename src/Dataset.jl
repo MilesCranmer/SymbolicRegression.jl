@@ -82,7 +82,7 @@ mutable struct BasicDataset{
 end
 
 """
-    BatchedDataset{T<:DATA_TYPE,L<:LOSS_TYPE}
+    BatchedDataset{T<:DATA_TYPE,L<:LOSS_TYPE,D<:BasicDataset{T,L},I<:AbstractVector{Int}}
 
 A dataset type that represents a batch of data from a BasicDataset. Calls to `.X`, `.y`,
 `.weights`, etc. will return the batched versions of these.
