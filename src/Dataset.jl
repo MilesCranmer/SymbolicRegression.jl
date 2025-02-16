@@ -91,28 +91,27 @@ struct BatchedDataset{
     T<:DATA_TYPE,L<:LOSS_TYPE,D<:BasicDataset{T,L},I<:AbstractVector{Int}
 } <: Dataset{T,L}
     _dataset::D
-    indices::I
+    _indices::I
 end
-@inline _dataset(d::BatchedDataset) = getfield(d, :_dataset)
-@inline _indices(d::BatchedDataset) = getfield(d, :indices)
+@inline get_full_dataset(d::BatchedDataset) = getfield(d, :_dataset)
+@inline get_indices(d::BatchedDataset) = getfield(d, :_indices)
 @inline function Base.getproperty(d::BatchedDataset, prop::Symbol)
-    if prop == :indices
-        return _indices(d)
-    elseif prop == :X
-        return @view(_dataset(d).X[:, _indices(d)])
+    if prop == :X
+        return view(get_full_dataset(d).X, :, get_indices(d))
     elseif prop == :y
-        y = _dataset(d).y
-        return isnothing(y) ? y : @view(y[_indices(d)])
+        y = get_full_dataset(d).y
+        return isnothing(y) ? y : view(y, get_indices(d))
     elseif prop == :weights
-        weights = _dataset(d).weights
-        return isnothing(weights) ? weights : @view(weights[_indices(d)])
+        weights = get_full_dataset(d).weights
+        return isnothing(weights) ? weights : view(weights, get_indices(d))
     elseif prop == :n
-        return length(_indices(d))
+        return length(get_indices(d))
     else
         # Forward all other properties
-        return getproperty(_dataset(d), prop)
+        return getproperty(get_full_dataset(d), prop)
     end
 end
+@inline Base.propertynames(d::BatchedDataset) = propertynames(get_full_dataset(d))
 
 """
     Dataset(X::AbstractMatrix{T},
@@ -246,6 +245,9 @@ function Dataset(
 end
 
 is_weighted(dataset::Dataset) = dataset.weights !== nothing
+
+get_full_dataset(d::BasicDataset) = d  # COV_EXCL_LINE
+get_indices(::BasicDataset) = nothing  # COV_EXCL_LINE
 
 function error_on_mismatched_size(_, ::Nothing)
     return nothing

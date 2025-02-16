@@ -7,7 +7,14 @@ using DynamicExpressions:
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
 using ..CoreModule:
-    AbstractOptions, Dataset, create_expression, DATA_TYPE, LOSS_TYPE, is_weighted
+    AbstractOptions,
+    Dataset,
+    create_expression,
+    DATA_TYPE,
+    LOSS_TYPE,
+    is_weighted,
+    get_indices,
+    get_full_dataset
 using ..ComplexityModule: compute_complexity
 using ..DimensionalAnalysisModule: violates_dimensional_constraints
 using ..InterfaceDynamicExpressionsModule: expected_array_type
@@ -115,19 +122,14 @@ function evaluator(
     tree::Union{AbstractExpressionNode{T},AbstractExpression{T}},
     dataset::Dataset{T,L},
     options::AbstractOptions,
-    idx=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE,F}
-    if hasmethod(f, typeof((tree, dataset, options, idx)))
-        # If user defines method that accepts batching indices:
-        return f(tree, dataset, options, idx)
+    full_dataset = get_full_dataset(dataset)
+    idx = get_indices(dataset)
+    if hasmethod(f, typeof((tree, full_dataset, options, idx)))
+        # If user defines method that accepts batching indices, we
+        # can convert the BatchedDataset to the old version
+        return f(tree, full_dataset, options, idx)
     elseif options.batching
-        error(
-            "User-defined loss function must accept batching indices if `options.batching == true`. " *
-            "For example, `f(tree, dataset, options, idx)`, where `idx` " *
-            "is `nothing` if full dataset is to be used, " *
-            "and a vector of indices otherwise.",
-        )
-    else
         return f(tree, dataset, options)
     end
 end
