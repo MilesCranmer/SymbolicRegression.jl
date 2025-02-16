@@ -122,14 +122,15 @@ function evaluator(
     tree::Union{AbstractExpressionNode{T},AbstractExpression{T}},
     dataset::Dataset{T,L},
     options::AbstractOptions,
+    idx,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE,F}
     full_dataset = get_full_dataset(dataset)
-    idx = get_indices(dataset)
+    idx = @something(idx, get_indices(dataset), Some(nothing))
     if hasmethod(f, typeof((tree, full_dataset, options, idx)))
         # If user defines method that accepts batching indices, we
         # can convert the BatchedDataset to the old version
         return f(tree, full_dataset, options, idx)
-    elseif options.batching
+    else
         return f(tree, dataset, options)
     end
 end
@@ -140,15 +141,16 @@ function eval_loss(
     dataset::Dataset{T,L},
     options::AbstractOptions;
     regularization::Bool=true,
+    idx=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
     loss_val = if !isnothing(options.loss_function)
         f = options.loss_function::Function
         inner_tree = tree isa AbstractExpression ? get_tree(tree) : tree
-        evaluator(f, inner_tree, dataset, options)
+        evaluator(f, inner_tree, dataset, options, idx)
     elseif !isnothing(options.loss_function_expression)
         f = options.loss_function_expression::Function
         @assert tree isa AbstractExpression
-        evaluator(f, tree, dataset, options)
+        evaluator(f, tree, dataset, options, idx)
     else
         _eval_loss(tree, dataset, options, regularization)
     end

@@ -284,6 +284,7 @@ end
 
 """
     batch([rng::AbstractRNG,] dataset::BasicDataset, batch_size::Int) -> BatchedDataset
+    batch(dataset::BasicDataset, indices::AbstractVector{Int}) -> BatchedDataset
 
 Create a batched dataset by randomly sampling from the original dataset.
 
@@ -292,10 +293,11 @@ Create a batched dataset by randomly sampling from the original dataset.
 - `dataset::BasicDataset`: The dataset to sample from
 - `batch_size::Int`: The size of the batch to create
 """
-function batch(rng::AbstractRNG, dataset::BasicDataset{T,L}, batch_size::Int) where {T,L}
-    n = dataset.n
-    indices = rand(rng, 1:n, batch_size)
+function batch(dataset::BasicDataset{T,L}, indices::AbstractVector{Int}) where {T,L}
     return BatchedDataset{T,L,typeof(dataset),typeof(indices)}(dataset, indices)
+end
+function batch(rng::AbstractRNG, dataset::BasicDataset{T,L}, batch_size::Int) where {T,L}
+    return batch(dataset, rand(rng, 1:(dataset.n), batch_size))
 end
 function batch(dataset::BasicDataset, batch_size::Int)
     return batch(default_rng(), dataset, batch_size)
