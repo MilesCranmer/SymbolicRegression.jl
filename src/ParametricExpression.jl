@@ -18,6 +18,7 @@ using Random: default_rng, AbstractRNG
 using ..CoreModule:
     AbstractOptions,
     Dataset,
+    BatchedDataset,
     DATA_TYPE,
     AbstractMutationWeights,
     AbstractExpressionSpec,
@@ -84,13 +85,17 @@ function DE.eval_tree_array(
     return out::A, complete::Bool
 end
 function LF.eval_tree_dispatch(
-    tree::ParametricExpression, dataset::Dataset, options::AbstractOptions, idx
+    tree::ParametricExpression, dataset::Dataset, options::AbstractOptions
 )
     A = IDE.expected_array_type(dataset.X, typeof(tree))
     out, complete = DE.eval_tree_array(
         tree,
-        LF.maybe_getindex(dataset.X, :, idx),
-        LF.maybe_getindex(dataset.extra.class, idx),
+        dataset.X,
+        if dataset isa BatchedDataset
+            view(dataset.extra.class, dataset.indices)
+        else
+            dataset.extra.class
+        end,
         options.operators,
     )
     return out::A, complete::Bool

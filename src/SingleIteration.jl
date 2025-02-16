@@ -3,14 +3,14 @@ module SingleIterationModule
 using ADTypes: AutoEnzyme
 using DynamicExpressions: AbstractExpression, string_tree, simplify_tree!, combine_operators
 using ..UtilsModule: @threads_if
-using ..CoreModule: AbstractOptions, Dataset, RecordType, create_expression
+using ..CoreModule: AbstractOptions, Dataset, RecordType, create_expression, batch
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: generate_reference
 using ..PopulationModule: Population, finalize_scores
 using ..HallOfFameModule: HallOfFame
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..RegularizedEvolutionModule: reg_evol_cycle
-using ..LossFunctionsModule: score_func_batched, batch_sample
+using ..LossFunctionsModule: score_func
 using ..ConstantOptimizationModule: optimize_constants
 using ..RecorderModule: @recorder
 
@@ -37,15 +37,11 @@ function s_r_cycle(
     best_examples_seen = HallOfFame(options, dataset)
     num_evals = 0.0
 
-    # For evaluating on a fixed batch (for batching)
-    idx = options.batching ? batch_sample(dataset, options) : Int[]
-    example_tree = create_expression(zero(T), options, dataset)
-    loss_cache = [(oid=example_tree, score=zero(L)) for member in pop.members]
-    first_loop = true
+    batched_dataset = options.batching ? batch(dataset, options.batch_size) : dataset
 
     for temperature in all_temperatures
         pop, tmp_num_evals = reg_evol_cycle(
-            dataset,
+            batched_dataset,
             pop,
             temperature,
             curmaxsize,
@@ -54,28 +50,9 @@ function s_r_cycle(
             record,
         )
         num_evals += tmp_num_evals
-        for (i, member) in enumerate(pop.members)
+        for member in pop.members
             size = compute_complexity(member, options)
-            score = if options.batching
-                oid = member.tree
-                if loss_cache[i].oid != oid || first_loop
-                    # Evaluate on fixed batch so that we can more accurately
-                    # compare expressions with a batched loss (though the batch
-                    # changes each iteration, and we evaluate on full-batch outside,
-                    # so this is not biased).
-                    _score, _ = score_func_batched(
-                        dataset, member, options; complexity=size, idx=idx
-                    )
-                    loss_cache[i] = (oid=copy(oid), score=_score)
-                    _score
-                else
-                    # Already evaluated this particular expression, so just use
-                    # the cached score
-                    loss_cache[i].score
-                end
-            else
-                member.score
-            end
+            score = member.score
             # TODO: Note that this per-population hall of fame only uses the batched
             #       loss, and is therefore inaccurate. Therefore, some expressions
             #       may be loss if a very small batch size is used.
@@ -91,7 +68,6 @@ function s_r_cycle(
                 best_examples_seen.members[size] = copy(member)
             end
         end
-        first_loop = false
     end
 
     return (pop, best_examples_seen, num_evals)

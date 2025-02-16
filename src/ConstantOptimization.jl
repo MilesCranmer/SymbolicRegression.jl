@@ -13,23 +13,12 @@ using DynamicExpressions:
     extract_gradient
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, specialized_options
 using ..UtilsModule: get_birth_order
-using ..LossFunctionsModule: eval_loss, loss_to_score, batch_sample
+using ..LossFunctionsModule: eval_loss, loss_to_score
 using ..PopMemberModule: PopMember
 
 function optimize_constants(
     dataset::Dataset{T,L}, member::P, options::AbstractOptions
 )::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
-    if options.batching
-        dispatch_optimize_constants(
-            dataset, member, options, batch_sample(dataset, options)
-        )
-    else
-        dispatch_optimize_constants(dataset, member, options, nothing)
-    end
-end
-function dispatch_optimize_constants(
-    dataset::Dataset{T,L}, member::P, options::AbstractOptions, idx
-) where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
     nconst = count_constants_for_optimization(member.tree)
     nconst == 0 && return (member, 0.0)
     if nconst == 1 && !(T <: Complex)
@@ -40,7 +29,6 @@ function dispatch_optimize_constants(
             specialized_options(options),
             algorithm,
             options.optimizer_options,
-            idx,
         )
     end
     return _optimize_constants(
@@ -51,7 +39,6 @@ function dispatch_optimize_constants(
         # more particular about dynamic dispatch
         options.optimizer_algorithm,
         options.optimizer_options,
-        idx,
     )
 end
 
@@ -59,13 +46,13 @@ end
 count_constants_for_optimization(ex::Expression) = count_scalar_constants(ex)
 
 function _optimize_constants(
-    dataset, member::P, options, algorithm, optimizer_options, idx
+    dataset, member::P, options, algorithm, optimizer_options
 )::Tuple{P,Float64} where {T,L,P<:PopMember{T,L}}
     tree = member.tree
     eval_fraction = options.batching ? (options.batch_size / dataset.n) : 1.0
     x0, refs = get_scalar_constants(tree)
     @assert count_constants_for_optimization(tree) == length(x0)
-    f = Evaluator(tree, refs, dataset, options, idx)
+    f = Evaluator(tree, refs, dataset, options)
     fg! = GradEvaluator(f, options.autodiff_backend)
     obj = if algorithm isa Optim.Newton || options.autodiff_backend === nothing
         f
@@ -103,17 +90,17 @@ function _optimize_constants(
     return member, num_evals
 end
 
-struct Evaluator{N<:AbstractExpression,R,D<:Dataset,O<:AbstractOptions,I} <: Function
+struct Evaluator{N<:AbstractExpression,R,D<:Dataset,O<:AbstractOptions} <: Function
     tree::N
     refs::R
     dataset::D
     options::O
-    idx::I
 end
 function (e::Evaluator)(x::AbstractVector; regularization=false)
     set_scalar_constants!(e.tree, x, e.refs)
-    return eval_loss(e.tree, e.dataset, e.options; regularization, e.idx)
+    return eval_loss(e.tree, e.dataset, e.options; regularization)
 end
+
 struct GradEvaluator{F<:Evaluator,AD<:Union{Nothing,AbstractADType},EX} <: Function
     f::F
     backend::AD
@@ -125,7 +112,7 @@ function (g::GradEvaluator{<:Any,AD})(_, G, x::AbstractVector) where {AD}
     AD isa AutoEnzyme && error("Please load the `Enzyme.jl` package.")
     set_scalar_constants!(g.f.tree, x, g.f.refs)
     (val, grad) = value_and_gradient(g.backend, g.f.tree) do tree
-        eval_loss(tree, g.f.dataset, g.f.options; regularization=false, idx=g.f.idx)
+        eval_loss(tree, g.f.dataset, g.f.options; regularization=false)
     end
     if G !== nothing && grad !== nothing
         G .= extract_gradient(grad, g.f.tree)
