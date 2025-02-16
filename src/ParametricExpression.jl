@@ -22,6 +22,7 @@ using ..CoreModule:
     DATA_TYPE,
     AbstractMutationWeights,
     AbstractExpressionSpec,
+    get_indices,
     ExpressionSpecModule as ES
 using ..PopMemberModule: PopMember
 using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
@@ -88,14 +89,11 @@ function LF.eval_tree_dispatch(
     tree::ParametricExpression, dataset::Dataset, options::AbstractOptions
 )
     A = IDE.expected_array_type(dataset.X, typeof(tree))
+    indices = get_indices(dataset)
     out, complete = DE.eval_tree_array(
         tree,
         dataset.X,
-        if dataset isa BatchedDataset
-            view(dataset.extra.class, dataset.indices)
-        else
-            dataset.extra.class
-        end,
+        isnothing(indices) ? dataset.extra.class : view(dataset.extra.class, indices),
         options.operators,
     )
     return out::A, complete::Bool
