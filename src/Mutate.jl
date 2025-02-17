@@ -1,5 +1,6 @@
 module MutateModule
 
+using DispatchDoctor: @unstable
 using DynamicExpressions:
     AbstractExpression,
     copy_into!,
@@ -17,7 +18,7 @@ using ..CoreModule:
     sample_mutation,
     max_features
 using ..ComplexityModule: compute_complexity
-using ..LossFunctionsModule: score_func, score_func_batched
+using ..LossFunctionsModule: score_func
 using ..CheckConstraintsModule: check_constraints
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..PopMemberModule: PopMember
@@ -156,7 +157,7 @@ end
 
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
-function next_generation(
+@unstable function next_generation(
     dataset::D,
     member::P,
     temperature,
@@ -171,12 +172,7 @@ function next_generation(
     num_evals = 0.0
 
     #TODO - reconsider this
-    beforeScore, beforeLoss = if options.batching
-        num_evals += (options.batch_size / dataset.n)
-        score_func_batched(dataset, member, options)
-    else
-        member.score, member.loss
-    end
+    beforeScore, beforeLoss = member.score, member.loss
 
     nfeatures = max_features(dataset, options)
 
@@ -257,11 +253,11 @@ function next_generation(
         )
     end
 
+    afterScore, afterLoss = score_func(dataset, tree, options)
     if options.batching
-        afterScore, afterLoss = score_func_batched(dataset, tree, options)
+        # TODO: This is incorrect - it should be ORIGINAL dataset.n
         num_evals += (options.batch_size / dataset.n)
     else
-        afterScore, afterLoss = score_func(dataset, tree, options)
         num_evals += 1
     end
 
@@ -667,22 +663,17 @@ function crossover_generation(
         child_tree1, child_tree2 = crossover_trees(tree1, tree2)
         num_tries += 1
     end
+    afterScore1, afterLoss1 = score_func(
+        dataset, child_tree1, options; complexity=afterSize1
+    )
+    afterScore2, afterLoss2 = score_func(
+        dataset, child_tree2, options; complexity=afterSize2
+    )
     if options.batching
-        afterScore1, afterLoss1 = score_func_batched(
-            dataset, child_tree1, options; complexity=afterSize1
-        )
-        afterScore2, afterLoss2 = score_func_batched(
-            dataset, child_tree2, options; complexity=afterSize2
-        )
+        # TODO: This is incorrect - it should be ORIGINAL dataset.n
         num_evals += 2 * (options.batch_size / dataset.n)
     else
-        afterScore1, afterLoss1 = score_func(
-            dataset, child_tree1, options; complexity=afterSize1
-        )
-        afterScore2, afterLoss2 = score_func(
-            dataset, child_tree2, options; complexity=afterSize2
-        )
-        num_evals += options.batch_size / dataset.n
+        num_evals += 2
     end
 
     baby1 = PopMember(

@@ -35,6 +35,8 @@ options = SymbolicRegression.Options(;
     early_stop_condition=early_stop,
     elementwise_loss=my_loss,
     complexity_mapping=my_complexity,
+    batching=true,
+    batch_size=50,
 )
 
 hof = equation_search(

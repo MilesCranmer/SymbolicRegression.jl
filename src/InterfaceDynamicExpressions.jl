@@ -82,6 +82,7 @@ function expected_array_type(X::AbstractArray, ::Type)
 end
 expected_array_type(X::AbstractArray, ::Type, ::Val{:eval_grad_tree_array}) = typeof(X)
 expected_array_type(::Matrix{T}, ::Type) where {T} = Vector{T}
+expected_array_type(::SubArray{T,2,Matrix{T}}, ::Type) where {T} = Vector{T}
 
 """
     eval_diff_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::AbstractOptions, direction::Int)

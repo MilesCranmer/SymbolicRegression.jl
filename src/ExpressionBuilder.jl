@@ -8,7 +8,6 @@ using DispatchDoctor: @unstable
 using Compat: Fix
 using DynamicExpressions:
     AbstractExpressionNode, AbstractExpression, constructorof, with_metadata
-using StatsBase: StatsBase
 using ..CoreModule: AbstractOptions, Dataset
 using ..HallOfFameModule: HallOfFame
 using ..PopulationModule: Population
