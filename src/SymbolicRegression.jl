@@ -238,7 +238,7 @@ using .CoreModule:
     RecordType,
     Dataset,
     BasicDataset,
-    BatchedDataset,
+    SubDataset,
     AbstractOptions,
     Options,
     ComplexityMapping,

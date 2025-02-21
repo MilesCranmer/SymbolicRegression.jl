@@ -127,7 +127,7 @@ function evaluator(
     idx = @something(idx, get_indices(dataset), Some(nothing))
     if hasmethod(f, typeof((tree, full_dataset, options, idx)))
         # If user defines method that accepts batching indices, we
-        # can convert the BatchedDataset to the old version
+        # can convert the SubDataset to the old version
         return f(tree, full_dataset, options, idx)
     else
         return f(tree, dataset, options)

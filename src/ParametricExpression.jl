@@ -18,7 +18,7 @@ using Random: default_rng, AbstractRNG
 using ..CoreModule:
     AbstractOptions,
     Dataset,
-    BatchedDataset,
+    SubDataset,
     DATA_TYPE,
     AbstractMutationWeights,
     AbstractExpressionSpec,

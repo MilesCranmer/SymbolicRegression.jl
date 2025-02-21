@@ -567,10 +567,10 @@ end
 @testitem "New batching syntax" tags = [:part3] begin
     using SymbolicRegression
     using SymbolicRegression: Dataset, batch
-    using SymbolicRegression: BatchedDataset, eval_loss
+    using SymbolicRegression: SubDataset, eval_loss
 
     function expr_loss(ex::AbstractExpression, dataset::Dataset, options::Options)
-        @test dataset isa BatchedDataset
+        @test dataset isa SubDataset
         output, completed = eval_tree_array(ex, dataset.X, options)
         !completed && return Inf
         return sum(abs2, output .- dataset.y) / length(dataset.y)
