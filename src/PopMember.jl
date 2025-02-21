@@ -27,7 +27,9 @@ end
     elseif field == :tree
         setfield!(member, :complexity, -1)
     elseif field == :score
-        Base.depwarn("Use `cost` instead of `score`.", Symbol(:setproperty!, :PopMember))
+        Base.depwarn(
+            "deprecated: use `cost` instead of `score`.", Symbol(:setproperty!, :PopMember)
+        )
         return setfield!(member, :cost, value)
     end
     return setfield!(member, field, value)
@@ -38,7 +40,9 @@ end
             error("Don't access `.complexity` directly. Use `compute_complexity` instead.")
         )
     elseif field == :score
-        Base.depwarn("Use `cost` instead of `score`.", Symbol(:getproperty, :PopMember))
+        Base.depwarn(
+            "deprecated: use `cost` instead of `score`.", Symbol(:getproperty, :PopMember)
+        )
         return getfield(member, :cost)
     end
     return getfield(member, field)
