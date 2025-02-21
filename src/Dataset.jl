@@ -15,7 +15,7 @@ Abstract type for all dataset types in SymbolicRegression.jl.
 abstract type Dataset{T<:DATA_TYPE,L<:LOSS_TYPE} end
 
 """
-    BasicDataset{T<:DATA_TYPE,L<:LOSS_TYPE}
+    BasicDataset{T<:DATA_TYPE,L<:LOSS_TYPE} <: Dataset{T,L}
 
 # Fields
 
@@ -82,20 +82,19 @@ mutable struct BasicDataset{
 end
 
 """
-    BatchedDataset{T<:DATA_TYPE,L<:LOSS_TYPE,D<:BasicDataset{T,L},I<:AbstractVector{Int}}
+    SubDataset{T<:DATA_TYPE,L<:LOSS_TYPE,D<:BasicDataset{T,L},I<:AbstractVector{Int}} <: Dataset{T,L}
 
 A dataset type that represents a batch of data from a BasicDataset. Calls to `.X`, `.y`,
 `.weights`, etc. will return the batched versions of these.
 """
-struct BatchedDataset{
-    T<:DATA_TYPE,L<:LOSS_TYPE,D<:BasicDataset{T,L},I<:AbstractVector{Int}
-} <: Dataset{T,L}
+struct SubDataset{T<:DATA_TYPE,L<:LOSS_TYPE,D<:BasicDataset{T,L},I<:AbstractVector{Int}} <:
+       Dataset{T,L}
     _dataset::D
     _indices::I
 end
-@inline get_full_dataset(d::BatchedDataset) = getfield(d, :_dataset)
-@inline get_indices(d::BatchedDataset) = getfield(d, :_indices)
-@inline function Base.getproperty(d::BatchedDataset, prop::Symbol)
+@inline get_full_dataset(d::SubDataset) = getfield(d, :_dataset)
+@inline get_indices(d::SubDataset) = getfield(d, :_indices)
+@inline function Base.getproperty(d::SubDataset, prop::Symbol)
     if prop == :X
         return view(get_full_dataset(d).X, :, get_indices(d))
     elseif prop == :y
@@ -111,9 +110,9 @@ end
         return getproperty(get_full_dataset(d), prop)
     end
 end
-@inline Base.propertynames(d::BatchedDataset) = propertynames(get_full_dataset(d))
+@inline Base.propertynames(d::SubDataset) = propertynames(get_full_dataset(d))
 
-dataset_fraction(d::BatchedDataset) = d.n / get_full_dataset(d).n
+dataset_fraction(d::SubDataset) = d.n / get_full_dataset(d).n
 
 """
     Dataset(X::AbstractMatrix{T},
@@ -288,8 +287,8 @@ function max_features(dataset::Dataset, _)
 end
 
 """
-    batch([rng::AbstractRNG,] dataset::BasicDataset, batch_size::Int) -> BatchedDataset
-    batch(dataset::BasicDataset, indices::AbstractVector{Int}) -> BatchedDataset
+    batch([rng::AbstractRNG,] dataset::BasicDataset, batch_size::Int) -> SubDataset
+    batch(dataset::BasicDataset, indices::AbstractVector{Int}) -> SubDataset
 
 Create a batched dataset by randomly sampling from the original dataset.
 
@@ -299,7 +298,7 @@ Create a batched dataset by randomly sampling from the original dataset.
 - `batch_size::Int`: The size of the batch to create
 """
 function batch(dataset::BasicDataset{T,L}, indices::AbstractVector{Int}) where {T,L}
-    return BatchedDataset{T,L,typeof(dataset),typeof(indices)}(dataset, indices)
+    return SubDataset{T,L,typeof(dataset),typeof(indices)}(dataset, indices)
 end
 function batch(rng::AbstractRNG, dataset::BasicDataset{T,L}, batch_size::Int) where {T,L}
     return batch(dataset, rand(rng, 1:(dataset.n), batch_size))

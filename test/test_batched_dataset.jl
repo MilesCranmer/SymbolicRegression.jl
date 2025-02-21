@@ -1,6 +1,6 @@
-@testitem "BatchedDataset properties" tags = [:part3] begin
+@testitem "SubDataset properties" tags = [:part3] begin
     using SymbolicRegression
-    using SymbolicRegression: batch, BatchedDataset
+    using SymbolicRegression: batch, SubDataset
     using Random
 
     # Test basic dataset creation
@@ -12,7 +12,7 @@
     # Test batching with default RNG
     batch_size = 16
     batched = batch(dataset, batch_size)
-    @test batched isa BatchedDataset
+    @test batched isa SubDataset
     @test size(batched.X, 2) == batch_size
     @test batched.X isa SubArray
     @test length(batched.y) == batch_size
@@ -28,7 +28,7 @@
     rng = Random.MersenneTwister(42)
     rng2 = Random.MersenneTwister(42)
     batched2 = batch(rng, dataset, batch_size)
-    @test batched2 isa BatchedDataset
+    @test batched2 isa SubDataset
     @test size(batched2.X, 2) == batch_size
 
     @test batch(rng2, dataset, batch_size).X == batched2.X

@@ -15,7 +15,7 @@ using .ProgramConstantsModule: RecordType, DATA_TYPE, LOSS_TYPE
 using .DatasetModule:
     Dataset,
     BasicDataset,
-    BatchedDataset,
+    SubDataset,
     is_weighted,
     has_units,
     max_features,
