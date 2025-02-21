@@ -18,9 +18,11 @@ using Random: default_rng, AbstractRNG
 using ..CoreModule:
     AbstractOptions,
     Dataset,
+    SubDataset,
     DATA_TYPE,
     AbstractMutationWeights,
     AbstractExpressionSpec,
+    get_indices,
     ExpressionSpecModule as ES
 using ..PopMemberModule: PopMember
 using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
@@ -84,13 +86,14 @@ function DE.eval_tree_array(
     return out::A, complete::Bool
 end
 function LF.eval_tree_dispatch(
-    tree::ParametricExpression, dataset::Dataset, options::AbstractOptions, idx
+    tree::ParametricExpression, dataset::Dataset, options::AbstractOptions
 )
     A = IDE.expected_array_type(dataset.X, typeof(tree))
+    indices = get_indices(dataset)
     out, complete = DE.eval_tree_array(
         tree,
-        LF.maybe_getindex(dataset.X, :, idx),
-        LF.maybe_getindex(dataset.extra.class, idx),
+        dataset.X,
+        isnothing(indices) ? dataset.extra.class : view(dataset.extra.class, indices),
         options.operators,
     )
     return out::A, complete::Bool

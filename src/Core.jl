@@ -12,7 +12,17 @@ include("ExpressionSpec.jl")
 include("Options.jl")
 
 using .ProgramConstantsModule: RecordType, DATA_TYPE, LOSS_TYPE
-using .DatasetModule: Dataset, is_weighted, has_units, max_features
+using .DatasetModule:
+    Dataset,
+    BasicDataset,
+    SubDataset,
+    is_weighted,
+    has_units,
+    max_features,
+    batch,
+    get_indices,
+    get_full_dataset,
+    dataset_fraction
 using .MutationWeightsModule: AbstractMutationWeights, MutationWeights, sample_mutation
 using .OptionsStructModule:
     AbstractOptions,

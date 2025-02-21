@@ -30,6 +30,8 @@ options = SymbolicRegression.Options(;
     unary_operators=[cos],
     early_stop_condition=early_stop,
     loss_function_expression=my_loss_expression,
+    batching=true,
+    batch_size=32,
 )
 
 hof = equation_search(

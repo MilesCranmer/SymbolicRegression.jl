@@ -1,6 +1,5 @@
 module MigrationModule
 
-using StatsBase: StatsBase
 using ..CoreModule: AbstractOptions
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember, reset_birth!
@@ -27,8 +26,8 @@ function migrate!(
     num_replace = min(num_replace, length(migrant_candidates))
     num_replace = min(num_replace, population_size)
 
-    locations = StatsBase.sample(1:population_size, num_replace; replace=true)
-    migrants = StatsBase.sample(migrant_candidates, num_replace; replace=true)
+    locations = rand(1:population_size, num_replace)
+    migrants = rand(migrant_candidates, num_replace)
 
     for (i, migrant) in zip(locations, migrants)
         base_pop.members[i] = copy(migrant)

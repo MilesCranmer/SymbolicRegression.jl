@@ -673,6 +673,9 @@ end
     # COV_EXCL_START
     IDE.expected_array_type(::AbstractArray, ::Type{<:TemplateExpression}) = Any
     IDE.expected_array_type(::Matrix{T}, ::Type{<:TemplateExpression}) where {T} = Any
+    IDE.expected_array_type(
+        ::SubArray{T,2,Matrix{T}}, ::Type{<:TemplateExpression}
+    ) where {T} = Any
     # COV_EXCL_STOP
 end
 
