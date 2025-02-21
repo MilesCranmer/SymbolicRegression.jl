@@ -635,7 +635,12 @@ end
 
 """Generate a generation via crossover of two members."""
 function crossover_generation(
-    member1::P, member2::P, dataset::D, curmaxsize::Int, options::AbstractOptions
+    member1::P,
+    member2::P,
+    dataset::D,
+    curmaxsize::Int,
+    options::AbstractOptions;
+    recorder::RecordType=RecordType(),
 )::Tuple{P,P,Bool,Float64} where {T,L,D<:Dataset{T,L},N,P<:PopMember{T,L,N}}
     tree1 = member1.tree
     tree2 = member2.tree
@@ -657,6 +662,10 @@ function crossover_generation(
             break
         end
         if num_tries > max_tries
+            @recorder begin
+                recorder["result"] = "reject"
+                recorder["reason"] = "failed_constraint_check"
+            end
             crossover_accepted = false
             return member1, member2, crossover_accepted, num_evals  # Fail.
         end
@@ -694,6 +703,11 @@ function crossover_generation(
         parent=member2.ref,
         deterministic=options.deterministic,
     )::P
+
+    @recorder begin
+        recorder["result"] = "accept"
+        recorder["reason"] = "pass"
+    end
 
     crossover_accepted = true
     return baby1, baby2, crossover_accepted, num_evals

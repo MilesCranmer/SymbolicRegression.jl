@@ -19,13 +19,6 @@ function reg_evol_cycle(
     options::AbstractOptions,
     record::RecordType,
 )::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:Population{T,L}}
-    # Batch over each subsample. Can give 15% improvement in speed; probably moreso for large pops.
-    # but is ultimately a different algorithm than regularized evolution, and might not be
-    # as good.
-    if options.crossover_probability > 0.0
-        @recorder error("You cannot have the recorder on when using crossover")
-    end
-
     num_evals = 0.0
     n_evol_cycles = ceil(Int, pop.n / options.tournament_selection_n)
 
@@ -87,8 +80,14 @@ function reg_evol_cycle(
             allstar1 = best_of_sample(pop, running_search_statistics, options)
             allstar2 = best_of_sample(pop, running_search_statistics, options)
 
+            crossover_recorder = RecordType()
             baby1, baby2, crossover_accepted, tmp_num_evals = crossover_generation(
-                allstar1, allstar2, dataset, curmaxsize, options
+                allstar1,
+                allstar2,
+                dataset,
+                curmaxsize,
+                options;
+                recorder=crossover_recorder,
             )
             num_evals += tmp_num_evals
 
@@ -96,11 +95,62 @@ function reg_evol_cycle(
                 continue
             end
 
+            # Find the oldest members to replace:
+            oldest1 = argmin_fast([pop.members[member].birth for member in 1:(pop.n)])
+            BT = typeof(first(pop.members).birth)
+            oldest2 = argmin_fast([
+                i == oldest1 ? typemax(BT) : pop.members[i].birth for i in 1:(pop.n)
+            ])
+
+            @recorder begin
+                if !haskey(record, "mutations")
+                    record["mutations"] = RecordType()
+                end
+                for member in [
+                    allstar1,
+                    allstar2,
+                    baby1,
+                    baby2,
+                    pop.members[oldest1],
+                    pop.members[oldest2],
+                ]
+                    if !haskey(record["mutations"], "$(member.ref)")
+                        record["mutations"]["$(member.ref)"] = RecordType(
+                            "events" => Vector{RecordType}(),
+                            "tree" => string_tree(member.tree, options),
+                            "score" => member.score,
+                            "loss" => member.loss,
+                            "parent" => member.parent,
+                        )
+                    end
+                end
+                crossover_event = RecordType(
+                    "type" => "crossover",
+                    "time" => time(),
+                    "parent1" => allstar1.ref,
+                    "parent2" => allstar2.ref,
+                    "child1" => baby1.ref,
+                    "child2" => baby2.ref,
+                    "details" => crossover_recorder,
+                )
+                death_event1 = RecordType("type" => "death", "time" => time())
+                death_event2 = RecordType("type" => "death", "time" => time())
+
+                push!(record["mutations"]["$(allstar1.ref)"]["events"], crossover_event)
+                push!(record["mutations"]["$(allstar2.ref)"]["events"], crossover_event)
+                push!(
+                    record["mutations"]["$(pop.members[oldest1].ref)"]["events"],
+                    death_event1,
+                )
+                push!(
+                    record["mutations"]["$(pop.members[oldest2].ref)"]["events"],
+                    death_event2,
+                )
+            end
+
             # Replace old members with new ones:
-            oldest = argmin_fast([pop.members[member].birth for member in 1:(pop.n)])
-            pop.members[oldest] = baby1
-            oldest = argmin_fast([pop.members[member].birth for member in 1:(pop.n)])
-            pop.members[oldest] = baby2
+            pop.members[oldest1] = baby1
+            pop.members[oldest2] = baby2
         end
     end
 
