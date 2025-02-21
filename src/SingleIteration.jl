@@ -52,17 +52,9 @@ function s_r_cycle(
         num_evals += tmp_num_evals
         for member in pop.members
             size = compute_complexity(member, options)
-            score = member.score
-            # TODO: Note that this per-population hall of fame only uses the batched
-            #       loss, and is therefore inaccurate. Therefore, some expressions
-            #       may be loss if a very small batch size is used.
-            # - Could have different batch size for different things (smaller for constant opt)
-            # - Could just recompute losses here (expensive)
-            # - Average over a few batches
-            # - Store multiple expressions in hall of fame
             if 0 < size <= options.maxsize && (
                 !best_examples_seen.exists[size] ||
-                score < best_examples_seen.members[size].score
+                member.score < best_examples_seen.members[size].score
             )
                 best_examples_seen.exists[size] = true
                 best_examples_seen.members[size] = copy(member)
