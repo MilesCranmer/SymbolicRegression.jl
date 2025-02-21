@@ -1124,10 +1124,14 @@ end
     num_evals += evals_from_optimize
     if options.batching
         for i_member in 1:(options.maxsize)
-            score, result_loss = score_func(dataset, best_seen.members[i_member], options)
-            best_seen.members[i_member].score = score
-            best_seen.members[i_member].loss = result_loss
-            num_evals += 1
+            if best_seen.exists[i_member]
+                score, result_loss = score_func(
+                    dataset, best_seen.members[i_member], options
+                )
+                best_seen.members[i_member].score = score
+                best_seen.members[i_member].loss = result_loss
+                num_evals += 1
+            end
         end
     end
     return (out_pop, best_seen, record, num_evals)
