@@ -113,6 +113,8 @@ end
 end
 @inline Base.propertynames(d::BatchedDataset) = propertynames(get_full_dataset(d))
 
+dataset_fraction(d::BatchedDataset) = d.n / get_full_dataset(d).n
+
 """
     Dataset(X::AbstractMatrix{T},
             y::Union{AbstractVector{T},Nothing}=nothing,
@@ -246,8 +248,11 @@ end
 
 is_weighted(dataset::Dataset) = dataset.weights !== nothing
 
-get_full_dataset(d::BasicDataset) = d  # COV_EXCL_LINE
-get_indices(::BasicDataset) = nothing  # COV_EXCL_LINE
+# COV_EXCL_START
+get_full_dataset(d::BasicDataset) = d
+get_indices(::BasicDataset) = nothing
+dataset_fraction(d::BasicDataset) = 1.0
+# COV_EXCL_END
 
 function error_on_mismatched_size(_, ::Nothing)
     return nothing

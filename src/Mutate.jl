@@ -16,7 +16,8 @@ using ..CoreModule:
     Dataset,
     RecordType,
     sample_mutation,
-    max_features
+    max_features,
+    dataset_fraction
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: score_func
 using ..CheckConstraintsModule: check_constraints
@@ -254,12 +255,7 @@ end
     end
 
     afterScore, afterLoss = score_func(dataset, tree, options)
-    if options.batching
-        # TODO: This is incorrect - it should be ORIGINAL dataset.n
-        num_evals += (options.batch_size / dataset.n)
-    else
-        num_evals += 1
-    end
+    num_evals += dataset_fraction(dataset)
 
     if isnan(afterScore)
         @recorder begin
@@ -678,12 +674,7 @@ function crossover_generation(
     afterScore2, afterLoss2 = score_func(
         dataset, child_tree2, options; complexity=afterSize2
     )
-    if options.batching
-        # TODO: This is incorrect - it should be ORIGINAL dataset.n
-        num_evals += 2 * (options.batch_size / dataset.n)
-    else
-        num_evals += 2
-    end
+    num_evals += 2 * dataset_fraction(dataset)
 
     baby1 = PopMember(
         child_tree1::AbstractExpression,

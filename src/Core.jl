@@ -21,7 +21,8 @@ using .DatasetModule:
     max_features,
     batch,
     get_indices,
-    get_full_dataset
+    get_full_dataset,
+    dataset_fraction
 using .MutationWeightsModule: AbstractMutationWeights, MutationWeights, sample_mutation
 using .OptionsStructModule:
     AbstractOptions,

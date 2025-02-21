@@ -11,7 +11,8 @@ using DynamicExpressions:
     get_scalar_constants,
     set_scalar_constants!,
     extract_gradient
-using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, specialized_options
+using ..CoreModule:
+    AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, specialized_options, dataset_fraction
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_loss, loss_to_score
 using ..PopMemberModule: PopMember
@@ -49,7 +50,7 @@ function _optimize_constants(
     dataset, member::P, options, algorithm, optimizer_options
 )::Tuple{P,Float64} where {T,L,P<:PopMember{T,L}}
     tree = member.tree
-    eval_fraction = options.batching ? (options.batch_size / dataset.n) : 1.0
+    eval_fraction = dataset_fraction(dataset)
     x0, refs = get_scalar_constants(tree)
     @assert count_constants_for_optimization(tree) == length(x0)
     f = Evaluator(tree, refs, dataset, options)
