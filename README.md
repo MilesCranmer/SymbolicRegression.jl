@@ -148,7 +148,7 @@ import SymbolicRegression: calculate_pareto_frontier
 dominating = calculate_pareto_frontier(hall_of_fame)
 ```
 
-This is a vector of `PopMember` type - which contains the expression along with the score.
+This is a vector of `PopMember` type - which contains the expression along with the cost.
 We can get the expressions with:
 
 ```julia

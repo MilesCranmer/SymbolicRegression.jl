@@ -6,11 +6,11 @@ using ..UtilsModule: @threads_if
 using ..CoreModule: AbstractOptions, Dataset, RecordType, create_expression, batch
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: generate_reference
-using ..PopulationModule: Population, finalize_scores
+using ..PopulationModule: Population, finalize_costs
 using ..HallOfFameModule: HallOfFame
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..RegularizedEvolutionModule: reg_evol_cycle
-using ..LossFunctionsModule: score_func
+using ..LossFunctionsModule: eval_cost
 using ..ConstantOptimizationModule: optimize_constants
 using ..RecorderModule: @recorder
 
@@ -54,7 +54,7 @@ function s_r_cycle(
             size = compute_complexity(member, options)
             if 0 < size <= options.maxsize && (
                 !best_examples_seen.exists[size] ||
-                member.score < best_examples_seen.members[size].score
+                member.cost < best_examples_seen.members[size].cost
             )
                 best_examples_seen.exists[size] = true
                 best_examples_seen.members[size] = copy(member)
@@ -89,7 +89,7 @@ function optimize_and_simplify_population(
         end
     end
     num_evals = sum(array_num_evals)
-    pop, tmp_num_evals = finalize_scores(dataset, pop, options)
+    pop, tmp_num_evals = finalize_costs(dataset, pop, options)
     num_evals += tmp_num_evals
 
     # Now, we create new references for every member,
@@ -109,7 +109,7 @@ function optimize_and_simplify_population(
                 record["mutations"]["$(member.ref)"] = RecordType(
                     "events" => Vector{RecordType}(),
                     "tree" => string_tree(member.tree, options),
-                    "score" => member.score,
+                    "cost" => member.cost,
                     "loss" => member.loss,
                     "parent" => member.parent,
                 )

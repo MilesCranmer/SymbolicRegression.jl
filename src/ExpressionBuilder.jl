@@ -111,7 +111,7 @@ end
     ) where {T,L}
         return PopMember(
             embed_metadata(member.tree, options, dataset),
-            member.score,
+            member.cost,
             member.loss,
             nothing;
             member.ref,
@@ -157,7 +157,7 @@ function strip_metadata(
 ) where {T,L}
     return PopMember(
         strip_metadata(member.tree, options, dataset),
-        member.score,
+        member.cost,
         member.loss,
         nothing;
         member.ref,

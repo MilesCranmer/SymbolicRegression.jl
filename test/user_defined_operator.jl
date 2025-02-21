@@ -15,5 +15,5 @@ hallOfFame = equation_search(
 dominating = calculate_pareto_frontier(X, y, hallOfFame, options)
 
 best = dominating[end]
-# Test the score
+# Test the cost
 @test best.loss < maximum_residual / 10

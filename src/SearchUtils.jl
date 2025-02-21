@@ -686,7 +686,7 @@ function update_hall_of_fame!(
             continue
         end
         not_filled = !hall_of_fame.exists[size]
-        better_than_current = member.score < hall_of_fame.members[size].score
+        better_than_current = member.cost < hall_of_fame.members[size].cost
         if not_filled || better_than_current
             hall_of_fame.members[size] = copy(member)
             hall_of_fame.exists[size] = true

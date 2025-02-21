@@ -5,12 +5,12 @@ using DynamicExpressions: AbstractExpression, AbstractExpressionNode, string_tre
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, create_expression
 import ..ComplexityModule: compute_complexity
 using ..UtilsModule: get_birth_order
-using ..LossFunctionsModule: score_func
+using ..LossFunctionsModule: eval_cost
 
-# Define a member of population by equation, score, and age
+# Define a member of population by equation, cost, and age
 mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
     tree::N
-    score::L  # Inludes complexity penalty, normalization
+    cost::L  # Inludes complexity penalty, normalization
     loss::L  # Raw loss
     birth::Int
     complexity::Int
@@ -19,17 +19,28 @@ mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
     ref::Int
     parent::Int
 end
-function Base.setproperty!(member::PopMember, field::Symbol, value)
-    field == :complexity && throw(
-        error("Don't set `.complexity` directly. Use `recompute_complexity!` instead.")
-    )
-    field == :tree && setfield!(member, :complexity, -1)
+@inline function Base.setproperty!(member::PopMember, field::Symbol, value)
+    if field == :complexity
+        throw(
+            error("Don't set `.complexity` directly. Use `recompute_complexity!` instead.")
+        )
+    elseif field == :tree
+        setfield!(member, :complexity, -1)
+    elseif field == :score
+        Base.depwarn("Use `cost` instead of `score`.", Symbol(:setproperty!, :PopMember))
+        return setfield!(member, :cost, value)
+    end
     return setfield!(member, field, value)
 end
 @unstable @inline function Base.getproperty(member::PopMember, field::Symbol)
-    field == :complexity && throw(
-        error("Don't access `.complexity` directly. Use `compute_complexity` instead.")
-    )
+    if field == :complexity
+        throw(
+            error("Don't access `.complexity` directly. Use `compute_complexity` instead.")
+        )
+    elseif field == :score
+        Base.depwarn("Use `cost` instead of `score`.", Symbol(:getproperty, :PopMember))
+        return getfield(member, :cost)
+    end
     return getfield(member, field)
 end
 function Base.show(io::IO, p::PopMember{T,L,N}) where {T,L,N}
@@ -37,7 +48,7 @@ function Base.show(io::IO, p::PopMember{T,L,N}) where {T,L,N}
     print(io, "PopMember(")
     print(io, "tree = (", string_tree(p.tree), "), ")
     print(io, "loss = ", shower(p.loss), ", ")
-    print(io, "score = ", shower(p.score))
+    print(io, "cost = ", shower(p.cost))
     print(io, ")")
     return nothing
 end
@@ -45,21 +56,21 @@ end
 generate_reference() = abs(rand(Int))
 
 """
-    PopMember(t::AbstractExpression{T}, score::L, loss::L)
+    PopMember(t::AbstractExpression{T}, cost::L, loss::L)
 
 Create a population member with a birth date at the current time.
-The type of the `Node` may be different from the type of the score
+The type of the `Node` may be different from the type of the cost
 and loss.
 
 # Arguments
 
 - `t::AbstractExpression{T}`: The tree for the population member.
-- `score::L`: The score (normalized to a baseline, and offset by a complexity penalty)
+- `cost::L`: The cost (normalized to a baseline, and offset by a complexity penalty)
 - `loss::L`: The raw loss to assign.
 """
 function PopMember(
     t::AbstractExpression{T},
-    score::L,
+    cost::L,
     loss::L,
     options::Union{AbstractOptions,Nothing}=nothing,
     complexity::Union{Int,Nothing}=nothing;
@@ -80,7 +91,7 @@ function PopMember(
     complexity = complexity === nothing ? -1 : complexity
     return PopMember{T,L,typeof(t)}(
         t,
-        score,
+        cost,
         loss,
         get_birth_order(; deterministic=deterministic),
         complexity,
@@ -97,7 +108,7 @@ end
     )
 
 Create a population member with a birth date at the current time.
-Automatically compute the score for this tree.
+Automatically compute the cost for this tree.
 
 # Arguments
 
@@ -117,10 +128,10 @@ function PopMember(
     ex = create_expression(tree, options, dataset)
     set_complexity = complexity === nothing ? compute_complexity(ex, options) : complexity
     @assert set_complexity != -1
-    score, loss = score_func(dataset, ex, options; complexity=set_complexity)
+    cost, loss = eval_cost(dataset, ex, options; complexity=set_complexity)
     return PopMember(
         ex,
-        score,
+        cost,
         loss,
         options,
         set_complexity;
@@ -132,13 +143,13 @@ end
 
 function Base.copy(p::P) where {P<:PopMember}
     tree = copy(p.tree)
-    score = copy(p.score)
+    cost = copy(p.cost)
     loss = copy(p.loss)
     birth = copy(p.birth)
     complexity = copy(getfield(p, :complexity))
     ref = copy(p.ref)
     parent = copy(p.parent)
-    return P(tree, score, loss, birth, complexity, ref, parent)
+    return P(tree, cost, loss, birth, complexity, ref, parent)
 end
 
 function reset_birth!(p::PopMember; deterministic::Bool)

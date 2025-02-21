@@ -294,7 +294,7 @@ using .MutationFunctionsModule:
     random_node_and_parent,
     crossover_trees
 using .InterfaceDynamicExpressionsModule: @extend_operators
-using .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
+using .LossFunctionsModule: eval_loss, eval_cost, update_baseline_loss!, score_func
 using .PopMemberModule: PopMember, reset_birth!
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 using .HallOfFameModule:
@@ -444,8 +444,8 @@ which is useful for debugging and profiling.
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
     hallOfFame.members gives an array of `PopMember` objects, which
-    have their tree (equation) stored in `.tree`. Their score (loss)
-    is given in `.score`. The array of `PopMember` objects
+    have their tree (equation) stored in `.tree`. Their loss
+    is given in `.loss`. The array of `PopMember` objects
     is enumerated by size from `1` to `options.maxsize`.
 """
 function equation_search(
@@ -708,8 +708,8 @@ function _initialize_search!(
         for j in eachindex(init_hall_of_fame, datasets, state.halls_of_fame)
             hof = strip_metadata(init_hall_of_fame[j], options, datasets[j])
             for member in hof.members[hof.exists]
-                score, result_loss = score_func(datasets[j], member, options)
-                member.score = score
+                cost, result_loss = eval_cost(datasets[j], member, options)
+                member.cost = cost
                 member.loss = result_loss
             end
             state.halls_of_fame[j] = hof
@@ -726,8 +726,8 @@ function _initialize_search!(
                 _saved_pop = strip_metadata(saved_pop, options, datasets[j])
                 ## Update losses:
                 for member in _saved_pop.members
-                    score, result_loss = score_func(datasets[j], member, options)
-                    member.score = score
+                    cost, result_loss = eval_cost(datasets[j], member, options)
+                    member.cost = cost
                     member.loss = result_loss
                 end
                 copy_pop = copy(_saved_pop)
@@ -1125,10 +1125,8 @@ end
     if options.batching
         for i_member in 1:(options.maxsize)
             if best_seen.exists[i_member]
-                score, result_loss = score_func(
-                    dataset, best_seen.members[i_member], options
-                )
-                best_seen.members[i_member].score = score
+                cost, result_loss = eval_cost(dataset, best_seen.members[i_member], options)
+                best_seen.members[i_member].cost = cost
                 best_seen.members[i_member].loss = result_loss
                 num_evals += 1
             end

@@ -165,8 +165,8 @@ get_tree_from_member(m) = m.tree
 # losses to use the PopMember's cached complexity for trees.
 # TODO!
 
-# Compute a score which includes a complexity penalty in the loss
-function loss_to_score(
+# Compute a cost which includes a complexity penalty in the loss
+function loss_to_cost(
     loss::L,
     use_baseline::Bool,
     baseline::L,
@@ -189,14 +189,14 @@ function loss_to_score(
 end
 
 # Score an equation
-function score_func(
+function eval_cost(
     dataset::Dataset{T,L},
     member,
     options::AbstractOptions;
     complexity::Union{Int,Nothing}=nothing,
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     result_loss = eval_loss(get_tree_from_member(member), dataset, options)
-    score = loss_to_score(
+    cost = loss_to_cost(
         result_loss,
         dataset.use_baseline,
         dataset.baseline_loss,
@@ -204,8 +204,11 @@ function score_func(
         options,
         complexity,
     )
-    return score, result_loss
+    return cost, result_loss
 end
+
+# Deprecated form
+function score_func end
 
 """
     update_baseline_loss!(dataset::Dataset{T,L}, options::AbstractOptions) where {T<:DATA_TYPE,L<:LOSS_TYPE}

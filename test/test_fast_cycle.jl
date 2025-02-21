@@ -21,7 +21,7 @@ dominating = calculate_pareto_frontier(hall_of_fame)
 
 best = dominating[end]
 
-# Test the score
+# Test the cost
 @test best.loss < maximum_residual / 10
 
 # Do search again, but with saved state:

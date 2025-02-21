@@ -53,7 +53,7 @@ function reg_evol_cycle(
                         record["mutations"]["$(member.ref)"] = RecordType(
                             "events" => Vector{RecordType}(),
                             "tree" => string_tree(member.tree, options),
-                            "score" => member.score,
+                            "cost" => member.cost,
                             "loss" => member.loss,
                             "parent" => member.parent,
                         )
@@ -118,7 +118,7 @@ function reg_evol_cycle(
                         record["mutations"]["$(member.ref)"] = RecordType(
                             "events" => Vector{RecordType}(),
                             "tree" => string_tree(member.tree, options),
-                            "score" => member.score,
+                            "cost" => member.cost,
                             "loss" => member.loss,
                             "parent" => member.parent,
                         )
