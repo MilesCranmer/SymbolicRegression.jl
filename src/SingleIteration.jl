@@ -74,6 +74,8 @@ function optimize_and_simplify_population(
     # to manually allocate a new task with a larger stack for Enzyme.
     should_thread = !(options.deterministic) && !(isa(options.autodiff_backend, AutoEnzyme))
 
+    batched_dataset = options.batching ? batch(dataset, options.batch_size) : dataset
+
     @threads_if should_thread for j in 1:(pop.n)
         if options.should_simplify
             tree = pop.members[j].tree
@@ -84,7 +86,7 @@ function optimize_and_simplify_population(
         if options.should_optimize_constants && do_optimization[j]
             # TODO: Might want to do full batch optimization here?
             pop.members[j], array_num_evals[j] = optimize_constants(
-                dataset, pop.members[j], options
+                batched_dataset, pop.members[j], options
             )
         end
     end
