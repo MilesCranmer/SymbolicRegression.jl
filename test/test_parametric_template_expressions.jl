@@ -348,7 +348,7 @@ end
 
     You can use the learned expression to make predictions using either `predict(mach, X)`,
     or by calling `best_expr(X_raw)` directly (note that `X_raw` needs to be a matrix of shape
-    `(n, d)` where `n` is the number of samples and `d` is the dimension of the features).
+    `(d, n)` where `n` is the number of samples and `d` is the dimension of the features).
     =#
 
     #literate_end
