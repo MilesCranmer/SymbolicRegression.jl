@@ -23,12 +23,12 @@ for reverse in [false, true]
             ex = @parse_expression(
                 x1 * 3.2, operators = options.operators, variable_names = [:x1],
             )
-            score = Float32(i - 1) / (n - 1)
+            cost = Float32(i - 1) / (n - 1)
             if reverse
-                score = 1 - score
+                cost = 1 - cost
             end
             test_loss = 1.0f0  # (arbitrary for this test)
-            PopMember(ex, score, test_loss, options; deterministic=false)
+            PopMember(ex, cost, test_loss, options; deterministic=false)
         end for i in 1:n
     ]
 
@@ -38,13 +38,13 @@ for reverse in [false, true]
         options=options
     )
     best_pop_member = [
-        SymbolicRegression.best_of_sample(pop, dummy_running_stats, options).score for
+        SymbolicRegression.best_of_sample(pop, dummy_running_stats, options).cost for
         j in 1:100
     ]
 
     mean_value = sum(best_pop_member) / length(best_pop_member)
 
-    # Make sure average score is small
+    # Make sure average cost is small
     @test mean_value < 0.1
 end
 

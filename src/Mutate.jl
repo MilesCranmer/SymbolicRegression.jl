@@ -19,7 +19,7 @@ using ..CoreModule:
     max_features,
     dataset_fraction
 using ..ComplexityModule: compute_complexity
-using ..LossFunctionsModule: score_func
+using ..LossFunctionsModule: eval_cost
 using ..CheckConstraintsModule: check_constraints
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..PopMemberModule: PopMember
@@ -173,7 +173,7 @@ end
     num_evals = 0.0
 
     #TODO - reconsider this
-    beforeScore, beforeLoss = member.score, member.loss
+    before_cost, before_loss = member.cost, member.loss
 
     nfeatures = max_features(dataset, options)
 
@@ -205,8 +205,8 @@ end
             recorder=tmp_recorder,
             temperature,
             dataset,
-            score=beforeScore,
-            loss=beforeLoss,
+            cost=before_cost,
+            loss=before_loss,
             parent_ref,
             curmaxsize,
             nfeatures,
@@ -242,8 +242,8 @@ end
         return (
             PopMember(
                 copy_into!(node_storage, member.tree),
-                beforeScore,
-                beforeLoss,
+                before_cost,
+                before_loss,
                 options,
                 compute_complexity(member, options);
                 parent=parent_ref,
@@ -254,10 +254,10 @@ end
         )
     end
 
-    afterScore, afterLoss = score_func(dataset, tree, options)
+    after_cost, after_loss = eval_cost(dataset, tree, options)
     num_evals += dataset_fraction(dataset)
 
-    if isnan(afterScore)
+    if isnan(after_cost)
         @recorder begin
             tmp_recorder["result"] = "reject"
             tmp_recorder["reason"] = "nan_loss"
@@ -266,8 +266,8 @@ end
         return (
             PopMember(
                 copy_into!(node_storage, member.tree),
-                beforeScore,
-                beforeLoss,
+                before_cost,
+                before_loss,
                 options,
                 compute_complexity(member, options);
                 parent=parent_ref,
@@ -280,7 +280,7 @@ end
 
     probChange = 1.0
     if options.annealing
-        delta = afterScore - beforeScore
+        delta = after_cost - before_cost
         probChange *= exp(-delta / (temperature * options.alpha))
     end
     newSize = -1
@@ -309,8 +309,8 @@ end
         return (
             PopMember(
                 copy_into!(node_storage, member.tree),
-                beforeScore,
-                beforeLoss,
+                before_cost,
+                before_loss,
                 options,
                 compute_complexity(member, options);
                 parent=parent_ref,
@@ -328,8 +328,8 @@ end
         return (
             PopMember(
                 tree,
-                afterScore,
-                afterLoss,
+                after_cost,
+                after_loss,
                 options,
                 newSize;
                 parent=parent_ref,
@@ -383,7 +383,7 @@ You may overload this function to handle new mutation types for new `AbstractMut
 
 - `temperature`: The temperature parameter for annealing-based mutations.
 - `dataset::Dataset`: The dataset used for scoring.
-- `score`: The score of the member before mutation.
+- `cost`: The cost of the member before mutation.
 - `loss`: The loss of the member before mutation.
 - `curmaxsize`: The current maximum size constraint, which may be different from `options.maxsize`.
 - `nfeatures`: The number of features in the dataset.
@@ -557,7 +557,7 @@ function mutate!(
     return MutationResult{N,P}(;
         member=PopMember(
             tree,
-            member.score,
+            member.cost,
             member.loss,
             options;
             parent=parent_ref,
@@ -618,7 +618,7 @@ function mutate!(
     return MutationResult{N,P}(;
         member=PopMember(
             tree,
-            member.score,
+            member.cost,
             member.loss,
             options,
             compute_complexity(tree, options);
@@ -668,18 +668,18 @@ function crossover_generation(
         child_tree1, child_tree2 = crossover_trees(tree1, tree2)
         num_tries += 1
     end
-    afterScore1, afterLoss1 = score_func(
+    after_cost1, after_loss1 = eval_cost(
         dataset, child_tree1, options; complexity=afterSize1
     )
-    afterScore2, afterLoss2 = score_func(
+    after_cost2, after_loss2 = eval_cost(
         dataset, child_tree2, options; complexity=afterSize2
     )
     num_evals += 2 * dataset_fraction(dataset)
 
     baby1 = PopMember(
         child_tree1::AbstractExpression,
-        afterScore1,
-        afterLoss1,
+        after_cost1,
+        after_loss1,
         options,
         afterSize1;
         parent=member1.ref,
@@ -687,8 +687,8 @@ function crossover_generation(
     )::P
     baby2 = PopMember(
         child_tree2::AbstractExpression,
-        afterScore2,
-        afterLoss2,
+        after_cost2,
+        after_loss2,
         options,
         afterSize2;
         parent=member2.ref,

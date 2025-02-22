@@ -14,7 +14,7 @@ using DynamicExpressions:
 using ..CoreModule:
     AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, specialized_options, dataset_fraction
 using ..UtilsModule: get_birth_order
-using ..LossFunctionsModule: eval_loss, loss_to_score
+using ..LossFunctionsModule: eval_loss, loss_to_cost
 using ..PopMemberModule: PopMember
 
 function optimize_constants(
@@ -79,7 +79,7 @@ function _optimize_constants(
     if result.minimum < baseline
         member.tree = tree
         member.loss = f(result.minimizer; regularization=true)
-        member.score = loss_to_score(
+        member.cost = loss_to_cost(
             member.loss, dataset.use_baseline, dataset.baseline_loss, member, options
         )
         member.birth = get_birth_order(; deterministic=options.deterministic)

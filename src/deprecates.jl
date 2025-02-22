@@ -1,8 +1,18 @@
 using Base: @deprecate
 
+import .LossFunctionsModule: score_func
 import .HallOfFameModule: calculate_pareto_frontier
 import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
 
+@deprecate(
+    score_func(
+        dataset::Dataset{T,L},
+        member,
+        options::AbstractOptions;
+        complexity::Union{Int,Nothing}=nothing,
+    ) where {T<:DATA_TYPE,L<:LOSS_TYPE},
+    eval_cost(dataset, member, options; complexity),
+)
 @deprecate(
     calculate_pareto_frontier(X, y, hallOfFame, options; weights=nothing),
     calculate_pareto_frontier(hallOfFame)

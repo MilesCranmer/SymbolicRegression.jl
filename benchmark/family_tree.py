@@ -12,7 +12,7 @@ def load_pysr_graph(json_path, progress=True):
 
     Returns:
         NetworkX DiGraph with:
-        - Node attributes: tree, score, loss, parent
+        - Node attributes: tree, cost, loss, parent
         - Edge attributes: type, time, mutation_details
     """
     # Load JSON data
@@ -176,7 +176,7 @@ def simplify_graph(G):
 
         simple_G.add_node(
             node,
-            score=data.get("score"),
+            cost=data.get("cost"),
             loss=data.get("loss"),
             tree=tree,
             display_tree=display_tree,

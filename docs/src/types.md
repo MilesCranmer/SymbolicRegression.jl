@@ -91,7 +91,7 @@ These types allow you to define expressions with parameters that can be tuned to
 ## Population
 
 Groups of equations are given as a population, which is
-an array of trees tagged with score, loss, and birthdate---these
+an array of trees tagged with cost, loss, and birthdate---these
 values are given in the `PopMember`.
 
 ```@docs

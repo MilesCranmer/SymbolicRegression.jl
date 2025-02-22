@@ -1,7 +1,7 @@
 using SymbolicRegression
 using Random
 using Compat: Fix
-using SymbolicRegression: eval_loss, score_func, Dataset
+using SymbolicRegression: eval_loss, eval_cost, Dataset
 using ForwardDiff
 include("test_params.jl")
 
@@ -91,19 +91,19 @@ for unaop in
             # Test loss:
             @test abs(eval_loss(tree, dataset, make_options())) < zero_tolerance
             @test eval_loss(tree, dataset, make_options()) ==
-                score_func(dataset, tree, make_options())[2]
+                eval_cost(dataset, tree, make_options())[2]
 
             #Test Scoring
-            @test abs(score_func(dataset, tree, make_options(; parsimony=0.0))[1]) <
+            @test abs(eval_cost(dataset, tree, make_options(; parsimony=0.0))[1]) <
                 zero_tolerance
-            @test score_func(dataset, tree, make_options(; parsimony=1.0))[1] > 1.0
-            @test score_func(dataset, tree, make_options())[1] <
-                score_func(dataset, tree_bad, make_options())[1]
+            @test eval_cost(dataset, tree, make_options(; parsimony=1.0))[1] > 1.0
+            @test eval_cost(dataset, tree, make_options())[1] <
+                eval_cost(dataset, tree_bad, make_options())[1]
 
             dataset_with_larger_baseline = deepcopy(dataset)
             dataset_with_larger_baseline.baseline_loss = one(T) * 10
-            @test score_func(dataset_with_larger_baseline, tree_bad, make_options())[1] <
-                score_func(dataset, tree_bad, make_options())[1]
+            @test eval_cost(dataset_with_larger_baseline, tree_bad, make_options())[1] <
+                eval_cost(dataset, tree_bad, make_options())[1]
 
             # Test gradients:
             df_true = x -> ForwardDiff.derivative(f_true, x)

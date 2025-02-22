@@ -39,7 +39,7 @@ end
 # Check whether 10 random elements have the right properties:
 for (i, key) in enumerate(keys(data.mutations))
     @test haskey(data.mutations[key], :events)
-    @test haskey(data.mutations[key], :score)
+    @test haskey(data.mutations[key], :cost)
     @test haskey(data.mutations[key], :tree)
     @test haskey(data.mutations[key], :loss)
     @test haskey(data.mutations[key], :parent)
