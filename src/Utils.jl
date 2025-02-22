@@ -199,45 +199,32 @@ end
 json3_write(args...) = error("Please load the JSON3.jl package.")
 
 """
-    PerThreadCache{T}
+    PerTaskCache{T,F}
 
-A cache that is efficient for multithreaded code, and works
-by having a separate cache for each thread. This allows
-us to avoid repeated locking. We only need to lock the cache
-when resizing to the number of threads.
+A per-task cache that allows us to avoid repeated locking.
 """
-struct PerThreadCache{T}
-    x::Vector{T}
-    num_threads::Ref{Int}
-    lock::Threads.SpinLock
+mutable struct PerTaskCache{T,F<:Function}
+    constructor::F
 
-    PerThreadCache{T}() where {T} = new(Vector{T}(undef, 1), Ref(1), Threads.SpinLock())
+    PerTaskCache{T}(constructor::F) where {T,F} = new{T,F}(constructor)
+    PerTaskCache{T}() where {T} = PerTaskCache{T}(() -> T())
 end
 
-function _get_thread_cache(cache::PerThreadCache{T}) where {T}
-    nthreads = Threads.nthreads()
-    if cache.num_threads[] < nthreads
-        Base.@lock cache.lock begin
-            # The reason we have this extra `.num_threads[]` parameter is to avoid
-            # a race condition between a thread resizing the array concurrent
-            # to the check above. Basically we want to make sure the array is
-            # always big enough by the time we get to using it. Since `.num_threads[]`
-            # is set last, we can safely use the array.
-            if cache.num_threads[] < nthreads
-                resize!(cache.x, nthreads)
-                cache.num_threads[] = nthreads
-            end
-        end
+function Base.getindex(cache::PerTaskCache{T}) where {T}
+    tls = Base.task_local_storage()
+    if haskey(tls, cache)
+        return tls[cache]::T
+    else
+        value = cache.constructor()::T
+        tls[cache] = value
+        return value
     end
-    threadid = Threads.threadid()
-    if !isassigned(cache.x, threadid)
-        cache.x[threadid] = eltype(cache.x)()
-    end
-    return cache.x[threadid]
 end
-function Base.get!(f::F, cache::PerThreadCache, key) where {F<:Function}
-    thread_cache = _get_thread_cache(cache)
-    return get!(f, thread_cache, key)
+
+function Base.setindex!(cache::PerTaskCache{T}, value) where {T}
+    tls = Base.task_local_storage()
+    tls[cache] = convert(T, value)
+    return value
 end
 
 # https://discourse.julialang.org/t/performance-of-hasmethod-vs-try-catch-on-methoderror/99827/14
@@ -247,10 +234,10 @@ end
     Bad
     Undefined
 end
-const SafeFunctions = PerThreadCache{Dict{Type,IsGood}}()
+const SafeFunctions = PerTaskCache{Dict{Type,IsGood}}()
 
 function safe_call(f::F, x::T, default::D) where {F,T<:Tuple,D}
-    thread_cache = _get_thread_cache(SafeFunctions)
+    thread_cache = SafeFunctions[]
     status = get(thread_cache, Tuple{F,T}, Undefined)
     status == Good && return (f(x...)::D, true)
     status == Bad && return (default, false)
