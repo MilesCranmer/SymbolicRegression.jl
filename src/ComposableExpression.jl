@@ -62,7 +62,10 @@ struct ComposableExpression{
 end
 
 @inline function ComposableExpression(
-    tree::AbstractExpressionNode{T}; operators, variable_names=nothing, eval_options=nothing
+    tree::AbstractExpressionNode{T};
+    operators::Union{AbstractOperatorEnum,Nothing}=nothing,
+    variable_names::Union{AbstractVector{<:AbstractString},Nothing}=nothing,
+    eval_options::Union{Nothing,EvalOptions}=nothing,
 ) where {T}
     d = (; operators, variable_names, eval_options)
     return ComposableExpression(tree, Metadata(d))
@@ -117,12 +120,18 @@ end
 function CO.count_constants_for_optimization(ex::AbstractComposableExpression)
     return CO.count_constants_for_optimization(convert(Expression, ex))
 end
+
+struct PreallocatedComposableExpression{N}
+    tree::N
+end
 function DE.allocate_container(
     prototype::ComposableExpression, n::Union{Nothing,Integer}=nothing
 )
-    return (; tree=DE.allocate_container(get_contents(prototype), n))
+    return PreallocatedComposableExpression(
+        DE.allocate_container(get_contents(prototype), n)
+    )
 end
-function DE.copy_into!(dest::NamedTuple, src::ComposableExpression)
+function DE.copy_into!(dest::PreallocatedComposableExpression, src::ComposableExpression)
     new_tree = DE.copy_into!(dest.tree, get_contents(src))
     return DE.with_contents(src, new_tree)
 end
@@ -222,6 +231,8 @@ function (ex::AbstractComposableExpression)(
     return with_contents(ex, tree)
 end
 
+# TODO: More methods for passing simple numbers to ComposableExpression (in combination with other inputs as well)
+
 # Basically we want to vectorize every single operation on ValidVector,
 # so that the user can use it easily.
 
@@ -247,7 +258,8 @@ _get_value(x) = x
 for op in (
     :*, :/, :+, :-, :^, :÷, :mod, :log,
     :atan, :atand, :copysign, :flipsign,
-    :&, :|, :⊻, ://, :\,
+    :&, :|, :⊻, ://, :\, :rem,
+    :(>), :(<), :(>=), :(<=), :max, :min
 )
     @eval begin
         Base.$(op)(x::ValidVector, y::ValidVector) = apply_operator(Base.$(op), x, y)

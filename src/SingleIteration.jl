@@ -3,14 +3,14 @@ module SingleIterationModule
 using ADTypes: AutoEnzyme
 using DynamicExpressions: AbstractExpression, string_tree, simplify_tree!, combine_operators
 using ..UtilsModule: @threads_if
-using ..CoreModule: AbstractOptions, Dataset, RecordType, create_expression
+using ..CoreModule: AbstractOptions, Dataset, RecordType, create_expression, batch
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: generate_reference
-using ..PopulationModule: Population, finalize_scores
+using ..PopulationModule: Population, finalize_costs
 using ..HallOfFameModule: HallOfFame
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..RegularizedEvolutionModule: reg_evol_cycle
-using ..LossFunctionsModule: score_func_batched, batch_sample
+using ..LossFunctionsModule: eval_cost
 using ..ConstantOptimizationModule: optimize_constants
 using ..RecorderModule: @recorder
 
@@ -37,15 +37,11 @@ function s_r_cycle(
     best_examples_seen = HallOfFame(options, dataset)
     num_evals = 0.0
 
-    # For evaluating on a fixed batch (for batching)
-    idx = options.batching ? batch_sample(dataset, options) : Int[]
-    example_tree = create_expression(zero(T), options, dataset)
-    loss_cache = [(oid=example_tree, score=zero(L)) for member in pop.members]
-    first_loop = true
+    batched_dataset = options.batching ? batch(dataset, options.batch_size) : dataset
 
     for temperature in all_temperatures
         pop, tmp_num_evals = reg_evol_cycle(
-            dataset,
+            batched_dataset,
             pop,
             temperature,
             curmaxsize,
@@ -54,44 +50,16 @@ function s_r_cycle(
             record,
         )
         num_evals += tmp_num_evals
-        for (i, member) in enumerate(pop.members)
+        for member in pop.members
             size = compute_complexity(member, options)
-            score = if options.batching
-                oid = member.tree
-                if loss_cache[i].oid != oid || first_loop
-                    # Evaluate on fixed batch so that we can more accurately
-                    # compare expressions with a batched loss (though the batch
-                    # changes each iteration, and we evaluate on full-batch outside,
-                    # so this is not biased).
-                    _score, _ = score_func_batched(
-                        dataset, member, options; complexity=size, idx=idx
-                    )
-                    loss_cache[i] = (oid=copy(oid), score=_score)
-                    _score
-                else
-                    # Already evaluated this particular expression, so just use
-                    # the cached score
-                    loss_cache[i].score
-                end
-            else
-                member.score
-            end
-            # TODO: Note that this per-population hall of fame only uses the batched
-            #       loss, and is therefore inaccurate. Therefore, some expressions
-            #       may be loss if a very small batch size is used.
-            # - Could have different batch size for different things (smaller for constant opt)
-            # - Could just recompute losses here (expensive)
-            # - Average over a few batches
-            # - Store multiple expressions in hall of fame
             if 0 < size <= options.maxsize && (
                 !best_examples_seen.exists[size] ||
-                score < best_examples_seen.members[size].score
+                member.cost < best_examples_seen.members[size].cost
             )
                 best_examples_seen.exists[size] = true
                 best_examples_seen.members[size] = copy(member)
             end
         end
-        first_loop = false
     end
 
     return (pop, best_examples_seen, num_evals)
@@ -106,6 +74,8 @@ function optimize_and_simplify_population(
     # to manually allocate a new task with a larger stack for Enzyme.
     should_thread = !(options.deterministic) && !(isa(options.autodiff_backend, AutoEnzyme))
 
+    batched_dataset = options.batching ? batch(dataset, options.batch_size) : dataset
+
     @threads_if should_thread for j in 1:(pop.n)
         if options.should_simplify
             tree = pop.members[j].tree
@@ -116,12 +86,12 @@ function optimize_and_simplify_population(
         if options.should_optimize_constants && do_optimization[j]
             # TODO: Might want to do full batch optimization here?
             pop.members[j], array_num_evals[j] = optimize_constants(
-                dataset, pop.members[j], options
+                batched_dataset, pop.members[j], options
             )
         end
     end
     num_evals = sum(array_num_evals)
-    pop, tmp_num_evals = finalize_scores(dataset, pop, options)
+    pop, tmp_num_evals = finalize_costs(dataset, pop, options)
     num_evals += tmp_num_evals
 
     # Now, we create new references for every member,
@@ -141,7 +111,7 @@ function optimize_and_simplify_population(
                 record["mutations"]["$(member.ref)"] = RecordType(
                     "events" => Vector{RecordType}(),
                     "tree" => string_tree(member.tree, options),
-                    "score" => member.score,
+                    "cost" => member.cost,
                     "loss" => member.loss,
                     "parent" => member.parent,
                 )

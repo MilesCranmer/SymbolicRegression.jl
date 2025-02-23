@@ -226,6 +226,9 @@ subexpression symbols we wish to learn:
 structure = TemplateStructure{(:B_x, :B_y, :B_z, :F_d_scale)}(compute_force)
 
 #=
+Note that we could have also used the `@template_spec` macro which is
+more convenient.
+
 First, let's look at an example of how this would be used
 in a TemplateExpression, for some guess at the form of
 the solution:
@@ -254,8 +257,7 @@ model = SRRegressor(;
     unary_operators=(sin, cos, sqrt, exp),
     niterations=500,
     maxsize=35,
-    expression_type=TemplateExpression,
-    expression_options=(; structure=structure),
+    expression_spec=TemplateExpressionSpec(; structure),
     ## Note that the elementwise loss needs to operate directly on each row of `y`:
     elementwise_loss=(F1, F2) -> (F1.x - F2.x)^2 + (F1.y - F2.y)^2 + (F1.z - F2.z)^2,
     batching=true,

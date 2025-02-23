@@ -1,10 +1,8 @@
 using SymbolicUtils
 using SymbolicRegression
-include("test_params.jl")
 
 _inv(x) = 1 / x
 options = Options(;
-    default_params...,
     binary_operators=(+, *, ^, /, greater),
     unary_operators=(_inv,),
     constraints=(_inv => 4,),

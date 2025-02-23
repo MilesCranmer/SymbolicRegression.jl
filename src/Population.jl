@@ -6,11 +6,11 @@ using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, string_tree
 using ..CoreModule: AbstractOptions, Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
-using ..LossFunctionsModule: score_func, update_baseline_loss!
+using ..LossFunctionsModule: eval_cost, update_baseline_loss!
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..MutationFunctionsModule: gen_random_tree
 using ..PopMemberModule: PopMember
-using ..UtilsModule: bottomk_fast, argmin_fast, PerThreadCache
+using ..UtilsModule: bottomk_fast, argmin_fast, PerTaskCache
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
 struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
@@ -31,7 +31,7 @@ end
                population_size, nlength::Int=3, options::AbstractOptions,
                nfeatures::Int)
 
-Create random population and score them on the dataset.
+Create random population and evaluate them on the dataset.
 """
 function Population(
     dataset::OrBorrowed{Dataset{T,L}};
@@ -122,7 +122,7 @@ function _best_of_sample(
 ) where {T,L,P<:PopMember{T,L}}
     p = options.tournament_selection_p
     n = length(members)  # == tournament_selection_n
-    scores = Vector{L}(undef, n)
+    adjusted_costs = Vector{L}(undef, n)
     if options.use_frequency_in_tournament
         # Score based on frequency of that size occurring.
         # In the end, all sizes should be just as common in the population.
@@ -137,42 +137,42 @@ function _best_of_sample(
             else
                 L(0)
             end
-            scores[i] = member.score * exp(adaptive_parsimony_scaling * frequency)
+            adjusted_costs[i] = member.cost * exp(adaptive_parsimony_scaling * frequency)
         end
     else
-        map!(_get_score, scores, members)
+        map!(_get_cost, adjusted_costs, members)
     end
 
     chosen_idx = if p == 1.0
-        argmin_fast(scores)
+        argmin_fast(adjusted_costs)
     else
         # First, decide what place we take (usually 1st place wins):
         tournament_winner = StatsBase.sample(get_tournament_selection_weights(options))
         # Then, find the member that won that place, given
         # their fitness:
         if tournament_winner == 1
-            argmin_fast(scores)
+            argmin_fast(adjusted_costs)
         else
-            bottomk_fast(scores, tournament_winner)[2][end]
+            bottomk_fast(adjusted_costs, tournament_winner)[2][end]
         end
     end
     return members[chosen_idx]
 end
-_get_score(member::PopMember) = member.score
+_get_cost(member::PopMember) = member.cost
 
 const CACHED_WEIGHTS =
     let init_k = collect(0:5),
         init_prob_each = 0.5f0 * (1 - 0.5f0) .^ init_k,
         test_weights = StatsBase.Weights(init_prob_each, sum(init_prob_each))
 
-        PerThreadCache{Dict{Tuple{Int,Float32},typeof(test_weights)}}()
+        PerTaskCache{Dict{Tuple{Int,Float32},typeof(test_weights)}}()
     end
 
 @unstable function get_tournament_selection_weights(@nospecialize(options::AbstractOptions))
     n = options.tournament_selection_n::Int
     p = options.tournament_selection_p::Float32
     # Computing the weights for the tournament becomes quite expensive,
-    return get!(CACHED_WEIGHTS, (n, p)) do
+    return get!(CACHED_WEIGHTS[], (n, p)) do
         k = collect(0:(n - 1))
         prob_each = p * ((1 - p) .^ k)
 
@@ -180,15 +180,15 @@ const CACHED_WEIGHTS =
     end
 end
 
-function finalize_scores(
+function finalize_costs(
     dataset::Dataset{T,L}, pop::P, options::AbstractOptions
 )::Tuple{P,Float64} where {T,L,P<:Population{T,L}}
     need_recalculate = options.batching
     num_evals = 0.0
     if need_recalculate
         for member in 1:(pop.n)
-            score, loss = score_func(dataset, pop.members[member], options)
-            pop.members[member].score = score
+            cost, loss = eval_cost(dataset, pop.members[member], options)
+            pop.members[member].cost = cost
             pop.members[member].loss = loss
         end
         num_evals += pop.n
@@ -198,7 +198,7 @@ end
 
 # Return best 10 examples
 function best_sub_pop(pop::P; topn::Int=10)::P where {P<:Population}
-    best_idx = sortperm([pop.members[member].score for member in 1:(pop.n)])
+    best_idx = sortperm([pop.members[member].cost for member in 1:(pop.n)])
     return Population(pop.members[best_idx[1:topn]])
 end
 
@@ -208,7 +208,7 @@ function record_population(pop::Population, options::AbstractOptions)::RecordTyp
             RecordType(
                 "tree" => string_tree(member.tree, options; pretty=false),
                 "loss" => member.loss,
-                "score" => member.score,
+                "cost" => member.cost,
                 "complexity" => compute_complexity(member, options),
                 "birth" => member.birth,
                 "ref" => member.ref,

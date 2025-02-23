@@ -87,7 +87,12 @@ function expected_array_type(
 )
     return typeof(X)
 end
-expected_array_type(::OrBorrowed{Matrix{T}}, ::Type) where {T} = Vector{T}
+function expected_array_type(::OrBorrowed{Matrix{T}}, ::Type) where {T}
+    return Vector{T}
+end
+function expected_array_type(::OrBorrowed{SubArray{T,2,Matrix{T}}}, ::Type) where {T}
+    return Vector{T}
+end
 
 """
     eval_diff_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::AbstractOptions, direction::Int)

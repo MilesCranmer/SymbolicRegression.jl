@@ -27,5 +27,5 @@ rmprocs(procs)
 
 dominating = calculate_pareto_frontier(hallOfFame)
 best = dominating[end]
-# Test the score
+# Test the cost
 @test best.loss < maximum_residual / 10

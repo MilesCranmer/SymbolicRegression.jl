@@ -9,20 +9,26 @@ export Population,
     PopMember,
     HallOfFame,
     Options,
+    OperatorEnum,
     Dataset,
     MutationWeights,
     Node,
     GraphNode,
     ParametricNode,
     Expression,
+    ExpressionSpec,
     ParametricExpression,
+    ParametricExpressionSpec,
     TemplateExpression,
     TemplateStructure,
+    TemplateExpressionSpec,
+    @template_spec,
     ValidVector,
     ComposableExpression,
     NodeSampler,
     AbstractExpression,
     AbstractExpressionNode,
+    AbstractExpressionSpec,
     EvalOptions,
     SRRegressor,
     MultitargetSRRegressor,
@@ -107,6 +113,7 @@ using DynamicExpressions:
     AbstractExpression,
     AbstractExpressionNode,
     ExpressionInterface,
+    OperatorEnum,
     @parse_expression,
     parse_expression,
     @declare_expression_operator,
@@ -226,6 +233,7 @@ using DispatchDoctor: @stable
     include("ExpressionBuilder.jl")
     include("ComposableExpression.jl")
     include("TemplateExpression.jl")
+    include("TemplateExpressionMacro.jl")
     include("ParametricExpression.jl")
 end
 
@@ -234,15 +242,20 @@ using .CoreModule:
     LOSS_TYPE,
     RecordType,
     Dataset,
+    BasicDataset,
+    SubDataset,
     AbstractOptions,
     Options,
     ComplexityMapping,
     AbstractMutationWeights,
     MutationWeights,
+    AbstractExpressionSpec,
+    ExpressionSpec,
     get_safe_op,
     max_features,
     is_weighted,
     sample_mutation,
+    batch,
     plus,
     sub,
     mult,
@@ -261,6 +274,9 @@ using .CoreModule:
     safe_atanh,
     neg,
     greater,
+    less,
+    greater_equal,
+    less_equal,
     cond,
     relu,
     logical_or,
@@ -283,7 +299,7 @@ using .MutationFunctionsModule:
     random_node_and_parent,
     crossover_trees
 using .InterfaceDynamicExpressionsModule: @extend_operators
-using .LossFunctionsModule: eval_loss, score_func, update_baseline_loss!
+using .LossFunctionsModule: eval_loss, eval_cost, update_baseline_loss!, score_func
 using .PopMemberModule: PopMember, reset_birth!
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 using .HallOfFameModule:
@@ -325,10 +341,13 @@ using .SearchUtilsModule:
     update_hall_of_fame!,
     logging_callback!
 using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
-using .TemplateExpressionModule: TemplateExpression, TemplateStructure
-using .TemplateExpressionModule: TemplateExpression, TemplateStructure, ValidVector
+using .TemplateExpressionModule:
+    TemplateExpression, TemplateStructure, TemplateExpressionSpec, ParamVector
+using .TemplateExpressionModule: ValidVector
 using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
+using .ParametricExpressionModule: ParametricExpressionSpec
+using .TemplateExpressionMacroModule: @template_spec
 
 @stable default_mode = "disable" begin
     include("deprecates.jl")
@@ -430,8 +449,8 @@ which is useful for debugging and profiling.
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
     hallOfFame.members gives an array of `PopMember` objects, which
-    have their tree (equation) stored in `.tree`. Their score (loss)
-    is given in `.score`. The array of `PopMember` objects
+    have their tree (equation) stored in `.tree`. Their loss
+    is given in `.loss`. The array of `PopMember` objects
     is enumerated by size from `1` to `options.maxsize`.
 """
 function equation_search(
@@ -716,7 +735,6 @@ function _initialize_search!(
     @clone :mut worker_assignment = state.worker_assignment
     @lifetime a let
         @ref ~a (sstate, rdatasets, roptions) = (saved_state, datasets, options)
-
         for j in 1:nout, i in 1:(options.populations)
             @own worker_idx = @lifetime b begin
                 @ref ~b :mut w = worker_assignment
@@ -876,7 +894,9 @@ function _main_search_loop!(
     if ropt.parallelism in (:multiprocessing, :multithreading)
         for j in 1:nout, i in 1:(options.populations)
             # Start listening for each population to finish:
-            t = @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
+            t = Base.errormonitor(
+                @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
+            )
             push!(state.tasks[j], t)
         end
     end
@@ -1002,8 +1022,8 @@ function _main_search_loop!(
                 worker_idx = worker_idx
             )
             if ropt.parallelism in (:multiprocessing, :multithreading)
-                state.tasks[j][i] = @async put!(
-                    state.channels[j][i], fetch(state.worker_output[j][i])
+                state.tasks[j][i] = Base.errormonitor(
+                    @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
                 )
             end
 
@@ -1159,10 +1179,12 @@ end
     num_evals += evals_from_optimize
     if options.batching
         for i_member in 1:(options.maxsize)
-            score, result_loss = score_func(dataset, best_seen.members[i_member], options)
-            best_seen.members[i_member].score = score
-            best_seen.members[i_member].loss = result_loss
-            num_evals += 1
+            if best_seen.exists[i_member]
+                cost, result_loss = eval_cost(dataset, best_seen.members[i_member], options)
+                best_seen.members[i_member].cost = cost
+                best_seen.members[i_member].loss = result_loss
+                num_evals += 1
+            end
         end
     end
     return (out_pop, best_seen, record, num_evals)
@@ -1213,7 +1235,8 @@ function _info_dump(
 end
 
 include("MLJInterface.jl")
-using .MLJInterfaceModule: SRRegressor, MultitargetSRRegressor
+using .MLJInterfaceModule:
+    SRRegressor, MultitargetSRRegressor, SRTestRegressor, MultitargetSRTestRegressor
 
 # Hack to get static analysis to work from within tests:
 @ignore include("../test/runtests.jl")
@@ -1224,7 +1247,7 @@ using ConstructionBase: ConstructionBase as _
 include("precompile.jl")
 redirect_stdout(devnull) do
     redirect_stderr(devnull) do
-        do_precompilation(Val(:precompile))
+        # do_precompilation(Val(:precompile))
     end
 end
 

@@ -47,12 +47,13 @@ let options = Options(; binary_operators=[+, *], loss_function=custom_objective_
     @test eval_loss(Node(; val=1.0), d, options; idx=[1, 2]) == sum(d.X[:, [1, 2]])
 end
 
-custom_objective_bad_batched(tree, dataset, options) = sum(dataset.X)
+# Test type mismatch errors
+let
+    x = randn(MersenneTwister(0), Float32, 100)
+    y = randn(MersenneTwister(1), Float64, 100)
+    w = abs.(randn(MersenneTwister(2), Float16, 100))
 
-let options = Options(;
-        binary_operators=[+, *], loss_function=custom_objective_bad_batched, batching=true
-    ),
-    d = Dataset(randn(3, 10), randn(10))
+    @test_throws("Element type of `x` is Float32 is different", _loss(x, y, L1DistLoss()))
 
-    @test_throws ErrorException eval_loss(Node(; val=1.0), d, options; idx=[1, 2])
+    @test_throws("Element type of `x` is Float32,", _weighted_loss(x, y, w, L1DistLoss()))
 end

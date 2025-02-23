@@ -1,5 +1,6 @@
 module DatasetModule
 
+using Random: AbstractRNG, default_rng
 using DynamicQuantities: Quantity
 using BorrowChecker: OrBorrowed, @take
 
@@ -9,6 +10,13 @@ using ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
 
 """
     Dataset{T<:DATA_TYPE,L<:LOSS_TYPE}
+
+Abstract type for all dataset types in SymbolicRegression.jl.
+"""
+abstract type Dataset{T<:DATA_TYPE,L<:LOSS_TYPE} end
+
+"""
+    BasicDataset{T<:DATA_TYPE,L<:LOSS_TYPE} <: Dataset{T,L}
 
 # Fields
 
@@ -43,7 +51,7 @@ using ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
 - `y_sym_units`: Unit information of `y`. When used, this is a single
     `DynamicQuantities.Quantity{<:Any,<:SymbolicDimensions}`.
 """
-mutable struct Dataset{
+mutable struct BasicDataset{
     T<:DATA_TYPE,
     L<:LOSS_TYPE,
     AX<:AbstractMatrix{T},
@@ -54,7 +62,7 @@ mutable struct Dataset{
     YU<:Union{Quantity,Nothing},
     XUS<:Union{AbstractVector{<:Quantity},Nothing},
     YUS<:Union{Quantity,Nothing},
-}
+} <: Dataset{T,L}
     const X::AX
     const y::AY
     const index::Int
@@ -75,6 +83,39 @@ mutable struct Dataset{
 end
 
 """
+    SubDataset{T<:DATA_TYPE,L<:LOSS_TYPE,D<:BasicDataset{T,L},I<:AbstractVector{Int}} <: Dataset{T,L}
+
+A dataset type that represents a batch of data from a BasicDataset. Calls to `.X`, `.y`,
+`.weights`, etc. will return the batched versions of these.
+"""
+struct SubDataset{T<:DATA_TYPE,L<:LOSS_TYPE,D<:BasicDataset{T,L},I<:AbstractVector{Int}} <:
+       Dataset{T,L}
+    _dataset::D
+    _indices::I
+end
+@inline get_full_dataset(d::SubDataset) = getfield(d, :_dataset)
+@inline get_indices(d::SubDataset) = getfield(d, :_indices)
+@inline function Base.getproperty(d::SubDataset, prop::Symbol)
+    if prop == :X
+        return view(get_full_dataset(d).X, :, get_indices(d))
+    elseif prop == :y
+        y = get_full_dataset(d).y
+        return isnothing(y) ? y : view(y, get_indices(d))
+    elseif prop == :weights
+        weights = get_full_dataset(d).weights
+        return isnothing(weights) ? weights : view(weights, get_indices(d))
+    elseif prop == :n
+        return length(get_indices(d))
+    else
+        # Forward all other properties
+        return getproperty(get_full_dataset(d), prop)
+    end
+end
+@inline Base.propertynames(d::SubDataset) = propertynames(get_full_dataset(d))
+
+dataset_fraction(d::SubDataset) = d.n / get_full_dataset(d).n
+
+"""
     Dataset(X::AbstractMatrix{T},
             y::Union{AbstractVector{T},Nothing}=nothing,
             loss_type::Type=Nothing;
@@ -86,7 +127,7 @@ end
             y_units=nothing,
     ) where {T<:DATA_TYPE}
 
-Construct a dataset to pass between internal functions.
+Construct a dataset to pass between internal functions. Returns a BasicDataset.
 """
 function Dataset(
     X::AbstractMatrix{T},
@@ -173,7 +214,7 @@ function Dataset(
 
     error_on_mismatched_size(nfeatures, X_si_units)
 
-    return Dataset{
+    return BasicDataset{
         T,
         out_loss_type,
         typeof(X),
@@ -207,6 +248,12 @@ end
 
 is_weighted(dataset::OrBorrowed{Dataset}) = !isnothing(dataset.weights)
 
+# COV_EXCL_START
+get_full_dataset(d::BasicDataset) = d
+get_indices(::BasicDataset) = nothing
+dataset_fraction(d::BasicDataset) = 1.0
+# COV_EXCL_END
+
 function error_on_mismatched_size(_, ::Nothing)
     return nothing
 end
@@ -238,6 +285,27 @@ _fill!(x, val) = x
 
 function max_features(dataset::OrBorrowed{Dataset}, _)
     return @take(dataset.nfeatures)
+end
+
+"""
+    batch([rng::AbstractRNG,] dataset::BasicDataset, batch_size::Int) -> SubDataset
+    batch(dataset::BasicDataset, indices::AbstractVector{Int}) -> SubDataset
+
+Create a batched dataset by randomly sampling from the original dataset.
+
+# Arguments
+- `rng::AbstractRNG`: Random number generator to use for sampling
+- `dataset::BasicDataset`: The dataset to sample from
+- `batch_size::Int`: The size of the batch to create
+"""
+function batch(dataset::BasicDataset{T,L}, indices::AbstractVector{Int}) where {T,L}
+    return SubDataset{T,L,typeof(dataset),typeof(indices)}(dataset, indices)
+end
+function batch(rng::AbstractRNG, dataset::BasicDataset{T,L}, batch_size::Int) where {T,L}
+    return batch(dataset, rand(rng, 1:(dataset.n), batch_size))
+end
+function batch(dataset::BasicDataset, batch_size::Int)
+    return batch(default_rng(), dataset, batch_size)
 end
 
 end

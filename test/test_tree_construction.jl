@@ -1,24 +1,31 @@
 using SymbolicRegression
 using Random
-using SymbolicRegression: eval_loss, score_func, Dataset
+using Compat: Fix
+using SymbolicRegression: eval_loss, eval_cost, Dataset
 using ForwardDiff
 include("test_params.jl")
 
 x1 = 2.0
 
+function make_options_maker(binop, unaop; kw...)
+    @nospecialize binop unaop kw
+    return Options(;
+        default_params...,
+        binary_operators=(+, *, ^, /, binop),
+        unary_operators=(unaop, abs),
+        populations=4,
+        verbosity=(unaop == gamma) ? 0 : Int(1e9),
+        kw...,
+    )
+end
+
 # Initialize functions in Base....
-for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma, safe_acosh]
-    for binop in [sub]
-        function make_options(; kw...)
-            return Options(;
-                default_params...,
-                binary_operators=(+, *, ^, /, binop),
-                unary_operators=(unaop, abs),
-                populations=4,
-                verbosity=(unaop == gamma) ? 0 : Int(1e9),
-                kw...,
-            )
-        end
+for unaop in
+    [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma, safe_acosh],
+    binop in [sub]
+
+    let
+        make_options = Fix{1}(Fix{2}(make_options_maker, unaop), binop)
         options = make_options()
         @extend_operators options
 
@@ -36,7 +43,7 @@ for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma,
 
         true_result = f_true(x1)
 
-        result = eval(Meta.parse(string_tree(const_tree, make_options())))
+        result = eval(Meta.parse(string_tree(const_tree, options)))
 
         # Test Basics
         @test n == 9
@@ -84,19 +91,19 @@ for unaop in [cos, exp, safe_log, safe_log2, safe_log10, safe_sqrt, relu, gamma,
             # Test loss:
             @test abs(eval_loss(tree, dataset, make_options())) < zero_tolerance
             @test eval_loss(tree, dataset, make_options()) ==
-                score_func(dataset, tree, make_options())[2]
+                eval_cost(dataset, tree, make_options())[2]
 
             #Test Scoring
-            @test abs(score_func(dataset, tree, make_options(; parsimony=0.0))[1]) <
+            @test abs(eval_cost(dataset, tree, make_options(; parsimony=0.0))[1]) <
                 zero_tolerance
-            @test score_func(dataset, tree, make_options(; parsimony=1.0))[1] > 1.0
-            @test score_func(dataset, tree, make_options())[1] <
-                score_func(dataset, tree_bad, make_options())[1]
+            @test eval_cost(dataset, tree, make_options(; parsimony=1.0))[1] > 1.0
+            @test eval_cost(dataset, tree, make_options())[1] <
+                eval_cost(dataset, tree_bad, make_options())[1]
 
             dataset_with_larger_baseline = deepcopy(dataset)
             dataset_with_larger_baseline.baseline_loss = one(T) * 10
-            @test score_func(dataset_with_larger_baseline, tree_bad, make_options())[1] <
-                score_func(dataset, tree_bad, make_options())[1]
+            @test eval_cost(dataset_with_larger_baseline, tree_bad, make_options())[1] <
+                eval_cost(dataset, tree_bad, make_options())[1]
 
             # Test gradients:
             df_true = x -> ForwardDiff.derivative(f_true, x)

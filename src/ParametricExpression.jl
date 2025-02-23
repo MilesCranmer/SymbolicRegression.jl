@@ -16,7 +16,15 @@ using BorrowChecker: OrBorrowed, @take
 using StatsBase: StatsBase
 using Random: default_rng, AbstractRNG
 
-using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, AbstractMutationWeights
+using ..CoreModule:
+    AbstractOptions,
+    Dataset,
+    SubDataset,
+    DATA_TYPE,
+    AbstractMutationWeights,
+    AbstractExpressionSpec,
+    get_indices,
+    ExpressionSpecModule as ES
 using ..PopMemberModule: PopMember
 using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..LossFunctionsModule: LossFunctionsModule as LF
@@ -84,13 +92,13 @@ function LF.eval_tree_dispatch(
     tree::ParametricExpression,
     dataset::OrBorrowed{Dataset},
     options::OrBorrowed{AbstractOptions},
-    idx,
 )
     A = IDE.expected_array_type(dataset.X, typeof(tree))
+    indices = get_indices(dataset)
     out, complete = DE.eval_tree_array(
         tree,
-        @take(LF.maybe_getindex(dataset.X, :, idx)),
-        @take(LF.maybe_getindex(dataset.extra.class, idx)),
+        @take(dataset.X),
+        @take(isnothing(indices) ? dataset.extra.class : dataset.extra.class[indices]),
         @take(options.operators),
     )
     return out::A, complete::Bool
@@ -189,5 +197,20 @@ end
 
 # ParametricExpression handles class columns
 IDE.handles_class_column(::Type{<:ParametricExpression}) = true
+
+"""
+    ParametricExpressionSpec <: AbstractExpressionSpec
+
+(Experimental) Specification for parametric expressions with configurable maximum parameters.
+"""
+Base.@kwdef struct ParametricExpressionSpec <: AbstractExpressionSpec
+    max_parameters::Int
+end
+
+# COV_EXCL_START
+ES.get_expression_type(::ParametricExpressionSpec) = ParametricExpression
+ES.get_expression_options(spec::ParametricExpressionSpec) = (; spec.max_parameters)
+ES.get_node_type(::ParametricExpressionSpec) = ParametricNode
+# COV_EXCL_STOP
 
 end

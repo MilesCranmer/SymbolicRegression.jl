@@ -126,7 +126,7 @@ function test_mixed(i, batching::Bool, weighted::Bool, parallelism)
         # Assert we created the correct type of trees:
         @test node_type(typeof(best.tree)) == Node{T}
 
-        # Test the score
+        # Test the cost
         @test best.loss < maximum_residual
         # Test the actual equation found:
         testX = randn(MersenneTwister(1), T, 5, 100)
