@@ -1,5 +1,6 @@
 module MutateModule
 
+using BorrowChecker: OrBorrowed, @take
 using DispatchDoctor: @unstable
 using DynamicExpressions:
     AbstractExpression,
@@ -97,7 +98,10 @@ Note that the weights were already copied, so you don't need to worry about muta
 - `curmaxsize::Int`: The current maximum size constraint for the member's expression tree.
 """
 function condition_mutation_weights!(
-    weights::AbstractMutationWeights, member::P, options::AbstractOptions, curmaxsize::Int
+    weights::AbstractMutationWeights,
+    member::P,
+    options::OrBorrowed{AbstractOptions},
+    curmaxsize::Int,
 ) where {T,L,N<:AbstractExpression,P<:PopMember{T,L,N}}
     tree = get_tree(member.tree)
     if !preserve_sharing(typeof(member.tree))
@@ -133,7 +137,7 @@ function condition_mutation_weights!(
         weights.insert_node = 0.0
     end
 
-    if !options.should_simplify
+    if !@take(options.should_simplify)
         weights.simplify = 0.0
     end
 
@@ -147,7 +151,7 @@ function condition_mutate_constant!(
     ::Type{<:AbstractExpression},
     weights::AbstractMutationWeights,
     member::PopMember,
-    options::AbstractOptions,
+    options::OrBorrowed{AbstractOptions},
     curmaxsize::Int,
 )
     n_constants = count_scalar_constants(member.tree)
@@ -159,12 +163,12 @@ end
 # Go through one simulated options.annealing mutation cycle
 #  exp(-delta/T) defines probability of accepting a change
 @unstable function next_generation(
-    dataset::D,
+    dataset::OrBorrowed{D},
     member::P,
     temperature,
     curmaxsize::Int,
     running_search_statistics::RunningSearchStatistics,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     tmp_recorder::RecordType,
 )::Tuple{
     P,Bool,Float64
@@ -177,7 +181,7 @@ end
 
     nfeatures = max_features(dataset, options)
 
-    weights = copy(options.mutation_weights)
+    weights = @take(options.mutation_weights)
 
     condition_mutation_weights!(weights, member, options, curmaxsize)
 
@@ -200,7 +204,7 @@ end
             rtree[],
             member,
             mutation_choice,
-            options.mutation_weights,
+            weights,
             options;
             recorder=tmp_recorder,
             temperature,
@@ -279,12 +283,12 @@ end
     end
 
     probChange = 1.0
-    if options.annealing
+    if @take(options.annealing)
         delta = after_cost - before_cost
         probChange *= exp(-delta / (temperature * options.alpha))
     end
     newSize = -1
-    if options.use_frequency
+    if @take(options.use_frequency)
         oldSize = compute_complexity(member, options)
         newSize = compute_complexity(tree, options)
         old_frequency = if (0 < oldSize <= options.maxsize)
@@ -314,7 +318,7 @@ end
                 options,
                 compute_complexity(member, options);
                 parent=parent_ref,
-                deterministic=options.deterministic,
+                deterministic=@take(options.deterministic),
             ),
             mutation_accepted,
             num_evals,
@@ -333,7 +337,7 @@ end
                 options,
                 newSize;
                 parent=parent_ref,
-                deterministic=options.deterministic,
+                deterministic=@take(options.deterministic),
             ),
             mutation_accepted,
             num_evals,
@@ -346,7 +350,7 @@ end
     member::PopMember,
     mutation_choice::Symbol,
     weights::W,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     kws...,
 ) where {W<:AbstractMutationWeights}
     mutation_choices = fieldnames(W)
@@ -399,7 +403,7 @@ rejecting the mutation. For example, a `simplify` operation will not change the 
 so it can always return immediately.
 """
 function mutate!(
-    ::N, ::P, ::Val{S}, ::AbstractMutationWeights, ::AbstractOptions; kws...
+    ::N, ::P, ::Val{S}, ::AbstractMutationWeights, ::OrBorrowed{AbstractOptions}; kws...
 ) where {N<:AbstractExpression,P<:PopMember,S}
     return error("Unknown mutation choice: $S")
 end
@@ -409,7 +413,7 @@ function mutate!(
     member::P,
     ::Val{:mutate_constant},
     ::AbstractMutationWeights,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType,
     temperature,
     kws...,
@@ -424,7 +428,7 @@ function mutate!(
     member::P,
     ::Val{:mutate_operator},
     ::AbstractMutationWeights,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType,
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
@@ -438,7 +442,7 @@ function mutate!(
     member::P,
     ::Val{:swap_operands},
     ::AbstractMutationWeights,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType,
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
@@ -452,7 +456,7 @@ function mutate!(
     member::P,
     ::Val{:add_node},
     ::AbstractMutationWeights,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType,
     nfeatures,
     kws...,
@@ -472,7 +476,7 @@ function mutate!(
     member::P,
     ::Val{:insert_node},
     ::AbstractMutationWeights,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType,
     nfeatures,
     kws...,
@@ -487,7 +491,7 @@ function mutate!(
     member::P,
     ::Val{:delete_node},
     ::AbstractMutationWeights,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType,
     nfeatures,
     kws...,
@@ -502,7 +506,7 @@ function mutate!(
     member::P,
     ::Val{:form_connection},
     ::AbstractMutationWeights,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType,
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
@@ -516,7 +520,7 @@ function mutate!(
     member::P,
     ::Val{:break_connection},
     ::AbstractMutationWeights,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType,
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
@@ -530,7 +534,7 @@ function mutate!(
     member::P,
     ::Val{:rotate_tree},
     ::AbstractMutationWeights,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType,
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
@@ -545,14 +549,14 @@ function mutate!(
     member::P,
     ::Val{:simplify},
     ::AbstractMutationWeights,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType,
     parent_ref,
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
-    @assert options.should_simplify
-    simplify_tree!(tree, options.operators)
-    tree = combine_operators(tree, options.operators)
+    @assert @take(options.should_simplify)
+    simplify_tree!(tree, @take(options.operators))
+    tree = combine_operators(tree, @take(options.operators))
     @recorder recorder["type"] = "simplify"
     return MutationResult{N,P}(;
         member=PopMember(
@@ -561,7 +565,7 @@ function mutate!(
             member.loss,
             options;
             parent=parent_ref,
-            deterministic=options.deterministic,
+            deterministic=@take(options.deterministic),
         ),
         return_immediately=true,
     )
@@ -572,7 +576,7 @@ function mutate!(
     ::P,
     ::Val{:randomize},
     ::AbstractMutationWeights,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType,
     curmaxsize,
     nfeatures,
@@ -588,9 +592,9 @@ function mutate!(
     member::P,
     ::Val{:optimize},
     ::AbstractMutationWeights,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType,
-    dataset::Dataset,
+    dataset::OrBorrowed{Dataset},
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
     cur_member, new_num_evals = optimize_constants(dataset, member, options)
@@ -605,7 +609,7 @@ function mutate!(
     member::P,
     ::Val{:do_nothing},
     ::AbstractMutationWeights,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType,
     parent_ref,
     kws...,
@@ -623,7 +627,7 @@ function mutate!(
             options,
             compute_complexity(tree, options);
             parent=parent_ref,
-            deterministic=options.deterministic,
+            deterministic=@take(options.deterministic),
         ),
         return_immediately=true,
     )
@@ -633,9 +637,9 @@ end
 function crossover_generation(
     member1::P,
     member2::P,
-    dataset::D,
+    dataset::OrBorrowed{D},
     curmaxsize::Int,
-    options::AbstractOptions;
+    options::OrBorrowed{AbstractOptions};
     recorder::RecordType=RecordType(),
 )::Tuple{P,P,Bool,Float64} where {T,L,D<:Dataset{T,L},N,P<:PopMember{T,L,N}}
     tree1 = member1.tree
@@ -683,7 +687,7 @@ function crossover_generation(
         options,
         afterSize1;
         parent=member1.ref,
-        deterministic=options.deterministic,
+        deterministic=@take(options.deterministic),
     )::P
     baby2 = PopMember(
         child_tree2::AbstractExpression,
@@ -692,7 +696,7 @@ function crossover_generation(
         options,
         afterSize2;
         parent=member2.ref,
-        deterministic=options.deterministic,
+        deterministic=@take(options.deterministic),
     )::P
 
     @recorder begin

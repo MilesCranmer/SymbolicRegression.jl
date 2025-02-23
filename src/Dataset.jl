@@ -113,7 +113,7 @@ end
 end
 @inline Base.propertynames(d::SubDataset) = propertynames(get_full_dataset(d))
 
-dataset_fraction(d::SubDataset) = d.n / get_full_dataset(d).n
+dataset_fraction(d::OrBorrowed{SubDataset}) = d.n / get_full_dataset(d).n
 
 """
     Dataset(X::AbstractMatrix{T},
@@ -249,9 +249,9 @@ end
 is_weighted(dataset::OrBorrowed{Dataset}) = !isnothing(dataset.weights)
 
 # COV_EXCL_START
-get_full_dataset(d::BasicDataset) = d
-get_indices(::BasicDataset) = nothing
-dataset_fraction(d::BasicDataset) = 1.0
+get_full_dataset(d::OrBorrowed{BasicDataset}) = d
+get_indices(::OrBorrowed{BasicDataset}) = nothing
+dataset_fraction(d::OrBorrowed{BasicDataset}) = 1.0
 # COV_EXCL_END
 
 function error_on_mismatched_size(_, ::Nothing)

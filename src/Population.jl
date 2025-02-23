@@ -100,9 +100,9 @@ function Base.copy(pop::P)::P where {T,L,N,P<:Population{T,L,N}}
 end
 
 # Sample random members of the population, and make a new one
-function sample_pop(pop::P, options::AbstractOptions)::P where {P<:Population}
+function sample_pop(pop::P, options::OrBorrowed{AbstractOptions})::P where {P<:Population}
     return Population(
-        StatsBase.sample(pop.members, options.tournament_selection_n; replace=false)
+        StatsBase.sample(pop.members, @take(options.tournament_selection_n); replace=false)
     )
 end
 
@@ -110,7 +110,7 @@ end
 function best_of_sample(
     pop::Population{T,L,N},
     running_search_statistics::RunningSearchStatistics,
-    options::AbstractOptions,
+    options::OrBorrowed{AbstractOptions},
 ) where {T,L,N}
     sample = sample_pop(pop, options)
     return copy(_best_of_sample(sample.members, running_search_statistics, options))
@@ -118,15 +118,15 @@ end
 function _best_of_sample(
     members::Vector{P},
     running_search_statistics::RunningSearchStatistics,
-    options::AbstractOptions,
+    options::OrBorrowed{AbstractOptions},
 ) where {T,L,P<:PopMember{T,L}}
     p = options.tournament_selection_p
     n = length(members)  # == tournament_selection_n
     adjusted_costs = Vector{L}(undef, n)
-    if options.use_frequency_in_tournament
+    if @take(options.use_frequency_in_tournament)
         # Score based on frequency of that size occurring.
         # In the end, all sizes should be just as common in the population.
-        adaptive_parsimony_scaling = L(options.adaptive_parsimony_scaling)
+        adaptive_parsimony_scaling = L(@take(options.adaptive_parsimony_scaling))
         # e.g., for 100% occupied at one size, exp(-20*1) = 2.061153622438558e-9; which seems like a good punishment for dominating the population.
 
         for i in 1:n
@@ -168,9 +168,11 @@ const CACHED_WEIGHTS =
         PerTaskCache{Dict{Tuple{Int,Float32},typeof(test_weights)}}()
     end
 
-@unstable function get_tournament_selection_weights(@nospecialize(options::AbstractOptions))
-    n = options.tournament_selection_n::Int
-    p = options.tournament_selection_p::Float32
+@unstable function get_tournament_selection_weights(
+    @nospecialize(options::OrBorrowed{AbstractOptions})
+)
+    n = @take(options.tournament_selection_n)::Int
+    p = @take(options.tournament_selection_p)::Float32
     # Computing the weights for the tournament becomes quite expensive,
     return get!(CACHED_WEIGHTS[], (n, p)) do
         k = collect(0:(n - 1))
@@ -181,9 +183,9 @@ const CACHED_WEIGHTS =
 end
 
 function finalize_costs(
-    dataset::Dataset{T,L}, pop::P, options::AbstractOptions
+    dataset::OrBorrowed{Dataset{T,L}}, pop::P, options::OrBorrowed{AbstractOptions}
 )::Tuple{P,Float64} where {T,L,P<:Population{T,L}}
-    need_recalculate = options.batching
+    need_recalculate = @take(options.batching)
     num_evals = 0.0
     if need_recalculate
         for member in 1:(pop.n)

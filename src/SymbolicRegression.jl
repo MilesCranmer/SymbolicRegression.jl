@@ -95,7 +95,7 @@ export Population,
     erfc,
     atanh_clip
 
-using BorrowChecker: @own, @move, @lifetime, @ref, @clone, @take, @take!
+using BorrowChecker: @own, @move, @lifetime, @ref, @clone, @take, @take!, OrBorrowed
 using Distributed
 using Printf: @printf, @sprintf
 using Pkg: Pkg
@@ -735,7 +735,7 @@ function _initialize_search!(
     @clone :mut worker_assignment = state.worker_assignment
     @lifetime a let
         @ref ~a (sstate, rdatasets, roptions) = (saved_state, datasets, options)
-        @own for j in 1:nout, i in 1:(options.populations)
+        @own for j in 1:nout, i in 1:(roptions.populations)
             @own worker_idx = @lifetime b begin
                 @ref ~b :mut w = worker_assignment
                 assign_next_worker!(
@@ -787,6 +787,7 @@ function _initialize_search!(
                         @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
                     end
                     @own nfeatures = max_features(rdatasets[j], roptions)
+                    # TODO: Put output of spawner in owned variable so it can't be accessed twice
                     @sr_spawner(
                         begin
                             @lifetime b let
@@ -827,41 +828,55 @@ function _warmup_search!(
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
 ) where {T,L,N}
-    nout = length(datasets)
-    for j in 1:nout, i in 1:(options.populations)
-        dataset = datasets[j]
-        running_search_statistics = state.all_running_search_statistics[j]
-        cur_maxsize = state.cur_maxsizes[j]
+    @own :mut state
+    @own datasets, ropt, options
+
+    @own nout = length(datasets)
+    @own for j in 1:nout, i in 1:(options.populations)
+        @own running_search_statistics = @take(state.all_running_search_statistics[j])
+        @own cur_maxsize = @take(state.cur_maxsizes[j])
         @recorder state.record[]["out$(j)_pop$(i)"] = RecordType()
-        worker_idx = assign_next_worker!(
-            state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
-        )
+        @own worker_idx = @lifetime b let
+            @own procs = @take(state.procs)
+            @ref ~b :mut w = state.worker_assignment
+            assign_next_worker!(
+                w;
+                out=@take(j),
+                pop=@take(i),
+                parallelism=@take(ropt.parallelism),
+                procs=@take!(procs)
+            )
+        end
 
         # TODO - why is this needed??
         # Multi-threaded doesn't like to fetch within a new task:
-        c_rss = deepcopy(running_search_statistics)
-        last_pop = state.worker_output[j][i]
-        updated_pop = @sr_spawner(
+        @own last_pop = @take(state.worker_output[j][i])
+        @own updated_pop = @sr_spawner(
             begin
-                in_pop = first(
-                    extract_from_worker(last_pop, Population{T,L,N}, HallOfFame{T,L,N})
-                )
-                _dispatch_s_r_cycle(
-                    in_pop,
-                    dataset,
-                    options;
-                    pop=i,
-                    out=j,
-                    iteration=0,
-                    ropt.verbosity,
-                    cur_maxsize,
-                    running_search_statistics=c_rss,
-                )::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N}}
+                @lifetime b let
+                    @ref ~b (spawn_dataset, spawn_options) = (datasets[j], options)
+                    @own in_pop = first(
+                        extract_from_worker(
+                            @take!(last_pop), Population{T,L,N}, HallOfFame{T,L,N}
+                        ),
+                    )
+                    _dispatch_s_r_cycle(
+                        @take!(in_pop),
+                        spawn_dataset,
+                        spawn_options;
+                        pop=@take(i),
+                        out=@take(j),
+                        iteration=0,
+                        verbosity=@take(ropt.verbosity),
+                        cur_maxsize=@take!(cur_maxsize),
+                        running_search_statistics=@take!(running_search_statistics),
+                    )::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N}}
+                end
             end,
-            parallelism = ropt.parallelism,
-            worker_idx = worker_idx
+            parallelism = @take(ropt.parallelism),
+            worker_idx = @take!(worker_idx)
         )
-        state.worker_output[j][i] = updated_pop
+        state.worker_output[j][i] = @take!(updated_pop)
     end
     return nothing
 end
@@ -1147,8 +1162,8 @@ end
 
 @stable default_mode = "disable" function _dispatch_s_r_cycle(
     in_pop::Population{T,L,N},
-    dataset::Dataset,
-    options::AbstractOptions;
+    dataset::OrBorrowed{Dataset},
+    options::OrBorrowed{AbstractOptions};
     pop::Int,
     out::Int,
     iteration::Int,
@@ -1165,7 +1180,7 @@ end
     out_pop, best_seen, evals_from_cycle = s_r_cycle(
         dataset,
         in_pop,
-        options.ncycles_per_iteration,
+        @take(options.ncycles_per_iteration),
         cur_maxsize,
         running_search_statistics;
         verbosity=verbosity,
@@ -1177,7 +1192,7 @@ end
         dataset, out_pop, options, cur_maxsize, record
     )
     num_evals += evals_from_optimize
-    if options.batching
+    if @take(options.batching)
         for i_member in 1:(options.maxsize)
             if best_seen.exists[i_member]
                 cost, result_loss = eval_cost(dataset, best_seen.members[i_member], options)

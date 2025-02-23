@@ -3,6 +3,7 @@ module ConstantOptimizationModule
 using LineSearches: LineSearches
 using Optim: Optim
 using ADTypes: AbstractADType, AutoEnzyme
+using BorrowChecker: OrBorrowed, @take
 using DifferentiationInterface: value_and_gradient
 using DynamicExpressions:
     AbstractExpression,
@@ -18,7 +19,7 @@ using ..LossFunctionsModule: eval_loss, loss_to_cost
 using ..PopMemberModule: PopMember
 
 function optimize_constants(
-    dataset::Dataset{T,L}, member::P, options::AbstractOptions
+    dataset::OrBorrowed{Dataset{T,L}}, member::P, options::OrBorrowed{AbstractOptions}
 )::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
     nconst = count_constants_for_optimization(member.tree)
     nconst == 0 && return (member, 0.0)
@@ -27,19 +28,19 @@ function optimize_constants(
         return _optimize_constants(
             dataset,
             member,
-            specialized_options(options),
+            specialized_options(@take(options)),
             algorithm,
-            options.optimizer_options,
+            @take(options.optimizer_options),
         )
     end
     return _optimize_constants(
         dataset,
         member,
-        specialized_options(options),
+        specialized_options(@take(options)),
         # We use specialized options here due to Enzyme being
         # more particular about dynamic dispatch
-        options.optimizer_algorithm,
-        options.optimizer_options,
+        @take(options.optimizer_algorithm),
+        @take(options.optimizer_options),
     )
 end
 
@@ -80,9 +81,13 @@ function _optimize_constants(
         member.tree = tree
         member.loss = f(result.minimizer; regularization=true)
         member.cost = loss_to_cost(
-            member.loss, dataset.use_baseline, dataset.baseline_loss, member, options
+            member.loss,
+            @take(dataset.use_baseline),
+            @take(dataset.baseline_loss),
+            member,
+            options,
         )
-        member.birth = get_birth_order(; deterministic=options.deterministic)
+        member.birth = get_birth_order(; deterministic=@take(options.deterministic))
         num_evals += eval_fraction
     else
         set_scalar_constants!(member.tree, x0, refs)
@@ -91,7 +96,9 @@ function _optimize_constants(
     return member, num_evals
 end
 
-struct Evaluator{N<:AbstractExpression,R,D<:Dataset,O<:AbstractOptions} <: Function
+struct Evaluator{
+    N<:AbstractExpression,R,D<:OrBorrowed{Dataset},O<:OrBorrowed{AbstractOptions}
+} <: Function
     tree::N
     refs::R
     dataset::D

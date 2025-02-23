@@ -1,11 +1,12 @@
 module RecorderModule
 
+using BorrowChecker: BorrowChecker
 using ..CoreModule: RecordType
 
 "Assumes that `options` holds the user options::AbstractOptions"
 macro recorder(ex)
     quote
-        if $(esc(:options)).use_recorder
+        if $(BorrowChecker).@take($(esc(:options)).use_recorder)
             $(esc(ex))
         end
     end

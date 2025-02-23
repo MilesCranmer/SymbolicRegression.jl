@@ -542,7 +542,11 @@ function EB.extra_init_params(
         # COV_EXCL_STOP
     end
     # We also need to include the operators here to be consistent with `create_expression`.
-    return (; operators=@take(options.operators), @take(options.expression_options)..., parameters=@take!(parameters))
+    return (;
+        operators=@take(options.operators),
+        @take(options.expression_options)...,
+        parameters=@take!(parameters)
+    )
 end
 function EB.sort_params(params::NamedTuple, ::Type{<:TemplateExpression})
     return (; params.structure, params.operators, params.variable_names, params.parameters)
@@ -672,7 +676,9 @@ end
 )
 @unstable begin
     # COV_EXCL_START
-    function IDE.expected_array_type(::OrBorrowed{AbstractArray}, ::Type{<:TemplateExpression})
+    function IDE.expected_array_type(
+        ::OrBorrowed{AbstractArray}, ::Type{<:TemplateExpression}
+    )
         return Any
     end
     IDE.expected_array_type(
@@ -771,7 +777,7 @@ function MM.condition_mutate_constant!(
     ::Type{<:TemplateExpression},
     weights::AbstractMutationWeights,
     member::PopMember,
-    options::AbstractOptions,
+    options::OrBorrowed{AbstractOptions},
     curmaxsize::Int,
 )
     # Avoid modifying the mutate_constant weight, since

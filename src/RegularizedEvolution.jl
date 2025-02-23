@@ -1,5 +1,6 @@
 module RegularizedEvolutionModule
 
+using BorrowChecker: OrBorrowed, @take
 using DynamicExpressions: string_tree
 using ..CoreModule: AbstractOptions, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..PopulationModule: Population, best_of_sample
@@ -11,12 +12,12 @@ using ..UtilsModule: argmin_fast
 # Pass through the population several times, replacing the oldest
 # with the fittest of a small subsample
 function reg_evol_cycle(
-    dataset::Dataset{T,L},
+    dataset::OrBorrowed{Dataset{T,L}},
     pop::P,
     temperature,
     curmaxsize::Int,
     running_search_statistics::RunningSearchStatistics,
-    options::AbstractOptions,
+    options::OrBorrowed{AbstractOptions},
     record::RecordType,
 )::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:Population{T,L}}
     num_evals = 0.0
@@ -37,7 +38,7 @@ function reg_evol_cycle(
             )
             num_evals += tmp_num_evals
 
-            if !mutation_accepted && options.skip_mutation_failures
+            if !mutation_accepted && @take(options.skip_mutation_failures)
                 # Skip this mutation rather than replacing oldest member with unchanged member
                 continue
             end
@@ -91,7 +92,7 @@ function reg_evol_cycle(
             )
             num_evals += tmp_num_evals
 
-            if !crossover_accepted && options.skip_mutation_failures
+            if !crossover_accepted && @take(options.skip_mutation_failures)
                 continue
             end
 
