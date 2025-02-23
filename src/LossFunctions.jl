@@ -67,9 +67,7 @@ end
             options::OrBorrowed{AbstractOptions},
         )
             A = expected_array_type(dataset.X, typeof(tree))
-            out, complete = eval_tree_array(
-                tree, @take(dataset.X), options
-            )
+            out, complete = eval_tree_array(tree, @take(dataset.X), options)
             if isnothing(out)
                 return out, false
             else
@@ -112,11 +110,7 @@ function _eval_loss(
             @take(options.elementwise_loss),
         )
     else
-        _loss(
-            prediction,
-            @take(dataset.y)::AbstractArray,
-            @take(options.elementwise_loss),
-        )
+        _loss(prediction, @take(dataset.y)::AbstractArray, @take(options.elementwise_loss))
     end
 
     if regularization

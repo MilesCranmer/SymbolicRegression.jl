@@ -95,7 +95,7 @@ export Population,
     erfc,
     atanh_clip
 
-using BorrowChecker: @own, @move, @lifetime, @ref, @clone, @take, @take!, @set
+using BorrowChecker: @own, @move, @lifetime, @ref, @clone, @take, @take!
 using Distributed
 using Printf: @printf, @sprintf
 using Pkg: Pkg
@@ -720,10 +720,10 @@ function _initialize_search!(
                 )
                 @lifetime b begin
                     @ref ~b :mut for member in hof.members[hof.exists]
-                        @own score, result_loss = score_func(
+                        @own cost, result_loss = eval_cost(
                             rdatasets[j], @take(member), roptions
                         )
-                        member.score = @take!(score)
+                        member.cost = @take!(cost)
                         member.loss = @take!(result_loss)
                     end
                 end
@@ -735,18 +735,18 @@ function _initialize_search!(
     @clone :mut worker_assignment = state.worker_assignment
     @lifetime a let
         @ref ~a (sstate, rdatasets, roptions) = (saved_state, datasets, options)
-        for j in 1:nout, i in 1:(options.populations)
+        @own for j in 1:nout, i in 1:(options.populations)
             @own worker_idx = @lifetime b begin
                 @ref ~b :mut w = worker_assignment
                 assign_next_worker!(
                     w;
-                    out=j,
-                    pop=i,
+                    out=@take(j),
+                    pop=@take(i),
                     parallelism=@take(ropt.parallelism),
                     procs=@take(state.procs),
                 )
             end
-            @own saved_pop = load_saved_population(sstate; out=j, pop=i)
+            @own saved_pop = load_saved_population(sstate; out=@take(j), pop=@take(i))
             @own new_pop =
                 if !isnothing(saved_pop) &&
                     length(saved_pop.members) == options.population_size
@@ -757,10 +757,10 @@ function _initialize_search!(
                     # Update losses:
                     @lifetime b begin
                         @ref ~b :mut for member in _saved_pop.members
-                            @own score, result_loss = score_func(
+                            @own cost, result_loss = eval_cost(
                                 rdatasets[j], @take(member), roptions
                             )
-                            member.score = @take!(score)
+                            member.cost = @take!(cost)
                             member.loss = @take!(result_loss)
                         end
                     end
@@ -1247,7 +1247,7 @@ using ConstructionBase: ConstructionBase as _
 include("precompile.jl")
 redirect_stdout(devnull) do
     redirect_stderr(devnull) do
-        # do_precompilation(Val(:precompile))
+        do_precompilation(Val(:precompile))
     end
 end
 
