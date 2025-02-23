@@ -706,22 +706,22 @@ function _initialize_search!(
     @own init_hall_of_fame = load_saved_hall_of_fame(@take(saved_state))
 
     @lifetime a let
-        @ref ~a (rdatasets, roptions) = (datasets, options)
+        @ref ~a (datasets_ref, options_ref) = (datasets, options)
         if isnothing(init_hall_of_fame)
             @own for j in 1:nout
-                state.halls_of_fame[j] = HallOfFame(roptions, rdatasets[j])
+                state.halls_of_fame[j] = HallOfFame(options_ref, datasets_ref[j])
             end
         else
             # Recompute losses for the hall of fame, in
             # case the dataset changed:
             @own for j in 1:nout
                 @own :mut hof = strip_metadata(
-                    @take(init_hall_of_fame[j]), roptions, rdatasets[j]
+                    @take(init_hall_of_fame[j]), options_ref, datasets_ref[j]
                 )
                 @lifetime b begin
                     @ref ~b :mut for member in hof.members[hof.exists]
                         @own cost, result_loss = eval_cost(
-                            rdatasets[j], @take(member), roptions
+                            datasets_ref[j], @take(member), options_ref
                         )
                         member.cost = @take!(cost)
                         member.loss = @take!(result_loss)
@@ -734,8 +734,8 @@ function _initialize_search!(
 
     @clone :mut worker_assignment = state.worker_assignment
     @lifetime a let
-        @ref ~a (sstate, rdatasets, roptions) = (saved_state, datasets, options)
-        @own for j in 1:nout, i in 1:(roptions.populations)
+        @ref ~a (state_ref, datasets_ref, options_ref) = (saved_state, datasets, options)
+        @own for j in 1:nout, i in 1:(options_ref.populations)
             @own worker_idx = @lifetime b begin
                 @ref ~b :mut w = worker_assignment
                 assign_next_worker!(
@@ -746,19 +746,19 @@ function _initialize_search!(
                     procs=@take(state.procs),
                 )
             end
-            @own saved_pop = load_saved_population(sstate; out=@take(j), pop=@take(i))
+            @own saved_pop = load_saved_population(state_ref; out=@take(j), pop=@take(i))
             @own new_pop =
                 if !isnothing(saved_pop) &&
                     length(saved_pop.members) == options.population_size
                     # TODO: Need bind
                     @own :mut _saved_pop = strip_metadata(
-                        @take!(saved_pop), roptions, rdatasets[j]
+                        @take!(saved_pop), options_ref, datasets_ref[j]
                     )
                     # Update losses:
                     @lifetime b begin
                         @ref ~b :mut for member in _saved_pop.members
                             @own cost, result_loss = eval_cost(
-                                rdatasets[j], @take(member), roptions
+                                datasets_ref[j], @take(member), options_ref
                             )
                             member.cost = @take!(cost)
                             member.loss = @take!(result_loss)
@@ -766,8 +766,8 @@ function _initialize_search!(
                     end
                     @sr_spawner(
                         begin
-                            @lifetime c let
-                                @ref ~c (spawn_dataset, spawn_options) = (
+                            @lifetime b let
+                                @ref ~b (spawn_dataset, spawn_options) = (
                                     datasets[j], options
                                 )
 
@@ -786,7 +786,7 @@ function _initialize_search!(
                     if !isnothing(saved_pop) && ropt.verbosity > 0
                         @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
                     end
-                    @own nfeatures = max_features(rdatasets[j], roptions)
+                    @own nfeatures = max_features(datasets_ref[j], options_ref)
                     # TODO: Put output of spawner in owned variable so it can't be accessed twice
                     @sr_spawner(
                         begin
