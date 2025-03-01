@@ -124,12 +124,9 @@ function logical_and(x, y)
     return ((x > zero(x)) & (y > zero(y))) * one(x)
 end
 
+# COV_EXCL_START
 # Strings
 DE.get_op_name(::typeof(safe_pow)) = "^"
-DE.get_op_name(::typeof(greater)) = ">"
-DE.get_op_name(::typeof(less)) = "<"
-DE.get_op_name(::typeof(greater_equal)) = ">="
-DE.get_op_name(::typeof(less_equal)) = "<="
 DE.get_op_name(::typeof(safe_log)) = "log"
 DE.get_op_name(::typeof(safe_log2)) = "log2"
 DE.get_op_name(::typeof(safe_log10)) = "log10"
@@ -139,6 +136,13 @@ DE.get_op_name(::typeof(safe_acos)) = "acos"
 DE.get_op_name(::typeof(safe_acosh)) = "acosh"
 DE.get_op_name(::typeof(safe_atanh)) = "atanh"
 DE.get_op_name(::typeof(safe_sqrt)) = "sqrt"
+
+# Strings that only get printed for pretty printing,
+# but not when saving to the file
+DE.get_pretty_op_name(::typeof(greater)) = ">"
+DE.get_pretty_op_name(::typeof(less)) = "<"
+DE.get_pretty_op_name(::typeof(greater_equal)) = ">="
+DE.get_pretty_op_name(::typeof(less_equal)) = "<="
 
 # Expression algebra
 DE.declare_operator_alias(::typeof(safe_pow), ::Val{2}) = ^
@@ -165,7 +169,6 @@ DE.declare_operator_alias(::typeof(safe_sqrt), ::Val{1}) = sqrt
 @ignore pow_abs(x, y) = safe_pow(x, y)
 
 # Actual mappings used for evaluation
-# COV_EXCL_START
 get_safe_op(op::F) where {F<:Function} = op
 get_safe_op(::typeof(^)) = safe_pow
 get_safe_op(::typeof(log)) = safe_log

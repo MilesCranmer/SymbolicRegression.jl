@@ -138,3 +138,26 @@ F_d = (-...
 )
 """
 end
+
+@testitem "pretty print vs serialization for comparison operators" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: greater, greater_equal, string_tree
+
+    options = Options(; binary_operators=[greater, greater_equal])
+    x1 = Expression(Node(; feature=1); operators=options.operators)
+    x2 = Expression(Node(; feature=2); operators=options.operators)
+    ex = x1 > x2
+    ex2 = x1 >= x2
+
+    # Pretty printing should use symbols
+    pretty_str = string_tree(ex; pretty=true)
+    pretty_str2 = string_tree(ex2; pretty=true)
+    @test pretty_str == "x1 > x2"
+    @test pretty_str2 == "x1 >= x2"
+
+    # Serialization should use function names
+    serialized_str = string_tree(ex)
+    serialized_str2 = string_tree(ex2)
+    @test serialized_str == "greater(x1, x2)"
+    @test serialized_str2 == "greater_equal(x1, x2)"
+end
