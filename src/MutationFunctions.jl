@@ -40,6 +40,14 @@ function with_contents_for_mutation(ex::AbstractExpression, new_contents, ::Noth
     return with_contents(ex, new_contents)
 end
 
+function apply_tree_mutation(
+    ex::AbstractExpression, rng::AbstractRNG, mutation_func::M, args...; kwargs...
+) where {M<:Function}
+    tree, context = get_contents_for_mutation(ex, rng)
+    mutated_tree = mutation_func(tree, args..., rng; kwargs...)
+    return with_contents_for_mutation(ex, mutated_tree, context)
+end
+
 """
     random_node(tree::AbstractNode; filter::F=Returns(true))
 
@@ -58,9 +66,7 @@ end
 
 """Swap operands in binary operator for ops like pow and divide"""
 function swap_operands(ex::AbstractExpression, rng::AbstractRNG=default_rng())
-    tree, context = get_contents_for_mutation(ex, rng)
-    ex = with_contents_for_mutation(ex, swap_operands(tree, rng), context)
-    return ex
+    return apply_tree_mutation(ex, rng, swap_operands)
 end
 function swap_operands(tree::AbstractNode, rng::AbstractRNG=default_rng())
     if !any(node -> node.degree == 2, tree)
@@ -73,17 +79,13 @@ end
 
 """Randomly convert an operator into another one (binary->binary; unary->unary)"""
 function mutate_operator(
-    ex::AbstractExpression{T}, options::AbstractOptions, rng::AbstractRNG=default_rng()
-) where {T<:DATA_TYPE}
-    tree, context = get_contents_for_mutation(ex, rng)
-    ex = with_contents_for_mutation(ex, mutate_operator(tree, options, rng), context)
-    return ex
+    ex::AbstractExpression, options::AbstractOptions, rng::AbstractRNG=default_rng()
+)
+    return apply_tree_mutation(ex, rng, mutate_operator, options)
 end
 function mutate_operator(
-    tree::AbstractExpressionNode{T},
-    options::AbstractOptions,
-    rng::AbstractRNG=default_rng(),
-) where {T}
+    tree::AbstractExpressionNode, options::AbstractOptions, rng::AbstractRNG=default_rng()
+)
     if !(has_operators(tree))
         return tree
     end
@@ -98,16 +100,12 @@ end
 
 """Randomly perturb a constant"""
 function mutate_constant(
-    ex::AbstractExpression{T},
+    ex::AbstractExpression,
     temperature,
     options::AbstractOptions,
     rng::AbstractRNG=default_rng(),
-) where {T<:DATA_TYPE}
-    tree, context = get_contents_for_mutation(ex, rng)
-    ex = with_contents_for_mutation(
-        ex, mutate_constant(tree, temperature, options, rng), context
     )
-    return ex
+    return apply_tree_mutation(ex, rng, mutate_constant, temperature, options)
 end
 function mutate_constant(
     tree::AbstractExpressionNode{T},
@@ -145,17 +143,15 @@ end
 
 """Add a random unary/binary operation to the end of a tree"""
 function append_random_op(
-    ex::AbstractExpression{T},
+    ex::AbstractExpression,
     options::AbstractOptions,
     nfeatures::Int,
     rng::AbstractRNG=default_rng();
     make_new_bin_op::Union{Bool,Nothing}=nothing,
-) where {T<:DATA_TYPE}
-    tree, context = get_contents_for_mutation(ex, rng)
-    ex = with_contents_for_mutation(
-        ex, append_random_op(tree, options, nfeatures, rng; make_new_bin_op), context
+)
+    return apply_tree_mutation(
+        ex, rng, append_random_op, options, nfeatures; make_new_bin_op=make_new_bin_op
     )
-    return ex
 end
 function append_random_op(
     tree::AbstractExpressionNode{T},
@@ -195,11 +191,7 @@ function insert_random_op(
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
-    tree, context = get_contents_for_mutation(ex, rng)
-    ex = with_contents_for_mutation(
-        ex, insert_random_op(tree, options, nfeatures, rng), context
-    )
-    return ex
+    return apply_tree_mutation(ex, rng, insert_random_op, options, nfeatures)
 end
 function insert_random_op(
     tree::AbstractExpressionNode{T},
@@ -231,11 +223,7 @@ function prepend_random_op(
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
-    tree, context = get_contents_for_mutation(ex, rng)
-    ex = with_contents_for_mutation(
-        ex, prepend_random_op(tree, options, nfeatures, rng), context
-    )
-    return ex
+    return apply_tree_mutation(ex, rng, prepend_random_op, options, nfeatures)
 end
 function prepend_random_op(
     tree::AbstractExpressionNode{T},
@@ -294,11 +282,7 @@ function delete_random_op!(
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
-    tree, context = get_contents_for_mutation(ex, rng)
-    ex = with_contents_for_mutation(
-        ex, delete_random_op!(tree, options, nfeatures, rng), context
-    )
-    return ex
+    return apply_tree_mutation(ex, rng, delete_random_op!, options, nfeatures)
 end
 function delete_random_op!(
     tree::AbstractExpressionNode{T},
@@ -352,11 +336,7 @@ function randomize_tree(
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 )
-    tree, context = get_contents_for_mutation(ex, rng)
-    ex = with_contents_for_mutation(
-        ex, randomize_tree(tree, curmaxsize, options, nfeatures, rng), context
-    )
-    return ex
+    return apply_tree_mutation(ex, rng, randomize_tree, curmaxsize, options, nfeatures)
 end
 function randomize_tree(
     ::AbstractExpressionNode{T},
@@ -472,8 +452,7 @@ function get_two_nodes_without_loop(tree::AbstractNode, rng::AbstractRNG; max_at
 end
 
 function form_random_connection!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
-    tree, context = get_contents_for_mutation(ex, rng)
-    return with_contents_for_mutation(ex, form_random_connection!(tree, rng), context)
+    return apply_tree_mutation(ex, rng, form_random_connection!)
 end
 function form_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     if length(tree) < 5
@@ -496,8 +475,7 @@ function form_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rn
 end
 
 function break_random_connection!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
-    tree, context = get_contents_for_mutation(ex, rng)
-    return with_contents_for_mutation(ex, break_random_connection!(tree, rng), context)
+    return apply_tree_mutation(ex, rng, break_random_connection!)
 end
 function break_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     tree.degree == 0 && return tree
@@ -515,9 +493,7 @@ function is_valid_rotation_node(node::AbstractNode)
 end
 
 function randomly_rotate_tree!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
-    tree, context = get_contents_for_mutation(ex, rng)
-    rotated_tree = randomly_rotate_tree!(tree, rng)
-    return with_contents_for_mutation(ex, rotated_tree, context)
+    return apply_tree_mutation(ex, rng, randomly_rotate_tree!)
 end
 function randomly_rotate_tree!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     num_rotation_nodes = count(is_valid_rotation_node, tree)
