@@ -104,7 +104,7 @@ function mutate_constant(
     temperature,
     options::AbstractOptions,
     rng::AbstractRNG=default_rng(),
-    )
+)
     return apply_tree_mutation(ex, rng, mutate_constant, temperature, options)
 end
 function mutate_constant(
