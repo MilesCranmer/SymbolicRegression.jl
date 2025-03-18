@@ -41,8 +41,12 @@ function with_contents_for_mutation(ex::AbstractExpression, new_contents, ::Noth
 end
 
 function apply_tree_mutation(
-    ex::AbstractExpression, rng::AbstractRNG, mutation_func::M, args...; kwargs...
-) where {M<:Function}
+    ex::AbstractExpression,
+    rng::AbstractRNG,
+    mutation_func::F,
+    args::Vararg{Any,N};
+    kwargs...,
+) where {F<:Function,N}
     tree, context = get_contents_for_mutation(ex, rng)
     mutated_tree = mutation_func(tree, args..., rng; kwargs...)
     return with_contents_for_mutation(ex, mutated_tree, context)
