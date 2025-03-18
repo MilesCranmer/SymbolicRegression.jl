@@ -1,5 +1,6 @@
 module MutationFunctionsModule
 
+using DispatchDoctor: @unstable
 using Random: default_rng, AbstractRNG
 using DynamicExpressions:
     AbstractExpressionNode,
@@ -333,7 +334,8 @@ function delete_random_op!(
     return tree
 end
 
-function randomize_tree(
+# TODO: For some reason this is unstable on Julia 1.10.
+@unstable function randomize_tree(
     ex::AbstractExpression,
     curmaxsize::Int,
     options::AbstractOptions,
