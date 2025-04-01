@@ -39,6 +39,7 @@ function Population(
     nlength::Int=3,
     nfeatures::Int,
     npop=nothing,
+    trees=nothing,
 ) where {T,L}
     @assert (population_size !== nothing) ⊻ (npop !== nothing)
     population_size = if npop === nothing
@@ -46,18 +47,34 @@ function Population(
     else
         npop
     end
-    return Population(
-        [
-            PopMember(
-                dataset,
-                gen_random_tree(nlength, options, nfeatures, T),
-                options;
-                parent=-1,
-                deterministic=options.deterministic,
-            ) for _ in 1:population_size
-        ],
-        population_size,
-    )
+    if isnothing(trees)
+        return Population(
+            [
+                PopMember(
+                    dataset,
+                    gen_random_tree(nlength, options, nfeatures, T),
+                    options;
+                    parent=-1,
+                    deterministic=options.deterministic,
+                ) for _ in 1:population_size
+            ],
+            population_size,
+        )
+    else
+        @assert length(trees) == population_size "Initialized populations must be the same size as the specified population size"
+        return Population(
+            [
+                PopMember(
+                    dataset,
+                    tree_container.tree.tree,
+                    options;
+                    parent=-1,
+                    deterministic=options.deterministic,
+                ) for tree_container in trees
+            ],
+            population_size,
+        )
+    end
 end
 """
     Population(X::AbstractMatrix{T}, y::AbstractVector{T};

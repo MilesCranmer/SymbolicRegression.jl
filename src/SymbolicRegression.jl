@@ -475,6 +475,7 @@ function equation_search(
     y_units=nothing,
     extra::NamedTuple=NamedTuple(),
     v_dim_out::Val{DIM_OUT}=Val(nothing),
+    initial_populations=nothing,
     # Deprecated:
     multithreaded=nothing,
 ) where {T<:DATA_TYPE,L,DIM_OUT}
@@ -521,6 +522,7 @@ function equation_search(
         logger=logger,
         progress=progress,
         v_dim_out=Val(DIM_OUT),
+        initial_populations=initial_populations
     )
 end
 
@@ -539,6 +541,7 @@ function equation_search(
     options::AbstractOptions=Options(),
     saved_state=nothing,
     runtime_options::Union{AbstractRuntimeOptions,Nothing}=nothing,
+    initial_populations=nothing,
     runtime_options_kws...,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
     _runtime_options = @something(
@@ -553,15 +556,15 @@ function equation_search(
     )
 
     # Underscores here mean that we have mutated the variable
-    return _equation_search(datasets, _runtime_options, options, saved_state)
+    return _equation_search(datasets, _runtime_options, options, saved_state, initial_populations)
 end
 
 @noinline function _equation_search(
-    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions, saved_state
+    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions, saved_state, initial_populations
 ) where {D<:Dataset}
     _validate_options(datasets, ropt, options)
     state = _create_workers(datasets, ropt, options)
-    _initialize_search!(state, datasets, ropt, options, saved_state)
+    _initialize_search!(state, datasets, ropt, options, saved_state, initial_populations)
     _warmup_search!(state, datasets, ropt, options)
     _main_search_loop!(state, datasets, ropt, options)
     _tear_down!(state, ropt, options)
@@ -694,6 +697,7 @@ function _initialize_search!(
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
     saved_state,
+    initial_populations
 ) where {T,L,N}
     nout = length(datasets)
 
@@ -716,6 +720,9 @@ function _initialize_search!(
         end
     end
 
+    if !isnothing(initial_populations)
+        @assert length(initial_populations) == options.populations "Number of initialized populations must match specified number of populations."
+    end
     for j in 1:nout, i in 1:(options.populations)
         worker_idx = assign_next_worker!(
             state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
@@ -738,7 +745,7 @@ function _initialize_search!(
                     parallelism = ropt.parallelism,
                     worker_idx = worker_idx
                 )
-            else
+            elseif isnothing(initial_populations)
                 if saved_pop !== nothing && ropt.verbosity > 0
                     @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
                 end
@@ -761,6 +768,26 @@ function _initialize_search!(
                     worker_idx = worker_idx
                 )
                 # This involves population_size evaluations, on the full dataset:
+            else
+                @sr_spawner(
+                    begin
+                        (
+                            Population(
+                                datasets[j];
+                                population_size=options.population_size,
+                                nlength=3,
+                                options=options,
+                                nfeatures=max_features(datasets[j], options),
+                                trees=initial_populations[i]
+                            ),
+                            HallOfFame(options, datasets[j]),
+                            RecordType(),
+                            Float64(options.population_size),
+                        )
+                    end,
+                    parallelism = ropt.parallelism,
+                    worker_idx = worker_idx
+                )
             end
         push!(state.worker_output[j], new_pop)
     end
