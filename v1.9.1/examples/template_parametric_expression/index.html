@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Parameterized Template Expressions · SymbolicRegression.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link rel="canonical" href="https://ai.damtp.cam.ac.uk/symbolicregression/stable/examples/template_parametric_expression/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../index_base/"><img src="../../assets/logo.svg" alt="SymbolicRegression.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../index_base/">SymbolicRegression.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../index_base/">Contents</a></li><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../">Short Examples</a></li><li><a class="tocitem" href="../template_expression/">Template Expressions</a></li><li><a class="tocitem" href="../parameterized_function/">Parameterized Expressions</a></li><li class="is-active"><a class="tocitem" href>Parameterized Template Expressions</a><ul class="internal"><li><a class="tocitem" href="#The-Model-Structure"><span>The Model Structure</span></a></li><li><a class="tocitem" href="#Defining-the-Template"><span>Defining the Template</span></a></li><li><a class="tocitem" href="#Interpreting-Results"><span>Interpreting Results</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../../api/">API</a></li><li><a class="tocitem" href="../../losses/">Losses</a></li><li><a class="tocitem" href="../../types/">Types</a></li><li><a class="tocitem" href="../../customization/">Customization</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Parameterized Template Expressions</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Parameterized Template Expressions</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/MilesCranmer/SymbolicRegression.jl/blob/master/test/test_parametric_template_expressions.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Parametrized-Template-Expressions"><a class="docs-heading-anchor" href="#Parametrized-Template-Expressions">Parametrized Template Expressions</a><a id="Parametrized-Template-Expressions-1"></a><a class="docs-heading-anchor-permalink" href="#Parametrized-Template-Expressions" title="Permalink"></a></h1><p>Template expressions in SymbolicRegression.jl can include parametric forms - expressions with tunable constants that are optimized during the search. This can even include learn class-specific parameters that vary by category, analogous to <code>ParametricExpression</code>s.</p><p>In this tutorial, we&#39;ll demonstrate how to use parametric template expressions to learn a model where:</p><ul><li>Some constants are shared across all data points</li><li>Other constants vary by class</li><li>The structure combines known forms (like cosine) with unknown sub-expressions</li></ul><pre><code class="language-julia hljs">using SymbolicRegression
+using Random: MersenneTwister, randn, rand
+using MLJBase: machine, fit!, predict, report</code></pre><h2 id="The-Model-Structure"><a class="docs-heading-anchor" href="#The-Model-Structure">The Model Structure</a><a id="The-Model-Structure-1"></a><a class="docs-heading-anchor-permalink" href="#The-Model-Structure" title="Permalink"></a></h2><p>We&#39;ll work with a model that combines:</p><ul><li>A cosine term with class-specific phase shifts</li><li>A polynomial term</li><li>Global scaling parameters</li></ul><p>Specifically, let&#39;s say that our true model has the form:</p><p class="math-container">\[y = A \cos(f(x_2) + \Delta_c) + g(x_1) - B\]</p><p>where:</p><ul><li><span>$A$</span> is a global amplitude (same for all classes)</li><li><span>$\Delta_c$</span> is a phase shift that depends on the class label</li><li><span>$f(x_2)$</span> is some function of <span>$x_2$</span> (in our case, just <span>$x_2$</span>)</li><li><span>$g(x_1)$</span> is some function of <span>$x_1$</span> (in our case, <span>$x_1^2$</span>)</li><li><span>$B$</span> is a global offset</li></ul><p>We&#39;ll generate synthetic data where:</p><ul><li><span>$A = 2.0$</span> (amplitude)</li><li><span>$\Delta_1 = 0.1$</span> (phase shift for class 1)</li><li><span>$\Delta_2 = 1.5$</span> (phase shift for class 2)</li><li><span>$B = 2.0$</span> (offset)</li></ul><pre><code class="language-julia hljs"># Set random seed for reproducibility
+rng = MersenneTwister(0)
+
+# Number of data points
+n = 200
+
+# Generate random features
+x1 = randn(rng, n)            # feature 1
+x2 = randn(rng, n)            # feature 2
+class = rand(rng, 1:2, n)     # class labels 1 or 2
+
+# Define the true parameters
+Δ_phase = [0.1, 1.5]   # phase shift for class 1 and 2
+A = 2.0                # amplitude
+B = 2.0                # offset
+
+# Add some noise
+eps = randn(rng, n) * 1e-5
+
+# Generate targets using the true underlying function
+y = [
+    A * cos(x2[i] + Δ_phase[class[i]]) + x1[i]^2 - B
+    for i in 1:n
+]
+y .+= eps</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">200-element Vector{Float64}:
+ -0.5701122294617497
+ -0.5997248546207727
+ -3.213537760261551
+ -3.7125477018459843
+ -2.4548070885543494
+ -1.9517096670556926
+  1.1041462223217429
+ -2.244653893032382
+ -2.2719553386239197
+ -1.2771884871477148
+  ⋮
+ -0.03912319768225371
+ -2.942389458733852
+ -0.5295870820960696
+ -1.0432446686006935
+ -0.2995868424235526
+ -3.538898427486066
+ -0.811395381747143
+ -0.2146004346109726
+  0.5166949494020697</code></pre><h2 id="Defining-the-Template"><a class="docs-heading-anchor" href="#Defining-the-Template">Defining the Template</a><a id="Defining-the-Template-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-the-Template" title="Permalink"></a></h2><p>Now we&#39;ll use the <code>@template_spec</code> macro to encode this structure, which will create a <code>TemplateExpressionSpec</code> object.</p><pre><code class="language-julia hljs"># Define the template structure with sub-expressions f and g
+template = @template_spec(
+    expressions=(f, g),
+    parameters=(p1=2, p2=2)
+) do x1, x2, class
+    return p1[1] * cos(f(x2) + p2[class]) + g(x1) - p1[2]
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">TemplateExpressionSpec{TemplateStructure{(:f, :g), (:p1, :p2), Main.var&quot;#3#4&quot;, @NamedTuple{f::Int64, g::Int64}, @NamedTuple{p1::Int64, p2::Int64}}}(TemplateStructure{(:f, :g), (:p1, :p2), Main.var&quot;#3#4&quot;, @NamedTuple{f::Int64, g::Int64}, @NamedTuple{p1::Int64, p2::Int64}}(Main.var&quot;#3#4&quot;(), (f = 1, g = 1), (p1 = 2, p2 = 2)))</code></pre><p>Let&#39;s break down this template:</p><ul><li>We declared two sub-expressions: <code>f</code> and <code>g</code> that we want to learn<ul><li>By calling <code>f(x2)</code> and <code>g(x1)</code>, the forward pass will constrain both expressions   to only include a single input argument.</li></ul></li><li>We declared two parameter vectors: <code>p1</code> (length 2) and <code>p2</code> (length 2)</li><li>The template combines these components as:<ul><li><code>p1[1]</code> is the amplitude (global parameter)</li><li><code>cos(f(x2) + p2[class])</code> adds a class-specific phase shift via <code>p2[class]</code></li><li><code>g(x1)</code> represents (we hope) the quadratic term</li><li><code>p1[2]</code> is the global offset</li></ul></li></ul><p>Now we&#39;ll set up an SRRegressor with our template:</p><pre><code class="language-julia hljs">model = SRRegressor(
+    binary_operators = (+, -, *, /),
+    niterations = 300,
+    maxsize = 20,
+    expression_spec = template,
+)
+
+# Package data up for MLJ
+X = (; x1, x2, class)
+mach = machine(model, X, y)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">untrained Machine; caches model-specific representations of data
+  model: SRRegressor(defaults = nothing, …)
+  args: 
+    1:	Source @662 ⏎ ScientificTypesBase.Table{Union{AbstractVector{ScientificTypesBase.Continuous}, AbstractVector{ScientificTypesBase.Count}}}
+    2:	Source @189 ⏎ AbstractVector{ScientificTypesBase.Continuous}
+</code></pre><p>At this point, you would run:</p><pre><code class="language-julia hljs">fit!(mach)</code></pre><p>which will evolve expressions following our template structure. The final result is accessible with:</p><pre><code class="language-julia hljs">report(mach)</code></pre><p>which returns a named tuple of the fitted results, including the <code>.equations</code> field containing the <code>TemplateExpression</code> objects that dominated the Pareto front.</p><h2 id="Interpreting-Results"><a class="docs-heading-anchor" href="#Interpreting-Results">Interpreting Results</a><a id="Interpreting-Results-1"></a><a class="docs-heading-anchor-permalink" href="#Interpreting-Results" title="Permalink"></a></h2><p>After training, you can inspect the expressions found:</p><pre><code class="language-julia hljs">r = report(mach)
+best_expr = r.equations[r.best_idx]</code></pre><p>You can also extract the individual sub-expressions (stored as <code>ComposableExpression</code> objects):</p><pre><code class="language-julia hljs">inner_exprs = get_contents(best_expr)
+metadata = get_metadata(best_expr)</code></pre><p>The learned expression should closely match our true generating function:</p><ul><li><code>f(x2)</code> should be approximately <code>x2</code>  (note it will show up as <code>x1</code> in the raw contents, but this simply is a relative indexing of its arguments!)</li><li><code>g(x1)</code> should be approximately <code>x1^2</code></li><li>The parameters should be close to their true values:<ul><li><code>p1[1] ≈ 2.0</code> (amplitude)</li><li><code>p1[2] ≈ 2.0</code> (offset)</li><li><code>p2[1] ≈ 0.1 mod 2π</code> (phase shift for class 1)</li><li><code>p2[2] ≈ 1.5 mod 2π</code> (phase shift for class 2)</li></ul></li></ul><p>You can use the learned expression to make predictions using either <code>predict(mach, X)</code>, or by calling <code>best_expr(X_raw)</code> directly (note that <code>X_raw</code> needs to be a matrix of shape <code>(d, n)</code> where <code>n</code> is the number of samples and <code>d</code> is the dimension of the features).</p><hr/><details>
+<summary> Show raw source code </summary><pre><code class="language-julia hljs">#=
+# Parametrized Template Expressions
+
+Template expressions in SymbolicRegression.jl can include parametric forms - expressions with tunable constants
+that are optimized during the search. This can even include learn class-specific parameters that vary by category,
+analogous to `ParametricExpression`s.
+
+In this tutorial, we&#39;ll demonstrate how to use parametric template expressions to learn a model where:
+
+- Some constants are shared across all data points
+- Other constants vary by class
+- The structure combines known forms (like cosine) with unknown sub-expressions
+
+=#
+
+using SymbolicRegression
+using Random: MersenneTwister, randn, rand
+using MLJBase: machine, fit!, predict, report
+
+#=
+## The Model Structure
+
+We&#39;ll work with a model that combines:
+- A cosine term with class-specific phase shifts
+- A polynomial term
+- Global scaling parameters
+
+Specifically, let&#39;s say that our true model has the form:
+
+\```math
+y = A \cos(f(x_2) + \Delta_c) + g(x_1) - B
+\```
+
+where:
+- ``A`` is a global amplitude (same for all classes)
+- ``\Delta_c`` is a phase shift that depends on the class label
+- ``f(x_2)`` is some function of ``x_2`` (in our case, just ``x_2``)
+- ``g(x_1)`` is some function of ``x_1`` (in our case, ``x_1^2``)
+- ``B`` is a global offset
+
+We&#39;ll generate synthetic data where:
+- ``A = 2.0`` (amplitude)
+- ``\Delta_1 = 0.1`` (phase shift for class 1)
+- ``\Delta_2 = 1.5`` (phase shift for class 2)
+- ``B = 2.0`` (offset)
+=#
+
+## Set random seed for reproducibility
+rng = MersenneTwister(0)
+
+## Number of data points
+n = 200
+
+## Generate random features
+x1 = randn(rng, n)            # feature 1
+x2 = randn(rng, n)            # feature 2
+class = rand(rng, 1:2, n)     # class labels 1 or 2
+
+## Define the true parameters
+Δ_phase = [0.1, 1.5]   # phase shift for class 1 and 2
+A = 2.0                # amplitude
+B = 2.0                # offset
+
+## Add some noise
+eps = randn(rng, n) * 1e-5
+
+## Generate targets using the true underlying function
+y = [
+    A * cos(x2[i] + Δ_phase[class[i]]) + x1[i]^2 - B
+    for i in 1:n
+]
+y .+= eps
+
+#=
+## Defining the Template
+
+Now we&#39;ll use the `@template_spec` macro to encode this structure, which will create
+a `TemplateExpressionSpec` object.
+=#
+
+## Define the template structure with sub-expressions f and g
+template = @template_spec(
+    expressions=(f, g),
+    parameters=(p1=2, p2=2)
+) do x1, x2, class
+    return p1[1] * cos(f(x2) + p2[class]) + g(x1) - p1[2]
+end
+
+#=
+Let&#39;s break down this template:
+- We declared two sub-expressions: `f` and `g` that we want to learn
+    - By calling `f(x2)` and `g(x1)`, the forward pass will constrain both expressions
+        to only include a single input argument.
+- We declared two parameter vectors: `p1` (length 2) and `p2` (length 2)
+- The template combines these components as:
+    - `p1[1]` is the amplitude (global parameter)
+    - `cos(f(x2) + p2[class])` adds a class-specific phase shift via `p2[class]`
+    - `g(x1)` represents (we hope) the quadratic term
+    - `p1[2]` is the global offset
+
+Now we&#39;ll set up an SRRegressor with our template:
+=#
+
+model = SRRegressor(
+    binary_operators = (+, -, *, /),
+    niterations = 300,
+    maxsize = 20,
+    expression_spec = template,
+    early_stop_condition = (loss, complexity) -&gt; loss &lt; 1e-5 &amp;&amp; complexity &lt; 10,  #src
+)
+
+## Package data up for MLJ
+X = (; x1, x2, class)
+mach = machine(model, X, y)
+
+#=
+At this point, you would run:
+\```julia
+fit!(mach)
+\```
+
+which will evolve expressions following our template structure. The final result is accessible with:
+\```julia
+report(mach)
+\```
+which returns a named tuple of the fitted results, including the `.equations` field containing
+the `TemplateExpression` objects that dominated the Pareto front.
+
+## Interpreting Results
+
+After training, you can inspect the expressions found:
+\```julia
+r = report(mach)
+best_expr = r.equations[r.best_idx]
+\```
+
+You can also extract the individual sub-expressions (stored as `ComposableExpression` objects):
+\```julia
+inner_exprs = get_contents(best_expr)
+metadata = get_metadata(best_expr)
+\```
+
+The learned expression should closely match our true generating function:
+- `f(x2)` should be approximately `x2`  (note it will show up as `x1` in the raw contents, but this simply is a relative indexing of its arguments!)
+- `g(x1)` should be approximately `x1^2`
+- The parameters should be close to their true values:
+    - `p1[1] ≈ 2.0` (amplitude)
+    - `p1[2] ≈ 2.0` (offset)
+    - `p2[1] ≈ 0.1 mod 2π` (phase shift for class 1)
+    - `p2[2] ≈ 1.5 mod 2π` (phase shift for class 2)
+
+You can use the learned expression to make predictions using either `predict(mach, X)`,
+or by calling `best_expr(X_raw)` directly (note that `X_raw` needs to be a matrix of shape
+`(d, n)` where `n` is the number of samples and `d` is the dimension of the features).
+=#</code></pre><p>which uses Literate.jl to generate this page.</p></details></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../parameterized_function/">« Parameterized Expressions</a><a class="docs-footer-nextpage" href="../../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Friday 4 April 2025 22:21">Friday 4 April 2025</span>. Using Julia version 1.11.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
