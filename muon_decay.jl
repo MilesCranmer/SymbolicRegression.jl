@@ -24,10 +24,6 @@ function update_feature!(node::Node)
     return node
 end
 
-function update_feature_popmember!(popmem::PopMember)
-    update_feature!
-end
-
 df_m1 = CSV.read("./transfer/marginal_data_0.npy", DataFrame, header=false)
 df_m2 = CSV.read("./transfer/marginal_data_1.npy", DataFrame, header=false)
 df_c1_slices = CSV.read("./transfer/conditional_slices_0.npy", DataFrame, header=false)
@@ -139,6 +135,10 @@ pow2(x) = x^2
 pow3(x) = x^3
 pow4(x) = x^4
 pow5(x) = x^5
+
+function p2f(x)
+    return x^2
+end
 #region Low level API
 options = SymbolicRegression.Options(;
     binary_operators=[+, *, /, -], unary_operators=[exp, pow2, pow3, pow4, pow5]
@@ -159,8 +159,8 @@ dominating_m_x2 = calculate_pareto_frontier(hall_of_fame_m_x2)
 trees_m_x2 = [member.tree for member in dominating_m_x2]
 
 
-for i in eachindex(trees_m_x2)
-    update_feature!(trees_m_x2[i].tree)
+for i in eachindex(hall_of_fame_m_x2.members)
+    update_feature!(hall_of_fame_m_x2.members[i].tree.tree)
 end
 
 conditional_hall_of_fame_x1 =[]
@@ -188,3 +188,15 @@ for i in eachindex(conditional_data_x2)
     end
 end
 
+# Multiply marginals and conditionals to obtain PopMember for initialization
+# 30*8 = 240 conditionals
+# 30 marginals
+# 240*30 = 7200
+# 7200*2 = 14,400
+
+# How many expressions per population?
+# How many populations?
+# How to distribute expressions to seed each population?
+
+#Combine conditionals and marginals like this
+# conditional_hall_of_fame_x2[1].members[8].tree = conditional_hall_of_fame_x1[1].members[8].tree * hall_of_fame_m_x2.members[7].tree
