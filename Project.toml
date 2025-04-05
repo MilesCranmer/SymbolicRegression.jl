@@ -1,7 +1,7 @@
 name = "SymbolicRegression"
 uuid = "8254be44-1295-4e6a-a16d-46603ac705cb"
 authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
-version = "1.9.0"
+version = "1.9.1"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -63,7 +63,7 @@ Optim = "1.8 - 1.12"
 Pkg = "<0.0.1, 1"
 PrecompileTools = "1"
 Printf = "<0.0.1, 1"
-ProgressMeter = "1.10"
+ProgressMeter = "1.10.0 - 1.10.2"
 Random = "<0.0.1, 1"
 Reexport = "1"
 SpecialFunctions = "0.10.1, 1, 2"
