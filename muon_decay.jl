@@ -200,3 +200,5 @@ end
 
 #Combine conditionals and marginals like this
 # conditional_hall_of_fame_x2[1].members[8].tree = conditional_hall_of_fame_x1[1].members[8].tree * hall_of_fame_m_x2.members[7].tree
+
+# Cross validation with KDE for the full pipeline
