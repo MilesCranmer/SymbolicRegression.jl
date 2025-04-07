@@ -30,7 +30,7 @@ def generate_marginals(samples):
         X, density = kde1D(samples[:, vid], bw)
         data = np.hstack([X.reshape(-1, 1), density.reshape(-1, 1)])
         np.savetxt(file_name, data, delimiter=",")
-        
+
 
 def generate_conditionals(samples):
     # conditional_data_[0-1]_slice_[0-7].csv
@@ -77,10 +77,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-

@@ -61,8 +61,8 @@ joint_data_y = vcat(
 
 m_x1_p = plot(m_x[1], m_y[1], seriestype=:scatter, title="Scatter plot of data x0", xlabel="X-axis", ylabel="Y-axis")
 m_x2_p = plot(m_x[2], m_y[2], seriestype=:scatter, title="Scatter plot of data x1", xlabel="X-axis", ylabel="Y-axis")
-# display(m_x1_p) 
-# display(m_x2_p) 
+# display(m_x1_p)
+# display(m_x2_p)
 
 pow2(x) = x^2
 pow3(x) = x^3
@@ -84,7 +84,7 @@ hall_of_fame_m_x1 = equation_search(
 hall_of_fame_m_x2 = equation_search(
         reshape(m_x[2], 1, :), m_y[2]; options=options, parallelism=:serial, niterations=10
     )
-   
+
 dominating_m_x1 = calculate_pareto_frontier(hall_of_fame_m_x1)
 trees_m_x1 = [member.tree for member in dominating_m_x1]
 

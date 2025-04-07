@@ -122,7 +122,7 @@ if true
     options1 = SymbolicRegression.Options(;
         binary_operators=[+, *, /, -], unary_operators=[cos, exp], populations = 2, population_size = length(initial_population[1])
         )
-    
+
     hof = equation_search(
          reshape(collect(x), 1, :), prob_x; options=options1, parallelism=:serial, initial_populations=initial_population
     )
@@ -157,7 +157,7 @@ end
 
 # r=report(mach)
 # println("$(r.equations[r.best_idx])")
-#endregion 
+#endregion
 
 #region custom Dataset and Loss
 var = [zeros(size(x)); zeros(size(x)); ones(size(y)); ones(size(y))]
