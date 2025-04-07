@@ -54,8 +54,8 @@ joint_data_x = vcat(
 )
 
 joint_data_y = vcat(
-    [hcat(y, repeat([info], length(y))) for (y, info) in zip(c_y1, c_y1_slice_info)]...,
-    [hcat(y, repeat([info], length(y))) for (y, info) in zip(c_y2, c_y2_slice_info)]...
+    [y .* info for (y, info) in zip(c_y1, c_y1_slice_info)]...,
+    [y .* info for (y, info) in zip(c_y2, c_y2_slice_info)]...
 )
 
 
