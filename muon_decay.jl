@@ -24,112 +24,45 @@ function update_feature!(node::Node)
     return node
 end
 
-df_m1 = CSV.read("./transfer/marginal_data_0.npy", DataFrame, header=false)
-df_m2 = CSV.read("./transfer/marginal_data_1.npy", DataFrame, header=false)
-df_c1_slices = CSV.read("./transfer/conditional_slices_0.npy", DataFrame, header=false)
-df_c2_slices = CSV.read("./transfer/conditional_slices_1.npy", DataFrame, header=false)
-df_c1_data_slice_1 = CSV.read("./transfer/conditional_data_0_slice_0.npy", DataFrame, header=false)
-df_c1_data_slice_2 = CSV.read("./transfer/conditional_data_0_slice_1.npy", DataFrame, header=false)
-df_c1_data_slice_3 = CSV.read("./transfer/conditional_data_0_slice_2.npy", DataFrame, header=false)
-df_c1_data_slice_4 = CSV.read("./transfer/conditional_data_0_slice_3.npy", DataFrame, header=false)
-df_c1_data_slice_5 = CSV.read("./transfer/conditional_data_0_slice_4.npy", DataFrame, header=false)
-df_c1_data_slice_6 = CSV.read("./transfer/conditional_data_0_slice_5.npy", DataFrame, header=false)
-df_c1_data_slice_7 = CSV.read("./transfer/conditional_data_0_slice_6.npy", DataFrame, header=false)
-df_c1_data_slice_8 = CSV.read("./transfer/conditional_data_0_slice_7.npy", DataFrame, header=false)
-df_c2_data_slice_1 = CSV.read("./transfer/conditional_data_1_slice_0.npy", DataFrame, header=false)
-df_c2_data_slice_2 = CSV.read("./transfer/conditional_data_1_slice_1.npy", DataFrame, header=false)
-df_c2_data_slice_3 = CSV.read("./transfer/conditional_data_1_slice_2.npy", DataFrame, header=false)
-df_c2_data_slice_4 = CSV.read("./transfer/conditional_data_1_slice_3.npy", DataFrame, header=false)
-df_c2_data_slice_5 = CSV.read("./transfer/conditional_data_1_slice_4.npy", DataFrame, header=false)
-df_c2_data_slice_6 = CSV.read("./transfer/conditional_data_1_slice_5.npy", DataFrame, header=false)
-df_c2_data_slice_7 = CSV.read("./transfer/conditional_data_1_slice_6.npy", DataFrame, header=false)
-df_c2_data_slice_8 = CSV.read("./transfer/conditional_data_1_slice_7.npy", DataFrame, header=false)
+df_m = [CSV.read("./data/marginal_data_$(i).csv", DataFrame; header=false) for i in 0:1]
+df_c_slices = [CSV.read("./data/conditional_slices_$(i).csv", DataFrame; header=false) for i in 0:1]
+df_c_data_slices = [[CSV.read("./data/conditional_data_$(i)_slice_$(j).csv", DataFrame; header=false) for j in 0:7] for i in 0:1]
 
-m_x1 = df_m1[:,1]
-m_y1 = df_m1[:,2]
-m_x2 = df_m2[:,1]
-m_y2 = df_m2[:,2]
+m_x = [df[:, 1] for df in df_m]
+m_y = [df[:, 2] for df in df_m]
 
-c1_x1_slice_info = df_c1_slices[1,1]; c1_y1_slice_info = df_c1_slices[1,2]
-c2_x1_slice_info = df_c1_slices[2,1]; c2_y1_slice_info = df_c1_slices[2,2]
-c3_x1_slice_info = df_c1_slices[3,1]; c3_y1_slice_info = df_c1_slices[3,2]
-c4_x1_slice_info = df_c1_slices[4,1]; c4_y1_slice_info = df_c1_slices[4,2]
-c5_x1_slice_info = df_c1_slices[5,1]; c5_y1_slice_info = df_c1_slices[5,2]
-c6_x1_slice_info = df_c1_slices[6,1]; c6_y1_slice_info = df_c1_slices[6,2]
-c7_x1_slice_info = df_c1_slices[7,1]; c7_y1_slice_info = df_c1_slices[7,2]
-c8_x1_slice_info = df_c1_slices[8,1]; c8_y1_slice_info = df_c1_slices[8,2]
+c_x1_slice_info = [df_c_slices[1][i, 1] for i in 1:8]
+c_y1_slice_info = [df_c_slices[1][i, 2] for i in 1:8]
 
-c1_x2_slice_info = df_c2_slices[1,1]; c1_y2_slice_info = df_c2_slices[1,2]
-c2_x2_slice_info = df_c2_slices[2,1]; c2_y2_slice_info = df_c2_slices[2,2]
-c3_x2_slice_info = df_c2_slices[3,1]; c3_y2_slice_info = df_c2_slices[3,2]
-c4_x2_slice_info = df_c2_slices[4,1]; c4_y2_slice_info = df_c2_slices[4,2]
-c5_x2_slice_info = df_c2_slices[5,1]; c5_y2_slice_info = df_c2_slices[5,2]
-c6_x2_slice_info = df_c2_slices[6,1]; c6_y2_slice_info = df_c2_slices[6,2]
-c7_x2_slice_info = df_c2_slices[7,1]; c7_y2_slice_info = df_c2_slices[7,2]
-c8_x2_slice_info = df_c2_slices[8,1]; c8_y2_slice_info = df_c2_slices[8,2]
+c_x2_slice_info = [df_c_slices[2][i, 1] for i in 1:8]
+c_y2_slice_info = [df_c_slices[2][i, 2] for i in 1:8]
 
-c1_x1 = df_c1_data_slice_1[:,1]; c1_y1 = df_c1_data_slice_1[:,2]
-c2_x1 = df_c1_data_slice_2[:,1]; c2_y1 = df_c1_data_slice_2[:,2]
-c3_x1 = df_c1_data_slice_3[:,1]; c3_y1 = df_c1_data_slice_3[:,2]
-c4_x1 = df_c1_data_slice_4[:,1]; c4_y1 = df_c1_data_slice_4[:,2]
-c5_x1 = df_c1_data_slice_5[:,1]; c5_y1 = df_c1_data_slice_5[:,2]
-c6_x1 = df_c1_data_slice_6[:,1]; c6_y1 = df_c1_data_slice_6[:,2]
-c7_x1 = df_c1_data_slice_7[:,1]; c7_y1 = df_c1_data_slice_7[:,2]
-c8_x1 = df_c1_data_slice_8[:,1]; c8_y1 = df_c1_data_slice_8[:,2]
+c_x1 = [df[:, 1] for df in df_c_data_slices[1]]
+c_y1 = [df[:, 2] for df in df_c_data_slices[1]]
 
-c1_x2 = df_c2_data_slice_1[:,1]; c1_y2 = df_c2_data_slice_1[:,2]
-c2_x2 = df_c2_data_slice_2[:,1]; c2_y2 = df_c2_data_slice_2[:,2]
-c3_x2 = df_c2_data_slice_3[:,1]; c3_y2 = df_c2_data_slice_3[:,2]
-c4_x2 = df_c2_data_slice_4[:,1]; c4_y2 = df_c2_data_slice_4[:,2]
-c5_x2 = df_c2_data_slice_5[:,1]; c5_y2 = df_c2_data_slice_5[:,2]
-c6_x2 = df_c2_data_slice_6[:,1]; c6_y2 = df_c2_data_slice_6[:,2]
-c7_x2 = df_c2_data_slice_7[:,1]; c7_y2 = df_c2_data_slice_7[:,2]
-c8_x2 = df_c2_data_slice_8[:,1]; c8_y2 = df_c2_data_slice_8[:,2]
+c_x2 = [df[:, 1] for df in df_c_data_slices[2]]
+c_y2 = [df[:, 2] for df in df_c_data_slices[2]]
 
-conditional_data_x1 = [[c1_x1], [c2_x1], [c3_x1], [c4_x1], [c5_x1], [c6_x1], [c7_x1], [c8_x1]]
-conditional_data_x2 = [[c1_x2], [c2_x2], [c3_x2], [c4_x2], [c5_x2], [c6_x2], [c7_x2], [c8_x2]]
-conditional_data_y1 = [[c1_y1], [c2_y1], [c3_y1], [c4_y1], [c5_y1], [c6_y1], [c7_y1], [c8_y1]]
-conditional_data_y2 = [[c1_y2], [c2_y2], [c3_y2], [c4_y2], [c5_y2], [c6_y2], [c7_y2], [c8_y2]]
+conditional_data_x1 = [[x] for x in c_x1]
+conditional_data_x2 = [[x] for x in c_x2]
+conditional_data_y1 = [[y] for y in c_y1]
+conditional_data_y2 = [[y] for y in c_y2]
 
-joint_data_x = [c1_x1  repeat([c1_x1_slice_info], length(c1_x1));
-                c2_x1 repeat([c2_x1_slice_info], length(c2_x1));
-                c3_x1 repeat([c3_x1_slice_info], length(c3_x1));
-                c4_x1 repeat([c4_x1_slice_info], length(c4_x1));
-                c5_x1 repeat([c5_x1_slice_info], length(c5_x1));
-                c6_x1 repeat([c6_x1_slice_info], length(c6_x1));
-                c7_x1 repeat([c7_x1_slice_info], length(c7_x1));
-                c8_x1 repeat([c8_x1_slice_info], length(c8_x1));
-                c1_x2 repeat([c1_x2_slice_info], length(c1_x2));
-                c2_x2 repeat([c2_x2_slice_info], length(c2_x2));
-                c3_x2 repeat([c3_x2_slice_info], length(c3_x2));
-                c4_x2 repeat([c4_x2_slice_info], length(c4_x2));
-                c5_x2 repeat([c5_x2_slice_info], length(c5_x2));
-                c6_x2 repeat([c6_x2_slice_info], length(c6_x2));
-                c7_x2 repeat([c7_x2_slice_info], length(c7_x2));
-                c8_x2 repeat([c8_x2_slice_info], length(c8_x2))]
+joint_data_x = vcat(
+    [hcat(x, repeat([info], length(x))) for (x, info) in zip(c_x1, c_x1_slice_info)]...,
+    [hcat(x, repeat([info], length(x))) for (x, info) in zip(c_x2, c_x2_slice_info)]...
+)
 
-joint_data_y = [c1_y1*c1_y1_slice_info;
-                c2_y1*c2_y1_slice_info;
-                c3_y1*c3_y1_slice_info;
-                c4_y1*c4_y1_slice_info;
-                c5_y1*c5_y1_slice_info;
-                c6_y1*c6_y1_slice_info;
-                c7_y1*c7_y1_slice_info;
-                c8_y1*c8_y1_slice_info;
-                c1_y2*c1_y2_slice_info;
-                c2_y2*c2_y2_slice_info;
-                c3_y2*c3_y2_slice_info;
-                c4_y2*c4_y2_slice_info;
-                c5_y2*c5_y2_slice_info;
-                c6_y2*c6_y2_slice_info;
-                c7_y2*c7_y2_slice_info;
-                c8_y2*c8_y2_slice_info]
+joint_data_y = vcat(
+    [hcat(y, repeat([info], length(y))) for (y, info) in zip(c_y1, c_y1_slice_info)]...,
+    [hcat(y, repeat([info], length(y))) for (y, info) in zip(c_y2, c_y2_slice_info)]...
+)
 
 
-m_x1_p = plot(m_x1, m_y1, seriestype=:scatter, title="Scatter plot of data x0", xlabel="X-axis", ylabel="Y-axis")
-m_x2_p = plot(m_x2, m_y2, seriestype=:scatter, title="Scatter plot of data x1", xlabel="X-axis", ylabel="Y-axis")
-display(m_x1_p)
-display(m_x2_p)
+m_x1_p = plot(m_x[1], m_y[1], seriestype=:scatter, title="Scatter plot of data x0", xlabel="X-axis", ylabel="Y-axis")
+m_x2_p = plot(m_x[2], m_y[2], seriestype=:scatter, title="Scatter plot of data x1", xlabel="X-axis", ylabel="Y-axis")
+# display(m_x1_p) 
+# display(m_x2_p) 
 
 pow2(x) = x^2
 pow3(x) = x^3
@@ -145,11 +78,11 @@ options = SymbolicRegression.Options(;
 )
 
 hall_of_fame_m_x1 = equation_search(
-        reshape(m_x1, 1, :), m_y1; options=options, parallelism=:serial, niterations=10
+        reshape(m_x[1], 1, :), m_y[1]; options=options, parallelism=:serial, niterations=10
     )
 
 hall_of_fame_m_x2 = equation_search(
-        reshape(m_x2, 1, :), m_y2; options=options, parallelism=:serial, niterations=10
+        reshape(m_x[2], 1, :), m_y[2]; options=options, parallelism=:serial, niterations=10
     )
    
 dominating_m_x1 = calculate_pareto_frontier(hall_of_fame_m_x1)
