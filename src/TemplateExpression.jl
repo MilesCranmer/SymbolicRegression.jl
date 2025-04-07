@@ -52,7 +52,7 @@ using ..CheckConstraintsModule: CheckConstraintsModule as CC
 using ..ComplexityModule: ComplexityModule
 using ..LossFunctionsModule: LossFunctionsModule as LF
 using ..MutateModule: MutateModule as MM
-using ..PopMemberModule: PopMember
+using ..PopMemberModule: PopMember, AbstractPopMember
 using ..ComposableExpressionModule: ComposableExpression, ValidVector
 
 struct ParamVector{T} <: AbstractVector{T}
@@ -692,7 +692,7 @@ function MM.condition_mutation_weights!(
     @nospecialize(member::P),
     @nospecialize(options::AbstractOptions),
     curmaxsize::Int,
-) where {T,L,N<:TemplateExpression,P<:PopMember{T,L,N}}
+) where {T,L,N<:TemplateExpression,P<:AbstractPopMember{T,L,N}}
     if !preserve_sharing(typeof(member.tree))
         weights.form_connection = 0.0
         weights.break_connection = 0.0

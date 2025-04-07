@@ -2,7 +2,7 @@ module MigrationModule
 
 using ..CoreModule: AbstractOptions
 using ..PopulationModule: Population
-using ..PopMemberModule: PopMember, reset_birth!
+using ..PopMemberModule: AbstractPopMember, reset_birth!
 using ..UtilsModule: poisson_sample
 
 """
@@ -14,7 +14,7 @@ to do so. The original migrant population is not modified. Pass with, e.g.,
 """
 function migrate!(
     migration::Pair{Vector{PM},P}, options::AbstractOptions; frac::AbstractFloat
-) where {T,L,N,PM<:PopMember{T,L,N},P<:Population{T,L,N}}
+) where {T,L,N,PM<:AbstractPopMember{T,L,N},P<:Population{T,L,N}}
     base_pop = migration.second
     population_size = length(base_pop.members)
     mean_number_replaced = population_size * frac

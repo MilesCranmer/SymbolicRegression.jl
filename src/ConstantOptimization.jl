@@ -15,11 +15,11 @@ using ..CoreModule:
     AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, specialized_options, dataset_fraction
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_loss, loss_to_cost
-using ..PopMemberModule: PopMember
+using ..PopMemberModule: AbstractPopMember
 
 function optimize_constants(
     dataset::Dataset{T,L}, member::P, options::AbstractOptions
-)::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
+)::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:AbstractPopMember{T,L}}
     nconst = count_constants_for_optimization(member.tree)
     nconst == 0 && return (member, 0.0)
     if nconst == 1 && !(T <: Complex)
@@ -48,7 +48,7 @@ count_constants_for_optimization(ex::Expression) = count_scalar_constants(ex)
 
 function _optimize_constants(
     dataset, member::P, options, algorithm, optimizer_options
-)::Tuple{P,Float64} where {T,L,P<:PopMember{T,L}}
+)::Tuple{P,Float64} where {T,L,P<:AbstractPopMember{T,L}}
     tree = member.tree
     eval_fraction = dataset_fraction(dataset)
     x0, refs = get_scalar_constants(tree)

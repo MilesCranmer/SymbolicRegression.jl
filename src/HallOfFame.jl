@@ -5,7 +5,7 @@ using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
 using ..ComplexityModule: compute_complexity
-using ..PopMemberModule: PopMember
+using ..PopMemberModule: AbstractPopMember, PopMember
 using ..InterfaceDynamicExpressionsModule: format_dimensions, WILDCARD_UNIT_STRING
 using Printf: @sprintf
 
@@ -23,7 +23,7 @@ have been set, you can run `.members[exists]`.
 - `exists::Array{Bool,1}`: Whether the member at the given complexity has been set.
 """
 struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
-    members::Array{PopMember{T,L,N},1}
+    members::Array{<:AbstractPopMember{T,L,N},1}
     exists::Array{Bool,1} #Whether it has been set
 end
 function Base.show(io::IO, mime::MIME"text/plain", hof::HallOfFame{T,L,N}) where {T,L,N}
@@ -91,7 +91,11 @@ end
 """
 function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
     # TODO - remove dataset from args.
-    P = PopMember{T,L,N}
+    P = if length(hallOfFame.members) > 0
+        typeof(hallOfFame.members[1])
+    else
+        PopMember{T,L,N}
+    end
     # Dominating pareto curve - must be better than all simpler equations
     dominating = P[]
     for size in eachindex(hallOfFame.members)

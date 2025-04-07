@@ -2,6 +2,7 @@ module SymbolicRegression
 
 # Types
 export Population,
+    AbstractPopMember,
     PopMember,
     HallOfFame,
     Options,
@@ -295,7 +296,7 @@ using .MutationFunctionsModule:
     crossover_trees
 using .InterfaceDynamicExpressionsModule: @extend_operators
 using .LossFunctionsModule: eval_loss, eval_cost, update_baseline_loss!, score_func
-using .PopMemberModule: PopMember, reset_birth!
+using .PopMemberModule: AbstractPopMember, PopMember, reset_birth!
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 using .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve

@@ -8,12 +8,12 @@ using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: eval_cost, update_baseline_loss!
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..MutationFunctionsModule: gen_random_tree
-using ..PopMemberModule: PopMember
+using ..PopMemberModule: PopMember, AbstractPopMember
 using ..UtilsModule: bottomk_fast, argmin_fast, PerTaskCache
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
-struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
-    members::Array{PopMember{T,L,N},1}
+struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T},PM<:AbstractPopMember{T,L,N}}
+    members::Array{PM,1}
     n::Int
 end
 """
@@ -21,7 +21,7 @@ end
 
 Create population from list of PopMembers.
 """
-function Population(pop::Vector{<:PopMember})
+function Population(pop::Vector{<:AbstractPopMember{T,L}}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     return Population(pop, size(pop, 1))
 end
 
@@ -91,7 +91,12 @@ Create random population and score them on the dataset.
 end
 
 function Base.copy(pop::P)::P where {T,L,N,P<:Population{T,L,N}}
-    copied_members = Vector{PopMember{T,L,N}}(undef, pop.n)
+    PM = if length(pop.members) > 0
+        typeof(pop.members[1])
+    else
+        AbstractPopMember{T,L,N}
+    end
+    copied_members = Vector{PM}(undef, pop.n)
     Threads.@threads for i in 1:(pop.n)
         copied_members[i] = copy(pop.members[i])
     end
@@ -118,7 +123,7 @@ function _best_of_sample(
     members::Vector{P},
     running_search_statistics::RunningSearchStatistics,
     options::AbstractOptions,
-) where {T,L,P<:PopMember{T,L}}
+) where {T,L,P<:AbstractPopMember{T,L}}
     p = options.tournament_selection_p
     n = length(members)  # == tournament_selection_n
     adjusted_costs = Vector{L}(undef, n)
@@ -157,7 +162,7 @@ function _best_of_sample(
     end
     return members[chosen_idx]
 end
-_get_cost(member::PopMember) = member.cost
+_get_cost(member::AbstractPopMember) = member.cost
 
 const CACHED_WEIGHTS =
     let init_k = collect(0:5),

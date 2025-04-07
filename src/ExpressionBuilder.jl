@@ -11,7 +11,7 @@ using DynamicExpressions:
 using ..CoreModule: AbstractOptions, Dataset
 using ..HallOfFameModule: HallOfFame
 using ..PopulationModule: Population
-using ..PopMemberModule: PopMember
+using ..PopMemberModule: PopMember, AbstractPopMember
 
 import DynamicExpressions: get_operators
 import ..CoreModule: create_expression
@@ -135,7 +135,7 @@ end
     end
     function embed_metadata(
         vec::Vector{H}, options::AbstractOptions, dataset::Dataset{T,L}
-    ) where {T,L,H<:Union{HallOfFame,Population,PopMember}}
+    ) where {T,L,PM<:AbstractPopMember,H<:Union{HallOfFame,Population,PM}}
         return map(Fix{2}(Fix{3}(embed_metadata, dataset), options), vec)
     end
 end
