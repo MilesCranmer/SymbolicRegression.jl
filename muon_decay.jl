@@ -121,17 +121,51 @@ for i in eachindex(conditional_data_x2)
     end
 end
 
+joint_initial_population = []
+
+function multiply_conditionals_with_marginals(conditional_pop_members, marginal_pop_members)
+    joint_pop_members = deepcopy(conditional_pop_members)
+    for i in eachindex(joint_pop_members)
+        joint_pop_members[i].tree = joint_pop_members[i].tree * rand(marginal_pop_members).tree
+    end
+    return joint_pop_members
+end
+
+
+for i in eachindex(conditional_hall_of_fame_x1)
+    append!(joint_initial_population, multiply_conditionals_with_marginals(conditional_hall_of_fame_x1[i].members, hall_of_fame_m_x2.members))
+end
+
+for i in eachindex(conditional_hall_of_fame_x2)
+    append!(joint_initial_population, multiply_conditionals_with_marginals(conditional_hall_of_fame_x2[i].members, hall_of_fame_m_x1.members))
+end
+
+shuffle(joint_initial_population)
+println("Press any key to continue...")
+readline()
+
+populations = [joint_initial_population[i:i+29] for i in 1:30:480]
+
+options1 = SymbolicRegression.Options(;
+    binary_operators=[+, *, /, -], unary_operators=[exp, pow2, pow3, pow4, pow5], populations = length(populations), population_size = length(populations[1])
+    )
+
+println("Press any key to continue...at end")
+readline()
+
+hof = equation_search(
+        reshape(joint_data_x, 2, :), joint_data_y; options=options1, parallelism=:serial, initial_populations=populations
+)
+
+
+
+
+
+
+
+# Bug: something is wrong with the conditional slice probabilities in the dataset!!!!
 # Multiply marginals and conditionals to obtain PopMember for initialization
 # 30*8 = 240 conditionals
 # 30 marginals
 # 240*30 = 7200
 # 7200*2 = 14,400
-
-# How many expressions per population?
-# How many populations?
-# How to distribute expressions to seed each population?
-
-#Combine conditionals and marginals like this
-# conditional_hall_of_fame_x2[1].members[8].tree = conditional_hall_of_fame_x1[1].members[8].tree * hall_of_fame_m_x2.members[7].tree
-
-# Cross validation with KDE for the full pipeline
