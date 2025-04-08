@@ -24,7 +24,7 @@ using ..CoreModule:
     AbstractExpressionSpec,
     get_indices,
     ExpressionSpecModule as ES
-using ..PopMemberModule: PopMember
+using ..PopMemberModule: AbstractPopMember, PopMember
 using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..LossFunctionsModule: LossFunctionsModule as LF
 using ..ExpressionBuilderModule: ExpressionBuilderModule as EB
@@ -102,10 +102,10 @@ end
 function MM.condition_mutate_constant!(
     ::Type{<:ParametricExpression},
     weights::AbstractMutationWeights,
-    member::PopMember,
+    member::PM,
     options::AbstractOptions,
     curmaxsize::Int,
-)
+) where {PM<:AbstractPopMember}
     # Avoid modifying the mutate_constant weight, since
     # otherwise we would be mutating constants all the time!
     return nothing

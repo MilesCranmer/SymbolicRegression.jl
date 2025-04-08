@@ -764,10 +764,10 @@ end
 function MM.condition_mutate_constant!(
     ::Type{<:TemplateExpression},
     weights::AbstractMutationWeights,
-    member::PopMember,
+    member::PM,
     options::AbstractOptions,
     curmaxsize::Int,
-)
+) where {PM<:AbstractPopMember}
     # Avoid modifying the mutate_constant weight, since
     # otherwise we would be mutating constants all the time!
     return nothing

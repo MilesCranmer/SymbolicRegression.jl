@@ -146,10 +146,10 @@ Use this to modify how `mutate_constant` changes for an expression type.
 function condition_mutate_constant!(
     ::Type{<:AbstractExpression},
     weights::AbstractMutationWeights,
-    member::PopMember,
+    member::PM,
     options::AbstractOptions,
     curmaxsize::Int,
-)
+) where {PM<:AbstractPopMember}
     n_constants = count_scalar_constants(member.tree)
     weights.mutate_constant *= min(8, n_constants) / 8.0
 
@@ -343,12 +343,12 @@ end
 
 @generated function _dispatch_mutations!(
     tree::AbstractExpression,
-    member::PopMember,
+    member::PM,
     mutation_choice::Symbol,
     weights::W,
     options::AbstractOptions;
     kws...,
-) where {W<:AbstractMutationWeights}
+) where {W<:AbstractMutationWeights, PM<:AbstractPopMember}
     mutation_choices = fieldnames(W)
     quote
         Base.Cartesian.@nif(

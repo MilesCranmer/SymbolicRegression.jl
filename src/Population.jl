@@ -12,8 +12,8 @@ using ..PopMemberModule: PopMember, AbstractPopMember
 using ..UtilsModule: bottomk_fast, argmin_fast, PerTaskCache
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
-struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T},PM<:AbstractPopMember{T,L,N}}
-    members::Array{PM,1}
+struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
+    members::Array{<:AbstractPopMember{T,L,N},1}
     n::Int
 end
 """
@@ -206,19 +206,21 @@ function best_sub_pop(pop::P; topn::Int=10)::P where {P<:Population}
     return Population(pop.members[best_idx[1:topn]])
 end
 
+function generate_record(member::PopMember, options::AbstractOptions)::RecordType
+    return RecordType(
+        "tree" => string_tree(member.tree, options; pretty=false),
+        "loss" => member.loss,
+        "cost" => member.cost,
+        "complexity" => compute_complexity(member, options),
+        "birth" => member.birth,
+        "ref" => member.ref,
+        "parent" => member.parent,
+    )
+end
+
 function record_population(pop::Population, options::AbstractOptions)::RecordType
     return RecordType(
-        "population" => [
-            RecordType(
-                "tree" => string_tree(member.tree, options; pretty=false),
-                "loss" => member.loss,
-                "cost" => member.cost,
-                "complexity" => compute_complexity(member, options),
-                "birth" => member.birth,
-                "ref" => member.ref,
-                "parent" => member.parent,
-            ) for member in pop.members
-        ],
+        "population" => [generate_record(member, options) for member in pop.members],
         "time" => time(),
     )
 end
