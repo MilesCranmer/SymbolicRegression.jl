@@ -13,6 +13,7 @@ using DynamicExpressions:
     count_nodes,
     has_constants,
     has_operators
+using BorrowChecker
 using ..CoreModule: AbstractOptions, DATA_TYPE
 
 """
@@ -146,7 +147,7 @@ end
 """Add a random unary/binary operation to the end of a tree"""
 function append_random_op(
     ex::AbstractExpression{T},
-    options::AbstractOptions,
+    options::OrBorrowed{AbstractOptions},
     nfeatures::Int,
     rng::AbstractRNG=default_rng();
     make_new_bin_op::Union{Bool,Nothing}=nothing,
@@ -159,7 +160,7 @@ function append_random_op(
 end
 function append_random_op(
     tree::AbstractExpressionNode{T},
-    options::AbstractOptions,
+    options::OrBorrowed{AbstractOptions},
     nfeatures::Int,
     rng::AbstractRNG=default_rng();
     make_new_bin_op::Union{Bool,Nothing}=nothing,
@@ -265,7 +266,7 @@ function make_random_leaf(
     ::Type{T},
     ::Type{N},
     rng::AbstractRNG=default_rng(),
-    ::Union{AbstractOptions,Nothing}=nothing,
+    ::Union{OrBorrowed{AbstractOptions},Nothing}=nothing,
 ) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
     if rand(rng, Bool)
         return constructorof(N)(T; val=randn(rng, T))
@@ -372,13 +373,13 @@ end
 """Create a random equation by appending random operators"""
 function gen_random_tree(
     length::Int,
-    options::AbstractOptions,
+    options::OrBorrowed{AbstractOptions},
     nfeatures::Int,
     ::Type{T},
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     # Note that this base tree is just a placeholder; it will be replaced.
-    tree = constructorof(options.node_type)(T; val=convert(T, 1))
+    tree = constructorof(@take(options.node_type))(T; val=convert(T, 1))
     for i in 1:length
         # TODO: This can be larger number of nodes than length.
         tree = append_random_op(tree, options, nfeatures, rng)

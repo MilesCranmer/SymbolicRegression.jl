@@ -10,6 +10,7 @@ using StatsBase: mean
 using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
 using Logging: AbstractLogger
+using BorrowChecker
 
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
@@ -271,7 +272,7 @@ macro sr_spawner(expr, kws...)
 end
 
 function init_dummy_pops(
-    npops::Int, datasets::Vector{D}, options::AbstractOptions
+    npops::Int, datasets::OrBorrowed{Vector{D}}, options::OrBorrowed{AbstractOptions}
 ) where {T,L,D<:Dataset{T,L}}
     prototype = Population(
         first(datasets);
@@ -617,7 +618,7 @@ For searches where the maxsize gradually increases, this function returns the
 current maxsize.
 """
 function get_cur_maxsize(;
-    options::AbstractOptions, total_cycles::Int, cycles_remaining::Int
+    options::OrBorrowed{AbstractOptions}, total_cycles::Int, cycles_remaining::Int
 )
     cycles_elapsed = total_cycles - cycles_remaining
     fraction_elapsed = 1.0f0 * cycles_elapsed / total_cycles
@@ -628,7 +629,7 @@ function get_cur_maxsize(;
             Int, (options.maxsize - 3) * fraction_elapsed / options.warmup_maxsize_by
         )
     else
-        return options.maxsize
+        return @take(options.maxsize)
     end
 end
 

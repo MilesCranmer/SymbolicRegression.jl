@@ -1,5 +1,6 @@
 module InterfaceDynamicExpressionsModule
 
+using BorrowChecker
 using Printf: @sprintf
 using DispatchDoctor: @stable
 using Compat: Fix
@@ -56,17 +57,18 @@ which speed up evaluation significantly.
     function DE.eval_tree_array(
         tree::Union{AbstractExpressionNode,AbstractExpression},
         X::AbstractMatrix,
-        options::AbstractOptions;
+        options::OrBorrowed{AbstractOptions};
         turbo=nothing,
         bumper=nothing,
         kws...,
     )
         A = expected_array_type(X, typeof(tree))
         eval_options = EvalOptions(;
-            turbo=something(turbo, options.turbo), bumper=something(bumper, options.bumper)
+            turbo=something(turbo, @take(options.turbo)),
+            bumper=something(bumper, @take(options.bumper)),
         )
         out, complete = DE.eval_tree_array(
-            tree, X, DE.get_operators(tree, options); eval_options, kws...
+            tree, X, DE.get_operators(tree, @take(options)); eval_options, kws...
         )
         if isnothing(out)
             return nothing, false

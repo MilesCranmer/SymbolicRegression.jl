@@ -170,6 +170,7 @@ using DynamicExpressions: with_type_parameters
     LogCoshLoss
 using DynamicDiff: D
 using Compat: @compat, Fix
+using BorrowChecker
 
 #! format: off
 @compat(
@@ -602,29 +603,31 @@ end
 @stable default_mode = "disable" function _create_workers(
     datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions
 ) where {T,L,D<:Dataset{T,L}}
-    stdin_reader = watch_stream(options.input_stream)
+    @own datasets, ropt, options
+    @own stdin_reader = @bc watch_stream(@take(options.input_stream))
 
     record = RecordType()
     @recorder record["options"] = "$(options)"
 
-    nout = length(datasets)
-    example_dataset = first(datasets)
-    example_ex = create_expression(zero(T), options, example_dataset)
-    NT = typeof(example_ex)
+    @own nout = @bc length(datasets)
+    @own example_dataset = @take(datasets[1])
+    @own example_ex = @bc create_expression(zero(T), options, example_dataset)
+
+    NT = typeof(@take(example_ex))
     PopType = Population{T,L,NT}
     HallOfFameType = HallOfFame{T,L,NT}
     WorkerOutputType = get_worker_output_type(
-        Val(ropt.parallelism), PopType, HallOfFameType
+        Val(@take!(ropt.parallelism)), PopType, HallOfFameType
     )
     ChannelType = ropt.parallelism == :multiprocessing ? RemoteChannel : Channel
 
     # Pointers to populations on each worker:
-    worker_output = Vector{WorkerOutputType}[WorkerOutputType[] for j in 1:nout]
+    @own worker_output = Vector{WorkerOutputType}[WorkerOutputType[] for j in 1:nout]
     # Initialize storage for workers
-    tasks = [Task[] for j in 1:nout]
+    @own tasks = [Task[] for j in 1:nout]
     # Set up a channel to send finished populations back to head node
-    channels = [[ChannelType(1) for i in 1:(options.populations)] for j in 1:nout]
-    (procs, we_created_procs) = if ropt.parallelism == :multiprocessing
+    @own channels = [[ChannelType(1) for i in 1:(options.populations)] for j in 1:nout]
+    @own (procs, we_created_procs) = if ropt.parallelism == :multiprocessing
         configure_workers(;
             procs=ropt.init_procs,
             ropt.numprocs,
@@ -642,49 +645,54 @@ end
         Int[], false
     end
     # Get the next worker process to give a job:
-    worker_assignment = WorkerAssignments()
+    @own worker_assignment = WorkerAssignments()
     # Randomly order which order to check populations:
     # This is done so that we do work on all nout equally.
-    task_order = [(j, i) for j in 1:nout for i in 1:(options.populations)]
-    shuffle!(task_order)
+    @own :mut task_order = [(j, i) for j in 1:nout for i in 1:(options.populations)]
+    @bc shuffle!(@mut(task_order))
 
     # Persistent storage of last-saved population for final return:
-    last_pops = init_dummy_pops(options.populations, datasets, options)
+    @own last_pops = @bc init_dummy_pops(@take(options.populations), datasets, options)
     # Best 10 members from each population for migration:
-    best_sub_pops = init_dummy_pops(options.populations, datasets, options)
+    @own best_sub_pops = @bc init_dummy_pops(@take(options.populations), datasets, options)
     # TODO: Should really be one per population too.
-    all_running_search_statistics = [
-        RunningSearchStatistics(; options=options) for j in 1:nout
+    @own all_running_search_statistics = [
+        @bc RunningSearchStatistics(; options=options) for j in 1:nout
     ]
     # Records the number of evaluations:
     # Real numbers indicate use of batching.
-    num_evals = [[0.0 for i in 1:(options.populations)] for j in 1:nout]
+    @own num_evals = [[0.0 for i in 1:(options.populations)] for j in 1:nout]
 
-    halls_of_fame = Vector{HallOfFameType}(undef, nout)
+    @own halls_of_fame = Vector{HallOfFameType}(undef, @take(nout))
 
-    total_cycles = ropt.niterations * options.populations
-    cycles_remaining = [total_cycles for j in 1:nout]
-    cur_maxsizes = [
-        get_cur_maxsize(; options, total_cycles, cycles_remaining=cycles_remaining[j]) for
-        j in 1:nout
+    @own total_cycles = ropt.niterations * options.populations
+    @own cycles_remaining = [@take(total_cycles) for j in 1:nout]
+    @own cur_maxsizes = [
+        @bc(
+            get_cur_maxsize(;
+                options,
+                total_cycles=@take(total_cycles),
+                cycles_remaining=@take(cycles_remaining[j])
+            )
+        ) for j in 1:nout
     ]
 
-    return SearchState{T,L,typeof(example_ex),WorkerOutputType,ChannelType}(;
-        procs=procs,
-        we_created_procs=we_created_procs,
-        worker_output=worker_output,
-        tasks=tasks,
-        channels=channels,
-        worker_assignment=worker_assignment,
-        task_order=task_order,
-        halls_of_fame=halls_of_fame,
-        last_pops=last_pops,
-        best_sub_pops=best_sub_pops,
-        all_running_search_statistics=all_running_search_statistics,
-        num_evals=num_evals,
-        cycles_remaining=cycles_remaining,
-        cur_maxsizes=cur_maxsizes,
-        stdin_reader=stdin_reader,
+    return SearchState{T,L,typeof(@take!(example_ex)),WorkerOutputType,ChannelType}(;
+        procs=@take!(procs),
+        we_created_procs=@take!(we_created_procs),
+        worker_output=@take!(worker_output),
+        tasks=@take!(tasks),
+        channels=@take!(channels),
+        worker_assignment=@take!(worker_assignment),
+        task_order=@take!(task_order),
+        halls_of_fame=@take!(halls_of_fame),
+        last_pops=@take!(last_pops),
+        best_sub_pops=@take!(best_sub_pops),
+        all_running_search_statistics=@take!(all_running_search_statistics),
+        num_evals=@take!(num_evals),
+        cycles_remaining=@take!(cycles_remaining),
+        cur_maxsizes=@take!(cur_maxsizes),
+        stdin_reader=@take!(stdin_reader),
         record=Ref(record),
     )
 end
