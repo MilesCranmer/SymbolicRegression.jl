@@ -265,7 +265,7 @@ function make_random_leaf(
     ::Type{T},
     ::Type{N},
     rng::AbstractRNG=default_rng(),
-    ::Union{AbstractOptions,Nothing}=nothing,
+    (::Union{AbstractOptions,Nothing})=nothing,
 ) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
     if rand(rng, Bool)
         return constructorof(N)(T; val=randn(rng, T))

@@ -17,7 +17,7 @@ import DynamicExpressions: get_operators
 import ..CoreModule: create_expression
 
 @unstable function create_expression(
-    t::T, options::AbstractOptions, dataset::Dataset{T,L}, ::Val{embed}=Val(false)
+    t::T, options::AbstractOptions, dataset::Dataset{T,L}, (::Val{embed})=Val(false)
 ) where {T,L,embed}
     return create_expression(
         t, options, dataset, options.node_type, options.expression_type, Val(embed)
@@ -27,7 +27,7 @@ end
     t::AbstractExpressionNode{T},
     options::AbstractOptions,
     dataset::Dataset{T,L},
-    ::Val{embed}=Val(false),
+    (::Val{embed})=Val(false),
 ) where {T,L,embed}
     return create_expression(
         t, options, dataset, options.node_type, options.expression_type, Val(embed)
@@ -37,7 +37,7 @@ function create_expression(
     ex::AbstractExpression{T},
     options::AbstractOptions,
     ::Dataset{T,L},
-    ::Val{embed}=Val(false),
+    (::Val{embed})=Val(false),
 ) where {T,L,embed}
     return ex::options.expression_type
 end
@@ -47,7 +47,7 @@ end
     dataset::Dataset{T,L},
     ::Type{N},
     ::Type{E},
-    ::Val{embed}=Val(false),
+    (::Val{embed})=Val(false),
 ) where {T,L,embed,N<:AbstractExpressionNode,E<:AbstractExpression}
     return create_expression(constructorof(N)(; val=t), options, dataset, N, E, Val(embed))
 end
@@ -57,7 +57,7 @@ end
     dataset::Dataset{T,L},
     ::Type{<:AbstractExpressionNode},
     ::Type{E},
-    ::Val{embed}=Val(false),
+    (::Val{embed})=Val(false),
 ) where {T,L,embed,E<:AbstractExpression}
     return constructorof(E)(t; init_params(options, dataset, nothing, Val(embed))...)
 end

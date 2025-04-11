@@ -242,8 +242,9 @@ function apply_operator(op::F, x::Vararg{Any,N}) where {F<:Function,N}
         result = safe_op.(vx...)
         return ValidVector(result, is_valid_array(result))
     else
-        example_vector =
-            something(map(xi -> xi isa ValidVector ? xi : nothing, x)...)::ValidVector
+        example_vector = something(
+            map(xi -> xi isa ValidVector ? xi : nothing, x)...
+        )::ValidVector
         return ValidVector(_get_value(example_vector), false)
     end
 end
