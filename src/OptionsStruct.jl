@@ -118,9 +118,11 @@ Controls level of specialization we compile into `Options`.
 
 Overload if needed for custom expression types.
 """
-operator_specialization(
+function operator_specialization(
     ::Type{O}, ::Type{<:AbstractExpression}
-) where {O<:AbstractOperatorEnum} = O
+) where {O<:AbstractOperatorEnum}
+    O
+end
 @unstable operator_specialization(::Type{<:OperatorEnum}, ::Type{<:AbstractExpression}) =
     OperatorEnum
 
