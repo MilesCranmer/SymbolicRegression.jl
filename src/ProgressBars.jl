@@ -9,16 +9,21 @@ using ..UtilsModule: AnnotatedString
 mutable struct WrappedProgressBar
     bar::Progress
     postfix::Vector{Tuple{AnnotatedString,AnnotatedString}}
+    clean_postfix::Vector{Tuple{AnnotatedString,AnnotatedString}}
+    last_update::Float64
 
     function WrappedProgressBar(n::Integer, niterations::Integer; kwargs...)
         init_vector = Tuple{AnnotatedString,AnnotatedString}[]
         kwargs = (; kwargs..., desc="Evolving for $niterations iterations...")
+        last_update = time()
         if get(ENV, "SYMBOLIC_REGRESSION_TEST", "false") == "true"
             # For testing, create a progress bar that writes to devnull
             output = devnull
-            return new(Progress(n; output, kwargs...), init_vector)
+            return new(
+                Progress(n; output, kwargs...), init_vector, copy(init_vector), last_update
+            )
         end
-        return new(Progress(n; kwargs...), init_vector)
+        return new(Progress(n; kwargs...), init_vector, copy(init_vector), last_update)
     end
 end
 
@@ -34,8 +39,13 @@ end
 """Iterate a progress bar."""
 function manually_iterate!(pbar::WrappedProgressBar)
     width = barlen(pbar)
-    postfix = map(Fix{2}(format_for_meter, width), pbar.postfix)
-    next!(pbar.bar; showvalues=postfix, valuecolor=:none)
+    last_update = pbar.last_update
+    update_interval = 0.005
+    if time() - last_update > update_interval
+        pbar.clean_postfix = map(Fix{2}(format_for_meter, width), pbar.postfix)
+        pbar.last_update = time()
+    end
+    next!(pbar.bar; showvalues=pbar.clean_postfix, valuecolor=:none)
     return nothing
 end
 
