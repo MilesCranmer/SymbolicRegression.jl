@@ -561,10 +561,10 @@ end
     datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions, saved_state
 ) where {D<:Dataset}
     _validate_options(datasets, ropt, options)
-    state = _create_workers(datasets, ropt, options)
+    state = _create_workers(PopMember, datasets, ropt, options)
     _initialize_search!(state, datasets, ropt, options, saved_state)
-    _warmup_search!(state, datasets, ropt, options)
-    _main_search_loop!(state, datasets, ropt, options)
+    _warmup_search!(PopMember, state, datasets, ropt, options)
+    _main_search_loop!(PopMember, state, datasets, ropt, options)
     _tear_down!(state, ropt, options)
     _info_dump(state, datasets, ropt, options)
     return _format_output(state, datasets, ropt, options)
@@ -601,8 +601,8 @@ function _validate_options(
     return nothing
 end
 @stable default_mode = "disable" function _create_workers(
-    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions
-) where {T,L,D<:Dataset{T,L}}
+    ::Type{PM}, datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions
+) where {T,L,D<:Dataset{T,L},PM<:AbstractPopMember}
     stdin_reader = watch_stream(options.input_stream)
 
     record = RecordType()
@@ -613,7 +613,7 @@ end
     example_ex = create_expression(zero(T), options, example_dataset)
     NT = typeof(example_ex)
     PopType = Population{T,L,NT}
-    HallOfFameType = HallOfFame{T,L,NT}
+    HallOfFameType = HallOfFame{T,L,NT,PM{T,L,NT}}
     WorkerOutputType = get_worker_output_type(
         Val(ropt.parallelism), PopType, HallOfFameType
     )
@@ -768,11 +768,12 @@ function _initialize_search!(
     return nothing
 end
 function _warmup_search!(
+    ::Type{PM},
     state::AbstractSearchState{T,L,N},
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
-) where {T,L,N}
+) where {T,L,N,PM<:AbstractPopMember}
     nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
         dataset = datasets[j]
@@ -790,7 +791,7 @@ function _warmup_search!(
         updated_pop = @sr_spawner(
             begin
                 in_pop = first(
-                    extract_from_worker(last_pop, Population{T,L,N}, HallOfFame{T,L,N})
+                    extract_from_worker(last_pop, Population{T,L,N}, HallOfFame{T,L,N,PM{T,L,N}})
                 )
                 _dispatch_s_r_cycle(
                     in_pop,
@@ -802,7 +803,7 @@ function _warmup_search!(
                     ropt.verbosity,
                     cur_maxsize,
                     running_search_statistics=c_rss,
-                )::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N}}
+                )::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N,PM{T,L,N}}}
             end,
             parallelism = ropt.parallelism,
             worker_idx = worker_idx
@@ -812,11 +813,12 @@ function _warmup_search!(
     return nothing
 end
 function _main_search_loop!(
+    ::Type{PM},
     state::AbstractSearchState{T,L,N},
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
-) where {T,L,N}
+) where {T,L,N,PM<:AbstractPopMember}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
     start_time = time()
@@ -892,7 +894,7 @@ function _main_search_loop!(
                 )
             else
                 state.worker_output[j][i]
-            end::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N}}
+            end::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N,PM{T,L,N}}}
             state.last_pops[j][i] = copy(cur_pop)
             state.best_sub_pops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
             @recorder state.record[] = recursive_merge(state.record[], cur_record)

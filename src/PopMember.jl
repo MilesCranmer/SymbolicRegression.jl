@@ -49,7 +49,7 @@ end
     end
     return getfield(member, field)
 end
-function Base.show(io::IO, p::M) where {T,L,N,M<:PopMember{T,L,N}}
+function Base.show(io::IO, p::PM) where {T,L,N,PM<:PopMember{T,L,N}}
     shower(x) = sprint(show, x)
     print(io, "PopMember(")
     print(io, "tree = (", string_tree(p.tree), "), ")

@@ -244,9 +244,9 @@ function get_worker_output_type(
 end
 
 #! format: off
-extract_from_worker(p::DefaultWorkerOutputType, _, _) = p
-extract_from_worker(f::Future, ::Type{P}, ::Type{H}) where {P,H} = fetch(f)::DefaultWorkerOutputType{P,H}
-extract_from_worker(t::Task, ::Type{P}, ::Type{H}) where {P,H} = fetch(t)::DefaultWorkerOutputType{P,H}
+@unstable extract_from_worker(p::DefaultWorkerOutputType, _, _) = p
+@unstable extract_from_worker(f::Future, ::Type{P}, ::Type{H}) where {P,H} = fetch(f)::DefaultWorkerOutputType{P,H}
+@unstable extract_from_worker(t::Task, ::Type{P}, ::Type{H}) where {P,H} = fetch(t)::DefaultWorkerOutputType{P,H}
 #! format: on
 
 macro sr_spawner(expr, kws...)
