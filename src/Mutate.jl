@@ -60,7 +60,8 @@ This struct encapsulates the result of a mutation operation. Either a new expres
 Return the `member` if you want to return immediately, and have
 computed the loss value as part of the mutation.
 """
-struct MutationResult{N<:AbstractExpression,P<:AbstractPopMember} <: AbstractMutationResult{N,P}
+struct MutationResult{N<:AbstractExpression,P<:AbstractPopMember} <:
+       AbstractMutationResult{N,P}
     tree::Union{N,Nothing}
     member::Union{P,Nothing}
     num_evals::Float64
@@ -348,7 +349,7 @@ end
     weights::W,
     options::AbstractOptions;
     kws...,
-) where {W<:AbstractMutationWeights, PM<:AbstractPopMember}
+) where {W<:AbstractMutationWeights,PM<:AbstractPopMember}
     mutation_choices = fieldnames(W)
     quote
         Base.Cartesian.@nif(

@@ -10,7 +10,8 @@ using ..LossFunctionsModule: eval_cost
 abstract type AbstractPopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}} end
 
 # Define a member of population by equation, cost, and age
-mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}} <: AbstractPopMember{T,L,N}
+mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}} <:
+               AbstractPopMember{T,L,N}
     tree::N
     cost::L  # Inludes complexity penalty, normalization
     loss::L  # Raw loss
@@ -21,7 +22,9 @@ mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}} <: 
     ref::Int
     parent::Int
 end
-@inline function Base.setproperty!(member::M, field::Symbol, value) where {M<:AbstractPopMember}
+@inline function Base.setproperty!(
+    member::M, field::Symbol, value
+) where {M<:AbstractPopMember}
     if field == :complexity
         throw(
             error("Don't set `.complexity` directly. Use `recompute_complexity!` instead.")
@@ -36,7 +39,9 @@ end
     end
     return setfield!(member, field, value)
 end
-@unstable @inline function Base.getproperty(member::M, field::Symbol) where {M<:AbstractPopMember}
+@unstable @inline function Base.getproperty(
+    member::M, field::Symbol
+) where {M<:AbstractPopMember}
     if field == :complexity
         throw(
             error("Don't access `.complexity` directly. Use `compute_complexity` instead.")
@@ -179,6 +184,5 @@ function recompute_complexity!(
     setfield!(member, :complexity, complexity)
     return complexity
 end
-
 
 end

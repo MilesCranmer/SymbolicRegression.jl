@@ -23,7 +23,9 @@ have been set, you can run `.members[exists]`.
     These are ordered by complexity, with `.members[1]` the member with complexity 1.
 - `exists::Array{Bool,1}`: Whether the member at the given complexity has been set.
 """
-struct HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T},PM<:AbstractPopMember{T,L,N}}
+struct HallOfFame{
+    T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T},PM<:AbstractPopMember{T,L,N}
+}
     members::Array{PM,1}
     exists::Array{Bool,1} #Whether it has been set
 end
@@ -66,7 +68,7 @@ function HallOfFame(
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     base_tree = create_expression(zero(T), options, dataset)
 
-    return HallOfFame{T,L,typeof(base_tree), PopMember{T,L,typeof(base_tree)}}(
+    return HallOfFame{T,L,typeof(base_tree),PopMember{T,L,typeof(base_tree)}}(
         [
             PopMember(
                 copy(base_tree),
@@ -131,21 +133,22 @@ end
 #     )
 # end
 
-_fmt(x::Integer)       = @sprintf("%-10d", x)
+_fmt(x::Integer) = @sprintf("%-10d", x)
 _fmt(x::AbstractFloat) = @sprintf("%-8.3e", x)
-_fmt(x)                = rpad(string(x), 12)        # fallback
+_fmt(x) = rpad(string(x), 12)        # fallback
 
 function string_dominating_pareto_curve(
     hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing, pretty::Bool=true
 )
     terminal_width = (width === nothing) ? 100 : max(100, width::Integer)
     formatted = format_hall_of_fame(hallOfFame, options)
-    stat_cols  = collect(propertynames(formatted))
+    stat_cols = collect(propertynames(formatted))
     filter!(c -> c ≠ :trees, stat_cols)
-    priority   = [:complexity, :loss, :score]
-    stat_cols  = vcat(intersect(priority, stat_cols),
-                      setdiff(stat_cols, priority))
-    header_cells = [rpad(styled("{bold:{underline:$(titlecase(string(c)))}}"), 12) for c in stat_cols]
+    priority = [:complexity, :loss, :score]
+    stat_cols = vcat(intersect(priority, stat_cols), setdiff(stat_cols, priority))
+    header_cells = [
+        rpad(styled("{bold:{underline:$(titlecase(string(c)))}}"), 12) for c in stat_cols
+    ]
     push!(header_cells, styled("{bold:{underline:Equation}}"))
     header = join(header_cells, "  ")
 
@@ -154,18 +157,23 @@ function string_dominating_pareto_curve(
     println(buffer, '─'^(terminal_width - 1))
     println(buffer, header)
     for i in 1:length(formatted.trees)
-        stats  = join((_fmt(getfield(formatted, c)[i]) for c in stat_cols), "  ")
+        stats = join((_fmt(getfield(formatted, c)[i]) for c in stat_cols), "  ")
         print(buffer, stats)
-        eqn = string_tree(formatted.trees[i], options;
-                          display_variable_names = dataset.display_variable_names,
-                          X_sym_units            = dataset.X_sym_units,
-                          y_sym_units            = dataset.y_sym_units,
-                          pretty)
+        eqn = string_tree(
+            formatted.trees[i],
+            options;
+            display_variable_names=dataset.display_variable_names,
+            X_sym_units=dataset.X_sym_units,
+            y_sym_units=dataset.y_sym_units,
+            pretty,
+        )
         prefix = make_prefix(formatted.trees[i], options, dataset)
-        print(buffer,
-              wrap_equation_string(prefix * eqn,
-                                   length(stats) + length(prefix) + 2,
-                                   terminal_width))
+        print(
+            buffer,
+            wrap_equation_string(
+                prefix * eqn, length(stats) + length(prefix) + 2, terminal_width
+            ),
+        )
     end
     print(buffer, '─'^(terminal_width - 1))
     return dump_buffer(buffer)
@@ -207,9 +215,11 @@ function wrap_equation_string(eqn_string, left_cols_width, terminal_width)
     return dump_buffer(buffer)
 end
 
-@unstable function format_hall_of_fame(hof::HallOfFame{T,L,N,PM}, options;
-    columns::Union{Vector{Symbol},Nothing}=[:losses, :complexities, :scores, :trees]
-    ) where {T,L,N,PM<:PopMember{T,L,N}}
+@unstable function format_hall_of_fame(
+    hof::HallOfFame{T,L,N,PM},
+    options;
+    columns::Union{Vector{Symbol},Nothing}=[:losses, :complexities, :scores, :trees],
+) where {T,L,N,PM<:PopMember{T,L,N}}
     dominating = calculate_pareto_frontier(hof)
     foreach(dominating) do member
         if member.loss < 0.0

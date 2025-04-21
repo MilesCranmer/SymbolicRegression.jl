@@ -136,7 +136,7 @@ end
     function embed_metadata(
         vec::Vector{<:Union{HallOfFame,Population,AbstractPopMember}},
         options::AbstractOptions,
-        dataset::Dataset{T,L}
+        dataset::Dataset{T,L},
     ) where {T,L}
         return map(Fix{2}(Fix{3}(embed_metadata, dataset), options), vec)
     end

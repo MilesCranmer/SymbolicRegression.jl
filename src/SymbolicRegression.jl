@@ -791,7 +791,9 @@ function _warmup_search!(
         updated_pop = @sr_spawner(
             begin
                 in_pop = first(
-                    extract_from_worker(last_pop, Population{T,L,N}, HallOfFame{T,L,N,PM{T,L,N}})
+                    extract_from_worker(
+                        last_pop, Population{T,L,N}, HallOfFame{T,L,N,PM{T,L,N}}
+                    ),
                 )
                 _dispatch_s_r_cycle(
                     in_pop,
