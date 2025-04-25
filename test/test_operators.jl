@@ -278,6 +278,10 @@ end
         @test iszero(deriv_invalid)
     end
 
+    # On ForwardDiff v1+, this becomes `!isfinite(x)`,
+    # but on earlier versions, invalid inputs returned `0.0`.
+    zero_or_nonfinite(x) = iszero(x) || !isfinite(x)
+
     # Test safe_pow separately since it's binary
     for x in [0.5, 2.0], y in [2.0, 0.5]
         # Test valid derivatives
@@ -287,9 +291,9 @@ end
         @test !isnan(deriv_y)
         @test !iszero(deriv_x)  # Should be non-zero for our test points
 
-        # Test invalid cases return 0.0 derivatives
-        @test iszero(ForwardDiff.derivative(x -> safe_pow(x, -1.0), 0.0))  # 0^(-1)
-        @test iszero(ForwardDiff.derivative(x -> safe_pow(-x, 0.5), 1.0))  # (-x)^0.5
-        @test iszero(ForwardDiff.derivative(x -> safe_pow(x, -0.5), 0.0))  # 0^(-0.5)
+        # Test invalid cases return non-finite or zero derivatives
+        @test zero_or_nonfinite(ForwardDiff.derivative(x -> safe_pow(x, -1.0), 0.0))  # 0^(-1)
+        @test iszero(ForwardDiff.derivative(x -> safe_pow(-x, 0.5), 1.0))
+        @test zero_or_nonfinite(ForwardDiff.derivative(x -> safe_pow(x, -0.5), 0.0))  # 0^(-0.5)
     end
 end

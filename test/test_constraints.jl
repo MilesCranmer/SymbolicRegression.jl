@@ -18,6 +18,13 @@ violating_tree = Node(1, tree)
 @test check_constraints(tree, options) == true
 @test check_constraints(violating_tree, options) == false
 
+# https://github.com/MilesCranmer/PySR/issues/896
+x1 = Node(; feature=1)
+complex_expr = x1 * x1 * x1 * x1 * x1  # Complex expression with complexity > 4
+inv_complex = Node(1, complex_expr)  # _inv applied to complex expression
+binary_with_nested_inv = Node(5, x1, inv_complex)  # _inv nested inside binary op, not at root
+@test check_constraints(binary_with_nested_inv, options) == false
+
 # Test complexity constraints:
 options = Options(; binary_operators=(+, *), maxsize=5)
 @extend_operators options

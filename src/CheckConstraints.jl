@@ -30,7 +30,7 @@ function flag_una_operator_complexity(
     tree::AbstractExpressionNode, op, cons, options::AbstractOptions
 )::Bool
     any(tree) do subtree
-        if subtree.degree == 1 && tree.op == op
+        if subtree.degree == 1 && subtree.op == op
             past_complexity_limit(subtree.l, options, cons) && return true
         end
         return false
