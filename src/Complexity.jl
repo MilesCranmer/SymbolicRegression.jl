@@ -1,13 +1,13 @@
 module ComplexityModule
 
-using BorrowChecker
+using BorrowChecker: @&, @take
 using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, get_tree, count_nodes, tree_mapreduce
 using ..CoreModule: AbstractOptions, ComplexityMapping
 
 function past_complexity_limit(
     tree::Union{AbstractExpression,AbstractExpressionNode},
-    options::OrBorrowed{AbstractOptions},
+    options::@&(AbstractOptions),
     limit,
 )::Bool
     return compute_complexity(tree, options) > limit
@@ -21,7 +21,7 @@ However, it could use the custom settings in options.complexity_mapping
 if these are defined.
 """
 function compute_complexity(
-    tree::AbstractExpression, options::OrBorrowed{AbstractOptions}; break_sharing=Val(false)
+    tree::AbstractExpression, options::@&(AbstractOptions); break_sharing=Val(false)
 )
     if options.complexity_mapping isa Function
         return options.complexity_mapping(tree)::Int
@@ -30,9 +30,7 @@ function compute_complexity(
     end
 end
 function compute_complexity(
-    tree::AbstractExpressionNode,
-    options::OrBorrowed{AbstractOptions};
-    break_sharing=Val(false),
+    tree::AbstractExpressionNode, options::@&(AbstractOptions); break_sharing=Val(false)
 )::Int
     complexity_mapping = @take(options.complexity_mapping)
     if complexity_mapping isa ComplexityMapping && complexity_mapping.use

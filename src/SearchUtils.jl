@@ -10,7 +10,7 @@ using StatsBase: mean
 using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
 using Logging: AbstractLogger
-using BorrowChecker
+using BorrowChecker: @&, @take
 
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
@@ -272,7 +272,7 @@ macro sr_spawner(expr, kws...)
 end
 
 function init_dummy_pops(
-    npops::Int, datasets::OrBorrowed{Vector{D}}, options::OrBorrowed{AbstractOptions}
+    npops::Int, datasets::@&(Vector{D}), options::@&(AbstractOptions)
 ) where {T,L,D<:Dataset{T,L}}
     prototype = Population(
         first(datasets);
@@ -618,7 +618,7 @@ For searches where the maxsize gradually increases, this function returns the
 current maxsize.
 """
 function get_cur_maxsize(;
-    options::OrBorrowed{AbstractOptions}, total_cycles::Int, cycles_remaining::Int
+    options::@&(AbstractOptions), total_cycles::Int, cycles_remaining::Int
 )
     cycles_elapsed = total_cycles - cycles_remaining
     fraction_elapsed = 1.0f0 * cycles_elapsed / total_cycles
@@ -693,6 +693,18 @@ function update_hall_of_fame!(
             hall_of_fame.exists[size] = true
         end
     end
+end
+
+function update_sub_pops!(
+    allPops, hallOfFame, npops::Int, datasets::@&(Vector{D}), options::@&(AbstractOptions)
+) where {D}
+    # Implementation of the function
+end
+
+function track_improvements!(
+    options::@&(AbstractOptions), total_cycles::Int, cycles_remaining::Int
+)
+    # Implementation of the function
 end
 
 end

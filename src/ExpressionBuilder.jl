@@ -4,7 +4,7 @@ This module provides functions for creating, initializing, and manipulating
 """
 module ExpressionBuilderModule
 
-using BorrowChecker
+using BorrowChecker: @&, @take
 using DispatchDoctor: @unstable
 using Compat: Fix
 using DynamicExpressions:
@@ -18,10 +18,7 @@ import DynamicExpressions: get_operators
 import ..CoreModule: create_expression
 
 @unstable function create_expression(
-    t::T,
-    options::OrBorrowed{AbstractOptions},
-    dataset::OrBorrowed{Dataset{T,L}},
-    ::Val{embed}=Val(false),
+    t::T, options::@&(AbstractOptions), dataset::@&(Dataset{T,L}), ::Val{embed}=Val(false)
 ) where {T,L,embed}
     return create_expression(
         t,
@@ -34,8 +31,8 @@ import ..CoreModule: create_expression
 end
 @unstable function create_expression(
     t::AbstractExpressionNode{T},
-    options::OrBorrowed{AbstractOptions},
-    dataset::OrBorrowed{Dataset{T,L}},
+    options::@&(AbstractOptions),
+    dataset::@&(Dataset{T,L}),
     ::Val{embed}=Val(false),
 ) where {T,L,embed}
     return create_expression(
@@ -49,16 +46,16 @@ end
 end
 function create_expression(
     ex::AbstractExpression{T},
-    options::OrBorrowed{AbstractOptions},
-    ::OrBorrowed{Dataset{T,L}},
+    options::@&(AbstractOptions),
+    ::@&(Dataset{T,L}),
     ::Val{embed}=Val(false),
 ) where {T,L,embed}
     return ex::options.expression_type
 end
 @unstable function create_expression(
     t::T,
-    options::OrBorrowed{AbstractOptions},
-    dataset::OrBorrowed{Dataset{T,L}},
+    options::@&(AbstractOptions),
+    dataset::@&(Dataset{T,L}),
     ::Type{N},
     ::Type{E},
     ::Val{embed}=Val(false),
@@ -67,8 +64,8 @@ end
 end
 @unstable function create_expression(
     t::AbstractExpressionNode{T},
-    options::OrBorrowed{AbstractOptions},
-    dataset::OrBorrowed{Dataset{T,L}},
+    options::@&(AbstractOptions),
+    dataset::@&(Dataset{T,L}),
     ::Type{<:AbstractExpressionNode},
     ::Type{E},
     ::Val{embed}=Val(false),
@@ -76,8 +73,8 @@ end
     return constructorof(E)(t; init_params(options, dataset, nothing, Val(embed))...)
 end
 @unstable function init_params(
-    options::OrBorrowed{AbstractOptions},
-    dataset::OrBorrowed{Dataset{T,L}},
+    options::@&(AbstractOptions),
+    dataset::@&(Dataset{T,L}),
     prototype::Union{Nothing,AbstractExpression},
     ::Val{embed},
 ) where {T,L,embed}
@@ -97,16 +94,16 @@ end
 function extra_init_params(
     ::Type{E},
     prototype::Union{Nothing,AbstractExpression},
-    options::OrBorrowed{AbstractOptions},
-    dataset::OrBorrowed{Dataset{T}},
+    options::@&(AbstractOptions),
+    dataset::@&(Dataset{T}),
     ::Val{embed},
 ) where {T,embed,E<:AbstractExpression}
     # TODO: Potential aliasing here
     return (; @take(options.expression_options)...)
 end
 
-consistency_checks(::OrBorrowed{AbstractOptions}, prototype::Nothing) = nothing
-function consistency_checks(options::OrBorrowed{AbstractOptions}, prototype)
+consistency_checks(::@&(AbstractOptions), prototype::Nothing) = nothing
+function consistency_checks(options::@&(AbstractOptions), prototype)
     @assert(
         prototype isa options.expression_type,
         "Need prototype to be of type $(options.expression_type), but got $(prototype)::$(typeof(prototype))"

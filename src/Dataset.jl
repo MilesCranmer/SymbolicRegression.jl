@@ -2,7 +2,7 @@ module DatasetModule
 
 using Random: AbstractRNG, default_rng
 using DynamicQuantities: Quantity
-using BorrowChecker
+using BorrowChecker: @&, @take
 
 using ..UtilsModule: subscriptify, get_base_type
 using ..ProgramConstantsModule: DATA_TYPE, LOSS_TYPE
@@ -246,7 +246,7 @@ function Dataset(
     )
 end
 
-is_weighted(dataset::OrBorrowed{Dataset}) = @take(dataset.weights) !== nothing
+is_weighted(dataset::@&(Dataset)) = @take(dataset.weights) !== nothing
 
 # COV_EXCL_START
 get_full_dataset(d::BasicDataset) = d
@@ -283,7 +283,7 @@ _fill!(x::NamedTuple, val) = foreach(v -> _fill!(v, val), values(x))
 _fill!(::Nothing, val) = nothing
 _fill!(x, val) = x
 
-function max_features(dataset::OrBorrowed{Dataset}, _)
+function max_features(dataset::@&(Dataset), _)
     return @take(dataset.nfeatures)
 end
 

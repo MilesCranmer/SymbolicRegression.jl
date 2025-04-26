@@ -1,6 +1,6 @@
 module PopMemberModule
 
-using BorrowChecker
+using BorrowChecker: @&, @take
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, AbstractExpressionNode, string_tree
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, create_expression
@@ -77,7 +77,7 @@ function PopMember(
     t::AbstractExpression{T},
     cost::L,
     loss::L,
-    options::Union{OrBorrowed{AbstractOptions},Nothing}=nothing,
+    options::Union{@&(AbstractOptions),Nothing}=nothing,
     complexity::Union{Int,Nothing}=nothing;
     ref::Int=-1,
     parent::Int=-1,
@@ -122,9 +122,9 @@ Automatically compute the cost for this tree.
 - `options::AbstractOptions`: What options to use.
 """
 function PopMember(
-    dataset::OrBorrowed{Dataset{T,L}},
+    dataset::@&(Dataset{T,L}),
     tree::Union{AbstractExpressionNode{T},AbstractExpression{T}},
-    options::OrBorrowed{AbstractOptions},
+    options::@&(AbstractOptions),
     complexity::Union{Int,Nothing}=nothing;
     ref::Int=-1,
     parent::Int=-1,

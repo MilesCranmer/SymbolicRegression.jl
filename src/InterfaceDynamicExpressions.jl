@@ -1,6 +1,6 @@
 module InterfaceDynamicExpressionsModule
 
-using BorrowChecker
+using BorrowChecker: @&, @take
 using Printf: @sprintf
 using DispatchDoctor: @stable
 using Compat: Fix
@@ -57,7 +57,7 @@ which speed up evaluation significantly.
     function DE.eval_tree_array(
         tree::Union{AbstractExpressionNode,AbstractExpression},
         X::AbstractMatrix,
-        options::OrBorrowed{AbstractOptions};
+        options::@&(AbstractOptions);
         turbo=nothing,
         bumper=nothing,
         kws...,

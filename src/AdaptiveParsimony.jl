@@ -1,6 +1,6 @@
 module AdaptiveParsimonyModule
 
-using BorrowChecker
+using BorrowChecker: @&, @take
 using ..CoreModule: AbstractOptions
 
 """
@@ -24,9 +24,7 @@ struct RunningSearchStatistics
     normalized_frequencies::Vector{Float64}  # Stores `frequencies`, but normalized (updated once in a while)
 end
 
-function RunningSearchStatistics(;
-    options::OrBorrowed{AbstractOptions}, window_size::Int=100000
-)
+function RunningSearchStatistics(; options::@&(AbstractOptions), window_size::Int=100000)
     init_frequencies = ones(Float64, @take(options.maxsize))
 
     return RunningSearchStatistics(

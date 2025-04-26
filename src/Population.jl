@@ -3,7 +3,7 @@ module PopulationModule
 using StatsBase: StatsBase
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, string_tree
-using BorrowChecker
+using BorrowChecker: @&, @take
 using ..CoreModule: AbstractOptions, Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: eval_cost, update_baseline_loss!
@@ -34,8 +34,8 @@ end
 Create random population and evaluate them on the dataset.
 """
 function Population(
-    dataset::OrBorrowed{Dataset{T,L}};
-    options::OrBorrowed{AbstractOptions},
+    dataset::@&(Dataset{T,L});
+    options::@&(AbstractOptions),
     population_size=nothing,
     nlength::Int=3,
     nfeatures::Int,
@@ -217,6 +217,17 @@ function record_population(pop::Population, options::AbstractOptions)::RecordTyp
         ],
         "time" => time(),
     )
+end
+
+function generate_random_population(
+    dataset::@&(Dataset{T,L});
+    options::@&(AbstractOptions),
+    nfeatures::Int=max_features(dataset, options),
+    population_size::Int=options.population_size,
+    population::Union{Population{T,L},Nothing}=nothing,
+    parallelism::Union{Val,Nothing}=nothing,
+) where {T<:DATA_TYPE,L}
+    # Implementation of generate_random_population function
 end
 
 end

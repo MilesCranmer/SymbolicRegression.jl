@@ -1,6 +1,6 @@
 module LossFunctionsModule
 
-using BorrowChecker
+using BorrowChecker: @&, @take
 using DispatchDoctor: @stable
 using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, get_tree, eval_tree_array
@@ -62,9 +62,7 @@ end
     default_union_limit = 2,
     begin
         function eval_tree_dispatch(
-            tree::AbstractExpression,
-            dataset::OrBorrowed{Dataset},
-            options::OrBorrowed{AbstractOptions},
+            tree::AbstractExpression, dataset::@&(Dataset), options::@&(AbstractOptions)
         )
             A = expected_array_type(@take(dataset.X), typeof(tree))
             out, complete = eval_tree_array(tree, @take(dataset.X), options)
@@ -75,9 +73,7 @@ end
             end
         end
         function eval_tree_dispatch(
-            tree::AbstractExpressionNode,
-            dataset::OrBorrowed{Dataset},
-            options::OrBorrowed{AbstractOptions},
+            tree::AbstractExpressionNode, dataset::@&(Dataset), options::@&(AbstractOptions)
         )
             A = expected_array_type(@take(dataset.X), typeof(tree))
             out, complete = eval_tree_array(tree, @take(dataset.X), options)
@@ -93,8 +89,8 @@ end
 # Evaluate the loss of a particular expression on the input dataset.
 function _eval_loss(
     tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
-    dataset::OrBorrowed{Dataset{T,L}},
-    options::OrBorrowed{AbstractOptions},
+    dataset::@&(Dataset{T,L}),
+    options::@&(AbstractOptions),
     regularization::Bool,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
     (prediction, completion) = eval_tree_dispatch(tree, dataset, options)
@@ -142,8 +138,8 @@ end
 # Evaluate the loss of a particular expression on the input dataset.
 function eval_loss(
     tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
-    dataset::OrBorrowed{Dataset{T,L}},
-    options::OrBorrowed{AbstractOptions};
+    dataset::@&(Dataset{T,L}),
+    options::@&(AbstractOptions);
     regularization::Bool=true,
     idx=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -176,7 +172,7 @@ function loss_to_cost(
     use_baseline::Bool,
     baseline::L,
     member,
-    options::OrBorrowed{AbstractOptions},
+    options::@&(AbstractOptions),
     complexity::Union{Int,Nothing}=nothing,
 )::L where {L<:LOSS_TYPE}
     # TODO: Come up with a more general normalization scheme.
@@ -195,9 +191,9 @@ end
 
 # Score an equation
 function eval_cost(
-    dataset::OrBorrowed{Dataset{T,L}},
+    dataset::@&(Dataset{T,L}),
     member,
-    options::OrBorrowed{AbstractOptions};
+    options::@&(AbstractOptions);
     complexity::Union{Int,Nothing}=nothing,
 )::Tuple{L,L} where {T<:DATA_TYPE,L<:LOSS_TYPE}
     result_loss = eval_loss(get_tree_from_member(member), dataset, options)
@@ -239,8 +235,8 @@ end
 
 function dimensional_regularization(
     tree::Union{AbstractExpression{T},AbstractExpressionNode{T}},
-    dataset::OrBorrowed{Dataset{T,L}},
-    options::OrBorrowed{AbstractOptions},
+    dataset::@&(Dataset{T,L}),
+    options::@&(AbstractOptions),
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     if !violates_dimensional_constraints(tree, @take(dataset), @take(options))
         return zero(L)
