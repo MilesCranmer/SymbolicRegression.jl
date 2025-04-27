@@ -11,7 +11,7 @@ using DynamicExpressions:
 using ..CoreModule: AbstractOptions, Dataset
 using ..HallOfFameModule: HallOfFame
 using ..PopulationModule: Population
-using ..PopMemberModule: PopMember
+using ..PopMemberModule: PopMember, AbstractPopMember
 
 import DynamicExpressions: get_operators
 import ..CoreModule: create_expression
@@ -134,8 +134,10 @@ end
         )
     end
     function embed_metadata(
-        vec::Vector{H}, options::AbstractOptions, dataset::Dataset{T,L}
-    ) where {T,L,H<:Union{HallOfFame,Population,PopMember}}
+        vec::Vector{<:Union{HallOfFame,Population,AbstractPopMember}},
+        options::AbstractOptions,
+        dataset::Dataset{T,L},
+    ) where {T,L}
         return map(Fix{2}(Fix{3}(embed_metadata, dataset), options), vec)
     end
 end
@@ -153,8 +155,8 @@ function strip_metadata(
     return with_metadata(ex; init_params(options, dataset, ex, Val(false))...)
 end
 function strip_metadata(
-    member::PopMember, options::AbstractOptions, dataset::Dataset{T,L}
-) where {T,L}
+    member::PM, options::AbstractOptions, dataset::Dataset{T,L}
+) where {T,L,PM<:PopMember{T,L}}
     return PopMember(
         strip_metadata(member.tree, options, dataset),
         member.cost,
@@ -165,14 +167,14 @@ function strip_metadata(
         deterministic=options.deterministic,
     )
 end
-function strip_metadata(
-    pop::Population, options::AbstractOptions, dataset::Dataset{T,L}
-) where {T,L}
+@unstable function strip_metadata(
+    pop::P, options::AbstractOptions, dataset::Dataset{T,L}
+) where {T,L,P<:Population{T,L}}
     return Population(map(member -> strip_metadata(member, options, dataset), pop.members))
 end
 function strip_metadata(
-    hof::HallOfFame, options::AbstractOptions, dataset::Dataset{T,L}
-) where {T,L}
+    hof::H, options::AbstractOptions, dataset::Dataset{T,L}
+) where {T,L,N,PM<:AbstractPopMember,H<:HallOfFame{T,L,N,PM}}
     return HallOfFame(
         map(member -> strip_metadata(member, options, dataset), hof.members), hof.exists
     )

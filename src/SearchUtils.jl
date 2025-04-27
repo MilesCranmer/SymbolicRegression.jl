@@ -16,7 +16,7 @@ using ..UtilsModule: subscriptify
 using ..CoreModule: Dataset, AbstractOptions, Options, RecordType, max_features
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
-using ..PopMemberModule: PopMember
+using ..PopMemberModule: AbstractPopMember, PopMember
 using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
 using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
@@ -244,9 +244,9 @@ function get_worker_output_type(
 end
 
 #! format: off
-extract_from_worker(p::DefaultWorkerOutputType, _, _) = p
-extract_from_worker(f::Future, ::Type{P}, ::Type{H}) where {P,H} = fetch(f)::DefaultWorkerOutputType{P,H}
-extract_from_worker(t::Task, ::Type{P}, ::Type{H}) where {P,H} = fetch(t)::DefaultWorkerOutputType{P,H}
+@unstable extract_from_worker(p::DefaultWorkerOutputType, _, _) = p
+@unstable extract_from_worker(f::Future, ::Type{P}, ::Type{H}) where {P,H} = fetch(f)::DefaultWorkerOutputType{P,H}
+@unstable extract_from_worker(t::Task, ::Type{P}, ::Type{H}) where {P,H} = fetch(t)::DefaultWorkerOutputType{P,H}
 #! format: on
 
 macro sr_spawner(expr, kws...)
@@ -678,7 +678,7 @@ end
 
 function update_hall_of_fame!(
     hall_of_fame::HallOfFame, members::Vector{PM}, options::AbstractOptions
-) where {PM<:PopMember}
+) where {PM<:AbstractPopMember}
     for member in members
         size = compute_complexity(member, options)
         valid_size = 0 < size <= options.maxsize
