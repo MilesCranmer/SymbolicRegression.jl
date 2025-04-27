@@ -189,11 +189,11 @@ function strip_metadata(
     )
 end
 
-@unstable function get_operators(ex::AbstractExpression, options::AbstractOptions)
-    return get_operators(ex, options.operators)
+@unstable function get_operators(ex::AbstractExpression, options::@&(AbstractOptions))
+    return get_operators(ex, @take(options.operators))
 end
-@unstable function get_operators(ex::AbstractExpressionNode, options::AbstractOptions)
-    return get_operators(ex, options.operators)
+@unstable function get_operators(ex::AbstractExpressionNode, options::@&(AbstractOptions))
+    return get_operators(ex, @take(options.operators))
 end
 
 end

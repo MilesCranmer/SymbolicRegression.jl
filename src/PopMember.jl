@@ -138,7 +138,7 @@ function PopMember(
         ex,
         cost,
         loss,
-        @take(options),
+        options,
         set_complexity;
         ref=ref,
         parent=parent,

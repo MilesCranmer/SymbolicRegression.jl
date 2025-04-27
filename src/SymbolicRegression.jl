@@ -560,8 +560,20 @@ end
 @noinline function _equation_search(
     datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions, saved_state
 ) where {D<:Dataset}
-    _validate_options(datasets, ropt, options)
-    state = _create_workers(datasets, ropt, options)
+    @own ropt, options, saved_state
+    @own :mut datasets
+
+    @bc _validate_options(datasets, ropt, options)
+    @bc _update_baseline_losses!(@mut(datasets), options)
+    @own state = @bc _create_workers(datasets, ropt, options)
+
+    # cheat
+    state = @take!(state)
+    datasets = @take!(datasets)
+    ropt = @take!(ropt)
+    options = @take!(options)
+    saved_state = @take!(saved_state)
+
     _initialize_search!(state, datasets, ropt, options, saved_state)
     _warmup_search!(state, datasets, ropt, options)
     _main_search_loop!(state, datasets, ropt, options)
@@ -570,40 +582,45 @@ end
     return _format_output(state, datasets, ropt, options)
 end
 
+function _update_baseline_losses!(
+    datasets::@&(:mut, Vector{D}), options::@&(AbstractOptions)
+) where {D<:Dataset}
+    for i in eachindex(datasets)
+        update_baseline_loss!(datasets[i], options)
+    end
+    return nothing
+end
+
 function _validate_options(
-    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions
+    datasets::@&(Vector{D}), ropt::@&(AbstractRuntimeOptions), options::@&(AbstractOptions)
 ) where {T,L,D<:Dataset{T,L}}
-    example_dataset = first(datasets)
-    nout = length(datasets)
+    @own example_dataset = first(@take(datasets))
+    @own nout = length(datasets)
     @assert nout >= 1
     @assert (nout == 1 || ropt.dim_out == 2)
     @assert options.populations >= 1
-    if ropt.progress
+    if @take(ropt.progress)
         @assert(nout == 1, "You cannot display a progress bar for multi-output searches.")
         @assert(ropt.verbosity > 0, "You cannot display a progress bar with `verbosity=0`.")
     end
-    if options.node_type <: GraphNode && ropt.verbosity > 0
+    if @take(options.node_type) <: GraphNode && ropt.verbosity > 0
         @warn "The `GraphNode` interface and mutation operators are experimental and will change in future versions."
     end
-    if ropt.runtests
-        test_option_configuration(ropt.parallelism, datasets, options, ropt.verbosity)
-        test_dataset_configuration(example_dataset, options, ropt.verbosity)
+    if @take(ropt.runtests)
+        @bc test_option_configuration(ropt.parallelism, datasets, options, ropt.verbosity)
+        @bc test_dataset_configuration(example_dataset, options, ropt.verbosity)
     end
-    for dataset in datasets
-        update_baseline_loss!(dataset, options)
+    if @take(options.define_helper_functions)
+        set_default_variable_names!(@take(example_dataset.variable_names))
     end
-    if options.define_helper_functions
-        set_default_variable_names!(first(datasets).variable_names)
-    end
-    if options.seed !== nothing
-        seed!(options.seed)
+    if !isnothing(options.seed)
+        seed!(@take(options.seed))
     end
     return nothing
 end
 @stable default_mode = "disable" function _create_workers(
-    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions
+    datasets::@&(Vector{D}), ropt::@&(AbstractRuntimeOptions), options::@&(AbstractOptions)
 ) where {T,L,D<:Dataset{T,L}}
-    @own datasets, ropt, options
     @own stdin_reader = @bc watch_stream(@take(options.input_stream))
 
     record = RecordType()

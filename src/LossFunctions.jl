@@ -1,6 +1,6 @@
 module LossFunctionsModule
 
-using BorrowChecker: @&, @take
+using BorrowChecker: @&, @take, @take!, @bc, @own
 using DispatchDoctor: @stable
 using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, get_tree, eval_tree_array
@@ -64,7 +64,7 @@ end
         function eval_tree_dispatch(
             tree::AbstractExpression, dataset::@&(Dataset), options::@&(AbstractOptions)
         )
-            A = expected_array_type(@take(dataset.X), typeof(tree))
+            A = expected_array_type(dataset.X, typeof(tree))
             out, complete = eval_tree_array(tree, @take(dataset.X), options)
             if isnothing(out)
                 return out, false
@@ -75,7 +75,7 @@ end
         function eval_tree_dispatch(
             tree::AbstractExpressionNode, dataset::@&(Dataset), options::@&(AbstractOptions)
         )
-            A = expected_array_type(@take(dataset.X), typeof(tree))
+            A = expected_array_type(dataset.X, typeof(tree))
             out, complete = eval_tree_array(tree, @take(dataset.X), options)
             if isnothing(out)
                 return out, false
@@ -217,14 +217,14 @@ function score_func end
 Update the baseline loss of the dataset using the loss function specified in `options`.
 """
 function update_baseline_loss!(
-    dataset::Dataset{T,L}, options::AbstractOptions
+    dataset::@&(:mut, Dataset{T,L}), options::@&(AbstractOptions)
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    example_tree = create_expression(zero(T), options, dataset)
+    @own example_tree = @bc create_expression(zero(T), options, dataset)
     # constructorof(options.node_type)(T; val=dataset.avg_y)
     # TODO: It could be that the loss function is not defined for this example type?
-    baseline_loss = eval_loss(example_tree, dataset, options)
+    @own baseline_loss = @bc eval_loss(@take!(example_tree), dataset, options)
     if isfinite(baseline_loss)
-        dataset.baseline_loss = baseline_loss
+        dataset.baseline_loss = @take!(baseline_loss)
         dataset.use_baseline = true
     else
         dataset.baseline_loss = one(L)

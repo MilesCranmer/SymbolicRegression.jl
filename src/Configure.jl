@@ -33,38 +33,38 @@ precompile(Tuple{typeof(test_operator),Function,Float32})
 
 const TEST_INPUTS = collect(range(-100, 100; length=99))
 
-function assert_operators_well_defined(T, options::AbstractOptions)
+function assert_operators_well_defined(T, options::@&(AbstractOptions))
     test_input = if T <: Complex
         Base.Fix1(convert, T).(TEST_INPUTS .+ TEST_INPUTS .* im)
     else
         Base.Fix1(convert, T).(TEST_INPUTS)
     end
-    for x in test_input, y in test_input, op in options.operators.binops
+    for x in test_input, y in test_input, op in @take(options.operators.binops)
         test_operator(op, x, y)
     end
-    for x in test_input, op in options.operators.unaops
+    for x in test_input, op in @take(options.operators.unaops)
         test_operator(op, x)
     end
 end
 
 # Check for errors before they happen
 function test_option_configuration(
-    parallelism, datasets::Vector{D}, options::AbstractOptions, verbosity
+    parallelism, datasets::@&(Vector{D}), options::@&(AbstractOptions), verbosity
 ) where {T,D<:Dataset{T}}
-    if options.deterministic && parallelism != :serial
+    if @take(options.deterministic) && parallelism != :serial
         error("Determinism is only guaranteed for serial mode.")
     end
     if parallelism == :multithreading && Threads.nthreads() == 1
         verbosity > 0 &&
             @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."
     end
-    if any(has_units, datasets) && options.dimensional_constraint_penalty === nothing
+    if any(has_units, datasets) && isnothing(options.dimensional_constraint_penalty)
         verbosity > 0 &&
             @warn "You are using dimensional constraints, but `dimensional_constraint_penalty` was not set. The default penalty of `1000.0` will be used."
     end
 
-    if any(is_anonymous_function, options.operators.binops) ||
-        any(is_anonymous_function, options.operators.unaops)
+    if any(is_anonymous_function, @take(options.operators.binops)) ||
+        any(is_anonymous_function, @take(options.operators.unaops))
         throw(
             AssertionError(
                 "Anonymous functions can't be used as operators for SymbolicRegression.jl"
@@ -74,7 +74,9 @@ function test_option_configuration(
 
     assert_operators_well_defined(T, options)
 
-    operator_intersection = intersect(options.operators.binops, options.operators.unaops)
+    operator_intersection = intersect(
+        @take(options.operators.binops), @take(options.operators.unaops)
+    )
     if length(operator_intersection) > 0
         throw(
             AssertionError(
@@ -87,11 +89,11 @@ end
 
 # Check for errors before they happen
 function test_dataset_configuration(
-    dataset::Dataset{T}, options::AbstractOptions, verbosity
+    dataset::@&(Dataset{T}), options::@&(AbstractOptions), verbosity
 ) where {T<:DATA_TYPE}
     n = dataset.n
     if n != size(dataset.X, 2) ||
-        (dataset.y !== nothing && n != size(dataset.y::AbstractArray, 1))
+        (!isnothing(dataset.y) && n != size(dataset.y::@&(AbstractArray), 1))
         throw(
             AssertionError(
                 "Dataset dimensions are invalid. Make sure X is of shape [features, rows], y is of shape [rows] and if there are weights, they are of shape [rows].",
@@ -99,13 +101,13 @@ function test_dataset_configuration(
         )
     end
 
-    if size(dataset.X, 2) > 10000 && !options.batching && verbosity > 0
+    if size(dataset.X, 2) > 10000 && !@take(options.batching) && verbosity > 0
         @info "Note: you are running with more than 10,000 datapoints. You should consider turning on batching (`options.batching`), and also if you need that many datapoints. Unless you have a large amount of noise (in which case you should smooth your dataset first), generally < 10,000 datapoints is enough to find a functional form."
     end
 
-    if !(typeof(options.elementwise_loss) <: SupervisedLoss) &&
+    if !(typeof(options.elementwise_loss) <: @&(SupervisedLoss)) &&
         is_weighted(dataset) &&
-        !(3 in [m.nargs - 1 for m in methods(options.elementwise_loss)])
+        !(3 in [m.nargs - 1 for m in methods(@take(options.elementwise_loss))])
         throw(
             AssertionError(
                 "When you create a custom loss function, and are using weights, you need to define your loss function with three scalar arguments: f(prediction, target, weight).",

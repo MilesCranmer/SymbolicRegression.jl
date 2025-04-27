@@ -68,7 +68,7 @@ which speed up evaluation significantly.
             bumper=something(bumper, @take(options.bumper)),
         )
         out, complete = DE.eval_tree_array(
-            tree, X, DE.get_operators(tree, @take(options)); eval_options, kws...
+            tree, X, DE.get_operators(tree, options); eval_options, kws...
         )
         if isnothing(out)
             return nothing, false
@@ -79,12 +79,12 @@ which speed up evaluation significantly.
 )
 
 """Improve type inference by telling Julia the expected array returned."""
-function expected_array_type(X::AbstractArray, ::Type)
+function expected_array_type(X::@&(AbstractArray), ::Type)
     return typeof(similar(X, axes(X, 2)))
 end
-expected_array_type(X::AbstractArray, ::Type, ::Val{:eval_grad_tree_array}) = typeof(X)
-expected_array_type(::Matrix{T}, ::Type) where {T} = Vector{T}
-expected_array_type(::SubArray{T,2,Matrix{T}}, ::Type) where {T} = Vector{T}
+expected_array_type(X::@&(AbstractArray), ::Type, ::Val{:eval_grad_tree_array}) = typeof(X)
+expected_array_type(::@&(Matrix{T}), ::Type) where {T} = Vector{T}
+expected_array_type(::@&(SubArray{T,2,Matrix{T}}), ::Type) where {T} = Vector{T}
 
 """
     eval_diff_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::AbstractOptions, direction::Int)
