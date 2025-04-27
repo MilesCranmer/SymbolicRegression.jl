@@ -1,6 +1,6 @@
 module TemplateExpressionModule
 
-using BorrowChecker: @&
+using BorrowChecker: @&, @take, OrBorrowed
 using Random: AbstractRNG
 using StatsBase: StatsBase
 using Compat: Fix
@@ -498,7 +498,7 @@ end
 
 function EB.create_expression(
     t::AbstractExpressionNode{T},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     dataset::Dataset{T,L},
     ::Type{<:AbstractExpressionNode},
     ::Type{E},
@@ -523,7 +523,7 @@ end
 function EB.extra_init_params(
     ::Type{E},
     prototype::Union{Nothing,AbstractExpression},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     dataset::Dataset{T},
     ::Val{embed},
 ) where {T,embed,E<:TemplateExpression}
@@ -549,7 +549,7 @@ function EB.sort_params(params::NamedTuple, ::Type{<:TemplateExpression})
 end
 
 function ComplexityModule.compute_complexity(
-    tree::TemplateExpression, options::AbstractOptions; break_sharing=Val(false)
+    tree::TemplateExpression, options::@&(AbstractOptions); break_sharing=Val(false)
 )
     # Rather than including the complexity of the combined tree,
     # we only sum the complexity of each inner expression, which will be smaller.
@@ -626,7 +626,7 @@ function DE.string_tree(
     )
     return annotatedstring(join(prefixed_strings, pretty ? styled"\n" : styled"; "))
 end
-function HOF.make_prefix(::TemplateExpression, ::AbstractOptions, ::Dataset)
+function HOF.make_prefix(::TemplateExpression, ::@&(AbstractOptions), ::Dataset)
     return ""
 end
 
@@ -683,7 +683,7 @@ end
 function DA.violates_dimensional_constraints(
     @nospecialize(tree::TemplateExpression),
     dataset::Dataset,
-    @nospecialize(options::AbstractOptions)
+    @nospecialize(options::OrBorrowed{AbstractOptions})
 )
     @assert !has_units(dataset)
     return false
@@ -691,7 +691,7 @@ end
 function MM.condition_mutation_weights!(
     @nospecialize(weights::AbstractMutationWeights),
     @nospecialize(member::P),
-    @nospecialize(options::AbstractOptions),
+    @nospecialize(options::OrBorrowed{AbstractOptions}),
     curmaxsize::Int,
 ) where {T,L,N<:TemplateExpression,P<:PopMember{T,L,N}}
     if !preserve_sharing(typeof(member.tree))
@@ -727,7 +727,7 @@ end
 CM.OptionsModule.recommend_loss_function_expression(::Type{<:TemplateExpression}) = true
 
 function CM.max_features(
-    dataset::Dataset, options::Options{<:Any,<:Any,<:Any,<:TemplateExpression}
+    dataset::@&(Dataset), options::@&(Options{<:Any,<:Any,<:Any,<:TemplateExpression})
 )
     num_features = options.expression_options.structure.num_features
     return max(values(num_features)...)
@@ -766,7 +766,7 @@ function MM.condition_mutate_constant!(
     ::Type{<:TemplateExpression},
     weights::AbstractMutationWeights,
     member::PopMember,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     curmaxsize::Int,
 )
     # Avoid modifying the mutate_constant weight, since
@@ -806,7 +806,7 @@ has_constants(ex::TemplateExpression) = any(has_constants, values(get_contents(e
 function MF.mutate_constant(
     ex::TemplateExpression{T},
     temperature,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     regular_constant_mutation = !has_params(ex) || (has_constants(ex) && rand(rng, Bool))
@@ -846,7 +846,7 @@ end
 
 function CC.check_constraints(
     ex::TemplateExpression,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     maxsize::Int,
     cursize::Union{Int,Nothing}=nothing,
 )::Bool

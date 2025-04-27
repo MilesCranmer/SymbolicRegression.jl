@@ -3,7 +3,7 @@ module RecorderModule
 using ..CoreModule: RecordType
 using BorrowChecker: BorrowChecker
 
-"Assumes that `options` holds the user options::AbstractOptions"
+"Assumes that `options` holds the user options::@&(AbstractOptions)"
 macro recorder(ex)
     quote
         if $(BorrowChecker).@take($(esc(:options)).use_recorder)

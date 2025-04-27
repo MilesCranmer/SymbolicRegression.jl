@@ -8,7 +8,7 @@ import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
     score_func(
         dataset::Dataset{T,L},
         member,
-        options::AbstractOptions;
+        options::@&(AbstractOptions);
         complexity::Union{Int,Nothing}=nothing,
     ) where {T<:DATA_TYPE,L<:LOSS_TYPE},
     eval_cost(dataset, member, options; complexity),
@@ -41,7 +41,7 @@ import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
         niterations::Int=10,
         weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
         variable_names::Union{Vector{String},Nothing}=nothing,
-        options::AbstractOptions=Options(),
+        options::@&(AbstractOptions)=Options(),
         parallelism=:multithreading,
         numprocs::Union{Int,Nothing}=nothing,
         procs::Union{Vector{Int},Nothing}=nothing,
@@ -74,7 +74,7 @@ import .MutationFunctionsModule: gen_random_tree, gen_random_tree_fixed_size
     EquationSearch(
         datasets::Vector{D};
         niterations::Int=10,
-        options::AbstractOptions=Options(),
+        options::@&(AbstractOptions)=Options(),
         parallelism=:multithreading,
         numprocs::Union{Int,Nothing}=nothing,
         procs::Union{Vector{Int},Nothing}=nothing,

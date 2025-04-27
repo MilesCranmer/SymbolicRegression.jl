@@ -121,7 +121,7 @@ function evaluator(
     f::F,
     tree::Union{AbstractExpressionNode{T},AbstractExpression{T}},
     dataset::Dataset{T,L},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     idx,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE,F}
     full_dataset = get_full_dataset(dataset)
@@ -212,7 +212,7 @@ end
 function score_func end
 
 """
-    update_baseline_loss!(dataset::Dataset{T,L}, options::AbstractOptions) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    update_baseline_loss!(dataset::Dataset{T,L}, options::@&(AbstractOptions)) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 
 Update the baseline loss of the dataset using the loss function specified in `options`.
 """

@@ -113,12 +113,12 @@ end
 
 @unstable begin
     function embed_metadata(
-        ex::AbstractExpression, options::AbstractOptions, dataset::Dataset{T,L}
+        ex::AbstractExpression, options::@&(AbstractOptions), dataset::Dataset{T,L}
     ) where {T,L}
         return with_metadata(ex; init_params(options, dataset, ex, Val(true))...)
     end
     function embed_metadata(
-        member::PopMember, options::AbstractOptions, dataset::Dataset{T,L}
+        member::PopMember, options::@&(AbstractOptions), dataset::Dataset{T,L}
     ) where {T,L}
         return PopMember(
             embed_metadata(member.tree, options, dataset),
@@ -131,21 +131,21 @@ end
         )
     end
     function embed_metadata(
-        pop::Population, options::AbstractOptions, dataset::Dataset{T,L}
+        pop::Population, options::@&(AbstractOptions), dataset::Dataset{T,L}
     ) where {T,L}
         return Population(
             map(Fix{2}(Fix{3}(embed_metadata, dataset), options), pop.members)
         )
     end
     function embed_metadata(
-        hof::HallOfFame, options::AbstractOptions, dataset::Dataset{T,L}
+        hof::HallOfFame, options::@&(AbstractOptions), dataset::Dataset{T,L}
     ) where {T,L}
         return HallOfFame(
             map(Fix{2}(Fix{3}(embed_metadata, dataset), options), hof.members), hof.exists
         )
     end
     function embed_metadata(
-        vec::Vector{H}, options::AbstractOptions, dataset::Dataset{T,L}
+        vec::Vector{H}, options::@&(AbstractOptions), dataset::Dataset{T,L}
     ) where {T,L,H<:Union{HallOfFame,Population,PopMember}}
         return map(Fix{2}(Fix{3}(embed_metadata, dataset), options), vec)
     end
@@ -159,12 +159,12 @@ stored within an expression).
 The opposite of this is `embed_metadata`.
 """
 function strip_metadata(
-    ex::AbstractExpression, options::AbstractOptions, dataset::Dataset{T,L}
+    ex::AbstractExpression, options::@&(AbstractOptions), dataset::Dataset{T,L}
 ) where {T,L}
     return with_metadata(ex; init_params(options, dataset, ex, Val(false))...)
 end
 function strip_metadata(
-    member::PopMember, options::AbstractOptions, dataset::Dataset{T,L}
+    member::PopMember, options::@&(AbstractOptions), dataset::Dataset{T,L}
 ) where {T,L}
     return PopMember(
         strip_metadata(member.tree, options, dataset),
@@ -177,12 +177,12 @@ function strip_metadata(
     )
 end
 function strip_metadata(
-    pop::Population, options::AbstractOptions, dataset::Dataset{T,L}
+    pop::Population, options::@&(AbstractOptions), dataset::Dataset{T,L}
 ) where {T,L}
     return Population(map(member -> strip_metadata(member, options, dataset), pop.members))
 end
 function strip_metadata(
-    hof::HallOfFame, options::AbstractOptions, dataset::Dataset{T,L}
+    hof::HallOfFame, options::@&(AbstractOptions), dataset::Dataset{T,L}
 ) where {T,L}
     return HallOfFame(
         map(member -> strip_metadata(member, options, dataset), hof.members), hof.exists

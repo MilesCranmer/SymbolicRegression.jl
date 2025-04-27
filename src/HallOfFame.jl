@@ -1,5 +1,6 @@
 module HallOfFameModule
 
+using BorrowChecker: @&, @take, @take!, @bc, @own
 using StyledStrings: @styled_str
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
@@ -48,7 +49,7 @@ function Base.show(io::IO, mime::MIME"text/plain", hof::HallOfFame{T,L,N}) where
 end
 
 """
-    HallOfFame(options::AbstractOptions, dataset::Dataset{T,L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
+    HallOfFame(options::@&(AbstractOptions), dataset::Dataset{T,L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 
 Create empty HallOfFame. The HallOfFame stores a list
 of `PopMember` objects in `.members`, which is enumerated
@@ -61,19 +62,19 @@ Arguments:
 - `dataset`: Dataset containing the input data.
 """
 function HallOfFame(
-    options::AbstractOptions, dataset::Dataset{T,L}
+    options::@&(AbstractOptions), dataset::@&(Dataset{T,L})
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    base_tree = create_expression(zero(T), options, dataset)
+    @own base_tree = @bc create_expression(zero(T), options, dataset)
 
-    return HallOfFame{T,L,typeof(base_tree)}(
+    return HallOfFame{T,L,typeof(@take(base_tree))}(
         [
             PopMember(
-                copy(base_tree),
+                @take(base_tree),
                 L(0),
                 L(Inf),
                 options;
                 parent=-1,
-                deterministic=options.deterministic,
+                deterministic=@take(options.deterministic),
             ) for i in 1:(options.maxsize)
         ],
         [false for i in 1:(options.maxsize)],
@@ -166,7 +167,7 @@ function string_dominating_pareto_curve(
     print(buffer, '─'^(terminal_width - 1))
     return dump_buffer(buffer)
 end
-function make_prefix(::AbstractExpression, ::AbstractOptions, dataset::Dataset)
+function make_prefix(::AbstractExpression, ::@&(AbstractOptions), dataset::Dataset)
     y_prefix = dataset.y_variable_name
     unit_str = format_dimensions(dataset.y_sym_units)
     y_prefix *= unit_str

@@ -370,7 +370,7 @@ which is useful for debugging and profiling.
     More iterations will improve the results.
 - `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
     weight the loss for each `y` by this value (same shape as `y`).
-- `options::AbstractOptions=Options()`: The options for the search, such as
+- `options::@&(AbstractOptions)=Options()`: The options for the search, such as
     which operators to use, evolution hyperparameters, etc.
 - `variable_names::Union{Vector{String}, Nothing}=nothing`: The names
     of each feature in `X`, which will be used during printing of equations.
@@ -454,7 +454,7 @@ function equation_search(
     y::AbstractMatrix;
     niterations::Int=100,
     weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
-    options::AbstractOptions=Options(),
+    options::@&(AbstractOptions)=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
     display_variable_names::Union{AbstractVector{String},Nothing}=variable_names,
     y_variable_names::Union{String,AbstractVector{String},Nothing}=nothing,
@@ -537,7 +537,7 @@ end
 
 function equation_search(
     datasets::Vector{D};
-    options::AbstractOptions=Options(),
+    options::@&(AbstractOptions)=Options(),
     saved_state=nothing,
     runtime_options::Union{AbstractRuntimeOptions,Nothing}=nothing,
     runtime_options_kws...,
@@ -558,28 +558,39 @@ function equation_search(
 end
 
 @noinline function _equation_search(
-    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions, saved_state
+    datasets::Vector{D},
+    ropt::AbstractRuntimeOptions,
+    options::@&(AbstractOptions),
+    saved_state,
 ) where {D<:Dataset}
     @own ropt, options, saved_state
     @own :mut datasets
 
     @bc _validate_options(datasets, ropt, options)
     @bc _update_baseline_losses!(@mut(datasets), options)
-    @own state = @bc _create_workers(datasets, ropt, options)
+    @own :mut state = @bc _create_workers(datasets, ropt, options)
 
-    # cheat
-    state = @take!(state)
-    datasets = @take!(datasets)
-    ropt = @take!(ropt)
-    options = @take!(options)
-    saved_state = @take!(saved_state)
+    @lifetime lt begin #= ensures dataset references last until threads finish =#
+        @ref ~lt rdatasets = datasets
+        @ref ~lt roptions = options
+        @ref ~lt rropt = ropt
 
-    _initialize_search!(state, datasets, ropt, options, saved_state)
-    _warmup_search!(state, datasets, ropt, options)
-    _main_search_loop!(state, datasets, ropt, options)
-    _tear_down!(state, ropt, options)
-    _info_dump(state, datasets, ropt, options)
-    return _format_output(state, datasets, ropt, options)
+        @bc _initialize_search!(
+            @mut(state), rdatasets, rropt, roptions, @take!(saved_state)
+        )
+        @bc _warmup_search!(@mut(state), rdatasets, rropt, roptions)
+
+        # cheat
+        state = @take!(state)
+        datasets = @take(datasets)
+        ropt = @take(ropt)
+        options = @take(options)
+
+        _main_search_loop!(state, datasets, ropt, options)
+        _tear_down!(state, ropt, options)
+        _info_dump(state, datasets, ropt, options)
+        return _format_output(state, datasets, ropt, options)
+    end
 end
 
 function _update_baseline_losses!(
@@ -626,7 +637,7 @@ end
     record = RecordType()
     @recorder record["options"] = "$(options)"
 
-    @own nout = @bc length(datasets)
+    nout = @bc length(datasets)
     @own example_dataset = @take(datasets[1])
     @own example_ex = @bc create_expression(zero(T), options, example_dataset)
 
@@ -682,7 +693,7 @@ end
 
     @own halls_of_fame = Vector{HallOfFameType}(undef, @take(nout))
 
-    @own total_cycles = ropt.niterations * options.populations
+    total_cycles = ropt.niterations * options.populations
     @own cycles_remaining = [@take(total_cycles) for j in 1:nout]
     @own cur_maxsizes = [
         @bc(
@@ -714,57 +725,71 @@ end
     )
 end
 function _initialize_search!(
-    state::AbstractSearchState{T,L,N},
-    datasets,
-    ropt::AbstractRuntimeOptions,
-    options::AbstractOptions,
+    state::@&(:mut, AbstractSearchState{T,L,N}),
+    datasets::@&(Vector{<:Dataset}),
+    ropt::@&(AbstractRuntimeOptions),
+    options::@&(AbstractOptions),
     saved_state,
 ) where {T,L,N}
+    @own saved_state
     nout = length(datasets)
 
-    init_hall_of_fame = load_saved_hall_of_fame(saved_state)
-    if init_hall_of_fame === nothing
+    @own init_hall_of_fame = load_saved_hall_of_fame(@take(saved_state))
+    if isnothing(init_hall_of_fame)
         for j in 1:nout
             state.halls_of_fame[j] = HallOfFame(options, datasets[j])
         end
     else
         # Recompute losses for the hall of fame, in
         # case the dataset changed:
-        for j in eachindex(init_hall_of_fame, datasets, state.halls_of_fame)
-            hof = strip_metadata(init_hall_of_fame[j], options, datasets[j])
-            for member in hof.members[hof.exists]
-                cost, result_loss = eval_cost(datasets[j], member, options)
-                member.cost = cost
-                member.loss = result_loss
+        for j in 1:nout
+            @own :mut hof = @bc strip_metadata(init_hall_of_fame[j], options, datasets[j])
+            for i_member in 1:length(hof.members)
+                @take(hof.exists[i_member]) || continue
+                @lifetime lt begin
+                    @ref ~lt :mut member = hof.members[i_member]
+                    cost, result_loss = @bc eval_cost(datasets[j], member, options)
+                    member.cost = cost
+                    member.loss = result_loss
+                end
             end
-            state.halls_of_fame[j] = hof
+            state.halls_of_fame[j] = @take!(hof)
         end
     end
 
     for j in 1:nout, i in 1:(options.populations)
-        worker_idx = assign_next_worker!(
-            state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
+        worker_idx = @bc assign_next_worker!(
+            @mut(state.worker_assignment);
+            out=j,
+            pop=i,
+            parallelism=ropt.parallelism,
+            procs=state.procs,
         )
-        saved_pop = load_saved_population(saved_state; out=j, pop=i)
-        new_pop =
-            if saved_pop !== nothing && length(saved_pop.members) == options.population_size
-                _saved_pop = strip_metadata(saved_pop, options, datasets[j])
+        @own saved_pop = load_saved_population(@take(saved_state); out=j, pop=i)
+        @own new_pop =
+            if !isnothing(saved_pop) && length(saved_pop.members) == options.population_size
+                @own :mut _saved_pop = @bc strip_metadata(saved_pop, options, datasets[j])
                 ## Update losses:
-                for member in _saved_pop.members
-                    cost, result_loss = eval_cost(datasets[j], member, options)
-                    member.cost = cost
-                    member.loss = result_loss
+                for i_member in 1:length(_saved_pop.members)
+                    @take(_saved_pop.exists[i_member]) || continue
+                    @lifetime lt begin
+                        @ref ~lt :mut member = _saved_pop.members[i_member]
+                        @own cost, result_loss = @bc eval_cost(datasets[j], member, options)
+                        member.cost = @take!(cost)
+                        member.loss = @take!(result_loss)
+                    end
                 end
-                copy_pop = copy(_saved_pop)
-                @sr_spawner(
-                    begin
-                        (copy_pop, HallOfFame(options, datasets[j]), RecordType(), 0.0)
-                    end,
-                    parallelism = ropt.parallelism,
-                    worker_idx = worker_idx
-                )
+                let copy_pop = @take!(_saved_pop)
+                    @sr_spawner(
+                        begin
+                            (copy_pop, HallOfFame(options, datasets[j]), RecordType(), 0.0)
+                        end,
+                        parallelism = ropt.parallelism,
+                        worker_idx = worker_idx
+                    )
+                end
             else
-                if saved_pop !== nothing && ropt.verbosity > 0
+                if !isnothing(saved_pop) && ropt.verbosity > 0
                     @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
                 end
                 @sr_spawner(
@@ -772,14 +797,14 @@ function _initialize_search!(
                         (
                             Population(
                                 datasets[j];
-                                population_size=options.population_size,
+                                population_size=@take(options.population_size),
                                 nlength=3,
                                 options=options,
                                 nfeatures=max_features(datasets[j], options),
                             ),
                             HallOfFame(options, datasets[j]),
                             RecordType(),
-                            Float64(options.population_size),
+                            Float64(@take(options.population_size)),
                         )
                     end,
                     parallelism = ropt.parallelism,
@@ -787,21 +812,19 @@ function _initialize_search!(
                 )
                 # This involves population_size evaluations, on the full dataset:
             end
-        push!(state.worker_output[j], new_pop)
+        push!(state.worker_output[j], @take!(new_pop))
     end
     return nothing
 end
 function _warmup_search!(
-    state::AbstractSearchState{T,L,N},
-    datasets,
-    ropt::AbstractRuntimeOptions,
-    options::AbstractOptions,
+    state::@&(:mut, AbstractSearchState{T,L,N}),
+    datasets::@&(Vector{<:Dataset}),
+    ropt::@&(AbstractRuntimeOptions),
+    options::@&(AbstractOptions),
 ) where {T,L,N}
     nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
-        dataset = datasets[j]
-        running_search_statistics = state.all_running_search_statistics[j]
-        cur_maxsize = state.cur_maxsizes[j]
+        @clone running_search_statistics = state.all_running_search_statistics[j]
         @recorder state.record[]["out$(j)_pop$(i)"] = RecordType()
         worker_idx = assign_next_worker!(
             state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
@@ -809,29 +832,34 @@ function _warmup_search!(
 
         # TODO - why is this needed??
         # Multi-threaded doesn't like to fetch within a new task:
-        c_rss = deepcopy(running_search_statistics)
-        last_pop = state.worker_output[j][i]
-        updated_pop = @sr_spawner(
-            begin
-                in_pop = first(
-                    extract_from_worker(last_pop, Population{T,L,N}, HallOfFame{T,L,N})
+        state.worker_output[j][i] =
+            let c_rss = @take!(running_search_statistics),
+                last_pop = @take(state.worker_output[j][i]),
+                cur_maxsize = @take(state.cur_maxsizes[j])
+
+                @sr_spawner(
+                    begin
+                        in_pop = first(
+                            extract_from_worker(
+                                last_pop, Population{T,L,N}, HallOfFame{T,L,N}
+                            ),
+                        )
+                        _dispatch_s_r_cycle(
+                            in_pop,
+                            datasets[j],
+                            options;
+                            pop=i,
+                            out=j,
+                            iteration=0,
+                            verbosity=@take(ropt.verbosity),
+                            cur_maxsize=cur_maxsize,
+                            running_search_statistics=c_rss,
+                        )::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N}}
+                    end,
+                    parallelism = ropt.parallelism,
+                    worker_idx = worker_idx
                 )
-                _dispatch_s_r_cycle(
-                    in_pop,
-                    dataset,
-                    options;
-                    pop=i,
-                    out=j,
-                    iteration=0,
-                    ropt.verbosity,
-                    cur_maxsize,
-                    running_search_statistics=c_rss,
-                )::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N}}
-            end,
-            parallelism = ropt.parallelism,
-            worker_idx = worker_idx
-        )
-        state.worker_output[j][i] = updated_pop
+            end
     end
     return nothing
 end
@@ -839,7 +867,7 @@ function _main_search_loop!(
     state::AbstractSearchState{T,L,N},
     datasets,
     ropt::AbstractRuntimeOptions,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
 ) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
@@ -1081,7 +1109,7 @@ function _main_search_loop!(
     return nothing
 end
 function _tear_down!(
-    state::AbstractSearchState, ropt::AbstractRuntimeOptions, options::AbstractOptions
+    state::AbstractSearchState, ropt::AbstractRuntimeOptions, options::@&(AbstractOptions)
 )
     close_reader!(state.stdin_reader)
     # Safely close all processes or threads
@@ -1100,7 +1128,7 @@ function _format_output(
     state::AbstractSearchState,
     datasets,
     ropt::AbstractRuntimeOptions,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
 )
     nout = length(datasets)
     out_hof = if ropt.dim_out == 1
@@ -1117,8 +1145,8 @@ end
 
 @stable default_mode = "disable" function _dispatch_s_r_cycle(
     in_pop::Population{T,L,N},
-    dataset::Dataset,
-    options::AbstractOptions;
+    dataset::@&(Dataset),
+    options::@&(AbstractOptions);
     pop::Int,
     out::Int,
     iteration::Int,
@@ -1135,7 +1163,7 @@ end
     out_pop, best_seen, evals_from_cycle = s_r_cycle(
         dataset,
         in_pop,
-        options.ncycles_per_iteration,
+        @take(options.ncycles_per_iteration),
         cur_maxsize,
         running_search_statistics;
         verbosity=verbosity,
@@ -1147,7 +1175,7 @@ end
         dataset, out_pop, options, cur_maxsize, record
     )
     num_evals += evals_from_optimize
-    if options.batching
+    if @take(options.batching)
         for i_member in 1:(options.maxsize)
             if best_seen.exists[i_member]
                 cost, result_loss = eval_cost(dataset, best_seen.members[i_member], options)
@@ -1163,7 +1191,7 @@ function _info_dump(
     state::AbstractSearchState,
     datasets::Vector{D},
     ropt::AbstractRuntimeOptions,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
 ) where {D<:Dataset}
     ropt.verbosity <= 0 && return nothing
 

@@ -3,6 +3,7 @@ module LoggingModule
 using Base: AbstractLogger
 using Logging: Logging as LG
 using DynamicExpressions: string_tree
+using BorrowChecker: @&, @take, OrBorrowed
 
 using ..UtilsModule: @ignore
 using ..CoreModule: AbstractOptions, Dataset
@@ -71,7 +72,7 @@ function logging_callback!(
     @nospecialize(state::AbstractSearchState),
     datasets::AbstractVector{<:Dataset{T,L}},
     @nospecialize(ropt::AbstractRuntimeOptions),
-    @nospecialize(options::AbstractOptions),
+    @nospecialize(options::OrBorrowed{AbstractOptions}),
 ) where {T,L}
     if should_log(logger)
         data = log_payload(logger, state, datasets, options)
@@ -87,7 +88,7 @@ function log_payload(
     logger::AbstractSRLogger,
     @nospecialize(state::AbstractSearchState),
     datasets::AbstractVector{<:Dataset{T,L}},
-    @nospecialize(options::AbstractOptions),
+    @nospecialize(options::OrBorrowed{AbstractOptions}),
 ) where {T,L}
     d = Ref(Dict{String,Any}())
     for i in eachindex(datasets, state.halls_of_fame)
@@ -111,7 +112,7 @@ function _log_scalars(;
     @nospecialize(pops::AbstractVector{<:Population}),
     @nospecialize(hall_of_fame::HallOfFame{T,L}),
     dataset::Dataset{T,L},
-    @nospecialize(options::AbstractOptions),
+    @nospecialize(options::OrBorrowed{AbstractOptions}),
 ) where {T,L}
     out = Dict{String,Any}()
 

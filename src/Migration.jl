@@ -1,19 +1,20 @@
 module MigrationModule
 
+using BorrowChecker: @&, @take
 using ..CoreModule: AbstractOptions
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember, reset_birth!
 using ..UtilsModule: poisson_sample
 
 """
-    migrate!(migration::Pair{Population{T,L},Population{T,L}}, options::AbstractOptions; frac::AbstractFloat)
+    migrate!(migration::Pair{Population{T,L},Population{T,L}}, options::@&(AbstractOptions); frac::AbstractFloat)
 
 Migrate a fraction of the population from one population to the other, creating copies
 to do so. The original migrant population is not modified. Pass with, e.g.,
 `migrate!(migration_candidates => destination, options; frac=0.1)`
 """
 function migrate!(
-    migration::Pair{Vector{PM},P}, options::AbstractOptions; frac::AbstractFloat
+    migration::Pair{Vector{PM},P}, options::@&(AbstractOptions); frac::AbstractFloat
 ) where {T,L,N,PM<:PopMember{T,L,N},P<:Population{T,L,N}}
     base_pop = migration.second
     population_size = length(base_pop.members)

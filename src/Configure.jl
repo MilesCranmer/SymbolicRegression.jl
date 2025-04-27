@@ -118,7 +118,7 @@ end
 
 """ Move custom operators and loss functions to workers, if undefined """
 function move_functions_to_workers(
-    procs, options::AbstractOptions, dataset::Dataset{T}, verbosity
+    procs, options::@&(AbstractOptions), dataset::Dataset{T}, verbosity
 ) where {T}
     # All the types of functions we need to move to workers:
     function_sets = (
@@ -193,7 +193,7 @@ function move_functions_to_workers(
 end
 
 function copy_definition_to_workers(
-    @nospecialize(op), procs, @nospecialize(options::AbstractOptions), verbosity
+    @nospecialize(op), procs, @nospecialize(options::OrBorrowed{AbstractOptions}), verbosity
 )
     name = nameof(op)
     verbosity > 0 && @info "Copying definition of $op to workers..."
@@ -218,7 +218,10 @@ function test_function_on_workers(example_inputs, op, procs)
 end
 
 function activate_env_on_workers(
-    procs, project_path::String, @nospecialize(options::AbstractOptions), verbosity
+    procs,
+    project_path::String,
+    @nospecialize(options::OrBorrowed{AbstractOptions}),
+    verbosity,
 )
     verbosity > 0 && @info "Activating environment on workers."
     @everywhere procs begin
@@ -287,7 +290,7 @@ function import_module_on_workers(
     return nothing
 end
 
-function test_module_on_workers(procs, options::AbstractOptions, verbosity)
+function test_module_on_workers(procs, options::@&(AbstractOptions), verbosity)
     verbosity > 0 && @info "Testing module on workers..."
     futures = []
     for proc in procs
@@ -304,7 +307,7 @@ function test_module_on_workers(procs, options::AbstractOptions, verbosity)
 end
 
 function test_entire_pipeline(
-    procs, dataset::Dataset{T}, options::AbstractOptions, verbosity
+    procs, dataset::Dataset{T}, options::@&(AbstractOptions), verbosity
 ) where {T<:DATA_TYPE}
     futures = []
     verbosity > 0 && @info "Testing entire pipeline on workers..."
@@ -346,7 +349,7 @@ function configure_workers(;
     procs::Union{Vector{Int},Nothing},
     numprocs::Int,
     addprocs_function::Function,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     @nospecialize(worker_imports::Union{Vector{Symbol},Nothing}),
     project_path,
     file,

@@ -74,7 +74,7 @@ end
 
 """Randomly convert an operator into another one (binary->binary; unary->unary)"""
 function mutate_operator(
-    ex::AbstractExpression{T}, options::AbstractOptions, rng::AbstractRNG=default_rng()
+    ex::AbstractExpression{T}, options::@&(AbstractOptions), rng::AbstractRNG=default_rng()
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
     ex = with_contents_for_mutation(ex, mutate_operator(tree, options, rng), context)
@@ -82,7 +82,7 @@ function mutate_operator(
 end
 function mutate_operator(
     tree::AbstractExpressionNode{T},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     rng::AbstractRNG=default_rng(),
 ) where {T}
     if !(has_operators(tree))
@@ -101,7 +101,7 @@ end
 function mutate_constant(
     ex::AbstractExpression{T},
     temperature,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
@@ -113,7 +113,7 @@ end
 function mutate_constant(
     tree::AbstractExpressionNode{T},
     temperature,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     # T is between 0 and 1.
@@ -192,7 +192,7 @@ end
 """Insert random node"""
 function insert_random_op(
     ex::AbstractExpression{T},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
@@ -204,7 +204,7 @@ function insert_random_op(
 end
 function insert_random_op(
     tree::AbstractExpressionNode{T},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
@@ -228,7 +228,7 @@ end
 """Add random node to the top of a tree"""
 function prepend_random_op(
     ex::AbstractExpression{T},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
@@ -240,7 +240,7 @@ function prepend_random_op(
 end
 function prepend_random_op(
     tree::AbstractExpressionNode{T},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
@@ -291,7 +291,7 @@ end
 """Select a random node, and splice it out of the tree."""
 function delete_random_op!(
     ex::AbstractExpression{T},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
@@ -303,7 +303,7 @@ function delete_random_op!(
 end
 function delete_random_op!(
     tree::AbstractExpressionNode{T},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
@@ -349,7 +349,7 @@ end
 function randomize_tree(
     ex::AbstractExpression,
     curmaxsize::Int,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 )
@@ -362,7 +362,7 @@ end
 function randomize_tree(
     ::AbstractExpressionNode{T},
     curmaxsize::Int,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
@@ -389,12 +389,12 @@ end
 
 function gen_random_tree_fixed_size(
     node_count::Int,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     nfeatures::Int,
     ::Type{T},
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
-    tree = make_random_leaf(nfeatures, T, options.node_type, rng, options)
+    tree = make_random_leaf(nfeatures, T, @take(options.node_type), rng, options)
     cur_size = count_nodes(tree)
     while cur_size < node_count
         if cur_size == node_count - 1  # only unary operator allowed.

@@ -109,7 +109,7 @@ end
     PopMember(
         dataset::Dataset{T,L},
         t::AbstractExpression{T},
-        options::AbstractOptions
+        options::@&(AbstractOptions)
     )
 
 Create a population member with a birth date at the current time.
@@ -164,7 +164,7 @@ end
 
 # Can read off complexity directly from pop members
 function compute_complexity(
-    member::PopMember, options::AbstractOptions; break_sharing=Val(false)
+    member::PopMember, options::@&(AbstractOptions); break_sharing=Val(false)
 )::Int
     complexity = getfield(member, :complexity)
     complexity == -1 && return recompute_complexity!(member, options; break_sharing)
@@ -172,7 +172,7 @@ function compute_complexity(
     return complexity
 end
 function recompute_complexity!(
-    member::PopMember, options::AbstractOptions; break_sharing=Val(false)
+    member::PopMember, options::@&(AbstractOptions); break_sharing=Val(false)
 )::Int
     complexity = compute_complexity(member.tree, options; break_sharing)
     setfield!(member, :complexity, complexity)

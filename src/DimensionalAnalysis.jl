@@ -2,6 +2,7 @@ module DimensionalAnalysisModule
 
 using DynamicExpressions: AbstractExpression, AbstractExpressionNode, get_tree
 using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, constructorof
+using BorrowChecker: @&, @take
 
 using ..CoreModule: AbstractOptions, Dataset
 using ..UtilsModule: safe_call
@@ -180,12 +181,12 @@ function violates_dimensional_constraints_dispatch(
 end
 
 """
-    violates_dimensional_constraints(tree::AbstractExpressionNode, dataset::Dataset, options::AbstractOptions)
+    violates_dimensional_constraints(tree::AbstractExpressionNode, dataset::Dataset, options::@&(AbstractOptions))
 
 Checks whether an expression violates dimensional constraints.
 """
 function violates_dimensional_constraints(
-    tree::AbstractExpressionNode, dataset::Dataset, options::AbstractOptions
+    tree::AbstractExpressionNode, dataset::Dataset, options::@&(AbstractOptions)
 )
     X = dataset.X
     return violates_dimensional_constraints(
@@ -193,7 +194,7 @@ function violates_dimensional_constraints(
     )
 end
 function violates_dimensional_constraints(
-    tree::AbstractExpression, dataset::Dataset, options::AbstractOptions
+    tree::AbstractExpression, dataset::Dataset, options::@&(AbstractOptions)
 )
     return violates_dimensional_constraints(get_tree(tree), dataset, options)
 end
@@ -202,7 +203,7 @@ function violates_dimensional_constraints(
     X_units::AbstractVector{<:Quantity},
     y_units::Union{Quantity,Nothing},
     x::AbstractVector{T},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
 ) where {T}
     allow_wildcards = !(options.dimensionless_constants_only)
     dimensional_output = violates_dimensional_constraints_dispatch(
@@ -224,7 +225,7 @@ function violates_dimensional_constraints(
     ::Nothing,
     ::Quantity,
     ::AbstractVector{T},
-    ::AbstractOptions,
+    ::@&(AbstractOptions),
 ) where {T}
     return error("This should never happen. Please submit a bug report.")
 end
@@ -233,7 +234,7 @@ function violates_dimensional_constraints(
     ::Nothing,
     ::Nothing,
     ::AbstractVector{T},
-    ::AbstractOptions,
+    ::@&(AbstractOptions),
 ) where {T}
     return false
 end

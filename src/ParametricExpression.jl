@@ -14,6 +14,7 @@ using DynamicExpressions:
     get_tree
 using StatsBase: StatsBase
 using Random: default_rng, AbstractRNG
+using BorrowChecker: @&, @take
 
 using ..CoreModule:
     AbstractOptions,
@@ -35,7 +36,7 @@ using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 function EB.extra_init_params(
     ::Type{E},
     prototype::Union{Nothing,ParametricExpression},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     dataset::Dataset{T},
     ::Val{embed},
 ) where {T,embed,E<:ParametricExpression}
@@ -49,7 +50,9 @@ function EB.extra_init_params(
     end
     return (; parameters=_parameters, parameter_names)
 end
-function EB.consistency_checks(options::AbstractOptions, prototype::ParametricExpression)
+function EB.consistency_checks(
+    options::@&(AbstractOptions), prototype::ParametricExpression
+)
     @assert(
         options.expression_type <: ParametricExpression,
         "Need prototype to be of type $(options.expression_type), but got $(prototype)::$(typeof(prototype))"
@@ -70,7 +73,7 @@ function DE.eval_tree_array(
     tree::ParametricExpression,
     X::AbstractMatrix,
     class::AbstractVector{<:Integer},
-    options::AbstractOptions;
+    options::@&(AbstractOptions);
     kws...,
 )
     A = IDE.expected_array_type(X, typeof(tree))
@@ -86,7 +89,7 @@ function DE.eval_tree_array(
     return out::A, complete::Bool
 end
 function LF.eval_tree_dispatch(
-    tree::ParametricExpression, dataset::Dataset, options::AbstractOptions
+    tree::ParametricExpression, dataset::Dataset, options::@&(AbstractOptions)
 )
     A = IDE.expected_array_type(dataset.X, typeof(tree))
     indices = get_indices(dataset)
@@ -103,7 +106,7 @@ function MM.condition_mutate_constant!(
     ::Type{<:ParametricExpression},
     weights::AbstractMutationWeights,
     member::PopMember,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     curmaxsize::Int,
 )
     # Avoid modifying the mutate_constant weight, since
@@ -173,7 +176,7 @@ end
 function MF.mutate_constant(
     ex::ParametricExpression{T},
     temperature,
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     if rand(rng, Bool)

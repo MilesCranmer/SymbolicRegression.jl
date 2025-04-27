@@ -10,7 +10,7 @@ using StatsBase: mean
 using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
 using Logging: AbstractLogger
-using BorrowChecker: @&, @take
+using BorrowChecker: @&, @take, @take!, @bc, @own
 
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: subscriptify
@@ -206,7 +206,7 @@ end
 """A simple dictionary to track worker allocations."""
 const WorkerAssignments = Dict{Tuple{Int,Int},Int}
 
-function next_worker(worker_assignment::WorkerAssignments, procs::Vector{Int})::Int
+function next_worker(worker_assignment::@&(WorkerAssignments), procs::@&(Vector{Int}))::Int
     job_counts = Dict(proc => 0 for proc in procs)
     for (key, value) in worker_assignment
         @assert haskey(job_counts, value)
@@ -219,12 +219,12 @@ function next_worker(worker_assignment::WorkerAssignments, procs::Vector{Int})::
 end
 
 function assign_next_worker!(
-    worker_assignment::WorkerAssignments; pop, out, parallelism, procs
+    worker_assignment::@&(:mut, WorkerAssignments); pop, out, parallelism, procs
 )::Int
     if parallelism == :multiprocessing
-        worker_idx = next_worker(worker_assignment, procs)
-        worker_assignment[(out, pop)] = worker_idx
-        return worker_idx
+        @own worker_idx = @bc next_worker(worker_assignment, procs)
+        worker_assignment[(out, pop)] = @take(worker_idx)
+        return @take!(worker_idx)
     else
         return 0
     end
@@ -348,14 +348,16 @@ function check_for_user_quit(reader::StdinReader)::Bool
     return false
 end
 
-function check_for_loss_threshold(halls_of_fame, options::AbstractOptions)::Bool
+function check_for_loss_threshold(halls_of_fame, options::@&(AbstractOptions))::Bool
     return _check_for_loss_threshold(halls_of_fame, options.early_stop_condition, options)
 end
 
-function _check_for_loss_threshold(_, ::Nothing, ::AbstractOptions)
+function _check_for_loss_threshold(_, ::Nothing, ::@&(AbstractOptions))
     return false
 end
-function _check_for_loss_threshold(halls_of_fame, f::F, options::AbstractOptions) where {F}
+function _check_for_loss_threshold(
+    halls_of_fame, f::F, options::@&(AbstractOptions)
+) where {F}
     return all(halls_of_fame) do hof
         any(hof.members[hof.exists]) do member
             f(member.loss, compute_complexity(member, options))::Bool
@@ -363,12 +365,12 @@ function _check_for_loss_threshold(halls_of_fame, f::F, options::AbstractOptions
     end
 end
 
-function check_for_timeout(start_time::Float64, options::AbstractOptions)::Bool
+function check_for_timeout(start_time::Float64, options::@&(AbstractOptions))::Bool
     return options.timeout_in_seconds !== nothing &&
            time() - start_time > options.timeout_in_seconds::Float64
 end
 
-function check_max_evals(num_evals, options::AbstractOptions)::Bool
+function check_max_evals(num_evals, options::@&(AbstractOptions))::Bool
     return options.max_evals !== nothing && options.max_evals::Int <= sum(sum, num_evals)
 end
 
@@ -424,7 +426,7 @@ function update_progress_bar!(
     progress_bar::WrappedProgressBar,
     hall_of_fame::HallOfFame{T,L},
     dataset::Dataset{T,L},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     equation_speed::Vector{Float32},
     head_node_occupation::Float64,
     parallelism=:serial,
@@ -455,7 +457,7 @@ end
 function print_search_state(
     hall_of_fames,
     datasets;
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     equation_speed::Vector{Float32},
     total_cycles::Int,
     cycles_remaining::Vector{Int},
@@ -570,7 +572,7 @@ function save_to_file(
     nout::Integer,
     j::Integer,
     dataset::Dataset{T,L},
-    options::AbstractOptions,
+    options::@&(AbstractOptions),
     ropt::AbstractRuntimeOptions,
 ) where {T,L}
     output_directory = joinpath(something(options.output_directory, "outputs"), ropt.run_id)
@@ -678,7 +680,7 @@ function construct_datasets(
 end
 
 function update_hall_of_fame!(
-    hall_of_fame::HallOfFame, members::Vector{PM}, options::AbstractOptions
+    hall_of_fame::HallOfFame, members::Vector{PM}, options::@&(AbstractOptions)
 ) where {PM<:PopMember}
     for member in members
         size = compute_complexity(member, options)

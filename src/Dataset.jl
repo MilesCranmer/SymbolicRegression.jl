@@ -88,8 +88,9 @@ end
 A dataset type that represents a batch of data from a BasicDataset. Calls to `.X`, `.y`,
 `.weights`, etc. will return the batched versions of these.
 """
-struct SubDataset{T<:DATA_TYPE,L<:LOSS_TYPE,D<:BasicDataset{T,L},I<:AbstractVector{Int}} <:
-       Dataset{T,L}
+struct SubDataset{
+    T<:DATA_TYPE,L<:LOSS_TYPE,D<:@&(BasicDataset{T,L}),I<:AbstractVector{Int}
+} <: Dataset{T,L}
     _dataset::D
     _indices::I
 end
@@ -249,9 +250,9 @@ end
 is_weighted(dataset::@&(Dataset)) = !isnothing(dataset.weights)
 
 # COV_EXCL_START
-get_full_dataset(d::BasicDataset) = d
-get_indices(::BasicDataset) = nothing
-dataset_fraction(d::BasicDataset) = 1.0
+get_full_dataset(d::@&(BasicDataset)) = d
+get_indices(::@&(BasicDataset)) = nothing
+dataset_fraction(d::@&(BasicDataset)) = 1.0
 # COV_EXCL_END
 
 function error_on_mismatched_size(_, ::Nothing)
@@ -298,13 +299,15 @@ Create a batched dataset by randomly sampling from the original dataset.
 - `dataset::BasicDataset`: The dataset to sample from
 - `batch_size::Int`: The size of the batch to create
 """
-function batch(dataset::BasicDataset{T,L}, indices::AbstractVector{Int}) where {T,L}
+function batch(dataset::@&(BasicDataset{T,L}), indices::AbstractVector{Int}) where {T,L}
     return SubDataset{T,L,typeof(dataset),typeof(indices)}(dataset, indices)
 end
-function batch(rng::AbstractRNG, dataset::BasicDataset{T,L}, batch_size::Int) where {T,L}
+function batch(
+    rng::AbstractRNG, dataset::@&(BasicDataset{T,L}), batch_size::Int
+) where {T,L}
     return batch(dataset, rand(rng, 1:(dataset.n), batch_size))
 end
-function batch(dataset::BasicDataset, batch_size::Int)
+function batch(dataset::@&(BasicDataset), batch_size::Int)
     return batch(default_rng(), dataset, batch_size)
 end
 
