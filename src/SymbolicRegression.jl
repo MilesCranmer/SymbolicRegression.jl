@@ -109,6 +109,7 @@ using DynamicExpressions:
     AbstractExpressionNode,
     ExpressionInterface,
     OperatorEnum,
+    GenericOperatorEnum,
     @parse_expression,
     parse_expression,
     @declare_expression_operator,
@@ -230,6 +231,7 @@ using DispatchDoctor: @stable
     include("TemplateExpression.jl")
     include("TemplateExpressionMacro.jl")
     include("ParametricExpression.jl")
+    include("StringsCompat.jl")
 end
 
 using .CoreModule:
@@ -246,6 +248,7 @@ using .CoreModule:
     MutationWeights,
     AbstractExpressionSpec,
     ExpressionSpec,
+    init_value,
     get_safe_op,
     max_features,
     is_weighted,
@@ -609,7 +612,7 @@ end
 
     nout = length(datasets)
     example_dataset = first(datasets)
-    example_ex = create_expression(zero(T), options, example_dataset)
+    example_ex = create_expression(init_value(T), options, example_dataset)
     NT = typeof(example_ex)
     PopType = Population{T,L,NT}
     HallOfFameType = HallOfFame{T,L,NT}

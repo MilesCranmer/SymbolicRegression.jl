@@ -13,7 +13,9 @@ using DynamicExpressions:
     count_nodes,
     has_constants,
     has_operators
-using ..CoreModule: AbstractOptions, DATA_TYPE
+using ..CoreModule: AbstractOptions, DATA_TYPE, init_value, sample_value
+
+import ..CoreModule: mutate_value
 
 """
     get_contents_for_mutation(ex::AbstractExpression, rng::AbstractRNG)
@@ -121,13 +123,15 @@ function mutate_constant(
         return tree
     end
     node = rand(rng, NodeSampler(; tree, filter=t -> (t.degree == 0 && t.constant)))
-
-    node.val *= mutate_factor(T, temperature, options, rng)
-
+    node.val = mutate_value(rng, node.val, temperature, options)
     return tree
 end
 
-function mutate_factor(::Type{T}, temperature, options, rng) where {T<:DATA_TYPE}
+function mutate_value(rng::AbstractRNG, val::Number, temperature, options)
+    return val * mutate_factor(typeof(val), temperature, options, rng)
+end
+
+function mutate_factor(::Type{T}, temperature, options, rng) where {T<:Number}
     bottom = 1//10
     maxChange = options.perturbation_factor * temperature + 1 + bottom
     factor = T(maxChange^rand(rng, T))
@@ -265,10 +269,10 @@ function make_random_leaf(
     ::Type{T},
     ::Type{N},
     rng::AbstractRNG=default_rng(),
-    ::Union{AbstractOptions,Nothing}=nothing,
+    options::Union{AbstractOptions,Nothing}=nothing,
 ) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
     if rand(rng, Bool)
-        return constructorof(N)(T; val=randn(rng, T))
+        return constructorof(N)(T; val=sample_value(rng, T, options))
     else
         return constructorof(N)(T; feature=rand(rng, 1:nfeatures))
     end
@@ -378,7 +382,7 @@ function gen_random_tree(
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     # Note that this base tree is just a placeholder; it will be replaced.
-    tree = constructorof(options.node_type)(T; val=convert(T, 1))
+    tree = constructorof(options.node_type)(T; val=init_value(T))
     for i in 1:length
         # TODO: This can be larger number of nodes than length.
         tree = append_random_op(tree, options, nfeatures, rng)
