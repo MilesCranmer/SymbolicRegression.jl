@@ -231,7 +231,6 @@ using DispatchDoctor: @stable
     include("TemplateExpression.jl")
     include("TemplateExpressionMacro.jl")
     include("ParametricExpression.jl")
-    include("StringsCompat.jl")
 end
 
 using .CoreModule:
