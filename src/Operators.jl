@@ -11,11 +11,10 @@ using ...UtilsModule: @ignore
 #TODO - actually add these operators to the module!
 
 # TODO: Should this be limited to AbstractFloat instead?
-function gamma(x::T)::T where {T<:DATA_TYPE}
+function gamma(x::T)::T where {T<:Number}
     out = SpecialFunctions.gamma(x)
     return isinf(out) ? T(NaN) : out
 end
-gamma(x) = SpecialFunctions.gamma(x)
 
 atanh_clip(x) = atanh(mod(x + oneunit(x), oneunit(x) + oneunit(x)) - oneunit(x)) * one(x)
 # == atanh((x + 1) % 2 - 1)
