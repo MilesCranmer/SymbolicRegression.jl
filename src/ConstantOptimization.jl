@@ -17,8 +17,11 @@ using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_loss, loss_to_cost
 using ..PopMemberModule: PopMember
 
-function can_optimize(::AbstractExpression{T}, ::AbstractOptions) where {T}
+function can_optimize(::AbstractExpression{T}, options) where {T}
     return can_optimize(T, options)
+end
+function can_optimize(::Type{T}, _) where {T<:Number}
+    return true
 end
 
 function optimize_constants(
