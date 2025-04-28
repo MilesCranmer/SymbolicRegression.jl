@@ -249,6 +249,8 @@ using .CoreModule:
     AbstractExpressionSpec,
     ExpressionSpec,
     init_value,
+    sample_value,
+    mutate_value,
     get_safe_op,
     max_features,
     is_weighted,
