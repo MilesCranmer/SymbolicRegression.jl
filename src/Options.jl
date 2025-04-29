@@ -3,7 +3,12 @@ module OptionsModule
 using DispatchDoctor: @unstable
 using Optim: Optim
 using DynamicExpressions:
-    OperatorEnum, Expression, default_node_type, AbstractExpression, AbstractExpressionNode
+    OperatorEnum,
+    AbstractOperatorEnum,
+    Expression,
+    default_node_type,
+    AbstractExpression,
+    AbstractExpressionNode
 using ADTypes: AbstractADType, ADTypes
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim
@@ -525,7 +530,10 @@ $(OPTION_DESCRIPTIONS)
     @nospecialize(adaptive_parsimony_scaling::Union{Real,Nothing} = nothing),
     ###           should_simplify
     ## 5. Mutations:
-    @nospecialize(operator_enum_constructor = nothing),
+    @nospecialize(
+        operator_enum_constructor::Union{Nothing,Type{<:AbstractOperatorEnum},Function} =
+            nothing
+    ),
     @nospecialize(
         mutation_weights::Union{AbstractMutationWeights,AbstractVector,NamedTuple,Nothing} =
             nothing

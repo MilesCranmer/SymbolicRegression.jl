@@ -219,6 +219,8 @@ fit!(mach)
 
 #literate_end
 
+using Test
+
 fit!(mach)
 
 ŷ = report(mach).equations[end](MLJBase.matrix(X; transpose=true))
