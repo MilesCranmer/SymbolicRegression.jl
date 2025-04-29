@@ -15,7 +15,7 @@ $$ y = interleave(concat(x_1, concat("def", x_2)), concat(concat(last_half(x_3),
 
 using SymbolicRegression
 using DynamicExpressions: GenericOperatorEnum
-using MLJBase: machine, fit!
+using MLJBase: machine, fit!, report, MLJBase
 using Random
 
 # String operations - unary operators
@@ -195,7 +195,6 @@ because we are dealing with non-numeric types.
 We also need to manually define the `loss_type`, since it's not inferrable from
 `loss_type`.
 =#
-
 model = SRRegressor(;
     binary_operators=(concat, interleave),
     unary_operators=(first_half, last_half, reverse),
@@ -205,6 +204,7 @@ model = SRRegressor(;
     maxsize=15,
     batching=true,
     batch_size=32,
+    early_stop_condition=8.0,  #src
 )
 
 mach = machine(model, X, y)
@@ -221,4 +221,7 @@ fit!(mach)
 
 fit!(mach)
 
+ŷ = report(mach).equations[end](MLJBase.matrix(X; transpose=true))
+mean_loss = sum(map(edit_distance, y, ŷ)) / length(y)
+@test mean_loss <= 8.0
 #! format: on

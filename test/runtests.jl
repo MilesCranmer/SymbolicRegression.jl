@@ -129,6 +129,11 @@ end
     include("../examples/parameterized_function.jl")
 end
 
+@testitem "Running custom types example." tags = [:part3] begin
+    ENV["SYMBOLIC_REGRESSION_IS_TESTING"] = "true"
+    include("../examples/custom_types.jl")
+end
+
 @testitem "Testing whether the recorder works." tags = [:part3] begin
     include("test_recorder.jl")
 end
