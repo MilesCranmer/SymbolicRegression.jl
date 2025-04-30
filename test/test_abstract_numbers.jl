@@ -1,4 +1,5 @@
 using SymbolicRegression
+using SymbolicRegression: init_value, sample_value, mutate_value
 using Random
 include("test_params.jl")
 
@@ -34,4 +35,20 @@ for T in (ComplexF16, ComplexF32, ComplexF64)
         @test typeof(output) <: AbstractArray{T}
         @test sum(abs2, output .- y) / length(output) <= L(1e-2)
     end
+end
+
+# Test error cases for InterfaceDataTypesModule functions
+@testset "Testing error handling in InterfaceDataTypesModule" begin
+    struct CustomTestType end
+
+    rng = Random.MersenneTwister(0)
+    @test_throws "No `init_value` method defined for type CustomTestType" init_value(
+        CustomTestType
+    )
+    @test_throws "No `sample_value` method defined for type CustomTestType" sample_value(
+        rng, CustomTestType, options
+    )
+    @test_throws "No `mutate_value` method defined for type CustomTestType" mutate_value(
+        rng, CustomTestType(), 0.5, options
+    )
 end
