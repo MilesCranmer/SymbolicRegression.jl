@@ -3,7 +3,8 @@ module HallOfFameModule
 using StyledStrings: @styled_str
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
-using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
+using ..CoreModule:
+    AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression, init_value
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: PopMember
 using ..InterfaceDynamicExpressionsModule: format_dimensions, WILDCARD_UNIT_STRING
@@ -63,7 +64,7 @@ Arguments:
 function HallOfFame(
     options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    base_tree = create_expression(zero(T), options, dataset)
+    base_tree = create_expression(init_value(T), options, dataset)
 
     return HallOfFame{T,L,typeof(base_tree)}(
         [

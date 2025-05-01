@@ -10,6 +10,7 @@ using DynamicExpressions:
     string_tree,
     AbstractExpressionNode,
     AbstractExpression,
+    AbstractOperatorEnum,
     Node,
     Expression,
     default_node_type,

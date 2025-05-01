@@ -1,3 +1,5 @@
+using Random: MersenneTwister
+
 const TEST_TYPE = Float32
 
 function test_operator(@nospecialize(op::Function), x::T, y=nothing) where {T}
@@ -33,18 +35,26 @@ precompile(Tuple{typeof(test_operator),Function,Float32})
 
 const TEST_INPUTS = collect(range(-100, 100; length=99))
 
+function get_test_inputs(::Type{T}, ::AbstractOptions) where {T<:Number}
+    return Base.Fix1(convert, T).(TEST_INPUTS)
+end
+function get_test_inputs(::Type{T}, ::AbstractOptions) where {T<:Complex}
+    return Base.Fix1(convert, T).(TEST_INPUTS .+ TEST_INPUTS .* im)
+end
+function get_test_inputs(::Type{T}, options::AbstractOptions) where {T}
+    rng = MersenneTwister(0)
+    return [sample_value(rng, T, options) for _ in 1:100]
+end
+
 function assert_operators_well_defined(T, options::AbstractOptions)
-    test_input = if T <: Complex
-        Base.Fix1(convert, T).(TEST_INPUTS .+ TEST_INPUTS .* im)
-    else
-        Base.Fix1(convert, T).(TEST_INPUTS)
-    end
+    test_input = get_test_inputs(T, options)
     for x in test_input, y in test_input, op in options.operators.binops
         test_operator(op, x, y)
     end
     for x in test_input, op in options.operators.unaops
         test_operator(op, x)
     end
+    return nothing
 end
 
 # Check for errors before they happen

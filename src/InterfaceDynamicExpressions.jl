@@ -5,6 +5,7 @@ using DispatchDoctor: @stable
 using Compat: Fix
 using DynamicExpressions:
     DynamicExpressions as DE,
+    AbstractOperatorEnum,
     OperatorEnum,
     GenericOperatorEnum,
     AbstractExpression,
@@ -16,6 +17,10 @@ using DynamicQuantities: dimension, ustrip
 using ..CoreModule: AbstractOptions, Dataset
 using ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
 using ..UtilsModule: subscriptify
+
+takes_eval_options(::Type{<:AbstractOperatorEnum}) = false
+takes_eval_options(::Type{<:OperatorEnum}) = true
+takes_eval_options(::T) where {T} = takes_eval_options(T)
 
 """
     eval_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::AbstractOptions; kws...)
@@ -62,12 +67,18 @@ which speed up evaluation significantly.
         kws...,
     )
         A = expected_array_type(X, typeof(tree))
-        eval_options = EvalOptions(;
-            turbo=something(turbo, options.turbo), bumper=something(bumper, options.bumper)
-        )
-        out, complete = DE.eval_tree_array(
-            tree, X, DE.get_operators(tree, options); eval_options, kws...
-        )
+        operators = DE.get_operators(tree, options)
+        eval_options_kws = if takes_eval_options(operators)
+            (;
+                eval_options=EvalOptions(;
+                    turbo=something(turbo, options.turbo),
+                    bumper=something(bumper, options.bumper),
+                )
+            )
+        else
+            NamedTuple()
+        end
+        out, complete = DE.eval_tree_array(tree, X, operators; eval_options_kws..., kws...)
         if isnothing(out)
             return nothing, false
         else

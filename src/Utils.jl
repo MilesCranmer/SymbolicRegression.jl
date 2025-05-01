@@ -4,6 +4,7 @@ module UtilsModule
 using Printf: @printf
 using MacroTools: splitdef
 using StyledStrings: StyledStrings
+using Random: AbstractRNG, default_rng
 
 macro ignore(args...) end
 
@@ -142,13 +143,16 @@ function argmin_fast(x::AbstractVector{T}) where {T}
     return findmin_fast(x)[2]
 end
 
-function poisson_sample(λ::T) where {T}
+function poisson_sample(rng::AbstractRNG, λ::T) where {T}
     k, p, L = 0, one(T), exp(-λ)
     while p > L
         k += 1
-        p *= rand(T)
+        p *= rand(rng, T)
     end
     return k - 1
+end
+function poisson_sample(λ::T) where {T}
+    return poisson_sample(default_rng(), λ)
 end
 
 macro threads_if(flag, ex)

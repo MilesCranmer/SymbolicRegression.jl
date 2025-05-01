@@ -17,9 +17,17 @@ using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_loss, loss_to_cost
 using ..PopMemberModule: PopMember
 
+function can_optimize(::AbstractExpression{T}, options) where {T}
+    return can_optimize(T, options)
+end
+function can_optimize(::Type{T}, _) where {T<:Number}
+    return true
+end
+
 function optimize_constants(
     dataset::Dataset{T,L}, member::P, options::AbstractOptions
 )::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
+    can_optimize(member.tree, options) || return (member, 0.0)
     nconst = count_constants_for_optimization(member.tree)
     nconst == 0 && return (member, 0.0)
     if nconst == 1 && !(T <: Complex)

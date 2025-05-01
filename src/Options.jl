@@ -3,7 +3,12 @@ module OptionsModule
 using DispatchDoctor: @unstable
 using Optim: Optim
 using DynamicExpressions:
-    OperatorEnum, Expression, default_node_type, AbstractExpression, AbstractExpressionNode
+    OperatorEnum,
+    AbstractOperatorEnum,
+    Expression,
+    default_node_type,
+    AbstractExpression,
+    AbstractExpressionNode
 using ADTypes: AbstractADType, ADTypes
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim
@@ -278,6 +283,10 @@ const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Op
     of the same type as input, and outputs the same type. For the SymbolicUtils
     simplification backend, you will need to define a generic method of the
     operator so it takes arbitrary types.
+- `operator_enum_constructor`: Constructor function to use for creating the operators enum.
+    By default, OperatorEnum is used, but you can provide a different constructor like
+    GenericOperatorEnum. The constructor must accept the keyword arguments 'binary_operators'
+    and 'unary_operators'.
 - `unary_operators`: Same, but for
     unary operators (one input scalar, gives an output scalar).
 - `constraints`: Array of pairs specifying size constraints
@@ -521,6 +530,10 @@ $(OPTION_DESCRIPTIONS)
     @nospecialize(adaptive_parsimony_scaling::Union{Real,Nothing} = nothing),
     ###           should_simplify
     ## 5. Mutations:
+    @nospecialize(
+        operator_enum_constructor::Union{Nothing,Type{<:AbstractOperatorEnum},Function} =
+            nothing
+    ),
     @nospecialize(
         mutation_weights::Union{AbstractMutationWeights,AbstractVector,NamedTuple,Nothing} =
             nothing
@@ -876,12 +889,18 @@ $(OPTION_DESCRIPTIONS)
     binary_operators = map(binopmap, binary_operators)
     unary_operators = map(unaopmap, unary_operators)
 
-    operators = OperatorEnum(;
-        binary_operators=binary_operators,
-        unary_operators=unary_operators,
-        define_helper_functions=define_helper_functions,
-        empty_old_operators=false,
-    )
+    operators = if operator_enum_constructor !== nothing
+        operator_enum_constructor(;
+            binary_operators=binary_operators, unary_operators=unary_operators
+        )
+    else
+        OperatorEnum(;
+            binary_operators=binary_operators,
+            unary_operators=unary_operators,
+            define_helper_functions=define_helper_functions,
+            empty_old_operators=false,
+        )
+    end
 
     early_stop_condition = if typeof(early_stop_condition) <: Real
         # Need to make explicit copy here for this to work:
