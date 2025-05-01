@@ -32,12 +32,14 @@ function process_block_content(indent, block_content)
         return ""
     end
     indent_length = length(indent)
+    # Filter out formatter directive lines
     lines = split(block_content, '\n')
+    lines = filter(line -> !startswith(strip(line), "#! format:"), lines)
     stripped_lines = [
-        if length(line) > indent_length
-            line[(indent_length + 1):end]
+        if startswith(line, indent)
+            line[(length(indent) + 1):end]  # Only remove exactly the indent prefix
         else
-            ""
+            line  # Keep the line as is if it doesn't have the expected indent
         end for line in lines
     ]
     return strip(join(stripped_lines, '\n'))

@@ -18,7 +18,7 @@ using DynamicExpressions: GenericOperatorEnum
 using MLJBase: machine, fit!, report, MLJBase
 using Random
 
-# String operations - unary operators
+## String operations - unary operators
 first_half(s::String) = length(s) == 0 ? "" : join(collect(s)[1:max(1, div(length(s), 2))])
 last_half(s::String) = length(s) == 0 ? "" : join(collect(s)[max(1, div(length(s), 2) + 1):end])
 concat(a::String, b::String) = a * b
@@ -49,7 +49,7 @@ function single_instance(rng=Random.default_rng())
     x_3 = join(rand(rng, 'a':'z', rand(rng, 1:10)))
     x_4 = join(rand(rng, 'a':'z', rand(rng, 1:10)))
 
-    # True formula:
+    ## True formula:
     y = interleave(x_1 * "def" * x_2, last_half(x_3) * reverse(x_4) * "abc")
     return (; X=(; x_1, x_2, x_3, x_4), y)
 end
