@@ -10,7 +10,16 @@ It doesn't even need to be a numerical type. It could be anything --- even a str
 Let's actually try this. Let's evolve an _expression over strings_.
 
 Let's first mock up a dataset. Say that we wish to find the expression
-$$ y = interleave(concat(x_1, concat("def", x_2)), concat(concat(last_half(x_3), reverse(d)), "abc")) $$
+
+```math
+y = \text{interleave}(
+    \text{concat}(x_1, \text{concat}(\text{``abc''}, x_2)),
+    \text{concat}(
+        \text{concat}(\text{last\_half}(x_3), \text{reverse}(x_4)),
+        \text{``xyz''}
+    )
+)
+```
 =#
 
 using SymbolicRegression
@@ -18,10 +27,20 @@ using DynamicExpressions: GenericOperatorEnum
 using MLJBase: machine, fit!, report, MLJBase
 using Random
 
-## String operations - unary operators
+#=
+First, let's define some unary and binary operators on strings.
+=#
+
+"""Returns the first half of the string."""
 first_half(s::String) = length(s) == 0 ? "" : join(collect(s)[1:max(1, div(length(s), 2))])
+
+"""Returns the second half of the string."""
 last_half(s::String) = length(s) == 0 ? "" : join(collect(s)[max(1, div(length(s), 2) + 1):end])
+
+"""Concatenates two strings."""
 concat(a::String, b::String) = a * b
+
+"""Interleaves characters from two strings."""
 function interleave(a::String, b::String)
     total_length = length(a) + length(b)
     result = Vector{Char}(undef, total_length)
@@ -43,6 +62,10 @@ function interleave(a::String, b::String)
     return join(result)
 end
 
+#=
+Now, let's use these operators to create a dataset.
+=#
+
 function single_instance(rng=Random.default_rng())
     x_1 = join(rand(rng, 'a':'z', rand(rng, 1:10)))
     x_2 = join(rand(rng, 'a':'z', rand(rng, 1:10)))
@@ -50,7 +73,7 @@ function single_instance(rng=Random.default_rng())
     x_4 = join(rand(rng, 'a':'z', rand(rng, 1:10)))
 
     ## True formula:
-    y = interleave(x_1 * "def" * x_2, last_half(x_3) * reverse(x_4) * "abc")
+    y = interleave(x_1 * "abc" * x_2, last_half(x_3) * reverse(x_4) * "xyz")
     return (; X=(; x_1, x_2, x_3, x_4), y)
 end
 
@@ -58,11 +81,16 @@ dataset = let rng = Random.MersenneTwister(0)
     [single_instance(rng) for _ in 1:128]
 end
 
+#=
+We'll get them in the right format for MLJ:
+=#
+
 X = [d.X for d in dataset]
 y = [d.y for d in dataset]
 
 #=
-First, there are some key functions we will need to overload.
+To actually get this working with SymbolicRegression,
+there are some key functions we will need to overload.
 
 First, we say that a single string is one "scalar" constant:
 =#
@@ -124,6 +152,7 @@ using SymbolicRegression.UtilsModule: poisson_sample
 import SymbolicRegression: mutate_value
 
 sample_alphabet(rng::AbstractRNG) = rand(rng, 'a':'z')
+
 function mutate_value(rng::AbstractRNG, val::String, T, options)
     max_length = 10
     lambda_max = 5.0
