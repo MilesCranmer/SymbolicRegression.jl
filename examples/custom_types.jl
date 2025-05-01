@@ -9,7 +9,7 @@ It doesn't even need to be a numerical type. It could be anything --- even a str
 
 Let's actually try this. Let's evolve an _expression over strings_.
 
-Let's first mock up a dataset. Say that we wish to find the expression
+First, we mock up a dataset. Say that we wish to find the expression
 
 ```math
 y = \text{interleave}(
@@ -20,16 +20,14 @@ y = \text{interleave}(
     )
 )
 ```
+
+We will define some unary and binary operators on strings:
 =#
 
 using SymbolicRegression
 using DynamicExpressions: GenericOperatorEnum
 using MLJBase: machine, fit!, report, MLJBase
 using Random
-
-#=
-First, let's define some unary and binary operators on strings.
-=#
 
 """Returns the first half of the string."""
 first_half(s::String) = length(s) == 0 ? "" : join(collect(s)[1:max(1, div(length(s), 2))])
