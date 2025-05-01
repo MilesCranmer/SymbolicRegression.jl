@@ -164,9 +164,7 @@ end
     include("test_custom_objectives.jl")
 end
 
-@testitem "Test abstract numbers" tags = [:part1] begin
-    include("test_abstract_numbers.jl")
-end
+include("test_abstract_numbers.jl")
 
 include("test_logging.jl")
 include("test_pretty_printing.jl")
