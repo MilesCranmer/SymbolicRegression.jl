@@ -1,14 +1,26 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Custom Types · SymbolicRegression.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link rel="canonical" href="https://ai.damtp.cam.ac.uk/symbolicregression/stable/examples/custom_types/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../index_base/"><img src="../../assets/logo.svg" alt="SymbolicRegression.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../index_base/">SymbolicRegression.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../index_base/">Contents</a></li><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../">Short Examples</a></li><li><a class="tocitem" href="../template_expression/">Template Expressions</a></li><li><a class="tocitem" href="../parameterized_function/">Parameterized Expressions</a></li><li><a class="tocitem" href="../template_parametric_expression/">Parameterized Template Expressions</a></li><li class="is-active"><a class="tocitem" href>Custom Types</a></li></ul></li><li><a class="tocitem" href="../../api/">API</a></li><li><a class="tocitem" href="../../losses/">Losses</a></li><li><a class="tocitem" href="../../types/">Types</a></li><li><a class="tocitem" href="../../customization/">Customization</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Custom Types</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Custom Types</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/MilesCranmer/SymbolicRegression.jl/blob/master/examples/custom_types.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Working-with-Custom-Input-Types"><a class="docs-heading-anchor" href="#Working-with-Custom-Input-Types">Working with Custom Input Types</a><a id="Working-with-Custom-Input-Types-1"></a><a class="docs-heading-anchor-permalink" href="#Working-with-Custom-Input-Types" title="Permalink"></a></h1><p>Say that you have some custom input type you want to evolve an expression for. It doesn&#39;t even need to be a numerical type. It could be anything –- even a string!</p><p>Let&#39;s actually try this. Let&#39;s evolve an <em>expression over strings</em>.</p><p>Let&#39;s first mock up a dataset. Say that we wish to find the expression $ y = interleave(concat(x<em>1, concat(&quot;def&quot;, x</em>2)), concat(concat(last<em>half(x</em>3), reverse(d)), &quot;abc&quot;)) $</p><pre><code class="language-julia hljs">using SymbolicRegression
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Custom Types · SymbolicRegression.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link rel="canonical" href="https://ai.damtp.cam.ac.uk/symbolicregression/stable/examples/custom_types/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../index_base/"><img src="../../assets/logo.svg" alt="SymbolicRegression.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../index_base/">SymbolicRegression.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../index_base/">Contents</a></li><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../">Short Examples</a></li><li><a class="tocitem" href="../template_expression/">Template Expressions</a></li><li><a class="tocitem" href="../parameterized_function/">Parameterized Expressions</a></li><li><a class="tocitem" href="../template_parametric_expression/">Parameterized Template Expressions</a></li><li class="is-active"><a class="tocitem" href>Custom Types</a></li></ul></li><li><a class="tocitem" href="../../api/">API</a></li><li><a class="tocitem" href="../../losses/">Losses</a></li><li><a class="tocitem" href="../../types/">Types</a></li><li><a class="tocitem" href="../../customization/">Customization</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Custom Types</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Custom Types</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/MilesCranmer/SymbolicRegression.jl/blob/master/examples/custom_types.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Working-with-Custom-Input-Types"><a class="docs-heading-anchor" href="#Working-with-Custom-Input-Types">Working with Custom Input Types</a><a id="Working-with-Custom-Input-Types-1"></a><a class="docs-heading-anchor-permalink" href="#Working-with-Custom-Input-Types" title="Permalink"></a></h1><p>Say that you have some custom input type you want to evolve an expression for. It doesn&#39;t even need to be a numerical type. It could be anything –- even a string!</p><p>Let&#39;s actually try this. Let&#39;s evolve an <em>expression over strings</em>.</p><p>First, we mock up a dataset. Say that we wish to find the expression</p><p class="math-container">\[y = \text{interleave}(
+    \text{concat}(x_1, \text{concat}(\text{``abc&#39;&#39;}, x_2)),
+    \text{concat}(
+        \text{concat}(\text{last\_half}(x_3), \text{reverse}(x_4)),
+        \text{``xyz&#39;&#39;}
+    )
+)\]</p><p>We will define some unary and binary operators on strings:</p><pre><code class="language-julia hljs">using SymbolicRegression
 using DynamicExpressions: GenericOperatorEnum
 using MLJBase: machine, fit!, report, MLJBase
 using Random
 
-# String operations - unary operators
-first_half(s::String) = length(s) == 0 ? &quot;&quot; : join(collect(s)[1:max(1, div(length(s), 2))])
-last_half(s::String) = length(s) == 0 ? &quot;&quot; : join(collect(s)[max(1, div(length(s), 2) + 1):end])
+&quot;&quot;&quot;Returns the first half of the string.&quot;&quot;&quot;
+head(s::String) = length(s) == 0 ? &quot;&quot; : join(collect(s)[1:max(1, div(length(s), 2))])
+
+&quot;&quot;&quot;Returns the second half of the string.&quot;&quot;&quot;
+tail(s::String) = length(s) == 0 ? &quot;&quot; : join(collect(s)[max(1, div(length(s), 2) + 1):end])
+
+&quot;&quot;&quot;Concatenates two strings.&quot;&quot;&quot;
 concat(a::String, b::String) = a * b
-function interleave(a::String, b::String)
+
+&quot;&quot;&quot;Interleaves characters from two strings.&quot;&quot;&quot;
+function zip(a::String, b::String)
     total_length = length(a) + length(b)
     result = Vector{Char}(undef, total_length)
     i_a = firstindex(a)
@@ -27,45 +39,41 @@ function interleave(a::String, b::String)
         end
     end
     return join(result)
-end
-
-function single_instance(rng=Random.default_rng())
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Main.zip</code></pre><p>Now, let&#39;s use these operators to create a dataset.</p><pre><code class="language-julia hljs">function single_instance(rng=Random.default_rng())
     x_1 = join(rand(rng, &#39;a&#39;:&#39;z&#39;, rand(rng, 1:10)))
     x_2 = join(rand(rng, &#39;a&#39;:&#39;z&#39;, rand(rng, 1:10)))
     x_3 = join(rand(rng, &#39;a&#39;:&#39;z&#39;, rand(rng, 1:10)))
     x_4 = join(rand(rng, &#39;a&#39;:&#39;z&#39;, rand(rng, 1:10)))
 
     # True formula:
-    y = interleave(x_1 * &quot;def&quot; * x_2, last_half(x_3) * reverse(x_4) * &quot;abc&quot;)
+    y = zip(x_1 * &quot;abc&quot; * x_2, tail(x_3) * reverse(x_4) * &quot;xyz&quot;)
     return (; X=(; x_1, x_2, x_3, x_4), y)
 end
 
 dataset = let rng = Random.MersenneTwister(0)
     [single_instance(rng) for _ in 1:128]
-end
-
-X = [d.X for d in dataset]
-y = [d.y for d in dataset]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">128-element Vector{String}:
- &quot;tnnidsezfckkjplglabc&quot;
- &quot;htfdjdetyjyqtokaybdcefqjcbvvyj&quot;
- &quot;pqijdyezfzgcivpodiewgfcgsabc&quot;
- &quot;mggrvoyryzogriesfzhrdaebfcgkklo&quot;
- &quot;ewdnexfqlmmaubjc&quot;
- &quot;omcethxgymdwewfaybncvxwmvtvy&quot;
- &quot;rrgmflfzdsenfpecigolvacblcjep&quot;
- &quot;xhojdqeifagbac&quot;
- &quot;ldhfhwdpegfgbunnfszhujlavbncv&quot;
- &quot;cnqhgzuwvacbzcdefgrxisqpdp&quot;
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">128-element Vector{@NamedTuple{X::@NamedTuple{x_1::String, x_2::String, x_3::String, x_4::String}, y::String}}:
+ (X = (x_1 = &quot;tn&quot;, x_2 = &quot;k&quot;, x_3 = &quot;cxrnis&quot;, x_4 = &quot;lglpjkcz&quot;), y = &quot;tnniasbzcckkjplglxyz&quot;)
+ (X = (x_1 = &quot;hfjeyytky&quot;, x_2 = &quot;qjcbvvyj&quot;, x_3 = &quot;wjhtddt&quot;, x_4 = &quot;oqj&quot;), y = &quot;htfdjdetyjyqtokxyyazbcqjcbvvyj&quot;)
+ (X = (x_1 = &quot;pi&quot;, x_2 = &quot;gipdeg&quot;, x_3 = &quot;dvjqjyz&quot;, x_4 = &quot;sgcfwiovcz&quot;), y = &quot;pqijaybzczgcivpodiewgfcgsxyz&quot;)
+ (X = (x_1 = &quot;mgvyyorefh&quot;, x_2 = &quot;gkklo&quot;, x_3 = &quot;bggro&quot;, x_4 = &quot;rzsigzr&quot;), y = &quot;mggrvoyryzogriesfzhraxbyczgkklo&quot;)
+ (X = (x_1 = &quot;e&quot;, x_2 = &quot;lmuj&quot;, x_3 = &quot;afcwnxq&quot;, x_4 = &quot;m&quot;), y = &quot;ewanbxcqlmmxuyjz&quot;)
+ (X = (x_1 = &quot;octxy&quot;, x_2 = &quot;ynvxwmvtvy&quot;, x_3 = &quot;bodmeh&quot;, x_4 = &quot;wwmg&quot;), y = &quot;omcethxgymawbwcxyynzvxwmvtvy&quot;)
+ (X = (x_1 = &quot;rgff&quot;, x_2 = &quot;eiovcljep&quot;, x_3 = &quot;ir&quot;, x_4 = &quot;lgcpnszlm&quot;), y = &quot;rrgmflfzasbncpecigolvxcylzjep&quot;)
+ (X = (x_1 = &quot;xo&quot;, x_2 = &quot;ga&quot;, x_3 = &quot;ohhj&quot;, x_4 = &quot;iq&quot;), y = &quot;xhojaqbicxgyaz&quot;)
+ (X = (x_1 = &quot;lhh&quot;, x_2 = &quot;bnfzulvnv&quot;, x_3 = &quot;edf&quot;, x_4 = &quot;jhsnuggpw&quot;), y = &quot;ldhfhwapbgcgbunnfszhujlxvynzv&quot;)
+ (X = (x_1 = &quot;cqguvcz&quot;, x_2 = &quot;grxisqpdp&quot;, x_3 = &quot;kknh&quot;, x_4 = &quot;wz&quot;), y = &quot;cnqhgzuwvxcyzzabcgrxisqpdp&quot;)
  ⋮
- &quot;uwcsplkbqiredheafbocv&quot;
- &quot;dtbpyrshdidxersldfehfqeasbc&quot;
- &quot;cmiurxohaofdnzdyeafbqc&quot;
- &quot;srjdgoyxhjmhxrwudaebfcabmanioxss&quot;
- &quot;haoawxkunbyacsdresfmgrwaqbucjdkz&quot;
- &quot;hdkvdmekfagcpviaxbncpb&quot;
- &quot;lnjogrclmjeqoqhwrlqpdaebfcwssrnkl&quot;
- &quot;wrfnosjfumlyfliwugdvegfaeboczo&quot;
- &quot;zrtvubpwcoethfmvpkvrdheafbncrpd&quot;</code></pre><p>First, there are some key functions we will need to overload.</p><p>First, we say that a single string is one &quot;scalar&quot; constant:</p><pre><code class="language-julia hljs">import DynamicExpressions: count_scalar_constants
+ (X = (x_1 = &quot;ucpkqr&quot;, x_2 = &quot;ov&quot;, x_3 = &quot;w&quot;, x_4 = &quot;heibls&quot;), y = &quot;uwcsplkbqireahbxcyozv&quot;)
+ (X = (x_1 = &quot;dbysddes&quot;, x_2 = &quot;es&quot;, x_3 = &quot;quewtprhi&quot;, x_4 = &quot;qhflrx&quot;), y = &quot;dtbpyrshdidxerslafbhcqexsyz&quot;)
+ (X = (x_1 = &quot;ciroafn&quot;, x_2 = &quot;q&quot;, x_3 = &quot;nm&quot;, x_4 = &quot;yzdohxu&quot;), y = &quot;cmiurxohaofdnzaybxcyqz&quot;)
+ (X = (x_1 = &quot;sjgyhmxw&quot;, x_2 = &quot;abmanioxss&quot;, x_3 = &quot;r&quot;, x_4 = &quot;urhjxod&quot;), y = &quot;srjdgoyxhjmhxrwuaxbyczabmanioxss&quot;)
+ (X = (x_1 = &quot;howknyc&quot;, x_2 = &quot;gwqujdkz&quot;, x_3 = &quot;gvaax&quot;, x_4 = &quot;rmsrsabu&quot;), y = &quot;haoawxkunbyacsarbscmgrwxqyuzjdkz&quot;)
+ (X = (x_1 = &quot;hk&quot;, x_2 = &quot;gpixnpb&quot;, x_3 = &quot;hlpfcdvmka&quot;, x_4 = &quot;vc&quot;), y = &quot;hdkvambkcagcpvixxynzpb&quot;)
+ (X = (x_1 = &quot;ljgcmeohrq&quot;, x_2 = &quot;wssrnkl&quot;, x_3 = &quot;dno&quot;, x_4 = &quot;plwqqjlr&quot;), y = &quot;lnjogrclmjeqoqhwrlqpaxbyczwssrnkl&quot;)
+ (X = (x_1 = &quot;wfojulfiu&quot;, x_2 = &quot;eozo&quot;, x_3 = &quot;tujarnsf&quot;, x_4 = &quot;gvgwlym&quot;), y = &quot;wrfnosjfumlyfliwugavbgcxeyozzo&quot;)
+ (X = (x_1 = &quot;ztupcehmpv&quot;, x_2 = &quot;nrpd&quot;, x_3 = &quot;mnarvbw&quot;, x_4 = &quot;hrkvfto&quot;), y = &quot;zrtvubpwcoethfmvpkvrahbxcynzrpd&quot;)</code></pre><p>We&#39;ll get them in the right format for MLJ:</p><pre><code class="language-julia hljs">X = [d.X for d in dataset]
+y = [d.y for d in dataset];</code></pre><p>To actually get this working with SymbolicRegression, there are some key functions we will need to overload.</p><p>First, we say that a single string is one &quot;scalar&quot; constant:</p><pre><code class="language-julia hljs">import DynamicExpressions: count_scalar_constants
 count_scalar_constants(::String) = 1</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">count_scalar_constants (generic function with 5 methods)</code></pre><p>Next, we define an initializer (which is normally 0.0 for numeric types).</p><pre><code class="language-julia hljs">import SymbolicRegression: init_value
 init_value(::Type{String}) = &quot;&quot;</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">init_value (generic function with 3 methods)</code></pre><p>Next, we define a random sampler. This is only used for generating initial random leafs; the <code>mutate_value</code> function is used for mutating them and moving around in the search space.</p><pre><code class="language-julia hljs">using Random: AbstractRNG
 import SymbolicRegression: sample_value
@@ -79,6 +87,7 @@ can_optimize(::Type{String}, _) = false</code></pre><pre class="documenter-examp
 import SymbolicRegression: mutate_value
 
 sample_alphabet(rng::AbstractRNG) = rand(rng, &#39;a&#39;:&#39;z&#39;)
+
 function mutate_value(rng::AbstractRNG, val::String, T, options)
     max_length = 10
     lambda_max = 5.0
@@ -106,7 +115,7 @@ function mutate_value(rng::AbstractRNG, val::String, T, options)
         end
     end
     return String(chars[1:min(end, max_length)])
-end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">mutate_value (generic function with 3 methods)</code></pre><p>This concludes the custom type interface. Now let&#39;s actually use it!</p><p>For the loss function, we will use Levenshtein edit distance. This lets the evolutionary algorithm gradually change the strings into the desired output.</p><pre><code class="language-julia hljs">function edit_distance(a::String, b::String)
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">mutate_value (generic function with 3 methods)</code></pre><p>This concludes the custom type interface. Now let&#39;s actually use it!</p><p>For the loss function, we will use Levenshtein edit distance. This lets the evolutionary algorithm gradually change the strings into the desired output.</p><pre><code class="language-julia hljs">function edit_distance(a::String, b::String)::Float64
     a, b = length(a) &gt;= length(b) ? (a, b) : (b, a)  ## Want shorter string to be b
     a, b = collect(a), collect(b)  ## Convert to vectors for uniform indexing
     m, n = length(a), length(b)
@@ -130,22 +139,31 @@ end</code></pre><pre class="documenter-example-output"><code class="nohighlight 
     end
 
     return Float64(prev[n + 1])  ## Make sure to convert to your `loss_type`!
-end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">edit_distance (generic function with 1 method)</code></pre><p>Next, let&#39;s create our regressor object. We pass <code>binary_operators</code> and <code>unary_operators</code> as normal, but now we also pass <code>GenericOperatorEnum</code>, because we are dealing with non-numeric types.</p><p>We also need to manually define the <code>loss_type</code>, since it&#39;s not inferrable from <code>loss_type</code>.</p><pre><code class="language-julia hljs">model = SRRegressor(;
-    binary_operators=(concat, interleave),
-    unary_operators=(first_half, last_half, reverse),
-    operator_enum_constructor=GenericOperatorEnum,
-    loss_type=Float64,
-    elementwise_loss=edit_distance,
-    maxsize=15,
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">edit_distance (generic function with 1 method)</code></pre><p>Next, let&#39;s create our regressor object. We pass <code>binary_operators</code> and <code>unary_operators</code> as normal, but now we also pass <code>GenericOperatorEnum</code>, because we are dealing with non-numeric types.</p><p>We also need to manually define the <code>loss_type</code>, since it&#39;s not inferrable from <code>loss_type</code>.</p><pre><code class="language-julia hljs">binary_operators = (concat, zip)
+unary_operators = (head, tail, reverse)
+hparams = (;
     batching=true,
     batch_size=32,
+    maxsize=20,
+    parsimony=0.1,
+    adaptive_parsimony_scaling=20.0,
+    mutation_weights=MutationWeights(; mutate_constant=1.0),
+    early_stop_condition=(l, c) -&gt; l &lt; 1.0 &amp;&amp; c &lt;= 15,  # src
 )
+model = SRRegressor(;
+    binary_operators,
+    unary_operators,
+    operator_enum_constructor=GenericOperatorEnum,
+    elementwise_loss=edit_distance,
+    loss_type=Float64,
+    hparams...,
+);
 
-mach = machine(model, X, y)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">untrained Machine; caches model-specific representations of data
+mach = machine(model, X, y; scitype_check_level=0)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">untrained Machine; caches model-specific representations of data
   model: SRRegressor(defaults = nothing, …)
   args: 
-    1:	Source @811 ⏎ ScientificTypesBase.Table{AbstractVector{ScientificTypesBase.Textual}}
-    2:	Source @122 ⏎ AbstractVector{ScientificTypesBase.Textual}
+    1:	Source @822 ⏎ ScientificTypesBase.Table{AbstractVector{ScientificTypesBase.Textual}}
+    2:	Source @510 ⏎ AbstractVector{ScientificTypesBase.Textual}
 </code></pre><p>At this point, you would run <code>fit!(mach)</code> as usual. Ignore the MLJ warnings about <code>scitype</code>s.</p><pre><code class="language-julia hljs">fit!(mach)</code></pre><hr/><details>
 <summary> Show raw source code </summary><pre><code class="language-julia hljs">#=
 # Working with Custom Input Types
@@ -155,8 +173,19 @@ It doesn&#39;t even need to be a numerical type. It could be anything --- even a
 
 Let&#39;s actually try this. Let&#39;s evolve an _expression over strings_.
 
-Let&#39;s first mock up a dataset. Say that we wish to find the expression
-$$ y = interleave(concat(x_1, concat(&quot;def&quot;, x_2)), concat(concat(last_half(x_3), reverse(d)), &quot;abc&quot;)) $$
+First, we mock up a dataset. Say that we wish to find the expression
+
+\```math
+y = \text{interleave}(
+    \text{concat}(x_1, \text{concat}(\text{``abc&#39;&#39;}, x_2)),
+    \text{concat}(
+        \text{concat}(\text{last\_half}(x_3), \text{reverse}(x_4)),
+        \text{``xyz&#39;&#39;}
+    )
+)
+\```
+
+We will define some unary and binary operators on strings:
 =#
 
 using SymbolicRegression
@@ -164,11 +193,17 @@ using DynamicExpressions: GenericOperatorEnum
 using MLJBase: machine, fit!, report, MLJBase
 using Random
 
-## String operations - unary operators
-first_half(s::String) = length(s) == 0 ? &quot;&quot; : join(collect(s)[1:max(1, div(length(s), 2))])
-last_half(s::String) = length(s) == 0 ? &quot;&quot; : join(collect(s)[max(1, div(length(s), 2) + 1):end])
+&quot;&quot;&quot;Returns the first half of the string.&quot;&quot;&quot;
+head(s::String) = length(s) == 0 ? &quot;&quot; : join(collect(s)[1:max(1, div(length(s), 2))])
+
+&quot;&quot;&quot;Returns the second half of the string.&quot;&quot;&quot;
+tail(s::String) = length(s) == 0 ? &quot;&quot; : join(collect(s)[max(1, div(length(s), 2) + 1):end])
+
+&quot;&quot;&quot;Concatenates two strings.&quot;&quot;&quot;
 concat(a::String, b::String) = a * b
-function interleave(a::String, b::String)
+
+&quot;&quot;&quot;Interleaves characters from two strings.&quot;&quot;&quot;
+function zip(a::String, b::String)
     total_length = length(a) + length(b)
     result = Vector{Char}(undef, total_length)
     i_a = firstindex(a)
@@ -189,6 +224,10 @@ function interleave(a::String, b::String)
     return join(result)
 end
 
+#=
+Now, let&#39;s use these operators to create a dataset.
+=#
+
 function single_instance(rng=Random.default_rng())
     x_1 = join(rand(rng, &#39;a&#39;:&#39;z&#39;, rand(rng, 1:10)))
     x_2 = join(rand(rng, &#39;a&#39;:&#39;z&#39;, rand(rng, 1:10)))
@@ -196,7 +235,7 @@ function single_instance(rng=Random.default_rng())
     x_4 = join(rand(rng, &#39;a&#39;:&#39;z&#39;, rand(rng, 1:10)))
 
     ## True formula:
-    y = interleave(x_1 * &quot;def&quot; * x_2, last_half(x_3) * reverse(x_4) * &quot;abc&quot;)
+    y = zip(x_1 * &quot;abc&quot; * x_2, tail(x_3) * reverse(x_4) * &quot;xyz&quot;)
     return (; X=(; x_1, x_2, x_3, x_4), y)
 end
 
@@ -204,11 +243,16 @@ dataset = let rng = Random.MersenneTwister(0)
     [single_instance(rng) for _ in 1:128]
 end
 
+#=
+We&#39;ll get them in the right format for MLJ:
+=#
+
 X = [d.X for d in dataset]
-y = [d.y for d in dataset]
+y = [d.y for d in dataset];
 
 #=
-First, there are some key functions we will need to overload.
+To actually get this working with SymbolicRegression,
+there are some key functions we will need to overload.
 
 First, we say that a single string is one &quot;scalar&quot; constant:
 =#
@@ -270,6 +314,7 @@ using SymbolicRegression.UtilsModule: poisson_sample
 import SymbolicRegression: mutate_value
 
 sample_alphabet(rng::AbstractRNG) = rand(rng, &#39;a&#39;:&#39;z&#39;)
+
 function mutate_value(rng::AbstractRNG, val::String, T, options)
     max_length = 10
     lambda_max = 5.0
@@ -307,7 +352,7 @@ This lets the evolutionary algorithm gradually change the strings
 into the desired output.
 =#
 
-function edit_distance(a::String, b::String)
+function edit_distance(a::String, b::String)::Float64
     a, b = length(a) &gt;= length(b) ? (a, b) : (b, a)  ## Want shorter string to be b
     a, b = collect(a), collect(b)  ## Convert to vectors for uniform indexing
     m, n = length(a), length(b)
@@ -341,19 +386,27 @@ because we are dealing with non-numeric types.
 We also need to manually define the `loss_type`, since it&#39;s not inferrable from
 `loss_type`.
 =#
-model = SRRegressor(;
-    binary_operators=(concat, interleave),
-    unary_operators=(first_half, last_half, reverse),
-    operator_enum_constructor=GenericOperatorEnum,
-    loss_type=Float64,
-    elementwise_loss=edit_distance,
-    maxsize=15,
+binary_operators = (concat, zip)
+unary_operators = (head, tail, reverse)
+hparams = (;
     batching=true,
     batch_size=32,
-    early_stop_condition=8.0,  #src
+    maxsize=20,
+    parsimony=0.1,
+    adaptive_parsimony_scaling=20.0,
+    mutation_weights=MutationWeights(; mutate_constant=1.0),
+    early_stop_condition=(l, c) -&gt; l &lt; 1.0 &amp;&amp; c &lt;= 15,  # src
 )
+model = SRRegressor(;
+    binary_operators,
+    unary_operators,
+    operator_enum_constructor=GenericOperatorEnum,
+    elementwise_loss=edit_distance,
+    loss_type=Float64,
+    hparams...,
+);
 
-mach = machine(model, X, y)
+mach = machine(model, X, y; scitype_check_level=0)
 
 #=
 At this point, you would run `fit!(mach)` as usual.
@@ -361,4 +414,4 @@ Ignore the MLJ warnings about `scitype`s.
 \```julia
 fit!(mach)
 \```
-=#</code></pre><p>which uses Literate.jl to generate this page.</p></details></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../template_parametric_expression/">« Parameterized Template Expressions</a><a class="docs-footer-nextpage" href="../../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Thursday 1 May 2025 19:22">Thursday 1 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+=#</code></pre><p>which uses Literate.jl to generate this page.</p></details></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../template_parametric_expression/">« Parameterized Template Expressions</a><a class="docs-footer-nextpage" href="../../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Friday 2 May 2025 21:56">Friday 2 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
