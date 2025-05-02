@@ -30,16 +30,16 @@ using MLJBase: machine, fit!, report, MLJBase
 using Random
 
 """Returns the first half of the string."""
-first_half(s::String) = length(s) == 0 ? "" : join(collect(s)[1:max(1, div(length(s), 2))])
+head(s::String) = length(s) == 0 ? "" : join(collect(s)[1:max(1, div(length(s), 2))])
 
 """Returns the second half of the string."""
-last_half(s::String) = length(s) == 0 ? "" : join(collect(s)[max(1, div(length(s), 2) + 1):end])
+tail(s::String) = length(s) == 0 ? "" : join(collect(s)[max(1, div(length(s), 2) + 1):end])
 
 """Concatenates two strings."""
 concat(a::String, b::String) = a * b
 
 """Interleaves characters from two strings."""
-function interleave(a::String, b::String)
+function zip(a::String, b::String)
     total_length = length(a) + length(b)
     result = Vector{Char}(undef, total_length)
     i_a = firstindex(a)
@@ -71,7 +71,7 @@ function single_instance(rng=Random.default_rng())
     x_4 = join(rand(rng, 'a':'z', rand(rng, 1:10)))
 
     ## True formula:
-    y = interleave(x_1 * "abc" * x_2, last_half(x_3) * reverse(x_4) * "xyz")
+    y = zip(x_1 * "abc" * x_2, tail(x_3) * reverse(x_4) * "xyz")
     return (; X=(; x_1, x_2, x_3, x_4), y)
 end
 
@@ -84,7 +84,7 @@ We'll get them in the right format for MLJ:
 =#
 
 X = [d.X for d in dataset]
-y = [d.y for d in dataset]
+y = [d.y for d in dataset];
 
 #=
 To actually get this working with SymbolicRegression,
@@ -188,7 +188,7 @@ This lets the evolutionary algorithm gradually change the strings
 into the desired output.
 =#
 
-function edit_distance(a::String, b::String)
+function edit_distance(a::String, b::String)::Float64
     a, b = length(a) >= length(b) ? (a, b) : (b, a)  ## Want shorter string to be b
     a, b = collect(a), collect(b)  ## Convert to vectors for uniform indexing
     m, n = length(a), length(b)
@@ -222,19 +222,27 @@ because we are dealing with non-numeric types.
 We also need to manually define the `loss_type`, since it's not inferrable from
 `loss_type`.
 =#
-model = SRRegressor(;
-    binary_operators=(concat, interleave),
-    unary_operators=(first_half, last_half, reverse),
-    operator_enum_constructor=GenericOperatorEnum,
-    loss_type=Float64,
-    elementwise_loss=edit_distance,
-    maxsize=15,
+binary_operators = (concat, zip)
+unary_operators = (head, tail, reverse)
+hparams = (;
     batching=true,
     batch_size=32,
-    early_stop_condition=8.0,  #src
+    maxsize=20,
+    parsimony=0.1,
+    adaptive_parsimony_scaling=20.0,
+    mutation_weights=MutationWeights(; mutate_constant=1.0),
+    early_stop_condition=(l, c) -> l < 1.0 && c <= 15,  # src
 )
+model = SRRegressor(;
+    binary_operators,
+    unary_operators,
+    operator_enum_constructor=GenericOperatorEnum,
+    elementwise_loss=edit_distance,
+    loss_type=Float64,
+    hparams...,
+);
 
-mach = machine(model, X, y)
+mach = machine(model, X, y; scitype_check_level=0)
 
 #=
 At this point, you would run `fit!(mach)` as usual.
