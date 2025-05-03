@@ -316,7 +316,7 @@ function _update(
         variable_names=variable_names,
         y_variable_names=y_variable_names,
         y_is_table=MMI.istable(y),
-        has_class=!isnothing(class),
+        has_class=(!isnothing(class)),
         X_units=X_units_clean,
         y_units=y_units_clean,
         types=SRFitResultTypes(;
@@ -580,9 +580,9 @@ end
 function get_equation_strings_for(
     ::AbstractSingletargetSRRegressor, trees, options, variable_names
 )
-    return (
-        t -> string_tree(t, options; variable_names=variable_names, pretty=false)
-    ).(trees)
+    return (t -> string_tree(t, options; variable_names=variable_names, pretty=false)).(
+        trees
+    )
 end
 function get_equation_strings_for(
     ::AbstractMultitargetSRRegressor, trees, options, variable_names
@@ -648,7 +648,7 @@ for model in [:SRRegressor, :SRTestRegressor]
             target_scitype=AbstractVector{<:MMI.Continuous},
             supports_weights=true,
             reports_feature_importances=false,
-            load_path=$("SymbolicRegression.MLJInterfaceModule." * string(model)),
+            load_path=($("SymbolicRegression.MLJInterfaceModule." * string(model))),
             human_name="Symbolic Regression via Evolutionary Search",
         )
     end
@@ -663,7 +663,7 @@ for model in [:MultitargetSRRegressor, :MultitargetSRTestRegressor]
             },
             supports_weights=true,
             reports_feature_importances=false,
-            load_path=$("SymbolicRegression.MLJInterfaceModule." * string(model)),
+            load_path=($("SymbolicRegression.MLJInterfaceModule." * string(model))),
             human_name="Multi-Target Symbolic Regression via Evolutionary Search",
         )
     end

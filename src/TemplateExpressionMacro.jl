@@ -109,7 +109,7 @@ function template_spec(func, args...)
                     )
                         return $(func_body)
                     end;
-                    num_parameters=$(parameters),
+                    num_parameters=($(parameters)),
                 ),
             )
         end

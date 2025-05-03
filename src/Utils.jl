@@ -92,12 +92,14 @@ function _to_vec(v::MutableTuple{S,T}) where {S,T}
 end
 
 """Return the bottom k elements of x, and their indices."""
-bottomk_fast(x::AbstractVector{T}, k) where {T} = Base.Cartesian.@nif(
-    32,
-    d -> d == k,
-    d -> _bottomk_dispatch(x, Val(d))::Tuple{Vector{T},Vector{Int}},
-    _ -> _bottomk_dispatch(x, Val(k))::Tuple{Vector{T},Vector{Int}}
-)
+function bottomk_fast(x::AbstractVector{T}, k) where {T}
+    Base.Cartesian.@nif(
+        32,
+        d -> d == k,
+        d -> _bottomk_dispatch(x, Val(d))::Tuple{Vector{T},Vector{Int}},
+        _ -> _bottomk_dispatch(x, Val(k))::Tuple{Vector{T},Vector{Int}}
+    )
+end
 
 function _bottomk_dispatch(x::AbstractVector{T}, ::Val{k}) where {T,k}
     if k == 1
