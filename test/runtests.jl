@@ -76,10 +76,7 @@ end
 end
 
 include("test_complexity.jl")
-
-@testitem "Test options" tags = [:part1] begin
-    include("test_options.jl")
-end
+include("test_options.jl")
 
 @testitem "Test hash of tree" tags = [:part2] begin
     include("test_hash.jl")
