@@ -117,39 +117,39 @@ end
         :serial
     end
     if concurrency in (:multithreading, :serial)
-        numprocs !== nothing && error(
+        !isnothing(numprocs) && error(
             "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
         )
-        procs !== nothing && error(
+        !isnothing(procs) && error(
             "`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
         )
     end
-    verbosity !== nothing &&
-        options_verbosity !== nothing &&
+    !isnothing(verbosity) &&
+        !isnothing(options_verbosity) &&
         error(
             "You cannot set `verbosity` in both the search parameters " *
             "`AbstractOptions` and the call to `equation_search`.",
         )
-    progress !== nothing &&
-        options_progress !== nothing &&
+    !isnothing(progress) &&
+        !isnothing(options_progress) &&
         error(
             "You cannot set `progress` in both the search parameters " *
             "`AbstractOptions` and the call to `equation_search`.",
         )
-    ORS !== nothing &&
-        return_state !== nothing &&
+    !isnothing(ORS) &&
+        !isnothing(return_state) &&
         error(
             "You cannot set `return_state` in both the `AbstractOptions` and in the passed arguments.",
         )
 
-    _numprocs::Int = if numprocs === nothing
-        if procs === nothing
+    _numprocs::Int = if isnothing(numprocs)
+        if isnothing(procs)
             4
         else
             length(procs)
         end
     else
-        if procs === nothing
+        if isnothing(procs)
             numprocs
         else
             @assert length(procs) == numprocs
@@ -164,13 +164,13 @@ end
     _addprocs_function = something(addprocs_function, addprocs)
     _run_id = @something(run_id, generate_run_id())
 
-    exeflags = if concurrency == :multiprocessing
+    exeflags = if concurrency == :multiprocessing && isnothing(procs)
         heap_size_hint_in_megabytes = floor(
             Int,
             (@something(heap_size_hint_in_bytes, (Sys.free_memory() / _numprocs))) / 1024^2,
         )
         _verbosity > 0 &&
-            heap_size_hint_in_bytes === nothing &&
+            isnothing(heap_size_hint_in_bytes) &&
             @info "Automatically setting `--heap-size-hint=$(heap_size_hint_in_megabytes)M` on each Julia process. You can configure this with the `heap_size_hint_in_bytes` parameter."
 
         `--heap-size=$(heap_size_hint_in_megabytes)M`
