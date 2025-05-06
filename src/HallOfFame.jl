@@ -136,8 +136,7 @@ function string_dominating_pareto_curve(
     hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing, pretty::Bool=true
 )
     terminal_width = (width === nothing) ? 100 : max(100, width::Integer)
-    _buffer = IOBuffer()
-    buffer = AnnotatedIOBuffer(_buffer)
+    buffer = AnnotatedIOBuffer(IOBuffer())
     println(buffer, '─'^(terminal_width - 1))
     if show_score_column(options)
         println(buffer, HEADER)
@@ -188,8 +187,8 @@ end
 function wrap_equation_string(eqn_string, left_cols_width, terminal_width)
     dots = "..."
     equation_width = (terminal_width - 1) - left_cols_width - length(dots)
-    _buffer = IOBuffer()
-    buffer = AnnotatedIOBuffer(_buffer)
+
+    buffer = AnnotatedIOBuffer(IOBuffer())
 
     forced_split_eqn = split(eqn_string, '\n')
     print_pad = false
