@@ -108,9 +108,7 @@ end
 
     # Create a simple test case with negative loss
     hof = HallOfFame(options_log, dataset)
-    hof.members[1].tree = Expression(
-        Node{Float64}(; feature=1); operators=nothing, variable_names=nothing
-    )
+    hof.members[1].tree = Expression(Node{Float64}(; feature=1); operators=nothing)
     hof.members[1].loss = -1.0
     hof.exists[1] = true
 
@@ -129,4 +127,44 @@ end
     result = format_hall_of_fame(hof, options_linear)
     @test result.losses[1] == -1.0f0
     @test result.scores[1] >= 0.0
+end
+
+@testitem "string_dominating_pareto_curve header display" tags = [:part2] begin
+    using SymbolicRegression
+    using SymbolicRegression.HallOfFameModule: HallOfFame, string_dominating_pareto_curve
+    using SymbolicRegression.CoreModule: Dataset
+    using DynamicExpressions: Node, Expression
+
+    # Create simple test dataset
+    X = [1.0 2.0]
+    y = [3.0]
+    dataset = Dataset(X, y; variable_names=["x1", "x2"])
+
+    # Create options with different loss scales
+    options_log = Options(; loss_scale=:log, binary_operators=[+, -], unary_operators=[])
+    options_linear = Options(;
+        loss_scale=:linear, binary_operators=[+, -], unary_operators=[]
+    )
+
+    # Create a minimal Hall of Fame with one element
+    hof = HallOfFame(options_log, dataset)
+    hof.members[1].tree = Expression(
+        Node{Float64}(; feature=1); operators=nothing, variable_names=nothing
+    )
+    hof.members[1].loss = 0.5
+    hof.exists[1] = true
+
+    # Test with log scale (should show Score column)
+    output_log = string_dominating_pareto_curve(hof, dataset, options_log)
+    @test occursin("Complexity", output_log)
+    @test occursin("Loss", output_log)
+    @test occursin("Score", output_log)
+    @test occursin("Equation", output_log)
+
+    # Test with linear scale (should NOT show Score column)
+    output_linear = string_dominating_pareto_curve(hof, dataset, options_linear)
+    @test occursin("Complexity", output_linear)
+    @test occursin("Loss", output_linear)
+    @test !occursin("Score", output_linear)
+    @test occursin("Equation", output_linear)
 end
