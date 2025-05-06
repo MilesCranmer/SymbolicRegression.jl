@@ -130,6 +130,8 @@ let header_parts = (
     @eval const HEADER_WITHOUT_SCORE = join($(header_parts[[1, 2, 4]]), "  ")
 end
 
+show_score_column(options::AbstractOptions) = options.loss_scale == :log
+
 function string_dominating_pareto_curve(
     hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing, pretty::Bool=true
 )
@@ -137,10 +139,10 @@ function string_dominating_pareto_curve(
     _buffer = IOBuffer()
     buffer = AnnotatedIOBuffer(_buffer)
     println(buffer, '─'^(terminal_width - 1))
-    if options.loss_scale == :linear
-        println(buffer, HEADER_WITHOUT_SCORE)
-    else
+    if show_score_column(options)
         println(buffer, HEADER)
+    else
+        println(buffer, HEADER_WITHOUT_SCORE)
     end
 
     formatted = format_hall_of_fame(hallOfFame, options)
@@ -156,10 +158,10 @@ function string_dominating_pareto_curve(
         )
         prefix = make_prefix(tree, options, dataset)
         eqn_string = prefix * eqn_string
-        stats_columns_string = if options.loss_scale == :linear
-            @sprintf("%-10d  %-8.3e  ", complexity, loss)
-        else
+        stats_columns_string = if show_score_column(options)
             @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
+        else
+            @sprintf("%-10d  %-8.3e  ", complexity, loss)
         end
         left_cols_width = length(stats_columns_string)
         print(buffer, stats_columns_string)
