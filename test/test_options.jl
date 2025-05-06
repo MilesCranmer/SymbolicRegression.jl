@@ -13,3 +13,14 @@ op = Options(;
 optim_op = Optim.Options(; iterations=16)
 op = Options(; optimizer_options=optim_op);
 @test isa(op.optimizer_options, Optim.Options)
+
+# testing loss_scale parameter
+op_log = Options(; loss_scale=:log);
+@test op_log.loss_scale == :log
+
+op_linear = Options(; loss_scale=:linear);
+@test op_linear.loss_scale == :linear
+
+# test that invalid loss_scale values are caught
+@test_throws AssertionError Options(; loss_scale=:invalid)
+@test_throws AssertionError Options(; loss_scale=:cubic)
