@@ -206,12 +206,14 @@ end
 
 function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}
     dominating = calculate_pareto_frontier(hof)
-    foreach(dominating) do member
-        if member.loss < 0.0
+
+    # Only check for negative losses if allow_negative_losses is false
+    if !options.allow_negative_losses
+        if any(member -> member.loss < 0.0, dominating)
             throw(
                 DomainError(
                     member.loss,
-                    "Your loss function must be non-negative. To do this, consider wrapping your loss inside an exponential, which will not affect the search (unless you are using annealing).",
+                    "To use a loss function that has negative values, you must set `allow_negative_losses` to true.",
                 ),
             )
         end
@@ -231,9 +233,15 @@ function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}
         complexity = complexities[i]
         cur_loss = losses[i]
         delta_c = complexity - last_complexity
-        delta_l_mse = log(relu(cur_loss / last_loss) + ZERO_POINT)
-
-        scores[i] = relu(-delta_l_mse / delta_c)
+        if options.allow_negative_losses
+            delta_mse = cur_loss - last_loss
+            scores[i] = i == 1 ? zero(L) : relu(-delta_mse / delta_c) #relu(delta_mse / delta_c)
+        # Just: cur_loss - last_loss
+        else
+            delta_l_mse = log(relu(cur_loss / last_loss) + ZERO_POINT)
+            scores[i] = i == 1 ? zero(L) : relu(-delta_l_mse / delta_c)
+            # Roughly: log(cur_loss) - log(last_loss)
+        end
         last_loss = cur_loss
         last_complexity = complexity
     end

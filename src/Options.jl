@@ -350,6 +350,9 @@ const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Op
         end
 
 - `loss_function_expression`: Similar to `loss_function`, but takes `AbstractExpression` instead of `AbstractExpressionNode` as its first argument. Useful for `TemplateExpressionSpec`.
+- `allow_negative_losses`: Whether to allow negative losses in the search. By default, negative losses
+    throw an error when encountered in the hall of fame. When set to true, negative losses are properly
+    handled in the search, which may be useful for custom loss functions.
 - `expression_spec::AbstractExpressionSpec`: A specification of what types of expressions to use in the
     search. For example, `ExpressionSpec()` (default). You can also see `TemplateExpressionSpec` and
     `ParametricExpressionSpec` for specialized cases.
@@ -594,6 +597,7 @@ $(OPTION_DESCRIPTIONS)
     ## 2. Setting the Search Size:
     ## 3. The Objective:
     dimensionless_constants_only::Bool=false,
+    allow_negative_losses::Bool=false,
     ## 4. Working with Complexities:
     complexity_mapping::Union{Function,ComplexityMapping,Nothing}=nothing,
     use_frequency::Bool=true,
@@ -1004,6 +1008,7 @@ $(OPTION_DESCRIPTIONS)
         elementwise_loss,
         loss_function,
         loss_function_expression,
+        allow_negative_losses,
         node_type,
         expression_type,
         expression_options,
