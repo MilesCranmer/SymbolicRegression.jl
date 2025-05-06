@@ -1185,7 +1185,11 @@ end
 
 include("MLJInterface.jl")
 using .MLJInterfaceModule:
-    SRRegressor, MultitargetSRRegressor, SRTestRegressor, MultitargetSRTestRegressor
+    get_options,
+    SRRegressor,
+    MultitargetSRRegressor,
+    SRTestRegressor,
+    MultitargetSRTestRegressor
 
 # Hack to get static analysis to work from within tests:
 @ignore include("../test/runtests.jl")
