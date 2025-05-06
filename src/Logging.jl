@@ -135,7 +135,7 @@ function _log_scalars(;
     out["summaries"] = Dict([
         "min_loss" => length(dominating) > 0 ? dominating[end].loss : L(Inf),
         "pareto_volume" => pareto_volume(
-            losses, complexities, options.maxsize, options.allow_negative_losses
+            losses, complexities, options.maxsize, options.loss_scale == :linear
         ),
     ])
 
@@ -155,13 +155,13 @@ function _log_scalars(;
 end
 
 function pareto_volume(
-    losses::AbstractVector{L}, complexities, maxsize::Int, allow_negative_losses::Bool
+    losses::AbstractVector{L}, complexities, maxsize::Int, use_linear_scaling::Bool
 ) where {L}
     if length(losses) == 0
         return 0.0
     end
 
-    y = allow_negative_losses ? copy(losses) : @.(log10(losses + eps(L)))
+    y = use_linear_scaling ? copy(losses) : @.(log10(losses + eps(L)))
     x = @. log10(complexities)
 
     # Add a point equal to the best loss and largest possible complexity, + 1

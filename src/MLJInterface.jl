@@ -605,7 +605,7 @@ function choose_best(;
     # https://github.com/MilesCranmer/PySR/blob/e74b8ad46b163c799908b3aa4d851cf8457c79ef/pysr/sr.py#L2318-L2332
     # threshold = 1.5 * minimum_loss
     # Then, we get max score of those below the threshold.
-    if !isnothing(options) && options.allow_negative_losses
+    if !isnothing(options) && options.loss_scale == :linear
         return argmin(losses)
     end
 

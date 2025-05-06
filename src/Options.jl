@@ -350,9 +350,11 @@ const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Op
         end
 
 - `loss_function_expression`: Similar to `loss_function`, but takes `AbstractExpression` instead of `AbstractExpressionNode` as its first argument. Useful for `TemplateExpressionSpec`.
-- `allow_negative_losses`: Whether to allow negative losses in the search. By default, negative losses
-    throw an error when encountered in the hall of fame. When set to true, negative losses are properly
-    handled in the search, which may be useful for custom loss functions.
+- `loss_scale`: Determines how loss values are scaled when computing scores. Options are:
+    - `:log` (default): Uses logarithmic scaling of loss ratios. This mode requires non-negative loss values
+        and is ideal for traditional loss functions that are always positive.
+    - `:linear`: Uses direct differences between losses. This mode handles any loss values (including negative)
+        and is useful for custom loss functions, especially those based on likelihoods.
 - `expression_spec::AbstractExpressionSpec`: A specification of what types of expressions to use in the
     search. For example, `ExpressionSpec()` (default). You can also see `TemplateExpressionSpec` and
     `ParametricExpressionSpec` for specialized cases.
@@ -597,7 +599,7 @@ $(OPTION_DESCRIPTIONS)
     ## 2. Setting the Search Size:
     ## 3. The Objective:
     dimensionless_constants_only::Bool=false,
-    allow_negative_losses::Bool=false,
+    loss_scale::Symbol=:log,
     ## 4. Working with Complexities:
     complexity_mapping::Union{Function,ComplexityMapping,Nothing}=nothing,
     use_frequency::Bool=true,
@@ -811,6 +813,7 @@ $(OPTION_DESCRIPTIONS)
     @assert length(unary_operators) <= 8192
     @assert length(binary_operators) <= 8192
     @assert tournament_selection_n < population_size "`tournament_selection_n` must be less than `population_size`"
+    @assert loss_scale in (:log, :linear) "`loss_scale` must be either log or linear"
 
     # Make sure nested_constraints contains functions within our operator set:
     _nested_constraints = build_nested_constraints(;
@@ -1008,7 +1011,7 @@ $(OPTION_DESCRIPTIONS)
         elementwise_loss,
         loss_function,
         loss_function_expression,
-        allow_negative_losses,
+        loss_scale,
         node_type,
         expression_type,
         expression_options,

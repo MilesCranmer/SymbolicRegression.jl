@@ -137,7 +137,7 @@ function string_dominating_pareto_curve(
     _buffer = IOBuffer()
     buffer = AnnotatedIOBuffer(_buffer)
     println(buffer, '─'^(terminal_width - 1))
-    if options.allow_negative_losses
+    if options.loss_scale == :linear
         println(buffer, HEADER_WITHOUT_SCORE)
     else
         println(buffer, HEADER)
@@ -156,7 +156,7 @@ function string_dominating_pareto_curve(
         )
         prefix = make_prefix(tree, options, dataset)
         eqn_string = prefix * eqn_string
-        stats_columns_string = if options.allow_negative_losses
+        stats_columns_string = if options.loss_scale == :linear
             @sprintf("%-10d  %-8.3e  ", complexity, loss)
         else
             @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
@@ -213,13 +213,13 @@ end
 function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}
     dominating = calculate_pareto_frontier(hof)
 
-    # Only check for negative losses if allow_negative_losses is false
-    !options.allow_negative_losses && for member in dominating
+    # Only check for negative losses if using logarithmic scaling
+    options.loss_scale == :log && for member in dominating
         if member.loss < 0.0
             throw(
                 DomainError(
                     member.loss,
-                    "Your loss function must be non-negative. To do this, consider wrapping your loss inside an exponential, which will not affect the search (unless you are using annealing).",
+                    "Your loss function must be non-negative. To allow negative losses, set the `loss_scale` to linear, or consider wrapping your loss inside an exponential.",
                 ),
             )
         end
@@ -241,7 +241,7 @@ function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}
         scores[i] = if i == 1
             zero(L)
         else
-            if options.allow_negative_losses
+            if options.loss_scale == :linear
                 compute_direct_score(cur_loss, last_loss, delta_c)
             else
                 compute_zero_centered_score(cur_loss, last_loss, delta_c)
