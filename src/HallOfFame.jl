@@ -219,34 +219,42 @@ function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}
         end
     end
 
-    ZERO_POINT = eps(L)
-    cur_loss = typemax(L)
-    last_loss = cur_loss
-    last_complexity = 0
-
     trees = [member.tree for member in dominating]
     losses = [member.loss for member in dominating]
     complexities = [compute_complexity(member, options) for member in dominating]
     scores = Array{L}(undef, length(dominating))
 
+    cur_loss = typemax(L)
+    last_loss = cur_loss
+    last_complexity = zero(eltype(complexities))
+
     for i in 1:length(dominating)
         complexity = complexities[i]
         cur_loss = losses[i]
         delta_c = complexity - last_complexity
-        if options.allow_negative_losses
-            delta_mse = cur_loss - last_loss
-            scores[i] = i == 1 ? zero(L) : relu(-delta_mse / delta_c) #relu(delta_mse / delta_c)
-        # Just: cur_loss - last_loss
+        scores[i] = if i == 1
+            zero(L)
         else
-            delta_l_mse = log(relu(cur_loss / last_loss) + ZERO_POINT)
-            scores[i] = i == 1 ? zero(L) : relu(-delta_l_mse / delta_c)
-            # Roughly: log(cur_loss) - log(last_loss)
+            if options.allow_negative_losses
+                compute_direct_score(cur_loss, last_loss, delta_c)
+            else
+                compute_zero_centered_score(cur_loss, last_loss, delta_c)
+            end
         end
         last_loss = cur_loss
         last_complexity = complexity
     end
     return (; trees, scores, losses, complexities)
 end
+function compute_direct_score(cur_loss, last_loss, delta_c)
+    delta = cur_loss - last_loss
+    return relu(-delta / delta_c)
+end
+function compute_zero_centered_score(cur_loss, last_loss, delta_c)
+    log_ratio = log(relu(cur_loss / last_loss) + eps(cur_loss))
+    return relu(-log_ratio / delta_c)
+end
+
 function format_hall_of_fame(hof::AbstractVector{<:HallOfFame}, options)
     outs = [format_hall_of_fame(h, options) for h in hof]
     return (;
