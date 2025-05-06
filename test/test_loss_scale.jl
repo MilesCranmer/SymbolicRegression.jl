@@ -108,7 +108,9 @@ end
 
     # Create a simple test case with negative loss
     hof = HallOfFame(options_log, dataset)
-    hof.members[1].tree = Expression(Node{Float64}(; feature=1); operators=nothing)
+    hof.members[1].tree = Expression(
+        Node{Float64}(; feature=1); operators=nothing, variable_names=nothing
+    )
     hof.members[1].loss = -1.0
     hof.exists[1] = true
 
