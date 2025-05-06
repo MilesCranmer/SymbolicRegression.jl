@@ -208,12 +208,12 @@ function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}
     dominating = calculate_pareto_frontier(hof)
 
     # Only check for negative losses if allow_negative_losses is false
-    if !options.allow_negative_losses
-        if any(member -> member.loss < 0.0, dominating)
+    !options.allow_negative_losses && for member in dominating
+        if member.loss < 0.0
             throw(
                 DomainError(
                     member.loss,
-                    "To use a loss function that has negative values, you must set `allow_negative_losses` to true.",
+                    "Your loss function must be non-negative. To do this, consider wrapping your loss inside an exponential, which will not affect the search (unless you are using annealing).",
                 ),
             )
         end
