@@ -120,16 +120,14 @@ function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
     return dominating
 end
 
-const HEADER = let
-    join(
-        (
-            rpad(styled"{bold:{underline:Complexity}}", 10),
-            rpad(styled"{bold:{underline:Loss}}", 9),
-            rpad(styled"{bold:{underline:Score}}", 9),
-            styled"{bold:{underline:Equation}}",
-        ),
-        "  ",
+let header_parts = (
+        rpad(styled"{bold:{underline:Complexity}}", 10),
+        rpad(styled"{bold:{underline:Loss}}", 9),
+        rpad(styled"{bold:{underline:Score}}", 9),
+        styled"{bold:{underline:Equation}}",
     )
+    @eval const HEADER = join($(header_parts), "  ")
+    @eval const HEADER_WITHOUT_SCORE = join($(header_parts[[1, 2, 4]]), "  ")
 end
 
 function string_dominating_pareto_curve(
@@ -139,7 +137,11 @@ function string_dominating_pareto_curve(
     _buffer = IOBuffer()
     buffer = AnnotatedIOBuffer(_buffer)
     println(buffer, '─'^(terminal_width - 1))
-    println(buffer, HEADER)
+    if options.allow_negative_losses
+        println(buffer, HEADER_WITHOUT_SCORE)
+    else
+        println(buffer, HEADER)
+    end
 
     formatted = format_hall_of_fame(hallOfFame, options)
     for (tree, score, loss, complexity) in
@@ -154,7 +156,11 @@ function string_dominating_pareto_curve(
         )
         prefix = make_prefix(tree, options, dataset)
         eqn_string = prefix * eqn_string
-        stats_columns_string = @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
+        stats_columns_string = if options.allow_negative_losses
+            @sprintf("%-10d  %-8.3e  ", complexity, loss)
+        else
+            @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
+        end
         left_cols_width = length(stats_columns_string)
         print(buffer, stats_columns_string)
         print(

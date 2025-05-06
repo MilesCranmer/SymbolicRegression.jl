@@ -196,7 +196,12 @@ function full_report(
         nothing
     end
     best_idx = dispatch_selection_for(
-        m, formatted.trees, formatted.losses, formatted.scores, formatted.complexities
+        m,
+        formatted.trees,
+        formatted.losses,
+        formatted.scores,
+        formatted.complexities,
+        fitresult.options,
     )
     return (;
         best_idx=best_idx,
@@ -593,11 +598,17 @@ function get_equation_strings_for(
     ]
 end
 
-function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<:LOSS_TYPE}
+function choose_best(;
+    trees, losses::Vector{L}, scores, complexities, options=nothing
+) where {L<:LOSS_TYPE}
     # Same as in PySR:
     # https://github.com/MilesCranmer/PySR/blob/e74b8ad46b163c799908b3aa4d851cf8457c79ef/pysr/sr.py#L2318-L2332
     # threshold = 1.5 * minimum_loss
     # Then, we get max score of those below the threshold.
+    if !isnothing(options) && options.allow_negative_losses
+        return argmin(losses)
+    end
+
     threshold = 1.5 * minimum(losses)
     return argmax([
         (losses[i] <= threshold) ? scores[i] : typemin(L) for i in eachindex(losses)
@@ -605,20 +616,22 @@ function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<
 end
 
 function dispatch_selection_for(
-    m::AbstractSingletargetSRRegressor, trees, losses, scores, complexities
+    m::AbstractSingletargetSRRegressor, trees, losses, scores, complexities, options
 )::Int
     length(trees) == 0 && return 0
-    return m.selection_method(;
-        trees=trees, losses=losses, scores=scores, complexities=complexities
-    )
+    return m.selection_method(; trees, losses, scores, complexities, options)
 end
 function dispatch_selection_for(
-    m::AbstractMultitargetSRRegressor, trees, losses, scores, complexities
+    m::AbstractMultitargetSRRegressor, trees, losses, scores, complexities, options
 )
     any(t -> length(t) == 0, trees) && return fill(0, length(trees))
     return [
         m.selection_method(;
-            trees=trees[i], losses=losses[i], scores=scores[i], complexities=complexities[i]
+            trees=trees[i],
+            losses=losses[i],
+            scores=scores[i],
+            complexities=complexities[i],
+            options,
         ) for i in eachindex(trees)
     ]
 end
