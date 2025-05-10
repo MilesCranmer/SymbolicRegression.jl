@@ -207,7 +207,7 @@ json3_write(args...) = error("Please load the JSON3.jl package.")
 
 A per-task cache that allows us to avoid repeated locking.
 """
-mutable struct PerTaskCache{T,F<:Function}
+struct PerTaskCache{T,F<:Function}
     constructor::F
 
     PerTaskCache{T}(constructor::F) where {T,F} = new{T,F}(constructor)
