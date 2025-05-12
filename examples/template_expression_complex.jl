@@ -257,7 +257,7 @@ model = SRRegressor(;
     unary_operators=(sin, cos, sqrt, exp),
     niterations=500,
     maxsize=35,
-    expression_spec=TemplateExpressionSpec(; structure),
+    expression_spec=ex,
     ## Note that the elementwise loss needs to operate directly on each row of `y`:
     elementwise_loss=(F1, F2) -> (F1.x - F2.x)^2 + (F1.y - F2.y)^2 + (F1.z - F2.z)^2,
     batching=true,
