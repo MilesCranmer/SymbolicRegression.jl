@@ -76,10 +76,7 @@ end
 end
 
 include("test_complexity.jl")
-
-@testitem "Test options" tags = [:part1] begin
-    include("test_options.jl")
-end
+include("test_options.jl")
 
 @testitem "Test hash of tree" tags = [:part2] begin
     include("test_hash.jl")
@@ -174,6 +171,7 @@ include("test_parametric_template_expressions.jl")
 include("test_template_macro.jl")
 include("test_template_expression_mutation.jl")
 include("test_template_expression_string.jl")
+include("test_loss_scale.jl")
 
 @testitem "Aqua tests" tags = [:part2, :aqua] begin
     include("test_aqua.jl")

@@ -280,6 +280,7 @@ end
 
     probChange = 1.0
     if options.annealing
+        # TODO: Try using log(after_cost) - log(before_cost) here
         delta = after_cost - before_cost
         probChange *= exp(-delta / (temperature * options.alpha))
     end

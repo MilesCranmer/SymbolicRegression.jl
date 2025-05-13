@@ -120,26 +120,29 @@ function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
     return dominating
 end
 
-const HEADER = let
-    join(
-        (
-            rpad(styled"{bold:{underline:Complexity}}", 10),
-            rpad(styled"{bold:{underline:Loss}}", 9),
-            rpad(styled"{bold:{underline:Score}}", 9),
-            styled"{bold:{underline:Equation}}",
-        ),
-        "  ",
+let header_parts = (
+        rpad(styled"{bold:{underline:Complexity}}", 10),
+        rpad(styled"{bold:{underline:Loss}}", 9),
+        rpad(styled"{bold:{underline:Score}}", 9),
+        styled"{bold:{underline:Equation}}",
     )
+    @eval const HEADER = join($(header_parts), "  ")
+    @eval const HEADER_WITHOUT_SCORE = join($(header_parts[[1, 2, 4]]), "  ")
 end
+
+show_score_column(options::AbstractOptions) = options.loss_scale == :log
 
 function string_dominating_pareto_curve(
     hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing, pretty::Bool=true
 )
     terminal_width = (width === nothing) ? 100 : max(100, width::Integer)
-    _buffer = IOBuffer()
-    buffer = AnnotatedIOBuffer(_buffer)
+    buffer = AnnotatedIOBuffer(IOBuffer())
     println(buffer, '─'^(terminal_width - 1))
-    println(buffer, HEADER)
+    if show_score_column(options)
+        println(buffer, HEADER)
+    else
+        println(buffer, HEADER_WITHOUT_SCORE)
+    end
 
     formatted = format_hall_of_fame(hallOfFame, options)
     for (tree, score, loss, complexity) in
@@ -154,7 +157,11 @@ function string_dominating_pareto_curve(
         )
         prefix = make_prefix(tree, options, dataset)
         eqn_string = prefix * eqn_string
-        stats_columns_string = @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
+        stats_columns_string = if show_score_column(options)
+            @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
+        else
+            @sprintf("%-10d  %-8.3e  ", complexity, loss)
+        end
         left_cols_width = length(stats_columns_string)
         print(buffer, stats_columns_string)
         print(
@@ -180,8 +187,8 @@ end
 function wrap_equation_string(eqn_string, left_cols_width, terminal_width)
     dots = "..."
     equation_width = (terminal_width - 1) - left_cols_width - length(dots)
-    _buffer = IOBuffer()
-    buffer = AnnotatedIOBuffer(_buffer)
+
+    buffer = AnnotatedIOBuffer(IOBuffer())
 
     forced_split_eqn = split(eqn_string, '\n')
     print_pad = false
@@ -206,39 +213,55 @@ end
 
 function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}
     dominating = calculate_pareto_frontier(hof)
-    foreach(dominating) do member
+
+    # Only check for negative losses if using logarithmic scaling
+    options.loss_scale == :log && for member in dominating
         if member.loss < 0.0
             throw(
                 DomainError(
                     member.loss,
-                    "Your loss function must be non-negative. To do this, consider wrapping your loss inside an exponential, which will not affect the search (unless you are using annealing).",
+                    "Your loss function must be non-negative. To allow negative losses, set the `loss_scale` to linear, or consider wrapping your loss inside an exponential.",
                 ),
             )
         end
     end
-
-    ZERO_POINT = eps(L)
-    cur_loss = typemax(L)
-    last_loss = cur_loss
-    last_complexity = 0
 
     trees = [member.tree for member in dominating]
     losses = [member.loss for member in dominating]
     complexities = [compute_complexity(member, options) for member in dominating]
     scores = Array{L}(undef, length(dominating))
 
+    cur_loss = typemax(L)
+    last_loss = cur_loss
+    last_complexity = zero(eltype(complexities))
+
     for i in 1:length(dominating)
         complexity = complexities[i]
         cur_loss = losses[i]
         delta_c = complexity - last_complexity
-        delta_l_mse = log(relu(cur_loss / last_loss) + ZERO_POINT)
-
-        scores[i] = relu(-delta_l_mse / delta_c)
+        scores[i] = if i == 1
+            zero(L)
+        else
+            if options.loss_scale == :linear
+                compute_direct_score(cur_loss, last_loss, delta_c)
+            else
+                compute_zero_centered_score(cur_loss, last_loss, delta_c)
+            end
+        end
         last_loss = cur_loss
         last_complexity = complexity
     end
     return (; trees, scores, losses, complexities)
 end
+function compute_direct_score(cur_loss, last_loss, delta_c)
+    delta = cur_loss - last_loss
+    return relu(-delta / delta_c)
+end
+function compute_zero_centered_score(cur_loss, last_loss, delta_c)
+    log_ratio = log(relu(cur_loss / last_loss) + eps(cur_loss))
+    return relu(-log_ratio / delta_c)
+end
+
 function format_hall_of_fame(hof::AbstractVector{<:HallOfFame}, options)
     outs = [format_hall_of_fame(h, options) for h in hof]
     return (;
