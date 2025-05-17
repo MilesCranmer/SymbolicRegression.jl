@@ -199,8 +199,7 @@ end
     # Parametrized Template Expressions
 
     Template expressions in SymbolicRegression.jl can include parametric forms - expressions with tunable constants
-    that are optimized during the search. This can even include learn class-specific parameters that vary by category,
-    analogous to `ParametricExpression`s.
+    that are optimized during the search. This can even include class-specific parameters that vary by category.
 
     In this tutorial, we'll demonstrate how to use parametric template expressions to learn a model where:
 
