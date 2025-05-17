@@ -2,15 +2,34 @@ module TemplateExpressionMacroModule
 
 """
     @template_spec(
-        parameters=(p1=10, p2=10, p3=1),
-        expressions=(f, g),
-    ) do x1, x2, class
-        return p1[class] * g(x1^2) + f(x1, x2, p2[class]) - p3[1]
+        expressions=(f, g, ...),
+        [parameters=(p1=size1, p2=size2, ...)],
+        [num_features=(f=n1, g=n2, ...)]
+    ) do x1, x2, ...
+        # template function body
     end
 
-(Experimental) Creates a TemplateExpressionSpec with the given parameters and expressions.
-The parameters are used to define constants that can be indexed, and the
-expressions define the function keys for the template structure.
+Creates a TemplateExpressionSpec with a custom template structure for symbolic regression.
+
+This macro allows defining structured symbolic expressions with constrained composition
+of sub-expressions and parameterized components.
+
+# Arguments
+- `expressions`: A tuple of function names that will be composed in the template.
+- `parameters`: Optional. A named tuple of parameter name-size pairs. These parameters
+    can be indexed and accessed in the template function.
+- `num_features`: Optional. A named tuple specifying how many features each expression function can access.
+    Normally this will be inferred automatically from the template function.
+
+# Example
+```julia
+expr_spec = @template_spec(
+    parameters=(p1=10, p2=10, p3=1),
+    expressions=(f, g),
+) do x1, x2, class
+    return p1[class] * g(x1^2) + f(x1, x2, p2[class]) - p3[1]
+end
+```
 """
 macro template_spec(f, args...)
     return esc(template_spec(f, args...))
@@ -20,6 +39,7 @@ function template_spec(func, args...)
     # Extract the parameters and expressions from the arguments
     parameters = nothing
     expressions = nothing
+    num_features = nothing
 
     for arg in args
         if Meta.isexpr(arg, :(=))
@@ -30,6 +50,9 @@ function template_spec(func, args...)
             elseif name == :expressions
                 !isnothing(expressions) && error("cannot set `expressions` keyword twice")
                 expressions = value
+            elseif name == :num_features
+                !isnothing(num_features) && error("cannot set `num_features` keyword twice")
+                num_features = value
             else
                 error("unrecognized keyword $(name)")
             end
@@ -92,7 +115,8 @@ function template_spec(func, args...)
                 structure=TemplateStructure{($(function_keys...),)}(
                     function ((; $(expr_names...)), ($(func_args...),))
                         return $(func_body)
-                    end
+                    end;
+                    num_features=$(num_features),
                 ),
             )
         end
@@ -109,6 +133,7 @@ function template_spec(func, args...)
                     )
                         return $(func_body)
                     end;
+                    num_features=$(num_features),
                     num_parameters=$(parameters),
                 ),
             )

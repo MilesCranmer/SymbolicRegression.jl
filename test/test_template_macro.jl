@@ -188,3 +188,15 @@ end
         template_spec(:((x,) -> f(x)), :(expressions = (f,)), :extra_arg)
     )
 end
+
+@testitem "Template macro with num_features parameter" tags = [:part1, :template_macro] begin
+    using SymbolicRegression
+    using DynamicExpressions: OperatorEnum, Node
+
+    # Test template with num_features
+    expr_spec = @template_spec(expressions = (f,), num_features = (f=5,)) do x1, x2
+        return x1^2 + f(x1, x2)  # Normal inference would infer (f=2,)
+    end
+
+    @test expr_spec.structure.num_features == (f=5,)
+end
