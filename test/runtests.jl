@@ -2,13 +2,18 @@ using TestItems: @testitem
 using TestItemRunner: @run_package_tests
 
 ENV["SYMBOLIC_REGRESSION_TEST"] = "true"
-tags_to_run = let t = get(ENV, "SYMBOLIC_REGRESSION_TEST_SUITE", "part1,part2,part3")
-    t = split(t, ",")
-    t = map(Symbol, t)
-    t
-end
 
-@eval @run_package_tests filter = ti -> !isdisjoint(ti.tags, $tags_to_run) verbose = true
+let
+    tags_to_run = map(Symbol, split(get(ENV, "SYMBOLIC_REGRESSION_TEST_SUITE", ""), ","))
+    names_to_run = split(get(ENV, "SYMBOLIC_REGRESSION_TEST_NAMES", ""), ",")
+    filter = if !isempty(names_to_run)
+        ti -> any(name -> occursin(name, ti.name), names_to_run)
+    else
+        tags_to_run = isempty(tags_to_run) ? [:part1, :part2, :part3] : tags_to_run
+        ti -> !isdisjoint(ti.tags, tags_to_run)
+    end
+    @eval @run_package_tests filter = $filter verbose = true
+end
 
 # TODO: This is a very slow test
 include("test_operators.jl")
