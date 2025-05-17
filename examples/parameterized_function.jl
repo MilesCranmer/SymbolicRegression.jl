@@ -25,7 +25,6 @@ We will need to simultaneously learn the symbolic expression and per-class param
 =#
 using SymbolicRegression
 using Random: MersenneTwister
-using Zygote
 using MLJBase: machine, fit!, predict, report
 using Test
 
@@ -51,20 +50,28 @@ end
 #=
 ## Setting up the Search
 
-We'll configure the symbolic regression search to:
-- Use parameterized expressions with up to 2 parameters
-- Use Zygote.jl for automatic differentiation during parameter optimization (important when using parametric expressions, as it is higher dimensional)
+We'll configure the symbolic regression search to
+use template expressions with parameters that _vary by class_
 =#
 
 stop_at = Ref(1e-4)  #src
+
+# Get number of categories from the data
+n_categories = length(unique(X.class))
+
+# Create a template expression specification with 2 parameters
+expression_spec = @template_spec(
+    expressions = (f,), parameters = (p1=n_categories, p2=n_categories),
+) do x1, x2, category
+    f(x1, x2, p1[category], p2[category])
+end
 
 model = SRRegressor(;
     niterations=100,
     binary_operators=[+, *, /, -],
     unary_operators=[cos, exp],
     populations=30,
-    expression_spec=ParametricExpressionSpec(; max_parameters=2),
-    autodiff_backend=:Zygote,
+    expression_spec=expression_spec,
     early_stop_condition=(loss, _) -> loss < stop_at[],  #src
 );
 
