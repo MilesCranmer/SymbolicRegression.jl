@@ -34,7 +34,6 @@ end
 @testitem "Test derivatives" tags = [:part2] begin
     include("test_derivatives.jl")
 end
-
 include("test_expression_derivatives.jl")
 
 @testitem "Test simplification" tags = [:part3] begin
@@ -178,7 +177,7 @@ include("test_loss_scale.jl")
     include("test_aqua.jl")
 end
 
-@testitem "JET tests" tags = [:part1, :jet] begin
+@testitem "JET tests" tags = [:jet] begin
     test_jet_file = joinpath((@__DIR__), "test_jet.jl")
     run(`$(Base.julia_cmd()) --startup-file=no $test_jet_file`)
 end
