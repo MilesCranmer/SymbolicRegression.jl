@@ -68,24 +68,20 @@ end
 
 @testitem "Test derivatives of parametric expression during optimization" tags = [:part3] begin
     using SymbolicRegression
-    using SymbolicRegression.ConstantOptimizationModule:
-        Evaluator, GradEvaluator, specialized_options
+    using SymbolicRegression.ConstantOptimizationModule: specialized_options
     using DynamicExpressions
     using Zygote: Zygote
     using Random: MersenneTwister
-    using DifferentiationInterface: value_and_gradient, AutoZygote, AutoForwardDiff
+    using DifferentiationInterface: AutoZygote
 
     # Import our AutoDiff helpers
     include("autodiff_helpers.jl")
 
     rng = MersenneTwister(0)
-    X, true_params, init_params, init_constants, class, y, dataset = setup_parametric_test(
-        rng
-    )
 
-    # Get true values using ForwardDiff
-    true_val, true_d_params, true_d_constants = get_parametric_test_vals(
-        rng, init_params, init_constants, X, class, y, AutoForwardDiff()
+    # Set up test data using our helper
+    _, dataset, init_params, _, true_val, true_d_params, true_d_constants = setup_parametric_test(
+        rng
     )
 
     # Create options and expression
@@ -103,17 +99,16 @@ end
 
 @testitem "Test Enzyme derivatives of parametric expression" tags = [:enzyme] begin
     using SymbolicRegression
-    using SymbolicRegression.ConstantOptimizationModule:
-        Evaluator, GradEvaluator, specialized_options
+    using SymbolicRegression.ConstantOptimizationModule: specialized_options
     using DynamicExpressions
     using Random: MersenneTwister
-    using DifferentiationInterface: value_and_gradient, AutoZygote
+    using DifferentiationInterface: AutoZygote
 
     # Import our AutoDiff helpers
     include("autodiff_helpers.jl")
 
     # Try to load Enzyme - skip test if not available
-    enzyme_loaded, enzyme_error = try
+    (enzyme_loaded, enzyme_error) = try
         using Enzyme
         using DifferentiationInterface: AutoEnzyme
         (true, nothing)
@@ -127,13 +122,10 @@ end
         @test_skip "Enzyme.jl is not available"
     else
         rng = MersenneTwister(0)
-        X, true_params, init_params, init_constants, class, y, dataset = setup_parametric_test(
-            rng
-        )
 
-        # Get true values using Zygote (to compare with Enzyme)
-        true_val, true_d_params, true_d_constants = get_parametric_test_vals(
-            rng, init_params, init_constants, X, class, y, AutoZygote()
+        # Set up test data using our helper
+        _, dataset, init_params, _, true_val, true_d_params, true_d_constants = setup_parametric_test(
+            rng
         )
 
         # Create options with Enzyme backend
@@ -155,4 +147,5 @@ end
             allow_failure=true,
         )
     end
+    # TODO: Test with batched dataset
 end

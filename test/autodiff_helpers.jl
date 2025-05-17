@@ -4,8 +4,13 @@ using SymbolicRegression.ConstantOptimizationModule:
 using DynamicExpressions
 using DifferentiationInterface: value_and_gradient
 using Test
+using Zygote: Zygote
+using DifferentiationInterface: AutoZygote
 
-# Utility for testing derivatives
+"""
+Create and set up all the test data needed for parametric expression autodiff tests.
+Returns everything needed for both Zygote and Enzyme tests.
+"""
 function setup_parametric_test(rng)
     X = rand(rng, 2, 32)
     true_params = [0.5 2.0]
@@ -19,14 +24,9 @@ function setup_parametric_test(rng)
 
     dataset = Dataset(X, y; extra=(; class))
 
-    return X, true_params, init_params, init_constants, class, y, dataset
-end
-
-function get_parametric_test_vals(
-    rng, init_params, init_constants, X, class, y, zygote_backend
-)
+    # Calculate the reference values using AutoZygote
     (true_val, (true_d_params, true_d_constants)) =
-        value_and_gradient(zygote_backend, (init_params, init_constants)) do (params, c)
+        value_and_gradient(AutoZygote(), (init_params, init_constants)) do (params, c)
             pred = [
                 X[1, i] * X[1, i] - cos(c[1] * X[2, i] + c[2]) + params[1, class[i]] for
                 i in 1:32
@@ -34,9 +34,14 @@ function get_parametric_test_vals(
             sum(abs2, pred .- y) / length(y)
         end
 
-    return true_val, true_d_params, true_d_constants
+    return X,
+    dataset, init_params, init_constants, true_val, true_d_params,
+    true_d_constants
 end
 
+"""
+Create the parametric expression for testing.
+"""
 function create_parametric_expression(init_params, operators)
     ex = @parse_expression(
         x * x - cos(2.5 * y + -0.5) + p1,
@@ -49,6 +54,10 @@ function create_parametric_expression(init_params, operators)
     return ex
 end
 
+"""
+Test the autodiff backend against the reference values.
+This matches the original test_backend function's behavior.
+"""
 function test_autodiff_backend(
     ex,
     dataset,
