@@ -73,7 +73,7 @@ end
     using DynamicExpressions
     using Zygote: Zygote
     using Random: MersenneTwister
-    using DifferentiationInterface: value_and_gradient, AutoZygote
+    using DifferentiationInterface: value_and_gradient, AutoZygote, AutoForwardDiff
 
     # Import our AutoDiff helpers
     include("autodiff_helpers.jl")
@@ -83,9 +83,9 @@ end
         rng
     )
 
-    # Get true values using Zygote
+    # Get true values using ForwardDiff
     true_val, true_d_params, true_d_constants = get_parametric_test_vals(
-        rng, init_params, init_constants, X, class, y, AutoZygote()
+        rng, init_params, init_constants, X, class, y, AutoForwardDiff()
     )
 
     # Create options and expression

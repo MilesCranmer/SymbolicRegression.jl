@@ -72,8 +72,7 @@ jobs:
         uses: julia-actions/julia-buildpkg@v1
       - name: "Install Enzyme (if needed)"
         if: matrix.test == 'enzyme'
-        run: |
-          julia --color=yes -e 'import Pkg; Pkg.add("Enzyme")'
+        run: julia --color=yes --project=./test -e 'import Pkg; Pkg.add("Enzyme")'
         shell: bash
       - name: "Run tests"
         env:
