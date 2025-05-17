@@ -113,14 +113,12 @@ end
     include("autodiff_helpers.jl")
 
     # Try to load Enzyme - skip test if not available
-    enzyme_loaded = false
-    enzyme_error = nothing
-    try
+    enzyme_loaded, enzyme_error = try
         using Enzyme
         using DifferentiationInterface: AutoEnzyme
-        enzyme_loaded = true
+        (true, nothing)
     catch e
-        enzyme_error = e
+        (false, e)
     end
 
     if !enzyme_loaded
