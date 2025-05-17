@@ -54,6 +54,9 @@ jobs:
           - os: macOS-latest
             julia-version: "1"
             test: "part3"
+          - os: ubuntu-latest
+            julia-version: "1"
+            test: "enzyme"
 
     steps:
       - uses: actions/checkout@v4
@@ -67,6 +70,11 @@ jobs:
           cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};os=${{ matrix.os }};julia=${{ matrix.julia-version }};project=${{ hashFiles('**/Project.toml') }}
       - name: "Build package"
         uses: julia-actions/julia-buildpkg@v1
+      - name: "Install Enzyme (if needed)"
+        if: matrix.test == 'enzyme'
+        run: |
+          julia --color=yes -e 'import Pkg; Pkg.add("Enzyme")'
+        shell: bash
       - name: "Run tests"
         env:
           SYMBOLIC_REGRESSION_TEST_SUITE: ${{ matrix.test }}
