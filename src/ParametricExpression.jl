@@ -196,10 +196,37 @@ IDE.handles_class_column(::Type{<:ParametricExpression}) = true
 """
     ParametricExpressionSpec <: AbstractExpressionSpec
 
+!!! warning
+    `ParametricExpressionSpec` is no longer recommended. Please use `@template_spec` (creating a `TemplateExpressionSpec`) instead.
+
 (Experimental) Specification for parametric expressions with configurable maximum parameters.
 """
-Base.@kwdef struct ParametricExpressionSpec <: AbstractExpressionSpec
+struct ParametricExpressionSpec <: AbstractExpressionSpec
     max_parameters::Int
+
+    function ParametricExpressionSpec(; max_parameters::Int, warn::Bool=true)
+        # Build a generic deprecation message
+        msg = """
+        ParametricExpressionSpec is no longer recommended – it is both faster, safer, and more explicit to
+        use TemplateExpressionSpec with the `@template_spec` macro instead.
+
+        Example with @template_spec macro:
+
+            n_categories = length(unique(X.class))
+            expression_spec = @template_spec(
+                expressions=(f,),
+                parameters=($(join(["p$i=n_categories" for i in 1:max_parameters], ", "))),
+            ) do x, #= other variable names..., =# category #= additional category feature =#
+                f(x1, #= other variable names..., =#  $(join(["p$i[category]" for i in 1:max_parameters], ", ")))
+            end
+
+        Then, when passing your dataset, include another feature with the category column.
+        """
+
+        warn && @warn msg maxlog = 1
+
+        return new(max_parameters)
+    end
 end
 
 # COV_EXCL_START
