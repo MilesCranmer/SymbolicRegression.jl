@@ -66,10 +66,14 @@ expression_spec = @template_spec(
 ) do x1, x2, category
     f(x1, x2, p1[category], p2[category])
 end
-test_kwargs = (;  #src
-    expression_spec=ParametricExpressionSpec(; max_parameters=2),  #src
-    autodiff_backend=:Zygote,  #src
-)  #src
+test_kwargs = if get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false") == "true"  #src
+    (;  #src
+        expression_spec=ParametricExpressionSpec(; max_parameters=2),  #src
+        autodiff_backend=:Zygote,  #src
+    )  #src
+else  #src
+    NamedTuple()  #src
+end  #src
 
 model = SRRegressor(;
     niterations=100,
