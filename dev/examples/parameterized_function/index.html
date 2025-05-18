@@ -4,7 +4,7 @@
 y = 2\cos(x_2 + 1.5) + x_1^2 - 0.5 \ \ \ \ \text{[class 2]}\]</p><p>We will need to simultaneously learn the symbolic expression and per-class parameters!</p><pre><code class="language-julia hljs">using SymbolicRegression
 using Random: MersenneTwister
 using MLJBase: machine, fit!, predict, report
-using Test</code></pre><p>Now, we generate synthetic data, with these 2 different classes.</p><p>Note that the <code>class</code> feature is given special treatment for the <a href="../../api/#SymbolicRegression.MLJInterfaceModule.SRRegressor"><code>SRRegressor</code></a> as a categorical variable:</p><pre><code class="language-julia hljs">X = let rng = MersenneTwister(0), n = 30
+using Test</code></pre><p>Now, we generate synthetic data, with these 2 different classes.</p><pre><code class="language-julia hljs">X = let rng = MersenneTwister(0), n = 30
     (; x1=randn(rng, n), x2=randn(rng, n), class=rand(rng, 1:2, n))
 end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(x1 = [-0.7587307822993239, 0.03249717326229417, 0.04868971510118324, 0.426553609186312, -0.6455341387712752, 0.16047914065004126, -1.174243139542269, -0.8590577126607076, 0.8166486156723918, -1.3610991864137623  …  -1.4738536651017287, -2.3922557197621166, -1.004193438685409, -0.15671091559738035, -0.40851221296291546, -0.02542189385385727, -1.507668525428601, -0.14180202282588494, -1.1251781589718115, -1.6634915201296359],
  x2 = [0.9225430229784556, -0.3431658216750271, 2.1494079717206267, -0.3614340720711092, -0.17101357024903552, 1.4044957064877326, -1.14561382828759, 1.199962308278444, -0.974684107278398, 0.517299511539031  …  0.15367872415413888, 0.1617663833102913, 1.6815067955745, 0.08878524390300123, 2.997069453443845, 1.3160268541638762, 0.10493050742285542, 0.17279914285302175, 0.39613226871496143, 1.2560661845396246],
@@ -32,8 +32,8 @@ end</code></pre><pre class="documenter-example-output"><code class="nohighlight 
  -0.1751135457735593
   0.4140028695829825</code></pre><h2 id="Setting-up-the-Search"><a class="docs-heading-anchor" href="#Setting-up-the-Search">Setting up the Search</a><a id="Setting-up-the-Search-1"></a><a class="docs-heading-anchor-permalink" href="#Setting-up-the-Search" title="Permalink"></a></h2><p>We&#39;ll configure the symbolic regression search to use template expressions with parameters that <em>vary by class</em></p><p>Get number of categories from the data</p><pre><code class="language-julia hljs">n_categories = length(unique(X.class))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2</code></pre><p>Create a template expression specification with 2 parameters</p><pre><code class="language-julia hljs">expression_spec = @template_spec(
     expressions = (f,), parameters = (p1=n_categories, p2=n_categories),
-) do x1, x2, category
-    f(x1, x2, p1[category], p2[category])
+) do x1, x2, class
+    f(x1, x2, p1[class], p2[class])
 end
 
 model = SRRegressor(;
@@ -45,8 +45,8 @@ model = SRRegressor(;
 );</code></pre><p>Now, let&#39;s set up the machine and fit it:</p><pre><code class="language-julia hljs">mach = machine(model, X, y)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">untrained Machine; caches model-specific representations of data
   model: SRRegressor(defaults = nothing, …)
   args: 
-    1:	Source @079 ⏎ ScientificTypesBase.Table{Union{AbstractVector{ScientificTypesBase.Continuous}, AbstractVector{ScientificTypesBase.Count}}}
-    2:	Source @615 ⏎ AbstractVector{ScientificTypesBase.Continuous}
+    1:	Source @852 ⏎ ScientificTypesBase.Table{Union{AbstractVector{ScientificTypesBase.Continuous}, AbstractVector{ScientificTypesBase.Count}}}
+    2:	Source @937 ⏎ AbstractVector{ScientificTypesBase.Continuous}
 </code></pre><p>At this point, you would run:</p><pre><code class="language-julia hljs">fit!(mach)</code></pre><p>You can extract the best expression and parameters with:</p><pre><code class="language-julia hljs">report(mach).equations[end]</code></pre><hr/><details>
 <summary> Show raw source code </summary><pre><code class="language-julia hljs">#=
 # Learning Parameterized Expressions
@@ -80,9 +80,6 @@ using Test
 
 #=
 Now, we generate synthetic data, with these 2 different classes.
-
-Note that the `class` feature is given special treatment for the [`SRRegressor`](@ref)
-as a categorical variable:
 =#
 
 X = let rng = MersenneTwister(0), n = 30
@@ -112,8 +109,8 @@ n_categories = length(unique(X.class))
 # Create a template expression specification with 2 parameters
 expression_spec = @template_spec(
     expressions = (f,), parameters = (p1=n_categories, p2=n_categories),
-) do x1, x2, category
-    f(x1, x2, p1[category], p2[category])
+) do x1, x2, class
+    f(x1, x2, p1[class], p2[class])
 end
 test_kwargs = if get(ENV, &quot;SYMBOLIC_REGRESSION_IS_TESTING&quot;, &quot;false&quot;) == &quot;true&quot;  #src
     (;  #src
@@ -153,4 +150,4 @@ You can extract the best expression and parameters with:
 report(mach).equations[end]
 \```
 
-=#</code></pre><p>which uses Literate.jl to generate this page.</p></details></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../template_expression/">« Template Expressions</a><a class="docs-footer-nextpage" href="../template_parametric_expression/">Parameterized Template Expressions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Sunday 18 May 2025 00:57">Sunday 18 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+=#</code></pre><p>which uses Literate.jl to generate this page.</p></details></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../template_expression/">« Template Expressions</a><a class="docs-footer-nextpage" href="../template_parametric_expression/">Parameterized Template Expressions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Sunday 18 May 2025 01:14">Sunday 18 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
