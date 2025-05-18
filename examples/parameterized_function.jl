@@ -25,6 +25,7 @@ We will need to simultaneously learn the symbolic expression and per-class param
 =#
 using SymbolicRegression
 using Random: MersenneTwister
+using Zygote  #src
 using MLJBase: machine, fit!, predict, report
 using Test
 
@@ -65,6 +66,10 @@ expression_spec = @template_spec(
 ) do x1, x2, category
     f(x1, x2, p1[category], p2[category])
 end
+test_kwargs = (;  #src
+    expression_spec=ParametricExpressionSpec(; max_parameters=2),  #src
+    autodiff_backend=:Zygote,  #src
+)  #src
 
 model = SRRegressor(;
     niterations=100,
@@ -72,6 +77,7 @@ model = SRRegressor(;
     unary_operators=[cos, exp],
     populations=30,
     expression_spec=expression_spec,
+    test_kwargs...,  #src
     early_stop_condition=(loss, _) -> loss < stop_at[],  #src
 );
 
