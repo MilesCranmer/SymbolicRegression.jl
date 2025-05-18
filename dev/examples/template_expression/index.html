@@ -105,7 +105,7 @@ F_d_scale = 1.0 * sqrt(T)
 ex = TemplateExpression(
     (; B_x, B_y, B_z, F_d_scale);
     structure, operators, variable_names
-)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">B_x = 2.1 * cos(#1); B_y = 2.1 * cos(#1); B_z = 2.1 * cos(#1); F_d_scale = 1.0 * sqrt(x5)</code></pre><p>So we can see that it prints the expression as we&#39;ve defined it.</p><p>Now, we can create a regressor that builds template expressions which follow this structure!</p><pre><code class="language-julia hljs">model = SRRegressor(;
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">B_x = 2.1 * cos(#1); B_y = 2.1 * cos(#1); B_z = 2.1 * cos(#1); F_d_scale = 1.0 * sqrt(x5)</code></pre><p>So we can see that it prints the expression as we&#39;ve defined it.</p><p>Now, we can create a regressor that builds template expressions which follow this structure, by defining a <code>TemplateExpressionSpec</code> which wraps the <code>structure</code> object. This will result in generating expressions like the above <code>ex</code> object.</p><pre><code class="language-julia hljs">model = SRRegressor(;
     binary_operators=(+, -, *, /),
     unary_operators=(sin, cos, sqrt, exp),
     niterations=500,
@@ -118,8 +118,8 @@ ex = TemplateExpression(
 );</code></pre><p>Note how we also have to define the custom <code>elementwise_loss</code> function. This is because our <code>combine_vectors</code> function returns a <code>Force</code> struct, so we need to combine it against the truth!</p><p>Next, we can set up our machine and fit:</p><pre><code class="language-julia hljs">mach = machine(model, X, y)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">untrained Machine; caches model-specific representations of data
   model: SRRegressor(defaults = nothing, …)
   args: 
-    1:	Source @834 ⏎ ScientificTypesBase.Table{AbstractVector{ScientificTypesBase.Continuous}}
-    2:	Source @775 ⏎ AbstractVector{ScientificTypesBase.Unknown}
+    1:	Source @920 ⏎ ScientificTypesBase.Table{AbstractVector{ScientificTypesBase.Continuous}}
+    2:	Source @741 ⏎ AbstractVector{ScientificTypesBase.Unknown}
 </code></pre><p>At this point, you would run:</p><pre><code class="language-julia hljs">fit!(mach)</code></pre><p>which should print using your <code>combine_strings</code> function during the search. The final result is accessible with:</p><pre><code class="language-julia hljs">report(mach)</code></pre><p>which would return a named tuple of the fitted results, including the <code>.equations</code> field, which is a vector of <code>TemplateExpression</code> objects that dominated the Pareto front.</p><hr/><details>
 <summary> Show raw source code </summary><pre><code class="language-julia hljs">#=
 # Searching with template expressions
@@ -371,7 +371,9 @@ ex = TemplateExpression(
 So we can see that it prints the expression as we&#39;ve defined it.
 
 Now, we can create a regressor that builds template expressions
-which follow this structure!
+which follow this structure, by defining a `TemplateExpressionSpec`
+which wraps the `structure` object. This will result in generating
+expressions like the above `ex` object.
 =#
 model = SRRegressor(;
     binary_operators=(+, -, *, /),
@@ -409,4 +411,4 @@ report(mach)
 which would return a named tuple of the fitted results,
 including the `.equations` field, which is a vector
 of `TemplateExpression` objects that dominated the Pareto front.
-=#</code></pre><p>which uses Literate.jl to generate this page.</p></details></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Short Examples</a><a class="docs-footer-nextpage" href="../parameterized_function/">Parameterized Expressions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Sunday 18 May 2025 00:53">Sunday 18 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+=#</code></pre><p>which uses Literate.jl to generate this page.</p></details></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Short Examples</a><a class="docs-footer-nextpage" href="../parameterized_function/">Parameterized Expressions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Sunday 18 May 2025 00:54">Sunday 18 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
