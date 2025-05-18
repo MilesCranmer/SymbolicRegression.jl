@@ -250,7 +250,9 @@ ex = TemplateExpression(
 So we can see that it prints the expression as we've defined it.
 
 Now, we can create a regressor that builds template expressions
-which follow this structure!
+which follow this structure, by defining a `TemplateExpressionSpec`
+which wraps the `structure` object. This will result in generating
+expressions like the above `ex` object.
 =#
 model = SRRegressor(;
     binary_operators=(+, -, *, /),
