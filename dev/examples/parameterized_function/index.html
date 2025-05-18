@@ -3,7 +3,6 @@
 \text{OR} \\
 y = 2\cos(x_2 + 1.5) + x_1^2 - 0.5 \ \ \ \ \text{[class 2]}\]</p><p>We will need to simultaneously learn the symbolic expression and per-class parameters!</p><pre><code class="language-julia hljs">using SymbolicRegression
 using Random: MersenneTwister
-using Zygote
 using MLJBase: machine, fit!, predict, report
 using Test</code></pre><p>Now, we generate synthetic data, with these 2 different classes.</p><p>Note that the <code>class</code> feature is given special treatment for the <a href="../../api/#SymbolicRegression.MLJInterfaceModule.SRRegressor"><code>SRRegressor</code></a> as a categorical variable:</p><pre><code class="language-julia hljs">X = let rng = MersenneTwister(0), n = 30
     (; x1=randn(rng, n), x2=randn(rng, n), class=rand(rng, 1:2, n))
@@ -31,18 +30,23 @@ end</code></pre><pre class="documenter-example-output"><code class="nohighlight 
   1.0312146396920676
  -1.2538511817635862
  -0.1751135457735593
-  0.4140028695829825</code></pre><h2 id="Setting-up-the-Search"><a class="docs-heading-anchor" href="#Setting-up-the-Search">Setting up the Search</a><a id="Setting-up-the-Search-1"></a><a class="docs-heading-anchor-permalink" href="#Setting-up-the-Search" title="Permalink"></a></h2><p>We&#39;ll configure the symbolic regression search to:</p><ul><li>Use parameterized expressions with up to 2 parameters</li><li>Use Zygote.jl for automatic differentiation during parameter optimization (important when using parametric expressions, as it is higher dimensional)</li></ul><pre><code class="language-julia hljs">model = SRRegressor(;
+  0.4140028695829825</code></pre><h2 id="Setting-up-the-Search"><a class="docs-heading-anchor" href="#Setting-up-the-Search">Setting up the Search</a><a id="Setting-up-the-Search-1"></a><a class="docs-heading-anchor-permalink" href="#Setting-up-the-Search" title="Permalink"></a></h2><p>We&#39;ll configure the symbolic regression search to use template expressions with parameters that <em>vary by class</em></p><p>Get number of categories from the data</p><pre><code class="language-julia hljs">n_categories = length(unique(X.class))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2</code></pre><p>Create a template expression specification with 2 parameters</p><pre><code class="language-julia hljs">expression_spec = @template_spec(
+    expressions = (f,), parameters = (p1=n_categories, p2=n_categories),
+) do x1, x2, category
+    f(x1, x2, p1[category], p2[category])
+end
+
+model = SRRegressor(;
     niterations=100,
     binary_operators=[+, *, /, -],
     unary_operators=[cos, exp],
     populations=30,
-    expression_spec=ParametricExpressionSpec(; max_parameters=2),
-    autodiff_backend=:Zygote,
+    expression_spec=expression_spec,
 );</code></pre><p>Now, let&#39;s set up the machine and fit it:</p><pre><code class="language-julia hljs">mach = machine(model, X, y)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">untrained Machine; caches model-specific representations of data
   model: SRRegressor(defaults = nothing, …)
   args: 
-    1:	Source @394 ⏎ ScientificTypesBase.Table{Union{AbstractVector{ScientificTypesBase.Continuous}, AbstractVector{ScientificTypesBase.Count}}}
-    2:	Source @049 ⏎ AbstractVector{ScientificTypesBase.Continuous}
+    1:	Source @441 ⏎ ScientificTypesBase.Table{Union{AbstractVector{ScientificTypesBase.Continuous}, AbstractVector{ScientificTypesBase.Count}}}
+    2:	Source @389 ⏎ AbstractVector{ScientificTypesBase.Continuous}
 </code></pre><p>At this point, you would run:</p><pre><code class="language-julia hljs">fit!(mach)</code></pre><p>You can extract the best expression and parameters with:</p><pre><code class="language-julia hljs">report(mach).equations[end]</code></pre><hr/><details>
 <summary> Show raw source code </summary><pre><code class="language-julia hljs">#=
 # Learning Parameterized Expressions
@@ -70,7 +74,7 @@ We will need to simultaneously learn the symbolic expression and per-class param
 =#
 using SymbolicRegression
 using Random: MersenneTwister
-using Zygote
+using Zygote  #src
 using MLJBase: machine, fit!, predict, report
 using Test
 
@@ -96,20 +100,37 @@ end
 #=
 ## Setting up the Search
 
-We&#39;ll configure the symbolic regression search to:
-- Use parameterized expressions with up to 2 parameters
-- Use Zygote.jl for automatic differentiation during parameter optimization (important when using parametric expressions, as it is higher dimensional)
+We&#39;ll configure the symbolic regression search to
+use template expressions with parameters that _vary by class_
 =#
 
 stop_at = Ref(1e-4)  #src
+
+# Get number of categories from the data
+n_categories = length(unique(X.class))
+
+# Create a template expression specification with 2 parameters
+expression_spec = @template_spec(
+    expressions = (f,), parameters = (p1=n_categories, p2=n_categories),
+) do x1, x2, category
+    f(x1, x2, p1[category], p2[category])
+end
+test_kwargs = if get(ENV, &quot;SYMBOLIC_REGRESSION_IS_TESTING&quot;, &quot;false&quot;) == &quot;true&quot;  #src
+    (;  #src
+        expression_spec=ParametricExpressionSpec(; max_parameters=2),  #src
+        autodiff_backend=:Zygote,  #src
+    )  #src
+else  #src
+    NamedTuple()  #src
+end  #src
 
 model = SRRegressor(;
     niterations=100,
     binary_operators=[+, *, /, -],
     unary_operators=[cos, exp],
     populations=30,
-    expression_spec=ParametricExpressionSpec(; max_parameters=2),
-    autodiff_backend=:Zygote,
+    expression_spec=expression_spec,
+    test_kwargs...,  #src
     early_stop_condition=(loss, _) -&gt; loss &lt; stop_at[],  #src
 );
 
@@ -132,4 +153,4 @@ You can extract the best expression and parameters with:
 report(mach).equations[end]
 \```
 
-=#</code></pre><p>which uses Literate.jl to generate this page.</p></details></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../template_expression/">« Template Expressions</a><a class="docs-footer-nextpage" href="../template_parametric_expression/">Parameterized Template Expressions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Sunday 18 May 2025 00:51">Sunday 18 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+=#</code></pre><p>which uses Literate.jl to generate this page.</p></details></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../template_expression/">« Template Expressions</a><a class="docs-footer-nextpage" href="../template_parametric_expression/">Parameterized Template Expressions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Sunday 18 May 2025 00:53">Sunday 18 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
