@@ -23,8 +23,8 @@ function GradEvaluator(f::F, backend::AE) where {F,AE<:AutoEnzyme}
     return GradEvaluator(f, backend, (; storage_tree, storage_refs, storage_dataset))
 end
 
-function evaluator(tree, dataset, options, idx, output)
-    output[] = eval_loss(tree, dataset, options; regularization=false, idx=idx)
+function evaluator(tree, dataset, options, output)
+    output[] = eval_loss(tree, dataset, options; regularization=false)
     return nothing
 end
 
@@ -45,7 +45,6 @@ function (g::GradEvaluator{<:Any,<:AutoEnzyme})(_, G, x::AbstractVector{T}) wher
             Duplicated(g.f.tree, g.extra.storage_tree),
             Duplicated(g.f.dataset, g.extra.storage_dataset),
             Const(g.f.options),
-            Const(g.f.idx),
             Duplicated(output, doutput),
         )
     end

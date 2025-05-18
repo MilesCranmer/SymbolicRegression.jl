@@ -68,75 +68,84 @@ end
 
 @testitem "Test derivatives of parametric expression during optimization" tags = [:part3] begin
     using SymbolicRegression
-    using SymbolicRegression.ConstantOptimizationModule:
-        Evaluator, GradEvaluator, optimize_constants, specialized_options
+    using SymbolicRegression.ConstantOptimizationModule: specialized_options
     using DynamicExpressions
     using Zygote: Zygote
     using Random: MersenneTwister
-    using DifferentiationInterface: value_and_gradient, AutoZygote, AutoEnzyme
-    enzyme_compatible = VERSION >= v"1.10.0" && VERSION < v"1.11.0-DEV.0"
-    @static if enzyme_compatible
-        using Enzyme: Enzyme
-    end
+    using DifferentiationInterface: AutoZygote
+
+    # Import our AutoDiff helpers
+    include("autodiff_helpers.jl")
 
     rng = MersenneTwister(0)
-    X = rand(rng, 2, 32)
-    true_params = [0.5 2.0]
-    init_params = [0.1 0.2]
-    init_constants = [2.5, -0.5]
-    class = rand(rng, 1:2, 32)
-    y = [
-        X[1, i] * X[1, i] - cos(2.6 * X[2, i] - 0.2) + true_params[1, class[i]] for
-        i in 1:32
-    ]
 
-    dataset = Dataset(X, y; extra=(; class))
+    # Set up test data using our helper
+    _, dataset, init_params, _, true_val, true_d_params, true_d_constants = setup_parametric_test(
+        rng
+    )
 
-    (true_val, (true_d_params, true_d_constants)) =
-        value_and_gradient(AutoZygote(), (init_params, init_constants)) do (params, c)
-            pred = [
-                X[1, i] * X[1, i] - cos(c[1] * X[2, i] + c[2]) + params[1, class[i]] for
-                i in 1:32
-            ]
-            sum(abs2, pred .- y) / length(y)
-        end
-
+    # Create options and expression
     options = Options(;
         unary_operators=[cos], binary_operators=[+, *, -], autodiff_backend=:Zygote
     )
 
-    ex = @parse_expression(
-        x * x - cos(2.5 * y + -0.5) + p1,
-        operators = options.operators,
-        expression_type = ParametricExpression,
-        variable_names = ["x", "y"],
-        extra_metadata = (parameter_names=["p1"], parameters=init_params)
+    ex = create_parametric_expression(init_params, options.operators)
+
+    # Test with Zygote
+    test_autodiff_backend(
+        ex, dataset, true_val, true_d_constants, true_d_params, options, AutoZygote()
     )
+end
 
-    function test_backend(ex, @nospecialize(backend); allow_failure=false)
-        x0, refs = get_scalar_constants(ex)
-        G = zero(x0)
+@testitem "Test Enzyme derivatives of parametric expression" tags = [:enzyme] begin
+    using SymbolicRegression
+    using SymbolicRegression.ConstantOptimizationModule: specialized_options
+    using DynamicExpressions
+    using Random: MersenneTwister
+    using DifferentiationInterface: AutoZygote
 
-        f = Evaluator(ex, refs, dataset, specialized_options(options))
-        fg! = GradEvaluator(f, backend)
+    # Import our AutoDiff helpers
+    include("autodiff_helpers.jl")
 
-        @test f(x0) ≈ true_val
-
-        try
-            val = fg!(nothing, G, x0)
-            @test val ≈ true_val
-            @test G ≈ vcat(true_d_constants[:], true_d_params[:])
-        catch e
-            if allow_failure
-                @warn "Expected failure" e
-            else
-                rethrow(e)
-            end
-        end
+    # Try to load Enzyme - skip test if not available
+    (enzyme_loaded, enzyme_error) = try
+        using Enzyme
+        using DifferentiationInterface: AutoEnzyme
+        (true, nothing)
+    catch e
+        (false, e)
     end
 
-    test_backend(ex, AutoZygote(); allow_failure=false)
-    @static if enzyme_compatible
-        test_backend(ex, AutoEnzyme(); allow_failure=true)
+    if !enzyme_loaded
+        @warn "Skipping Enzyme tests because Enzyme.jl could not be loaded" exception =
+            enzyme_error
+        @test_skip "Enzyme.jl is not available"
+    else
+        rng = MersenneTwister(0)
+
+        # Set up test data using our helper
+        _, dataset, init_params, _, true_val, true_d_params, true_d_constants = setup_parametric_test(
+            rng
+        )
+
+        # Create options with Enzyme backend
+        options = Options(;
+            unary_operators=[cos], binary_operators=[+, *, -], autodiff_backend=:Enzyme
+        )
+
+        ex = create_parametric_expression(init_params, options.operators)
+
+        # Test with Enzyme
+        test_autodiff_backend(
+            ex,
+            dataset,
+            true_val,
+            true_d_constants,
+            true_d_params,
+            options,
+            AutoEnzyme();
+            allow_failure=true,
+        )
     end
+    # TODO: Test with batched dataset
 end
