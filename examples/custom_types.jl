@@ -12,10 +12,10 @@ Let's actually try this. Let's evolve an _expression over strings_.
 First, we mock up a dataset. Say that we wish to find the expression
 
 ```math
-y = \text{interleave}(
+y = \text{zip}(
     \text{concat}(x_1, \text{concat}(\text{``abc''}, x_2)),
     \text{concat}(
-        \text{concat}(\text{last\_half}(x_3), \text{reverse}(x_4)),
+        \text{concat}(\text{tail}(x_3), \text{reverse}(x_4)),
         \text{``xyz''}
     )
 )
