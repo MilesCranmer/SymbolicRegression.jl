@@ -163,6 +163,18 @@ function move_functions_to_workers(
             end
             ops = (options.early_stop_condition,)
             example_inputs = (zero(T), 0)
+        elseif function_set == :expression_type
+            # Needs to run _before_ using TemplateExpression anywhere, such
+            # as in `loss_function_expression`!
+            if isnothing(options.expression_type)
+                continue
+            end
+            if !require_copy_to_workers(options.expression_type)
+                continue
+            end
+            (; ops, example_inputs) = make_example_inputs(
+                options.expression_type, T, options, dataset
+            )
         elseif function_set == :loss_function
             if isnothing(options.loss_function)
                 continue

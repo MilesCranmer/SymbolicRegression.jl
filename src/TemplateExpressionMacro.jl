@@ -108,12 +108,17 @@ function template_spec(func, args...)
     func_body = func.args[2]
     func_args = func_args.args
 
+    # For loading from checkpoint, or sharing across workers
+    function_hash = hash((function_keys, expr_names, func_args, func_body))
+
     # Create the TemplateStructure with or without parameters
     if isnothing(parameters)
+        function_name = Symbol(:__sr_template_, function_hash)
+
         quote
             TemplateExpressionSpec(;
                 structure=TemplateStructure{($(function_keys...),)}(
-                    function ((; $(expr_names...)), ($(func_args...),))
+                    function $(function_name)((; $(expr_names...)), ($(func_args...),))
                         return $(func_body)
                     end;
                     num_features=$(num_features),
@@ -125,10 +130,14 @@ function template_spec(func, args...)
         param_keys = Tuple(QuoteNode(p.args[1]) for p in parameters.args)
         param_names = [p.args[1] for p in parameters.args]
 
+        # For loading from checkpoint, or sharing across workers
+        function_hash_with_params = hash((param_keys, param_names), function_hash)
+        function_name = Symbol(:__sr_template_, function_hash_with_params)
+
         quote
             TemplateExpressionSpec(;
                 structure=TemplateStructure{($(function_keys...),),($(param_keys...),)}(
-                    function (
+                    function $(function_name)(
                         (; $(expr_names...)), (; $(param_names...)), ($(func_args...),)
                     )
                         return $(func_body)

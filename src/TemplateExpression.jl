@@ -907,4 +907,21 @@ ES.get_expression_options(spec::TemplateExpressionSpec) = (; structure=spec.stru
 ES.get_node_type(::TemplateExpressionSpec) = Node
 # COV_EXCL_STOP
 
+IDE.require_copy_to_workers(::Type{<:TemplateExpression}) = true  # COV_EXCL_LINE
+function IDE.make_example_inputs(
+    ::Type{<:TemplateExpression}, ::Type{T}, options, dataset
+) where {T}
+    ex = EB.create_expression(CM.init_value(T), options, dataset)
+    raw_contents = get_contents(ex)
+    extra_args = has_params(ex) ? (get_metadata(ex).parameters,) : ()
+    return (;
+        ops=(get_metadata(ex).structure.combine,),
+        example_inputs=(
+            raw_contents,
+            extra_args...,
+            map(x -> ValidVector(copy(x), true), eachrow(dataset.X)),
+        ),
+    )
+end
+
 end

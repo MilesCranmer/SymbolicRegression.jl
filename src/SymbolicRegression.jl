@@ -297,7 +297,8 @@ using .MutationFunctionsModule:
     random_node,
     random_node_and_parent,
     crossover_trees
-using .InterfaceDynamicExpressionsModule: @extend_operators
+using .InterfaceDynamicExpressionsModule:
+    @extend_operators, require_copy_to_workers, make_example_inputs
 using .LossFunctionsModule: eval_loss, eval_cost, update_baseline_loss!, score_func
 using .PopMemberModule: PopMember, reset_birth!
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
