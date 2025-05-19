@@ -20,7 +20,7 @@ jobs:
         uses: julia-actions/cache@v2
       - name: "Install JuliaFormatter and format"
         run: |
-          julia  -e 'import Pkg; pkg"add JuliaFormatter@1.0.61"'
+          julia  -e 'using Pkg; pkg"add JuliaFormatter@1.0.61"'
           julia  -e 'using JuliaFormatter; format(".")'
       - name: "Create Pull Request"
         id: cpr
