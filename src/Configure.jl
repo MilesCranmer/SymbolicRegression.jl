@@ -134,6 +134,7 @@ function move_functions_to_workers(
         :binops,
         :elementwise_loss,
         :early_stop_condition,
+        :expression_type,
         :loss_function,
         :loss_function_expression,
         :complexity_mapping,
@@ -163,13 +164,13 @@ function move_functions_to_workers(
             ops = (options.early_stop_condition,)
             example_inputs = (zero(T), 0)
         elseif function_set == :loss_function
-            if options.loss_function === nothing
+            if isnothing(options.loss_function)
                 continue
             end
             ops = (options.loss_function,)
             example_inputs = ((options.node_type)(T; val=init_value(T)), dataset, options)
         elseif function_set == :loss_function_expression
-            if options.loss_function_expression === nothing
+            if isnothing(options.loss_function_expression)
                 continue
             end
             ops = (options.loss_function_expression,)
