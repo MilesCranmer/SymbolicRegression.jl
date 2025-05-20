@@ -134,6 +134,7 @@ function move_functions_to_workers(
         :binops,
         :elementwise_loss,
         :early_stop_condition,
+        :expression_type,
         :loss_function,
         :loss_function_expression,
         :complexity_mapping,
@@ -142,19 +143,19 @@ function move_functions_to_workers(
     for function_set in function_sets
         if function_set == :unaops
             ops = options.operators.unaops
-            example_inputs = (zero(T),)
+            example_inputs = (init_value(T),)
         elseif function_set == :binops
             ops = options.operators.binops
-            example_inputs = (zero(T), zero(T))
+            example_inputs = (init_value(T), init_value(T))
         elseif function_set == :elementwise_loss
             if typeof(options.elementwise_loss) <: SupervisedLoss
                 continue
             end
             ops = (options.elementwise_loss,)
             example_inputs = if is_weighted(dataset)
-                (zero(T), zero(T), zero(T))
+                (init_value(T), init_value(T), init_value(T))
             else
-                (zero(T), zero(T))
+                (init_value(T), init_value(T))
             end
         elseif function_set == :early_stop_condition
             if !(typeof(options.early_stop_condition) <: Function)
@@ -162,25 +163,37 @@ function move_functions_to_workers(
             end
             ops = (options.early_stop_condition,)
             example_inputs = (zero(T), 0)
+        elseif function_set == :expression_type
+            # Needs to run _before_ using TemplateExpression anywhere, such
+            # as in `loss_function_expression`!
+            if isnothing(options.expression_type)
+                continue
+            end
+            if !require_copy_to_workers(options.expression_type)
+                continue
+            end
+            (; ops, example_inputs) = make_example_inputs(
+                options.expression_type, T, options, dataset
+            )
         elseif function_set == :loss_function
-            if options.loss_function === nothing
+            if isnothing(options.loss_function)
                 continue
             end
             ops = (options.loss_function,)
-            example_inputs = (Node(T; val=zero(T)), dataset, options)
+            example_inputs = ((options.node_type)(T; val=init_value(T)), dataset, options)
         elseif function_set == :loss_function_expression
-            if options.loss_function_expression === nothing
+            if isnothing(options.loss_function_expression)
                 continue
             end
             ops = (options.loss_function_expression,)
-            ex = create_expression(zero(T), options, dataset)
+            ex = create_expression(init_value(T), options, dataset)
             example_inputs = (ex, dataset, options)
         elseif function_set == :complexity_mapping
             if !(options.complexity_mapping isa Function)
                 continue
             end
             ops = (options.complexity_mapping,)
-            example_inputs = (create_expression(zero(T), options, dataset),)
+            example_inputs = (create_expression(init_value(T), options, dataset),)
         else
             error("Invalid function set: $function_set")
         end

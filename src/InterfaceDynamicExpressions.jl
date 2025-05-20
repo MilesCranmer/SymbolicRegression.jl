@@ -375,4 +375,18 @@ end
 # Allows special handling of class columns in MLJInterface.jl
 handles_class_column(::Type{<:AbstractExpression}) = false
 
+# These functions allow you to declare functions that must be
+# passed to worker nodes explicitly. See TemplateExpressions.jl for
+# an example. This is used inside Configure.jl.
+# COV_EXCL_START
+require_copy_to_workers(::Type{<:AbstractExpression}) = false
+function make_example_inputs(
+    ::Type{<:AbstractExpression}, ::Type{T}, options, dataset
+) where {T}
+    return error(
+        "`make_example_inputs` is not implemented for `$(typeof(options.expression_type))`."
+    )
+end
+# COV_EXCL_STOP
+
 end
