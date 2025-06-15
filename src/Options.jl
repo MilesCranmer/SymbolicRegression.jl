@@ -155,89 +155,46 @@ end
     ]
 end
 
-function binopmap(@nospecialize(op))
-    if op == plus
-        return +
-    elseif op == mult
-        return *
-    elseif op == sub
-        return -
-    elseif op == div
-        return /
-    elseif op == ^
-        return safe_pow
-    elseif op == pow
-        return safe_pow
-    elseif op == Base.:(>)
-        return greater
-    elseif op == Base.:(<)
-        return less
-    elseif op == Base.:(>=)
-        return greater_equal
-    elseif op == Base.:(<=)
-        return less_equal
-    end
-    return op
-end
-function inverse_binopmap(@nospecialize(op))
-    if op == safe_pow
-        return ^
-    elseif op == greater
-        return Base.:(>)
-    elseif op == less
-        return Base.:(<)
-    elseif op == greater_equal
-        return Base.:(>=)
-    elseif op == less_equal
-        return Base.:(<=)
-    end
-    return op
-end
+const OP_MAP = Dict{Any,Any}(
+    plus => (+),
+    mult => (*),
+    sub => (-),
+    div => (/),
+    (^) => safe_pow,
+    pow => safe_pow,
+    Base.:(>) => greater,
+    Base.:(<) => less,
+    Base.:(>=) => greater_equal,
+    Base.:(<=) => less_equal,
+    log => safe_log,
+    log10 => safe_log10,
+    log2 => safe_log2,
+    log1p => safe_log1p,
+    sqrt => safe_sqrt,
+    asin => safe_asin,
+    acos => safe_acos,
+    acosh => safe_acosh,
+    atanh => safe_atanh,
+)
+const INVERSE_OP_MAP = Dict{Any,Any}(
+    safe_pow => (^),
+    greater => Base.:(>),
+    less => Base.:(<),
+    greater_equal => Base.:(>=),
+    less_equal => Base.:(<=),
+    safe_log => log,
+    safe_log10 => log10,
+    safe_log2 => log2,
+    safe_log1p => log1p,
+    safe_sqrt => sqrt,
+    safe_asin => asin,
+    safe_acos => acos,
+    safe_acosh => acosh,
+    safe_atanh => atanh,
+)
 
-function unaopmap(@nospecialize(op))
-    if op == log
-        return safe_log
-    elseif op == log10
-        return safe_log10
-    elseif op == log2
-        return safe_log2
-    elseif op == log1p
-        return safe_log1p
-    elseif op == sqrt
-        return safe_sqrt
-    elseif op == asin
-        return safe_asin
-    elseif op == acos
-        return safe_acos
-    elseif op == acosh
-        return safe_acosh
-    elseif op == atanh
-        return safe_atanh
-    end
-    return op
-end
-function inverse_unaopmap(@nospecialize(op))
-    if op == safe_log
-        return log
-    elseif op == safe_log10
-        return log10
-    elseif op == safe_log2
-        return log2
-    elseif op == safe_log1p
-        return log1p
-    elseif op == safe_sqrt
-        return sqrt
-    elseif op == safe_asin
-        return asin
-    elseif op == safe_acos
-        return acos
-    elseif op == safe_acosh
-        return acosh
-    elseif op == safe_atanh
-        return atanh
-    end
-    return op
-end
+opmap(@nospecialize(op)) = get(OP_MAP, op, op)
+inverse_opmap(@nospecialize(op)) = get(INVERSE_OP_MAP, op, op)
 
 recommend_loss_function_expression(expression_type) = false
 
@@ -505,8 +462,7 @@ $(OPTION_DESCRIPTIONS)
     @nospecialize(defaults::Union{VersionNumber,Nothing} = nothing),
     # Search options:
     ## 1. Creating the Search Space:
-    @nospecialize(binary_operators = nothing),
-    @nospecialize(unary_operators = nothing),
+    @nospecialize(operators::Union{Nothing,AbstractOperatorEnum} = nothing),
     @nospecialize(maxsize::Union{Nothing,Integer} = nothing),
     @nospecialize(maxdepth::Union{Nothing,Integer} = nothing),
     @nospecialize(expression_spec::Union{Nothing,AbstractExpressionSpec} = nothing),
@@ -664,6 +620,8 @@ $(OPTION_DESCRIPTIONS)
     npopulations::Union{Nothing,Integer}=nothing,
     npop::Union{Nothing,Integer}=nothing,
     deprecated_return_state::Union{Bool,Nothing}=nothing,
+    unary_operators=nothing,
+    binary_operators=nothing,
     kws...,
     #########################################
 )
@@ -747,6 +705,11 @@ $(OPTION_DESCRIPTIONS)
     if output_file !== nothing
         error("`output_file` is deprecated. Use `output_directory` instead.")
     end
+    if operators !== nothing
+        @assert binary_operators === nothing
+        @assert unary_operators === nothing
+        @assert operator_enum_constructor === nothing
+    end
 
     @assert(
         count(!isnothing, [elementwise_loss, loss_function, loss_function_expression]) <= 1,
@@ -773,8 +736,6 @@ $(OPTION_DESCRIPTIONS)
     #### Supply defaults ############
     #! format: off
     _default_options = default_options(defaults)
-    binary_operators = something(binary_operators, _default_options.binary_operators)
-    unary_operators = something(unary_operators, _default_options.unary_operators)
     maxsize = something(maxsize, _default_options.maxsize)
     populations = something(populations, _default_options.populations)
     population_size = something(population_size, _default_options.population_size)
@@ -795,6 +756,10 @@ $(OPTION_DESCRIPTIONS)
     topn = something(topn, _default_options.topn)
     batching = something(batching, _default_options.batching)
     batch_size = something(batch_size, _default_options.batch_size)
+    if operators === nothing
+        binary_operators = something(binary_operators, _default_options.operators.ops[2])
+        unary_operators = something(unary_operators, _default_options.operators.ops[1])
+    end
     #! format: on
     #################################
 
@@ -810,8 +775,6 @@ $(OPTION_DESCRIPTIONS)
 
     @assert maxsize > 3
     @assert warmup_maxsize_by >= 0.0f0
-    @assert length(unary_operators) <= 8192
-    @assert length(binary_operators) <= 8192
     @assert tournament_selection_n < population_size "`tournament_selection_n` must be less than `population_size`"
     @assert loss_scale in (:log, :linear) "`loss_scale` must be either log or linear"
 
@@ -881,7 +844,7 @@ $(OPTION_DESCRIPTIONS)
         maxdepth = maxsize
     end
 
-    if define_helper_functions
+    if define_helper_functions && any(!isnothing, (binary_operators, unary_operators))
         # We call here so that mapped operators, like ^
         # are correctly overloaded, rather than overloading
         # operators like "safe_pow", etc.
@@ -893,20 +856,23 @@ $(OPTION_DESCRIPTIONS)
         )
     end
 
-    binary_operators = map(binopmap, binary_operators)
-    unary_operators = map(unaopmap, unary_operators)
-
-    operators = if operator_enum_constructor !== nothing
-        operator_enum_constructor(;
-            binary_operators=binary_operators, unary_operators=unary_operators
-        )
+    operators = if operators !== nothing
+        operators
     else
-        OperatorEnum(;
-            binary_operators=binary_operators,
-            unary_operators=unary_operators,
-            define_helper_functions=define_helper_functions,
-            empty_old_operators=false,
-        )
+        binary_operators = map(opmap, binary_operators)
+        unary_operators = map(opmap, unary_operators)
+        if operator_enum_constructor !== nothing
+            operator_enum_constructor(;
+                binary_operators=binary_operators, unary_operators=unary_operators
+            )
+        else
+            OperatorEnum(;
+                binary_operators=binary_operators,
+                unary_operators=unary_operators,
+                define_helper_functions=define_helper_functions,
+                empty_old_operators=false,
+            )
+        end
     end
 
     early_stop_condition = if typeof(early_stop_condition) <: Real
@@ -953,9 +919,12 @@ $(OPTION_DESCRIPTIONS)
             output_directory
         end
 
+    nops = map(length, operators.ops)
+
     options = Options{
         typeof(complexity_mapping),
         operator_specialization(typeof(operators), expression_type),
+        typeof(nops),
         node_type,
         expression_type,
         typeof(expression_options),
@@ -1005,8 +974,7 @@ $(OPTION_DESCRIPTIONS)
         Val(print_precision),
         save_to_file,
         probability_negate_constant,
-        length(unary_operators),
-        length(binary_operators),
+        nops,
         seed,
         elementwise_loss,
         loss_function,
@@ -1043,8 +1011,7 @@ function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = n
     if version isa VersionNumber && version < v"1.0.0"
         return (;
             # Creating the Search Space
-            binary_operators=[+, -, /, *],
-            unary_operators=Function[],
+            operators=OperatorEnum(1 => (), 2 => (+, -, /, *)),
             maxsize=20,
             # Setting the Search Size
             populations=15,
@@ -1089,8 +1056,7 @@ function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = n
     else
         return (;
             # Creating the Search Space
-            binary_operators=Function[+, -, /, *],
-            unary_operators=Function[],
+            operators=OperatorEnum(1 => (), 2 => (+, -, /, *)),
             maxsize=30,
             # Setting the Search Size
             populations=31,

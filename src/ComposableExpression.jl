@@ -286,4 +286,6 @@ for op in (
 end
 #! format: on
 
+# TODO: Support for 3-ary operators
+
 end

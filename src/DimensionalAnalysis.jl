@@ -155,7 +155,7 @@ end
 end
 
 function violates_dimensional_constraints_dispatch(
-    tree::AbstractExpressionNode{T},
+    tree::AbstractExpressionNode{T,2},
     x_units::Vector{Q},
     x::AbstractVector{T},
     operators,

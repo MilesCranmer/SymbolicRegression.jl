@@ -41,7 +41,9 @@ function compute_complexity(
 end
 
 function _compute_complexity(
-    tree::AbstractExpressionNode, cmap::ComplexityMapping{CT}; break_sharing=Val(false)
+    tree::AbstractExpressionNode{<:Any,2},
+    cmap::ComplexityMapping{CT};
+    break_sharing=Val(false),
 )::CT where {CT}
     return tree_mapreduce(
         let vc = cmap.variable_complexity, cc = cmap.constant_complexity
