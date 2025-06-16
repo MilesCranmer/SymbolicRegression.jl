@@ -231,6 +231,7 @@ using DispatchDoctor: @stable
     include("TemplateExpression.jl")
     include("TemplateExpressionMacro.jl")
     include("ParametricExpression.jl")
+    include("SeedExpressions.jl")
 end
 
 using .CoreModule:
@@ -348,6 +349,7 @@ using .ComposableExpressionModule: ComposableExpression
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 using .ParametricExpressionModule: ParametricExpressionSpec
 using .TemplateExpressionMacroModule: @template_spec
+using .SeedExpressionsModule: process_seed_expressions!
 
 @stable default_mode = "disable" begin
     include("deprecates.jl")
@@ -719,6 +721,11 @@ function _initialize_search!(
             end
             state.halls_of_fame[j] = hof
         end
+    end
+
+    # Process seed expressions if provided
+    for j in 1:nout
+        process_seed_expressions!(state.halls_of_fame[j], datasets[j], options)
     end
 
     for j in 1:nout, i in 1:(options.populations)

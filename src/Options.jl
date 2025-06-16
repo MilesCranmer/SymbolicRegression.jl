@@ -487,6 +487,11 @@ const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Op
     in serial mode.
 - `define_helper_functions`: Whether to define helper functions
     for constructing and evaluating trees.
+- `seed_expressions`: A vector of string expressions to use as initial guesses for 
+    seeding the search population. These expressions will be parsed using the same
+    variable names as provided in the dataset, then have their constants optimized,
+    and finally be added to the hall of fame. Example: `["x1 + x2", "sin(x1) * 0.5"]`.
+    Set to `nothing` (default) to disable seeding.
 """
 
 """
@@ -590,60 +595,6 @@ $(OPTION_DESCRIPTIONS)
     ## 14. Environment:
     ###           [none]
     ## 15. Exporting the Results:
-    ###           [others, passed to `equation_search`]
-    ###           output_directory
-    ###           save_to_file
-
-    # Other search, but no specializations (since Julia limits us to 32!)
-    ## 1. Search Space:
-    ## 2. Setting the Search Size:
-    ## 3. The Objective:
-    dimensionless_constants_only::Bool=false,
-    loss_scale::Symbol=:log,
-    ## 4. Working with Complexities:
-    complexity_mapping::Union{Function,ComplexityMapping,Nothing}=nothing,
-    use_frequency::Bool=true,
-    use_frequency_in_tournament::Bool=true,
-    should_simplify::Union{Nothing,Bool}=nothing,
-    ## 5. Mutations:
-    perturbation_factor::Union{Nothing,Real}=nothing,
-    probability_negate_constant::Union{Real,Nothing}=nothing,
-    skip_mutation_failures::Bool=true,
-    ## 6. Tournament Selection
-    ## 7. Constant Optimization:
-    optimizer_algorithm::Union{AbstractString,Optim.AbstractOptimizer}=Optim.BFGS(;
-        linesearch=LineSearches.BackTracking()
-    ),
-    optimizer_nrestarts::Int=2,
-    optimizer_probability::AbstractFloat=0.14,
-    optimizer_iterations::Union{Nothing,Integer}=nothing,
-    optimizer_f_calls_limit::Union{Nothing,Integer}=nothing,
-    optimizer_options::Union{Dict,NamedTuple,Optim.Options,Nothing}=nothing,
-    should_optimize_constants::Bool=true,
-    ## 8. Migration between Populations:
-    migration::Bool=true,
-    hof_migration::Bool=true,
-    fraction_replaced::Union{Real,Nothing}=nothing,
-    fraction_replaced_hof::Union{Real,Nothing}=nothing,
-    topn::Union{Nothing,Integer}=nothing,
-    ## 9. Data Preprocessing:
-    ## 10. Stopping Criteria:
-    timeout_in_seconds::Union{Nothing,Real}=nothing,
-    max_evals::Union{Nothing,Integer}=nothing,
-    input_stream::IO=stdin,
-    ## 11. Performance and Parallelization:
-    turbo::Bool=false,
-    bumper::Bool=false,
-    autodiff_backend::Union{AbstractADType,Symbol,Nothing}=nothing,
-    ## 12. Determinism:
-    deterministic::Bool=false,
-    seed=nothing,
-    ## 13. Monitoring:
-    verbosity::Union{Integer,Nothing}=nothing,
-    print_precision::Integer=5,
-    progress::Union{Bool,Nothing}=nothing,
-    ## 14. Environment:
-    ## 15. Exporting the Results:
     output_directory::Union{Nothing,String}=nothing,
     save_to_file::Bool=true,
     ## Undocumented features:
@@ -652,6 +603,8 @@ $(OPTION_DESCRIPTIONS)
     terminal_width::Union{Nothing,Integer}=nothing,
     use_recorder::Bool=false,
     recorder_file::AbstractString="pysr_recorder.json",
+    ## Seeding:
+    seed_expressions::Union{Nothing,Vector{String}}=nothing,
     ### Not search options; just construction options:
     define_helper_functions::Bool=true,
     #########################################
@@ -1034,6 +987,7 @@ $(OPTION_DESCRIPTIONS)
         deterministic,
         define_helper_functions,
         use_recorder,
+        seed_expressions,
     )
 
     return options

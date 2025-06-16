@@ -258,6 +258,7 @@ struct Options{
     deterministic::Bool
     define_helper_functions::Bool
     use_recorder::Bool
+    seed_expressions::Union{Nothing,Vector{String}}
 end
 
 function Base.print(io::IO, @nospecialize(options::Options))
