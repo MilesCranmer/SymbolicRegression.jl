@@ -1,0 +1,81 @@
+WARNING: using DynamicExpressions.@extend_operators in module Main conflicts with an existing identifier.
+[ Info: generating markdown page from `/tmp/jl_o5oP0reHSV.jl`
+[ Info: writing result to `/workspace/docs/src/examples/template_parametric_expression.md`
+[ Info: Processed literate block to /workspace/docs/src/examples/template_parametric_expression.md with EditURL set to ../../../test/test_parametric_template_expressions.jl
+[ Info: generating markdown page from `/tmp/jl_qVUZglYB49.jl`
+[ Info: writing result to `/workspace/docs/src/examples/custom_types.md`
+[ Info: Processed literate block to /workspace/docs/src/examples/custom_types.md with EditURL set to ../../../examples/custom_types.jl
+[ Info: generating markdown page from `/tmp/jl_GJaHobiLqp.jl`
+[ Info: writing result to `/workspace/docs/src/examples/parameterized_function.md`
+[ Info: Processed literate block to /workspace/docs/src/examples/parameterized_function.md with EditURL set to ../../../examples/parameterized_function.jl
+[ Info: generating markdown page from `/tmp/jl_4ZEL0DMVEl.jl`
+[ Info: writing result to `/workspace/docs/src/examples/template_expression.md`
+[ Info: Processed literate block to /workspace/docs/src/examples/template_expression.md with EditURL set to ../../../examples/template_expression_complex.jl
+[ Info: SetupBuildDirectory: setting up build directory.
+[ Info: Doctest: running doctests.
+[ Info: ExpandTemplates: expanding markdown templates.
+[ Info: CrossReferences: building cross-references.
+┌ Error: Cannot resolve @ref for md"[`AbstractOptions`](@ref SymbolicRegression.OptionsStruct.AbstractOptions)" in docs/src/customization.md.
+│ - Exception trying to find docref for `SymbolicRegression.OptionsStruct.AbstractOptions`: unable to get the binding for `SymbolicRegression.OptionsStruct.AbstractOptions` in module SymbolicRegression.CoreModule.MutationWeightsModule
+│ - Exception trying to find docref for `SymbolicRegression.OptionsStruct.AbstractOptions`: unable to get the binding for `SymbolicRegression.OptionsStruct.AbstractOptions` in module Main
+└ @ Documenter ~/.julia/packages/Documenter/2D2ei/src/utilities/utilities.jl:47
+┌ Error: Cannot resolve @ref for md"[`RuntimeOptions`](@ref)" in docs/src/customization.md.
+│ - No docstring found in doc for binding `SymbolicRegression.SearchUtilsModule.RuntimeOptions`.
+│ - No docstring found in doc for binding `Main.RuntimeOptions`.
+└ @ Documenter ~/.julia/packages/Documenter/2D2ei/src/utilities/utilities.jl:47
+┌ Error: Cannot resolve @ref for md"[`AbstractOptions`](@ref SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions)" in docs/src/customization.md.
+│ - Exception trying to find docref for `SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions`: unable to get the binding for `SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions` in module SymbolicRegression.SearchUtilsModule
+│ - Exception trying to find docref for `SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions`: unable to get the binding for `SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions` in module Main
+└ @ Documenter ~/.julia/packages/Documenter/2D2ei/src/utilities/utilities.jl:47
+┌ Error: Cannot resolve @ref for md"[`SearchState`](@ref)" in docs/src/customization.md.
+│ - No docstring found in doc for binding `SymbolicRegression.SearchUtilsModule.SearchState`.
+│ - No docstring found in doc for binding `Main.SearchState`.
+└ @ Documenter ~/.julia/packages/Documenter/2D2ei/src/utilities/utilities.jl:47
+┌ Error: Cannot resolve @ref for md"[`AbstractOptions`](@ref SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions)" in docs/src/customization.md.
+│ - Exception trying to find docref for `SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions`: unable to get the binding for `SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions` in module SymbolicRegression.SearchUtilsModule
+│ - Exception trying to find docref for `SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions`: unable to get the binding for `SymbolicRegression.CoreModule.OptionsStruct.AbstractOptions` in module Main
+└ @ Documenter ~/.julia/packages/Documenter/2D2ei/src/utilities/utilities.jl:47
+┌ Error: Cannot resolve @ref for md"[`string_tree`](@ref StringsModule.string_tree)" in docs/src/api.md.
+│ - Exception trying to find docref for `StringsModule.string_tree`: unable to get the binding for `StringsModule.string_tree` in module DynamicExpressions.ExpressionModule
+│ - Exception trying to find docref for `StringsModule.string_tree`: unable to get the binding for `StringsModule.string_tree` in module Main
+└ @ Documenter ~/.julia/packages/Documenter/2D2ei/src/utilities/utilities.jl:47
+┌ Error: Cannot resolve @ref for md"[`eval_tree_array`](@ref EvaluateModule.eval_tree_array)" in docs/src/api.md.
+│ - Exception trying to find docref for `EvaluateModule.eval_tree_array`: unable to get the binding for `EvaluateModule.eval_tree_array` in module DynamicExpressions.ExpressionModule
+│ - Exception trying to find docref for `EvaluateModule.eval_tree_array`: unable to get the binding for `EvaluateModule.eval_tree_array` in module Main
+└ @ Documenter ~/.julia/packages/Documenter/2D2ei/src/utilities/utilities.jl:47
+┌ Error: Cannot resolve @ref for md"[`eval_grad_tree_array`](@ref EvaluateDerivativeModule.eval_grad_tree_array)" in docs/src/api.md.
+│ - Exception trying to find docref for `EvaluateDerivativeModule.eval_grad_tree_array`: unable to get the binding for `EvaluateDerivativeModule.eval_grad_tree_array` in module DynamicExpressions.ExpressionModule
+│ - Exception trying to find docref for `EvaluateDerivativeModule.eval_grad_tree_array`: unable to get the binding for `EvaluateDerivativeModule.eval_grad_tree_array` in module Main
+└ @ Documenter ~/.julia/packages/Documenter/2D2ei/src/utilities/utilities.jl:47
+┌ Error: invalid local link/image: file does not exist in docs/src/index.md
+│   link =
+│    @ast MarkdownAST.Link(".github/workflows/CI.yml", "") do
+│      MarkdownAST.Image("https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/CI/badge.svg", "") do
+│        MarkdownAST.Text("CI")
+│      end
+│    end
+│    
+└ @ Documenter ~/.julia/packages/Documenter/2D2ei/src/utilities/utilities.jl:47
+[ Info: CheckDocument: running document checks.
+[ Info: Populate: populating indices.
+ERROR: LoadError: `makedocs` encountered an error [:cross_references] -- terminating build before rendering.
+Stacktrace:
+ [1] error(s::String)
+   @ Base ./error.jl:35
+ [2] runner(::Type{Documenter.Builder.RenderDocument}, doc::Documenter.Document)
+   @ Documenter ~/.julia/packages/Documenter/2D2ei/src/builder_pipeline.jl:259
+ [3] dispatch(::Type{Documenter.Builder.DocumentPipeline}, x::Documenter.Document)
+   @ Documenter.Selectors ~/.julia/packages/Documenter/2D2ei/src/utilities/Selectors.jl:170
+ [4] #88
+   @ ~/.julia/packages/Documenter/2D2ei/src/makedocs.jl:280 [inlined]
+ [5] withenv(::Documenter.var"#88#90"{Documenter.Document}, ::Pair{String, Nothing}, ::Vararg{Pair{String, Nothing}})
+   @ Base ./env.jl:265
+ [6] #87
+   @ ~/.julia/packages/Documenter/2D2ei/src/makedocs.jl:279 [inlined]
+ [7] cd(f::Documenter.var"#87#89"{Documenter.Document}, dir::String)
+   @ Base.Filesystem ./file.jl:112
+ [8] makedocs(; debug::Bool, format::MarkdownVitepress, kwargs::@Kwargs{sitename::String, authors::String, clean::Bool, pages::Vector{Pair{String, Any}}})
+   @ Documenter ~/.julia/packages/Documenter/2D2ei/src/makedocs.jl:278
+ [9] top-level scope
+   @ /workspace/docs/make.jl:95
+in expression starting at /workspace/docs/make.jl:95

@@ -137,7 +137,7 @@ function apply_to_a_href!(f!, element::HTMLElement)
     end
 end
 
-# Check if the HTML file exists (it might not with VitePress structure)
+# Check if the HTML file exists and error if it's not found
 html_file_path = "docs/build/1/losses/index.html"
 if isfile(html_file_path)
     html_content = read(html_file_path, String)
@@ -153,7 +153,7 @@ if isfile(html_file_path)
         write(io, string(html))
     end
 else
-    @warn "HTML file not found at $html_file_path, skipping link fixes"
+    error("HTML file not found at $html_file_path. DocumenterVitepress build likely failed to generate HTML files due to cross-reference errors. Check the build output for @ref errors and fix them.")
 end
 
 if !haskey(ENV, "JL_LIVERELOAD")
