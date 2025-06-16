@@ -781,7 +781,9 @@ $(OPTION_DESCRIPTIONS)
 
     # Make sure nested_constraints contains functions within our operator set:
     _nested_constraints = build_nested_constraints(;
-        binary_operators, unary_operators, nested_constraints
+        binary_operators=operators !== nothing ? operators.ops[2] : binary_operators,
+        unary_operators=operators !== nothing ? operators.ops[1] : unary_operators,
+        nested_constraints
     )
 
     if typeof(constraints) <: Tuple
@@ -827,7 +829,10 @@ $(OPTION_DESCRIPTIONS)
     end
 
     _una_constraints, _bin_constraints = build_constraints(;
-        una_constraints, bin_constraints, unary_operators, binary_operators
+        una_constraints, 
+        bin_constraints, 
+        unary_operators=operators !== nothing ? operators.ops[1] : unary_operators,
+        binary_operators=operators !== nothing ? operators.ops[2] : binary_operators
     )
 
     complexity_mapping = @something(

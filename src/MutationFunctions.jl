@@ -178,7 +178,7 @@ function append_random_op(
 ) where {T<:DATA_TYPE}
     node = rand(rng, NodeSampler(; tree, filter=t -> t.degree == 0))
 
-    # Determine the arity of the new operator
+    # Determine available arities
     max_arity = length(options.nops)
     available_arities = [i for i in 1:max_arity if options.nops[i] > 0]
     
@@ -186,19 +186,15 @@ function append_random_op(
         return tree
     end
     
-    target_arity = if make_new_bin_op === true
-        2  # Force binary if requested
-    elseif make_new_bin_op === false
-        1  # Force unary if requested
+    # Choose arity
+    target_arity = if make_new_bin_op === true && 2 in available_arities
+        2
+    elseif make_new_bin_op === false && 1 in available_arities
+        1
     else
-        # Choose arity based on relative probability
+        # Choose based on probability weights
         arity_weights = [options.nops[i] for i in available_arities]
         sample(rng, available_arities, Weights(arity_weights))
-    end
-    
-    # Ensure the chosen arity is available
-    if target_arity > max_arity || options.nops[target_arity] == 0
-        target_arity = available_arities[1]  # Fallback to first available
     end
 
     children = [make_random_leaf(nfeatures, T, typeof(tree), rng, options) for _ in 1:target_arity]
@@ -240,18 +236,19 @@ function insert_random_op(
         return tree
     end
     
-    # Choose arity based on relative probability
+    # Choose arity based on probability
     arity_weights = [options.nops[i] for i in available_arities]
     target_arity = sample(rng, available_arities, Weights(arity_weights))
     
-    # Create children - first child is the existing node, rest are random leaves
-    first_child = copy(node)
-    other_children = [make_random_leaf(nfeatures, T, typeof(tree), rng, options) for _ in 2:target_arity]
-    all_children = [first_child; other_children]
+    # Create children - existing node plus additional random leaves
+    children = [copy(node)]
+    for _ in 2:target_arity
+        push!(children, make_random_leaf(nfeatures, T, typeof(tree), rng, options))
+    end
     
     newnode = constructorof(typeof(tree))(;
         op=rand(rng, 1:(options.nops[target_arity])),
-        children=tuple(all_children...)
+        children=tuple(children...)
     )
     
     set_node!(node, newnode)
@@ -277,8 +274,6 @@ function prepend_random_op(
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
-    node = tree
-    
     # Determine available arities
     max_arity = length(options.nops)
     available_arities = [i for i in 1:max_arity if options.nops[i] > 0]
@@ -287,22 +282,22 @@ function prepend_random_op(
         return tree
     end
     
-    # Choose arity based on relative probability
+    # Choose arity based on probability
     arity_weights = [options.nops[i] for i in available_arities]
     target_arity = sample(rng, available_arities, Weights(arity_weights))
     
-    # Create children - first child is the existing tree, rest are random leaves
-    first_child = copy(tree)
-    other_children = [make_random_leaf(nfeatures, T, typeof(tree), rng, options) for _ in 2:target_arity]
-    all_children = [first_child; other_children]
+    # Create children - existing tree plus additional random leaves
+    children = [copy(tree)]
+    for _ in 2:target_arity
+        push!(children, make_random_leaf(nfeatures, T, typeof(tree), rng, options))
+    end
     
     newnode = constructorof(typeof(tree))(;
         op=rand(rng, 1:(options.nops[target_arity])),
-        children=tuple(all_children...)
+        children=tuple(children...)
     )
     
-    set_node!(node, newnode)
-    return node
+    return newnode
 end
 
 function make_random_leaf(
@@ -319,10 +314,10 @@ function make_random_leaf(
     end
 end
 
-"""Return a random node from the tree with parent, and side (child index or 'n' for no parent)"""
+"""Return a random node from the tree with parent, and side (child index or nothing for no parent)"""
 function random_node_and_parent(tree::AbstractNode, rng::AbstractRNG=default_rng())
     if tree.degree == 0
-        return tree, tree, 'n'
+        return tree, tree, nothing
     end
     parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
     child_index = rand(rng, 1:parent.degree)
@@ -350,7 +345,7 @@ function delete_random_op!(
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     node, parent, side = random_node_and_parent(tree, rng)
-    isroot = side == 'n'
+    isroot = side == nothing
 
     if node.degree == 0
         # Replace with new constant
@@ -469,17 +464,17 @@ function crossover_trees(
 
     node1 = copy(node1)
 
-    if side1 != 'n'
+    if side1 != nothing
         set_child!(parent1, copy(node2), side1)
         # tree1 now contains the modified structure
-    else # 'n'
+    else # nothing
         # This means that there is no parent1.
         tree1 = copy(node2)
     end
 
-    if side2 != 'n'
+    if side2 != nothing
         set_child!(parent2, node1, side2)
-    else # 'n'
+    else # nothing
         tree2 = node1
     end
 
@@ -536,77 +531,16 @@ function break_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_r
     return tree
 end
 
-function is_valid_rotation_node(node::AbstractNode)
-    return (node.degree >= 2 && get_child(node, 1).degree >= 2) || 
-           (node.degree >= 2 && get_child(node, 2).degree >= 2)
-end
-
 function randomly_rotate_tree!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
     tree, context = get_contents_for_mutation(ex, rng)
     rotated_tree = randomly_rotate_tree!(tree, rng)
     return with_contents_for_mutation(ex, rotated_tree, context)
 end
+
 function randomly_rotate_tree!(tree::AbstractNode, rng::AbstractRNG=default_rng())
-    # Only perform rotation on binary subtrees to maintain tree structure
-    binary_nodes = filter(t -> t.degree == 2, tree)
-    
-    if isempty(binary_nodes)
-        return tree  # No binary nodes to rotate
-    end
-    
-    # Choose a random binary node to potentially rotate
-    node_to_rotate = rand(rng, binary_nodes)
-    left_child = get_child(node_to_rotate, 1)
-    right_child = get_child(node_to_rotate, 2)
-    
-    # Only rotate if children are also binary (to maintain structure)
-    if left_child.degree == 2 && rand(rng, Bool)
-        # Right rotation
-        new_root = left_child
-        new_left = get_child(new_root, 1)
-        new_right_left = get_child(new_root, 2)
-        
-        set_child!(node_to_rotate, new_right_left, 1)
-        set_child!(new_root, node_to_rotate, 2)
-        
-        # Update parent references if needed
-        # (This is simplified - full implementation would need parent tracking)
-        
-    elseif right_child.degree == 2 && rand(rng, Bool)
-        # Left rotation
-        new_root = right_child
-        new_right = get_child(new_root, 2)
-        new_left_right = get_child(new_root, 1)
-        
-        set_child!(node_to_rotate, new_left_right, 2)
-        set_child!(new_root, node_to_rotate, 1)
-    end
-    
+    # For non-binary trees, rotation is not well-defined, so just return the tree
+    # This could be enhanced in the future for specific arity cases
     return tree
-end
-
-# Helper functions for binary tree operations (backwards compatibility)
-function leftmost(node::AbstractNode)
-    return node.degree >= 1 ? get_child(node, 1) : node
-end
-
-function rightmost(node::AbstractNode)
-    return node.degree >= 2 ? get_child(node, 2) : 
-           node.degree >= 1 ? get_child(node, 1) : node
-end
-
-function set_leftmost!(node::AbstractNode, l::AbstractNode)
-    if node.degree >= 1
-        set_child!(node, l, 1)
-    end
-end
-
-function set_rightmost!(node::AbstractNode, r::AbstractNode)
-    if node.degree >= 2
-        set_child!(node, r, 2)
-    elseif node.degree >= 1
-        set_child!(node, r, 1)
-    end
 end
 
 end
