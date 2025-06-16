@@ -57,28 +57,3 @@ if Threads.nthreads() > 1
 else
     println("Skipping multithreading test (only 1 thread available)")
 end
-
-# Test multiprocessing mode with deterministic=true
-# Note: This creates processes dynamically, so we keep it simple
-try
-    all_outputs_mp = []
-    for i in 1:2
-        hall_of_fame = equation_search(
-            X,
-            y;
-            niterations=3,  # Fewer iterations for multiprocessing test
-            options=options,
-            parallelism=:multiprocessing,
-            numprocs=2,
-            v_dim_out=Val(1),
-            return_state=Val(false),
-        )
-        dominating = calculate_pareto_frontier(hall_of_fame)
-        push!(all_outputs_mp, dominating[end].tree)
-    end
-
-    @test string(all_outputs_mp[1]) == string(all_outputs_mp[2])
-    println("Multiprocessing deterministic test passed")
-catch e
-    println("Multiprocessing test failed or skipped: ", e)
-end

@@ -61,9 +61,6 @@ end
 function test_option_configuration(
     parallelism, datasets::Vector{D}, options::AbstractOptions, verbosity
 ) where {T,D<:Dataset{T}}
-    if options.deterministic && parallelism != :serial
-        verbosity > 0 && @info "Using deterministic mode with parallelism. This enforces deterministic task ordering and seed splitting."
-    end
     if parallelism == :multithreading && Threads.nthreads() == 1
         verbosity > 0 &&
             @warn "You are using multithreading mode, but only one thread is available. Try starting julia with `--threads=auto`."

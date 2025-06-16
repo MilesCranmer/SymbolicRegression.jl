@@ -651,11 +651,15 @@ end
     # Order which populations to check:
     # This is done so that we do work on all nout equally.
     task_order = [(j, i) for j in 1:nout for i in 1:(options.populations)]
-    if !options.deterministic
+    if options.deterministic && options.seed !== nothing
+        # Use seeded shuffle for deterministic but unbiased task ordering
+        rng = MersenneTwister(options.seed)
+        shuffle!(rng, task_order)
+    elseif !options.deterministic
         # Randomly order task checking for better load balancing in non-deterministic mode
         shuffle!(task_order)
     end
-    # In deterministic mode, we keep the natural ordering to ensure reproducibility
+    # If deterministic but no seed, keep natural ordering (fallback)
 
     # Persistent storage of last-saved population for final return:
     last_pops = init_dummy_pops(options.populations, datasets, options)
