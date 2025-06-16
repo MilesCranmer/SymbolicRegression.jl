@@ -45,6 +45,7 @@ using ..ExpressionSpecModule:
     get_expression_type,
     get_expression_options,
     get_node_type
+using DynamicExpressions.NodeModule: with_max_degree
 
 """Build constraints on operator-level complexity from a user-passed dict."""
 @unstable function build_constraints(;
@@ -195,24 +196,6 @@ const INVERSE_OP_MAP = Dict{Any,Any}(
 
 opmap(@nospecialize(op)) = get(OP_MAP, op, op)
 inverse_opmap(@nospecialize(op)) = get(INVERSE_OP_MAP, op, op)
-
-"""
-    with_max_dimensions(N::Type{<:AbstractExpressionNode}, max_degree::Int)
-
-Creates a node type with the specified maximum degree. For example,
-`with_max_dimensions(Node{Float64}, 3)` returns `Node{Float64,3}`.
-"""
-function with_max_dimensions(::Type{N}, max_degree::Int) where {T,N<:AbstractExpressionNode{T}}
-    return N{T,max_degree}
-end
-function with_max_dimensions(::Type{N}, max_degree::Int) where {T,D,N<:AbstractExpressionNode{T,D}}
-    return N{T,max_degree}
-end
-# Handle the case where Node doesn't have type parameters specified
-function with_max_dimensions(::Type{N}, max_degree::Int) where {N<:AbstractExpressionNode}
-    # For the raw Node type, return Node{Float64,max_degree} as default
-    return N{Float64,max_degree}
-end
 
 recommend_loss_function_expression(expression_type) = false
 
@@ -895,15 +878,11 @@ $(OPTION_DESCRIPTIONS)
 
     # Update node_type based on operator enum if not explicitly provided
     if node_type === nothing || node_type == default_node_type(expression_type)
-        # Determine maximum arity from operators
-        max_arity = max(length(unary_operators), length(binary_operators))
-        if hasfield(typeof(operators), :ops)
-            max_arity = length(operators.ops)
-        end
-        
-        # Use with_max_dimensions to get the appropriate node type
+        # Determine the maximum arity from operators.ops
+        max_arity = length(operators.ops)
         base_node_type = default_node_type(expression_type)
-        node_type = with_max_dimensions(base_node_type, max_arity)
+        # Use with_max_degree to get the appropriate node type
+        node_type = with_max_degree(base_node_type, Val(max_arity))
     end
 
     early_stop_condition = if typeof(early_stop_condition) <: Real
