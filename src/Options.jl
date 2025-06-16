@@ -1036,7 +1036,7 @@ function _apply_defaults(_default_options, maxsize, populations, population_size
 end
 
 """Process and validate various settings, returning processed values."""
-function _process_and_validate_settings(should_simplify, loss_function, nested_constraints, constraints,
+@unstable function _process_and_validate_settings(should_simplify, loss_function, nested_constraints, constraints,
                                        bin_constraints, una_constraints, binary_operators, unary_operators,
                                        expression_spec, expression_type, expression_options, node_type,
                                        complexity_mapping, complexity_of_operators, complexity_of_variables,
@@ -1177,7 +1177,7 @@ function _process_and_validate_settings(should_simplify, loss_function, nested_c
 end
 
 """Create the operators enum from the provided options."""
-function _create_operators_enum(operators, binary_operators, unary_operators, 
+@unstable function _create_operators_enum(operators, binary_operators, unary_operators, 
                                operator_enum_constructor, define_helper_functions)
     if define_helper_functions && any(!isnothing, (binary_operators, unary_operators))
         # We call here so that mapped operators, like ^
