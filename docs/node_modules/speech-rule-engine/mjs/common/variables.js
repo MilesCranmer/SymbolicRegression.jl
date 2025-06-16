@@ -1,0 +1,33 @@
+export class Variables {
+    static ensureLocale(loc, def) {
+        if (!Variables.LOCALES.get(loc)) {
+            console.error(`Locale ${loc} does not exist! Using` +
+                ` ${Variables.LOCALES.get(def)} instead.`);
+            return def;
+        }
+        return loc;
+    }
+}
+Variables.VERSION = '4.1.2';
+Variables.LOCALES = new Map([
+    ['af', 'Africaans'],
+    ['ca', 'Catalan'],
+    ['da', 'Danish'],
+    ['de', 'German'],
+    ['en', 'English'],
+    ['es', 'Spanish'],
+    ['euro', 'Euro'],
+    ['fr', 'French'],
+    ['hi', 'Hindi'],
+    ['it', 'Italian'],
+    ['ko', 'Korean'],
+    ['nb', 'Bokmål'],
+    ['nn', 'Nynorsk'],
+    ['sv', 'Swedish'],
+    ['nemeth', 'Nemeth']
+]);
+Variables.mathjaxVersion = '4.0.0-beta.5';
+Variables.url = 'https://cdn.jsdelivr.net/npm/speech-rule-engine@' +
+    Variables.VERSION +
+    '/lib/mathmaps';
+Variables.WGXpath = 'https://cdn.jsdelivr.net/npm/wicked-good-xpath@1.3.0/dist/wgxpath.install.js';

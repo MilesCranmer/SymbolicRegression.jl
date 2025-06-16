@@ -1,0 +1,82 @@
+import { Grammar } from '../../rule_engine/grammar.js';
+import { localFont } from '../locale_util.js';
+import { createLocale } from '../locale.js';
+import { NUMBERS } from '../numbers/numbers_de.js';
+const germanPrefixCombiner = function (letter, font, cap) {
+    if (cap === 's') {
+        font = font
+            .split(' ')
+            .map(function (x) {
+            return x.replace(/s$/, '');
+        })
+            .join(' ');
+        cap = '';
+    }
+    letter = cap ? cap + ' ' + letter : letter;
+    return font ? font + ' ' + letter : letter;
+};
+const germanPostfixCombiner = function (letter, font, cap) {
+    letter = !cap || cap === 's' ? letter : cap + ' ' + letter;
+    return font ? letter + ' ' + font : letter;
+};
+let locale = null;
+export function de() {
+    if (!locale) {
+        locale = create();
+    }
+    return locale;
+}
+function create() {
+    const loc = createLocale();
+    loc.NUMBERS = NUMBERS;
+    loc.COMBINERS['germanPostfix'] = germanPostfixCombiner;
+    loc.ALPHABETS.combiner = germanPrefixCombiner;
+    loc.FUNCTIONS.radicalNestDepth = (x) => {
+        return x > 1 ? loc.NUMBERS.numberToWords(x) + 'fach' : '';
+    };
+    loc.FUNCTIONS.combineRootIndex = (postfix, index) => {
+        const root = index ? index + 'wurzel' : '';
+        return postfix.replace('Wurzel', root);
+    };
+    loc.FUNCTIONS.combineNestedRadical = (a, b, c) => {
+        a = c.match(/exponent$/) ? a + 'r' : a;
+        const count = (b ? b + ' ' : '') + a;
+        return c.match(/ /) ? c.replace(/ /, ' ' + count + ' ') : count + ' ' + c;
+    };
+    loc.FUNCTIONS.fontRegexp = function (font) {
+        font = font
+            .split(' ')
+            .map(function (x) {
+            return x.replace(/s$/, '(|s)');
+        })
+            .join(' ');
+        return new RegExp('((^' + font + ' )|( ' + font + '$))');
+    };
+    loc.CORRECTIONS.correctOne = (num) => num.replace(/^eins$/, 'ein');
+    loc.CORRECTIONS.localFontNumber = (font) => {
+        const realFont = localFont(font);
+        return realFont
+            .split(' ')
+            .map(function (x) {
+            return x.replace(/s$/, '');
+        })
+            .join(' ');
+    };
+    loc.CORRECTIONS.lowercase = (name) => name.toLowerCase();
+    loc.CORRECTIONS.article = (name) => {
+        const decl = Grammar.getInstance().getParameter('case');
+        const plural = Grammar.getInstance().getParameter('plural');
+        if (decl === 'dative') {
+            return { der: 'dem', die: plural ? 'den' : 'der', das: 'dem' }[name];
+        }
+        return name;
+    };
+    loc.CORRECTIONS.masculine = (name) => {
+        const decl = Grammar.getInstance().getParameter('case');
+        if (decl === 'dative') {
+            return name + 'n';
+        }
+        return name;
+    };
+    return loc;
+}

@@ -1,0 +1,10 @@
+import { Span } from '../audio/span.js';
+export declare function nodeCounter(nodes: Element[], context: string | null): () => string;
+export declare function allCellsSimple(node: Element): Element[];
+export declare function isSmallVulgarFraction(node: Element): Element[];
+export declare function ordinalExponent(node: Element): Span[];
+export declare function nestingDepth(node: Element): Span[];
+export declare function matchingFences(node: Element): Element[];
+export declare function fencedArguments(node: Element): Element[];
+export declare function simpleArguments(node: Element): Element[];
+export declare function wordOrdinal(node: Element): Span[];

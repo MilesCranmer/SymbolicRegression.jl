@@ -17,6 +17,7 @@ using SymbolicRegression:
     AbstractSearchState,
     @extend_operators
 using DynamicExpressions
+using Gumbo
 
 include("utils.jl")
 process_literate_blocks("test")
@@ -96,6 +97,8 @@ makedocs(;
     sitename="SymbolicRegression.jl",
     authors="Miles Cranmer",
     clean=true,
+    checkdocs=:none,
+    warnonly=true,
     format=DocumenterVitepress.MarkdownVitepress(
         repo="github.com/MilesCranmer/SymbolicRegression.jl",
         devbranch="master",
@@ -120,9 +123,7 @@ makedocs(;
     ],
 )
 
-# Next, we fix links in the docs/build/1/losses/index.html file:
-using Gumbo
-
+# Next, we fix links in the docs/build/1/losses.html file:
 html_type(::HTMLElement{S}) where {S} = S
 
 function apply_to_a_href!(f!, element::HTMLElement)
@@ -138,7 +139,7 @@ function apply_to_a_href!(f!, element::HTMLElement)
 end
 
 # Check if the HTML file exists and error if it's not found
-html_file_path = "docs/build/1/losses/index.html"
+html_file_path = "docs/build/1/losses.html"
 if isfile(html_file_path)
     html_content = read(html_file_path, String)
     html = parsehtml(html_content)

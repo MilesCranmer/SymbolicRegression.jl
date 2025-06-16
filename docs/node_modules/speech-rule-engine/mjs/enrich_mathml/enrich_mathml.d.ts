@@ -1,0 +1,13 @@
+import { SemanticNode } from '../semantic_tree/semantic_node.js';
+import { Sexp } from '../semantic_tree/semantic_skeleton.js';
+import { SemanticTree } from '../semantic_tree/semantic_tree.js';
+export declare function enrich(mml: Element, semantic: SemanticTree): Element;
+export declare function walkTree(semantic: SemanticNode): Element;
+export declare function introduceNewLayer(children: Element[], semantic: SemanticNode): Element;
+export declare function ascendNewNode(newNode: Element): Element;
+export declare function addCollapsedAttribute(node: Element, collapsed: Sexp): void;
+export declare function cloneContentNode(content: SemanticNode): Element;
+export declare function rewriteMfenced(mml: Element): Element;
+export declare function setOperatorAttribute(semantic: SemanticNode, content: Element[]): void;
+export declare function getInnerNode(node: Element): Element;
+export declare function collapsePunctuated(semantic: SemanticNode, opt_children?: Element[]): Sexp;
