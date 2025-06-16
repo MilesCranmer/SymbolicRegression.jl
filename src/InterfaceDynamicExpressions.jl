@@ -23,28 +23,6 @@ takes_eval_options(::Type{<:OperatorEnum}) = true
 takes_eval_options(::T) where {T} = takes_eval_options(T)
 
 """
-    with_max_dimensions(N::Type{<:AbstractExpressionNode}, max_degree::Int)
-
-Creates a node type with the specified maximum degree. For example,
-`with_max_dimensions(Node{Float64}, 3)` returns `Node{Float64,3}`.
-"""
-function with_max_dimensions(::Type{N}, max_degree::Int) where {T,N<:AbstractExpressionNode{T}}
-    return N{T,max_degree}
-end
-function with_max_dimensions(::Type{N}, max_degree::Int) where {T,D,N<:AbstractExpressionNode{T,D}}
-    return N{T,max_degree}
-end
-
-"""
-    max_degree(operators::AbstractOperatorEnum)
-
-Returns the maximum degree (arity) of operators in the OperatorEnum.
-"""
-function max_degree(operators::AbstractOperatorEnum)
-    return length(operators.ops)
-end
-
-"""
     eval_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::AbstractOptions; kws...)
 
 Evaluate a binary tree (equation) over a given input data matrix. The
