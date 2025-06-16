@@ -46,6 +46,10 @@ using ..ExpressionSpecModule:
     get_expression_options,
     get_node_type
 
+# ================================================================================================
+# HELPER FUNCTIONS FOR BUILDING CONSTRAINTS
+# ================================================================================================
+
 """Build constraints on operator-level complexity from a user-passed dict."""
 @unstable function build_constraints(;
     una_constraints,
@@ -155,6 +159,10 @@ end
     ]
 end
 
+# ================================================================================================
+# OPERATOR MAPPING CONSTANTS AND HELPERS
+# ================================================================================================
+
 const OP_MAP = Dict{Any,Any}(
     plus => (+),
     mult => (*),
@@ -176,6 +184,7 @@ const OP_MAP = Dict{Any,Any}(
     acosh => safe_acosh,
     atanh => safe_atanh,
 )
+
 const INVERSE_OP_MAP = Dict{Any,Any}(
     safe_pow => (^),
     greater => Base.:(>),
@@ -195,6 +204,10 @@ const INVERSE_OP_MAP = Dict{Any,Any}(
 
 opmap(@nospecialize(op)) = get(OP_MAP, op, op)
 inverse_opmap(@nospecialize(op)) = get(INVERSE_OP_MAP, op, op)
+
+# ================================================================================================
+# HELPER FUNCTIONS FOR OPTIONS PROCESSING
+# ================================================================================================
 
 recommend_loss_function_expression(expression_type) = false
 
@@ -224,6 +237,134 @@ const deprecated_options_mapping = Base.ImmutableDict(
     :ns => :tournament_selection_n,
     :loss => :elementwise_loss,
 )
+
+"""Handle deprecated keyword arguments and update variables accordingly."""
+function handle_deprecated_options!(
+    kws,
+    hof_migration,
+    should_optimize_constants,
+    perturbation_factor,
+    batch_size,
+    crossover_probability,
+    warmup_maxsize_by,
+    use_frequency,
+    use_frequency_in_tournament,
+    ncycles_per_iteration,
+    fraction_replaced,
+    fraction_replaced_hof,
+    probability_negate_constant,
+    optimizer_probability,
+    tournament_selection_p,
+    early_stop_condition,
+    deprecated_return_state,
+    tournament_selection_n,
+    elementwise_loss,
+    mutation_weights
+)
+    # Check for unknown deprecated options
+    for k in keys(kws)
+        !haskey(deprecated_options_mapping, k) && error("Unknown keyword argument: $k")
+        new_key = deprecated_options_mapping[k]
+        if startswith(string(new_key), "deprecated_")
+            Base.depwarn("The keyword argument `$(k)` is deprecated.", :Options)
+            if string(new_key) != "deprecated_return_state"
+                # This one we actually want to use
+                continue
+            end
+        else
+            Base.depwarn(
+                "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.",
+                :Options,
+            )
+        end
+    end
+
+    # Process each deprecated option
+    for k in keys(kws)
+        #! format: off
+        if k == :hofMigration
+            hof_migration = kws[k]
+        elseif k == :shouldOptimizeConstants
+            should_optimize_constants = kws[k]
+        elseif k == :perturbationFactor
+            perturbation_factor = kws[k]
+        elseif k == :batchSize
+            batch_size = kws[k]
+        elseif k == :crossoverProbability
+            crossover_probability = kws[k]
+        elseif k == :warmupMaxsizeBy
+            warmup_maxsize_by = kws[k]
+        elseif k == :useFrequency
+            use_frequency = kws[k]
+        elseif k == :useFrequencyInTournament
+            use_frequency_in_tournament = kws[k]
+        elseif k == :ncyclesperiteration
+            ncycles_per_iteration = kws[k]
+        elseif k == :fractionReplaced
+            fraction_replaced = kws[k]
+        elseif k == :fractionReplacedHof
+            fraction_replaced_hof = kws[k]
+        elseif k == :probNegate
+            probability_negate_constant = kws[k]
+        elseif k == :optimize_probability
+            optimizer_probability = kws[k]
+        elseif k == :probPickFirst
+            tournament_selection_p = kws[k]
+        elseif k == :earlyStopCondition
+            early_stop_condition = kws[k]
+        elseif k == :return_state || k == :stateReturn
+            deprecated_return_state = kws[k]
+        elseif k == :enable_autodiff
+            # This option is deprecated and ignored
+            continue
+        elseif k == :ns
+            tournament_selection_n = kws[k]
+        elseif k == :loss
+            elementwise_loss = kws[k]
+        elseif k == :mutationWeights
+            if typeof(kws[k]) <: AbstractVector
+                _mutation_weights = kws[k]
+                if length(_mutation_weights) < length(mutations)
+                    # Pad with zeros:
+                    _mutation_weights = vcat(
+                        _mutation_weights,
+                        zeros(length(mutations) - length(_mutation_weights))
+                    )
+                end
+                mutation_weights = MutationWeights(_mutation_weights...)
+            else
+                mutation_weights = kws[k]
+            end
+        else
+            error(
+                "Unknown deprecated keyword argument: $k. Please update `Options(;)` to transfer this key.",
+            )
+        end
+        #! format: on
+    end
+
+    return (
+        hof_migration,
+        should_optimize_constants,
+        perturbation_factor,
+        batch_size,
+        crossover_probability,
+        warmup_maxsize_by,
+        use_frequency,
+        use_frequency_in_tournament,
+        ncycles_per_iteration,
+        fraction_replaced,
+        fraction_replaced_hof,
+        probability_negate_constant,
+        optimizer_probability,
+        tournament_selection_p,
+        early_stop_condition,
+        deprecated_return_state,
+        tournament_selection_n,
+        elementwise_loss,
+        mutation_weights
+    )
+end
 
 # For static analysis tools:
 @ignore const DEFAULT_OPTIONS = ()
@@ -446,6 +587,10 @@ const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Op
     for constructing and evaluating trees.
 """
 
+# ================================================================================================
+# MAIN OPTIONS CONSTRUCTOR
+# ================================================================================================
+
 """
     Options(;kws...) <: AbstractOptions
 
@@ -625,72 +770,55 @@ $(OPTION_DESCRIPTIONS)
     kws...,
     #########################################
 )
-    for k in keys(kws)
-        !haskey(deprecated_options_mapping, k) && error("Unknown keyword argument: $k")
-        new_key = deprecated_options_mapping[k]
-        if startswith(string(new_key), "deprecated_")
-            Base.depwarn("The keyword argument `$(k)` is deprecated.", :Options)
-            if string(new_key) != "deprecated_return_state"
-                # This one we actually want to use
-                continue
-            end
-        else
-            Base.depwarn(
-                "The keyword argument `$(k)` is deprecated. Use `$(new_key)` instead.",
-                :Options,
-            )
-        end
-        # Now, set the new key to the old value:
-        #! format: off
-        k == :hofMigration && (hof_migration = kws[k]; true) && continue
-        k == :shouldOptimizeConstants && (should_optimize_constants = kws[k]; true) && continue
-        k == :perturbationFactor && (perturbation_factor = kws[k]; true) && continue
-        k == :batchSize && (batch_size = kws[k]; true) && continue
-        k == :crossoverProbability && (crossover_probability = kws[k]; true) && continue
-        k == :warmupMaxsizeBy && (warmup_maxsize_by = kws[k]; true) && continue
-        k == :useFrequency && (use_frequency = kws[k]; true) && continue
-        k == :useFrequencyInTournament && (use_frequency_in_tournament = kws[k]; true) && continue
-        k == :ncyclesperiteration && (ncycles_per_iteration = kws[k]; true) && continue
-        k == :fractionReplaced && (fraction_replaced = kws[k]; true) && continue
-        k == :fractionReplacedHof && (fraction_replaced_hof = kws[k]; true) && continue
-        k == :probNegate && (probability_negate_constant = kws[k]; true) && continue
-        k == :optimize_probability && (optimizer_probability = kws[k]; true) && continue
-        k == :probPickFirst && (tournament_selection_p = kws[k]; true) && continue
-        k == :earlyStopCondition && (early_stop_condition = kws[k]; true) && continue
-        k == :return_state && (deprecated_return_state = kws[k]; true) && continue
-        k == :stateReturn && (deprecated_return_state = kws[k]; true) && continue
-        k == :enable_autodiff && continue
-        k == :ns && (tournament_selection_n = kws[k]; true) && continue
-        k == :loss && (elementwise_loss = kws[k]; true) && continue
-        if k == :mutationWeights
-            if typeof(kws[k]) <: AbstractVector
-                _mutation_weights = kws[k]
-                if length(_mutation_weights) < length(mutations)
-                    # Pad with zeros:
-                    _mutation_weights = vcat(
-                        _mutation_weights,
-                        zeros(length(mutations) - length(_mutation_weights))
-                    )
-                end
-                mutation_weights = MutationWeights(_mutation_weights...)
-            else
-                mutation_weights = kws[k]
-            end
-            continue
-        end
-        #! format: on
-        error(
-            "Unknown deprecated keyword argument: $k. Please update `Options(;)` to transfer this key.",
-        )
-    end
-    if npop !== nothing
-        Base.depwarn("`npop` is deprecated. Use `population_size` instead.", :Options)
-        population_size = npop
-    end
-    if npopulations !== nothing
-        Base.depwarn("`npopulations` is deprecated. Use `populations` instead.", :Options)
-        populations = npopulations
-    end
+    # Handle deprecated options
+    (
+        hof_migration,
+        should_optimize_constants,
+        perturbation_factor,
+        batch_size,
+        crossover_probability,
+        warmup_maxsize_by,
+        use_frequency,
+        use_frequency_in_tournament,
+        ncycles_per_iteration,
+        fraction_replaced,
+        fraction_replaced_hof,
+        probability_negate_constant,
+        optimizer_probability,
+        tournament_selection_p,
+        early_stop_condition,
+        deprecated_return_state,
+        tournament_selection_n,
+        elementwise_loss,
+        mutation_weights
+    ) = handle_deprecated_options!(
+        kws,
+        hof_migration,
+        should_optimize_constants,
+        perturbation_factor,
+        batch_size,
+        crossover_probability,
+        warmup_maxsize_by,
+        use_frequency,
+        use_frequency_in_tournament,
+        ncycles_per_iteration,
+        fraction_replaced,
+        fraction_replaced_hof,
+        probability_negate_constant,
+        optimizer_probability,
+        tournament_selection_p,
+        early_stop_condition,
+        deprecated_return_state,
+        tournament_selection_n,
+        elementwise_loss,
+        mutation_weights
+    )
+
+    # Handle additional deprecated options
+    npop !== nothing && (Base.depwarn("`npop` is deprecated. Use `population_size` instead.", :Options); population_size = npop)
+    npopulations !== nothing && (Base.depwarn("`npopulations` is deprecated. Use `populations` instead.", :Options); populations = npopulations)
+    
+    # Handle deprecated optimizer algorithm string format
     if optimizer_algorithm isa AbstractString
         Base.depwarn(
             "The `optimizer_algorithm` argument should be an `AbstractOptimizer`, not a string.",
@@ -702,20 +830,24 @@ $(OPTION_DESCRIPTIONS)
             Optim.BFGS(; linesearch=LineSearches.BackTracking())
         end
     end
-    if output_file !== nothing
-        error("`output_file` is deprecated. Use `output_directory` instead.")
-    end
+
+    # Handle deprecated output_file option
+    output_file !== nothing && error("`output_file` is deprecated. Use `output_directory` instead.")
+
+    # Validate operator inputs
     if operators !== nothing
         @assert binary_operators === nothing
         @assert unary_operators === nothing
         @assert operator_enum_constructor === nothing
     end
 
+    # Validate loss function inputs
     @assert(
         count(!isnothing, [elementwise_loss, loss_function, loss_function_expression]) <= 1,
         "You cannot specify more than one of `elementwise_loss`, `loss_function`, and `loss_function_expression`."
     )
 
+    # Warning for loss function with specific expression types
     if !isnothing(loss_function) && recommend_loss_function_expression(expression_type)
         @warn(
             "You are using `loss_function` with `$(expression_type)`. " *
@@ -723,8 +855,10 @@ $(OPTION_DESCRIPTIONS)
         )
     end
 
+    # Set default elementwise loss
     elementwise_loss = something(elementwise_loss, L2DistLoss())
 
+    # Validate complexity mapping
     if complexity_mapping !== nothing
         @assert all(
             isnothing,
@@ -732,196 +866,48 @@ $(OPTION_DESCRIPTIONS)
         )
     end
 
-    #################################
-    #### Supply defaults ############
-    #! format: off
+    # Apply defaults from specified version
     _default_options = default_options(defaults)
-    maxsize = something(maxsize, _default_options.maxsize)
-    populations = something(populations, _default_options.populations)
-    population_size = something(population_size, _default_options.population_size)
-    ncycles_per_iteration = something(ncycles_per_iteration, _default_options.ncycles_per_iteration)
-    parsimony = something(parsimony, _default_options.parsimony)
-    warmup_maxsize_by = something(warmup_maxsize_by, _default_options.warmup_maxsize_by)
-    adaptive_parsimony_scaling = something(adaptive_parsimony_scaling, _default_options.adaptive_parsimony_scaling)
-    mutation_weights = something(mutation_weights, _default_options.mutation_weights)
-    crossover_probability = something(crossover_probability, _default_options.crossover_probability)
-    annealing = something(annealing, _default_options.annealing)
-    alpha = something(alpha, _default_options.alpha)
-    perturbation_factor = something(perturbation_factor, _default_options.perturbation_factor)
-    probability_negate_constant = something(probability_negate_constant, _default_options.probability_negate_constant)
-    tournament_selection_n = something(tournament_selection_n, _default_options.tournament_selection_n)
-    tournament_selection_p = something(tournament_selection_p, _default_options.tournament_selection_p)
-    fraction_replaced = something(fraction_replaced, _default_options.fraction_replaced)
-    fraction_replaced_hof = something(fraction_replaced_hof, _default_options.fraction_replaced_hof)
-    topn = something(topn, _default_options.topn)
-    batching = something(batching, _default_options.batching)
-    batch_size = something(batch_size, _default_options.batch_size)
-    if operators === nothing
-        binary_operators = something(binary_operators, _default_options.operators.ops[2])
-        unary_operators = something(unary_operators, _default_options.operators.ops[1])
-    end
-    #! format: on
-    #################################
+    
+    # Supply defaults for search parameters
+    maxsize, populations, population_size, ncycles_per_iteration, parsimony, warmup_maxsize_by,
+    adaptive_parsimony_scaling, mutation_weights, crossover_probability, annealing, alpha,
+    perturbation_factor, probability_negate_constant, tournament_selection_n, tournament_selection_p,
+    fraction_replaced, fraction_replaced_hof, topn, batching, batch_size, binary_operators, unary_operators = 
+        _apply_defaults(_default_options, maxsize, populations, population_size, ncycles_per_iteration,
+                       parsimony, warmup_maxsize_by, adaptive_parsimony_scaling, mutation_weights,
+                       crossover_probability, annealing, alpha, perturbation_factor, probability_negate_constant,
+                       tournament_selection_n, tournament_selection_p, fraction_replaced, fraction_replaced_hof,
+                       topn, batching, batch_size, operators, binary_operators, unary_operators)
 
-    if should_simplify === nothing
-        should_simplify = (
-            loss_function === nothing &&
-            nested_constraints === nothing &&
-            constraints === nothing &&
-            bin_constraints === nothing &&
-            una_constraints === nothing
-        )
-    end
+    # Process and validate settings
+    should_simplify, _nested_constraints, expression_type, expression_options, node_type, 
+    _una_constraints, _bin_constraints, complexity_mapping, maxdepth, early_stop_condition,
+    optimizer_options, _autodiff_backend, _output_directory = 
+        _process_and_validate_settings(should_simplify, loss_function, nested_constraints, constraints,
+                                     bin_constraints, una_constraints, binary_operators, unary_operators,
+                                     expression_spec, expression_type, expression_options, node_type,
+                                     complexity_mapping, complexity_of_operators, complexity_of_variables,
+                                     complexity_of_constants, maxsize, maxdepth, early_stop_condition,
+                                     optimizer_iterations, optimizer_f_calls_limit, optimizer_options,
+                                     autodiff_backend, output_directory)
 
-    @assert maxsize > 3
-    @assert warmup_maxsize_by >= 0.0f0
-    @assert tournament_selection_n < population_size "`tournament_selection_n` must be less than `population_size`"
-    @assert loss_scale in (:log, :linear) "`loss_scale` must be either log or linear"
+    # Create final operators enum
+    operators = _create_operators_enum(operators, binary_operators, unary_operators, 
+                                     operator_enum_constructor, define_helper_functions)
 
-    # Make sure nested_constraints contains functions within our operator set:
-    _nested_constraints = build_nested_constraints(;
-        binary_operators, unary_operators, nested_constraints
-    )
+    # Validate final settings
+    _validate_final_settings(maxsize, warmup_maxsize_by, tournament_selection_n, 
+                                 population_size, loss_scale, print_precision)
 
-    if typeof(constraints) <: Tuple
-        constraints = collect(constraints)
-    end
-    if constraints !== nothing
-        @assert bin_constraints === nothing
-        @assert una_constraints === nothing
-        # TODO: This is redundant with the checks in equation_search
-        for op in binary_operators
-            @assert !(op in unary_operators)
-        end
-        for op in unary_operators
-            @assert !(op in binary_operators)
-        end
-        bin_constraints = constraints
-        una_constraints = constraints
-    end
-
-    if expression_spec !== nothing
-        @assert expression_type === nothing
-        @assert expression_options === nothing
-        @assert node_type === nothing
-
-        expression_type = get_expression_type(expression_spec)
-        expression_options = get_expression_options(expression_spec)
-        node_type = get_node_type(expression_spec)
-    else
-        if !all(isnothing, (expression_type, expression_options, node_type))
-            Base.depwarn(
-                "The `expression_type`, `expression_options`, and `node_type` arguments are deprecated. Use `expression_spec` instead, which populates these automatically.",
-                :Options,
-            )
-        end
-        _default_expression_spec = ExpressionSpec()
-        expression_type = @something(
-            expression_type, get_expression_type(_default_expression_spec)
-        )
-        expression_options = @something(
-            expression_options, get_expression_options(_default_expression_spec)
-        )
-        node_type = @something(node_type, default_node_type(expression_type))
-    end
-
-    _una_constraints, _bin_constraints = build_constraints(;
-        una_constraints, bin_constraints, unary_operators, binary_operators
-    )
-
-    complexity_mapping = @something(
-        complexity_mapping,
-        ComplexityMapping(
-            complexity_of_operators,
-            complexity_of_variables,
-            complexity_of_constants,
-            binary_operators,
-            unary_operators,
-        )
-    )
-
-    if maxdepth === nothing
-        maxdepth = maxsize
-    end
-
-    if define_helper_functions && any(!isnothing, (binary_operators, unary_operators))
-        # We call here so that mapped operators, like ^
-        # are correctly overloaded, rather than overloading
-        # operators like "safe_pow", etc.
-        OperatorEnum(;
-            binary_operators=binary_operators,
-            unary_operators=unary_operators,
-            define_helper_functions=true,
-            empty_old_operators=true,
-        )
-    end
-
-    operators = if operators !== nothing
-        operators
-    else
-        binary_operators = map(opmap, binary_operators)
-        unary_operators = map(opmap, unary_operators)
-        if operator_enum_constructor !== nothing
-            operator_enum_constructor(;
-                binary_operators=binary_operators, unary_operators=unary_operators
-            )
-        else
-            OperatorEnum(;
-                binary_operators=binary_operators,
-                unary_operators=unary_operators,
-                define_helper_functions=define_helper_functions,
-                empty_old_operators=false,
-            )
-        end
-    end
-
-    early_stop_condition = if typeof(early_stop_condition) <: Real
-        # Need to make explicit copy here for this to work:
-        stopping_point = Float64(early_stop_condition)
-        Base.Fix2(<, stopping_point) ∘ first ∘ tuple # Equivalent to (l, c) -> l < stopping_point
-    else
-        early_stop_condition
-    end
-
-    # Parse optimizer options
-    if !isa(optimizer_options, Optim.Options)
-        optimizer_iterations = something(optimizer_iterations, 8)
-        optimizer_f_calls_limit = something(optimizer_f_calls_limit, 10_000)
-        extra_kws = hasfield(Optim.Options, :show_warnings) ? (; show_warnings=false) : ()
-        optimizer_options = Optim.Options(;
-            iterations=optimizer_iterations,
-            f_calls_limit=optimizer_f_calls_limit,
-            extra_kws...,
-            something(optimizer_options, ())...,
-        )
-    else
-        @assert optimizer_iterations === nothing && optimizer_f_calls_limit === nothing
-    end
-    if hasfield(Optim.Options, :show_warnings) && optimizer_options.show_warnings
-        @warn "Optimizer warnings are turned on. This might result in a lot of warnings being printed from NaNs, as these are common during symbolic regression"
-    end
-
+    # Create mutation weights
     set_mutation_weights = create_mutation_weights(mutation_weights)
 
-    @assert print_precision > 0
-
-    _autodiff_backend = if autodiff_backend isa Union{Nothing,AbstractADType}
-        autodiff_backend
-    else
-        ADTypes.Auto(autodiff_backend)
-    end
-
-    _output_directory =
-        if output_directory === nothing &&
-            get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false") == "true"
-            mktempdir()
-        else
-            output_directory
-        end
-
+    # Get operator counts
     nops = map(length, operators.ops)
 
-    options = Options{
+    # Construct and return Options struct
+    return Options{
         typeof(complexity_mapping),
         operator_specialization(typeof(operators), expression_type),
         typeof(nops),
@@ -1003,9 +989,239 @@ $(OPTION_DESCRIPTIONS)
         define_helper_functions,
         use_recorder,
     )
-
-    return options
 end
+
+# ================================================================================================
+# HELPER FUNCTIONS FOR OPTIONS PROCESSING
+# ================================================================================================
+
+"""Apply default values to options parameters."""
+function _apply_defaults(_default_options, maxsize, populations, population_size, ncycles_per_iteration,
+                        parsimony, warmup_maxsize_by, adaptive_parsimony_scaling, mutation_weights,
+                        crossover_probability, annealing, alpha, perturbation_factor, probability_negate_constant,
+                        tournament_selection_n, tournament_selection_p, fraction_replaced, fraction_replaced_hof,
+                        topn, batching, batch_size, operators, binary_operators, unary_operators)
+    
+    #! format: off
+    maxsize = something(maxsize, _default_options.maxsize)
+    populations = something(populations, _default_options.populations)
+    population_size = something(population_size, _default_options.population_size)
+    ncycles_per_iteration = something(ncycles_per_iteration, _default_options.ncycles_per_iteration)
+    parsimony = something(parsimony, _default_options.parsimony)
+    warmup_maxsize_by = something(warmup_maxsize_by, _default_options.warmup_maxsize_by)
+    adaptive_parsimony_scaling = something(adaptive_parsimony_scaling, _default_options.adaptive_parsimony_scaling)
+    mutation_weights = something(mutation_weights, _default_options.mutation_weights)
+    crossover_probability = something(crossover_probability, _default_options.crossover_probability)
+    annealing = something(annealing, _default_options.annealing)
+    alpha = something(alpha, _default_options.alpha)
+    perturbation_factor = something(perturbation_factor, _default_options.perturbation_factor)
+    probability_negate_constant = something(probability_negate_constant, _default_options.probability_negate_constant)
+    tournament_selection_n = something(tournament_selection_n, _default_options.tournament_selection_n)
+    tournament_selection_p = something(tournament_selection_p, _default_options.tournament_selection_p)
+    fraction_replaced = something(fraction_replaced, _default_options.fraction_replaced)
+    fraction_replaced_hof = something(fraction_replaced_hof, _default_options.fraction_replaced_hof)
+    topn = something(topn, _default_options.topn)
+    batching = something(batching, _default_options.batching)
+    batch_size = something(batch_size, _default_options.batch_size)
+    if operators === nothing
+        binary_operators = something(binary_operators, _default_options.operators.ops[2])
+        unary_operators = something(unary_operators, _default_options.operators.ops[1])
+    end
+    #! format: on
+    
+    return (maxsize, populations, population_size, ncycles_per_iteration, parsimony, warmup_maxsize_by,
+            adaptive_parsimony_scaling, mutation_weights, crossover_probability, annealing, alpha,
+            perturbation_factor, probability_negate_constant, tournament_selection_n, tournament_selection_p,
+            fraction_replaced, fraction_replaced_hof, topn, batching, batch_size, binary_operators, unary_operators)
+end
+
+"""Process and validate various settings, returning processed values."""
+function _process_and_validate_settings(should_simplify, loss_function, nested_constraints, constraints,
+                                       bin_constraints, una_constraints, binary_operators, unary_operators,
+                                       expression_spec, expression_type, expression_options, node_type,
+                                       complexity_mapping, complexity_of_operators, complexity_of_variables,
+                                       complexity_of_constants, maxsize, maxdepth, early_stop_condition,
+                                       optimizer_iterations, optimizer_f_calls_limit, optimizer_options,
+                                       autodiff_backend, output_directory)
+    
+    # Determine should_simplify
+    if should_simplify === nothing
+        should_simplify = (
+            loss_function === nothing &&
+            nested_constraints === nothing &&
+            constraints === nothing &&
+            bin_constraints === nothing &&
+            una_constraints === nothing
+        )
+    end
+
+    # Build nested constraints
+    _nested_constraints = build_nested_constraints(;
+        binary_operators, unary_operators, nested_constraints
+    )
+
+    # Process constraints
+    if typeof(constraints) <: Tuple
+        constraints = collect(constraints)
+    end
+    if constraints !== nothing
+        @assert bin_constraints === nothing
+        @assert una_constraints === nothing
+        # TODO: This is redundant with the checks in equation_search
+        for op in binary_operators
+            @assert !(op in unary_operators)
+        end
+        for op in unary_operators
+            @assert !(op in binary_operators)
+        end
+        bin_constraints = constraints
+        una_constraints = constraints
+    end
+
+    # Process expression specification
+    if expression_spec !== nothing
+        @assert expression_type === nothing
+        @assert expression_options === nothing
+        @assert node_type === nothing
+
+        expression_type = get_expression_type(expression_spec)
+        expression_options = get_expression_options(expression_spec)
+        node_type = get_node_type(expression_spec)
+    else
+        if !all(isnothing, (expression_type, expression_options, node_type))
+            Base.depwarn(
+                "The `expression_type`, `expression_options`, and `node_type` arguments are deprecated. Use `expression_spec` instead, which populates these automatically.",
+                :Options,
+            )
+        end
+        _default_expression_spec = ExpressionSpec()
+        expression_type = @something(
+            expression_type, get_expression_type(_default_expression_spec)
+        )
+        expression_options = @something(
+            expression_options, get_expression_options(_default_expression_spec)
+        )
+        node_type = @something(node_type, default_node_type(expression_type))
+    end
+
+    # Build constraints
+    _una_constraints, _bin_constraints = build_constraints(;
+        una_constraints, bin_constraints, unary_operators, binary_operators
+    )
+
+    # Set complexity mapping
+    complexity_mapping = @something(
+        complexity_mapping,
+        ComplexityMapping(
+            complexity_of_operators,
+            complexity_of_variables,
+            complexity_of_constants,
+            binary_operators,
+            unary_operators,
+        )
+    )
+
+    # Set maxdepth
+    if maxdepth === nothing
+        maxdepth = maxsize
+    end
+
+    # Process early stop condition
+    early_stop_condition = if typeof(early_stop_condition) <: Real
+        # Need to make explicit copy here for this to work:
+        stopping_point = Float64(early_stop_condition)
+        Base.Fix2(<, stopping_point) ∘ first ∘ tuple # Equivalent to (l, c) -> l < stopping_point
+    else
+        early_stop_condition
+    end
+
+    # Parse optimizer options
+    if !isa(optimizer_options, Optim.Options)
+        optimizer_iterations = something(optimizer_iterations, 8)
+        optimizer_f_calls_limit = something(optimizer_f_calls_limit, 10_000)
+        extra_kws = hasfield(Optim.Options, :show_warnings) ? (; show_warnings=false) : ()
+        optimizer_options = Optim.Options(;
+            iterations=optimizer_iterations,
+            f_calls_limit=optimizer_f_calls_limit,
+            extra_kws...,
+            something(optimizer_options, ())...,
+        )
+    else
+        @assert optimizer_iterations === nothing && optimizer_f_calls_limit === nothing
+    end
+    if hasfield(Optim.Options, :show_warnings) && optimizer_options.show_warnings
+        @warn "Optimizer warnings are turned on. This might result in a lot of warnings being printed from NaNs, as these are common during symbolic regression"
+    end
+
+    # Process autodiff backend
+    _autodiff_backend = if autodiff_backend isa Union{Nothing,AbstractADType}
+        autodiff_backend
+    else
+        ADTypes.Auto(autodiff_backend)
+    end
+
+    # Process output directory
+    _output_directory =
+        if output_directory === nothing &&
+            get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false") == "true"
+            mktempdir()
+        else
+            output_directory
+        end
+
+    return (should_simplify, _nested_constraints, expression_type, expression_options, node_type,
+            _una_constraints, _bin_constraints, complexity_mapping, maxdepth, early_stop_condition,
+            optimizer_options, _autodiff_backend, _output_directory)
+end
+
+"""Create the operators enum from the provided options."""
+function _create_operators_enum(operators, binary_operators, unary_operators, 
+                               operator_enum_constructor, define_helper_functions)
+    if define_helper_functions && any(!isnothing, (binary_operators, unary_operators))
+        # We call here so that mapped operators, like ^
+        # are correctly overloaded, rather than overloading
+        # operators like "safe_pow", etc.
+        OperatorEnum(;
+            binary_operators=binary_operators,
+            unary_operators=unary_operators,
+            define_helper_functions=true,
+            empty_old_operators=true,
+        )
+    end
+
+    if operators !== nothing
+        return operators
+    else
+        binary_operators = map(opmap, binary_operators)
+        unary_operators = map(opmap, unary_operators)
+        if operator_enum_constructor !== nothing
+            return operator_enum_constructor(;
+                binary_operators=binary_operators, unary_operators=unary_operators
+            )
+        else
+            return OperatorEnum(;
+                binary_operators=binary_operators,
+                unary_operators=unary_operators,
+                define_helper_functions=define_helper_functions,
+                empty_old_operators=false,
+            )
+        end
+    end
+end
+
+"""Validate final settings before creating Options struct."""
+function _validate_final_settings(maxsize, warmup_maxsize_by, tournament_selection_n, 
+                                 population_size, loss_scale, print_precision)
+    @assert maxsize > 3
+    @assert warmup_maxsize_by >= 0.0f0
+    @assert tournament_selection_n < population_size "`tournament_selection_n` must be less than `population_size`"
+    @assert loss_scale in (:log, :linear) "`loss_scale` must be either log or linear"
+    @assert print_precision > 0
+end
+
+# ================================================================================================
+# DEFAULT OPTIONS FUNCTION
+# ================================================================================================
 
 function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = nothing))
     if version isa VersionNumber && version < v"1.0.0"
