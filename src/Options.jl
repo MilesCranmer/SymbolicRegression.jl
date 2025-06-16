@@ -11,7 +11,6 @@ using DynamicExpressions:
     AbstractExpressionNode
 using ADTypes: AbstractADType, ADTypes
 using LossFunctions: L2DistLoss, SupervisedLoss
-using Optim: Optim
 using LineSearches: LineSearches
 #TODO - eventually move some of these
 # into the SR call itself, rather than
