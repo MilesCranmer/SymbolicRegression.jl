@@ -13,7 +13,7 @@
     dataset = Dataset(X, y)
     member = PopMember(dataset, ex, options; deterministic=false)
     member.cost = 1.0
-    @test member isa PopMember{Float64,Float64,<:Expression{Float64,Node{Float64}}}
+    @test member isa PopMember{Float64,Float64,<:Expression{Float64,<:Node{Float64}}}
     s_member = shower(member)
     @test s_member == "PopMember(tree = ((x ^ 2.0) + 1.5), loss = 16.25, cost = 1.0)"
 
@@ -42,7 +42,7 @@ end
     dataset = Dataset(X, y)
     member = PopMember(dataset, ex, options; deterministic=false)
     member.cost = 1.0
-    @test member isa PopMember{Float64,Float64,<:Expression{Float64,Node{Float64}}}
+    @test member isa PopMember{Float64,Float64,<:Expression{Float64,<:Node{Float64}}}
 
     hof = HallOfFame(options, dataset)
     hof = embed_metadata(hof, options, dataset)

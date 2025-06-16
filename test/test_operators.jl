@@ -134,13 +134,13 @@ end
         @test_nowarn SymbolicRegression.assert_operators_well_defined(T, options)
     end
 
-    using SymbolicRegression.CoreModule.OptionsModule: inverse_binopmap
+    using SymbolicRegression.CoreModule.OptionsModule: inverse_opmap
 
     # Test inverse mapping for comparison operators
-    @test inverse_binopmap(greater) == (>)
-    @test inverse_binopmap(less) == (<)
-    @test inverse_binopmap(greater_equal) == (>=)
-    @test inverse_binopmap(less_equal) == (<=)
+    @test inverse_opmap(greater) == (>)
+    @test inverse_opmap(less) == (<)
+    @test inverse_opmap(greater_equal) == (>=)
+    @test inverse_opmap(less_equal) == (<=)
 end
 
 @testitem "Built-in operators pass validation for complex numbers" tags = [:part2] begin
