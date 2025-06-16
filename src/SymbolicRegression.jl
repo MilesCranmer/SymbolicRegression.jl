@@ -648,10 +648,14 @@ end
     end
     # Get the next worker process to give a job:
     worker_assignment = WorkerAssignments()
-    # Randomly order which order to check populations:
+    # Order which populations to check:
     # This is done so that we do work on all nout equally.
     task_order = [(j, i) for j in 1:nout for i in 1:(options.populations)]
-    shuffle!(task_order)
+    if !options.deterministic
+        # Randomly order task checking for better load balancing in non-deterministic mode
+        shuffle!(task_order)
+    end
+    # In deterministic mode, we keep the natural ordering to ensure reproducibility
 
     # Persistent storage of last-saved population for final return:
     last_pops = init_dummy_pops(options.populations, datasets, options)
@@ -725,6 +729,13 @@ function _initialize_search!(
         worker_idx = assign_next_worker!(
             state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
         )
+        
+        # Set deterministic seed for this population if in deterministic mode
+        if options.deterministic && options.seed !== nothing
+            pop_seed = SymbolicRegression.UtilsModule.split_seed(options.seed, j, i)
+            seed!(pop_seed)
+        end
+        
         saved_pop = load_saved_population(saved_state; out=j, pop=i)
         new_pop =
             if saved_pop !== nothing && length(saved_pop.members) == options.population_size
@@ -747,8 +758,18 @@ function _initialize_search!(
                 if saved_pop !== nothing && ropt.verbosity > 0
                     @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
                 end
+                # Compute deterministic seed for this population
+                pop_seed_for_worker = if options.deterministic && options.seed !== nothing
+                    SymbolicRegression.UtilsModule.split_seed(options.seed, j, i)
+                else
+                    nothing
+                end
                 @sr_spawner(
                     begin
+                        # Set deterministic seed for this specific population in the worker
+                        if pop_seed_for_worker !== nothing
+                            seed!(pop_seed_for_worker)
+                        end
                         (
                             Population(
                                 datasets[j];
@@ -787,12 +808,30 @@ function _warmup_search!(
             state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
         )
 
+        # Set deterministic seed for this population during warmup if in deterministic mode
+        if options.deterministic && options.seed !== nothing
+            pop_seed = SymbolicRegression.UtilsModule.split_seed(options.seed, j, i, 0)  # iteration 0
+            seed!(pop_seed)
+        end
+
         # TODO - why is this needed??
         # Multi-threaded doesn't like to fetch within a new task:
         c_rss = deepcopy(running_search_statistics)
         last_pop = state.worker_output[j][i]
+        
+        # Compute deterministic seed for worker
+        warmup_seed_for_worker = if options.deterministic && options.seed !== nothing
+            SymbolicRegression.UtilsModule.split_seed(options.seed, j, i, 0)  # iteration 0
+        else
+            nothing
+        end
+        
         updated_pop = @sr_spawner(
             begin
+                # Set deterministic seed for this specific population in the worker
+                if warmup_seed_for_worker !== nothing
+                    seed!(warmup_seed_for_worker)
+                end
                 in_pop = first(
                     extract_from_worker(last_pop, Population{T,L,N}, HallOfFame{T,L,N})
                 )
@@ -873,10 +912,20 @@ function _main_search_loop!(
                 error("Task failed for population")
             end
         end
-        # Non-blocking check if a population is ready:
+        # Check if a population is ready:
         population_ready = if ropt.parallelism in (:multiprocessing, :multithreading)
             # TODO: Implement type assertions based on parallelism.
-            isready(state.channels[j][i])
+            if options.deterministic
+                # In deterministic mode, wait for the specific task to complete
+                # rather than taking any available task. This ensures deterministic ordering.
+                while !isready(state.channels[j][i]) && state.cycles_remaining[j] > 0
+                    sleep(0.001)  # Short sleep to avoid busy waiting
+                end
+                isready(state.channels[j][i])
+            else
+                # In non-deterministic mode, use non-blocking check for efficiency
+                isready(state.channels[j][i])
+            end
         else
             true
         end
@@ -952,10 +1001,27 @@ function _main_search_loop!(
                 0
             end
 
+            # Set deterministic seed for this iteration if in deterministic mode
+            if options.deterministic && options.seed !== nothing
+                iter_seed = SymbolicRegression.UtilsModule.split_seed(options.seed, j, i, iteration)
+                seed!(iter_seed)
+            end
+
+            # Compute deterministic seed for worker
+            iteration_seed_for_worker = if options.deterministic && options.seed !== nothing
+                SymbolicRegression.UtilsModule.split_seed(options.seed, j, i, iteration)
+            else
+                nothing
+            end
+
             c_rss = deepcopy(state.all_running_search_statistics[j])
             in_pop = copy(cur_pop::Population{T,L,N})
             state.worker_output[j][i] = @sr_spawner(
                 begin
+                    # Set deterministic seed for this specific population and iteration in the worker
+                    if iteration_seed_for_worker !== nothing
+                        seed!(iteration_seed_for_worker)
+                    end
                     _dispatch_s_r_cycle(
                         in_pop,
                         dataset,

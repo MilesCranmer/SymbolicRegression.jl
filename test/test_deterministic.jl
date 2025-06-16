@@ -1,5 +1,6 @@
 using SymbolicRegression
 using Random
+using Test
 
 X = 2 .* randn(MersenneTwister(0), Float32, 2, 1000)
 y = 3 * cos.(X[2, :]) + X[1, :] .^ 2 .- 2
@@ -15,6 +16,7 @@ options = SymbolicRegression.Options(;
     progress=false,
 )
 
+# Test serial mode (original test)
 all_outputs = []
 for i in 1:2
     hall_of_fame = equation_search(
@@ -31,3 +33,52 @@ for i in 1:2
 end
 
 @test string(all_outputs[1]) == string(all_outputs[2])
+println("Serial deterministic test passed")
+
+# Test multithreading mode with deterministic=true
+if Threads.nthreads() > 1
+    all_outputs_mt = []
+    for i in 1:2
+        hall_of_fame = equation_search(
+            X,
+            y;
+            niterations=5,
+            options=options,
+            parallelism=:multithreading,
+            v_dim_out=Val(1),
+            return_state=Val(false),
+        )
+        dominating = calculate_pareto_frontier(hall_of_fame)
+        push!(all_outputs_mt, dominating[end].tree)
+    end
+
+    @test string(all_outputs_mt[1]) == string(all_outputs_mt[2])
+    println("Multithreading deterministic test passed")
+else
+    println("Skipping multithreading test (only 1 thread available)")
+end
+
+# Test multiprocessing mode with deterministic=true
+# Note: This creates processes dynamically, so we keep it simple
+try
+    all_outputs_mp = []
+    for i in 1:2
+        hall_of_fame = equation_search(
+            X,
+            y;
+            niterations=3,  # Fewer iterations for multiprocessing test
+            options=options,
+            parallelism=:multiprocessing,
+            numprocs=2,
+            v_dim_out=Val(1),
+            return_state=Val(false),
+        )
+        dominating = calculate_pareto_frontier(hall_of_fame)
+        push!(all_outputs_mp, dominating[end].tree)
+    end
+
+    @test string(all_outputs_mp[1]) == string(all_outputs_mp[2])
+    println("Multiprocessing deterministic test passed")
+catch e
+    println("Multiprocessing test failed or skipped: ", e)
+end

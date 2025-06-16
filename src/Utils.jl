@@ -288,4 +288,24 @@ function (f::FixKws{F,KWS})(args::Vararg{Any,N}) where {F,KWS,N}
     return f.f(args...; f.kws...)
 end
 
+"""
+    split_seed(base_seed, index1, index2=0, index3=0)
+
+Deterministically split a base seed into a unique seed for a specific worker/population.
+This uses a simple but effective mixing approach to ensure different seeds for different 
+combinations of indices while maintaining determinism.
+"""
+function split_seed(base_seed::Int, index1::Int, index2::Int=0, index3::Int=0)::Int
+    # Use a simple hash-like mixing to create unique seeds
+    # This ensures that different (index1, index2, index3) combinations 
+    # produce different seeds while being deterministic
+    seed = base_seed
+    seed = seed ⊻ (index1 * 0x9e3779b9)  # Mix in index1
+    seed = seed ⊻ (index2 * 0x85ebca6b)  # Mix in index2  
+    seed = seed ⊻ (index3 * 0xc2b2ae35)  # Mix in index3
+    
+    # Ensure we return a positive seed (some RNG implementations prefer this)
+    return abs(seed) % typemax(Int32)
+end
+
 end
