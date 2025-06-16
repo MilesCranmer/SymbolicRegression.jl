@@ -1045,14 +1045,16 @@ function _process_and_validate_settings(should_simplify, loss_function, nested_c
                                        autodiff_backend, output_directory)
     
     # Determine should_simplify
-    if should_simplify === nothing
-        should_simplify = (
+    should_simplify_resolved::Bool = if should_simplify === nothing
+        (
             loss_function === nothing &&
             nested_constraints === nothing &&
             constraints === nothing &&
             bin_constraints === nothing &&
             una_constraints === nothing
         )
+    else
+        should_simplify::Bool
     end
 
     # Build nested constraints
@@ -1078,15 +1080,15 @@ function _process_and_validate_settings(should_simplify, loss_function, nested_c
         una_constraints = constraints
     end
 
-    # Process expression specification
-    if expression_spec !== nothing
+    # Process expression specification with concrete types
+    expression_type_resolved, expression_options_resolved, node_type_resolved = if expression_spec !== nothing
         @assert expression_type === nothing
         @assert expression_options === nothing
         @assert node_type === nothing
 
-        expression_type = get_expression_type(expression_spec)
-        expression_options = get_expression_options(expression_spec)
-        node_type = get_node_type(expression_spec)
+        (get_expression_type(expression_spec),
+         get_expression_options(expression_spec),
+         get_node_type(expression_spec))
     else
         if !all(isnothing, (expression_type, expression_options, node_type))
             Base.depwarn(
@@ -1095,13 +1097,10 @@ function _process_and_validate_settings(should_simplify, loss_function, nested_c
             )
         end
         _default_expression_spec = ExpressionSpec()
-        expression_type = @something(
-            expression_type, get_expression_type(_default_expression_spec)
-        )
-        expression_options = @something(
-            expression_options, get_expression_options(_default_expression_spec)
-        )
-        node_type = @something(node_type, default_node_type(expression_type))
+        
+        (something(expression_type, get_expression_type(_default_expression_spec)),
+         something(expression_options, get_expression_options(_default_expression_spec)),
+         something(node_type, default_node_type(get_expression_type(_default_expression_spec))))
     end
 
     # Build constraints
@@ -1110,7 +1109,7 @@ function _process_and_validate_settings(should_simplify, loss_function, nested_c
     )
 
     # Set complexity mapping
-    complexity_mapping = @something(
+    complexity_mapping_resolved = @something(
         complexity_mapping,
         ComplexityMapping(
             complexity_of_operators,
@@ -1122,12 +1121,14 @@ function _process_and_validate_settings(should_simplify, loss_function, nested_c
     )
 
     # Set maxdepth
-    if maxdepth === nothing
-        maxdepth = maxsize
+    maxdepth_resolved::Int = if maxdepth === nothing
+        maxsize
+    else
+        maxdepth
     end
 
     # Process early stop condition
-    early_stop_condition = if typeof(early_stop_condition) <: Real
+    early_stop_condition_resolved = if typeof(early_stop_condition) <: Real
         # Need to make explicit copy here for this to work:
         stopping_point = Float64(early_stop_condition)
         Base.Fix2(<, stopping_point) ∘ first ∘ tuple # Equivalent to (l, c) -> l < stopping_point
@@ -1136,20 +1137,21 @@ function _process_and_validate_settings(should_simplify, loss_function, nested_c
     end
 
     # Parse optimizer options
-    if !isa(optimizer_options, Optim.Options)
-        optimizer_iterations = something(optimizer_iterations, 8)
-        optimizer_f_calls_limit = something(optimizer_f_calls_limit, 10_000)
+    optimizer_options_resolved = if !isa(optimizer_options, Optim.Options)
+        optimizer_iterations_val = something(optimizer_iterations, 8)
+        optimizer_f_calls_limit_val = something(optimizer_f_calls_limit, 10_000)
         extra_kws = hasfield(Optim.Options, :show_warnings) ? (; show_warnings=false) : ()
-        optimizer_options = Optim.Options(;
-            iterations=optimizer_iterations,
-            f_calls_limit=optimizer_f_calls_limit,
+        Optim.Options(;
+            iterations=optimizer_iterations_val,
+            f_calls_limit=optimizer_f_calls_limit_val,
             extra_kws...,
             something(optimizer_options, ())...,
         )
     else
         @assert optimizer_iterations === nothing && optimizer_f_calls_limit === nothing
+        optimizer_options
     end
-    if hasfield(Optim.Options, :show_warnings) && optimizer_options.show_warnings
+    if hasfield(Optim.Options, :show_warnings) && optimizer_options_resolved.show_warnings
         @warn "Optimizer warnings are turned on. This might result in a lot of warnings being printed from NaNs, as these are common during symbolic regression"
     end
 
@@ -1161,7 +1163,7 @@ function _process_and_validate_settings(should_simplify, loss_function, nested_c
     end
 
     # Process output directory
-    _output_directory =
+    _output_directory::Union{Nothing,String} =
         if output_directory === nothing &&
             get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false") == "true"
             mktempdir()
@@ -1169,9 +1171,9 @@ function _process_and_validate_settings(should_simplify, loss_function, nested_c
             output_directory
         end
 
-    return (should_simplify, _nested_constraints, expression_type, expression_options, node_type,
-            _una_constraints, _bin_constraints, complexity_mapping, maxdepth, early_stop_condition,
-            optimizer_options, _autodiff_backend, _output_directory)
+    return (should_simplify_resolved, _nested_constraints, expression_type_resolved, expression_options_resolved, node_type_resolved,
+            _una_constraints, _bin_constraints, complexity_mapping_resolved, maxdepth_resolved, early_stop_condition_resolved,
+            optimizer_options_resolved, _autodiff_backend, _output_directory)
 end
 
 """Create the operators enum from the provided options."""
