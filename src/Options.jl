@@ -1,7 +1,7 @@
 module OptionsModule
 
 using DispatchDoctor: @unstable
-using Optim: Optim
+using Optim
 using DynamicExpressions:
     OperatorEnum,
     AbstractOperatorEnum,
@@ -11,7 +11,7 @@ using DynamicExpressions:
     AbstractExpressionNode
 using ADTypes: AbstractADType, ADTypes
 using LossFunctions: L2DistLoss, SupervisedLoss
-using LineSearches: LineSearches
+using LineSearches
 #TODO - eventually move some of these
 # into the SR call itself, rather than
 # passing huge options at once.
