@@ -3,7 +3,7 @@ module ConstantOptimizationModule
 using LineSearches: LineSearches
 using Optim: Optim
 using ADTypes: AbstractADType, AutoEnzyme
-using DifferentiationInterface: value_and_gradient
+using DifferentiationInterface: value_and_gradient, prepare_gradient
 using DynamicExpressions:
     AbstractExpression,
     Expression,
@@ -13,7 +13,7 @@ using DynamicExpressions:
     extract_gradient
 using ..CoreModule:
     AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, specialized_options, dataset_fraction
-using ..UtilsModule: get_birth_order
+using ..UtilsModule: get_birth_order, PerTaskCache
 using ..LossFunctionsModule: eval_loss, loss_to_cost
 using ..PopMemberModule: PopMember
 
@@ -61,7 +61,8 @@ function _optimize_constants(
     eval_fraction = dataset_fraction(dataset)
     x0, refs = get_scalar_constants(tree)
     @assert count_constants_for_optimization(tree) == length(x0)
-    f = Evaluator(tree, refs, dataset, options)
+    ctx = EvaluatorContext(dataset, options)
+    f = Evaluator(tree, refs, ctx)
     fg! = GradEvaluator(f, options.autodiff_backend)
     obj = if algorithm isa Optim.Newton || options.autodiff_backend === nothing
         f
@@ -99,32 +100,53 @@ function _optimize_constants(
     return member, num_evals
 end
 
-struct Evaluator{N<:AbstractExpression,R,D<:Dataset,O<:AbstractOptions} <: Function
-    tree::N
-    refs::R
+struct EvaluatorContext{D<:Dataset,O<:AbstractOptions} <: Function
     dataset::D
     options::O
 end
-function (e::Evaluator)(x::AbstractVector; regularization=false)
-    set_scalar_constants!(e.tree, x, e.refs)
-    return eval_loss(e.tree, e.dataset, e.options; regularization)
+function (c::EvaluatorContext)(tree; regularization=false)
+    return eval_loss(tree, c.dataset, c.options; regularization)
 end
 
-struct GradEvaluator{F<:Evaluator,AD<:Union{Nothing,AbstractADType},EX} <: Function
-    f::F
+struct Evaluator{N<:AbstractExpression,R,C<:EvaluatorContext} <: Function
+    tree::N
+    refs::R
+    ctx::C
+end
+function (e::Evaluator)(x::AbstractVector; regularization=false)
+    set_scalar_constants!(e.tree, x, e.refs)
+    return e.ctx(e.tree; regularization)
+end
+
+struct GradEvaluator{E<:Evaluator,AD<:Union{Nothing,AbstractADType},PR,EX} <: Function
+    e::E
+    prep::PR
     backend::AD
     extra::EX
 end
-GradEvaluator(f::F, backend::AD) where {F,AD} = GradEvaluator(f, backend, nothing)
+function GradEvaluator(e::Evaluator, backend)
+    prep = isnothing(backend) ? nothing : _cached_prep(e.ctx, backend, e.tree)
+    return GradEvaluator(e, prep, backend, nothing)
+end
+
+const CachedPrep = PerTaskCache{Dict{UInt,Any}}()
+
+function _cached_prep(ctx, backend, example_tree)
+    # We avoid hashing on the tree because it should not affect the prep.
+    # We want to cache as much as possible!
+    key = hash((ctx, backend))
+    get!(CachedPrep[], key) do
+        prepare_gradient(ctx, backend, example_tree)
+    end
+end
 
 function (g::GradEvaluator{<:Any,AD})(_, G, x::AbstractVector) where {AD}
     AD isa AutoEnzyme && error("Please load the `Enzyme.jl` package.")
-    set_scalar_constants!(g.f.tree, x, g.f.refs)
-    (val, grad) = value_and_gradient(g.backend, g.f.tree) do tree
-        eval_loss(tree, g.f.dataset, g.f.options; regularization=false)
-    end
+    set_scalar_constants!(g.e.tree, x, g.e.refs)
+    maybe_prep = isnothing(g.prep) ? () : (g.prep,)
+    (val, grad) = value_and_gradient(g.e.ctx, maybe_prep..., g.backend, g.e.tree)
     if G !== nothing && grad !== nothing
-        G .= extract_gradient(grad, g.f.tree)
+        G .= extract_gradient(grad, g.e.tree)
     end
     return val
 end

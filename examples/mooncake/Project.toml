@@ -1,0 +1,10 @@
+[deps]
+DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
+DynamicExpressions = "a40a106e-89c9-4ca8-8020-a735e8728b6b"
+MLJBase = "a7f614a8-145f-11e9-1d2a-a57a1082229d"
+Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
+SymbolicRegression = "8254be44-1295-4e6a-a16d-46603ac705cb"
+
+[sources]
+Mooncake = {rev = "1da3c039c381823f637b323835f5bef4d348aa1c", url = "https://github.com/MilesCranmer/Mooncake.jl.git"}
+SymbolicRegression = {rev = "f01fc8c36308a9965f460c4feaac42cc6a63d248", url = "https://github.com/MilesCranmer/SymbolicRegression.jl.git"}
