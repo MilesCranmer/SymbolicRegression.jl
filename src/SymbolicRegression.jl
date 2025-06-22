@@ -815,32 +815,17 @@ function _warmup_search!(
     end
     return nothing
 end
-function _main_search_loop!(
+"""
+    _initialize_parallel_workers!(state, nout, options)
+
+Initialize parallel workers for populations across output dimensions.
+"""
+function _initialize_parallel_workers!(
     state::AbstractSearchState{T,L,N},
-    datasets,
-    ropt::AbstractRuntimeOptions,
+    nout::Int,
     options::AbstractOptions,
+    ropt::AbstractRuntimeOptions,
 ) where {T,L,N}
-    ropt.verbosity > 0 && @info "Started!"
-    nout = length(datasets)
-    start_time = time()
-    progress_bar = if ropt.progress
-        #TODO: need to iterate this on the max cycles remaining!
-        sum_cycle_remaining = sum(state.cycles_remaining)
-        WrappedProgressBar(
-            sum_cycle_remaining, ropt.niterations; barlen=options.terminal_width
-        )
-    else
-        nothing
-    end
-
-    last_print_time = time()
-    last_speed_recording_time = time()
-    num_evals_last = sum(sum, state.num_evals)
-    num_evals_since_last = sum(sum, state.num_evals) - num_evals_last  # i.e., start at 0
-    print_every_n_seconds = 5
-    equation_speed = Float32[]
-
     if ropt.parallelism in (:multiprocessing, :multithreading)
         for j in 1:nout, i in 1:(options.populations)
             # Start listening for each population to finish:
@@ -850,211 +835,387 @@ function _main_search_loop!(
             push!(state.tasks[j], t)
         end
     end
+end
+
+"""
+    _process_population_results!(state, (j, i), datasets, options, resource_monitor, equation_speed, ropt, progress_bar)
+
+Process results from a completed population iteration and launch the next.
+"""
+function _process_population_results!(
+    state::AbstractSearchState{T,L,N},
+    (j, i),
+    datasets::Vector,
+    options::AbstractOptions,
+    resource_monitor::ResourceMonitor,
+    equation_speed::Vector{Float32},
+    ropt::AbstractRuntimeOptions,
+    progress_bar,
+) where {T,L,N}
+    # Take the fetch operation from the channel since its ready
+    (cur_pop, best_seen, cur_record, cur_num_evals) = if ropt.parallelism in
+        (
+        :multiprocessing, :multithreading
+    )
+        take!(
+            state.channels[j][i]
+        )
+    else
+        state.worker_output[j][i]
+    end::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N}}
+
+    # Update state with current population results
+    state.last_pops[j][i] = copy(cur_pop)
+    state.best_sub_pops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
+    @recorder state.record[] = recursive_merge(state.record[], cur_record)
+    state.num_evals[j][i] += cur_num_evals
+
+    # Get current dataset and maxsize
+    dataset = datasets[j]
+    cur_maxsize = state.cur_maxsizes[j]
+
+    # Update frequency statistics for adaptive parsimony
+    for member in cur_pop.members
+        size = compute_complexity(member, options)
+        update_frequencies!(state.all_running_search_statistics[j]; size)
+    end
+
+    # Update hall of fame with new expressions
+    update_hall_of_fame!(state.halls_of_fame[j], cur_pop.members, options)
+    update_hall_of_fame!(
+        state.halls_of_fame[j], best_seen.members[best_seen.exists], options
+    )
+
+    # Calculate pareto frontier for this output dimension
+    dominating = calculate_pareto_frontier(state.halls_of_fame[j])
+
+    # Save results to file if requested
+    if options.save_to_file
+        save_to_file(dominating, length(datasets), j, dataset, options, ropt)
+    end
+
+    # Handle migrations between populations
+    _perform_migration!(state, j, cur_pop, dominating, options)
+
+    # Decrement remaining cycles and check if this output is done
+    state.cycles_remaining[j] -= 1
+    if state.cycles_remaining[j] == 0
+        return false
+    end
+
+    # Start the next iteration for this population
+    _launch_next_iteration!(state, j, i, cur_pop, dataset, cur_maxsize, options, ropt)
+
+    # Update maxsize and parsimony window
+    total_cycles = ropt.niterations * options.populations
+    state.cur_maxsizes[j] = get_cur_maxsize(;
+        options, total_cycles, cycles_remaining=state.cycles_remaining[j]
+    )
+    move_window!(state.all_running_search_statistics[j])
+
+    # Update UI and logs
+    if !isnothing(progress_bar)
+        head_node_occupation = estimate_work_fraction(resource_monitor)
+        update_progress_bar!(
+            progress_bar,
+            only(state.halls_of_fame),
+            only(datasets),
+            options,
+            equation_speed,
+            head_node_occupation,
+            ropt.parallelism,
+        )
+    end
+    if ropt.logger !== nothing
+        logging_callback!(ropt.logger; state, datasets, ropt, options)
+    end
+
+    return true
+end
+
+"""
+    _perform_migration!(state, j, cur_pop, dominating, options)
+
+Handle population migration between different populations and from hall of fame.
+"""
+function _perform_migration!(
+    state::AbstractSearchState, j::Int, cur_pop, dominating, options::AbstractOptions
+)
+    # Population migration (from best members of all populations)
+    if options.migration
+        best_of_each = Population([
+            member for pop in state.best_sub_pops[j] for member in pop.members
+        ])
+        migrate!(best_of_each.members => cur_pop, options; frac=options.fraction_replaced)
+    end
+
+    # Hall of fame migration (from best overall expressions)
+    if options.hof_migration && length(dominating) > 0
+        migrate!(dominating => cur_pop, options; frac=options.fraction_replaced_hof)
+    end
+end
+
+"""
+    _launch_next_iteration!(state, j, i, cur_pop, dataset, cur_maxsize, options, ropt)
+
+Set up and launch the next iteration for a specific population.
+"""
+function _launch_next_iteration!(
+    state::AbstractSearchState{T,L,N},
+    j::Int,
+    i::Int,
+    cur_pop::Population{T,L,N},
+    dataset,
+    cur_maxsize::Int,
+    options::AbstractOptions,
+    ropt::AbstractRuntimeOptions,
+) where {T,L,N}
+    # Get worker assignment and iteration number
+    worker_idx = assign_next_worker!(
+        state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
+    )
+
+    iteration = if options.use_recorder
+        key = "out$(j)_pop$(i)"
+        find_iteration_from_record(key, state.record[]) + 1
+    else
+        0
+    end
+
+    # Clone statistics and population for next iteration
+    c_rss = deepcopy(state.all_running_search_statistics[j])
+    in_pop = copy(cur_pop)
+
+    # Launch the next search cycle
+    state.worker_output[j][i] = @sr_spawner(
+        begin
+            _dispatch_s_r_cycle(
+                in_pop,
+                dataset,
+                options;
+                pop=i,
+                out=j,
+                iteration,
+                ropt.verbosity,
+                cur_maxsize,
+                running_search_statistics=c_rss,
+            )
+        end,
+        parallelism = ropt.parallelism,
+        worker_idx = worker_idx
+    )
+
+    # For parallel modes, set up the task to collect results
+    if ropt.parallelism in (:multiprocessing, :multithreading)
+        state.tasks[j][i] = Base.errormonitor(
+            @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
+        )
+    end
+end
+
+"""
+    _update_search_statistics!(equation_speed, state, last_speed_recording_time, num_evals_last)
+
+Update search statistics including evaluation speed.
+"""
+function _update_search_statistics!(
+    equation_speed::Vector{Float32},
+    state::AbstractSearchState,
+    last_speed_recording_time::Float64,
+    num_evals_last::Float64,
+)
+    elapsed_since_speed_recording = time() - last_speed_recording_time
+    if elapsed_since_speed_recording > 1.0
+        current_eval_sum = sum(sum, state.num_evals)
+        num_evals_since_last = current_eval_sum - num_evals_last
+        current_speed = num_evals_since_last / elapsed_since_speed_recording
+        push!(equation_speed, current_speed)
+
+        # Keep a running average of the last 20 seconds
+        average_over_m_measurements = 20
+        if length(equation_speed) > average_over_m_measurements
+            deleteat!(equation_speed, 1)
+        end
+
+        return time(), current_eval_sum
+    else
+        return last_speed_recording_time, num_evals_last
+    end
+end
+
+"""
+    _print_status_update(ropt, options, state, datasets, equation_speed, last_print_time, resource_monitor)
+
+Print status updates to the console at regular intervals.
+"""
+function _print_status_update(
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+    state::AbstractSearchState,
+    datasets,
+    equation_speed::Vector{Float32},
+    last_print_time::Float64,
+    resource_monitor::ResourceMonitor,
+)
+    print_every_n_seconds = 5
+    elapsed = time() - last_print_time
+
+    if elapsed > print_every_n_seconds
+        if ropt.verbosity > 0 && !ropt.progress && length(equation_speed) > 0
+            head_node_occupation = estimate_work_fraction(resource_monitor)
+            total_cycles = ropt.niterations * options.populations
+            print_search_state(
+                state.halls_of_fame,
+                datasets;
+                options,
+                equation_speed,
+                total_cycles,
+                state.cycles_remaining,
+                head_node_occupation,
+                parallelism=ropt.parallelism,
+                width=options.terminal_width,
+            )
+        end
+        return time()
+    else
+        return last_print_time
+    end
+end
+
+"""
+    _should_continue_search(state, start_time, options)
+
+Check if the search should continue by evaluating all stopping conditions.
+Returns true if search should continue, false if it should stop.
+"""
+function _should_continue_search(
+    state::AbstractSearchState, start_time::Float64, options::AbstractOptions
+)
+    has_cycles_remaining = sum(state.cycles_remaining) > 0
+    early_stop = any((
+        check_for_loss_threshold(state.halls_of_fame, options),
+        check_for_user_quit(state.stdin_reader),
+        check_for_timeout(start_time, options),
+        check_max_evals(state.num_evals, options),
+    ))
+    return has_cycles_remaining && !early_stop
+end
+
+"""
+    _check_population_ready(state, j, i, ropt)
+
+Check if a specific population is ready for processing.
+"""
+function _check_population_ready(
+    state::AbstractSearchState, (j, i), ropt::AbstractRuntimeOptions
+)
+    # Check if error on population
+    if ropt.parallelism in (:multiprocessing, :multithreading)
+        if istaskfailed(state.tasks[j][i])
+            fetch(state.tasks[j][i])
+            error("Task failed for population")
+        end
+    end
+
+    # Non-blocking check if a population is ready
+    population_ready = if ropt.parallelism in (:multiprocessing, :multithreading)
+        isready(state.channels[j][i])
+    else
+        true
+    end
+
+    # Don't start more if this output has finished its cycles
+    return population_ready && (state.cycles_remaining[j] > 0)
+end
+
+function _main_search_loop!(
+    state::AbstractSearchState{T,L,N},
+    datasets,
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+) where {T,L,N}
+    ropt.verbosity > 0 && @info "Started!"
+    nout = length(datasets)
+    start_time = time()
+
+    # Setup progress bar if requested
+    progress_bar = if ropt.progress
+        sum_cycle_remaining = sum(state.cycles_remaining)
+        WrappedProgressBar(
+            sum_cycle_remaining, ropt.niterations; barlen=options.terminal_width
+        )
+    else
+        nothing
+    end
+
+    # Initialize timers and statistics
+    last_print_time = time()
+    last_speed_recording_time = time()
+    num_evals_last = sum(sum, state.num_evals)
+    equation_speed = Float32[]
+
+    # Initialize parallel workers
+    _initialize_parallel_workers!(state, nout, options, ropt)
+
+    # Setup resource monitoring
     kappa = 0
     resource_monitor = ResourceMonitor(;
-        # Storing n times as many monitoring intervals as populations seems like it will
-        # help get accurate resource estimates:
         max_recordings=options.populations * 100 * nout,
         start_reporting_at=options.populations * 3 * nout,
         window_size=options.populations * 2 * nout,
     )
-    while sum(state.cycles_remaining) > 0
+
+    # Main search loop
+    while _should_continue_search(state, start_time, options)
+        # Select next population to process
         kappa += 1
         if kappa > options.populations * nout
             kappa = 1
         end
-        # nout, populations:
-        j, i = state.task_order[kappa]
+        (j, i) = state.task_order[kappa]
 
-        # Check if error on population:
-        if ropt.parallelism in (:multiprocessing, :multithreading)
-            if istaskfailed(state.tasks[j][i])
-                fetch(state.tasks[j][i])
-                error("Task failed for population")
-            end
-        end
-        # Non-blocking check if a population is ready:
-        population_ready = if ropt.parallelism in (:multiprocessing, :multithreading)
-            # TODO: Implement type assertions based on parallelism.
-            isready(state.channels[j][i])
-        else
-            true
-        end
+        # Check if population is ready and record state
+        population_ready = _check_population_ready(state, (j, i), ropt)
         record_channel_state!(resource_monitor, population_ready)
 
-        # Don't start more if this output has finished its cycles:
-        # TODO - this might skip extra cycles?
-        population_ready &= (state.cycles_remaining[j] > 0)
+        # Process population results if ready
         if population_ready
-            # Take the fetch operation from the channel since its ready
-            (cur_pop, best_seen, cur_record, cur_num_evals) = if ropt.parallelism in
-                (
-                :multiprocessing, :multithreading
+            continue_search = _process_population_results!(
+                state,
+                (j, i),
+                datasets,
+                options,
+                resource_monitor,
+                equation_speed,
+                ropt,
+                progress_bar,
             )
-                take!(
-                    state.channels[j][i]
-                )
-            else
-                state.worker_output[j][i]
-            end::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N}}
-            state.last_pops[j][i] = copy(cur_pop)
-            state.best_sub_pops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
-            @recorder state.record[] = recursive_merge(state.record[], cur_record)
-            state.num_evals[j][i] += cur_num_evals
-            dataset = datasets[j]
-            cur_maxsize = state.cur_maxsizes[j]
-
-            for member in cur_pop.members
-                size = compute_complexity(member, options)
-                update_frequencies!(state.all_running_search_statistics[j]; size)
-            end
-            #! format: off
-            update_hall_of_fame!(state.halls_of_fame[j], cur_pop.members, options)
-            update_hall_of_fame!(state.halls_of_fame[j], best_seen.members[best_seen.exists], options)
-            #! format: on
-
-            # Dominating pareto curve - must be better than all simpler equations
-            dominating = calculate_pareto_frontier(state.halls_of_fame[j])
-
-            if options.save_to_file
-                save_to_file(dominating, nout, j, dataset, options, ropt)
-            end
-            ###################################################################
-            # Migration #######################################################
-            if options.migration
-                best_of_each = Population([
-                    member for pop in state.best_sub_pops[j] for member in pop.members
-                ])
-                migrate!(
-                    best_of_each.members => cur_pop, options; frac=options.fraction_replaced
-                )
-            end
-            if options.hof_migration && length(dominating) > 0
-                migrate!(dominating => cur_pop, options; frac=options.fraction_replaced_hof)
-            end
-            ###################################################################
-
-            state.cycles_remaining[j] -= 1
-            if state.cycles_remaining[j] == 0
+            if !continue_search
                 break
             end
-            worker_idx = assign_next_worker!(
-                state.worker_assignment;
-                out=j,
-                pop=i,
-                parallelism=ropt.parallelism,
-                state.procs,
-            )
-            iteration = if options.use_recorder
-                key = "out$(j)_pop$(i)"
-                find_iteration_from_record(key, state.record[]) + 1
-            else
-                0
-            end
-
-            c_rss = deepcopy(state.all_running_search_statistics[j])
-            in_pop = copy(cur_pop::Population{T,L,N})
-            state.worker_output[j][i] = @sr_spawner(
-                begin
-                    _dispatch_s_r_cycle(
-                        in_pop,
-                        dataset,
-                        options;
-                        pop=i,
-                        out=j,
-                        iteration,
-                        ropt.verbosity,
-                        cur_maxsize,
-                        running_search_statistics=c_rss,
-                    )
-                end,
-                parallelism = ropt.parallelism,
-                worker_idx = worker_idx
-            )
-            if ropt.parallelism in (:multiprocessing, :multithreading)
-                state.tasks[j][i] = Base.errormonitor(
-                    @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
-                )
-            end
-
-            total_cycles = ropt.niterations * options.populations
-            state.cur_maxsizes[j] = get_cur_maxsize(;
-                options, total_cycles, cycles_remaining=state.cycles_remaining[j]
-            )
-            move_window!(state.all_running_search_statistics[j])
-            if !isnothing(progress_bar)
-                head_node_occupation = estimate_work_fraction(resource_monitor)
-                update_progress_bar!(
-                    progress_bar,
-                    only(state.halls_of_fame),
-                    only(datasets),
-                    options,
-                    equation_speed,
-                    head_node_occupation,
-                    ropt.parallelism,
-                )
-            end
-            if ropt.logger !== nothing
-                logging_callback!(ropt.logger; state, datasets, ropt, options)
-            end
         end
+
+        # Allow other tasks to run
         yield()
 
-        ################################################################
-        ## Search statistics
-        elapsed_since_speed_recording = time() - last_speed_recording_time
-        if elapsed_since_speed_recording > 1.0
-            num_evals_since_last, num_evals_last = let s = sum(sum, state.num_evals)
-                s - num_evals_last, s
-            end
-            current_speed = num_evals_since_last / elapsed_since_speed_recording
-            push!(equation_speed, current_speed)
-            average_over_m_measurements = 20 # 20 second running average
-            if length(equation_speed) > average_over_m_measurements
-                deleteat!(equation_speed, 1)
-            end
-            last_speed_recording_time = time()
-        end
-        ################################################################
+        # Update statistics periodically
+        last_speed_recording_time, num_evals_last = _update_search_statistics!(
+            equation_speed, state, last_speed_recording_time, num_evals_last
+        )
 
-        ################################################################
-        ## Printing code
-        elapsed = time() - last_print_time
-        # Update if time has passed
-        if elapsed > print_every_n_seconds
-            if ropt.verbosity > 0 && !ropt.progress && length(equation_speed) > 0
-
-                # Dominating pareto curve - must be better than all simpler equations
-                head_node_occupation = estimate_work_fraction(resource_monitor)
-                total_cycles = ropt.niterations * options.populations
-                print_search_state(
-                    state.halls_of_fame,
-                    datasets;
-                    options,
-                    equation_speed,
-                    total_cycles,
-                    state.cycles_remaining,
-                    head_node_occupation,
-                    parallelism=ropt.parallelism,
-                    width=options.terminal_width,
-                )
-            end
-            last_print_time = time()
-        end
-        ################################################################
-
-        ################################################################
-        ## Early stopping code
-        if any((
-            check_for_loss_threshold(state.halls_of_fame, options),
-            check_for_user_quit(state.stdin_reader),
-            check_for_timeout(start_time, options),
-            check_max_evals(state.num_evals, options),
-        ))
-            break
-        end
-        ################################################################
+        # Print status updates periodically
+        last_print_time = _print_status_update(
+            ropt,
+            options,
+            state,
+            datasets,
+            equation_speed,
+            last_print_time,
+            resource_monitor,
+        )
     end
+
+    # Cleanup
     if !isnothing(progress_bar)
         finish!(progress_bar)
     end
