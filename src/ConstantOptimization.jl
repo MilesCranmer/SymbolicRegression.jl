@@ -11,9 +11,10 @@ using DynamicExpressions:
     get_scalar_constants,
     set_scalar_constants!,
     extract_gradient
+using DispatchDoctor: @unstable
 using ..CoreModule:
     AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, specialized_options, dataset_fraction
-using ..UtilsModule: get_birth_order, PerTaskCache
+using ..UtilsModule: get_birth_order, PerTaskCache, stable_get!
 using ..LossFunctionsModule: eval_loss, loss_to_cost
 using ..PopMemberModule: PopMember
 
@@ -58,12 +59,18 @@ function _optimize_constants(
     dataset, member::P, options, algorithm, optimizer_options
 )::Tuple{P,Float64} where {T,L,P<:PopMember{T,L}}
     tree = member.tree
-    eval_fraction = dataset_fraction(dataset)
     x0, refs = get_scalar_constants(tree)
     @assert count_constants_for_optimization(tree) == length(x0)
     ctx = EvaluatorContext(dataset, options)
     f = Evaluator(tree, refs, ctx)
     fg! = GradEvaluator(f, options.autodiff_backend)
+    return _optimize_constants_inner(
+        f, fg!, x0, refs, dataset, member, options, algorithm, optimizer_options
+    )
+end
+function _optimize_constants_inner(
+    f::F, fg!::G, x0, refs, dataset, member::P, options, algorithm, optimizer_options
+)::Tuple{P,Float64} where {F<:Evaluator,G<:GradEvaluator,T,L,P<:PopMember{T,L}}
     obj = if algorithm isa Optim.Newton || options.autodiff_backend === nothing
         f
     else
@@ -71,6 +78,7 @@ function _optimize_constants(
     end
     baseline = f(x0)
     result = Optim.optimize(obj, x0, algorithm, optimizer_options)
+    eval_fraction = dataset_fraction(dataset)
     num_evals = result.f_calls * eval_fraction
     # Try other initial conditions:
     for _ in 1:(options.optimizer_nrestarts)
@@ -94,6 +102,7 @@ function _optimize_constants(
         member.birth = get_birth_order(; deterministic=options.deterministic)
         num_evals += eval_fraction
     else
+        # Reset to original state
         set_scalar_constants!(member.tree, x0, refs)
     end
 
@@ -124,18 +133,18 @@ struct GradEvaluator{E<:Evaluator,AD<:Union{Nothing,AbstractADType},PR,EX} <: Fu
     backend::AD
     extra::EX
 end
-function GradEvaluator(e::Evaluator, backend)
+@unstable function GradEvaluator(e::Evaluator, backend)
     prep = isnothing(backend) ? nothing : _cached_prep(e.ctx, backend, e.tree)
     return GradEvaluator(e, prep, backend, nothing)
 end
 
 const CachedPrep = PerTaskCache{Dict{UInt,Any}}()
 
-function _cached_prep(ctx, backend, example_tree)
+@unstable function _cached_prep(ctx, backend, example_tree)
     # We avoid hashing on the tree because it should not affect the prep.
     # We want to cache as much as possible!
     key = hash((ctx, backend))
-    get!(CachedPrep[], key) do
+    stable_get!(CachedPrep[], key) do
         prepare_gradient(ctx, backend, example_tree)
     end
 end
