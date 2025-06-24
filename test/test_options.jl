@@ -26,3 +26,19 @@
     @test_throws AssertionError Options(; loss_scale=:invalid)
     @test_throws AssertionError Options(; loss_scale=:cubic)
 end
+
+@testitem "Test operators parameter conflicts" tags = [:part1] begin
+    using SymbolicRegression
+    using DynamicExpressions: OperatorEnum
+
+    # Test that when operators is provided, we can't also provide individual sets
+    operators = OperatorEnum(1 => (sin, cos), 2 => (+, *, -))
+    @test_throws AssertionError Options(; operators, binary_operators=(+, *))
+    @test_throws AssertionError Options(; operators, unary_operators=(sin,))
+
+    # Test that when operators is provided, operator_enum_constructor should be nothing
+    @test_throws AssertionError Options(; operators, operator_enum_constructor=OperatorEnum)
+
+    # Test that providing operators alone works fine (should not throw)
+    @test_nowarn Options(; operators)
+end

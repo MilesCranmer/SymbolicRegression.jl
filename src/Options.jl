@@ -779,9 +779,15 @@ $(OPTION_DESCRIPTIONS)
     @assert loss_scale in (:log, :linear) "`loss_scale` must be either log or linear"
 
     # Make sure nested_constraints contains functions within our operator set:
-    _nested_constraints = build_nested_constraints(;
-        binary_operators, unary_operators, nested_constraints
-    )
+    _nested_constraints = if operators !== nothing
+        build_nested_constraints(;
+            binary_operators=operators.ops[2],
+            unary_operators=operators.ops[1],
+            nested_constraints,
+        )
+    else
+        build_nested_constraints(; binary_operators, unary_operators, nested_constraints)
+    end
 
     if typeof(constraints) <: Tuple
         constraints = collect(constraints)
@@ -790,10 +796,11 @@ $(OPTION_DESCRIPTIONS)
         @assert bin_constraints === nothing
         @assert una_constraints === nothing
         # TODO: This is redundant with the checks in equation_search
-        for op in binary_operators
+        operators !== nothing && @assert length(operators.ops) == 2
+        for op in @something(binary_operators, operators.ops[2])
             @assert !(op in unary_operators)
         end
-        for op in unary_operators
+        for op in @something(unary_operators, operators.ops[1])
             @assert !(op in binary_operators)
         end
         bin_constraints = constraints
@@ -825,19 +832,40 @@ $(OPTION_DESCRIPTIONS)
         node_type = @something(node_type, default_node_type(expression_type))
     end
 
-    _una_constraints, _bin_constraints = build_constraints(;
-        una_constraints, bin_constraints, unary_operators, binary_operators
-    )
+    _una_constraints, _bin_constraints = if operators !== nothing
+        # When operators is provided, extract operators from the enum for constraints
+        @assert length(operators.ops) == 2
+        build_constraints(;
+            una_constraints,
+            bin_constraints,
+            unary_operators=operators.ops[1],
+            binary_operators=operators.ops[2],
+        )
+    else
+        build_constraints(; una_constraints, bin_constraints, unary_operators, binary_operators)
+    end
 
     complexity_mapping = @something(
         complexity_mapping,
-        ComplexityMapping(
-            complexity_of_operators,
-            complexity_of_variables,
-            complexity_of_constants,
-            binary_operators,
-            unary_operators,
-        )
+        if operators !== nothing
+            # When operators is provided, use the operators from the enum
+            @assert length(operators.ops) == 2
+            ComplexityMapping(
+                complexity_of_operators,
+                complexity_of_variables,
+                complexity_of_constants,
+                operators.ops[2],
+                operators.ops[1],
+            )
+        else
+            ComplexityMapping(
+                complexity_of_operators,
+                complexity_of_variables,
+                complexity_of_constants,
+                binary_operators,
+                unary_operators,
+            )
+        end
     )
 
     if maxdepth === nothing
