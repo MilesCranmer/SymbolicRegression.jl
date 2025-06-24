@@ -3,11 +3,11 @@
     using Optim: Optim
 
     # testing types
-    op = Options(; optimizer_options=(iterations=16, f_calls_limit=100, x_tol=1e-16))
+    op = Options(; optimizer_options=(iterations=16, f_calls_limit=100, x_abstol=1e-16))
     @test isa(op.optimizer_options, Optim.Options)
 
     op = Options(;
-        optimizer_options=Dict(:iterations => 32, :g_calls_limit => 50, :f_tol => 1e-16)
+        optimizer_options=Dict(:iterations => 32, :g_calls_limit => 50, :f_reltol => 1e-16)
     )
     @test isa(op.optimizer_options, Optim.Options)
 
