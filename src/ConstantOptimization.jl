@@ -85,7 +85,7 @@ function _optimize_constants(
     end
 
     if result.minimum < baseline
-        member.tree = tree
+        set_scalar_constants!(member.tree, result.minimizer, refs)
         member.loss = f(result.minimizer; regularization=true)
         member.cost = loss_to_cost(
             member.loss, dataset.use_baseline, dataset.baseline_loss, member, options
