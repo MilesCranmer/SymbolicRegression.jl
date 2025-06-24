@@ -7,7 +7,7 @@ using ..ComplexityModule: compute_complexity, past_complexity_limit
 
 # Check if any binary operator are overly complex
 function flag_bin_operator_complexity(
-    tree::AbstractExpressionNode, op, cons, options::AbstractOptions
+    tree::AbstractExpressionNode{<:Any,2}, op, cons, options::AbstractOptions
 )::Bool
     any(tree) do subtree
         if subtree.degree == 2 && subtree.op == op
@@ -80,7 +80,7 @@ function check_constraints(
     return check_constraints(tree, options, maxsize, cursize)
 end
 function check_constraints(
-    tree::AbstractExpressionNode,
+    tree::AbstractExpressionNode{<:Any,2},
     options::AbstractOptions,
     maxsize::Int,
     cursize::Union{Int,Nothing}=nothing,
@@ -88,12 +88,12 @@ function check_constraints(
     ((cursize === nothing) ? compute_complexity(tree, options) : cursize) > maxsize &&
         return false
     count_depth(tree) > options.maxdepth && return false
-    for i in 1:(options.nbin)
+    for i in 1:(options.nops[2])
         cons = options.bin_constraints[i]
         cons == (-1, -1) && continue
         flag_bin_operator_complexity(tree, i, cons, options) && return false
     end
-    for i in 1:(options.nuna)
+    for i in 1:(options.nops[1])
         cons = options.una_constraints[i]
         cons == -1 && continue
         flag_una_operator_complexity(tree, i, cons, options) && return false

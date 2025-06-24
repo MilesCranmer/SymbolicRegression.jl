@@ -180,6 +180,7 @@ abstract type AbstractOptions end
 struct Options{
     CM<:Union{ComplexityMapping,Function},
     OP<:AbstractOperatorEnum,
+    NOPS<:Tuple,
     N<:AbstractExpressionNode,
     E<:AbstractExpression,
     EO<:NamedTuple,
@@ -229,8 +230,7 @@ struct Options{
     v_print_precision::Val{print_precision}
     save_to_file::Bool
     probability_negate_constant::Float32
-    nuna::Int
-    nbin::Int
+    nops::NOPS
     seed::Union{Int,Nothing}
     elementwise_loss::Union{SupervisedLoss,Function}
     loss_function::Union{Nothing,Function}
