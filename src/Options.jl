@@ -9,6 +9,7 @@ using DynamicExpressions:
     default_node_type,
     AbstractExpression,
     AbstractExpressionNode
+using DynamicExpressions.NodeModule: has_max_degree, with_max_degree
 using ADTypes: AbstractADType, ADTypes
 using LossFunctions: L2DistLoss, SupervisedLoss
 using Optim: Optim
@@ -200,6 +201,23 @@ recommend_loss_function_expression(expression_type) = false
 
 create_mutation_weights(w::AbstractMutationWeights) = w
 create_mutation_weights(w::NamedTuple) = MutationWeights(; w...)
+
+@unstable function with_max_degree_from_context(
+    node_type, user_provided_operators, operators
+)
+    if has_max_degree(node_type)
+        # The user passed a node type with an explicit max degree,
+        # so we don't override it.
+        node_type
+    else
+        if user_provided_operators
+            # We select a degree so that we fit the number of operators
+            with_max_degree(node_type, Val(length(operators)))
+        else
+            with_max_degree(node_type, Val(2))
+        end
+    end
+end
 
 const deprecated_options_mapping = Base.ImmutableDict(
     :mutationWeights => :mutation_weights,
@@ -705,7 +723,9 @@ $(OPTION_DESCRIPTIONS)
     if output_file !== nothing
         error("`output_file` is deprecated. Use `output_directory` instead.")
     end
-    if operators !== nothing
+    user_provided_operators = !isnothing(operators)
+
+    if user_provided_operators
         @assert binary_operators === nothing
         @assert unary_operators === nothing
         @assert operator_enum_constructor === nothing
@@ -756,7 +776,7 @@ $(OPTION_DESCRIPTIONS)
     topn = something(topn, _default_options.topn)
     batching = something(batching, _default_options.batching)
     batch_size = something(batch_size, _default_options.batch_size)
-    if operators === nothing
+    if !user_provided_operators
         binary_operators = something(binary_operators, _default_options.operators.ops[2])
         unary_operators = something(unary_operators, _default_options.operators.ops[1])
     end
@@ -779,9 +799,15 @@ $(OPTION_DESCRIPTIONS)
     @assert loss_scale in (:log, :linear) "`loss_scale` must be either log or linear"
 
     # Make sure nested_constraints contains functions within our operator set:
-    _nested_constraints = build_nested_constraints(;
-        binary_operators, unary_operators, nested_constraints
-    )
+    _nested_constraints = if user_provided_operators
+        build_nested_constraints(;
+            binary_operators=operators.ops[2],
+            unary_operators=operators.ops[1],
+            nested_constraints,
+        )
+    else
+        build_nested_constraints(; binary_operators, unary_operators, nested_constraints)
+    end
 
     if typeof(constraints) <: Tuple
         constraints = collect(constraints)
@@ -790,10 +816,11 @@ $(OPTION_DESCRIPTIONS)
         @assert bin_constraints === nothing
         @assert una_constraints === nothing
         # TODO: This is redundant with the checks in equation_search
-        for op in binary_operators
+        user_provided_operators && @assert length(operators.ops) == 2
+        for op in @something(binary_operators, operators.ops[2])
             @assert !(op in unary_operators)
         end
-        for op in unary_operators
+        for op in @something(unary_operators, operators.ops[1])
             @assert !(op in binary_operators)
         end
         bin_constraints = constraints
@@ -825,27 +852,48 @@ $(OPTION_DESCRIPTIONS)
         node_type = @something(node_type, default_node_type(expression_type))
     end
 
-    _una_constraints, _bin_constraints = build_constraints(;
-        una_constraints, bin_constraints, unary_operators, binary_operators
-    )
+    node_type = with_max_degree_from_context(node_type, user_provided_operators, operators)
+
+    _una_constraints, _bin_constraints = if user_provided_operators
+        # When operators is provided, extract operators from the enum for constraints
+        @assert length(operators.ops) == 2
+        build_constraints(;
+            una_constraints,
+            bin_constraints,
+            unary_operators=operators.ops[1],
+            binary_operators=operators.ops[2],
+        )
+    else
+        build_constraints(; una_constraints, bin_constraints, unary_operators, binary_operators)
+    end
 
     complexity_mapping = @something(
         complexity_mapping,
-        ComplexityMapping(
-            complexity_of_operators,
-            complexity_of_variables,
-            complexity_of_constants,
-            binary_operators,
-            unary_operators,
-        )
+        if user_provided_operators
+            # When operators is provided, use the operators from the enum
+            @assert length(operators.ops) == 2
+            ComplexityMapping(
+                complexity_of_operators,
+                complexity_of_variables,
+                complexity_of_constants,
+                operators.ops[2],
+                operators.ops[1],
+            )
+        else
+            ComplexityMapping(
+                complexity_of_operators,
+                complexity_of_variables,
+                complexity_of_constants,
+                binary_operators,
+                unary_operators,
+            )
+        end
     )
 
-    if maxdepth === nothing
-        maxdepth = maxsize
-    end
+    maxdepth = something(maxdepth, maxsize)
 
-    if define_helper_functions && any(!isnothing, (binary_operators, unary_operators))
-        # We call here so that mapped operators, like ^
+    if define_helper_functions && !user_provided_operators
+        # We call here so that mapped operators, like `^`
         # are correctly overloaded, rather than overloading
         # operators like "safe_pow", etc.
         OperatorEnum(;
@@ -856,7 +904,7 @@ $(OPTION_DESCRIPTIONS)
         )
     end
 
-    operators = if operators !== nothing
+    operators = if user_provided_operators
         operators
     else
         binary_operators = map(opmap, binary_operators)
