@@ -42,3 +42,16 @@ end
     # Test that providing operators alone works fine (should not throw)
     @test_nowarn Options(; operators)
 end
+
+@testitem "Test with_max_degree_from_context" tags = [:part1] begin
+    using SymbolicRegression
+
+    operators = OperatorEnum(1 => (sin, cos), 2 => (+, *, -))
+    @test Options(; node_type=GraphNode, operators).node_type <: GraphNode{<:Any,2}
+    @test Options(; node_type=Node, operators).node_type <: Node{<:Any,2}
+
+    operators = OperatorEnum(1 => (sin, cos), 2 => ())
+    @test Options(; node_type=Node{<:Any,1}, operators).node_type <: Node{<:Any,1}
+
+    @test Options().node_type <: Node{<:Any,2}
+end
