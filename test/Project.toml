@@ -17,6 +17,7 @@ LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 MLJBase = "a7f614a8-145f-11e9-1d2a-a57a1082229d"
 MLJModelInterface = "e80e1ace-859a-464e-9ed9-23947d8ae3ea"
 MLJTestInterface = "72560011-54dd-4dc2-94f3-c5de45b75ecd"
+Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -32,3 +33,6 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [preferences.SymbolicRegression]
 dispatch_doctor_mode = "error"
+
+[sources]
+Mooncake = { url = "https://github.com/MilesCranmer/Mooncake.jl.git", rev = "fix-iostream" }
