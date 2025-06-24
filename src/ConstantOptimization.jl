@@ -70,7 +70,7 @@ function _optimize_constants(
 end
 function _optimize_constants_inner(
     f::F, fg!::G, x0, refs, dataset, member::P, options, algorithm, optimizer_options
-)::Tuple{P,Float64} where {F<:Evaluator,G<:GradEvaluator,T,L,P<:PopMember{T,L}}
+)::Tuple{P,Float64} where {F,G,T,L,P<:PopMember{T,L}}
     obj = if algorithm isa Optim.Newton || options.autodiff_backend === nothing
         f
     else
