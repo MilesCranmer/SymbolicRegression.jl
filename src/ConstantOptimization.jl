@@ -1,5 +1,6 @@
 module ConstantOptimizationModule
 
+using Random: AbstractRNG, default_rng
 using LineSearches: LineSearches
 using Optim: Optim
 using ADTypes: AbstractADType, AutoEnzyme
@@ -26,7 +27,10 @@ function can_optimize(::Type{T}, _) where {T<:Number}
 end
 
 function optimize_constants(
-    dataset::Dataset{T,L}, member::P, options::AbstractOptions
+    dataset::Dataset{T,L},
+    member::P,
+    options::AbstractOptions;
+    rng::AbstractRNG=default_rng(),
 )::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
     can_optimize(member.tree, options) || return (member, 0.0)
     nconst = count_constants_for_optimization(member.tree)
@@ -39,6 +43,7 @@ function optimize_constants(
             specialized_options(options),
             algorithm,
             options.optimizer_options,
+            rng,
         )
     end
     return _optimize_constants(
@@ -49,6 +54,7 @@ function optimize_constants(
         # more particular about dynamic dispatch
         options.optimizer_algorithm,
         options.optimizer_options,
+        rng,
     )
 end
 
@@ -56,7 +62,7 @@ end
 count_constants_for_optimization(ex::Expression) = count_scalar_constants(ex)
 
 function _optimize_constants(
-    dataset, member::P, options, algorithm, optimizer_options
+    dataset, member::P, options, algorithm, optimizer_options, rng
 )::Tuple{P,Float64} where {T,L,P<:PopMember{T,L}}
     tree = member.tree
     x0, refs = get_scalar_constants(tree)
@@ -65,11 +71,11 @@ function _optimize_constants(
     f = Evaluator(tree, refs, ctx)
     fg! = GradEvaluator(f, options.autodiff_backend)
     return _optimize_constants_inner(
-        f, fg!, x0, refs, dataset, member, options, algorithm, optimizer_options
+        f, fg!, x0, refs, dataset, member, options, algorithm, optimizer_options, rng
     )
 end
 function _optimize_constants_inner(
-    f::F, fg!::G, x0, refs, dataset, member::P, options, algorithm, optimizer_options
+    f::F, fg!::G, x0, refs, dataset, member::P, options, algorithm, optimizer_options, rng
 )::Tuple{P,Float64} where {F,G,T,L,P<:PopMember{T,L}}
     obj = if algorithm isa Optim.Newton || options.autodiff_backend === nothing
         f
@@ -82,7 +88,7 @@ function _optimize_constants_inner(
     num_evals = result.f_calls * eval_fraction
     # Try other initial conditions:
     for _ in 1:(options.optimizer_nrestarts)
-        eps = randn(T, size(x0)...)
+        eps = randn(rng, T, size(x0)...)
         xt = @. x0 * (T(1) + T(1//2) * eps)
         tmpresult = Optim.optimize(obj, xt, algorithm, optimizer_options)
         num_evals += tmpresult.f_calls * eval_fraction
