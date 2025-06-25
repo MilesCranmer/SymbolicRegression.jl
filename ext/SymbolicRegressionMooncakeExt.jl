@@ -4,6 +4,22 @@ using DynamicExpressions: DynamicExpressions as DE
 using SymbolicRegression: SymbolicRegression as SR
 using Mooncake: Mooncake
 
+# TODO: Remove this hack once Mooncake.jl is updated:
+if !applicable(Mooncake.tangent_type, Union{Mooncake.NoFData,Float32}, Mooncake.NoRData)
+    @eval function Mooncake.tangent_type(
+        ::Type{Union{Mooncake.NoFData,T}}, ::Type{Mooncake.NoRData}
+    ) where {T}
+        return Union{Mooncake.NoTangent,Mooncake.tangent_type(T)}
+    end
+end
+if !applicable(Mooncake.tangent_type, Mooncake.NoFData, Union{Mooncake.NoRData,Float32})
+    @eval function Mooncake.tangent_type(
+        ::Type{Mooncake.NoFData}, ::Type{Union{Mooncake.NoRData,T}}
+    ) where {T<:Base.IEEEFloat}
+        return Union{Mooncake.NoTangent,Mooncake.tangent_type(T)}
+    end
+end
+
 function DE.extract_gradient(
     gradient::Mooncake.Tangent, ex::SR.TemplateExpression{T}
 ) where {T}
