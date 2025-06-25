@@ -289,7 +289,7 @@ function (f::FixKws{F,KWS})(args::Vararg{Any,N}) where {F,KWS,N}
     return f.f(args...; f.kws...)
 end
 
-@unstable Base.@assume_effects :foldable function return_type(f::F) where {F}
+function return_type(f::F) where {F}
     return Core.Compiler.return_type(f, Tuple{})
 end
 @unstable function stable_get!(f::F, dict, key) where {F}
