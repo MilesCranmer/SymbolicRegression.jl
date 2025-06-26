@@ -12,16 +12,16 @@ using DynamicExpressions:
 using ADTypes: AutoEnzyme
 using Enzyme: autodiff, Reverse, Active, Const, Duplicated
 
-import SymbolicRegression.ConstantOptimizationModule: GradEvaluator
+import SymbolicRegression.ConstantOptimizationModule: Evaluator, GradEvaluator
 
 # We prepare a copy of the tree and all arrays
-function GradEvaluator(f::F, backend::AE) where {F,AE<:AutoEnzyme}
+function GradEvaluator(f::F, backend::AE) where {F<:Evaluator,AE<:AutoEnzyme}
     storage_tree = copy(f.tree)
     _, storage_refs = get_scalar_constants(storage_tree)
-    storage_dataset = deepcopy(f.dataset)
+    storage_dataset = deepcopy(f.ctx.dataset)
     # TODO: It is super inefficient to deepcopy; how can we skip this
     return GradEvaluator(
-        f, backend, nothing, (; storage_tree, storage_refs, storage_dataset)
+        f, nothing, backend, (; storage_tree, storage_refs, storage_dataset)
     )
 end
 
