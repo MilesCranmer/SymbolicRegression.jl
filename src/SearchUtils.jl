@@ -11,15 +11,17 @@ using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
 using Logging: AbstractLogger
 
-using DynamicExpressions: AbstractExpression, string_tree
+using DynamicExpressions: AbstractExpression, string_tree, parse_expression
 using ..UtilsModule: subscriptify
 using ..CoreModule: Dataset, AbstractOptions, Options, RecordType, max_features
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
 using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
+using ..ConstantOptimizationModule: optimize_constants
 using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
+using ..ExpressionBuilderModule: strip_metadata
 
 function logging_callback! end
 
@@ -691,6 +693,64 @@ function update_hall_of_fame!(
             hall_of_fame.members[size] = copy(member)
             hall_of_fame.exists[size] = true
         end
+    end
+end
+
+"""Parse user-provided guess expressions and convert them into optimized
+`PopMember` objects for each output dataset."""
+function parse_guesses(
+    ::Type{P},
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing},
+    datasets::Vector{D},
+    options::AbstractOptions,
+) where {T,L,P<:PopMember{T,L},D<:Dataset{T,L}}
+    nout = length(datasets)
+    out = [P[] for _ in 1:nout]
+    guesses === nothing && return out
+    guess_lists = _make_vector_vector(guesses, nout)
+    for j in 1:nout
+        dataset = datasets[j]
+        for g in guess_lists[j]
+            g::Union{AbstractExpression,AbstractString}
+            ex = if g isa AbstractExpression
+                g
+            else
+                parse_expression(
+                    Meta.parse(g);
+                    operators=options.operators,
+                    variable_names=dataset.variable_names,
+                    node_type=options.node_type,
+                    expression_type=options.expression_type,
+                )
+            end
+            member = PopMember(dataset, ex, options; deterministic=options.deterministic)
+            if options.should_optimize_constants
+                member, _ = optimize_constants(dataset, member, options)
+            end
+            member = strip_metadata(member, options, dataset)
+            push!(out[j], member)
+        end
+    end
+    return out
+end
+function _make_vector_vector(guesses, nout)
+    if nout == 1
+        if guesses isa AbstractVector{<:AbstractVector}
+            @assert length(guesses) == nout
+            return guesses
+        else
+            return [guesses]
+        end
+    else  # nout > 1
+        if !(guesses isa AbstractVector{<:AbstractVector})
+            throw(
+                ArgumentError(
+                    "`guesses` must be a vector of vectors of strings when `nout > 1`"
+                ),
+            )
+        end
+        @assert length(guesses) == nout
+        return guesses
     end
 end
 
