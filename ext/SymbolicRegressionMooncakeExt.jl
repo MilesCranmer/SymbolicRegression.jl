@@ -24,7 +24,7 @@ function DE.extract_gradient(
     gradient::Mooncake.Tangent, ex::SR.TemplateExpression{T}
 ) where {T}
     arrays = Vector{T}[]
-    for (tree_gradient, tree) in zip(values(gradient.fields.trees), ex.trees)
+    for (tree_gradient, tree) in zip(values(gradient.fields.trees), values(ex.trees))
         if !(tree_gradient isa Mooncake.NoTangent)
             push!(arrays, DE.extract_gradient(tree_gradient, tree))
         else
@@ -36,7 +36,8 @@ function DE.extract_gradient(
     end
     if SR.has_params(ex)
         for (param_gradient, param) in zip(
-            values(gradient.fields.metadata.fields._data.parameters), ex.metadata.parameters
+            values(gradient.fields.metadata.fields._data.parameters),
+            values(ex.metadata.parameters),
         )
             if !(param_gradient isa Mooncake.NoTangent)
                 push!(arrays, param_gradient.fields._data)
