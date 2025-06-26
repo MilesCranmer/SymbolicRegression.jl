@@ -713,7 +713,7 @@ function parse_guesses(
         for g in guess_lists[j]
             g::Union{AbstractExpression,AbstractString}
             ex = if g isa AbstractExpression
-                g
+                copy(g)
             else
                 parse_expression(
                     Meta.parse(g);
