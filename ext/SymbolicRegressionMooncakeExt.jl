@@ -4,11 +4,14 @@ using DynamicExpressions: DynamicExpressions as DE
 using SymbolicRegression: SymbolicRegression as SR
 using Mooncake: Mooncake
 
-if !applicable(Mooncake.tangent_type, Union{Mooncake.NoFData,Float64}, Mooncake.NoRData)
+const _NEEDS_OVERLOAD =
+    !applicable(Mooncake.tangent_type, Union{Mooncake.NoFData,Float64}, Mooncake.NoRData)
+
+if _NEEDS_OVERLOAD
     @eval function Mooncake.tangent_type(
         ::Type{U}, ::Type{Mooncake.NoRData}
     ) where {U<:Union{Mooncake.NoFData,T} where {T}}
-        return Mooncake.tangent_type(T)
+        return Mooncake.tangent_type(U)
     end
 end
 
