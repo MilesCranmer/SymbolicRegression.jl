@@ -5,7 +5,11 @@ using SymbolicRegression: SymbolicRegression as SR
 using Mooncake: Mooncake
 
 const _NEEDS_OVERLOAD =
-    !applicable(Mooncake.tangent_type, Union{Mooncake.NoFData,Float64}, Mooncake.NoRData)
+    !applicable(
+        Mooncake.tangent_type,
+        Union{Mooncake.NoFData,Mooncake.FData{@NamedTuple{alphas::Vector{Float64}}}},
+        Mooncake.NoRData,
+    )
 
 if _NEEDS_OVERLOAD
     @eval function Mooncake.tangent_type(

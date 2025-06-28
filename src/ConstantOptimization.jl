@@ -26,7 +26,7 @@ function can_optimize(::Type{T}, _) where {T<:Number}
     return true
 end
 
-function optimize_constants(
+@unstable function optimize_constants(
     dataset::Dataset{T,L},
     member::P,
     options::AbstractOptions;
