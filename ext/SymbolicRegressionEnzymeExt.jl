@@ -12,15 +12,17 @@ using DynamicExpressions:
 using ADTypes: AutoEnzyme
 using Enzyme: autodiff, Reverse, Active, Const, Duplicated
 
-import SymbolicRegression.ConstantOptimizationModule: GradEvaluator
+import SymbolicRegression.ConstantOptimizationModule: Evaluator, GradEvaluator
 
 # We prepare a copy of the tree and all arrays
-function GradEvaluator(f::F, backend::AE) where {F,AE<:AutoEnzyme}
+function GradEvaluator(f::F, backend::AE) where {F<:Evaluator,AE<:AutoEnzyme}
     storage_tree = copy(f.tree)
     _, storage_refs = get_scalar_constants(storage_tree)
-    storage_dataset = deepcopy(f.dataset)
+    storage_dataset = deepcopy(f.ctx.dataset)
     # TODO: It is super inefficient to deepcopy; how can we skip this
-    return GradEvaluator(f, backend, (; storage_tree, storage_refs, storage_dataset))
+    return GradEvaluator(
+        f, nothing, backend, (; storage_tree, storage_refs, storage_dataset)
+    )
 end
 
 function evaluator(tree, dataset, options, output)
@@ -31,7 +33,7 @@ end
 with_stacksize(f::F, n) where {F} = fetch(schedule(Task(f, n)))
 
 function (g::GradEvaluator{<:Any,<:AutoEnzyme})(_, G, x::AbstractVector{T}) where {T}
-    set_scalar_constants!(g.f.tree, x, g.f.refs)
+    set_scalar_constants!(g.e.tree, x, g.e.refs)
     set_scalar_constants!(g.extra.storage_tree, zero(x), g.extra.storage_refs)
     fill!(g.extra.storage_dataset, 0)
 
@@ -42,9 +44,9 @@ function (g::GradEvaluator{<:Any,<:AutoEnzyme})(_, G, x::AbstractVector{T}) wher
         autodiff(
             Reverse,
             evaluator,
-            Duplicated(g.f.tree, g.extra.storage_tree),
-            Duplicated(g.f.dataset, g.extra.storage_dataset),
-            Const(g.f.options),
+            Duplicated(g.e.tree, g.extra.storage_tree),
+            Duplicated(g.e.ctx.dataset, g.extra.storage_dataset),
+            Const(g.e.ctx.options),
             Duplicated(output, doutput),
         )
     end
