@@ -447,38 +447,34 @@ end
 """Crossover between two expressions"""
 function crossover_trees(
     tree1::N, tree2::N, rng::AbstractRNG=default_rng()
-) where {T,N<:AbstractExpressionNode{T,2}}
-    if tree1 === tree2
-        error("Attempted to crossover the same tree!")
-    end
-    tree1 = copy(tree1)
-    tree2 = copy(tree2)
+) where {N<:AbstractExpressionNode}
+    tree1 === tree2 && error("Attempted to crossover the same tree!")
 
-    node1, parent1, side1 = random_node_and_parent(tree1, rng)
-    node2, parent2, side2 = random_node_and_parent(tree2, rng)
+    # copy whole trees so original expressions remain unchanged
+    t1 = copy(tree1)
+    t2 = copy(tree2)
 
-    node1 = copy(node1)
+    # pick random nodes (and parents) in each tree
+    n1, p1, i1 = _random_node_and_parent(t1, rng)
+    n2, p2, i2 = _random_node_and_parent(t2, rng)
 
-    if side1 == 'l'
-        parent1.l = copy(node2)
-        # tree1 now contains this.
-    elseif side1 == 'r'
-        parent1.r = copy(node2)
-        # tree1 now contains this.
-    else # 'n'
-        # This means that there is no parent2.
-        tree1 = copy(node2)
+    n1 = copy(n1)
+
+    # splice n2 into t1
+    if i1 == 0
+        t1 = copy(n2)
+    else
+        set_child!(p1, copy(n2), i1)
     end
 
-    if side2 == 'l'
-        parent2.l = node1
-    elseif side2 == 'r'
-        parent2.r = node1
-    else # 'n'
-        tree2 = node1
+    # splice n1 into t2
+    if i2 == 0
+        t2 = n1
+    else
+        set_child!(p2, n1, i2)
     end
 
-    return tree1, tree2
+    return t1, t2
 end
 
 function get_two_nodes_without_loop(tree::AbstractNode, rng::AbstractRNG; max_attempts=10)
