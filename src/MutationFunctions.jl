@@ -205,27 +205,35 @@ function insert_random_op(
     )
     return ex
 end
-function insert_random_op(
-    tree::AbstractExpressionNode{T},
+@generated function insert_random_op(
+    tree::AbstractExpressionNode{T,D},
     options::AbstractOptions,
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
-) where {T<:DATA_TYPE}
-    node = rand(rng, NodeSampler(; tree))
-    choice = rand(rng)
-    make_new_bin_op = choice < options.nops[2] / sum(values(options.nops))
-    left = copy(node)
-
-    if make_new_bin_op
-        right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
-        newnode = constructorof(typeof(tree))(;
-            op=rand(rng, 1:(options.nops[2])), l=left, r=right
+) where {T<:DATA_TYPE,D}
+    quote
+        node = rand(rng, NodeSampler(; tree))
+        csum = (0, cumsum(options.nops)...)
+        scaled_rand = rand(rng) * last(csum)
+        newnode = Base.Cartesian.@nif(
+            $D,
+            i -> scaled_rand > csum[i] && scaled_rand <= csum[i + 1],
+            i -> let
+                arg_to_carry = rand(rng, 1:i)
+                children = Base.Cartesian.@ntuple(
+                    i,
+                    j -> if j == arg_to_carry
+                        copy(node)
+                    else
+                        make_random_leaf(nfeatures, T, typeof(tree), rng, options)
+                    end
+                )
+                constructorof(typeof(tree))(; op=rand(rng, 1:(options.nops[i])), children)
+            end
         )
-    else
-        newnode = constructorof(typeof(tree))(; op=rand(rng, 1:(options.nops[1])), l=left)
+        set_node!(node, newnode)
+        return tree
     end
-    set_node!(node, newnode)
-    return tree
 end
 
 """Add random node to the top of a tree"""
@@ -241,27 +249,37 @@ function prepend_random_op(
     )
     return ex
 end
-function prepend_random_op(
-    tree::AbstractExpressionNode{T,2},
+
+@generated function prepend_random_op(
+    tree::AbstractExpressionNode{T,D},
     options::AbstractOptions,
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
-) where {T<:DATA_TYPE}
-    node = tree
-    choice = rand(rng)
-    make_new_bin_op = choice < options.nops[2] / sum(values(options.nops))
-    left = copy(tree)
+) where {T<:DATA_TYPE,D}
+    quote
+        @assert D == length(options.nops)
+        csum = (0, cumsum(options.nops)...)
+        scaled_rand = rand(rng) * last(csum)
 
-    if make_new_bin_op
-        right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
-        newnode = constructorof(typeof(tree))(;
-            op=rand(rng, 1:(options.nops[2])), l=left, r=right
+        newroot = Base.Cartesian.@nif(
+            $D,
+            i -> scaled_rand > csum[i] && scaled_rand <= csum[i + 1],
+            i -> let
+                carry = rand(rng, 1:i)
+                children = Base.Cartesian.@ntuple(
+                    i,
+                    j -> if j == carry
+                        tree
+                    else
+                        make_random_leaf(nfeatures, T, typeof(tree), rng, options)
+                    end
+                )
+                constructorof(typeof(tree))(; op=rand(rng, 1:options.nops[i]), children)
+            end,
         )
-    else
-        newnode = constructorof(typeof(tree))(; op=rand(rng, 1:(options.nops[1])), l=left)
+
+        return newroot
     end
-    set_node!(node, newnode)
-    return node
 end
 
 function make_random_leaf(
@@ -508,6 +526,18 @@ function break_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_r
     return tree
 end
 
+"""Return (node, parent, idx) where `idx == 0` iff node is the root."""
+function _random_node_and_parent(
+    tree::AbstractExpressionNode, rng::AbstractRNG=default_rng()
+)
+    node = rand(rng, NodeSampler(; tree))
+    if node === tree
+        return node, node, 0
+    else
+        parent, idx = _find_parent(tree, node)
+        return node, parent, idx
+    end
+end
 function _find_parent(tree::N, node::N) where {N<:AbstractNode}
     r = Ref{Tuple{typeof(tree),Int}}()
     finished = any(tree) do t
