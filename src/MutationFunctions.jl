@@ -154,45 +154,43 @@ function append_random_op(
     ex::AbstractExpression{T},
     options::AbstractOptions,
     nfeatures::Int,
-    rng::AbstractRNG=default_rng();
-    make_new_bin_op::Union{Bool,Nothing}=nothing,
+    rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
     ex = with_contents_for_mutation(
-        ex, append_random_op(tree, options, nfeatures, rng; make_new_bin_op), context
+        ex, append_random_op(tree, options, nfeatures, rng), context
     )
     return ex
 end
-function append_random_op(
-    tree::AbstractExpressionNode{T,2},
+@generated function append_random_op(
+    tree::AbstractExpressionNode{T,D},
     options::AbstractOptions,
     nfeatures::Int,
-    rng::AbstractRNG=default_rng();
-    make_new_bin_op::Union{Bool,Nothing}=nothing,
-) where {T<:DATA_TYPE}
-    node = rand(rng, NodeSampler(; tree, filter=t -> t.degree == 0))
+    rng::AbstractRNG=default_rng(),
+) where {T<:DATA_TYPE,D}
+    quote
+        node = _sample_leaf(rng, tree)
 
-    _make_new_bin_op = @something(
-        make_new_bin_op, rand(rng) < options.nops[2] / sum(values(options.nops)),
-    )
+        @assert D == length(options.nops)
+        csum = (0, cumsum(options.nops)...)
+        scaled_rand = rand(rng) * last(csum)
+        newnode = Base.Cartesian.@nif(
+            $D,
+            i -> scaled_rand > csum[i] && scaled_rand <= csum[i + 1],
+            i -> constructorof(typeof(tree))(;
+                op=rand(rng, 1:(options.nops[i])),
+                children=Base.Cartesian.@ntuple(
+                    i, j -> make_random_leaf(nfeatures, T, typeof(tree), rng, options)
+                )
+            )
+        )
 
-    if _make_new_bin_op
-        newnode = constructorof(typeof(tree))(;
-            op=rand(rng, 1:(options.nops[2])),
-            l=make_random_leaf(nfeatures, T, typeof(tree), rng, options),
-            r=make_random_leaf(nfeatures, T, typeof(tree), rng, options),
-        )
-    else
-        newnode = constructorof(typeof(tree))(;
-            op=rand(rng, 1:(options.nops[1])),
-            l=make_random_leaf(nfeatures, T, typeof(tree), rng, options),
-        )
+        set_node!(node, newnode)
+
+        return tree
     end
-
-    set_node!(node, newnode)
-
-    return tree
 end
+_sample_leaf(rng, tree) = rand(rng, NodeSampler(; tree, filter=t -> t.degree == 0))
 
 """Insert random node"""
 function insert_random_op(
