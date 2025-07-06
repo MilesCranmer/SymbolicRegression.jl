@@ -12,7 +12,10 @@ using DynamicExpressions:
     set_node!,
     count_nodes,
     has_constants,
-    has_operators
+    has_operators,
+    get_child,
+    set_child!,
+    max_degree
 using ..CoreModule: AbstractOptions, DATA_TYPE, init_value, sample_value
 
 import ..CoreModule: mutate_value
@@ -384,6 +387,44 @@ function gen_random_tree(
     return tree
 end
 
+@generated function _make_node(
+    arity::Int,
+    proto::AbstractExpressionNode{<:Any,D},
+    nfeatures::Int,
+    ::Type{T},
+    options::AbstractOptions,
+    rng::AbstractRNG,
+) where {T,D}
+    quote
+        Base.Cartesian.@nif(
+            $D,
+            i -> arity == i,
+            i -> constructorof(typeof(proto))(;
+                op=rand(rng, 1:options.nops[i]),
+                children=Base.Cartesian.@ntuple(
+                    i, j -> make_random_leaf(nfeatures, T, typeof(proto), rng, options),
+                ),
+            ),
+        )
+    end
+end
+
+function _arity_picker(rng::AbstractRNG, remaining::Int, nops::NTuple{D,Int}) where {D}
+    total = 0
+    for k in 1:min(D, remaining)
+        total += @inbounds nops[k]
+    end
+    total == 0 && return 0
+
+    thresh = rand(rng, 1:total)
+    acc = 0
+    for k in 1:min(D, remaining)
+        acc += @inbounds nops[k]
+        thresh <= acc && return k
+    end
+    return 0
+end
+
 function gen_random_tree_fixed_size(
     node_count::Int,
     options::AbstractOptions,
@@ -391,18 +432,28 @@ function gen_random_tree_fixed_size(
     ::Type{T},
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
+    # (1) start with a single leaf
     tree = make_random_leaf(nfeatures, T, options.node_type, rng, options)
-    tree::AbstractNode{2}  # Need to update the logic below
-    cur_size = count_nodes(tree)
-    while cur_size < node_count
-        if cur_size == node_count - 1  # only unary operator allowed.
-            options.nops[1] == 0 && break # We will go over the requested amount, so we must break.
-            tree = append_random_op(tree, options, nfeatures, rng; make_new_bin_op=false)
-        else
-            tree = append_random_op(tree, options, nfeatures, rng)
-        end
-        cur_size = count_nodes(tree)
+    cur_size = 1
+
+    # (2) grow the tree
+    while true
+        remaining = node_count - cur_size
+        remaining == 0 && break
+
+        arity = _arity_picker(rng, remaining, options.nops)
+        arity == 0 && break
+
+        # choose a random leaf to expand
+        leaf = rand(rng, NodeSampler(; tree, filter=t -> t.degree == 0))
+
+        # make a new operator node of that arity
+        newnode = _make_node(arity, leaf, nfeatures, T, options, rng)
+
+        set_node!(leaf, newnode)
+        cur_size += arity
     end
+
     return tree
 end
 
