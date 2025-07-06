@@ -1094,7 +1094,7 @@ function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = n
     if version isa VersionNumber && version < v"1.0.0"
         return (;
             # Creating the Search Space
-            operators=OperatorEnum(1 => (), 2 => (+, -, /, *)),
+            operators=OperatorEnum(((), (+, -, /, *))),
             maxsize=20,
             # Setting the Search Size
             populations=15,
@@ -1139,7 +1139,7 @@ function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = n
     else
         return (;
             # Creating the Search Space
-            operators=OperatorEnum(1 => (), 2 => (+, -, /, *)),
+            operators=OperatorEnum(((), (+, -, /, *))),
             maxsize=30,
             # Setting the Search Size
             populations=31,
