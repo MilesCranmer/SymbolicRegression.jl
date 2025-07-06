@@ -43,6 +43,16 @@ end
     @test_nowarn Options(; operators)
 end
 
+@testitem "Test operators stored globally" tags = [:part1] begin
+    using SymbolicRegression
+    using DynamicExpressions.OperatorEnumConstructionModule: LATEST_OPERATORS
+
+    operators = OperatorEnum(1 => [sin, cos], 2 => [+, -, *], 3 => [fma], 5 => [max])
+    options = Options(; operators)
+
+    @test LATEST_OPERATORS[] == operators
+end
+
 @testitem "Test with_max_degree_from_context" tags = [:part1] begin
     using SymbolicRegression
 
@@ -60,4 +70,5 @@ end
     @test options.node_type <: Node{<:Any,3}
     @test options.op_constraints ==
         ([-1, -1], [(-1, -1), (-1, -1), (-1, -1)], [(-1, -1, -1), (-1, -1, -1)])
+    @test options.nops == (2, 3, 2)
 end
