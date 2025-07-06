@@ -1,6 +1,7 @@
 module DimensionalAnalysisModule
 
-using DynamicExpressions: AbstractExpression, AbstractExpressionNode, get_tree
+using DynamicExpressions:
+    AbstractExpression, AbstractExpressionNode, get_tree, get_child, tree_mapreduce
 using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, constructorof
 
 using ..CoreModule: AbstractOptions, Dataset
@@ -129,54 +130,80 @@ end
         )
     end
 end
-@inline function deg1_eval(
-    op::F, l::W
-) where {F,T,Q<:AbstractQuantity{T},W<:WildcardQuantity{Q}}
-    l.violates && return l
-    !isfinite(l) && return W(one(Q), false, true)
+@generated function degn_eval(
+    op::F, args::Vararg{W,N}
+) where {F,N,T,Q<:AbstractQuantity{T},W<:WildcardQuantity{Q}}
+    quote
+        Base.Cartesian.@nextract($N, arg, args)
+        Base.Cartesian.@nexprs($N, i -> arg_i.violates && return arg_i)
+        # ^For N = 2:
+        # ```
+        #      arg_1.violates && return arg_1
+        #      arg_2.violates && return arg_2
+        # ```
+        Base.Cartesian.@nany($N, i -> !isfinite(arg_i)) && return W(one(Q), false, true)
+        # ^For N = 2:
+        # ```
+        #      !isfinite(arg_1) || !isfinite(arg_2) && return W(one(Q), false, true)
+        # ```
+        Base.Cartesian.@nexprs(
+            $(2^N),
+            i -> begin
+                # Get indices of N-d matrix of types:
+                lattice = Base.Cartesian.@ntuple($N, j -> div(i - 1, (2^(N - j))) % 2)
+                Base.Cartesian.@nextract($N, lattice, lattice)
+                # (e.g., for N = 3, this would be (0, 0, 0), (0, 0, 1), ..., (1, 1, 1))
+                #! format: off
+                if hasmethod(op, Tuple{Base.Cartesian.@ntuple($N, j -> lattice_j == 0 ? W : T)...}) &&
+                        Base.Cartesian.@nall($N, j -> lattice_j == 0 ? true : arg_j.wildcard)
 
-    hasmethod(op, Tuple{W}) && @maybe_return_call(W, op, (l,))
-    l.wildcard && return W(Quantity(op(ustrip(l))::T), false, false)
-    return W(one(Q), false, true)
-end
-@inline function deg2_eval(
-    op::F, l::W, r::W
-) where {F,T,Q<:AbstractQuantity{T},W<:WildcardQuantity{Q}}
-    l.violates && return l
-    r.violates && return r
-    (!isfinite(l) || !isfinite(r)) && return W(one(Q), false, true)
-    hasmethod(op, Tuple{W,W}) && @maybe_return_call(W, op, (l, r))
-    hasmethod(op, Tuple{T,W}) && l.wildcard && @maybe_return_call(W, op, (ustrip(l), r))
-    hasmethod(op, Tuple{W,T}) && r.wildcard && @maybe_return_call(W, op, (l, ustrip(r)))
-    l.wildcard &&
-        r.wildcard &&
-        return W(Quantity(op(ustrip(l), ustrip(r))::T), false, false)
-    return W(one(Q), false, true)
+                    # if on last one, we always evaluate (assuming wildcards are on):
+                    if i == $(2^N)
+                        return W(
+                            op(Base.Cartesian.@ntuple($N, j -> ustrip(arg_j))...)::T,
+                            false,
+                            false,
+                        )
+                    else
+                        @maybe_return_call(
+                            W,
+                            op,
+                            Base.Cartesian.@ntuple(
+                                $N, j -> lattice_j == 0 ? arg_j : ustrip(arg_j)
+                            )
+                        )
+                    end
+                end
+                #! format: on
+            end
+        )
+        # ^For N = 2:
+        # ```
+        #     hasmethod(op, Tuple{W,W}) && @maybe_return_call(W, op, (arg_1, arg_2))
+        #     hasmethod(op, Tuple{W,T}) && arg_2.wildcard && @maybe_return_call(W, op, (arg_1, ustrip(arg_2)))
+        #     hasmethod(op, Tuple{T,W}) && arg_1.wildcard && @maybe_return_call(W, op, (ustrip(arg_1), arg_2))
+        #     hasmethod(op, Tuple{T,T}) && arg_1.wildcard && arg_2.wildcard && W(op(ustrip(arg_1), ustrip(arg_2))::T, false, false)
+        # ```
+        return W(one(Q), false, true)
+    end
 end
 
 function violates_dimensional_constraints_dispatch(
-    tree::AbstractExpressionNode{T,2},
+    tree::AbstractExpressionNode{T,D},
     x_units::Vector{Q},
     x::AbstractVector{T},
     operators,
     allow_wildcards,
-) where {T,Q<:AbstractQuantity{T}}
-    if tree.degree == 0
-        return deg0_eval(x, x_units, tree, allow_wildcards)::WildcardQuantity{Q}
-    elseif tree.degree == 1
-        l = violates_dimensional_constraints_dispatch(
-            tree.l, x_units, x, operators, allow_wildcards
-        )
-        return deg1_eval((@inbounds operators.unaops[tree.op]), l)::WildcardQuantity{Q}
-    else
-        l = violates_dimensional_constraints_dispatch(
-            tree.l, x_units, x, operators, allow_wildcards
-        )
-        r = violates_dimensional_constraints_dispatch(
-            tree.r, x_units, x, operators, allow_wildcards
-        )
-        return deg2_eval((@inbounds operators.binops[tree.op]), l, r)::WildcardQuantity{Q}
-    end
+) where {T,Q<:AbstractQuantity{T},D}
+    return tree_mapreduce(
+        leaf -> deg0_eval(x, x_units, leaf, allow_wildcards)::WildcardQuantity{Q},
+        branch -> branch,
+        (branch, children...) -> degn_eval(
+            (@inbounds operators.ops[branch.degree][branch.op]), children...
+        )::WildcardQuantity{Q},
+        tree;
+        break_sharing=Val(true),
+    )
 end
 
 """
