@@ -54,4 +54,10 @@ end
     @test Options(; node_type=Node{<:Any,1}, operators).node_type <: Node{<:Any,1}
 
     @test Options().node_type <: Node{<:Any,2}
+
+    operators = OperatorEnum(1 => (sin, cos), 2 => (+, *, -), 3 => (fma, max))
+    options = Options(; operators)
+    @test options.node_type <: Node{<:Any,3}
+    @test options.op_constraints ==
+        ([-1, -1], [(-1, -1), (-1, -1), (-1, -1)], [(-1, -1, -1), (-1, -1, -1)])
 end

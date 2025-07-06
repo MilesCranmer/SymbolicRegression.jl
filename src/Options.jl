@@ -57,8 +57,10 @@ using ..ExpressionSpecModule:
     constraints = if constraints !== nothing
         @assert all(isnothing, (una_constraints, bin_constraints))
         constraints
-    else
+    elseif any(!isnothing, (una_constraints, bin_constraints))
         (una_constraints, bin_constraints)
+    else
+        ntuple(i -> nothing, Val(D))
     end
     return _build_constraints(constraints, operators_by_degree)
 end
