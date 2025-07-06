@@ -1066,6 +1066,7 @@ function _tear_down!(
     close_reader!(state.stdin_reader)
     # Safely close all processes or threads
     if ropt.parallelism == :multiprocessing
+        # TODO: We should unwrap the error monitors here
         state.we_created_procs && rmprocs(state.procs)
     elseif ropt.parallelism == :multithreading
         nout = length(state.worker_output)
