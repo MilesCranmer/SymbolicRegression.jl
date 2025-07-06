@@ -292,11 +292,7 @@ using .CheckConstraintsModule: check_constraints
 using .AdaptiveParsimonyModule:
     RunningSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
 using .MutationFunctionsModule:
-    gen_random_tree,
-    gen_random_tree_fixed_size,
-    random_node,
-    random_node_and_parent,
-    crossover_trees
+    gen_random_tree, gen_random_tree_fixed_size, random_node, crossover_trees
 using .InterfaceDynamicExpressionsModule:
     @extend_operators, require_copy_to_workers, make_example_inputs
 using .LossFunctionsModule: eval_loss, eval_cost, update_baseline_loss!, score_func
