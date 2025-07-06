@@ -480,7 +480,7 @@ function form_random_connection!(ex::AbstractExpression, rng::AbstractRNG=defaul
     tree, context = get_contents_for_mutation(ex, rng)
     return with_contents_for_mutation(ex, form_random_connection!(tree, rng), context)
 end
-function form_random_connection!(tree::AbstractNode{2}, rng::AbstractRNG=default_rng())
+function form_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     if length(tree) < 5
         return tree
     end
@@ -491,12 +491,8 @@ function form_random_connection!(tree::AbstractNode{2}, rng::AbstractRNG=default
         return tree
     end
 
-    # Set one of the children to be this new child:
-    if parent.degree == 1 || rand(rng, Bool)
-        parent.l = new_child
-    else
-        parent.r = new_child
-    end
+    i = rand(rng, 1:(parent.degree))
+    set_child!(parent, new_child, i)
     return tree
 end
 
@@ -504,14 +500,11 @@ function break_random_connection!(ex::AbstractExpression, rng::AbstractRNG=defau
     tree, context = get_contents_for_mutation(ex, rng)
     return with_contents_for_mutation(ex, break_random_connection!(tree, rng), context)
 end
-function break_random_connection!(tree::AbstractNode{2}, rng::AbstractRNG=default_rng())
+function break_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     tree.degree == 0 && return tree
     parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
-    if parent.degree == 1 || rand(rng, Bool)
-        parent.l = copy(parent.l)
-    else
-        parent.r = copy(parent.r)
-    end
+    i = rand(rng, 1:(parent.degree))
+    set_child!(parent, copy(get_child(parent, i)), i)
     return tree
 end
 
