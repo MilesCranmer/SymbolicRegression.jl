@@ -275,75 +275,27 @@ function make_random_leaf(
     end
 end
 
-"""Return a random node from the tree with parent, and side ('n' for no parent)"""
-function random_node_and_parent(tree::AbstractNode{2}, rng::AbstractRNG=default_rng())
-    if tree.degree == 0
-        return tree, tree, 'n'
-    end
-    parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
-    if parent.degree == 1 || rand(rng, Bool)
-        return (parent.l, parent, 'l')
-    else
-        return (parent.r, parent, 'r')
-    end
-end
-
 """Select a random node, and splice it out of the tree."""
-function delete_random_op!(
-    ex::AbstractExpression{T},
-    options::AbstractOptions,
-    nfeatures::Int,
-    rng::AbstractRNG=default_rng(),
-) where {T<:DATA_TYPE}
-    tree, context = get_contents_for_mutation(ex, rng)
-    ex = with_contents_for_mutation(
-        ex, delete_random_op!(tree, options, nfeatures, rng), context
-    )
-    return ex
+function delete_random_op!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
+    tree, ctx = get_contents_for_mutation(ex, rng)
+    newtree = delete_random_op!(tree, rng)
+    return with_contents_for_mutation(ex, newtree, ctx)
 end
-function delete_random_op!(
-    tree::AbstractExpressionNode{T,2},
-    options::AbstractOptions,
-    nfeatures::Int,
-    rng::AbstractRNG=default_rng(),
-) where {T<:DATA_TYPE}
-    node, parent, side = random_node_and_parent(tree, rng)
-    isroot = side == 'n'
 
-    if node.degree == 0
-        # Replace with new constant
-        newnode = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
-        set_node!(node, newnode)
-    elseif node.degree == 1
-        # Join one of the children with the parent
-        if isroot
-            return node.l
-        elseif parent.l == node
-            parent.l = node.l
-        else
-            parent.r = node.l
-        end
+function delete_random_op!(tree::AbstractExpressionNode, rng::AbstractRNG=default_rng())
+    tree.degree == 0 && return tree
+
+    node = rand(rng, NodeSampler(; tree, filter=t -> t.degree > 0))
+    carry_idx = rand(rng, 1:(node.degree))
+    carry = get_child(node, carry_idx)
+
+    if node === tree
+        return carry
     else
-        # Join one of the children with the parent
-        if rand(rng, Bool)
-            if isroot
-                return node.l
-            elseif parent.l == node
-                parent.l = node.l
-            else
-                parent.r = node.l
-            end
-        else
-            if isroot
-                return node.r
-            elseif parent.l == node
-                parent.l = node.r
-            else
-                parent.r = node.r
-            end
-        end
+        parent, idx = _find_parent(tree, node)
+        set_child!(parent, carry, idx)
+        return tree
     end
-    return tree
 end
 
 function randomize_tree(

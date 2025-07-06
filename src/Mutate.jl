@@ -490,10 +490,9 @@ function mutate!(
     ::AbstractMutationWeights,
     options::AbstractOptions;
     recorder::RecordType,
-    nfeatures,
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
-    tree = delete_random_op!(tree, options, nfeatures)
+    tree = delete_random_op!(tree)
     @recorder recorder["type"] = "delete_node"
     return MutationResult{N,P}(; tree=tree)
 end
