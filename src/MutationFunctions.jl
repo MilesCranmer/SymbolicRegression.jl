@@ -242,7 +242,7 @@ function prepend_random_op(
     return ex
 end
 function prepend_random_op(
-    tree::AbstractExpressionNode{T},
+    tree::AbstractExpressionNode{T,2},
     options::AbstractOptions,
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
