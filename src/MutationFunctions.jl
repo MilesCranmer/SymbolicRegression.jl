@@ -61,18 +61,23 @@ function random_node(
     return rand(rng, NodeSampler(; tree, filter))
 end
 
-"""Swap operands in binary operator for ops like pow and divide"""
+"""Swap operands in operators"""
 function swap_operands(ex::AbstractExpression, rng::AbstractRNG=default_rng())
     tree, context = get_contents_for_mutation(ex, rng)
     ex = with_contents_for_mutation(ex, swap_operands(tree, rng), context)
     return ex
 end
-function swap_operands(tree::AbstractNode{2}, rng::AbstractRNG=default_rng())
-    if !any(node -> node.degree == 2, tree)
+function swap_operands(tree::AbstractNode, rng::AbstractRNG=default_rng())
+    if !any(node -> node.degree > 1, tree)
         return tree
     end
-    node = rand(rng, NodeSampler(; tree, filter=t -> t.degree == 2))
-    node.l, node.r = node.r, node.l
+    node = rand(rng, NodeSampler(; tree, filter=t -> t.degree > 1))
+    i1 = rand(rng, 1:(node.degree))
+    i2 = rand(rng, filter(!=(i1), 1:(node.degree)))
+    n1 = get_child(node, i1)
+    n2 = get_child(node, i2)
+    set_child!(node, n2, i1)
+    set_child!(node, n1, i2)
     return tree
 end
 
