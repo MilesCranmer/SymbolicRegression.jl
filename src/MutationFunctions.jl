@@ -82,19 +82,13 @@ function mutate_operator(
     return ex
 end
 function mutate_operator(
-    tree::AbstractExpressionNode{T,2},
-    options::AbstractOptions,
-    rng::AbstractRNG=default_rng(),
-) where {T}
+    tree::AbstractExpressionNode, options::AbstractOptions, rng::AbstractRNG=default_rng()
+)
     if !(has_operators(tree))
         return tree
     end
     node = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
-    if node.degree == 1
-        node.op = rand(rng, 1:(options.nops[1]))
-    else
-        node.op = rand(rng, 1:(options.nops[2]))
-    end
+    node.op = rand(rng, 1:(options.nops[node.degree]))
     return tree
 end
 
