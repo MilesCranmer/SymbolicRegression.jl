@@ -147,9 +147,9 @@ end
 const CachedPrep = PerTaskCache{Dict{UInt,Any}}()
 
 @unstable function _cached_prep(ctx, backend, example_tree)
-    # We avoid hashing on the tree because it should not affect the prep.
-    # We want to cache as much as possible!
-    key = hash((ctx, backend))
+    # We avoid hashing on the tree _value_ because it should not
+    # affect the prep. We want to cache as much as possible!
+    key = hash((ctx, backend, typeof(example_tree)))
     stable_get!(CachedPrep[], key) do
         prepare_gradient(ctx, backend, example_tree)
     end
