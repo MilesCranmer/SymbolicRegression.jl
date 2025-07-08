@@ -4,21 +4,6 @@ using DynamicExpressions: DynamicExpressions as DE
 using SymbolicRegression: SymbolicRegression as SR
 using Mooncake: Mooncake
 
-const _NEEDS_OVERLOAD =
-    !applicable(
-        Mooncake.tangent_type,
-        Union{Mooncake.NoFData,Mooncake.FData{@NamedTuple{alphas::Vector{Float64}}}},
-        Mooncake.NoRData,
-    )
-
-if _NEEDS_OVERLOAD
-    @eval function Mooncake.tangent_type(
-        ::Type{U}, ::Type{Mooncake.NoRData}
-    ) where {U<:Union{Mooncake.NoFData,T} where {T}}
-        return Mooncake.tangent_type(U)
-    end
-end
-
 function DE.extract_gradient(
     gradient::Mooncake.Tangent, ex::SR.TemplateExpression{T}
 ) where {T}
