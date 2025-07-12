@@ -284,8 +284,32 @@ for op in (
 )
     @eval Base.$(op)(x::ValidVector) = apply_operator(Base.$(op), x)
 end
-#! format: on
 
-# TODO: Support for 3-ary operators
+# Support for 3-ary operators
+# For now, we define a generic method that can handle any number of arguments
+# This allows for 3-ary operators like `ifelse`, `fma`, etc.
+# Users can define their own 3-ary operators and they will work with ValidVector
+function (op::Function)(x::ValidVector, y::ValidVector, z::ValidVector)
+    return apply_operator(op, x, y, z)
+end
+function (op::Function)(x::ValidVector, y::ValidVector, z::Number)
+    return apply_operator(op, x, y, z)
+end
+function (op::Function)(x::ValidVector, y::Number, z::ValidVector)
+    return apply_operator(op, x, y, z)
+end
+function (op::Function)(x::Number, y::ValidVector, z::ValidVector)
+    return apply_operator(op, x, y, z)
+end
+function (op::Function)(x::ValidVector, y::Number, z::Number)
+    return apply_operator(op, x, y, z)
+end
+function (op::Function)(x::Number, y::ValidVector, z::Number)
+    return apply_operator(op, x, y, z)
+end
+function (op::Function)(x::Number, y::Number, z::ValidVector)
+    return apply_operator(op, x, y, z)
+end
+#! format: on
 
 end

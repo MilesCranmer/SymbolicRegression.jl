@@ -344,14 +344,51 @@ function define_alias_operators(
     # We undo some of the aliases so that the user doesn't need to use, e.g.,
     # `safe_pow(x1, 1.5)`. They can use `x1 ^ 1.5` instead.
     constructor = isa(operators, OperatorEnum) ? OperatorEnum : GenericOperatorEnum
-    @assert operators.ops isa Tuple{Vararg{Any,2}}
-    # TODO: Support for 3-ary operators
-    return constructor(;
-        binary_operators=map(inverse_opmap, operators.ops[2]),
-        unary_operators=map(inverse_opmap, operators.ops[1]),
-        define_helper_functions=false,
-        empty_old_operators=false,
-    )
+    
+    # Support for n-ary operators
+    num_arities = length(operators.ops)
+    
+    if num_arities == 2
+        # Legacy support for binary and unary operators only
+        return constructor(;
+            binary_operators=map(inverse_opmap, operators.ops[2]),
+            unary_operators=map(inverse_opmap, operators.ops[1]),
+            define_helper_functions=false,
+            empty_old_operators=false,
+        )
+    else
+        # Support for n-ary operators
+        # Create a dictionary mapping arities to operators
+        operators_by_arity = Dict{Int,Vector{Any}}()
+        for (arity, ops) in enumerate(operators.ops)
+            if !isempty(ops)
+                operators_by_arity[arity] = map(inverse_opmap, ops)
+            end
+        end
+        
+        # Build the constructor arguments
+        constructor_args = Dict{Symbol,Any}()
+        
+        # Add operators for each arity
+        for (arity, ops) in operators_by_arity
+            if arity == 1
+                constructor_args[:unary_operators] = ops
+            elseif arity == 2
+                constructor_args[:binary_operators] = ops
+            else
+                # For 3-ary and higher, use the generic interface
+                # This assumes the constructor supports a generic `operators` argument
+                # or specific arity arguments like `ternary_operators`
+                arity_symbol = Symbol("$(arity == 3 ? "ternary" : "$(arity)ary")_operators")
+                constructor_args[arity_symbol] = ops
+            end
+        end
+        
+        constructor_args[:define_helper_functions] = false
+        constructor_args[:empty_old_operators] = false
+        
+        return constructor(; constructor_args...)
+    end
 end
 
 function (tree::Union{AbstractExpression,AbstractExpressionNode})(
