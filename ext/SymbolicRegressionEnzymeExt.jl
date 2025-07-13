@@ -10,7 +10,7 @@ using DynamicExpressions:
     with_contents,
     get_contents
 using ADTypes: AutoEnzyme
-using Enzyme: autodiff, Reverse, Active, Const, Duplicated, make_zero, make_zero!
+using Enzyme: autodiff, Reverse, Active, Const, Duplicated, make_zero, remake_zero!
 
 import SymbolicRegression.ConstantOptimizationModule: Evaluator, GradEvaluator
 
@@ -38,9 +38,9 @@ with_stacksize(f::F, n) where {F} = fetch(schedule(Task(f, n)))
 
 function (g::GradEvaluator{<:Any,<:AutoEnzyme})(_, G, x::AbstractVector{T}) where {T}
     set_scalar_constants!(g.e.tree, x, g.e.refs)
-    make_zero!(g.extra.storage_tree)
-    make_zero!(g.extra.storage_dataset)
-    make_zero!(g.extra.storage_options)
+    remake_zero!(g.extra.storage_tree)
+    remake_zero!(g.extra.storage_dataset)
+    remake_zero!(g.extra.storage_options)
 
     output = [zero(T)]
     doutput = [one(T)]
