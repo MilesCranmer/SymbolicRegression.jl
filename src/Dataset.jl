@@ -79,9 +79,7 @@ mutable struct BasicDataset{
     const y_units::YU
     const X_sym_units::XUS
     const y_sym_units::YUS
-    const _hash::UInt
 end
-Base.hash(d::BasicDataset, h::UInt) = hash(d._hash, h)  # Faster to precompute hash
 
 """
     SubDataset{T<:DATA_TYPE,L<:LOSS_TYPE,D<:BasicDataset{T,L},I<:AbstractVector{Int}} <: Dataset{T,L}
@@ -215,7 +213,18 @@ function Dataset(
 
     error_on_mismatched_size(nfeatures, X_si_units)
 
-    args = (
+    return BasicDataset{
+        T,
+        out_loss_type,
+        typeof(X),
+        typeof(y),
+        typeof(weights),
+        typeof(extra),
+        typeof(X_si_units),
+        typeof(y_si_units),
+        typeof(X_sym_units),
+        typeof(y_sym_units),
+    }(
         X,
         y,
         index,
@@ -233,20 +242,6 @@ function Dataset(
         y_si_units,
         X_sym_units,
         y_sym_units,
-    )
-    return BasicDataset{
-        T,
-        out_loss_type,
-        typeof(X),
-        typeof(y),
-        typeof(weights),
-        typeof(extra),
-        typeof(X_si_units),
-        typeof(y_si_units),
-        typeof(X_sym_units),
-        typeof(y_sym_units),
-    }(
-        args..., hash(args)
     )
 end
 
