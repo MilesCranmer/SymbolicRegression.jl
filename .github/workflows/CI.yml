@@ -2,8 +2,6 @@ name: CI
 
 on:
   push:
-    branches:
-      - master
     paths:
       - "**"
   pull_request:
@@ -23,6 +21,7 @@ jobs:
     name: Julia ${{ matrix.julia-version }}-${{ matrix.os }}-${{ matrix.test }}-${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 240
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     strategy:
       fail-fast: false
       matrix:

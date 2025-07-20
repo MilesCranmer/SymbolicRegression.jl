@@ -1,6 +1,6 @@
 using SymbolicRegression
 using SymbolicRegression.ConstantOptimizationModule:
-    Evaluator, GradEvaluator, specialized_options
+    EvaluatorContext, Evaluator, GradEvaluator, specialized_options
 using DynamicExpressions
 using DifferentiationInterface: value_and_gradient
 using Test
@@ -71,7 +71,8 @@ function test_autodiff_backend(
     x0, refs = get_scalar_constants(ex)
     G = zero(x0)
 
-    f = Evaluator(ex, refs, dataset, specialized_options(options))
+    ctx = EvaluatorContext(dataset, options)
+    f = Evaluator(ex, refs, ctx)
     fg! = GradEvaluator(f, backend)
 
     @test f(x0) ≈ true_val

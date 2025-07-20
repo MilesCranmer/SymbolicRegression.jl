@@ -5,6 +5,7 @@ using Printf: @printf
 using MacroTools: splitdef
 using StyledStrings: StyledStrings
 using Random: AbstractRNG, default_rng
+using DispatchDoctor: @unstable
 
 macro ignore(args...) end
 
@@ -286,6 +287,10 @@ function FixKws(f::F; kws...) where {F}
 end
 function (f::FixKws{F,KWS})(args::Vararg{Any,N}) where {F,KWS,N}
     return f.f(args...; f.kws...)
+end
+
+@unstable function stable_get!(f::F, dict, key) where {F}
+    return get!(f, dict, key)::(Base.promote_op(f))
 end
 
 end

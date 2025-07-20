@@ -836,11 +836,18 @@ function MF.mutate_constant(
 end
 # TODO: Look at other ParametricExpression behavior
 
-function CO.count_constants_for_optimization(ex::TemplateExpression)
-    return (
-        sum(CO.count_constants_for_optimization, values(get_contents(ex))) +
-        (has_params(ex) ? sum(values(get_metadata(ex).structure.num_parameters)) : 0)
-    )
+for f in (:(DE.count_scalar_constants), :(CO.count_constants_for_optimization))
+    @eval function $f(ex::TemplateExpression)
+        return (
+            sum($f, values(get_contents(ex))) +
+            (has_params(ex) ? sum($f, values(get_metadata(ex).parameters)) : 0)
+        )
+    end
+    @eval function $f(p::ParamVector)
+        # TODO: This is not general enough; we should be using `get_scalar_constants`
+        # on the parameters themselves.
+        return length(p._data)
+    end
 end
 
 function CC.check_constraints(

@@ -1,0 +1,9 @@
+[deps]
+DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
+DynamicExpressions = "a40a106e-89c9-4ca8-8020-a735e8728b6b"
+MLJBase = "a7f614a8-145f-11e9-1d2a-a57a1082229d"
+Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
+SymbolicRegression = "8254be44-1295-4e6a-a16d-46603ac705cb"
+
+[sources]
+SymbolicRegression = {path = "../../"}
