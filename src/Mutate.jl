@@ -133,8 +133,8 @@ function condition_mutation_weights!(
 
     condition_mutate_constant!(typeof(member.tree), weights, member, options, curmaxsize)
 
-    # Disable feature mutation if no feature nodes or only one feature available
-    if !any(node -> node.degree == 0 && !node.constant, tree) || nfeatures <= 1
+    # Disable feature mutation if only one feature available
+    if nfeatures <= 1
         weights.mutate_feature = 0.0
     end
 
