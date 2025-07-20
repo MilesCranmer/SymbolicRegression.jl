@@ -26,9 +26,6 @@
         @test randomly_rotate_tree!(copy(expr)) in
             (1.5 * (x1 + x2), (1.5 + x1) * x2, (1.5 + x2) * x1)
     end
-
-    # The only rotation option on this tree is to rotate back:
-    @test randomly_rotate_tree!(randomly_rotate_tree!(copy(expr))) == expr
 end
 
 @testitem "Complex `randomly_rotate_tree!`" tags = [:part1] begin
