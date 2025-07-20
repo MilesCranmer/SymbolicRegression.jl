@@ -72,8 +72,9 @@ function swap_operands(tree::AbstractNode, rng::AbstractRNG=default_rng())
         return tree
     end
     node = rand(rng, NodeSampler(; tree, filter=t -> t.degree > 1))
-    i1 = rand(rng, 1:(node.degree))
-    i2 = rand(rng, filter(!=(i1), 1:(node.degree)))
+    deg = node.degree
+    i1 = rand(rng, 1:deg)
+    i2 = deg == 2 ? (i1 == 1 ? 2 : 1) : rand(rng, filter(!=(i1), 1:deg))
     n1 = get_child(node, i1)
     n2 = get_child(node, i2)
     set_child!(node, n2, i1)
