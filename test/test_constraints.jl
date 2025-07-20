@@ -62,3 +62,22 @@ tree = cos(cos(x1))
 tree = cos(cos(cos(x1)))
 @test count_depth(tree) == 4
 @test check_constraints(tree, options) == false
+
+_inv2(x) = 1 / x
+
+# Test the specific path where constraints !== nothing
+# This hits line 58: @assert all(isnothing, (una_constraints, bin_constraints))
+options = Options(;
+    binary_operators=(+, *),
+    unary_operators=(_inv2,),
+    constraints=(_inv2 => 5,),  # This triggers the line we want to test
+    maxsize=10,
+)
+
+# Verify it works by testing constraint enforcement
+x1 = Node(; feature=1)
+deep_expr = x1 * x1 * x1 * x1 * x1 * x1  # complexity > 5
+violating_tree = Node(1, deep_expr)  # _inv applied to expr with complexity > 5
+
+# The constraint should reject this tree
+@test check_constraints(violating_tree, options) == false

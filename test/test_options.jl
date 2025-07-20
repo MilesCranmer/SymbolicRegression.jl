@@ -72,3 +72,19 @@ end
         ([-1, -1], [(-1, -1), (-1, -1), (-1, -1)], [(-1, -1, -1), (-1, -1, -1)])
     @test options.nops == (2, 3, 2)
 end
+
+@testitem "Test operator appears in multiple degrees error" tags = [:part1] begin
+    using SymbolicRegression
+
+    operators = OperatorEnum(1 => (+, sin), 2 => (+, *))  # + appears in both degrees
+
+    @test_throws(
+        "Operator + appears in multiple degrees. You can't use nested constraints.",
+        Options(; operators, nested_constraints=[(+) => [(+) => 0]])
+    )
+
+    @test_throws(
+        "Operator + appears in multiple degrees.",
+        Options(; operators, constraints=[(+) => -1])
+    )
+end
