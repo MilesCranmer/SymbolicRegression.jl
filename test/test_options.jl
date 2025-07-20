@@ -84,7 +84,7 @@ end
     )
 
     @test_throws(
-        "Operator + appears in multiple degrees.",
+        "Operator + appears in multiple degrees. You can't use constraints.",
         Options(; operators, constraints=[(+) => -1])
     )
 end

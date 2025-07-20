@@ -843,7 +843,10 @@ $(OPTION_DESCRIPTIONS)
             for ops in operators.ops
                 for op in ops
                     if op ∈ all_operators
-                        error("Operator $(op) appears in multiple degrees.")
+                        error(
+                            "Operator $(op) appears in multiple degrees. " *
+                            "You can't use constraints.",
+                        )
                     end
                     push!(all_operators, op)
                 end
