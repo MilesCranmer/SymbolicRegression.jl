@@ -37,7 +37,8 @@ end
 
 @testitem "Test derivatives during optimization" tags = [:part1] begin
     using SymbolicRegression
-    using SymbolicRegression.ConstantOptimizationModule: Evaluator, GradEvaluator
+    using SymbolicRegression.ConstantOptimizationModule:
+        Evaluator, GradEvaluator, EvaluatorContext
     using DynamicExpressions
     using Zygote: Zygote
     using Random: MersenneTwister
@@ -55,7 +56,8 @@ end
     ex = @parse_expression(
         x * x - cos(2.5 * y), operators = options.operators, variable_names = [:x, :y]
     )
-    f = Evaluator(ex, last(get_scalar_constants(ex)), dataset, options)
+    ctx = EvaluatorContext(dataset, options)
+    f = Evaluator(ex, last(get_scalar_constants(ex)), ctx)
     fg! = GradEvaluator(f, options.autodiff_backend)
 
     @test f(first(get_scalar_constants(ex))) isa Float64

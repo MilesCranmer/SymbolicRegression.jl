@@ -1,9 +1,10 @@
 module ConstantOptimizationModule
 
+using Random: AbstractRNG, default_rng
 using LineSearches: LineSearches
 using Optim: Optim
 using ADTypes: AbstractADType, AutoEnzyme
-using DifferentiationInterface: value_and_gradient
+using DifferentiationInterface: value_and_gradient, prepare_gradient
 using DynamicExpressions:
     AbstractExpression,
     Expression,
@@ -11,9 +12,10 @@ using DynamicExpressions:
     get_scalar_constants,
     set_scalar_constants!,
     extract_gradient
+using DispatchDoctor: @unstable
 using ..CoreModule:
     AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, specialized_options, dataset_fraction
-using ..UtilsModule: get_birth_order
+using ..UtilsModule: get_birth_order, PerTaskCache, stable_get!
 using ..LossFunctionsModule: eval_loss, loss_to_cost
 using ..PopMemberModule: PopMember
 
@@ -24,8 +26,11 @@ function can_optimize(::Type{T}, _) where {T<:Number}
     return true
 end
 
-function optimize_constants(
-    dataset::Dataset{T,L}, member::P, options::AbstractOptions
+@unstable function optimize_constants(
+    dataset::Dataset{T,L},
+    member::P,
+    options::AbstractOptions;
+    rng::AbstractRNG=default_rng(),
 )::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:PopMember{T,L}}
     can_optimize(member.tree, options) || return (member, 0.0)
     nconst = count_constants_for_optimization(member.tree)
@@ -38,6 +43,7 @@ function optimize_constants(
             specialized_options(options),
             algorithm,
             options.optimizer_options,
+            rng,
         )
     end
     return _optimize_constants(
@@ -48,6 +54,7 @@ function optimize_constants(
         # more particular about dynamic dispatch
         options.optimizer_algorithm,
         options.optimizer_options,
+        rng,
     )
 end
 
@@ -55,14 +62,21 @@ end
 count_constants_for_optimization(ex::Expression) = count_scalar_constants(ex)
 
 function _optimize_constants(
-    dataset, member::P, options, algorithm, optimizer_options
+    dataset, member::P, options, algorithm, optimizer_options, rng
 )::Tuple{P,Float64} where {T,L,P<:PopMember{T,L}}
     tree = member.tree
-    eval_fraction = dataset_fraction(dataset)
     x0, refs = get_scalar_constants(tree)
     @assert count_constants_for_optimization(tree) == length(x0)
-    f = Evaluator(tree, refs, dataset, options)
+    ctx = EvaluatorContext(dataset, options)
+    f = Evaluator(tree, refs, ctx)
     fg! = GradEvaluator(f, options.autodiff_backend)
+    return _optimize_constants_inner(
+        f, fg!, x0, refs, dataset, member, options, algorithm, optimizer_options, rng
+    )
+end
+function _optimize_constants_inner(
+    f::F, fg!::G, x0, refs, dataset, member::P, options, algorithm, optimizer_options, rng
+)::Tuple{P,Float64} where {F,G,T,L,P<:PopMember{T,L}}
     obj = if algorithm isa Optim.Newton || options.autodiff_backend === nothing
         f
     else
@@ -70,10 +84,11 @@ function _optimize_constants(
     end
     baseline = f(x0)
     result = Optim.optimize(obj, x0, algorithm, optimizer_options)
+    eval_fraction = dataset_fraction(dataset)
     num_evals = result.f_calls * eval_fraction
     # Try other initial conditions:
     for _ in 1:(options.optimizer_nrestarts)
-        eps = randn(T, size(x0)...)
+        eps = randn(rng, T, size(x0)...)
         xt = @. x0 * (T(1) + T(1//2) * eps)
         tmpresult = Optim.optimize(obj, xt, algorithm, optimizer_options)
         num_evals += tmpresult.f_calls * eval_fraction
@@ -93,38 +108,60 @@ function _optimize_constants(
         member.birth = get_birth_order(; deterministic=options.deterministic)
         num_evals += eval_fraction
     else
+        # Reset to original state
         set_scalar_constants!(member.tree, x0, refs)
     end
 
     return member, num_evals
 end
 
-struct Evaluator{N<:AbstractExpression,R,D<:Dataset,O<:AbstractOptions} <: Function
-    tree::N
-    refs::R
+struct EvaluatorContext{D<:Dataset,O<:AbstractOptions} <: Function
     dataset::D
     options::O
 end
-function (e::Evaluator)(x::AbstractVector; regularization=false)
-    set_scalar_constants!(e.tree, x, e.refs)
-    return eval_loss(e.tree, e.dataset, e.options; regularization)
+function (c::EvaluatorContext)(tree; regularization=false)
+    return eval_loss(tree, c.dataset, c.options; regularization)
 end
 
-struct GradEvaluator{F<:Evaluator,AD<:Union{Nothing,AbstractADType},EX} <: Function
-    f::F
+struct Evaluator{N<:AbstractExpression,R,C<:EvaluatorContext} <: Function
+    tree::N
+    refs::R
+    ctx::C
+end
+function (e::Evaluator)(x::AbstractVector; regularization=false)
+    set_scalar_constants!(e.tree, x, e.refs)
+    return e.ctx(e.tree; regularization)
+end
+
+struct GradEvaluator{E<:Evaluator,AD<:Union{Nothing,AbstractADType},PR,EX} <: Function
+    e::E
+    prep::PR
     backend::AD
     extra::EX
 end
-GradEvaluator(f::F, backend::AD) where {F,AD} = GradEvaluator(f, backend, nothing)
+@unstable function GradEvaluator(e::Evaluator, backend)
+    prep = isnothing(backend) ? nothing : _cached_prep(e.ctx, backend, e.tree)
+    return GradEvaluator(e, prep, backend, nothing)
+end
+
+const CachedPrep = PerTaskCache{Dict{UInt,Any}}()
+
+@unstable function _cached_prep(ctx, backend, example_tree)
+    # We avoid hashing on the tree _value_ because it should not
+    # affect the prep. We want to cache as much as possible!
+    key = hash((ctx, backend, typeof(example_tree)))
+    stable_get!(CachedPrep[], key) do
+        prepare_gradient(ctx, backend, example_tree)
+    end
+end
 
 function (g::GradEvaluator{<:Any,AD})(_, G, x::AbstractVector) where {AD}
     AD isa AutoEnzyme && error("Please load the `Enzyme.jl` package.")
-    set_scalar_constants!(g.f.tree, x, g.f.refs)
-    (val, grad) = value_and_gradient(g.backend, g.f.tree) do tree
-        eval_loss(tree, g.f.dataset, g.f.options; regularization=false)
-    end
+    set_scalar_constants!(g.e.tree, x, g.e.refs)
+    maybe_prep = isnothing(g.prep) ? () : (g.prep,)
+    (val, grad) = value_and_gradient(g.e.ctx, maybe_prep..., g.backend, g.e.tree)
     if G !== nothing && grad !== nothing
-        G .= extract_gradient(grad, g.f.tree)
+        G .= extract_gradient(grad, g.e.tree)
     end
     return val
 end
