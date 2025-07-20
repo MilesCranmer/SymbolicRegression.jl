@@ -147,7 +147,34 @@ function mutate_factor(::Type{T}, temperature, options, rng) where {T<:Number}
     return factor
 end
 
-# TODO: Shouldn't we add a mutate_feature here?
+"""Randomly change which feature a variable node points to"""
+function mutate_feature(
+    ex::AbstractExpression{T}, nfeatures::Int, rng::AbstractRNG=default_rng()
+) where {T<:DATA_TYPE}
+    tree, context = get_contents_for_mutation(ex, rng)
+    ex = with_contents_for_mutation(ex, mutate_feature(tree, nfeatures, rng), context)
+    return ex
+end
+function mutate_feature(
+    tree::AbstractExpressionNode{T}, nfeatures::Int, rng::AbstractRNG=default_rng()
+) where {T<:DATA_TYPE}
+    # Check if tree has any feature nodes
+    if !any(node -> node.degree == 0 && !node.constant, tree)
+        return tree
+    end
+
+    # Sample a random feature node
+    node = rand(rng, NodeSampler(; tree, filter=t -> (t.degree == 0 && !t.constant)))
+
+    # Choose a different feature
+    current_feature = node.feature
+    if nfeatures > 1
+        new_feature = rand(rng, filter(!=(current_feature), 1:nfeatures))
+        node.feature = new_feature
+    end
+
+    return tree
+end
 
 """Add a random unary/binary operation to the end of a tree"""
 function append_random_op(
