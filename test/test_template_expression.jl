@@ -612,7 +612,7 @@ end
     @test loss_batch ≈ expected_batch_loss
 end
 
-@testitem "warning for loss_function with TemplateExpression" begin
+@testitem "warning for loss_function with TemplateExpression" tags = [:part2] begin
     using SymbolicRegression
 
     @test_warn(
