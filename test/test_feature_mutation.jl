@@ -32,4 +32,48 @@
         @test hasfield(typeof(weights), :mutate_feature)
         @test weights.mutate_feature == 0.1
     end
+
+    @testset "get_nfeatures_for_mutation API" begin
+        using DynamicExpressions: Expression
+        using SymbolicRegression.MutationFunctionsModule: get_nfeatures_for_mutation
+
+        # Test default implementation
+        operators = OperatorEnum(; binary_operators=[+, *], unary_operators=[cos])
+        ex = Expression(Node{Float64}(; feature=1); operators=operators)
+
+        # Default implementation should return global nfeatures
+        @test get_nfeatures_for_mutation(ex, nothing, 5) == 5
+        @test get_nfeatures_for_mutation(ex, nothing, 10) == 10
+    end
+
+    @testset "TemplateExpression get_nfeatures_for_mutation" begin
+        # Create a template structure with different feature counts per subexpression
+        struct_different_features = TemplateStructure{(:f, :g)}(
+            ((; f, g), (x1, x2, x3, x4)) -> f(x1, x2) + g(x1, x3, x4);
+            # f uses features 1, 2; g uses features 1, 3, 4
+        )
+
+        options = Options(;
+            binary_operators=(+, *),
+            unary_operators=(sin,),
+            expression_spec=TemplateExpressionSpec(; structure=struct_different_features),
+        )
+        operators = options.operators
+        variable_names = ["x1", "x2", "x3", "x4"]
+
+        # Create composable expressions
+        f_expr = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+        g_expr = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names)
+
+        # Create template expression
+        template_ex = TemplateExpression(
+            (; f=f_expr, g=g_expr); structure=struct_different_features, operators=operators
+        )
+
+        using SymbolicRegression.MutationFunctionsModule: get_nfeatures_for_mutation
+
+        # Test that each subexpression gets its specific feature count
+        @test get_nfeatures_for_mutation(template_ex, :f, 4) == 2
+        @test get_nfeatures_for_mutation(template_ex, :g, 4) == 3
+    end
 end

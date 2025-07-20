@@ -46,6 +46,19 @@ function with_contents_for_mutation(ex::AbstractExpression, new_contents, ::Noth
 end
 
 """
+    get_nfeatures_for_mutation(ex::AbstractExpression, context, nfeatures::Int)
+
+Return the number of features available for mutation in the given expression.
+You can overload this function for custom expression types that need
+context-specific feature ranges (e.g., TemplateExpression subexpressions).
+
+The default implementation simply returns the global `nfeatures`.
+"""
+function get_nfeatures_for_mutation(::AbstractExpression, context, nfeatures::Int)
+    return nfeatures
+end
+
+"""
     random_node(tree::AbstractNode; filter::F=Returns(true))
 
 Return a random node from the tree. You may optionally
@@ -152,27 +165,19 @@ function mutate_feature(
     ex::AbstractExpression{T}, nfeatures::Int, rng::AbstractRNG=default_rng()
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
-    ex = with_contents_for_mutation(ex, mutate_feature(tree, nfeatures, rng), context)
+    local_nfeatures = get_nfeatures_for_mutation(ex, context, nfeatures)
+    ex = with_contents_for_mutation(ex, mutate_feature(tree, local_nfeatures, rng), context)
     return ex
 end
 function mutate_feature(
     tree::AbstractExpressionNode{T}, nfeatures::Int, rng::AbstractRNG=default_rng()
 ) where {T<:DATA_TYPE}
-    # Check if tree has any feature nodes
-    if !any(node -> node.degree == 0 && !node.constant, tree)
-        return tree
-    end
+    # Quick checks for if there is nothing to do
+    nfeatures <= 1 && return tree
+    !any(node -> node.degree == 0 && !node.constant, tree) && return tree
 
-    # Sample a random feature node
     node = rand(rng, NodeSampler(; tree, filter=t -> (t.degree == 0 && !t.constant)))
-
-    # Choose a different feature
-    current_feature = node.feature
-    if nfeatures > 1
-        new_feature = rand(rng, filter(!=(current_feature), 1:nfeatures))
-        node.feature = new_feature
-    end
-
+    node.feature = rand(rng, filter(!=(node.feature), 1:nfeatures))
     return tree
 end
 
@@ -184,8 +189,9 @@ function append_random_op(
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
+    local_nfeatures = get_nfeatures_for_mutation(ex, context, nfeatures)
     ex = with_contents_for_mutation(
-        ex, append_random_op(tree, options, nfeatures, rng), context
+        ex, append_random_op(tree, options, local_nfeatures, rng), context
     )
     return ex
 end
@@ -227,8 +233,9 @@ function insert_random_op(
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
+    local_nfeatures = get_nfeatures_for_mutation(ex, context, nfeatures)
     ex = with_contents_for_mutation(
-        ex, insert_random_op(tree, options, nfeatures, rng), context
+        ex, insert_random_op(tree, options, local_nfeatures, rng), context
     )
     return ex
 end
@@ -271,8 +278,9 @@ function prepend_random_op(
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
+    local_nfeatures = get_nfeatures_for_mutation(ex, context, nfeatures)
     ex = with_contents_for_mutation(
-        ex, prepend_random_op(tree, options, nfeatures, rng), context
+        ex, prepend_random_op(tree, options, local_nfeatures, rng), context
     )
     return ex
 end
@@ -354,8 +362,9 @@ function randomize_tree(
     rng::AbstractRNG=default_rng(),
 )
     tree, context = get_contents_for_mutation(ex, rng)
+    local_nfeatures = get_nfeatures_for_mutation(ex, context, nfeatures)
     ex = with_contents_for_mutation(
-        ex, randomize_tree(tree, curmaxsize, options, nfeatures, rng), context
+        ex, randomize_tree(tree, curmaxsize, options, local_nfeatures, rng), context
     )
     return ex
 end
