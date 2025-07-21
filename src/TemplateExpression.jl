@@ -761,6 +761,12 @@ function MF.with_contents_for_mutation(
     )
     return with_contents(ex, new_contents)
 end
+
+"""We only want to mutate to a valid number of features."""
+function MF.get_nfeatures_for_mutation(ex::TemplateExpression, ctx::Symbol, _::Int)
+    return get_metadata(ex).structure.num_features[ctx]
+end
+
 function MM.condition_mutate_constant!(
     ::Type{<:TemplateExpression},
     weights::AbstractMutationWeights,

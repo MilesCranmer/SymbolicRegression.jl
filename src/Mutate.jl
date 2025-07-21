@@ -26,6 +26,7 @@ using ..PopMemberModule: PopMember
 using ..MutationFunctionsModule:
     mutate_constant,
     mutate_operator,
+    mutate_feature,
     swap_operands,
     append_random_op,
     prepend_random_op,
@@ -82,7 +83,7 @@ struct MutationResult{N<:AbstractExpression,P<:PopMember} <: AbstractMutationRes
 end
 
 """
-    condition_mutation_weights!(weights::AbstractMutationWeights, member::PopMember, options::AbstractOptions, curmaxsize::Int)
+    condition_mutation_weights!(weights::AbstractMutationWeights, member::PopMember, options::AbstractOptions, curmaxsize::Int, nfeatures::Int)
 
 Adjusts the mutation weights based on the properties of the current member and options.
 
@@ -95,9 +96,14 @@ Note that the weights were already copied, so you don't need to worry about muta
 - `member::PopMember`: The current population member being mutated.
 - `options::AbstractOptions`: The options that guide the mutation process.
 - `curmaxsize::Int`: The current maximum size constraint for the member's expression tree.
+- `nfeatures::Int`: The number of features available in the dataset.
 """
 function condition_mutation_weights!(
-    weights::AbstractMutationWeights, member::P, options::AbstractOptions, curmaxsize::Int
+    weights::AbstractMutationWeights,
+    member::P,
+    options::AbstractOptions,
+    curmaxsize::Int,
+    nfeatures::Int,
 ) where {T,L,N<:AbstractExpression,P<:PopMember{T,L,N}}
     tree = get_tree(member.tree)
     if !preserve_sharing(typeof(member.tree))
@@ -114,6 +120,8 @@ function condition_mutation_weights!(
         if !tree.constant
             weights.optimize = 0.0
             weights.mutate_constant = 0.0
+        else
+            weights.mutate_feature = 0.0
         end
         return nothing
     end
@@ -124,6 +132,11 @@ function condition_mutation_weights!(
     end
 
     condition_mutate_constant!(typeof(member.tree), weights, member, options, curmaxsize)
+
+    # Disable feature mutation if only one feature available
+    if nfeatures <= 1
+        weights.mutate_feature = 0.0
+    end
 
     complexity = compute_complexity(member, options)
 
@@ -179,7 +192,7 @@ end
 
     weights = copy(options.mutation_weights)
 
-    condition_mutation_weights!(weights, member, options, curmaxsize)
+    condition_mutation_weights!(weights, member, options, curmaxsize, nfeatures)
 
     mutation_choice = sample_mutation(weights)
 
@@ -431,6 +444,21 @@ function mutate!(
 ) where {N<:AbstractExpression,P<:PopMember}
     tree = mutate_operator(tree, options)
     @recorder recorder["type"] = "mutate_operator"
+    return MutationResult{N,P}(; tree=tree)
+end
+
+function mutate!(
+    tree::N,
+    member::P,
+    ::Val{:mutate_feature},
+    ::AbstractMutationWeights,
+    options::AbstractOptions;
+    recorder::RecordType,
+    nfeatures,
+    kws...,
+) where {N<:AbstractExpression,P<:PopMember}
+    tree = mutate_feature(tree, nfeatures)
+    @recorder recorder["type"] = "mutate_feature"
     return MutationResult{N,P}(; tree=tree)
 end
 
