@@ -41,9 +41,7 @@ function compute_complexity(
 end
 
 function _compute_complexity(
-    tree::AbstractExpressionNode{<:Any,2},
-    cmap::ComplexityMapping{CT};
-    break_sharing=Val(false),
+    tree::AbstractExpressionNode, cmap::ComplexityMapping{CT}; break_sharing=Val(false)
 )::CT where {CT}
     return tree_mapreduce(
         let vc = cmap.variable_complexity, cc = cmap.constant_complexity
@@ -53,8 +51,8 @@ function _compute_complexity(
                 t -> t.constant ? cc : vc
             end
         end,
-        let uc = cmap.unaop_complexities, bc = cmap.binop_complexities
-            t -> t.degree == 1 ? @inbounds(uc[t.op]) : @inbounds(bc[t.op])
+        let op_complexities = cmap.op_complexities
+            t -> @inbounds(op_complexities[t.degree][t.op])
         end,
         +,
         tree,
