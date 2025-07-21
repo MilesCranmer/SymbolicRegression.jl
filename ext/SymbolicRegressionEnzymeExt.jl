@@ -10,17 +10,23 @@ using DynamicExpressions:
     with_contents,
     get_contents
 using ADTypes: AutoEnzyme
-using Enzyme: autodiff, Reverse, Active, Const, Duplicated
+using Enzyme: autodiff, Reverse, Active, Const, Duplicated, make_zero, remake_zero!
 
-import SymbolicRegression.ConstantOptimizationModule: GradEvaluator
+import SymbolicRegression.ConstantOptimizationModule: Evaluator, GradEvaluator
 
 # We prepare a copy of the tree and all arrays
-function GradEvaluator(f::F, backend::AE) where {F,AE<:AutoEnzyme}
-    storage_tree = copy(f.tree)
+function GradEvaluator(f::F, backend::AE) where {F<:Evaluator,AE<:AutoEnzyme}
+    storage_tree = make_zero(f.tree)
     _, storage_refs = get_scalar_constants(storage_tree)
-    storage_dataset = deepcopy(f.dataset)
+    storage_dataset = make_zero(f.ctx.dataset)
+    storage_options = make_zero(f.ctx.options)
     # TODO: It is super inefficient to deepcopy; how can we skip this
-    return GradEvaluator(f, backend, (; storage_tree, storage_refs, storage_dataset))
+    return GradEvaluator(
+        f,
+        nothing,
+        backend,
+        (; storage_tree, storage_refs, storage_dataset, storage_options),
+    )
 end
 
 function evaluator(tree, dataset, options, output)
@@ -31,9 +37,10 @@ end
 with_stacksize(f::F, n) where {F} = fetch(schedule(Task(f, n)))
 
 function (g::GradEvaluator{<:Any,<:AutoEnzyme})(_, G, x::AbstractVector{T}) where {T}
-    set_scalar_constants!(g.f.tree, x, g.f.refs)
-    set_scalar_constants!(g.extra.storage_tree, zero(x), g.extra.storage_refs)
-    fill!(g.extra.storage_dataset, 0)
+    set_scalar_constants!(g.e.tree, x, g.e.refs)
+    remake_zero!(g.extra.storage_tree)
+    remake_zero!(g.extra.storage_dataset)
+    remake_zero!(g.extra.storage_options)
 
     output = [zero(T)]
     doutput = [one(T)]
@@ -42,9 +49,9 @@ function (g::GradEvaluator{<:Any,<:AutoEnzyme})(_, G, x::AbstractVector{T}) wher
         autodiff(
             Reverse,
             evaluator,
-            Duplicated(g.f.tree, g.extra.storage_tree),
-            Duplicated(g.f.dataset, g.extra.storage_dataset),
-            Const(g.f.options),
+            Duplicated(g.e.tree, g.extra.storage_tree),
+            Duplicated(g.e.ctx.dataset, g.extra.storage_dataset),
+            Duplicated(g.e.ctx.options, g.extra.storage_options),
             Duplicated(output, doutput),
         )
     end
