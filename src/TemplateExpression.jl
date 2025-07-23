@@ -931,4 +931,123 @@ function IDE.make_example_inputs(
     )
 end
 
+"""
+    parse_expression(ex::NamedTuple; kws...)
+
+Extension of `parse_expression` to handle NamedTuple input for creating template expressions.
+Each key in the NamedTuple should map to a string expression using #N placeholder syntax.
+
+# Example
+```julia
+# With expression_spec (recommended for template expressions):
+spec = TemplateExpressionSpec(; structure=TemplateStructure{(:f, :g)}(...))
+parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_spec=spec, operators=operators, variable_names=["x1", "x2"])
+
+# Or with explicit parameters:
+parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=TemplateExpression, operators=operators, variable_names=["x1", "x2"])
+```
+"""
+@unstable function DE.parse_expression(
+    ex::NamedTuple;
+    expression_spec::Union{ES.AbstractExpressionSpec,Nothing}=nothing,
+    expression_options::Union{NamedTuple,Nothing}=nothing,
+    eval_options::Union{EvalOptions,Nothing}=nothing,
+    operators::Union{AbstractOperatorEnum,Nothing}=nothing,
+    binary_operators::Union{Vector{<:Function},Nothing}=nothing,
+    unary_operators::Union{Vector{<:Function},Nothing}=nothing,
+    variable_names::Union{AbstractVector,Nothing}=nothing,
+    expression_type::Union{Type,Nothing}=nothing,
+    node_type::Union{Type,Nothing}=nothing,
+    kws...,
+)
+    if expression_spec !== nothing
+        actual_expression_type = ES.get_expression_type(expression_spec)
+        actual_expression_options = ES.get_expression_options(expression_spec)
+        actual_node_type = ES.get_node_type(expression_spec)
+    else
+        actual_expression_type = something(expression_type, DE.Expression)
+        actual_expression_options = expression_options
+        actual_node_type = something(node_type, Node)
+    end
+
+    if actual_expression_options !== nothing &&
+        hasfield(typeof(actual_expression_options), :structure)
+        eval_options_kws = if eval_options !== nothing
+            (; eval_options)
+        else
+            NamedTuple()
+        end
+
+        inner_expressions = NamedTuple{keys(ex)}(
+            map(values(ex)) do expr_str
+                # Find maximum #N index in this specific expression
+                max_var_index = 0
+                for m in eachmatch(r"#(\d+)", expr_str)
+                    var_idx = parse(Int, m.captures[1])
+                    max_var_index = max(max_var_index, var_idx)
+                end
+
+                # Create variable names like ["__arg_1", "__arg_2", "__arg_3", ...]
+                # up to max index for this expression
+                placeholder_variable_names = ["__arg_$i" for i in 1:max_var_index]
+                expr_str = replace(expr_str, r"#(\d+)" => s"__arg_\1")
+
+                # Parse as Expression first
+                parsed_expr = DE.parse_expression(
+                    Meta.parse(expr_str);
+                    operators,
+                    binary_operators,
+                    unary_operators,
+                    variable_names=placeholder_variable_names,  # Use #1, #2, ... as variable names
+                    expression_type=DE.Expression,
+                    node_type=actual_node_type,
+                    kws...,
+                )
+
+                # Convert to ComposableExpression and remove variable names metadata
+                ComposableExpression(
+                    parsed_expr.tree; operators, variable_names=nothing, eval_options_kws...
+                )
+            end,
+        )
+
+        return actual_expression_type(
+            inner_expressions;
+            structure=actual_expression_options.structure,
+            operators,
+            variable_names=nothing,
+            kws...,
+        )
+    end
+
+    parsed_expressions = NamedTuple{keys(ex)}(
+        map(values(ex)) do expr_str
+            # Find maximum #N index in this specific expression
+            max_var_index = 0
+            for m in eachmatch(r"#(\d+)", expr_str)
+                var_idx = parse(Int, m.captures[1])
+                max_var_index = max(max_var_index, var_idx)
+            end
+
+            # Create variable names like ["#1", "#2", "#3", ...] up to max index for this expression
+            placeholder_variable_names = ["#$i" for i in 1:max_var_index]
+
+            expr = DE.parse_expression(
+                Meta.parse(expr_str);
+                operators,
+                binary_operators,
+                unary_operators,
+                variable_names=placeholder_variable_names,  # Use #1, #2, ... as variable names
+                expression_type=actual_expression_type,
+                node_type=actual_node_type,
+                kws...,
+            )
+
+            # Remove the placeholder variable names metadata after parsing
+            with_metadata(expr; variable_names=nothing)
+        end,
+    )
+    return parsed_expressions
+end
+
 end
