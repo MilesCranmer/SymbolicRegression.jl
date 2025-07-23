@@ -413,7 +413,7 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_spec=spec, 
 parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=TemplateExpression, operators=operators, variable_names=["x1", "x2"])
 ```
 """
-function DE.parse_expression(
+@unstable function DE.parse_expression(
     ex::NamedTuple;
     expression_spec::Union{AbstractExpressionSpec,Nothing}=nothing,
     expression_options::Union{NamedTuple,Nothing}=nothing,
