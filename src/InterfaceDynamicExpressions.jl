@@ -12,10 +12,14 @@ using DynamicExpressions:
     AbstractExpressionNode,
     Node,
     GraphNode,
-    EvalOptions
+    EvalOptions,
+    Expression,
+    default_node_type
 using DynamicQuantities: dimension, ustrip
-using ..CoreModule: AbstractOptions, Dataset
+using ..CoreModule: AbstractOptions, Dataset, AbstractExpressionSpec
 using ..CoreModule.OptionsModule: inverse_opmap
+using ..CoreModule.ExpressionSpecModule:
+    get_expression_type, get_expression_options, get_node_type
 using ..UtilsModule: subscriptify
 
 takes_eval_options(::Type{<:AbstractOperatorEnum}) = false
@@ -392,5 +396,129 @@ function make_example_inputs(
     )
 end
 # COV_EXCL_STOP
+
+"""
+    parse_expression(ex::NamedTuple; kws...)
+
+Extension of `parse_expression` to handle NamedTuple input for creating template expressions.
+Each key in the NamedTuple should map to a string expression using #N placeholder syntax.
+
+# Example
+```julia
+# With expression_spec (recommended for template expressions):
+spec = TemplateExpressionSpec(; structure=TemplateStructure{(:f, :g)}(...))
+parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_spec=spec, operators=operators, variable_names=["x1", "x2"])
+
+# Or with explicit parameters:
+parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=TemplateExpression, operators=operators, variable_names=["x1", "x2"])
+```
+"""
+function DE.parse_expression(
+    ex::NamedTuple;
+    expression_spec::Union{AbstractExpressionSpec,Nothing}=nothing,
+    expression_options::Union{NamedTuple,Nothing}=nothing,
+    operators::Union{AbstractOperatorEnum,Nothing}=nothing,
+    binary_operators::Union{Vector{<:Function},Nothing}=nothing,
+    unary_operators::Union{Vector{<:Function},Nothing}=nothing,
+    variable_names::Union{AbstractVector,Nothing}=nothing,
+    expression_type::Union{Type,Nothing}=nothing,
+    node_type::Union{Type,Nothing}=nothing,
+    kws...,
+)
+    if expression_spec !== nothing
+        actual_expression_type = get_expression_type(expression_spec)
+        actual_expression_options = get_expression_options(expression_spec)
+        actual_node_type = get_node_type(expression_spec)
+    else
+        actual_expression_type = something(expression_type, Expression)
+        actual_expression_options = expression_options
+        actual_node_type = something(node_type, Node)
+    end
+
+    # For TemplateExpression, we need to create the full expression
+    if actual_expression_options !== nothing &&
+        hasfield(typeof(actual_expression_options), :structure)
+        # Parse each sub-expression as Expression objects first, ensuring consistent types
+        parsed_expressions = NamedTuple{keys(ex)}(
+            map(values(ex)) do expr_str
+                # Preprocess #N placeholders to variable names
+                processed_str = expr_str
+                if variable_names !== nothing
+                    for (i, var_name) in enumerate(variable_names)
+                        processed_str = replace(processed_str, "#$i" => var_name)
+                    end
+                end
+
+                DE.parse_expression(
+                    Meta.parse(processed_str);  # Need to parse string to Expr first
+                    operators=operators,
+                    binary_operators=binary_operators,
+                    unary_operators=unary_operators,
+                    variable_names=variable_names,
+                    expression_type=Expression,  # Parse as regular expressions first
+                    node_type=actual_node_type,
+                    kws...,
+                )
+            end,
+        )
+
+        # Convert to ComposableExpression objects for TemplateExpression
+        # We need to access ComposableExpression dynamically since it's loaded after this module
+        ComposableExpression =
+            getfield(
+                parentmodule(@__MODULE__), :ComposableExpressionModule
+            ).ComposableExpression
+
+        # Ensure all expressions have the same element type by converting trees to Float64
+        inner_expressions = NamedTuple{keys(parsed_expressions)}(
+            map(values(parsed_expressions)) do expr
+                # Convert node tree to Float64 if it's not already
+                tree = if eltype(expr.tree) != Float64
+                    convert(Node{Float64}, expr.tree)
+                else
+                    expr.tree
+                end
+                ComposableExpression(
+                    tree; operators=operators, variable_names=variable_names
+                )
+            end,
+        )
+
+        # Create TemplateExpression using the constructor
+        return actual_expression_type(
+            inner_expressions;
+            structure=actual_expression_options.structure,
+            operators=operators,
+            variable_names=variable_names,
+            kws...,
+        )
+    end
+
+    # For non-template expressions or when expression_spec is not provided,
+    # parse each expression in the NamedTuple
+    parsed_expressions = NamedTuple{keys(ex)}(
+        map(values(ex)) do expr_str
+            # Preprocess #N placeholders to variable names
+            processed_str = expr_str
+            if variable_names !== nothing
+                for (i, var_name) in enumerate(variable_names)
+                    processed_str = replace(processed_str, "#$i" => var_name)
+                end
+            end
+
+            DE.parse_expression(
+                Meta.parse(processed_str);  # Need to parse string to Expr first
+                operators=operators,
+                binary_operators=binary_operators,
+                unary_operators=unary_operators,
+                variable_names=variable_names,
+                expression_type=actual_expression_type,
+                node_type=actual_node_type,
+                kws...,
+            )
+        end,
+    )
+    return parsed_expressions
+end
 
 end

@@ -711,9 +711,20 @@ function parse_guesses(
     for j in 1:nout
         dataset = datasets[j]
         for g in guess_lists[j]
-            g::Union{AbstractExpression,AbstractString}
             ex = if g isa AbstractExpression
                 copy(g)
+            elseif g isa NamedTuple
+                # Handle NamedTuple input for template expressions
+                # Our custom parse_expression method handles the #N preprocessing internally
+                parse_expression(
+                    g;  # Pass original NamedTuple with #N placeholders
+                    expression_type=options.expression_type,
+                    operators=options.operators,
+                    variable_names=dataset.variable_names,  # Pass variable names for preprocessing
+                    node_type=options.node_type,
+                    # Pass expression_options which contains the structure for TemplateExpression
+                    expression_options=options.expression_options,
+                )
             else
                 parse_expression(
                     Meta.parse(g);
