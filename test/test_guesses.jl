@@ -127,11 +127,8 @@ end
         binary_operators=[+, -, *, /], verbosity=0, progress=false, deterministic=true
     )
 
-    # This guess contains Float64 literals but should work with Float32 dataset
-    # after auto-conversion is implemented
     guess_with_float64_literals = "4.561253 - ((x1 - x2) * 0.18459733)"
 
-    # Test that this now works with auto-conversion after the fix
     parsed_members = parse_guesses(
         PopMember{Float32,Float32}, [guess_with_float64_literals], [dataset], options
     )

@@ -19,8 +19,8 @@
         named_tuple_input;
         expression_options=options.expression_options,
         operators=operators,
-        variable_names=variable_names,
         expression_type=TemplateExpression,
+        node_type=Node{Float64},
     )
 
     @test result isa TemplateExpression
@@ -34,7 +34,7 @@
         named_tuple_input;
         expression_spec=template,
         operators=operators,
-        variable_names=variable_names,
+        node_type=Node{Float64},
     )
 
     @test result_with_spec isa TemplateExpression
@@ -46,15 +46,14 @@
         different_input;
         expression_options=options.expression_options,
         operators=operators,
-        variable_names=variable_names,
         expression_type=TemplateExpression,
+        node_type=Node{Float64},
     )
 
     @test different_result isa TemplateExpression
     @test different_result.trees.f isa ComposableExpression
     @test different_result.trees.g isa ComposableExpression
 
-    # Test for non-template expressions (fallback behavior) - also using #N syntax
     simple_input = (; a="#1 + 1", b="#2 * 2")
     simple_result = parse_expression(
         simple_input; operators=operators, variable_names=variable_names

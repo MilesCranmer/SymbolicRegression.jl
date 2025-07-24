@@ -716,22 +716,18 @@ function parse_guesses(
             ex = if g isa AbstractExpression
                 copy(g)
             elseif g isa NamedTuple
-                # Handle NamedTuple input for template expressions
-                # Our custom parse_expression method handles the #N preprocessing internally
                 eval_options_kws = if takes_eval_options(options.operators)
                     (; eval_options=EvalOptions(; options.turbo, options.bumper))
                 else
                     NamedTuple()
                 end
                 parse_expression(
-                    g;  # Pass original NamedTuple with #N placeholders
+                    g;
                     expression_type=options.expression_type,
                     operators=options.operators,
-                    variable_names=dataset.variable_names,  # Pass variable names for preprocessing
-                    node_type=with_type_parameters(options.node_type, T),  # Use dataset's numeric type T for auto-conversion
-                    # Pass expression_options which contains the structure for TemplateExpression
+                    variable_names=nothing,  # Don't pass dataset variable names - let custom parse_expression handle #N placeholders
+                    node_type=with_type_parameters(options.node_type, T),
                     expression_options=options.expression_options,
-                    # Pass eval_options only if operators support it
                     eval_options_kws...,
                 )
             else
@@ -739,7 +735,7 @@ function parse_guesses(
                     Meta.parse(g);
                     operators=options.operators,
                     variable_names=dataset.variable_names,
-                    node_type=with_type_parameters(options.node_type, T),  # Use dataset's numeric type T for auto-conversion
+                    node_type=with_type_parameters(options.node_type, T),
                     expression_type=options.expression_type,
                 )
             end
