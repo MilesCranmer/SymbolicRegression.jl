@@ -11,7 +11,8 @@ using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
 using Logging: AbstractLogger
 
-using DynamicExpressions: AbstractExpression, string_tree, parse_expression, EvalOptions
+using DynamicExpressions:
+    AbstractExpression, string_tree, parse_expression, EvalOptions, with_type_parameters
 using ..UtilsModule: subscriptify
 using ..CoreModule: Dataset, AbstractOptions, Options, RecordType, max_features
 using ..ComplexityModule: compute_complexity
@@ -727,7 +728,7 @@ function parse_guesses(
                     expression_type=options.expression_type,
                     operators=options.operators,
                     variable_names=dataset.variable_names,  # Pass variable names for preprocessing
-                    node_type=options.node_type,
+                    node_type=with_type_parameters(options.node_type, T),  # Use dataset's numeric type T for auto-conversion
                     # Pass expression_options which contains the structure for TemplateExpression
                     expression_options=options.expression_options,
                     # Pass eval_options only if operators support it
@@ -738,7 +739,7 @@ function parse_guesses(
                     Meta.parse(g);
                     operators=options.operators,
                     variable_names=dataset.variable_names,
-                    node_type=options.node_type,
+                    node_type=with_type_parameters(options.node_type, T),  # Use dataset's numeric type T for auto-conversion
                     expression_type=options.expression_type,
                 )
             end

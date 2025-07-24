@@ -113,5 +113,41 @@ end
     @test any(m -> m.tree isa TemplateExpression, dominating)
 end
 
+@testitem "Float32 dataset with Float64 guess literals" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: parse_guesses, Dataset, PopMember
+    using Test
+
+    # Create Float32 dataset
+    X = Float32[1.0 2.0; 3.0 4.0]
+    y = Float32[5.0, 6.0]
+    dataset = Dataset(X, y)
+
+    options = Options(;
+        binary_operators=[+, -, *, /], verbosity=0, progress=false, deterministic=true
+    )
+
+    # This guess contains Float64 literals but should work with Float32 dataset
+    # after auto-conversion is implemented
+    guess_with_float64_literals = "4.561253 - ((x1 - x2) * 0.18459733)"
+
+    # Test that this now works with auto-conversion after the fix
+    parsed_members = parse_guesses(
+        PopMember{Float32,Float32}, [guess_with_float64_literals], [dataset], options
+    )
+    @test length(parsed_members) == 1
+    @test length(parsed_members[1]) == 1
+    @test parsed_members[1][1] isa PopMember{Float32,Float32}
+
+    # Test that Float32 literals work fine
+    guess_with_float32_literals = "4.561253f0 - ((x1 - x2) * 0.18459733f0)"
+    parsed_members = parse_guesses(
+        PopMember{Float32,Float32}, [guess_with_float32_literals], [dataset], options
+    )
+    @test length(parsed_members) == 1
+    @test length(parsed_members[1]) == 1
+    @test parsed_members[1][1] isa PopMember{Float32,Float32}
+end
+
 # TODO: Multiple outputs
 # TODO: User-defined operators
