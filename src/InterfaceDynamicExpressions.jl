@@ -1,7 +1,7 @@
 module InterfaceDynamicExpressionsModule
 
 using Printf: @sprintf
-using DispatchDoctor: @stable
+using DispatchDoctor: @stable, @unstable
 using Compat: Fix
 using DynamicExpressions:
     DynamicExpressions as DE,
@@ -417,6 +417,7 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
     ex::NamedTuple;
     expression_spec::Union{AbstractExpressionSpec,Nothing}=nothing,
     expression_options::Union{NamedTuple,Nothing}=nothing,
+    eval_options::Union{EvalOptions,Nothing}=nothing,
     operators::Union{AbstractOperatorEnum,Nothing}=nothing,
     binary_operators::Union{Vector{<:Function},Nothing}=nothing,
     unary_operators::Union{Vector{<:Function},Nothing}=nothing,
@@ -470,6 +471,12 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
             ).ComposableExpression
 
         # Ensure all expressions have the same element type by converting trees to Float64
+        # Create eval_options kwargs conditionally
+        eval_options_kws = if eval_options !== nothing
+            (; eval_options=eval_options)
+        else
+            NamedTuple()
+        end
         inner_expressions = NamedTuple{keys(parsed_expressions)}(
             map(values(parsed_expressions)) do expr
                 # Convert node tree to Float64 if it's not already
@@ -479,7 +486,7 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
                     expr.tree
                 end
                 ComposableExpression(
-                    tree; operators=operators, variable_names=variable_names
+                    tree; operators=operators, variable_names=nothing, eval_options_kws...
                 )
             end,
         )
@@ -489,7 +496,7 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
             inner_expressions;
             structure=actual_expression_options.structure,
             operators=operators,
-            variable_names=variable_names,
+            variable_names=nothing,
             kws...,
         )
     end

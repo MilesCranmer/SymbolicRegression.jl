@@ -11,7 +11,7 @@ using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
 using Logging: AbstractLogger
 
-using DynamicExpressions: AbstractExpression, string_tree, parse_expression
+using DynamicExpressions: AbstractExpression, string_tree, parse_expression, EvalOptions
 using ..UtilsModule: subscriptify
 using ..CoreModule: Dataset, AbstractOptions, Options, RecordType, max_features
 using ..ComplexityModule: compute_complexity
@@ -22,6 +22,7 @@ using ..ConstantOptimizationModule: optimize_constants
 using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..ExpressionBuilderModule: strip_metadata
+using ..InterfaceDynamicExpressionsModule: takes_eval_options
 
 function logging_callback! end
 
@@ -716,6 +717,11 @@ function parse_guesses(
             elseif g isa NamedTuple
                 # Handle NamedTuple input for template expressions
                 # Our custom parse_expression method handles the #N preprocessing internally
+                eval_options_kws = if takes_eval_options(options.operators)
+                    (; eval_options=EvalOptions(; options.turbo, options.bumper))
+                else
+                    NamedTuple()
+                end
                 parse_expression(
                     g;  # Pass original NamedTuple with #N placeholders
                     expression_type=options.expression_type,
@@ -724,6 +730,8 @@ function parse_guesses(
                     node_type=options.node_type,
                     # Pass expression_options which contains the structure for TemplateExpression
                     expression_options=options.expression_options,
+                    # Pass eval_options only if operators support it
+                    eval_options_kws...,
                 )
             else
                 parse_expression(
