@@ -20,7 +20,7 @@
         expression_options=options.expression_options,
         operators=operators,
         expression_type=TemplateExpression,
-        node_type=Node{Float64},
+        node_type=Node{Float64,2},
     )
 
     @test result isa TemplateExpression
@@ -34,7 +34,7 @@
         named_tuple_input;
         expression_spec=template,
         operators=operators,
-        node_type=Node{Float64},
+        node_type=Node{Float64,2},
     )
 
     @test result_with_spec isa TemplateExpression

@@ -987,8 +987,10 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
                     max_var_index = max(max_var_index, var_idx)
                 end
 
-                # Create variable names like ["#1", "#2", "#3", ...] up to max index for this expression
-                placeholder_variable_names = ["#$i" for i in 1:max_var_index]
+                # Create variable names like ["__arg_1", "__arg_2", "__arg_3", ...]
+                # up to max index for this expression
+                placeholder_variable_names = ["__arg_$i" for i in 1:max_var_index]
+                expr_str = replace(expr_str, r"#(\d+)" => s"__arg_\1")
 
                 # Parse as Expression first
                 parsed_expr = DE.parse_expression(
