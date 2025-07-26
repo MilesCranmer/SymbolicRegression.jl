@@ -699,6 +699,43 @@ function update_hall_of_fame!(
     end
 end
 
+function _parse_guess_expression(
+    ::Type{T}, g::AbstractExpression, ::Dataset, ::AbstractOptions
+) where {T}
+    return copy(g)
+end
+
+@unstable function _parse_guess_expression(
+    ::Type{T}, g::NamedTuple, ::Dataset, options::AbstractOptions
+) where {T}
+    eval_options_kws = if takes_eval_options(options.operators)
+        (; eval_options=EvalOptions(; options.turbo, options.bumper))
+    else
+        NamedTuple()
+    end
+    return parse_expression(
+        g;
+        expression_type=options.expression_type,
+        operators=options.operators,
+        variable_names=nothing,  # Don't pass dataset variable names - let custom parse_expression handle #N placeholders
+        node_type=with_type_parameters(options.node_type, T),
+        expression_options=options.expression_options,
+        eval_options_kws...,
+    )
+end
+
+@unstable function _parse_guess_expression(
+    ::Type{T}, g, dataset::Dataset, options::AbstractOptions
+) where {T}
+    return parse_expression(
+        g;
+        operators=options.operators,
+        variable_names=dataset.variable_names,
+        node_type=with_type_parameters(options.node_type, T),
+        expression_type=options.expression_type,
+    )
+end
+
 """Parse user-provided guess expressions and convert them into optimized
 `PopMember` objects for each output dataset."""
 function parse_guesses(
@@ -713,32 +750,7 @@ function parse_guesses(
     for j in 1:nout
         dataset = datasets[j]
         for g in guess_lists[j]
-            ex = if g isa AbstractExpression
-                copy(g)
-            elseif g isa NamedTuple
-                eval_options_kws = if takes_eval_options(options.operators)
-                    (; eval_options=EvalOptions(; options.turbo, options.bumper))
-                else
-                    NamedTuple()
-                end
-                parse_expression(
-                    g;
-                    expression_type=options.expression_type,
-                    operators=options.operators,
-                    variable_names=nothing,  # Don't pass dataset variable names - let custom parse_expression handle #N placeholders
-                    node_type=with_type_parameters(options.node_type, T),
-                    expression_options=options.expression_options,
-                    eval_options_kws...,
-                )
-            else
-                parse_expression(
-                    g;
-                    operators=options.operators,
-                    variable_names=dataset.variable_names,
-                    node_type=with_type_parameters(options.node_type, T),
-                    expression_type=options.expression_type,
-                )
-            end
+            ex = _parse_guess_expression(T, g, dataset, options)
             member = PopMember(dataset, ex, options; deterministic=options.deterministic)
             if options.should_optimize_constants
                 member, _ = optimize_constants(dataset, member, options)
