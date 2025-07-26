@@ -983,8 +983,11 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
                 # Find maximum #N index in this specific expression
                 max_var_index = 0
                 for m in eachmatch(r"#(\d+)", expr_str)
-                    var_idx = parse(Int, m.captures[1])
-                    max_var_index = max(max_var_index, var_idx)
+                    capture = m.captures[1]
+                    if capture !== nothing
+                        var_idx = parse(Int, capture)
+                        max_var_index = max(max_var_index, var_idx)
+                    end
                 end
 
                 # Create variable names like ["__arg_1", "__arg_2", "__arg_3", ...]
@@ -1025,8 +1028,11 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
             # Find maximum #N index in this specific expression
             max_var_index = 0
             for m in eachmatch(r"#(\d+)", expr_str)
-                var_idx = parse(Int, m.captures[1])
-                max_var_index = max(max_var_index, var_idx)
+                capture = m.captures[1]
+                if capture !== nothing
+                    var_idx = parse(Int, capture)
+                    max_var_index = max(max_var_index, var_idx)
+                end
             end
 
             # Create variable names like ["#1", "#2", "#3", ...] up to max index for this expression
