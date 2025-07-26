@@ -980,7 +980,6 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
 
         inner_expressions = NamedTuple{keys(ex)}(
             map(values(ex)) do expr_str
-                # Find maximum #N index in this specific expression
                 max_var_index = 0
                 for m in eachmatch(r"#(\d+)", expr_str)
                     capture = m.captures[1]
@@ -990,24 +989,20 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
                     end
                 end
 
-                # Create variable names like ["__arg_1", "__arg_2", "__arg_3", ...]
-                # up to max index for this expression
                 placeholder_variable_names = ["__arg_$i" for i in 1:max_var_index]
                 expr_str = replace(expr_str, r"#(\d+)" => s"__arg_\1")
 
-                # Parse as Expression first
                 parsed_expr = DE.parse_expression(
                     expr_str;
                     operators,
                     binary_operators,
                     unary_operators,
-                    variable_names=placeholder_variable_names,  # Use #1, #2, ... as variable names
+                    variable_names=placeholder_variable_names,
                     expression_type=DE.Expression,
                     node_type=actual_node_type,
                     kws...,
                 )
 
-                # Convert to ComposableExpression and remove variable names metadata
                 ComposableExpression(
                     parsed_expr.tree; operators, variable_names=nothing, eval_options_kws...
                 )
@@ -1025,7 +1020,6 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
 
     parsed_expressions = NamedTuple{keys(ex)}(
         map(values(ex)) do expr_str
-            # Find maximum #N index in this specific expression
             max_var_index = 0
             for m in eachmatch(r"#(\d+)", expr_str)
                 capture = m.captures[1]
@@ -1035,7 +1029,6 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
                 end
             end
 
-            # Create variable names like ["#1", "#2", "#3", ...] up to max index for this expression
             placeholder_variable_names = ["#$i" for i in 1:max_var_index]
 
             expr = DE.parse_expression(
@@ -1043,13 +1036,12 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
                 operators,
                 binary_operators,
                 unary_operators,
-                variable_names=placeholder_variable_names,  # Use #1, #2, ... as variable names
+                variable_names=placeholder_variable_names,
                 expression_type=actual_expression_type,
                 node_type=actual_node_type,
                 kws...,
             )
 
-            # Remove the placeholder variable names metadata after parsing
             with_metadata(expr; variable_names=nothing)
         end,
     )

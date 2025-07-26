@@ -447,9 +447,10 @@ which is useful for debugging and profiling.
     If `y` is a matrix, then this can be a vector of units, in which case
     each element corresponds to each output feature.
 - `guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing}=nothing`: Initial
-    guess equations to seed the search, provided as strings (e.g., "x1 + 2.0 * x2") or
-    `AbstractExpression` objects. For multi-output, use a vector of vectors (one per output).
-    Any constants will be automatically optimized on first pass.
+    guess equations to seed the search. Examples:
+    - Single output: `["x1^2 + x2", "sin(x1) * x2"]`
+    - Multi-output: `[["x1 + x2"], ["x1 * x2", "x1 - x2"]]`
+    Constants will be automatically optimized.
 
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
