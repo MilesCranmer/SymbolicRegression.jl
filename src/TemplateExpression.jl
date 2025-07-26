@@ -965,10 +965,12 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
         actual_expression_options = ES.get_expression_options(expression_spec)
         actual_node_type = ES.get_node_type(expression_spec)
     else
-        actual_expression_type = something(expression_type, DE.Expression)
+        actual_expression_type = something(expression_type, TemplateExpression)
         actual_expression_options = expression_options
         actual_node_type = something(node_type, Node)
     end
+
+    @assert actual_expression_type <: TemplateExpression
 
     if actual_expression_options !== nothing &&
         hasfield(typeof(actual_expression_options), :structure)
