@@ -1,7 +1,7 @@
 module InterfaceDynamicExpressionsModule
 
 using Printf: @sprintf
-using DispatchDoctor: @stable, @unstable
+using DispatchDoctor: @stable
 using Compat: Fix
 using DynamicExpressions:
     DynamicExpressions as DE,
@@ -12,14 +12,10 @@ using DynamicExpressions:
     AbstractExpressionNode,
     Node,
     GraphNode,
-    EvalOptions,
-    Expression,
-    default_node_type
+    EvalOptions
 using DynamicQuantities: dimension, ustrip
-using ..CoreModule: AbstractOptions, Dataset, AbstractExpressionSpec
+using ..CoreModule: AbstractOptions, Dataset
 using ..CoreModule.OptionsModule: inverse_opmap
-using ..CoreModule.ExpressionSpecModule:
-    get_expression_type, get_expression_options, get_node_type
 using ..UtilsModule: subscriptify
 
 takes_eval_options(::Type{<:AbstractOperatorEnum}) = false
