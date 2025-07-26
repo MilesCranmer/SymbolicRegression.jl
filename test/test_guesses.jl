@@ -303,4 +303,31 @@ end
     @test haskey(member.tree.trees, :g)
 end
 
-# TODO: Multiple outputs
+@testitem "Smoke test migration with multiple outputs and templates" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: calculate_pareto_frontier
+    using Test
+
+    # Multi-output data
+    X = randn(2, 20)
+    y1 = @. 2.0 * X[1, :] + X[2, :]
+    y2 = @. X[1, :] - X[2, :]
+    Y = [y1 y2]'
+
+    # Template expressions
+    operators = OperatorEnum(; binary_operators=[+, -, *], unary_operators=[])
+    template = @template_spec(expressions = (f,)) do x1, x2
+        f(x1, x2)
+    end
+    options = Options(;
+        operators=operators,
+        expression_spec=template,
+        fraction_replaced_guesses=0.5,
+        verbosity=0,
+        progress=false,
+    )
+    guesses = [[(; f="1.9 * #1 + #2")], [(; f="#1 - #2")]]
+    hof = equation_search(X, Y; niterations=1, options, guesses)
+
+    @test all(h -> any(m -> m.loss < 0.01, calculate_pareto_frontier(h)), hof)
+end
