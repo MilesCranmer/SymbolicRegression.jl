@@ -321,29 +321,31 @@ struct TemplateExpression{
 end
 
 function TemplateExpression(
-    trees::NamedTuple{<:Any,<:NTuple{<:Any,<:AbstractExpression}};
+    trees::NamedTuple{<:Any,<:NTuple{<:Any,<:AbstractExpression{T}}};
     structure::TemplateStructure,
     operators::Union{AbstractOperatorEnum,Nothing}=nothing,
     variable_names::Union{AbstractVector{<:AbstractString},Nothing}=nothing,
     parameters::Union{NamedTuple,Nothing}=nothing,
-)
+) where {T}
     example_tree = first(values(trees))::AbstractExpression
     operators = get_operators(example_tree, operators)
     variable_names = get_variable_names(example_tree, variable_names)
-    parameters = if has_params(structure)
-        @assert(
-            parameters !== nothing,
-            "Expected `parameters` to be provided for `structure.num_parameters=$(structure.num_parameters)`"
-        )
+    final_parameters = if has_params(structure)
+        resolved_parameters = @something parameters begin
+            # Auto-initialize parameters to zeros when not provided
+            NamedTuple{keys(structure.num_parameters)}(
+                map(Base.Fix1(zeros, T), values(structure.num_parameters))
+            )
+        end
         for k in keys(structure.num_parameters)
             @assert(
-                length(parameters[k]) == structure.num_parameters[k],
-                "Expected `parameters.$k` to have length $(structure.num_parameters[k]), got $(length(parameters[k]))"
+                length(resolved_parameters[k]) == structure.num_parameters[k],
+                "Expected `parameters.$k` to have length $(structure.num_parameters[k]), got $(length(resolved_parameters[k]))"
             )
         end
         # TODO: Delete this extra check once we are confident that it works
         NamedTuple{keys(structure.num_parameters)}(
-            map(p -> p isa ParamVector ? p : ParamVector(p::Vector), parameters)
+            map(p -> p isa ParamVector ? p : ParamVector(p::Vector), resolved_parameters),
         )
     else
         @assert(
@@ -352,7 +354,7 @@ function TemplateExpression(
         )
         NamedTuple()
     end
-    metadata = (; structure, operators, variable_names, parameters)
+    metadata = (; structure, operators, variable_names, parameters=final_parameters)
     return TemplateExpression(trees, Metadata(metadata))
 end
 

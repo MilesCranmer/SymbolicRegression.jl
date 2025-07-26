@@ -77,6 +77,36 @@ end
     @test all(m -> m.tree isa TemplateExpression, parsed_multiple[1])
 end
 
+@testitem "Unit test: parse_guesses with NamedTuple and parameters" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: parse_guesses, Dataset, PopMember
+    using Test
+
+    # Create test data
+    X = Float64[1.0 2.0; 3.0 4.0]
+    y = Float64[5.0, 6.0]
+    dataset = Dataset(X, y)
+
+    # Create template with parameters
+    operators = OperatorEnum(; binary_operators=[+, -, *], unary_operators=[])
+    template = @template_spec(expressions = (f,), parameters = (p=2,)) do x1, x2
+        f(x1, x2) + p[1] * x1 + p[2]
+    end
+    options = Options(; operators=operators, expression_spec=template)
+
+    # Test NamedTuple guess - should auto-initialize parameters
+    namedtuple_guess = (; f="#1 * #2")
+
+    parsed_members = parse_guesses(
+        PopMember{Float64,Float64}, [namedtuple_guess], [dataset], options
+    )
+
+    member = parsed_members[1][1]
+    @test member.tree isa TemplateExpression
+    @test haskey(get_metadata(member.tree).parameters, :p)
+    @test length(get_metadata(member.tree).parameters.p._data) == 2
+end
+
 @testitem "NamedTuple guesses with different variable names" tags = [:part1] begin
     using SymbolicRegression
     using SymbolicRegression: calculate_pareto_frontier
