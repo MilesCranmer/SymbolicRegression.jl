@@ -744,6 +744,14 @@ function parse_guesses(
                 member, _ = optimize_constants(dataset, member, options)
             end
             member = strip_metadata(member, options, dataset)
+
+            # Check if guess expression exceeds maxsize and warn
+            complexity = compute_complexity(member.tree, options)
+            if complexity > options.maxsize
+                expr_str = string_tree(member.tree, options)
+                @warn "Guess expression '$expr_str' has complexity $complexity > maxsize ($(options.maxsize))."
+            end
+
             push!(out[j], member)
         end
     end

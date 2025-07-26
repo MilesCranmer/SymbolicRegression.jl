@@ -331,3 +331,35 @@ end
 
     @test all(h -> any(m -> m.loss < 0.01, calculate_pareto_frontier(h)), hof)
 end
+
+@testitem "maxsize warning" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: parse_guesses, Dataset, PopMember
+    using Test
+    using Logging
+
+    X = Float64[1.0 2.0; 3.0 4.0]
+    y = Float64[5.0, 6.0]
+    dataset = Dataset(X, y)
+    options = Options(; binary_operators=[+, -, *, /], maxsize=7)
+
+    # Test complex guess triggers warning
+    io = IOBuffer()
+    with_logger(Logging.SimpleLogger(io, Logging.Warn)) do
+        parse_guesses(
+            PopMember{Float64,Float64},
+            ["x1 * x2 + x1 * x2 + x1 * x2 + x1 * x2 + x1 * x2"],
+            [dataset],
+            options,
+        )
+    end
+    log_output = String(take!(io))
+    @test contains(log_output, "complexity") && contains(log_output, "maxsize")
+
+    # Test simple guess doesn't trigger warning
+    io = IOBuffer()
+    with_logger(Logging.SimpleLogger(io, Logging.Warn)) do
+        parse_guesses(PopMember{Float64,Float64}, ["x1 + x2"], [dataset], options)
+    end
+    @test !contains(String(take!(io)), "maxsize")
+end
