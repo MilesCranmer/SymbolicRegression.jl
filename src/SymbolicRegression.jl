@@ -687,6 +687,8 @@ end
         j in 1:nout
     ]
 
+    seed_members = [PopMember{T,L,NT}[] for j in 1:nout]
+
     return SearchState{T,L,typeof(example_ex),WorkerOutputType,ChannelType}(;
         procs=procs,
         we_created_procs=we_created_procs,
@@ -704,6 +706,7 @@ end
         cur_maxsizes=cur_maxsizes,
         stdin_reader=stdin_reader,
         record=Ref(record),
+        seed_members=seed_members,
     )
 end
 function _initialize_search!(
@@ -735,9 +738,14 @@ function _initialize_search!(
         end
     end
 
-    seed_members = parse_guesses(eltype(state.halls_of_fame[1]), guesses, datasets, options)
-    for j in 1:nout
-        update_hall_of_fame!(state.halls_of_fame[j], seed_members[j], options)
+    if !isnothing(guesses)
+        parsed_seed_members = parse_guesses(
+            eltype(state.halls_of_fame[1]), guesses, datasets, options
+        )
+        for j in 1:nout
+            state.seed_members[j] = copy(parsed_seed_members[j])
+            update_hall_of_fame!(state.halls_of_fame[j], parsed_seed_members[j], options)
+        end
     end
 
     for j in 1:nout, i in 1:(options.populations)
@@ -950,6 +958,13 @@ function _main_search_loop!(
             end
             if options.hof_migration && length(dominating) > 0
                 migrate!(dominating => cur_pop, options; frac=options.fraction_replaced_hof)
+            end
+            if !isempty(state.seed_members[j])
+                migrate!(
+                    state.seed_members[j] => cur_pop,
+                    options;
+                    frac=options.fraction_replaced_guesses,
+                )
             end
             ###################################################################
 

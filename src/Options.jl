@@ -599,6 +599,7 @@ $(OPTION_DESCRIPTIONS)
     hof_migration::Bool=true,
     fraction_replaced::Union{Real,Nothing}=nothing,
     fraction_replaced_hof::Union{Real,Nothing}=nothing,
+    fraction_replaced_guesses::Union{Real,Nothing}=nothing,
     topn::Union{Nothing,Integer}=nothing,
     ## 9. Data Preprocessing:
     ## 10. Stopping Criteria:
@@ -773,6 +774,7 @@ $(OPTION_DESCRIPTIONS)
     tournament_selection_p = something(tournament_selection_p, _default_options.tournament_selection_p)
     fraction_replaced = something(fraction_replaced, _default_options.fraction_replaced)
     fraction_replaced_hof = something(fraction_replaced_hof, _default_options.fraction_replaced_hof)
+    fraction_replaced_guesses = something(fraction_replaced_guesses, _default_options.fraction_replaced_guesses)
     topn = something(topn, _default_options.topn)
     batching = something(batching, _default_options.batching)
     batch_size = something(batch_size, _default_options.batch_size)
@@ -1017,6 +1019,7 @@ $(OPTION_DESCRIPTIONS)
         ncycles_per_iteration,
         fraction_replaced,
         fraction_replaced_hof,
+        fraction_replaced_guesses,
         topn,
         verbosity,
         Val(print_precision),
@@ -1096,6 +1099,7 @@ function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = n
             # Migration between Populations
             fraction_replaced=0.00036,
             fraction_replaced_hof=0.035,
+            fraction_replaced_guesses=0.001,
             topn=12,
             # Performance and Parallelization
             batching=false,
@@ -1144,6 +1148,7 @@ function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = n
             ## but I thought this was a symptom of doing the sweep on such
             ## a small problem, so I increased it to the older value of 0.00036
             fraction_replaced_hof=0.0614,
+            fraction_replaced_guesses=0.001,
             topn=12,
             # Performance and Parallelization
             batching=false,

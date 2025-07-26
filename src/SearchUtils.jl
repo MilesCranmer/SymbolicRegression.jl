@@ -566,6 +566,7 @@ Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,Cha
     cur_maxsizes::Vector{Int}
     stdin_reader::StdinReader
     record::Base.RefValue{RecordType}
+    seed_members::Vector{Vector{PopMember{T,L,N}}}
 end
 
 function save_to_file(
@@ -702,13 +703,12 @@ end
 `PopMember` objects for each output dataset."""
 function parse_guesses(
     ::Type{P},
-    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing},
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector}},
     datasets::Vector{D},
     options::AbstractOptions,
 ) where {T,L,P<:PopMember{T,L},D<:Dataset{T,L}}
     nout = length(datasets)
     out = [P[] for _ in 1:nout]
-    guesses === nothing && return out
     guess_lists = _make_vector_vector(guesses, nout)
     for j in 1:nout
         dataset = datasets[j]
