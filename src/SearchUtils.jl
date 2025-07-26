@@ -732,7 +732,7 @@ function parse_guesses(
                 )
             else
                 parse_expression(
-                    Meta.parse(g);
+                    g;
                     operators=options.operators,
                     variable_names=dataset.variable_names,
                     node_type=with_type_parameters(options.node_type, T),

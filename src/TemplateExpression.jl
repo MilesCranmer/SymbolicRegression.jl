@@ -997,7 +997,7 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
 
                 # Parse as Expression first
                 parsed_expr = DE.parse_expression(
-                    Meta.parse(expr_str);
+                    expr_str;
                     operators,
                     binary_operators,
                     unary_operators,
@@ -1039,7 +1039,7 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
             placeholder_variable_names = ["#$i" for i in 1:max_var_index]
 
             expr = DE.parse_expression(
-                Meta.parse(expr_str);
+                expr_str;
                 operators,
                 binary_operators,
                 unary_operators,
