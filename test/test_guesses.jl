@@ -146,5 +146,161 @@ end
     @test parsed_members[1][1] isa PopMember{Float32,Float32}
 end
 
+@testitem "Custom operators in string guesses" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: parse_guesses, Dataset, PopMember, calculate_pareto_frontier
+    using Test
+
+    # Define custom operators
+    pythag_pos(x, y) = sqrt(x^2 + y^2)
+    pythag_neg(x, y) = (d = x^2 - y^2) < 0 ? typeof(x)(NaN) : typeof(x)(sqrt(d))
+    custom_sin(x) = sin(x) + 0.1
+
+    # Test with binary custom operators
+    X = Float64[1.0 2.0 3.0; 4.0 5.0 6.0]
+    y = Float64[7.0, 8.0, 9.0]
+    dataset = Dataset(X, y)
+
+    options = Options(;
+        binary_operators=[+, -, *, /, pythag_pos, pythag_neg],
+        unary_operators=[sin, cos, custom_sin],
+        verbosity=0,
+        progress=false,
+    )
+
+    # Test that custom operators work in string guesses
+    custom_guess = "pythag_pos(x1, x2) + custom_sin(x1)"
+    parsed_members = parse_guesses(
+        PopMember{Float64,Float64}, [custom_guess], [dataset], options
+    )
+
+    @test length(parsed_members) == 1
+    @test length(parsed_members[1]) == 1
+    @test parsed_members[1][1] isa PopMember{Float64,Float64}
+
+    # Test with complex expression like the original failing case
+    complex_guess = "pythag_pos(x1, 4.51352 - ((x2 - x1) * 0.07425507))"
+    parsed_complex = parse_guesses(
+        PopMember{Float64,Float64}, [complex_guess], [dataset], options
+    )
+
+    @test length(parsed_complex) == 1
+    @test length(parsed_complex[1]) == 1
+    @test parsed_complex[1][1] isa PopMember{Float64,Float64}
+
+    # Test multiple custom operator guesses
+    multiple_custom_guesses = [
+        "pythag_pos(x1, x2)", "pythag_neg(x1, x2) + 0.5", "custom_sin(x1) * x2"
+    ]
+    parsed_multiple = parse_guesses(
+        PopMember{Float64,Float64}, multiple_custom_guesses, [dataset], options
+    )
+
+    @test length(parsed_multiple) == 1
+    @test length(parsed_multiple[1]) == 3
+    @test all(m -> m isa PopMember{Float64,Float64}, parsed_multiple[1])
+end
+
+@testitem "Custom operators in equation_search guesses" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: calculate_pareto_frontier
+    using Test
+
+    # Define custom operators
+    pythag_pos(x, y) = sqrt(x^2 + y^2)
+    pythag_neg(x, y) = (d = x^2 - y^2) < 0 ? typeof(x)(NaN) : typeof(x)(sqrt(d))
+
+    # Create synthetic data where custom operator is the true function
+    X = randn(2, 30)
+    y = pythag_pos.(X[1, :], X[2, :]) .+ 0.01 .* randn(30)  # Add small noise
+
+    options = Options(;
+        binary_operators=[+, -, *, /, pythag_pos, pythag_neg],
+        unary_operators=[sin, cos],
+        verbosity=0,
+        progress=false,
+    )
+
+    # Test that custom operator guess works in equation_search
+    custom_guess = "pythag_pos(x1, x2)"
+    hof = equation_search(X, y; niterations=0, options, guesses=[custom_guess])
+    dominating = calculate_pareto_frontier(hof)
+
+    # Should find a good solution since we gave it the exact function
+    @test any(m -> m.loss < 1e-2, dominating)
+
+    # Test more complex custom operator expression
+    complex_guess = "pythag_pos(x1, x2) + 0.0"
+    hof_complex = equation_search(X, y; niterations=0, options, guesses=[complex_guess])
+    dominating_complex = calculate_pareto_frontier(hof_complex)
+
+    @test any(m -> m.loss < 1e-2, dominating_complex)
+end
+
+@testitem "Custom operators error handling in guesses" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: parse_guesses, Dataset, PopMember
+    using Test
+
+    # Define custom operator
+    pythag_pos(x, y) = sqrt(x^2 + y^2)
+
+    X = Float64[1.0 2.0; 3.0 4.0]
+    y = Float64[5.0, 6.0]
+    dataset = Dataset(X, y)
+
+    options = Options(;
+        binary_operators=[+, -, *, /, pythag_pos], verbosity=0, progress=false
+    )
+
+    # Test wrong arity error
+    @test_throws ArgumentError parse_guesses(
+        PopMember{Float64,Float64}, ["pythag_pos(x1)"], [dataset], options
+    )
+
+    # Test non-existent operator error
+    @test_throws ArgumentError parse_guesses(
+        PopMember{Float64,Float64}, ["nonexistent_op(x1, x2)"], [dataset], options
+    )
+end
+
+@testitem "Custom operators with NamedTuple guesses" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: parse_guesses, Dataset, PopMember
+    using Test
+
+    # Define custom operators
+    pythag_pos(x, y) = sqrt(x^2 + y^2)
+    custom_mul(x, y) = x * y * 1.1
+
+    X = Float64[1.0 2.0; 3.0 4.0]
+    y = Float64[5.0, 6.0]
+    dataset = Dataset(X, y)
+
+    # Create template options with custom operators
+    operators = OperatorEnum(;
+        binary_operators=[+, -, *, pythag_pos, custom_mul], unary_operators=[]
+    )
+    template = @template_spec(expressions = (f, g)) do x1, x2
+        f(x1, x2) + g(x1, x2)
+    end
+    options = Options(; operators=operators, expression_spec=template)
+
+    # Test NamedTuple guess with custom operators using #N placeholder syntax
+    namedtuple_guess = (; f="pythag_pos(#1, #2)", g="custom_mul(#1, #2)")
+
+    parsed_members = parse_guesses(
+        PopMember{Float64,Float64}, [namedtuple_guess], [dataset], options
+    )
+
+    @test length(parsed_members) == 1
+    @test length(parsed_members[1]) == 1
+
+    member = parsed_members[1][1]
+    @test member isa PopMember
+    @test member.tree isa TemplateExpression
+    @test haskey(member.tree.trees, :f)
+    @test haskey(member.tree.trees, :g)
+end
+
 # TODO: Multiple outputs
-# TODO: User-defined operators
