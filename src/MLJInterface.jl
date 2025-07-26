@@ -82,6 +82,8 @@ function modelexpr(
             runtests::Bool = true
             run_id::Union{String,Nothing} = nothing
             loss_type::Type{L} = Nothing
+            guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing} =
+                nothing
             selection_method::Function = choose_best
             dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
         end)
@@ -308,6 +310,7 @@ function _update(
         verbosity=verbosity,
         extra=isnothing(class) ? (;) : (; class),
         logger=m.logger,
+        guesses=m.guesses,
         # Help out with inference:
         v_dim_out=isa(m, AbstractSingletargetSRRegressor) ? Val(1) : Val(2),
     )

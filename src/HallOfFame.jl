@@ -11,7 +11,7 @@ using ..InterfaceDynamicExpressionsModule: format_dimensions, WILDCARD_UNIT_STRI
 using Printf: @sprintf
 
 """
-    HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE}
+    HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
 
 List of the best members seen all time in `.members`, with `.members[c]` being
 the best member seen at complexity c. Including only the members which actually
@@ -19,7 +19,7 @@ have been set, you can run `.members[exists]`.
 
 # Fields
 
-- `members::Array{PopMember{T,L},1}`: List of the best members seen all time.
+- `members::Array{PopMember{T,L,N},1}`: List of the best members seen all time.
     These are ordered by complexity, with `.members[1]` the member with complexity 1.
 - `exists::Array{Bool,1}`: Whether the member at the given complexity has been set.
 """
@@ -46,6 +46,9 @@ function Base.show(io::IO, mime::MIME"text/plain", hof::HallOfFame{T,L,N}) where
         end
     end
     return nothing
+end
+function Base.eltype(::Union{HOF,Type{HOF}}) where {T,L,N,HOF<:HallOfFame{T,L,N}}
+    return PopMember{T,L,N}
 end
 
 """
