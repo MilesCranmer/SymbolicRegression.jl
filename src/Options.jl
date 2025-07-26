@@ -388,6 +388,8 @@ const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Op
     migrated equations at the end of each cycle.
 - `fraction_replaced_hof`: What fraction to replace with hall of fame
     equations at the end of each cycle.
+- `fraction_replaced_guesses`: What fraction to replace with user-provided
+    guess expressions at the end of each cycle.
 - `should_simplify`: Whether to simplify equations. If you
     pass a custom objective, this will be set to `false`.
 - `should_optimize_constants`: Whether to use an optimization algorithm
