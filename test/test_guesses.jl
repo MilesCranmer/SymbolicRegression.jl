@@ -25,7 +25,7 @@
     @test !any(m -> m.loss < 1e-10, dominating)
 end
 
-@testitem "Unit test: parse_guesses with NamedTuple" tags = [:part1] begin
+@testitem "parse_guesses with NamedTuple" tags = [:part1] begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
     using Test
@@ -77,7 +77,7 @@ end
     @test all(m -> m.tree isa TemplateExpression, parsed_multiple[1])
 end
 
-@testitem "Unit test: parse_guesses with NamedTuple and parameters" tags = [:part1] begin
+@testitem "parse_guesses with NamedTuple and parameters" tags = [:part1] begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
     using Test
