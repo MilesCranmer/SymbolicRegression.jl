@@ -11,15 +11,19 @@ using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
 using Logging: AbstractLogger
 
-using DynamicExpressions: AbstractExpression, string_tree
+using DynamicExpressions:
+    AbstractExpression, string_tree, parse_expression, EvalOptions, with_type_parameters
 using ..UtilsModule: subscriptify
 using ..CoreModule: Dataset, AbstractOptions, Options, RecordType, max_features
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
 using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
+using ..ConstantOptimizationModule: optimize_constants
 using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
+using ..ExpressionBuilderModule: strip_metadata
+using ..InterfaceDynamicExpressionsModule: takes_eval_options
 
 function logging_callback! end
 
@@ -562,6 +566,7 @@ Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,Cha
     cur_maxsizes::Vector{Int}
     stdin_reader::StdinReader
     record::Base.RefValue{RecordType}
+    seed_members::Vector{Vector{PopMember{T,L,N}}}
 end
 
 function save_to_file(
@@ -691,6 +696,105 @@ function update_hall_of_fame!(
             hall_of_fame.members[size] = copy(member)
             hall_of_fame.exists[size] = true
         end
+    end
+end
+
+function _parse_guess_expression(
+    ::Type{T}, g::AbstractExpression, ::Dataset, ::AbstractOptions
+) where {T}
+    return copy(g)
+end
+
+@unstable function _parse_guess_expression(
+    ::Type{T}, g::NamedTuple, dataset::Dataset, options::AbstractOptions
+) where {T}
+    # Check if any expression in the NamedTuple uses actual variable names instead of placeholder syntax
+    for expr_str in values(g), var_name in dataset.variable_names
+        if occursin(Regex("\\b\\Q$(var_name)\\E\\b"), expr_str)
+            throw(
+                ArgumentError(
+                    "Found variable name '$(var_name)' in TemplateExpression guess. " *
+                    "Use placeholder syntax '#1', '#2', etc., (for argument 1, 2, etc.) instead of actual variable names.",
+                ),
+            )
+        end
+    end
+
+    eval_options_kws = if takes_eval_options(options.operators)
+        (; eval_options=EvalOptions(; options.turbo, options.bumper))
+    else
+        NamedTuple()
+    end
+    return parse_expression(
+        g;
+        expression_type=options.expression_type,
+        operators=options.operators,
+        variable_names=nothing,  # Don't pass dataset variable names - let custom parse_expression handle #N placeholders
+        node_type=with_type_parameters(options.node_type, T),
+        expression_options=options.expression_options,
+        eval_options_kws...,
+    )
+end
+
+@unstable function _parse_guess_expression(
+    ::Type{T}, g, dataset::Dataset, options::AbstractOptions
+) where {T}
+    return parse_expression(
+        g;
+        operators=options.operators,
+        variable_names=dataset.variable_names,
+        node_type=with_type_parameters(options.node_type, T),
+        expression_type=options.expression_type,
+    )
+end
+
+"""Parse user-provided guess expressions and convert them into optimized
+`PopMember` objects for each output dataset."""
+function parse_guesses(
+    ::Type{P},
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector}},
+    datasets::Vector{D},
+    options::AbstractOptions,
+) where {T,L,P<:PopMember{T,L},D<:Dataset{T,L}}
+    nout = length(datasets)
+    out = [P[] for _ in 1:nout]
+    guess_lists = _make_vector_vector(guesses, nout)
+    for j in 1:nout
+        dataset = datasets[j]
+        for g in guess_lists[j]
+            ex = _parse_guess_expression(T, g, dataset, options)
+            member = PopMember(dataset, ex, options; deterministic=options.deterministic)
+            if options.should_optimize_constants
+                member, _ = optimize_constants(dataset, member, options)
+            end
+            member = strip_metadata(member, options, dataset)
+
+            # Check if guess expression exceeds maxsize and warn
+            complexity = compute_complexity(member.tree, options)
+            if complexity > options.maxsize
+                expr_str = string_tree(member.tree, options)
+                @warn "Guess expression '$expr_str' has complexity $complexity > maxsize ($(options.maxsize))."
+            end
+
+            push!(out[j], member)
+        end
+    end
+    return out
+end
+function _make_vector_vector(guesses, nout)
+    if nout == 1
+        if guesses isa AbstractVector{<:AbstractVector}
+            @assert length(guesses) == nout
+            return guesses
+        else
+            return [guesses]
+        end
+    else  # nout > 1
+        if !(guesses isa AbstractVector{<:AbstractVector})
+            throw(ArgumentError("`guesses` must be a vector of vectors when `nout > 1`"))
+        end
+        @assert length(guesses) == nout
+        return guesses
     end
 end
 

@@ -219,6 +219,7 @@ using DispatchDoctor: @stable
     include("ConstantOptimization.jl")
     include("Population.jl")
     include("HallOfFame.jl")
+    include("ExpressionBuilder.jl")
     include("Mutate.jl")
     include("RegularizedEvolution.jl")
     include("SingleIteration.jl")
@@ -226,7 +227,6 @@ using DispatchDoctor: @stable
     include("Migration.jl")
     include("SearchUtils.jl")
     include("Logging.jl")
-    include("ExpressionBuilder.jl")
     include("ComposableExpression.jl")
     include("TemplateExpression.jl")
     include("TemplateExpressionMacro.jl")
@@ -339,6 +339,7 @@ using .SearchUtilsModule:
     save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!,
+    parse_guesses,
     logging_callback!
 using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
 using .TemplateExpressionModule:
@@ -445,6 +446,11 @@ which is useful for debugging and profiling.
 - `y_units=nothing`: The units of the output, to be used for dimensional constraints.
     If `y` is a matrix, then this can be a vector of units, in which case
     each element corresponds to each output feature.
+- `guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing}=nothing`: Initial
+    guess equations to seed the search. Examples:
+    - Single output: `["x1^2 + x2", "sin(x1) * x2"]`
+    - Multi-output: `[["x1 + x2"], ["x1 * x2", "x1 - x2"]]`
+    Constants will be automatically optimized.
 
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
@@ -479,6 +485,7 @@ function equation_search(
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
     extra::NamedTuple=NamedTuple(),
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
     # Deprecated:
     multithreaded=nothing,
@@ -525,6 +532,7 @@ function equation_search(
         verbosity=verbosity,
         logger=logger,
         progress=progress,
+        guesses=guesses,
         v_dim_out=Val(DIM_OUT),
     )
 end
@@ -543,6 +551,7 @@ function equation_search(
     datasets::Vector{D};
     options::AbstractOptions=Options(),
     saved_state=nothing,
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing}=nothing,
     runtime_options::Union{AbstractRuntimeOptions,Nothing}=nothing,
     runtime_options_kws...,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
@@ -558,15 +567,19 @@ function equation_search(
     )
 
     # Underscores here mean that we have mutated the variable
-    return _equation_search(datasets, _runtime_options, options, saved_state)
+    return _equation_search(datasets, _runtime_options, options, saved_state, guesses)
 end
 
 @noinline function _equation_search(
-    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions, saved_state
+    datasets::Vector{D},
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+    saved_state,
+    guesses,
 ) where {D<:Dataset}
     _validate_options(datasets, ropt, options)
     state = _create_workers(datasets, ropt, options)
-    _initialize_search!(state, datasets, ropt, options, saved_state)
+    _initialize_search!(state, datasets, ropt, options, saved_state, guesses)
     _warmup_search!(state, datasets, ropt, options)
     _main_search_loop!(state, datasets, ropt, options)
     _tear_down!(state, ropt, options)
@@ -674,6 +687,8 @@ end
         j in 1:nout
     ]
 
+    seed_members = [PopMember{T,L,NT}[] for j in 1:nout]
+
     return SearchState{T,L,typeof(example_ex),WorkerOutputType,ChannelType}(;
         procs=procs,
         we_created_procs=we_created_procs,
@@ -691,6 +706,7 @@ end
         cur_maxsizes=cur_maxsizes,
         stdin_reader=stdin_reader,
         record=Ref(record),
+        seed_members=seed_members,
     )
 end
 function _initialize_search!(
@@ -699,6 +715,7 @@ function _initialize_search!(
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
     saved_state,
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing},
 ) where {T,L,N}
     nout = length(datasets)
 
@@ -718,6 +735,16 @@ function _initialize_search!(
                 member.loss = result_loss
             end
             state.halls_of_fame[j] = hof
+        end
+    end
+
+    if !isnothing(guesses)
+        parsed_seed_members = parse_guesses(
+            eltype(state.halls_of_fame[1]), guesses, datasets, options
+        )
+        for j in 1:nout
+            state.seed_members[j] = copy(parsed_seed_members[j])
+            update_hall_of_fame!(state.halls_of_fame[j], parsed_seed_members[j], options)
         end
     end
 
@@ -931,6 +958,13 @@ function _main_search_loop!(
             end
             if options.hof_migration && length(dominating) > 0
                 migrate!(dominating => cur_pop, options; frac=options.fraction_replaced_hof)
+            end
+            if !isempty(state.seed_members[j])
+                migrate!(
+                    state.seed_members[j] => cur_pop,
+                    options;
+                    frac=options.fraction_replaced_guesses,
+                )
             end
             ###################################################################
 
