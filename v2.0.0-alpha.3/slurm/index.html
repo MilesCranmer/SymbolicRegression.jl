@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Using SymbolicRegression.jl on a Cluster · SymbolicRegression.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://ai.damtp.cam.ac.uk/symbolicregression/stable/slurm/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../index_base/"><img src="../assets/logo.svg" alt="SymbolicRegression.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../index_base/">SymbolicRegression.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../index_base/">Contents</a></li><li><a class="tocitem" href="../">Home</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../examples/">Short Examples</a></li><li><a class="tocitem" href="../examples/template_expression/">Template Expressions</a></li><li><a class="tocitem" href="../examples/parameterized_function/">Parameterized Expressions</a></li><li><a class="tocitem" href="../examples/template_parametric_expression/">Parameterized Template Expressions</a></li><li><a class="tocitem" href="../examples/custom_types/">Custom Types</a></li><li class="is-active"><a class="tocitem" href>Using SymbolicRegression.jl on a Cluster</a><ul class="internal"><li><a class="tocitem" href="#Example-Script"><span>Example Script</span></a></li><li><a class="tocitem" href="#Interactive-Mode,-using-salloc"><span>Interactive Mode, using <code>salloc</code></span></a></li><li><a class="tocitem" href="#Batch-Mode,-using-sbatch"><span>Batch Mode, using <code>sbatch</code></span></a></li><li><a class="tocitem" href="#Explicit-Worker-Management"><span>Explicit Worker Management</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../api/">API</a></li><li><a class="tocitem" href="../losses/">Losses</a></li><li><a class="tocitem" href="../types/">Types</a></li><li><a class="tocitem" href="../customization/">Customization</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Using SymbolicRegression.jl on a Cluster</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Using SymbolicRegression.jl on a Cluster</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/MilesCranmer/SymbolicRegression.jl/blob/master/docs/src/slurm.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Using-SymbolicRegression.jl-on-a-Cluster"><a class="docs-heading-anchor" href="#Using-SymbolicRegression.jl-on-a-Cluster">Using SymbolicRegression.jl on a Cluster</a><a id="Using-SymbolicRegression.jl-on-a-Cluster-1"></a><a class="docs-heading-anchor-permalink" href="#Using-SymbolicRegression.jl-on-a-Cluster" title="Permalink"></a></h1><p>Here, we look at how to run SymbolicRegression.jl efficiently on an HPC cluster managed by Slurm. Both methods utilize <a href="https://github.com/JuliaParallel/SlurmClusterManager.jl"><code>SlurmClusterManager.jl</code></a>, which extends Distributed.jl (part of the Julia standard library) to spread out worker processes across a slurm allocation.</p><p>For other cluster managers, see the <a href="https://github.com/JuliaParallel/ClusterManagers.jl"><code>ClusterManagers.jl</code></a> documentation.</p><h2 id="Example-Script"><a class="docs-heading-anchor" href="#Example-Script">Example Script</a><a id="Example-Script-1"></a><a class="docs-heading-anchor-permalink" href="#Example-Script" title="Permalink"></a></h2><p>Here is the example script we would like to run using our slurm cluster. We will pass the <code>addprocs_function</code> to the <code>SRRegressor</code> constructor, which will be used to add worker processes to the cluster.</p><pre><code class="language-julia hljs"># script.jl
+
+using SymbolicRegression
+
+using Distributed: addprocs
+using SlurmClusterManager: SlurmManager
+using MLJ: machine, fit!
+
+# Figure out how large a job we are launching
+num_tasks = parse(Int, ENV[&quot;SLURM_NTASKS&quot;])
+
+# Define a custom loss function (this will
+# be automatically passed to the workers)
+my_loss(pred, targ) = abs2(pred - targ)
+
+# Create a simple dataset
+X = (; x1=randn(10_000), x2=20rand(10_000))
+y = 2 .* cos.(X.x2) .+ X.x1 .^ 2 .- 1
+
+add_slurm(_; kws...) = addprocs(SlurmManager(); kws...)
+
+model = SRRegressor(;
+    unary_operators=(),
+    binary_operators=(+, *, -, /, mod),
+    niterations=5000,
+    elementwise_loss=my_loss,
+    ######################################
+    #= KEY OPTIONS FOR DISTRIBUTED MODE =#
+    parallelism=:multiprocessing,
+    addprocs_function=add_slurm,
+    #numprocs=num_tasks,  # &lt;- Not relevant for `SlurmManager`, but some other cluster managers need it
+    ######################################
+    # Scaled # of populations means workers can stay busy:
+    populations=num_tasks * 3,
+    # Larger ncycles_per_iteration means reduced
+    # communication overhead with head worker node:
+    ncycles_per_iteration=300,
+    # If you need additional modules on workers, pass them to `worker_imports` as symbols:
+    #worker_imports=[:VectorizationBase],
+)
+
+mach = machine(model, X, y)
+fit!(mach)</code></pre><p>Save this as <code>script.jl</code>.</p><p>This script should be launched once within the slurm allocation; <code>SlurmManager</code> will then automatically add worker processes via Julia&#39;s Distributed.jl.</p><h2 id="Interactive-Mode,-using-salloc"><a class="docs-heading-anchor" href="#Interactive-Mode,-using-salloc">Interactive Mode, using <code>salloc</code></a><a id="Interactive-Mode,-using-salloc-1"></a><a class="docs-heading-anchor-permalink" href="#Interactive-Mode,-using-salloc" title="Permalink"></a></h2><p>Now, let&#39;s see how to launch this. The first technique is interactive - this is useful at the prototyping stage, as you can quickly re-run the script within the same allocation.</p><p>First, request resources:</p><pre><code class="language-bash hljs">salloc -p YOUR_PARTITION -N 2</code></pre><p>with whatever other settings you need (follow your institution&#39;s documentation).</p><p>Then, view the allocated nodes:</p><pre><code class="language-bash hljs">squeue -u $USER</code></pre><p>You should then usually be able to directly connect to one of the allocated nodes:</p><pre><code class="language-bash hljs">ssh YOUR_NODE_NAME</code></pre><p>On this node, you can now run the script. When you do this, because you are running interactively, you will need to declare the number of tasks. Do this with <code>SLURM_NTASKS</code>:</p><pre><code class="language-bash hljs">SLURM_NTASKS=127 julia --project=. script.jl</code></pre><p><code>SLURM_NTASKS</code> specifies how many worker processes to spawn. You might also want to declare <code>JULIA_NUM_THREADS=1</code> here, to not overuse resources.</p><h2 id="Batch-Mode,-using-sbatch"><a class="docs-heading-anchor" href="#Batch-Mode,-using-sbatch">Batch Mode, using <code>sbatch</code></a><a id="Batch-Mode,-using-sbatch-1"></a><a class="docs-heading-anchor-permalink" href="#Batch-Mode,-using-sbatch" title="Permalink"></a></h2><p>The more common technique is to create a batch script, which you can then submit to the cluster.</p><p>Let&#39;s say we want to create a batch script on partition <code>gen</code>, and allocate 128 SymbolicRegression workers. For each worker, we&#39;ll assign 1 CPU core. Let&#39;s also say that we&#39;ll run this job for up to 1 day.</p><p>Create a batch script, <code>batch.sh</code>:</p><pre><code class="language-bash hljs">#!/usr/bin/env bash
+#SBATCH -p gen
+#SBATCH -n 128
+#SBATCH --cpus-per-task=1
+#SBATCH --time=1-00:00:00
+#SBATCH --job-name=sr_example
+
+julia --project=. script.jl</code></pre><p>We can simply submit it:</p><pre><code class="language-bash hljs">sbatch batch.sh</code></pre><p>Slurm will then allocate the necessary nodes automatically.</p><h2 id="Explicit-Worker-Management"><a class="docs-heading-anchor" href="#Explicit-Worker-Management">Explicit Worker Management</a><a id="Explicit-Worker-Management-1"></a><a class="docs-heading-anchor-permalink" href="#Explicit-Worker-Management" title="Permalink"></a></h2><p>For more explicit control over the worker processes, including the ability to specify multiple functions that need to be defined on each worker (normally only one level of functions are passed to each worker), you can pass a list of processes directly to the <code>SRRegressor</code> constructor.</p><pre><code class="language-julia hljs">using SymbolicRegression
+
+using Distributed: addprocs, @everywhere
+using SlurmClusterManager: SlurmManager
+using MLJ: machine, fit!
+
+num_tasks = parse(Int, ENV[&quot;SLURM_NTASKS&quot;])
+
+procs = addprocs(SlurmManager())
+
+@everywhere begin
+    # define functions you need on workers
+    function my_loss(pred, targ)
+        abs2(pred - targ)
+    end
+
+    # define any other modules you need on workers
+    using VectorizationBase
+end
+
+model = SRRegressor(;
+    #= same as before =#
+    #= ... =#
+
+    procs=procs,  # Pass workers explicitly
+    addprocs_function=nothing,  # &lt;- Only used for SR-managed workers
+)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../examples/custom_types/">« Custom Types</a><a class="docs-footer-nextpage" href="../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Sunday 27 July 2025 15:27">Sunday 27 July 2025</span>. Using Julia version 1.11.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
