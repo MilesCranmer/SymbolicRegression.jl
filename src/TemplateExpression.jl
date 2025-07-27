@@ -692,6 +692,7 @@ function MM.condition_mutation_weights!(
     @nospecialize(member::P),
     @nospecialize(options::AbstractOptions),
     curmaxsize::Int,
+    nfeatures::Int,
 ) where {T,L,N<:TemplateExpression,P<:PopMember{T,L,N}}
     if !preserve_sharing(typeof(member.tree))
         weights.form_connection = 0.0
@@ -699,6 +700,11 @@ function MM.condition_mutation_weights!(
     end
 
     MM.condition_mutate_constant!(typeof(member.tree), weights, member, options, curmaxsize)
+
+    # Disable feature mutation if only one feature available
+    if nfeatures <= 1
+        weights.mutate_feature = 0.0
+    end
 
     complexity = ComplexityModule.compute_complexity(member, options)
 
