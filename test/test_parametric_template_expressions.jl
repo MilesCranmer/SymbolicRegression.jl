@@ -29,8 +29,8 @@ end
 
     variable_names = ["x"]
 
-    # Error for missing parameters
-    @test_throws "Expected `parameters` to be provided" TemplateExpression(
+    # Test auto-initialization of parameters when not provided
+    expr_auto_init = TemplateExpression(
         (;
             f=ComposableExpression(
                 Node{Float64}(; feature=1); operators=Options().operators, variable_names
@@ -40,6 +40,10 @@ end
         operators=Options().operators,
         variable_names,
     )
+    @test expr_auto_init isa TemplateExpression
+    @test haskey(get_metadata(expr_auto_init).parameters, :p)
+    @test length(get_metadata(expr_auto_init).parameters.p._data) == 2
+    @test all(==(0.0), get_metadata(expr_auto_init).parameters.p._data)
 
     # Error for wrong parameter vector length
     @test_throws "Expected `parameters.p` to have length 2, got 1" TemplateExpression(
