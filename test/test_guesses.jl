@@ -362,6 +362,49 @@ end
     @test all(h -> any(m -> m.loss < 0.01, calculate_pareto_frontier(h)), hof)
 end
 
+@testitem "parse_guesses with mix of strings and expression objects" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: parse_guesses, Dataset, PopMember
+    using Test
+    using DynamicExpressions: @parse_expression
+
+    X = Float64[1.0 2.0; 3.0 4.0]
+    y = Float64[5.0, 6.0]
+    dataset = Dataset(X, y)
+    options = Options(; binary_operators=[+, -, *, /], unary_operators=[sin, cos])
+    expr1 = Expression(
+        Node{Float64}(; feature=1); operators=nothing, variable_names=nothing
+    )
+    expr2 = "x1 - x2"
+    expr3 = Expression(Node{Float64}(; val=1.0); operators=nothing, variable_names=nothing)
+    mixed_guesses = [expr1, expr2, expr3]
+
+    # Test parse_guesses with mixed input types
+    parsed_members = parse_guesses(
+        PopMember{Float64,Float64}, mixed_guesses, [dataset], options
+    )
+
+    # Should return a vector of vectors (one per output dataset)
+    @test length(parsed_members) == 1
+    @test length(parsed_members[1]) == 3
+
+    # Check that all parsed members are correct type
+    for member in parsed_members[1]
+        @test member isa PopMember{Float64,Float64}
+        @test member.tree !== nothing
+        @test member.tree isa Expression
+    end
+
+    # No constant optimization happens yet
+    @test parsed_members[1][1].tree == expr1
+    @test string_tree(with_metadata(parsed_members[1][2].tree; options.operators)) ==
+        "x1 - x2"
+
+    # However, this one does get optimized
+    @test parsed_members[1][3].tree != expr3
+    @test parsed_members[1][3].tree.tree.val != 1.0
+end
+
 @testitem "maxsize warning" tags = [:part1] begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
