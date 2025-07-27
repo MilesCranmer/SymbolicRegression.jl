@@ -69,6 +69,7 @@ function modelexpr(
     parent_type::Symbol=:AbstractSymbolicRegressor;
     default_niterations=100,
 )
+    #! format: off
     struct_def =
         :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L} <: $parent_type
             niterations::Int = $(default_niterations)
@@ -82,11 +83,11 @@ function modelexpr(
             runtests::Bool = true
             run_id::Union{String,Nothing} = nothing
             loss_type::Type{L} = Nothing
-            guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing} =
-                nothing
+            guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing} = nothing
             selection_method::Function = choose_best
             dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
         end)
+    #! format: on
     # TODO: store `procs` from initial run if parallelism is `:multiprocessing`
     fields = last(last(struct_def.args).args).args
 
