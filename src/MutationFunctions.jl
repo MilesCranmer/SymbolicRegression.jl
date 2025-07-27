@@ -175,6 +175,7 @@ end
         @assert D == length(options.nops)
         csum = (0, cumsum(options.nops)...)
         scaled_rand = rand(rng) * last(csum)
+        # COV_EXCL_START
         newnode = Base.Cartesian.@nif(
             $D,
             i -> scaled_rand > csum[i] && scaled_rand <= csum[i + 1],
@@ -185,9 +186,8 @@ end
                 )
             )
         )
-
+        # COV_EXCL_STOP
         set_node!(node, newnode)
-
         return tree
     end
 end
@@ -218,12 +218,12 @@ end
         scaled_rand = rand(rng) * last(csum)
         newnode = Base.Cartesian.@nif(
             $D,
-            i -> scaled_rand > csum[i] && scaled_rand <= csum[i + 1],
-            i -> let
+            i -> scaled_rand > csum[i] && scaled_rand <= csum[i + 1],  # COV_EXCL_LINE
+            i -> let  # COV_EXCL_LINE
                 arg_to_carry = rand(rng, 1:i)
                 children = Base.Cartesian.@ntuple(
                     i,
-                    j -> if j == arg_to_carry
+                    j -> if j == arg_to_carry  # COV_EXCL_LINE
                         copy(node)
                     else
                         make_random_leaf(nfeatures, T, typeof(tree), rng, options)
@@ -264,12 +264,12 @@ end
 
         newroot = Base.Cartesian.@nif(
             $D,
-            i -> scaled_rand > csum[i] && scaled_rand <= csum[i + 1],
-            i -> let
+            i -> scaled_rand > csum[i] && scaled_rand <= csum[i + 1],  # COV_EXCL_LINE
+            i -> let  # COV_EXCL_LINE
                 carry = rand(rng, 1:i)
                 children = Base.Cartesian.@ntuple(
                     i,
-                    j -> if j == carry
+                    j -> if j == carry  # COV_EXCL_LINE
                         tree
                     else
                         make_random_leaf(nfeatures, T, typeof(tree), rng, options)
@@ -370,6 +370,7 @@ end
     rng::AbstractRNG,
 ) where {T,D}
     quote
+        # COV_EXCL_START
         Base.Cartesian.@nif(
             $D,
             i -> arity == i,
@@ -380,23 +381,25 @@ end
                 ),
             ),
         )
+        # COV_EXCL_STOP
     end
 end
 
 function _arity_picker(rng::AbstractRNG, remaining::Int, nops::NTuple{D,Int}) where {D}
     total = 0
-    for k in 1:min(D, remaining)
+    limit = min(D, remaining)
+    for k in 1:limit
         total += @inbounds nops[k]
     end
     total == 0 && return 0
 
     thresh = rand(rng, 1:total)
     acc = 0
-    for k in 1:min(D, remaining)
+    for k in 1:(limit - 1)
         acc += @inbounds nops[k]
         thresh <= acc && return k
     end
-    return 0
+    return limit
 end
 
 function gen_random_tree_fixed_size(
