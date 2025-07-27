@@ -510,7 +510,36 @@ You can also provide multiple guesses. For a template expression,
 your guesses should be an array of named tuples, such as
 `(; f="cos(#1) + 0.1", g="sin(#2) - 0.9")`.
 
-## 12. Additional features
+## 12. Higher-arity operators
+
+You can use operators with more than 2 arguments by passing an `OperatorEnum` explicitly.
+This operator allows you to declare arbitrary arities by passing them in a `arity => (op1, op2, ...)` format.
+
+Here's an example using a ternary conditional operator:
+
+```julia
+using SymbolicRegression, MLJ
+
+scalar_ifelse(a, b, c) = a > 0 ? b : c
+
+X = randn(3, 100)
+y = [X[1, i] > 0 ? 2*X[2, i] : X[3, i] for i in 1:100]
+
+model = SRRegressor(
+    operators=OperatorEnum(
+        1 => (),
+        2 => (+, -, *, /),
+        3 => (scalar_ifelse,)
+    ),
+    niterations=35,
+)
+mach = machine(model, X', y)
+fit!(mach)
+```
+
+This sort of piecewise logic might be difficult to express with only binary operators.
+
+## 13. Additional features
 
 For the many other features available in SymbolicRegression.jl,
 check out the API page for `Options`. You might also find it useful
