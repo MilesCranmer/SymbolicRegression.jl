@@ -437,6 +437,25 @@ end
     @test !contains(String(take!(io)), "maxsize")
 end
 
+@testitem "Vector of vectors input for single output" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: parse_guesses, Dataset, PopMember
+    using Test
+
+    X = Float64[1.0 2.0; 3.0 4.0]
+    y = Float64[5.0, 6.0]
+    dataset = Dataset(X, y)
+    options = Options(; binary_operators=[+, -])
+
+    # Single output (nout=1) with vector-of-vectors format
+    guesses_vector_of_vectors = [["x1 + x2", "x1 - x2"]]
+    parsed_members = parse_guesses(
+        PopMember{Float64,Float64}, guesses_vector_of_vectors, [dataset], options
+    )
+    @test length(parsed_members) == 1  # One output
+    @test length(parsed_members[1]) == 2  # Two guesses for that output
+end
+
 @testitem "Multiple outputs guesses format validation" tags = [:part1] begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
