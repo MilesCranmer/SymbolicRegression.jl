@@ -78,8 +78,7 @@ function check_constraints(
     maxsize::Int,
     cursize::Union{Int,Nothing}=nothing,
 )::Bool
-    ((cursize === nothing) ? compute_complexity(tree, options) : cursize) > maxsize &&
-        return false
+    @something(cursize, compute_complexity(tree, options)) > maxsize && return false
     count_depth(tree) > options.maxdepth && return false
     any_invalid = any(enumerate(options.op_constraints)) do (degree, degree_constraints)
         any(enumerate(degree_constraints)) do (op_idx, cons)
