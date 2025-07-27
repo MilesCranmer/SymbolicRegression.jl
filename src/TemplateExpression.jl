@@ -972,57 +972,22 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
         actual_node_type = something(node_type, Node)
     end
 
+    # COV_EXCL_START
     @assert actual_expression_type <: TemplateExpression
+    @assert(
+        actual_expression_options !== nothing &&
+            actual_expression_options.structure isa TemplateStructure,
+        "NamedTuple expressions require expression_options with a TemplateStructure"
+    )
+    # COV_EXCL_STOP
 
-    if actual_expression_options !== nothing &&
-        hasfield(typeof(actual_expression_options), :structure)
-        eval_options_kws = if eval_options !== nothing
-            (; eval_options)
-        else
-            NamedTuple()
-        end
-
-        inner_expressions = NamedTuple{keys(ex)}(
-            map(values(ex)) do expr_str
-                max_var_index = 0
-                for m in eachmatch(r"#(\d+)", expr_str)
-                    capture = m.captures[1]
-                    if capture !== nothing
-                        var_idx = parse(Int, capture)
-                        max_var_index = max(max_var_index, var_idx)
-                    end
-                end
-
-                placeholder_variable_names = ["__arg_$i" for i in 1:max_var_index]
-                expr_str = replace(expr_str, r"#(\d+)" => s"__arg_\1")
-
-                parsed_expr = DE.parse_expression(
-                    expr_str;
-                    operators,
-                    binary_operators,
-                    unary_operators,
-                    variable_names=placeholder_variable_names,
-                    expression_type=DE.Expression,
-                    node_type=actual_node_type,
-                    kws...,
-                )
-
-                ComposableExpression(
-                    parsed_expr.tree; operators, variable_names=nothing, eval_options_kws...
-                )
-            end,
-        )
-
-        return actual_expression_type(
-            inner_expressions;
-            structure=actual_expression_options.structure,
-            operators,
-            variable_names=nothing,
-            kws...,
-        )
+    eval_options_kws = if eval_options !== nothing
+        (; eval_options)
+    else
+        NamedTuple()
     end
 
-    parsed_expressions = NamedTuple{keys(ex)}(
+    inner_expressions = NamedTuple{keys(ex)}(
         map(values(ex)) do expr_str
             max_var_index = 0
             for m in eachmatch(r"#(\d+)", expr_str)
@@ -1033,23 +998,33 @@ parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=Templa
                 end
             end
 
-            placeholder_variable_names = ["#$i" for i in 1:max_var_index]
+            placeholder_variable_names = ["__arg_$i" for i in 1:max_var_index]
+            expr_str = replace(expr_str, r"#(\d+)" => s"__arg_\1")
 
-            expr = DE.parse_expression(
+            parsed_expr = DE.parse_expression(
                 expr_str;
                 operators,
                 binary_operators,
                 unary_operators,
                 variable_names=placeholder_variable_names,
-                expression_type=actual_expression_type,
+                expression_type=DE.Expression,
                 node_type=actual_node_type,
                 kws...,
             )
 
-            with_metadata(expr; variable_names=nothing)
+            ComposableExpression(
+                parsed_expr.tree; operators, variable_names=nothing, eval_options_kws...
+            )
         end,
     )
-    return parsed_expressions
+
+    return actual_expression_type(
+        inner_expressions;
+        structure=actual_expression_options.structure,
+        operators,
+        variable_names=nothing,
+        kws...,
+    )
 end
 
 end
