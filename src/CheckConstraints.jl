@@ -48,19 +48,18 @@ end
 """Check if there are any illegal combinations of operators"""
 function flag_illegal_nests(tree::AbstractExpressionNode, options::AbstractOptions)::Bool
     # We search from the top first, then from child nodes at end.
-    (nested_constraints = options.nested_constraints) === nothing && return false
-    for (degree, op_idx, op_constraint) in nested_constraints
-        for (nested_degree, nested_op_idx, max_nestedness) in op_constraint
-            any(tree) do subtree
-                if subtree.degree == degree && subtree.op == op_idx
-                    nestedness = count_max_nestedness(subtree, nested_degree, nested_op_idx)
-                    return nestedness > max_nestedness
+    nested_constraints = options.nested_constraints
+    isnothing(nested_constraints) && return false
+    any(tree) do subtree
+        any(nested_constraints) do (degree, op_idx, op_constraints)
+            subtree.degree == degree &&
+                subtree.op == op_idx &&
+                any(op_constraints) do (nested_degree, nested_op_idx, max_nestedness)
+                    count_max_nestedness(subtree, nested_degree, nested_op_idx) >
+                    max_nestedness
                 end
-                return false
-            end && return true
         end
     end
-    return false
 end
 
 """Check if user-passed constraints are satisfied. Returns false otherwise."""
