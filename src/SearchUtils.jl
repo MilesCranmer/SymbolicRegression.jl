@@ -779,11 +779,7 @@ function _make_vector_vector(guesses, nout)
         end
     else  # nout > 1
         if !(guesses isa AbstractVector{<:AbstractVector})
-            throw(
-                ArgumentError(
-                    "`guesses` must be a vector of vectors of strings when `nout > 1`"
-                ),
-            )
+            throw(ArgumentError("`guesses` must be a vector of vectors when `nout > 1`"))
         end
         @assert length(guesses) == nout
         return guesses

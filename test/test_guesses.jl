@@ -393,3 +393,19 @@ end
     end
     @test !contains(String(take!(io)), "maxsize")
 end
+
+@testitem "Multiple outputs guesses format validation" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: parse_guesses, Dataset, PopMember
+    using Test
+
+    datasets = [Dataset(randn(2, 10), randn(10)) for _ in 1:2]
+    options = Options()
+
+    @test_throws(
+        ArgumentError("`guesses` must be a vector of vectors when `nout > 1`"),
+        parse_guesses(
+            PopMember{Float64,Float64}, ["x1 + x2", "x1 - x2"], datasets, options
+        )
+    )
+end
