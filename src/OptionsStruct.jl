@@ -14,15 +14,14 @@ This struct defines how complexity is calculated.
 # Fields
 - `use`: Shortcut indicating whether we use custom complexities,
     or just use 1 for everything.
-- `binop_complexities`: Complexity of each binary operator.
-- `unaop_complexities`: Complexity of each unary operator.
+- `op_complexities`: Tuple of vectors, where each vector contains
+    the complexities for operators of that degree.
 - `variable_complexity`: Complexity of using a variable.
 - `constant_complexity`: Complexity of using a constant.
 """
-struct ComplexityMapping{T<:Real,VC<:Union{T,AbstractVector{T}}}
+struct ComplexityMapping{T<:Real,VC<:Union{T,AbstractVector{T}},D}
     use::Bool
-    binop_complexities::Vector{T}
-    unaop_complexities::Vector{T}
+    op_complexities::NTuple{D,Vector{T}}
     variable_complexity::VC
     constant_complexity::T
 end
@@ -31,39 +30,34 @@ Base.eltype(::ComplexityMapping{T}) where {T} = T
 
 """Promote type when defining complexity mapping."""
 function ComplexityMapping(;
-    binop_complexities::Vector{T1},
-    unaop_complexities::Vector{T2},
-    variable_complexity::Union{T3,AbstractVector{T3}},
-    constant_complexity::T4,
-) where {T1<:Real,T2<:Real,T3<:Real,T4<:Real}
-    T = promote_type(T1, T2, T3, T4)
+    op_complexities::Tuple{Vararg{Vector,D}},
+    variable_complexity::Union{T2,AbstractVector{T2}},
+    constant_complexity::T3,
+) where {T2<:Real,T3<:Real,D}
+    T = promote_type(map(eltype, op_complexities)..., T2, T3)
     vc = map(T, variable_complexity)
-    return ComplexityMapping{T,typeof(vc)}(
-        true,
-        map(T, binop_complexities),
-        map(T, unaop_complexities),
-        vc,
-        T(constant_complexity),
+    return ComplexityMapping{T,typeof(vc),D}(
+        true, map(Base.Fix1(map, T), op_complexities), vc, T(constant_complexity)
+    )
+end
+
+function ComplexityMapping(::Nothing, ::Nothing, ::Nothing, operators::Tuple)
+    # If no customization provided, then we simply
+    # turn off the complexity mapping
+    use = false
+    return ComplexityMapping{Int,Int,length(operators)}(
+        use, ntuple(i -> Int[], Val(length(operators))), 0, 0
     )
 end
 
 function ComplexityMapping(
-    ::Nothing, ::Nothing, ::Nothing, binary_operators, unary_operators
-)
-    # If no customization provided, then we simply
-    # turn off the complexity mapping
-    use = false
-    return ComplexityMapping{Int,Int}(use, zeros(Int, 0), zeros(Int, 0), 0, 0)
-end
-function ComplexityMapping(
     complexity_of_operators,
     complexity_of_variables,
     complexity_of_constants,
-    binary_operators,
-    unary_operators,
+    operators::Tuple,
 )
     _complexity_of_operators = if complexity_of_operators === nothing
-        Dict{Function,Int64}()
+        Dict{Any,Int64}()
     else
         # Convert to dict:
         Dict(complexity_of_operators)
@@ -87,15 +81,11 @@ function ComplexityMapping(
 
     T = promote_type(VAR_T, CONST_T, OP_T)
 
-    # If not in dict, then just set it to 1.
-    binop_complexities = T[
-        (haskey(_complexity_of_operators, op) ? _complexity_of_operators[op] : one(T)) #
-        for op in binary_operators
-    ]
-    unaop_complexities = T[
-        (haskey(_complexity_of_operators, op) ? _complexity_of_operators[op] : one(T)) #
-        for op in unary_operators
-    ]
+    # Build operator complexities for each degree as vectors
+    op_complexities = ntuple(
+        i -> T[get(_complexity_of_operators, op, one(T)) for op in operators[i]],
+        Val(length(operators)),
+    )
 
     variable_complexity = if complexity_of_variables !== nothing
         map(T, complexity_of_variables)
@@ -108,9 +98,7 @@ function ComplexityMapping(
         one(T)
     end
 
-    return ComplexityMapping(;
-        binop_complexities, unaop_complexities, variable_complexity, constant_complexity
-    )
+    return ComplexityMapping(; op_complexities, variable_complexity, constant_complexity)
 end
 
 """
@@ -181,6 +169,7 @@ struct Options{
     CM<:Union{ComplexityMapping,Function},
     OP<:AbstractOperatorEnum,
     NOPS<:Tuple,
+    OP_CONSTRAINTS<:Tuple{Vararg{Vector{<:Union{Int,Tuple{Vararg{Int}}}}}},
     N<:AbstractExpressionNode,
     E<:AbstractExpression,
     EO<:NamedTuple,
@@ -192,8 +181,7 @@ struct Options{
     print_precision,
 } <: AbstractOptions
     operators::OP
-    bin_constraints::Vector{Tuple{Int,Int}}
-    una_constraints::Vector{Int}
+    op_constraints::OP_CONSTRAINTS
     complexity_mapping::CM
     tournament_selection_n::Int
     tournament_selection_p::Float32
@@ -265,13 +253,13 @@ function Base.print(io::IO, @nospecialize(options::Options))
     return print(
         io,
         "Options(" *
-        "binops=$(options.operators.binops), " *
-        "unaops=$(options.operators.unaops), "
+        "operators=$(options.operators), "
         # Fill in remaining fields automatically:
         *
         join(
             [
-                if fieldname in (:optimizer_options, :mutation_weights)
+                if fieldname in
+                    (:optimizer_algorithm, :optimizer_options, :mutation_weights)
                     "$(fieldname)=..."
                 else
                     "$(fieldname)=$(getfield(options, fieldname))"

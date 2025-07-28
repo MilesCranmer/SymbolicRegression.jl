@@ -49,67 +49,70 @@ using ..ExpressionSpecModule:
 
 """Build constraints on operator-level complexity from a user-passed dict."""
 @unstable function build_constraints(;
-    una_constraints,
-    bin_constraints,
-    @nospecialize(unary_operators),
-    @nospecialize(binary_operators)
-)::Tuple{Vector{Int},Vector{Tuple{Int,Int}}}
+    constraints=nothing,
+    una_constraints=nothing,
+    bin_constraints=nothing,
+    @nospecialize(operators_by_degree::Tuple{Vararg{Any,D}})
+) where {D}
+    constraints = if constraints !== nothing
+        @assert all(isnothing, (una_constraints, bin_constraints))
+        constraints
+    elseif any(!isnothing, (una_constraints, bin_constraints))
+        (una_constraints, bin_constraints)
+    else
+        ntuple(i -> nothing, Val(D))
+    end
+    return _build_constraints(constraints, operators_by_degree)
+end
+@unstable function _build_constraints(
+    constraints, @nospecialize(operators_by_degree::Tuple{Vararg{Any,D}})
+) where {D}
     # Expect format ((*)=>(-1, 3)), etc.
-    # TODO: Need to disable simplification if (*, -, +, /) are constrained?
-    #  Or, just quit simplification is constraints violated.
 
-    is_una_constraints_already_done = una_constraints isa Vector{Int}
-    _una_constraints1 = if una_constraints isa Array && !is_una_constraints_already_done
-        Dict(una_constraints)
-    else
-        una_constraints
-    end
-    _una_constraints2 = if _una_constraints1 === nothing
-        fill(-1, length(unary_operators))
-    elseif !is_una_constraints_already_done
-        [
-            haskey(_una_constraints1, op) ? _una_constraints1[op]::Int : -1 for
-            op in unary_operators
-        ]
-    else
-        _una_constraints1
+    is_constraints_already_done = ntuple(Val(D)) do i
+        i == 1 && constraints[i] isa Vector{Int} ||
+            i > 1 && constraints[i] isa Vector{NTuple{i,Int}}
     end
 
-    is_bin_constraints_already_done = bin_constraints isa Vector{Tuple{Int,Int}}
-    _bin_constraints1 = if bin_constraints isa Array && !is_bin_constraints_already_done
-        Dict(bin_constraints)
-    else
-        bin_constraints
+    _op_constraints = ntuple(Val(D)) do i
+        if constraints[i] isa Array && !is_constraints_already_done[i]
+            Dict(constraints[i])
+        else
+            constraints[i]
+        end
     end
-    _bin_constraints2 = if _bin_constraints1 === nothing
-        fill((-1, -1), length(binary_operators))
-    elseif !is_bin_constraints_already_done
-        [
-            if haskey(_bin_constraints1, op)
-                _bin_constraints1[op]::Tuple{Int,Int}
+
+    return ntuple(Val(D)) do i
+        let default_value = i == 1 ? -1 : ntuple(j -> -1, i)
+            if isnothing(_op_constraints[i])
+                fill(default_value, length(operators_by_degree[i]))
+            elseif !is_constraints_already_done[i]
+                typeof(default_value)[
+                    get(_op_constraints[i], op, default_value) for
+                    op in operators_by_degree[i]
+                ]
             else
-                (-1, -1)
-            end for op in binary_operators
-        ]
-    else
-        _bin_constraints1
+                _op_constraints[i]::Vector{typeof(default_value)}
+            end
+        end
     end
-
-    return _una_constraints2, _bin_constraints2
 end
 
 @unstable function build_nested_constraints(;
-    @nospecialize(binary_operators), @nospecialize(unary_operators), nested_constraints
+    nested_constraints, @nospecialize(operators_by_degree)
 )
     nested_constraints === nothing && return nested_constraints
-    # Check that intersection of binary operators and unary operators is empty:
-    for op in binary_operators
-        if op ∈ unary_operators
+
+    # Check that no operator appears in multiple degrees:
+    all_operators = Set()
+    for ops in operators_by_degree, op in ops
+        if op ∈ all_operators
             error(
-                "Operator $(op) is both a binary and unary operator. " *
+                "Operator $(op) appears in multiple degrees. " *
                 "You can't use nested constraints.",
             )
         end
+        push!(all_operators, op)
     end
 
     # Convert to dict:
@@ -121,31 +124,50 @@ end
             [cons[1] => Dict(cons[2]...) for cons in nested_constraints]...
         )
     end
+
     for (op, nested_constraint) in _nested_constraints
-        if !(op ∈ binary_operators || op ∈ unary_operators)
+        if !(op ∈ all_operators)
             error("Operator $(op) is not in the operator set.")
         end
         for (nested_op, max_nesting) in nested_constraint
-            if !(nested_op ∈ binary_operators || nested_op ∈ unary_operators)
+            if !(nested_op ∈ all_operators)
                 error("Operator $(nested_op) is not in the operator set.")
             end
-            @assert nested_op ∈ binary_operators || nested_op ∈ unary_operators
             @assert max_nesting >= -1 && typeof(max_nesting) <: Int
         end
     end
 
     # Lastly, we clean it up into a dict of (degree,op_idx) => max_nesting.
     return [
-        let (degree, idx) = if op ∈ binary_operators
-                2, findfirst(isequal(op), binary_operators)::Int
-            else
-                1, findfirst(isequal(op), unary_operators)::Int
+        let (degree, idx) = begin
+                found_degree = 0
+                found_idx = 0
+                for (d, ops) in enumerate(operators_by_degree)
+                    idx_in_degree = findfirst(isequal(op), ops)
+                    if idx_in_degree !== nothing
+                        found_degree = d
+                        found_idx = idx_in_degree
+                        break
+                    end
+                end
+                found_degree == 0 && error("Operator $(op) is not in the operator set.")
+                (found_degree, found_idx)
             end,
             new_max_nesting_dict = [
-                let (nested_degree, nested_idx) = if nested_op ∈ binary_operators
-                        2, findfirst(isequal(nested_op), binary_operators)::Int
-                    else
-                        1, findfirst(isequal(nested_op), unary_operators)::Int
+                let (nested_degree, nested_idx) = begin
+                        found_degree = 0
+                        found_idx = 0
+                        for (d, ops) in enumerate(operators_by_degree)
+                            idx_in_degree = findfirst(isequal(nested_op), ops)
+                            if idx_in_degree !== nothing
+                                found_degree = d
+                                found_idx = idx_in_degree
+                                break
+                            end
+                        end
+                        found_degree == 0 &&
+                        error("Operator $(nested_op) is not in the operator set.")
+                        (found_degree, found_idx)
                     end
                     (nested_degree, nested_idx, max_nesting)
                 end for (nested_op, max_nesting) in nested_constraint
@@ -804,31 +826,53 @@ $(OPTION_DESCRIPTIONS)
 
     # Make sure nested_constraints contains functions within our operator set:
     _nested_constraints = if user_provided_operators
-        build_nested_constraints(;
-            binary_operators=operators.ops[2],
-            unary_operators=operators.ops[1],
-            nested_constraints,
-        )
+        build_nested_constraints(; nested_constraints, operators_by_degree=operators.ops)
     else
-        build_nested_constraints(; binary_operators, unary_operators, nested_constraints)
+        # Convert binary/unary to generic format for backwards compatibility
+        operators_tuple = (unary_operators, binary_operators)
+        build_nested_constraints(; nested_constraints, operators_by_degree=operators_tuple)
     end
 
     if typeof(constraints) <: Tuple
-        constraints = collect(constraints)
+        constraints = Dict(constraints)
+    elseif constraints isa AbstractVector
+        constraints = Dict(constraints)
     end
     if constraints !== nothing
-        @assert bin_constraints === nothing
-        @assert una_constraints === nothing
-        # TODO: This is redundant with the checks in equation_search
-        user_provided_operators && @assert length(operators.ops) == 2
-        for op in @something(binary_operators, operators.ops[2])
-            @assert !(op in unary_operators)
+        @assert all(isnothing, (bin_constraints, una_constraints))
+        if user_provided_operators
+            # For generic degree interface, constraints should be handled by the generic function
+            # Don't set bin_constraints/una_constraints as they shouldn't be used
+            all_operators = Set()
+            for ops in operators.ops
+                for op in ops
+                    if op ∈ all_operators
+                        error(
+                            "Operator $(op) appears in multiple degrees. " *
+                            "You can't use constraints.",
+                        )
+                    end
+                    push!(all_operators, op)
+                end
+            end
+        else
+            for op in binary_operators
+                @assert !(op in unary_operators)
+            end
+            for op in unary_operators
+                @assert !(op in binary_operators)
+            end
+            bin_constraints = constraints
+            una_constraints = constraints
         end
-        for op in @something(unary_operators, operators.ops[1])
-            @assert !(op in binary_operators)
+    else
+        # When constraints is nothing, we might still have individual bin_constraints/una_constraints
+        if user_provided_operators
+            @assert(
+                all(isnothing, (bin_constraints, una_constraints)),
+                "When using user_provided_operators=true, use the 'constraints' parameter instead of 'bin_constraints' and 'una_constraints'"
+            )
         end
-        bin_constraints = constraints
-        una_constraints = constraints
     end
 
     if expression_spec !== nothing
@@ -858,40 +902,34 @@ $(OPTION_DESCRIPTIONS)
 
     node_type = with_max_degree_from_context(node_type, user_provided_operators, operators)
 
-    _una_constraints, _bin_constraints = if user_provided_operators
-        # When operators is provided, extract operators from the enum for constraints
-        @assert length(operators.ops) == 2
+    op_constraints = if user_provided_operators
+        @assert(
+            all(isnothing, (una_constraints, bin_constraints)),
+            "When using user_provided_operators=true, use the 'constraints' parameter instead of 'una_constraints' and 'bin_constraints'"
+        )
+
+        build_constraints(; constraints, operators_by_degree=operators.ops)
+    else
+        # Convert binary/unary to generic format for backwards compatibility
         build_constraints(;
             una_constraints,
             bin_constraints,
-            unary_operators=operators.ops[1],
-            binary_operators=operators.ops[2],
+            operators_by_degree=(unary_operators, binary_operators),
         )
-    else
-        build_constraints(; una_constraints, bin_constraints, unary_operators, binary_operators)
     end
 
     complexity_mapping = @something(
         complexity_mapping,
-        if user_provided_operators
-            # When operators is provided, use the operators from the enum
-            @assert length(operators.ops) == 2
-            ComplexityMapping(
-                complexity_of_operators,
-                complexity_of_variables,
-                complexity_of_constants,
-                operators.ops[2],
-                operators.ops[1],
-            )
-        else
-            ComplexityMapping(
-                complexity_of_operators,
-                complexity_of_variables,
-                complexity_of_constants,
-                binary_operators,
-                unary_operators,
-            )
-        end
+        ComplexityMapping(
+            complexity_of_operators,
+            complexity_of_variables,
+            complexity_of_constants,
+            if user_provided_operators
+                operators.ops
+            else
+                (unary_operators, binary_operators)
+            end,
+        )
     )
 
     maxdepth = something(maxdepth, maxsize)
@@ -977,6 +1015,7 @@ $(OPTION_DESCRIPTIONS)
         typeof(complexity_mapping),
         operator_specialization(typeof(operators), expression_type),
         typeof(nops),
+        typeof(op_constraints),
         node_type,
         expression_type,
         typeof(expression_options),
@@ -988,8 +1027,7 @@ $(OPTION_DESCRIPTIONS)
         print_precision,
     }(
         operators,
-        _bin_constraints,
-        _una_constraints,
+        op_constraints,
         complexity_mapping,
         tournament_selection_n,
         tournament_selection_p,
@@ -1064,7 +1102,7 @@ function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = n
     if version isa VersionNumber && version < v"1.0.0"
         return (;
             # Creating the Search Space
-            operators=OperatorEnum(1 => (), 2 => (+, -, /, *)),
+            operators=OperatorEnum(((), (+, -, /, *))),
             maxsize=20,
             # Setting the Search Size
             populations=15,
@@ -1110,7 +1148,7 @@ function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = n
     else
         return (;
             # Creating the Search Space
-            operators=OperatorEnum(1 => (), 2 => (+, -, /, *)),
+            operators=OperatorEnum(((), (+, -, /, *))),
             maxsize=30,
             # Setting the Search Size
             populations=31,

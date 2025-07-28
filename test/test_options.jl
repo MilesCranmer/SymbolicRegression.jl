@@ -43,6 +43,16 @@ end
     @test_nowarn Options(; operators)
 end
 
+@testitem "Test operators stored globally" tags = [:part1] begin
+    using SymbolicRegression
+    using DynamicExpressions.OperatorEnumConstructionModule: LATEST_OPERATORS
+
+    operators = OperatorEnum(1 => [sin, cos], 2 => [+, -, *], 3 => [fma], 5 => [max])
+    options = Options(; operators)
+
+    @test LATEST_OPERATORS[] == operators
+end
+
 @testitem "Test with_max_degree_from_context" tags = [:part1] begin
     using SymbolicRegression
 
@@ -54,4 +64,52 @@ end
     @test Options(; node_type=Node{<:Any,1}, operators).node_type <: Node{<:Any,1}
 
     @test Options().node_type <: Node{<:Any,2}
+
+    operators = OperatorEnum(1 => (sin, cos), 2 => (+, *, -), 3 => (fma, max))
+    options = Options(; operators)
+    @test options.node_type <: Node{<:Any,3}
+    @test options.op_constraints ==
+        ([-1, -1], [(-1, -1), (-1, -1), (-1, -1)], [(-1, -1, -1), (-1, -1, -1)])
+    @test options.nops == (2, 3, 2)
+end
+
+@testitem "Test operator appears in multiple degrees error" tags = [:part1] begin
+    using SymbolicRegression
+
+    operators = OperatorEnum(1 => (+, sin), 2 => (+, *))  # + appears in both degrees
+
+    @test_throws(
+        "Operator + appears in multiple degrees. You can't use nested constraints.",
+        Options(; operators, nested_constraints=[(+) => [(+) => 0]])
+    )
+
+    @test_throws(
+        "Operator + appears in multiple degrees. You can't use constraints.",
+        Options(; operators, constraints=[(+) => -1])
+    )
+end
+
+@testitem "Test build_constraints with pre-processed vector format" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression.CoreModule.OptionsModule: build_constraints
+    using DynamicExpressions: OperatorEnum
+
+    operators = OperatorEnum(1 => (sin, cos), 2 => (+, *, -), 5 => (max,))
+
+    constraints_processed = (
+        [-1, -1], [(-1, -1), (-1, -1), (-1, -1)], nothing, nothing, [(-1, -1, -1, -1, -1)]
+    )
+
+    result = build_constraints(;
+        constraints=constraints_processed, operators_by_degree=operators.ops
+    )
+
+    # Verify the result matches expected format (fills empty slots with default values)
+    @test result == (
+        [-1, -1],
+        [(-1, -1), (-1, -1), (-1, -1)],
+        NTuple{3,Int}[],
+        NTuple{4,Int}[],
+        [(-1, -1, -1, -1, -1)],
+    )
 end
