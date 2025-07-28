@@ -150,9 +150,8 @@ end
 
 include("test_mlj.jl")
 
-@testitem "Testing whether we can move operators to workers." tags = [:part1] begin
-    include("test_custom_operators_multiprocessing.jl")
-end
+include("test_custom_operators_multiprocessing.jl")
+include("test_filtered_async.jl")
 
 @testitem "Testing whether we can move loss function expression to workers." tags = [:part2] begin
     include("test_loss_function_expression_multiprocessing.jl")
