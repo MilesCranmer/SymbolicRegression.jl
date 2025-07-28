@@ -28,6 +28,30 @@ using ..InterfaceDynamicExpressionsModule: takes_eval_options
 function logging_callback! end
 
 """
+    @filtered_async expr
+
+Like `@async` but with error monitoring that ignores `Distributed.ProcessExitedException`
+to avoid spam when worker processes exit normally.
+"""
+macro filtered_async(expr)
+    return esc(
+        quote
+            $(Base).errormonitor(
+                @async begin
+                    try
+                        $expr
+                    catch ex
+                        if !(ex isa $(Distributed).ProcessExitedException)
+                            rethrow(ex)
+                        end
+                    end
+                end
+            )
+        end,
+    )
+end
+
+"""
     AbstractRuntimeOptions
 
 An abstract type representing runtime configuration parameters for the symbolic regression algorithm.
@@ -265,9 +289,9 @@ macro sr_spawner(expr, kws...)
         if $(parallelism) == :serial
             $(expr)
         elseif $(parallelism) == :multiprocessing
-            @spawnat($(worker_idx), $(expr))
+            $(Distributed).@spawnat($(worker_idx), $(expr))
         elseif $(parallelism) == :multithreading
-            Threads.@spawn($(expr))
+            $(Threads).@spawn($(expr))
         else
             error("Invalid parallel type ", string($(parallelism)), ".")
         end
