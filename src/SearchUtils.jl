@@ -36,15 +36,17 @@ to avoid spam when worker processes exit normally.
 macro filtered_async(expr)
     return esc(
         quote
-            Base.errormonitor(@async begin
-                try
-                    $expr
-                catch ex
-                    if !(ex isa Distributed.ProcessExitedException)
-                        rethrow(ex)
+            $(Base).errormonitor(
+                @async begin
+                    try
+                        $expr
+                    catch ex
+                        if !(ex isa $(Distributed).ProcessExitedException)
+                            rethrow(ex)
+                        end
                     end
                 end
-            end)
+            )
         end,
     )
 end
@@ -287,9 +289,9 @@ macro sr_spawner(expr, kws...)
         if $(parallelism) == :serial
             $(expr)
         elseif $(parallelism) == :multiprocessing
-            @spawnat($(worker_idx), $(expr))
+            $(Distributed).@spawnat($(worker_idx), $(expr))
         elseif $(parallelism) == :multithreading
-            Threads.@spawn($(expr))
+            $(Threads).@spawn($(expr))
         else
             error("Invalid parallel type ", string($(parallelism)), ".")
         end
