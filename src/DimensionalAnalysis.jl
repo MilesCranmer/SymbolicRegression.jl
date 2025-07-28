@@ -204,15 +204,15 @@ function violates_dimensional_constraints_dispatch(
     operators,
     allow_wildcards,
 ) where {T,Q<:AbstractQuantity{T},D}
+    #! format: off
     return tree_mapreduce(
         leaf -> deg0_eval(x, x_units, leaf, allow_wildcards)::WildcardQuantity{Q},
         branch -> branch,
-        (branch, children...) -> degn_eval(
-            (@inbounds operators.ops[branch.degree][branch.op]), children...
-        )::WildcardQuantity{Q},
+        (branch, children...) -> degn_eval((@inbounds operators.ops[branch.degree][branch.op]), children...)::WildcardQuantity{Q},
         tree;
         break_sharing=Val(true),
     )
+    #! format: on
 end
 
 """
