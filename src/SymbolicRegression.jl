@@ -316,6 +316,7 @@ using .SearchUtilsModule:
     get_worker_output_type,
     extract_from_worker,
     @sr_spawner,
+    @filtered_async,
     StdinReader,
     watch_stream,
     close_reader!,
@@ -867,9 +868,7 @@ function _main_search_loop!(
     if ropt.parallelism in (:multiprocessing, :multithreading)
         for j in 1:nout, i in 1:(options.populations)
             # Start listening for each population to finish:
-            t = Base.errormonitor(
-                @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
-            )
+            t = @filtered_async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
             push!(state.tasks[j], t)
         end
     end
@@ -1002,8 +1001,8 @@ function _main_search_loop!(
                 worker_idx = worker_idx
             )
             if ropt.parallelism in (:multiprocessing, :multithreading)
-                state.tasks[j][i] = Base.errormonitor(
-                    @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
+                state.tasks[j][i] = @filtered_async put!(
+                    state.channels[j][i], fetch(state.worker_output[j][i])
                 )
             end
 
