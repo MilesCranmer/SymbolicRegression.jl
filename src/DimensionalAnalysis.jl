@@ -150,8 +150,10 @@ end
             $(2^N),
             i -> begin
                 # Get indices of N-d matrix of types:
-                lattice = Base.Cartesian.@ntuple($N, j -> div(i - 1, (2^(N - j))) % 2)
-                Base.Cartesian.@nextract($N, lattice, lattice)
+                Base.Cartesian.@nexprs(
+                    $N, j -> lattice_j = compute_lattice(Val($N), Val(i), Val(j))
+                )
+
                 # (e.g., for N = 3, this would be (0, 0, 0), (0, 0, 1), ..., (1, 1, 1))
                 #! format: off
                 if hasmethod(op, Tuple{Base.Cartesian.@ntuple($N, j -> lattice_j == 0 ? W : T)...}) &&
@@ -186,6 +188,9 @@ end
         # ```
         return W(one(Q), false, true)
     end
+end
+@generated function compute_lattice(::Val{N}, ::Val{i}, ::Val{j}) where {N,i,j}
+    return div(i - 1, (2^(N - j))) % 2
 end
 
 function violates_dimensional_constraints_dispatch(
