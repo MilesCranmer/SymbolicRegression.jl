@@ -148,6 +148,7 @@ end
         # ```
         #      !isfinite(arg_1) || !isfinite(arg_2) && return W(one(Q), false, true)
         # ```
+        # COV_EXCL_START
         Base.Cartesian.@nexprs(
             $(2^N),
             i -> begin
@@ -181,6 +182,7 @@ end
                 #! format: on
             end
         )
+        # COV_EXCL_STOP
         # ^For N = 2:
         # ```
         #     hasmethod(op, Tuple{W,W}) && @maybe_return_call(W, op, (arg_1, arg_2))
