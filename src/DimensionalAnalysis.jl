@@ -131,9 +131,11 @@ end
     end
 end
 @generated function degn_eval(
-    op::F, args::Vararg{W,N}
-) where {F,N,T,Q<:AbstractQuantity{T},W<:WildcardQuantity{Q}}
+    op::F, _arg::W, _args::Vararg{W,Nm1}
+) where {F,Nm1,T,Q<:AbstractQuantity{T},W<:WildcardQuantity{Q}}
+    N = Nm1 + 1
     quote
+        args = (_arg, _args...)
         Base.Cartesian.@nextract($N, arg, args)
         Base.Cartesian.@nexprs($N, i -> arg_i.violates && return arg_i)
         # ^For N = 2:
