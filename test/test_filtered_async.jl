@@ -1,5 +1,3 @@
-using SymbolicRegression
-
 @testitem "@filtered_async error forwarding tests" tags = [:part2] begin
     using Distributed: Distributed
     using SymbolicRegression.SearchUtilsModule: SearchUtilsModule as SUM
