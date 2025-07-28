@@ -62,3 +62,14 @@ tree = cos(cos(x1))
 tree = cos(cos(cos(x1)))
 @test count_depth(tree) == 4
 @test check_constraints(tree, options) == false
+
+_inv2(x) = 1 / x
+options = Options(;
+    binary_operators=(+, *), unary_operators=(_inv2,), constraints=(_inv2 => 5,), maxsize=10
+)
+
+x1 = Node(; feature=1)
+deep_expr = x1 * x1 * x1 * x1 * x1 * x1
+violating_tree = Node(1, deep_expr)
+
+@test check_constraints(violating_tree, options) == false

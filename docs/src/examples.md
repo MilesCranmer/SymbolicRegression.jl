@@ -467,7 +467,79 @@ println("Learned expression: ", best_expr)
 
 If successful, the result should simplify to something like $\frac{\sqrt{x^2 - 1}}{x}$, which is the integral of the target function.
 
-## 11. Additional features
+## 11. Seeding search with initial guesses
+
+You can also provide initial guesses for the search.
+In this example, let's look for the following function:
+
+```math
+\sin(x_1 x_2 + 0.1) + \cos(x_3) x_4 + \frac{x_5}{x_6^2 + 1}
+```
+
+```julia
+using SymbolicRegression, MLJ
+
+X = randn(Float32, 6, 2048)
+y = @. sin(X[1, :] * X[2, :] + 0.1f0) + cos(X[3, :]) * X[4, :] + X[5, :] / (X[6, :] * X[6, :] + 1)
+```
+
+This expression is quite complex. Now, say that we know most of
+the structure, but want to further optimize it. We can provide
+a guess for the search:
+
+```julia
+model = SRRegressor(
+    binary_operators=[+, -, *, /],
+    unary_operators=[sin, cos],
+    maxsize=35,
+    niterations=35,
+    guesses=["sin(x1 * x2) + cos(x3) * x4 + x5 / (x6 * x6 + 0.9)", #= can provide additional guesses here =#],
+    batching=true,
+    batch_size=32,
+)
+
+mach = machine(model, X', y)
+fit!(mach)
+```
+
+If everything goes well, it should optimize the `0.9` to `1.0`,
+and also discover the `+ 0.1` term inside the sinusoid, whereas
+this might have been difficult to discover as fast from the normal search.
+
+You can also provide multiple guesses. For a template expression,
+your guesses should be an array of named tuples, such as
+`(; f="cos(#1) + 0.1", g="sin(#2) - 0.9")`.
+
+## 12. Higher-arity operators
+
+You can use operators with more than 2 arguments by passing an `OperatorEnum` explicitly.
+This operator allows you to declare arbitrary arities by passing them in a `arity => (op1, op2, ...)` format.
+
+Here's an example using a ternary conditional operator:
+
+```julia
+using SymbolicRegression, MLJ
+
+scalar_ifelse(a, b, c) = a > 0 ? b : c
+
+X = randn(3, 100)
+y = [X[1, i] > 0 ? 2*X[2, i] : X[3, i] for i in 1:100]
+
+model = SRRegressor(
+    operators=OperatorEnum(
+        1 => (),
+        2 => (+, -, *, /),
+        3 => (scalar_ifelse,)
+    ),
+    niterations=35,
+)
+mach = machine(model, X', y)
+fit!(mach)
+```
+
+This sort of piecewise logic might be difficult to express with only binary operators.
+
+## 13. Additional features
 
 For the many other features available in SymbolicRegression.jl,
 check out the API page for `Options`. You might also find it useful

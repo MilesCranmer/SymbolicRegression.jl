@@ -213,6 +213,7 @@ struct Options{
     ncycles_per_iteration::Int
     fraction_replaced::Float32
     fraction_replaced_hof::Float32
+    fraction_replaced_guesses::Float32
     topn::Int
     verbosity::Union{Int,Nothing}
     v_print_precision::Val{print_precision}

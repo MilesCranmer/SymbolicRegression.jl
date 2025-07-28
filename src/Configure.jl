@@ -279,6 +279,7 @@ function import_module_on_workers(
         :ClusterManagers,
         :Enzyme,
         :LoopVectorization,
+        :Mooncake,
         :SymbolicUtils,
         :TensorBoardLogger,
         :Zygote,
