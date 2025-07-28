@@ -694,6 +694,7 @@ function MM.condition_mutation_weights!(
     @nospecialize(member::P),
     @nospecialize(options::AbstractOptions),
     curmaxsize::Int,
+    nfeatures::Int,
 ) where {T,L,N<:TemplateExpression,P<:PopMember{T,L,N}}
     if !preserve_sharing(typeof(member.tree))
         weights.form_connection = 0.0
@@ -701,6 +702,11 @@ function MM.condition_mutation_weights!(
     end
 
     MM.condition_mutate_constant!(typeof(member.tree), weights, member, options, curmaxsize)
+
+    # Disable feature mutation if only one feature available
+    if nfeatures <= 1
+        weights.mutate_feature = 0.0
+    end
 
     complexity = ComplexityModule.compute_complexity(member, options)
 
@@ -763,6 +769,12 @@ function MF.with_contents_for_mutation(
     )
     return with_contents(ex, new_contents)
 end
+
+"""We only want to mutate to a valid number of features."""
+function MF.get_nfeatures_for_mutation(ex::TemplateExpression, ctx::Symbol, _::Int)
+    return get_metadata(ex).structure.num_features[ctx]
+end
+
 function MM.condition_mutate_constant!(
     ::Type{<:TemplateExpression},
     weights::AbstractMutationWeights,

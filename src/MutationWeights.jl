@@ -77,6 +77,7 @@ will be normalized to sum to 1.0 after initialization.
 
 - `mutate_constant::Float64`: How often to mutate a constant.
 - `mutate_operator::Float64`: How often to mutate an operator.
+- `mutate_feature::Float64`: How often to mutate which feature a variable node references.
 - `swap_operands::Float64`: How often to swap the operands of a binary operator.
 - `rotate_tree::Float64`: How often to perform a tree rotation at a random node.
 - `add_node::Float64`: How often to append a node to the tree.
@@ -102,6 +103,7 @@ will be normalized to sum to 1.0 after initialization.
 Base.@kwdef mutable struct MutationWeights <: AbstractMutationWeights
     mutate_constant::Float64 = 0.0353
     mutate_operator::Float64 = 3.63
+    mutate_feature::Float64 = 0.1
     swap_operands::Float64 = 0.00608
     rotate_tree::Float64 = 1.42
     add_node::Float64 = 0.0771
