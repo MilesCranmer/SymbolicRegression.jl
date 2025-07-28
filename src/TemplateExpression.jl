@@ -321,29 +321,31 @@ struct TemplateExpression{
 end
 
 function TemplateExpression(
-    trees::NamedTuple{<:Any,<:NTuple{<:Any,<:AbstractExpression}};
+    trees::NamedTuple{<:Any,<:NTuple{<:Any,<:AbstractExpression{T}}};
     structure::TemplateStructure,
     operators::Union{AbstractOperatorEnum,Nothing}=nothing,
     variable_names::Union{AbstractVector{<:AbstractString},Nothing}=nothing,
     parameters::Union{NamedTuple,Nothing}=nothing,
-)
+) where {T}
     example_tree = first(values(trees))::AbstractExpression
     operators = get_operators(example_tree, operators)
     variable_names = get_variable_names(example_tree, variable_names)
-    parameters = if has_params(structure)
-        @assert(
-            parameters !== nothing,
-            "Expected `parameters` to be provided for `structure.num_parameters=$(structure.num_parameters)`"
-        )
+    final_parameters = if has_params(structure)
+        resolved_parameters = @something parameters begin
+            # Auto-initialize parameters to zeros when not provided
+            NamedTuple{keys(structure.num_parameters)}(
+                map(Base.Fix1(zeros, T), values(structure.num_parameters))
+            )
+        end
         for k in keys(structure.num_parameters)
             @assert(
-                length(parameters[k]) == structure.num_parameters[k],
-                "Expected `parameters.$k` to have length $(structure.num_parameters[k]), got $(length(parameters[k]))"
+                length(resolved_parameters[k]) == structure.num_parameters[k],
+                "Expected `parameters.$k` to have length $(structure.num_parameters[k]), got $(length(resolved_parameters[k]))"
             )
         end
         # TODO: Delete this extra check once we are confident that it works
         NamedTuple{keys(structure.num_parameters)}(
-            map(p -> p isa ParamVector ? p : ParamVector(p::Vector), parameters)
+            map(p -> p isa ParamVector ? p : ParamVector(p::Vector), resolved_parameters),
         )
     else
         @assert(
@@ -352,7 +354,7 @@ function TemplateExpression(
         )
         NamedTuple()
     end
-    metadata = (; structure, operators, variable_names, parameters)
+    metadata = (; structure, operators, variable_names, parameters=final_parameters)
     return TemplateExpression(trees, Metadata(metadata))
 end
 
@@ -940,6 +942,100 @@ function IDE.make_example_inputs(
             extra_args...,
             map(x -> ValidVector(copy(x), true), eachrow(dataset.X)),
         ),
+    )
+end
+
+"""
+    parse_expression(ex::NamedTuple; kws...)
+
+Extension of `parse_expression` to handle NamedTuple input for creating template expressions.
+Each key in the NamedTuple should map to a string expression using #N placeholder syntax.
+
+# Example
+```julia
+# With expression_spec (recommended for template expressions):
+spec = TemplateExpressionSpec(; structure=TemplateStructure{(:f, :g)}(...))
+parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_spec=spec, operators=operators, variable_names=["x1", "x2"])
+
+# Or with explicit parameters:
+parse_expression((; f="cos(#1) - 1.5", g="exp(#2) - #1"); expression_type=TemplateExpression, operators=operators, variable_names=["x1", "x2"])
+```
+"""
+@unstable function DE.parse_expression(
+    ex::NamedTuple;
+    expression_spec::Union{ES.AbstractExpressionSpec,Nothing}=nothing,
+    expression_options::Union{NamedTuple,Nothing}=nothing,
+    eval_options::Union{EvalOptions,Nothing}=nothing,
+    operators::Union{AbstractOperatorEnum,Nothing}=nothing,
+    binary_operators::Union{Vector{<:Function},Nothing}=nothing,
+    unary_operators::Union{Vector{<:Function},Nothing}=nothing,
+    variable_names::Union{AbstractVector,Nothing}=nothing,
+    expression_type::Union{Type,Nothing}=nothing,
+    node_type::Union{Type,Nothing}=nothing,
+    kws...,
+)
+    if expression_spec !== nothing
+        actual_expression_type = ES.get_expression_type(expression_spec)
+        actual_expression_options = ES.get_expression_options(expression_spec)
+        actual_node_type = ES.get_node_type(expression_spec)
+    else
+        actual_expression_type = something(expression_type, TemplateExpression)
+        actual_expression_options = expression_options
+        actual_node_type = something(node_type, Node)
+    end
+
+    # COV_EXCL_START
+    @assert actual_expression_type <: TemplateExpression
+    @assert(
+        actual_expression_options !== nothing &&
+            actual_expression_options.structure isa TemplateStructure,
+        "NamedTuple expressions require expression_options with a TemplateStructure"
+    )
+    # COV_EXCL_STOP
+
+    eval_options_kws = if eval_options !== nothing
+        (; eval_options)
+    else
+        NamedTuple()
+    end
+
+    inner_expressions = NamedTuple{keys(ex)}(
+        map(values(ex)) do expr_str
+            max_var_index = 0
+            for m in eachmatch(r"#(\d+)", expr_str)
+                capture = m.captures[1]
+                if capture !== nothing
+                    var_idx = parse(Int, capture)
+                    max_var_index = max(max_var_index, var_idx)
+                end
+            end
+
+            placeholder_variable_names = ["__arg_$i" for i in 1:max_var_index]
+            expr_str = replace(expr_str, r"#(\d+)" => s"__arg_\1")
+
+            parsed_expr = DE.parse_expression(
+                expr_str;
+                operators,
+                binary_operators,
+                unary_operators,
+                variable_names=placeholder_variable_names,
+                expression_type=DE.Expression,
+                node_type=actual_node_type,
+                kws...,
+            )
+
+            ComposableExpression(
+                parsed_expr.tree; operators, variable_names=nothing, eval_options_kws...
+            )
+        end,
+    )
+
+    return actual_expression_type(
+        inner_expressions;
+        structure=actual_expression_options.structure,
+        operators,
+        variable_names=nothing,
+        kws...,
     )
 end
 
