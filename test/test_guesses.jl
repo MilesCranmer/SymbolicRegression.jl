@@ -471,3 +471,68 @@ end
         )
     )
 end
+
+@testitem "File saving with niterations=0" tags = [:part1] begin
+    using SymbolicRegression
+    using Test
+    using Random: MersenneTwister
+
+    # Create test data
+    rng = MersenneTwister(0)
+    X = randn(rng, 2, 30)
+    y = @. 2.0 * X[1, :]^2 + 3.0 * X[2, :] + 0.5
+
+    tmpdir = mktempdir()
+    options = Options(;
+        binary_operators=(+, *),
+        unary_operators=(),
+        verbosity=0,
+        progress=false,
+        save_to_file=true,
+        seed=0,
+        deterministic=true,
+        output_directory=tmpdir,
+    )
+
+    # Test that files are saved even when niterations=0, including guesses
+    good_guess = "2.0*x1*x1 + 3.0*x2 + 0.5"
+    hof = equation_search(
+        X, y; niterations=0, options=options, parallelism=:serial, guesses=[good_guess]
+    )
+
+    output_files = []
+    for (root, dirs, files) in walkdir(tmpdir)
+        for file in files
+            if endswith(file, ".csv") && contains(file, "hall_of_fame")
+                push!(output_files, joinpath(root, file))
+            end
+        end
+    end
+    @test length(output_files) == 1
+
+    expected_file = only(output_files)
+    content = read(expected_file, String)
+    @test !isempty(content)
+    @test contains(content, "Complexity")
+    @test contains(content, "Loss")
+    @test contains(content, "x1")
+
+    lines = split(content, '\n')
+    equation_lines = filter(
+        line -> !startswith(line, "Complexity") && !isempty(strip(line)), lines
+    )
+    @test length(equation_lines) > 0
+
+    # Check that one equation matches our guess: "2.0*x1*x1 + 3.0*x2 + 0.5"
+    @test any(equation_lines) do line
+        parts = split(line, ',')
+        if length(parts) >= 3
+            equation_part = strip(parts[end])
+            equation_part = strip(equation_part, '"')
+            if equation_part == "(((2.0 * x1) * x1) + (3.0 * x2)) + 0.5"
+                return true
+            end
+        end
+        return false
+    end
+end

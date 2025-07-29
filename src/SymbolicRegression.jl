@@ -1175,9 +1175,20 @@ function _info_dump(
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
 ) where {D<:Dataset}
+    nout = length(state.halls_of_fame)
+
+    # Ensure files are saved even when niterations=0, regardless of verbosity
+    if options.save_to_file
+        for j in 1:nout
+            hall_of_fame = state.halls_of_fame[j]
+            dataset = datasets[j]
+            dominating = calculate_pareto_frontier(hall_of_fame)
+            save_to_file(dominating, nout, j, dataset, options, ropt)
+        end
+    end
+
     ropt.verbosity <= 0 && return nothing
 
-    nout = length(state.halls_of_fame)
     if nout > 1
         @info "Final populations:"
     else
