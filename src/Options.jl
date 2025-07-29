@@ -902,7 +902,7 @@ $(OPTION_DESCRIPTIONS)
 
     node_type = with_max_degree_from_context(node_type, user_provided_operators, operators)
 
-    operators = if user_provided_operators
+    operators = if user_provided_operators && operators isa OperatorEnum
         # Apply opmap to user-provided operators (e.g., log -> safe_log)
         mapped_operators_by_degree = ntuple(length(operators.ops)) do i
             map(opmap, operators.ops[i])
