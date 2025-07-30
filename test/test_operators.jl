@@ -297,3 +297,29 @@ end
         @test zero_or_nonfinite(ForwardDiff.derivative(x -> safe_pow(x, -0.5), 0.0))  # 0^(-0.5)
     end
 end
+
+@testitem "user_provided_operators applies safe operator mappings" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: safe_log, safe_pow, safe_sqrt
+    using DynamicExpressions: OperatorEnum
+
+    # Test that when user_provided_operators=true, operators get mapped through opmap
+    # This was a bug where user-provided operators weren't being mapped to safe versions
+
+    # Create operators with regular (potentially unsafe) functions
+    operators = OperatorEnum(
+        1 => (log, sqrt),  # Should become safe_log, safe_sqrt
+        2 => (+, -, (^)),   # ^ should become safe_pow
+    )
+
+    # Create options with user_provided_operators=true
+    options = Options(; operators)
+
+    # Verify that the operators were mapped to their safe versions
+    @test options.operators.ops[1] == (safe_log, safe_sqrt)
+    @test options.operators.ops[2] == (+, -, safe_pow)
+
+    # Also test accessing via convenience properties
+    @test options.operators.unaops == (safe_log, safe_sqrt)
+    @test options.operators.binops == (+, -, safe_pow)
+end
