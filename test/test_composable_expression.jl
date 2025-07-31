@@ -129,3 +129,23 @@ end
     x2_val = ValidVector([1.0, 2.0], false)
     @test ex(x1_val, x2_val).valid == false
 end
+
+@testitem "ValidVector operations with Union{} return type" tags = [:part2] begin
+    using SymbolicRegression: ValidVector
+    using SymbolicRegression.ComposableExpressionModule: apply_operator
+
+    error_op(::Any, ::Any) = error("This should cause Union{} inference")
+
+    x = ValidVector([1.0, 2.0], false)
+    y = ValidVector([3.0, 4.0], false)
+
+    result = apply_operator(error_op, x, y)
+    @test result isa ValidVector
+    @test !result.valid
+    @test result.x == [1.0, 2.0]
+
+    a = ValidVector(Float32[1.0, 2.0], false)
+    b = 1.0
+    result2 = apply_operator(*, a, b)
+    @test result2 isa ValidVector{<:AbstractArray{Float64}}
+end
