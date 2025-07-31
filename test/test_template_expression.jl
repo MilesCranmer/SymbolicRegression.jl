@@ -692,3 +692,31 @@ end
     @test contains(msg, "ValidVector is required")
     @test contains(msg, "ValidVector(my_data, computation_is_valid)")
 end
+
+@testitem "Test Float32/Float64 type conversion in TemplateExpression" tags = [:part2] begin
+    using SymbolicRegression
+    using SymbolicRegression: eval_loss
+
+    template = @template_spec(expressions = (f,)) do x1, x2
+        0.5 * f(x1, x2)  # 0.5 is Float64 literal
+    end
+
+    options = Options(; binary_operators=[+, *, /, -], expression_spec=template)
+    x1 = ComposableExpression(Node{Float32}(; feature=1); operators=options.operators)
+    x2 = ComposableExpression(Node{Float32}(; feature=2); operators=options.operators)
+    f_expr = x1 + x2
+
+    template_expr = TemplateExpression(
+        (; f=f_expr); structure=template.structure, operators=options.operators
+    )
+
+    X = Float32[1.0 2.0; 3.0 4.0]
+    result = template_expr(X)
+    @test result isa Vector{Float32}
+
+    y = Float32[2.0, 3.0]
+    dataset = Dataset(X, y)
+    loss = eval_loss(template_expr, dataset, options)
+    @test loss isa Float32
+    @test loss ≈ 0.0
+end

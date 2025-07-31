@@ -260,22 +260,45 @@ end
 # Basically we want to vectorize every single operation on ValidVector,
 # so that the user can use it easily.
 
+function _apply_operator(op::F, x::Vararg{Any,N}) where {F<:Function,N}
+    vx = map(_get_value, x)
+    safe_op = get_safe_op(op)
+    result = safe_op.(vx...)
+    return ValidVector(result, is_valid_array(result))
+end
+
 function apply_operator(op::F, x::Vararg{Any,N}) where {F<:Function,N}
     if all(_is_valid, x)
-        vx = map(_get_value, x)
-        safe_op = get_safe_op(op)
-        result = safe_op.(vx...)
-        return ValidVector(result, is_valid_array(result))
+        return _apply_operator(op, x...)
     else
         example_vector =
             something(map(xi -> xi isa ValidVector ? xi : nothing, x)...)::ValidVector
-        return ValidVector(_get_value(example_vector), false)
+        expected_return_type = Base.promote_op(
+            _apply_operator, typeof(op), map(typeof, x)...
+        )
+        if expected_return_type !== Union{} &&
+            expected_return_type <: ValidVector{<:AbstractArray}
+            return ValidVector(
+                _match_eltype(expected_return_type, example_vector.x), false
+            )::expected_return_type
+        else
+            return ValidVector(example_vector.x, false)
+        end
     end
 end
 _is_valid(x::ValidVector) = x.valid
 _is_valid(x) = true
 _get_value(x::ValidVector) = x.x
 _get_value(x) = x
+function _match_eltype(
+    ::Type{<:ValidVector{<:AbstractArray{T1}}}, x::AbstractArray{T2}
+) where {T1,T2}
+    if T1 == T2
+        return x
+    else
+        return Base.Fix1(convert, T1).(x)
+    end
+end
 
 struct ValidVectorMixError <: Exception end
 struct ValidVectorAccessError <: Exception end
