@@ -76,32 +76,27 @@ features:
 
 # Post-process VitePress output to fix YAML frontmatter and HTML escaping
 function post_process_vitepress_index()
-    index_path = joinpath(@__DIR__, "build", ".documenter", "index.md")
+    # Fix BOTH index.md files - VitePress reads from build/index.md
+    for index_path in [
+        joinpath(@__DIR__, "build", ".documenter", "index.md"),
+        joinpath(@__DIR__, "build", "index.md"),
+    ]
+        process_single_index_file(index_path)
+    end
+end
 
+function process_single_index_file(index_path)
     if !isfile(index_path)
-        @error "Index file not found: $index_path"
-        @info "Checking what files exist in build directory:"
-        build_dir = joinpath(@__DIR__, "build")
-        if isdir(build_dir)
-            for (root, dirs, files) in walkdir(build_dir)
-                for file in files
-                    if endswith(file, ".md")
-                        @info "Found markdown file: $(joinpath(root, file))"
-                    end
-                end
-            end
-        else
-            @error "Build directory doesn't exist: $build_dir"
-        end
+        @warn "Index file not found: $index_path - skipping"
         return false
     end
 
     content = read(index_path, String)
 
     # Check if YAML frontmatter has been corrupted by DocumenterVitepress.jl
-    if occursin(r"hero:\s*name:", content)
-        # Replace the corrupted frontmatter with proper VitePress home layout (defined globally above)
-
+    has_hero_pattern = occursin(r"hero:\s*name:", content)
+    if has_hero_pattern
+        # Replace the corrupted frontmatter with proper VitePress home layout
         # Replace everything from the start up to the first "## Example" with our proper YAML
         content = replace(content, r"^.*?(?=## Example)"s => proper_yaml)
     end
@@ -114,7 +109,6 @@ function post_process_vitepress_index()
     content = replace(content, "&amp;" => "&")
 
     write(index_path, content)
-    @info "Successfully post-processed VitePress index.md - fixed YAML frontmatter and HTML escaping"
     return true
 end
 
@@ -160,7 +154,8 @@ index_base = open(dirname(@__FILE__) * "/src/index_base.md") do io
 end
 
 # Create index.md with VitePress frontmatter and content
-open(dirname(@__FILE__) * "/src/index.md", "w") do io
+index_md_path = dirname(@__FILE__) * "/src/index.md"
+open(index_md_path, "w") do io
     write(io, readme)
     write(io, "\n")
     write(io, index_base)
@@ -181,13 +176,6 @@ DocMeta.setdocmeta!(
     :(using LossFunctions, DynamicExpressions);
     recursive=true,
 )
-
-@info "Environment info:"
-@info "DOCUMENTER_PRODUCTION = $(get(ENV, "DOCUMENTER_PRODUCTION", "not set"))"
-@info "CI = $(get(ENV, "CI", "not set"))"
-@info "GITHUB_ACTIONS = $(get(ENV, "GITHUB_ACTIONS", "not set"))"
-@info "build_vitepress will be: $(get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true")"
-@info "md_output_path will be: $(get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true" ? ".documenter" : ".")"
 
 makedocs(;
     sitename="SymbolicRegression.jl",
