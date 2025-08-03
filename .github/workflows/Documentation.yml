@@ -36,7 +36,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - uses: julia-actions/cache@v2
+      - name: Load Julia packages from cache
+        id: julia-cache
+        uses: julia-actions/cache@v2
+        with:
+          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};os=${{ runner.os }};julia=1;project=${{ hashFiles('**/Project.toml') }}
       - name: "Install Julia dependencies"
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: "Install Node.js dependencies"
@@ -49,3 +53,11 @@ jobs:
           DOCUMENTER_PRODUCTION: "true"
         run: |
           julia --project=docs/ docs/make.jl
+      - name: Save Julia depot cache on cancel or failure
+        id: julia-cache-save
+        if: cancelled() || failure()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ steps.julia-cache.outputs.cache-paths }}
+          key: ${{ steps.julia-cache.outputs.cache-key }}
