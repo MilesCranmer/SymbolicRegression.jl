@@ -44,7 +44,7 @@ jobs:
       - name: "Install Julia dependencies"
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: "Install Node.js dependencies"
-        run: cd docs && npm ci
+        run: cd docs && npm install
       - name: "Build and deploy"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
