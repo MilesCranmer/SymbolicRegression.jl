@@ -71,6 +71,7 @@ features:
     title: For SR Researchers
     details: Designed to support the community as a "PyTorch" for symbolic regression.
 ---
+
 """
 
 # Post-process VitePress output to fix YAML frontmatter and HTML escaping
