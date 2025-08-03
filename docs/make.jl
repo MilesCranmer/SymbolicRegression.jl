@@ -47,29 +47,29 @@ hero:
 features:
   - icon: 🔍
     title: Interpretable by Design
-    details: Automatically discovers human-readable mathematical equations, not black-box models. Perfect for scientific discovery and regulatory compliance.
+    details: Automatically discovers human-readable mathematical expressions, not black-box models.
 
   - icon: ⚡
     title: Production Ready
-    details: Years of engineering and optimization deliver high-performance parallel search that scales from laptops to supercomputers.
+    details: Years of engineering and optimization deliver high-performance distributed search.
+
+  - icon: 🛠️
+    title: Customizable
+    details: Build exactly what you need with custom types, operators, loss functions, templates, and more.
+    link: /customization
 
   - icon: ⚙️
     title: Easy Integration
-    details: Seamlessly works with MLJ.jl, DataFrames.jl, and the entire Julia ecosystem. Export to strings, LaTeX, SymbolicUtils, or callable functions.
+    details: Seamlessly integrates with the Julia ecosystem.
     link: #mlj-interface
 
-  - icon: 🛠️
-    title: Extremely Customizable
-    details: Define custom operators, loss functions, dimensional constraints, and template expressions. Build exactly what you need.
-    link: /customization
+  - icon: 💡
+    title: For Scientists
+    details: Proven with real scientific discoveries from astrophysics to economics.
 
   - icon: 🔬
-    title: Scientific Discoveries
-    details: Used to discover new laws in physics, biology, and engineering. Proven on real-world scientific datasets and benchmarks.
-
-  - icon: 🎨
-    title: Flexible Framework
-    details: SymbolicRegression.jl aims to be the PyTorch of symbolic regression, and is designed to also support research on symbolic regression itself.
+    title: For SR Researchers
+    details: Designed to support the community as a "PyTorch" for symbolic regression.
 ---
 """
 
