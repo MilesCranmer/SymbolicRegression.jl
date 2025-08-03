@@ -69,7 +69,7 @@ features:
 
   - icon: 🎨
     title: Flexible Framework
-    details: From simple curve fitting to complex multi-output models with shared components. The PyTorch of symbolic regression.
+    details: SymbolicRegression.jl aims to be the PyTorch of symbolic regression, and is designed with flexibility as a priority.
 ---
 """
 
