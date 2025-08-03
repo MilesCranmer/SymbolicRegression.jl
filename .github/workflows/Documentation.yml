@@ -24,6 +24,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+      statuses: write
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
@@ -39,6 +43,7 @@ jobs:
         run: cd docs && npm ci
       - name: "Build and deploy"
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY_ASTROAUTOMATA: ${{ secrets.DOCUMENTER_KEY }}
           DOCUMENTER_KEY_CAM: ${{ secrets.DAMTP_DEPLOY_KEY }}
           DOCUMENTER_PRODUCTION: "true"
