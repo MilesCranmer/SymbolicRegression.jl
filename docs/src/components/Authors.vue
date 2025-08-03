@@ -10,14 +10,14 @@
       />
     </div>
   </template>
-  
+
   <script setup>
   import { useData } from 'vitepress'
-  
+
   const { frontmatter } = useData()
   const pageAuthors = frontmatter.value.authors || []
   </script>
-  
+
   <style scoped>
   .authors-container {
     display: flex;

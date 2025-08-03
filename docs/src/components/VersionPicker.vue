@@ -25,7 +25,7 @@ function absoluteUrl(relative) {
   if (typeof window === 'undefined') {
     return joinPath(absoluteRoot, relative);
   }
-  
+
   const siteOrigin = window.location.origin;
   const withRoot = joinPath(absoluteRoot, relative);
   return siteOrigin + withRoot; // don't call `joinPath` on https:// part to not remove double slashes there
