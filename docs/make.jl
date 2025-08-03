@@ -55,7 +55,7 @@ features:
 
   - icon: 🎯
     title: Easy Integration
-    details: Seamlessly works with MLJ.jl, DataFrames.jl, and the entire Julia ecosystem. Export to LaTeX, SymPy, or callable functions.
+    details: Seamlessly works with MLJ.jl, DataFrames.jl, and the entire Julia ecosystem. Export to strings, LaTeX, SymbolicUtils, or callable functions.
     link: #mlj-interface
 
   - icon: 🛠️
@@ -69,7 +69,7 @@ features:
 
   - icon: 🎨
     title: Flexible Framework
-    details: SymbolicRegression.jl aims to be the PyTorch of symbolic regression, and is designed with flexibility as a priority.
+    details: SymbolicRegression.jl aims to be the PyTorch of symbolic regression, and is designed to also support research on symbolic regression itself.
 ---
 """
 
