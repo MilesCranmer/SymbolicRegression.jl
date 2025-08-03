@@ -5,13 +5,36 @@ SymbolicRegression.jl searches for symbolic expressions which optimize a particu
 
 https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0
 
-| Latest release | Documentation | Forums | Paper |
-| :---: | :---: | :---: | :---: |
-| [![version](https://juliahub.com/docs/SymbolicRegression/version.svg)](https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS) | [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://ai.damtp.cam.ac.uk/symbolicregression/dev/) | [![Discussions](https://img.shields.io/badge/discussions-github-informational)](https://github.com/MilesCranmer/PySR/discussions) | [![Paper](https://img.shields.io/badge/arXiv-2305.01582-b31b1b)](https://arxiv.org/abs/2305.01582) |
-
-| Build status | Coverage |
-| :---: | :---: |
-| [![CI](https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/CI/badge.svg)](.github/workflows/CI.yml) | [![Coverage Status](https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master)](https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master) |
+<table>
+<thead>
+<tr>
+<th align="center">Latest release</th>
+<th align="center">Documentation</th>
+<th align="center">Forums</th>
+<th align="center">Paper</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"><a href="https://juliahub.com/ui/Packages/SymbolicRegression/X2eIS"><img src="https://juliahub.com/docs/SymbolicRegression/version.svg" alt="version"></a></td>
+<td align="center"><a href="https://ai.damtp.cam.ac.uk/symbolicregression/dev/"><img src="https://img.shields.io/badge/docs-dev-blue.svg" alt="Dev"></a></td>
+<td align="center"><a href="https://github.com/MilesCranmer/PySR/discussions"><img src="https://img.shields.io/badge/discussions-github-informational" alt="Discussions"></a></td>
+<td align="center"><a href="https://arxiv.org/abs/2305.01582"><img src="https://img.shields.io/badge/arXiv-2305.01582-b31b1b" alt="Paper"></a></td>
+</tr>
+<tr>
+<td align="center"><strong>Build status</strong></td>
+<td align="center"><strong>Coverage</strong></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center"><a href=".github/workflows/CI.yml"><img src="https://github.com/MilesCranmer/SymbolicRegression.jl/workflows/CI/badge.svg" alt="CI"></a></td>
+<td align="center"><a href="https://coveralls.io/github/MilesCranmer/SymbolicRegression.jl?branch=master"><img src="https://coveralls.io/repos/github/MilesCranmer/SymbolicRegression.jl/badge.svg?branch=master" alt="Coverage Status"></a></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+</tbody>
+</table>
 
 Check out [PySR](https://github.com/MilesCranmer/PySR) for
 a Python frontend.

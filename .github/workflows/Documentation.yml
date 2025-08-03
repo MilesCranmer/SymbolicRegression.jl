@@ -17,20 +17,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@latest
+      - uses: julia-actions/setup-julia@v1
         with:
           version: "1"
-      - name: "Cache dependencies"
-        uses: julia-actions/cache@v2
-      - name: Force use of updated Julia registry
-        run: |
-          rm -rf ~/.julia/registries/General
-          julia -e 'ENV["JULIA_PKG_SERVER"]=""; using Pkg; Pkg.update()'
-      - name: "Install dependencies"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: julia-actions/cache@v2
+      - name: "Install Julia dependencies"
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      - name: "Install Node.js dependencies"
+        run: cd docs && npm ci
       - name: "Build and deploy"
         env:
           DOCUMENTER_KEY_ASTROAUTOMATA: ${{ secrets.DOCUMENTER_KEY }}
           DOCUMENTER_KEY_CAM: ${{ secrets.DAMTP_DEPLOY_KEY }}
+          DOCUMENTER_PRODUCTION: "true"
         run: |
           julia --project=docs/ docs/make.jl

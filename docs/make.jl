@@ -1,4 +1,5 @@
 using Documenter
+using DocumenterVitepress
 using SymbolicUtils
 using SymbolicRegression
 using SymbolicRegression:
@@ -95,10 +96,18 @@ makedocs(;
     sitename="SymbolicRegression.jl",
     authors="Miles Cranmer",
     doctest=true,
-    strict=:doctest,
-    clean=true,
-    format=Documenter.HTML(;
-        canonical="https://ai.damtp.cam.ac.uk/symbolicregression/stable"
+    clean=get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true",
+    warnonly=[:docs_block, :cross_references, :missing_docs],
+    format=DocumenterVitepress.MarkdownVitepress(;
+        repo="https://github.com/MilesCranmer/SymbolicRegression.jl",
+        devbranch="master",
+        devurl="dev",
+        build_vitepress=get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true",
+        md_output_path=if get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true"
+            ".documenter"
+        else
+            "."
+        end,
     ),
     pages=[
         "Contents" => "index_base.md",
@@ -118,41 +127,57 @@ makedocs(;
     ],
 )
 
-# Next, we fix links in the docs/build/losses/index.html file:
-using Gumbo
+# NOTE: The following HTML post-processing is specific to Documenter.jl HTML output
+# and is not needed for DocumenterVitepress.jl which generates VitePress markdown
+# TODO: Implement equivalent functionality for VitePress if needed
 
-html_type(::HTMLElement{S}) where {S} = S
+# # Next, we fix links in the docs/build/losses/index.html file:
+# using Gumbo
+#
+# html_type(::HTMLElement{S}) where {S} = S
+#
+# function apply_to_a_href!(f!, element::HTMLElement)
+#     if html_type(element) == :a &&
+#         haskey(element.attributes, "href") &&
+#         element.attributes["href"] == "@ref"
+#         f!(element)
+#     else
+#         for child in element.children
+#             typeof(child) <: HTMLElement && apply_to_a_href!(f!, child)
+#         end
+#     end
+# end
 
-function apply_to_a_href!(f!, element::HTMLElement)
-    if html_type(element) == :a &&
-        haskey(element.attributes, "href") &&
-        element.attributes["href"] == "@ref"
-        f!(element)
-    else
-        for child in element.children
-            typeof(child) <: HTMLElement && apply_to_a_href!(f!, child)
-        end
-    end
-end
+# html_content = read("docs/build/losses/index.html", String)
+# html = parsehtml(html_content)
 
-html_content = read("docs/build/losses/index.html", String)
-html = parsehtml(html_content)
+# apply_to_a_href!(html.root) do element
+#     # Replace the "href" to be equal to the contents of the tag, prefixed with #:
+#     element.attributes["href"] = "#LossFunctions." * element.children[1].text
+# end
 
-apply_to_a_href!(html.root) do element
-    # Replace the "href" to be equal to the contents of the tag, prefixed with #:
-    element.attributes["href"] = "#LossFunctions." * element.children[1].text
-end
-
-# Then, we write the new html to the file, only if it has changed:
-open("docs/build/losses/index.html", "w") do io
-    write(io, string(html))
-end
+# # Then, we write the new html to the file, only if it has changed:
+# open("docs/build/losses/index.html", "w") do io
+#     write(io, string(html))
+# end
 
 if !haskey(ENV, "JL_LIVERELOAD")
     ENV["DOCUMENTER_KEY"] = get(ENV, "DOCUMENTER_KEY_ASTROAUTOMATA", "")
-    deploydocs(; repo="github.com/MilesCranmer/SymbolicRegression.jl.git")
+    DocumenterVitepress.deploydocs(;
+        repo="github.com/MilesCranmer/SymbolicRegression.jl.git",
+        target="build",
+        devbranch="master",
+        branch="gh-pages",
+        push_preview=true,
+    )
 
     ENV["DOCUMENTER_KEY"] = get(ENV, "DOCUMENTER_KEY_CAM", "")
     ENV["GITHUB_REPOSITORY"] = "ai-damtp-cam-ac-uk/symbolicregression.git"
-    deploydocs(; repo="github.com/ai-damtp-cam-ac-uk/symbolicregression.git")
+    DocumenterVitepress.deploydocs(;
+        repo="github.com/ai-damtp-cam-ac-uk/symbolicregression.git",
+        target="build",
+        devbranch="master",
+        branch="gh-pages",
+        push_preview=true,
+    )
 end
