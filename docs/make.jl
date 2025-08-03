@@ -75,7 +75,7 @@ features:
 
 # Post-process VitePress output to fix YAML frontmatter and HTML escaping
 function post_process_vitepress_index()
-    index_path = joinpath(@__DIR__, "build", "index.md")
+    index_path = joinpath(@__DIR__, "build", ".documenter", "index.md")
 
     if !isfile(index_path)
         @error "Index file not found: $index_path"
