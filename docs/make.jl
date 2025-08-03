@@ -79,6 +79,19 @@ function post_process_vitepress_index()
 
     if !isfile(index_path)
         @error "Index file not found: $index_path"
+        @info "Checking what files exist in build directory:"
+        build_dir = joinpath(@__DIR__, "build")
+        if isdir(build_dir)
+            for (root, dirs, files) in walkdir(build_dir)
+                for file in files
+                    if endswith(file, ".md")
+                        @info "Found markdown file: $(joinpath(root, file))"
+                    end
+                end
+            end
+        else
+            @error "Build directory doesn't exist: $build_dir"
+        end
         return false
     end
 
@@ -167,6 +180,13 @@ DocMeta.setdocmeta!(
     :(using LossFunctions, DynamicExpressions);
     recursive=true,
 )
+
+@info "Environment info:"
+@info "DOCUMENTER_PRODUCTION = $(get(ENV, "DOCUMENTER_PRODUCTION", "not set"))"
+@info "CI = $(get(ENV, "CI", "not set"))"
+@info "GITHUB_ACTIONS = $(get(ENV, "GITHUB_ACTIONS", "not set"))"
+@info "build_vitepress will be: $(get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true")"
+@info "md_output_path will be: $(get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true" ? ".documenter" : ".")"
 
 makedocs(;
     sitename="SymbolicRegression.jl",
