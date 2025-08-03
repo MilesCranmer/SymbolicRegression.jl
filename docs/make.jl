@@ -53,7 +53,7 @@ features:
     title: Production Ready
     details: Years of engineering and optimization deliver high-performance parallel search that scales from laptops to supercomputers.
 
-  - icon: 🎯
+  - icon: ⚙️
     title: Easy Integration
     details: Seamlessly works with MLJ.jl, DataFrames.jl, and the entire Julia ecosystem. Export to strings, LaTeX, SymbolicUtils, or callable functions.
     link: #mlj-interface
