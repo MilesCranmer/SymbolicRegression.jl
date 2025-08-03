@@ -207,7 +207,6 @@ makedocs(;
         end,
     ),
     pages=[
-        "Contents" => "index_base.md",
         "Home" => "index.md",
         "Examples" => [
             "Short Examples" => "examples.md",
