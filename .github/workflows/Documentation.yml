@@ -11,6 +11,15 @@ on:
       - ".github/workflows/**"
       - "examples/**"
     tags: "*"
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "src/**"
+      - "docs/**"
+      - "README.md"
+      - ".github/workflows/**"
+      - "examples/**"
 
 jobs:
   build:
