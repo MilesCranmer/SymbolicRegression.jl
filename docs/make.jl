@@ -152,6 +152,15 @@ open(dirname(@__FILE__) * "/src/index.md", "w") do io
     write(io, index_base)
 end
 
+deploy_config = Documenter.auto_detect_deploy_system()
+deploy_decision = Documenter.deploy_folder(
+    deploy_config;
+    repo="github.com/MilesCranmer/SymbolicRegression.jl",
+    devbranch="master",
+    devurl="dev",
+    push_preview=true,
+)
+
 DocMeta.setdocmeta!(
     SymbolicRegression,
     :DocTestSetup,
@@ -166,9 +175,10 @@ makedocs(;
     clean=get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true",
     warnonly=[:docs_block, :cross_references, :missing_docs],
     format=DocumenterVitepress.MarkdownVitepress(;
-        repo="https://github.com/MilesCranmer/SymbolicRegression.jl",
+        repo="github.com/MilesCranmer/SymbolicRegression.jl",
         devbranch="master",
         devurl="dev",
+        deploy_decision,
         build_vitepress=get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true",
         md_output_path=if get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true"
             ".documenter"
@@ -197,24 +207,18 @@ makedocs(;
 # Run post-processing to fix HTML escaping
 post_process_vitepress_index()
 
-# Deploy to GitHub Pages (only in CI)
-if !haskey(ENV, "JL_LIVERELOAD")
-    ENV["DOCUMENTER_KEY"] = get(ENV, "DOCUMENTER_KEY_ASTROAUTOMATA", "")
-    DocumenterVitepress.deploydocs(;
-        repo="github.com/MilesCranmer/SymbolicRegression.jl.git",
-        target="build",
-        devbranch="master",
-        branch="gh-pages",
-        push_preview=true,
-    )
+DocumenterVitepress.deploydocs(;
+    repo="github.com/MilesCranmer/SymbolicRegression.jl.git",
+    push_preview=true,
+    target="build",
+    devbranch="master",
+)
 
-    ENV["DOCUMENTER_KEY"] = get(ENV, "DOCUMENTER_KEY_CAM", "")
-    ENV["GITHUB_REPOSITORY"] = "ai-damtp-cam-ac-uk/symbolicregression.git"
-    DocumenterVitepress.deploydocs(;
-        repo="github.com/ai-damtp-cam-ac-uk/symbolicregression.git",
-        target="build",
-        devbranch="master",
-        branch="gh-pages",
-        push_preview=true,
-    )
-end
+ENV["DOCUMENTER_KEY"] = get(ENV, "DOCUMENTER_KEY_CAM", "")
+ENV["GITHUB_REPOSITORY"] = "ai-damtp-cam-ac-uk/symbolicregression.git"
+DocumenterVitepress.deploydocs(;
+    repo="github.com/ai-damtp-cam-ac-uk/symbolicregression.git",
+    push_preview=true,
+    target="build",
+    devbranch="master",
+)
