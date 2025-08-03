@@ -101,8 +101,8 @@ function post_process_vitepress_index()
     if occursin(r"hero:\s*name:", content)
         # Replace the corrupted frontmatter with proper VitePress home layout (defined globally above)
 
-        # Replace everything from the start up to the first "## Example:" with our proper YAML
-        content = replace(content, r"^.*?(?=## Example:)"s => proper_yaml)
+        # Replace everything from the start up to the first "## Example" with our proper YAML
+        content = replace(content, r"^.*?(?=## Example)"s => proper_yaml)
     end
 
     # Fix HTML escaping - unescape HTML entities
