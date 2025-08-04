@@ -46,19 +46,19 @@ hero:
     alt: SymbolicRegression.jl
 
 features:
-  - icon: 🔍
+  - icon: 🔬
     title: Interpretable By Design
     details: Discovers interpretable mathematical expressions instead of black-box models.
 
-  - icon: ⚡
+  - icon: 🚀
     title: Production Ready
     details: Years of development have produced mature, highly optimized parallel evolutionary algorithms.
 
-  - icon: 🛠️
+  - icon: 🔧
     title: Extremely Customizable
     details: "Customize everything: operators, loss functions, complexity, input types, optimizer, and more."
 
-  - icon: 🧩
+  - icon: 🔌
     title: Julia Native
     details: Built for automatic interoperability with the entire scientific computing stack.
 ---
