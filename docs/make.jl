@@ -76,10 +76,13 @@ features:
 
 # Post-process VitePress output to fix YAML frontmatter and HTML escaping
 function post_process_vitepress_index()
-    # Fix BOTH index.md files - VitePress reads from build/index.md
+    # Fix BOTH index.md files - in production mode, files are in build/1/ subdirectory
+    is_production = get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true"
+    build_subdir = is_production ? "1" : "."
+
     for index_path in [
         joinpath(@__DIR__, "build", ".documenter", "index.md"),
-        joinpath(@__DIR__, "build", "index.md"),
+        joinpath(@__DIR__, "build", build_subdir, "index.md"),
     ]
         process_single_index_file(index_path)
     end
