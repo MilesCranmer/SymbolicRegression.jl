@@ -22,8 +22,9 @@ include("utils.jl")
 process_literate_blocks("test")
 process_literate_blocks("examples")
 
-# Define the proper YAML frontmatter for VitePress
-proper_yaml = """---
+# Define the proper YAML frontmatter for VitePress - must be wrapped in @raw html for DocumenterVitepress
+proper_yaml = """```@raw html
+---
 layout: home
 
 hero:
@@ -71,6 +72,7 @@ features:
     title: For SR Researchers
     details: Designed to support the community as a "PyTorch" for symbolic regression.
 ---
+```
 
 """
 
