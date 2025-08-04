@@ -164,6 +164,39 @@ open(index_md_path, "w") do io
     write(io, index_base)
 end
 
+# Pre-process the source index.md to ensure clean YAML frontmatter
+# This ensures VitePress processes clean YAML during makedocs()
+function preprocess_source_index()
+    index_path = joinpath(@__DIR__, "src", "index.md")
+    if !isfile(index_path)
+        @warn "Source index file not found: $index_path - skipping"
+        return false
+    end
+
+    content = read(index_path, String)
+
+    # Check if YAML frontmatter has any issues that need fixing
+    has_hero_pattern = occursin(r"hero:\s*name:", content)
+    if has_hero_pattern
+        # Ensure YAML frontmatter is clean and properly formatted
+        # Replace everything from the start up to the first "## Example" with our proper YAML
+        content = replace(content, r"^.*?(?=## Example)"s => proper_yaml)
+    end
+
+    # Fix any HTML escaping in the source
+    content = replace(content, "&lt;" => "<")
+    content = replace(content, "&gt;" => ">")
+    content = replace(content, "&quot;" => "\"")
+    content = replace(content, "&#39;" => "'")
+    content = replace(content, "&amp;" => "&")
+
+    write(index_path, content)
+    return true
+end
+
+# Run preprocessing on source files before makedocs()
+preprocess_source_index()
+
 deploy_config = Documenter.auto_detect_deploy_system()
 deploy_decision = Documenter.deploy_folder(
     deploy_config;
@@ -215,8 +248,47 @@ makedocs(;
     ],
 )
 
-# Run post-processing to fix HTML escaping
+# Post-processing after makedocs() (for any remaining issues in build output)
+# This runs after VitePress build to fix any final rendering issues
 post_process_vitepress_index()
+
+# Additional post-processing for VitePress production build issues
+function fix_vitepress_production_output()
+    build_index_html = joinpath(@__DIR__, "build", "1", "index.html")
+    if !isfile(build_index_html)
+        @warn "Production index.html not found: $build_index_html"
+        return false
+    end
+
+    content = read(build_index_html, String)
+
+    # Check if the page is showing literal YAML instead of home layout
+    if occursin(r"<p>layout: home</p>", content)
+        @info "Detected literal YAML frontmatter in production HTML - fixing..."
+
+        # This is a more complex fix - we need to regenerate the page with proper VitePress home layout
+        # For now, let's try to replace the literal YAML content with a message
+        content = replace(
+            content,
+            r"<div><hr><p>layout: home</p>.*?<hr>" => """<div class="VPDoc">
+                                                      <div class="vp-doc">
+                                                      <h1>SymbolicRegression.jl</h1>
+                                                      <p><strong>Note:</strong> VitePress home layout not working in production mode. Please use the dev server or check the documentation.</p>
+                                                      </div>
+                                                      </div>""";
+            count=1,
+        )
+
+        write(build_index_html, content)
+        @info "Applied temporary fix to production HTML output"
+        return true
+    end
+
+    return false
+end
+
+# Apply additional fix for production build
+fix_vitepress_production_output()
 
 DocumenterVitepress.deploydocs(;
     repo="github.com/MilesCranmer/SymbolicRegression.jl.git",
