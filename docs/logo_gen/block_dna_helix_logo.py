@@ -38,8 +38,8 @@ def create_ribbon_path(x_center, y_center, dx, dy, width):
 
     return x_left, y_left, x_right, y_right
 
-def draw_smooth_ribbon_segment(ax, x_coords, y_coords, start_idx, end_idx, color, width, zorder_base=5, fade_direction=None):
-    """Draw a smooth ribbon segment with optional gradient fade"""
+def draw_smooth_ribbon_segment(ax, x_coords, y_coords, start_idx, end_idx, color, width, zorder_base=5):
+    """Draw a smooth ribbon segment"""
     if end_idx >= len(x_coords) or start_idx >= end_idx:
         return
 
@@ -77,46 +77,10 @@ def draw_smooth_ribbon_segment(ax, x_coords, y_coords, start_idx, end_idx, color
     x_ribbon = np.concatenate([x_left_all, x_right_all[::-1]])
     y_ribbon = np.concatenate([y_left_all, y_right_all[::-1]])
 
-    if fade_direction is not None:
-        # Create gradient fade using proper matplotlib technique
-        # Create the polygon first
-        ribbon = Polygon(list(zip(x_ribbon, y_ribbon)),
-                        facecolor='none', edgecolor='none', zorder=zorder_base)
-        ax.add_patch(ribbon)
-
-        # Get bounds for gradient
-        xmin, xmax = min(x_ribbon), max(x_ribbon)
-        ymin, ymax = min(y_ribbon), max(y_ribbon)
-
-        # Create gradient array (RGBA format)
-        gradient_height = 100
-        z = np.empty((gradient_height, 1, 4), dtype=float)
-        rgb = mcolors.colorConverter.to_rgb(color)
-        z[:,:,:3] = rgb  # Set RGB channels
-
-        if fade_direction == 'top':
-            # Fade towards top - start opaque at bottom, fade to transparent at top
-            alphas = np.linspace(1.0, 0.0, gradient_height) ** 4.0  # Much more aggressive fade
-            z[:,:,-1] = alphas[:,None]
-        elif fade_direction == 'bottom':
-            # Fade towards bottom - start opaque at top, fade to transparent at bottom
-            alphas = np.linspace(0.0, 1.0, gradient_height) ** 4.0  # Much more aggressive fade
-            z[:,:,-1] = alphas[:,None]
-        else:
-            z[:,:,-1] = 1.0  # Solid
-
-        # Create the gradient image
-        im = ax.imshow(z, aspect='auto', extent=[xmin, xmax, ymin, ymax],
-                      origin='lower', zorder=zorder_base)
-
-        # Clip the gradient to the ribbon shape
-        im.set_clip_path(ribbon)
-
-    else:
-        # Draw standard solid ribbon
-        ribbon = Polygon(list(zip(x_ribbon, y_ribbon)),
-                        facecolor=color, edgecolor='none', zorder=zorder_base)
-        ax.add_patch(ribbon)
+    # Draw solid ribbon
+    ribbon = Polygon(list(zip(x_ribbon, y_ribbon)),
+                    facecolor=color, edgecolor='none', zorder=zorder_base)
+    ax.add_patch(ribbon)
 
     return x_left_all, y_left_all, x_right_all, y_right_all
 
@@ -129,19 +93,20 @@ def create_smooth_dna_helix():
     ax.set_facecolor('white')
 
     # Parameters for smooth DNA helix
-    n_segments = 10  # Number of segments along each strand
-    segment_length_param = np.pi / 4  # Each segment is exactly π/4 in length
-    total_param_length = n_segments * segment_length_param  # Total length = 10 * π/4 = 5π/2
+    n_segments = 8  # Number of segments along each strand
+    # Create helix like classic DNA structure - exactly 1 full rotation
+    total_rotations = 1.0  # Exactly one complete rotation
+    total_param_length = total_rotations * 2 * np.pi
     half_param_length = total_param_length / 2
 
-    t = np.linspace(-half_param_length, half_param_length, 400)
-    radius = 0.7
+    t = np.linspace(-half_param_length, half_param_length, 600)  # More points for smoother curve
+    radius = 0.8  # Good radius for classic DNA look
 
-    # Create helix coordinates
+    # Create helix coordinates with classic DNA proportions - perfect for 1 rotation
     x1 = radius * np.cos(t)
-    y1 = t / np.pi * 1.2
+    y1 = t / np.pi * 1.8  # Perfect height for classic DNA with exactly 1 rotation
     x2 = radius * np.cos(t + np.pi)
-    y2 = t / np.pi * 1.2
+    y2 = t / np.pi * 1.8
 
     # Calculate z-coordinates for 3D depth effect
     z1 = radius * np.sin(t)
@@ -182,7 +147,7 @@ def create_smooth_dna_helix():
     arc2 = calculate_arc_length(x2, y2)
 
     # Create equal arc length segments
-    ribbon_width = 0.35
+    ribbon_width = 0.42
     # n_segments already defined above
 
     # Calculate segment boundaries based on arc length
@@ -255,20 +220,13 @@ def create_smooth_dna_helix():
             back_strand = 2
             front_strand = 1
 
-        # Determine fade direction for first and last segments
-        fade_dir = None
-        if info['seg'] == 0:  # First segment (bottom)
-            fade_dir = 'bottom'
-        elif info['seg'] == n_segments - 1:  # Last segment (top)
-            fade_dir = 'top'
-
         # Draw back strand (zorder 1)
         if back_strand == 1:
             draw_smooth_ribbon_segment(ax, x1, y1, info['start_idx1'], info['end_idx1'],
-                                     info['color1'], ribbon_width, zorder_base=1, fade_direction=fade_dir)
+                                     info['color1'], ribbon_width, zorder_base=1)
         else:
             draw_smooth_ribbon_segment(ax, x2, y2, info['start_idx2'], info['end_idx2'],
-                                     info['color2'], ribbon_width, zorder_base=1, fade_direction=fade_dir)
+                                     info['color2'], ribbon_width, zorder_base=1)
 
         # Draw back strand text (zorder 2)
         if back_strand == 1:
@@ -307,10 +265,10 @@ def create_smooth_dna_helix():
         # Draw front strand (zorder 3)
         if front_strand == 1:
             draw_smooth_ribbon_segment(ax, x1, y1, info['start_idx1'], info['end_idx1'],
-                                     info['color1'], ribbon_width, zorder_base=3, fade_direction=fade_dir)
+                                     info['color1'], ribbon_width, zorder_base=3)
         else:
             draw_smooth_ribbon_segment(ax, x2, y2, info['start_idx2'], info['end_idx2'],
-                                     info['color2'], ribbon_width, zorder_base=3, fade_direction=fade_dir)
+                                     info['color2'], ribbon_width, zorder_base=3)
 
         # Draw front strand text (zorder 4)
         if front_strand == 1:
