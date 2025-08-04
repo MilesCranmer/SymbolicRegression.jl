@@ -122,6 +122,7 @@ SymbolicRegression.jl can automatically discover mathematical expressions from d
 # Process README for VitePress
 readme = replace(readme, r"<!--.*?-->" => s"") # Remove markdown comments
 readme = replace(readme, r"<[/]?div.*" => s"") # Remove div tags
+readme = replace(readme, r"## Contributors ✨.*$"s => s"") # Remove Contributors section onwards
 readme = replace( # Convert video URL to proper video tag wrapped in @raw html for VitePress
     readme,
     r"https://github.com/MilesCranmer/SymbolicRegression.jl/assets/7593028/f5b68f1f-9830-497f-a197-6ae332c94ee0" => """```@raw html
