@@ -56,7 +56,7 @@ features:
 
   - icon: 🛠️
     title: Extremely Customizable
-    details: Customize everything: operators, loss functions, complexity, input types, optimizer, and more.
+    details: "Customize everything: operators, loss functions, complexity, input types, optimizer, and more."
 
   - icon: 🧩
     title: Julia Native
