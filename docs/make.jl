@@ -47,30 +47,20 @@ hero:
 
 features:
   - icon: 🔍
-    title: Interpretable by Design
-    details: Automatically discovers human-readable mathematical expressions, not black-box models.
+    title: Interpretable Machine Learning
+    details: Discovers interpretable mathematical expressions instead of black-box models.
 
   - icon: ⚡
     title: Production Ready
-    details: Years of engineering and optimization deliver high-performance distributed search.
+    details: Years of development have produced mature, highly optimized parallel evolutionary algorithms.
 
   - icon: 🛠️
-    title: Customizable
-    details: Build exactly what you need with custom types, operators, loss functions, templates, and more.
-    link: /customization
+    title: Extremely Customizable
+    details: Customize everything: operators, loss functions, complexity, input types, optimizer, and more.
 
-  - icon: ⚙️
-    title: Easy Integration
-    details: Seamlessly integrates with the Julia ecosystem.
-    link: #mlj-interface
-
-  - icon: 💡
-    title: For Scientists
-    details: Proven with real scientific discoveries from astrophysics to economics.
-
-  - icon: 🔬
-    title: For SR Researchers
-    details: Designed to support the community as a "PyTorch" for symbolic regression.
+  - icon: 🧩
+    title: Julia Native
+    details: Built for automatic interoperability with the entire scientific computing stack.
 ---
 ```
 
