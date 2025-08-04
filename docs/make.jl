@@ -112,12 +112,7 @@ readme = open(dirname(@__FILE__) * "/../README.md") do io
 end
 
 # VitePress frontmatter for beautiful home page
-vitepress_frontmatter = proper_yaml * """
-## Example: Rediscovering Physical Laws
-
-SymbolicRegression.jl can automatically discover mathematical expressions from data:
-
-"""
+vitepress_frontmatter = proper_yaml
 
 # Process README for VitePress
 readme = replace(readme, r"<!--.*?-->" => s"") # Remove markdown comments
@@ -137,13 +132,8 @@ readme = replace( # Convert video URL to proper video tag wrapped in @raw html f
 # Wrap HTML tables in @raw html blocks for VitePress
 readme = replace(readme, r"(<table>.*?</table>)"s => s"```@raw html\n\1\n```")
 
-# Add mermaid.js initialization and VitePress frontmatter
-init_mermaid = """<script type="module">
-  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.esm.min.mjs';
-  mermaid.initialize({ startOnLoad: true });
-</script>
-"""
-readme = vitepress_frontmatter * init_mermaid * readme
+# Add VitePress frontmatter
+readme = vitepress_frontmatter * readme
 
 # Read base content
 index_base = open(dirname(@__FILE__) * "/src/index_base.md") do io
