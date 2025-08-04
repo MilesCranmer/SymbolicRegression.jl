@@ -187,15 +187,53 @@ function (ex::AbstractComposableExpression)(
         return x .* nan
     end
 end
+# Method for all-Number arguments (scalars)
+function (ex::AbstractComposableExpression)(x::Number, _xs::Vararg{Number,N}) where {N}
+    xs = (x, _xs...)
+    # TODO: We should be using `float`, rather than `Float64`!
+
+    # Check if all numbers are finite
+    if !all(isfinite, xs)
+        return convert(Float64, NaN)
+    end
+
+    # Use existing ValidVector method - each number becomes a single-element ValidVector
+    vectors = ntuple(i -> ValidVector([Float64(xs[i])], true), length(xs))
+    return only(_get_value(ex(vectors...)))
+end
+
 function (ex::AbstractComposableExpression)(
-    x::ValidVector, _xs::Vararg{ValidVector,N}
+    x::Union{ValidVector,Number}, _xs::Vararg{Union{ValidVector,Number},N}
 ) where {N}
     xs = (x, _xs...)
-    valid = all(_is_valid, xs)
+
+    # This method handles mixed ValidVector/Number cases and all-ValidVector cases
+    # (All-Number cases are handled by the dedicated Number method above)
+
+    # Find first ValidVector to determine sample size for Number conversion
+    first_valid_vector_idx = findfirst(arg -> arg isa ValidVector, xs)::Int
+    sample_vector = xs[first_valid_vector_idx]::ValidVector
+    n_samples = length(sample_vector.x)
+
+    # Convert Numbers to ValidVectors based on first ValidVector's size
+    valid_args = ntuple(length(xs)) do i
+        arg = xs[i]
+        if arg isa ValidVector
+            arg
+        else
+            # Convert Number to ValidVector with repeated values
+            filled_array = similar(sample_vector.x)
+            fill!(filled_array, Float64(arg))
+            ValidVector(filled_array, _is_valid(arg))
+        end
+    end
+
+    # Use existing ValidVector logic
+    valid = all(_is_valid, valid_args)
     if !valid
-        return ValidVector(_get_value(first(xs)), false)
+        return ValidVector(_get_value(first(valid_args)), false)
     else
-        X = Matrix(stack(map(_get_value, xs))')
+        X = stack(map(_get_value, valid_args); dims=1)
         eval_options = get_eval_options(ex)
         return ValidVector(eval_tree_array(ex, X; eval_options))
     end
