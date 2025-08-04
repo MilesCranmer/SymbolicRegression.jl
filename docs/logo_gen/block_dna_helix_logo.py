@@ -12,11 +12,12 @@ plt.rcParams['font.family'] = 'serif'
 plt.rcParams['mathtext.fontset'] = 'stix'  # STIX fonts for better math rendering
 
 # Julia language colors
+# Julia colors - muted but elegant and readable
 julia_colors = {
-    'red': '#CB3C33',
-    'green': '#389826',
-    'blue': '#4063D8',
-    'purple': '#9558B2'
+    'red': '#A54A42',
+    'green': '#4A7E3A',
+    'blue': '#4F5FAE',
+    'purple': '#7D5F8B'
 }
 
 def create_ribbon_path(x_center, y_center, dx, dy, width):
