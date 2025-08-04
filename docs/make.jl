@@ -47,7 +47,7 @@ hero:
 
 features:
   - icon: 🔍
-    title: Interpretable Machine Learning
+    title: Interpretable By Design
     details: Discovers interpretable mathematical expressions instead of black-box models.
 
   - icon: ⚡
