@@ -117,6 +117,7 @@ vitepress_frontmatter = proper_yaml
 # Process README for VitePress
 readme = replace(readme, r"<!--.*?-->" => s"") # Remove markdown comments
 readme = replace(readme, r"<[/]?div.*" => s"") # Remove div tags
+readme = replace(readme, r"\*\*Contents\*\*:.*?(?=## )"s => s"") # Remove Contents TOC
 readme = replace(readme, r"## Contributors ✨.*$"s => s"") # Remove Contributors section onwards
 readme = replace( # Convert video URL to proper video tag wrapped in @raw html for VitePress
     readme,
