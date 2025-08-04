@@ -1,0 +1,12 @@
+[workspace]
+authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
+channels = ["conda-forge"]
+name = "sr_logo_design"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+numpy = ">=2.3.2,<3"
+matplotlib = ">=3.10.5,<4"

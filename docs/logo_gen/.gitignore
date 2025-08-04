@@ -1,0 +1,9 @@
+
+# pixi environments
+.pixi
+*.egg-info
+
+# Generated outputs
+outputs/
+*.png
+*.svg
