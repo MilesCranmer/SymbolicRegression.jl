@@ -1,586 +1,303 @@
-# Troubleshooting Guide
+# FAQ
 
-This guide addresses the most common issues users encounter when working with SymbolicRegression.jl, organized as frequently asked questions with practical solutions.
+This FAQ addresses the most commonly asked questions based on actual user discussions and issues.
 
-## Getting Started Issues
+## CPU cores aren't being fully utilized
 
-### Q: I'm getting Julia-related errors during installation or first run
-
-**Common symptoms:**
-
-- "tried to read a stream that is not readable"
-- PyCall-related errors
-- Julia version conflicts
-
-**Solutions:**
-
-1. **Check your Julia version**: Use Julia 1.6 or higher (1.9+ recommended)
-2. **Remove old Julia versions**: Delete previous Julia installations that might conflict
-3. **Verify environment**: If using Jupyter/IPython, restart your kernel after installation
-4. **Fresh installation**: Try uninstalling and reinstalling both PySR and Julia
-5. **System details matter**: The error can be OS-specific (Linux/Mac/Windows)
+This is the most common performance question. Check the head worker occupation percentage in the output:
 
 ```julia
-# Check your Julia version
-julia --version
-# Should show 1.6 or higher
-```
-
-### Q: How do I get started with a basic symbolic regression problem?
-
-**Start simple:**
-
-```julia
-using SymbolicRegression
-
-# Generate simple test data
-X = randn(100, 2)
-y = @. 2*X[:, 1] + X[:, 2]^2
-
-# Basic search
-model = SRRegressor(
-    binary_operators=[+, -, *, /],
-    unary_operators=[square, exp],
-    niterations=10  # Start small for testing
+# If head worker occupation > 50%, increase work per iteration:
+options = Options(
+    ncycles_per_iteration=1000,    # More cycles per iteration
+    populations=20                 # More populations for more cores
 )
 
-mach = machine(model, X, y)
-fit!(mach)
-report(mach)
-```
-
-### Q: The search runs but I get no meaningful results
-
-**Common causes and fixes:**
-
-1. **Too few iterations**: Start with `niterations=30` for real problems
-2. **Wrong operators**: Include operators relevant to your problem (`+` is almost always needed)
-3. **Data preprocessing**: Check for NaN, infinite, or extremely large/small values
-4. **Check data dimensions**: Ensure X and y have compatible shapes
-
-## Performance and Search Issues
-
-### Q: The search is very slow or gets stuck
-
-**Performance optimization strategies:**
-
-1. **Increase population and cycles:**
-
-```julia
-model = SRRegressor(
-    populations=40,        # More populations (default: 15)
-    population_size=50     # Larger populations (default: 33)
+# For distributed processing (parallelism goes in equation_search):
+hall_of_fame = equation_search(X, y;
+    options=options,
+    parallelism=:multiprocessing,  # Use multiple processes
+    procs=8                       # Number of processes
 )
 ```
 
-2. **Tune the search space:**
+## My expressions use only 1-2 variables instead of all inputs
+
+This is frequently asked and reflects how the algorithm naturally performs feature selection:
+
+**Why this happens:** The algorithm finds the simplest expression that fits the data. If your target can be predicted well using only a subset of features, that's often the correct mathematical relationship.
+
+**What to do:**
+
+1. **Check if the unused variables actually matter** by computing correlations:
 
 ```julia
-model = SRRegressor(
-    maxsize=20,           # Allow more complex expressions
-    maxdepth=8,           # Allow deeper nesting
-    ncyclesperiteration=300  # More mutations per cycle
-)
-```
-
-3. **Adaptive parsimony issues:**
-   - If search gets stuck at one complexity level, the adaptive parsimony might be too aggressive
-   - Try disabling it: `adaptive_parsimony_scaling=1000.0` (effectively disables)
-
-### Q: The search keeps finding trivial solutions (constants or single variables)
-
-**Solutions:**
-
-1. **Increase complexity pressure:**
-
-```julia
-model = SRRegressor(
-    constraints=Dict(
-        :complexity => (min=3, max=30)  # Force minimum complexity
-    )
-)
-```
-
-2. **Better initialization:**
-   - Include `+` and `*` operators for building complex expressions
-   - Ensure your target variable actually depends on multiple inputs
-
-3. **Check data quality:**
-   - Verify your target variable isn't actually constant or linear
-   - Scale your features if they have very different magnitudes
-
-### Q: My CPU cores aren't being fully utilized
-
-**Parallelization troubleshooting:**
-
-1. **Check head worker occupation:** If this percentage is high (>80%), increase:
-
-```julia
-model = SRRegressor(
-    ncyclesperiteration=1000,  # More work per iteration
-    population_size=100        # Larger populations
-)
-```
-
-2. **Try different parallelization:**
-
-```julia
-# Single-node multi-processing instead of multi-threading
-model = SRRegressor(
-    multithreading=false,
-    procs=8
-)
-```
-
-3. **Cluster-specific issues:**
-   - PBS clusters: Use single-node processing due to ClusterManagers.jl limitations
-   - SLURM clusters: Should work with multi-node processing
-
-## Expression Quality Issues
-
-### Q: I'm getting overly complex expressions that don't generalize
-
-**Complexity control strategies:**
-
-1. **Tighter complexity constraints:**
-
-```julia
-model = SRRegressor(
-    maxsize=15,           # Smaller max size
-    parsimony=0.01,       # Stronger parsimony pressure
-    constraints=Dict(
-        :max_complexity => 10
-    )
-)
-```
-
-2. **Operator-specific constraints:**
-
-```julia
-model = SRRegressor(
-    nested_constraints=Dict(
-        :sin => Dict(:sin => 0, :cos => 1),  # Prevent sin(sin(x))
-        :exp => Dict(:exp => 0)              # Prevent exp(exp(x))
-    )
-)
-```
-
-### Q: I'm getting NaN or infinite values in my expressions
-
-**Numerical stability fixes:**
-
-1. **Constrain problematic operators:**
-
-```julia
-model = SRRegressor(
-    constraints=Dict(
-        :/ => (max_arg_size=5,),  # Limit denominator complexity
-        :^ => (max_arg_size=3,)   # Limit exponent complexity
-    )
-)
-```
-
-2. **Custom safe operators:**
-
-```julia
-safe_log(x) = x > 0 ? log(x) : -10.0
-safe_div(x, y) = abs(y) > 1e-6 ? x/y : sign(x) * 1e6
-
-model = SRRegressor(
-    unary_operators=[safe_log],
-    binary_operators=[+, -, *, safe_div]
-)
-```
-
-3. **Data preprocessing:**
-   - Remove or clip extreme outliers
-   - Scale features to reasonable ranges
-   - Check for missing or invalid data
-
-### Q: The discovered expressions don't include all my input variables
-
-**Variable inclusion strategies:**
-
-1. **Feature constraints:** Currently not directly supported, but you can:
-   - Use feature selection preprocessing to identify important variables
-   - Create custom loss functions that penalize unused variables
-   - Check if your variables actually contribute to the target
-
-2. **Verify data relationships:**
-
-```julia
-# Check correlation with target
 using Statistics
-[cor(X[:, i], y) for i in 1:size(X, 2)]
+correlations = [cor(X[:, i], y) for i in 1:size(X, 2)]
 ```
 
-## Parameter and Configuration Issues
-
-### Q: How do I choose the right operators for my problem?
-
-**Domain-specific operator selection:**
-
-1. **Start with basics:** Always include `+`, `*` for building expressions
-2. **Add domain-relevant operators:**
-   - Physics: `sin`, `cos`, `exp`, `log`, `^`
-   - Biology: `exp`, `/`, `^` for growth/decay
-   - Engineering: `sqrt`, `abs`, trigonometric functions
-
-3. **Custom operators for your domain:**
+2. **If you need all variables included**, use a custom loss function:
 
 ```julia
-# Example: Activation function for neural network analysis
-sigmoid(x) = 1 / (1 + exp(-x))
+function feature_penalty_loss(tree, dataset, options)
+    prediction, complete = eval_tree_array(tree, dataset.X, options)
+    !complete && return Inf
 
-model = SRRegressor(
-    binary_operators=[+, -, *, /],
-    unary_operators=[sigmoid, exp]
-)
-```
+    # Count nodes as proxy for complexity (SymbolicRegression.jl doesn't have count_features)
+    complexity = count_nodes(tree)
+    max_complexity = 20  # Set reasonable threshold
 
-### Q: How do I set appropriate time budgets and iteration counts?
+    # Penalty for low complexity (encourages using more features indirectly)
+    complexity_penalty = max_complexity - complexity
 
-**Guidelines for search parameters:**
-
-1. **Quick prototyping:** `niterations=10-30`
-2. **Real problems:** `niterations=100-1000`
-3. **Complex problems:** `niterations=1000+` with larger populations
-
-4. **Use progress monitoring:**
-
-```julia
-# The search will show progress and hall-of-fame updates
-# Quit early if no improvement for many iterations
-```
-
-### Q: My custom loss function isn't working as expected
-
-**Custom loss troubleshooting:**
-
-1. **Check function signature:**
-
-```julia
-# Elementwise loss (point-by-point)
-elementwise_loss = "loss(prediction, target) = (prediction - target)^2"
-
-# Full loss function (operates on entire dataset)
-full_objective = "loss(tree, dataset) = sum((evaluate_tree(tree, dataset.X) - dataset.y).^2)"
-```
-
-2. **Handle edge cases:**
-
-```julia
-# Robust loss that handles NaN/Inf
-elementwise_loss = """
-function safe_loss(pred, target)
-    if isnan(pred) || isinf(pred)
-        return 1e6
-    else
-        return (pred - target)^2
-    end
+    base_loss = sum(abs2, prediction .- dataset.y) / length(dataset.y)
+    return base_loss + unused_penalty
 end
-"""
+
+options = Options(loss_function=feature_penalty_loss)
 ```
 
-## Advanced Feature Issues
+## I'm getting tiny constants like 1e-16 in my expressions
 
-### Q: Template expressions with #N placeholders aren't working
+This is a very common issue caused by numerical optimization:
 
-**Template expression troubleshooting:**
+**Cause:** The constant optimizer finds numerically tiny values that should be zero.
 
-**Critical:** Never replace `#1`, `#2`, etc. with dataset variable names! These refer to function arguments.
+**Solution:** Use size constraints to limit expression complexity:
 
 ```julia
-# Correct template usage
-expressions = [
-    "sin(#1) + cos(#2)",     # #1, #2 are function arguments
-    "#1 * exp(#2) + #3"      # Will take 3 arguments from dataset
-]
-
-model = SRRegressor(
-    expression_specs=expressions,
-    # ... other parameters
+options = Options(
+    constraints=[
+        (*) => (-1, 5),    # Multiplication: unlimited left, max size 5 right
+        (+) => (10, 10),   # Addition: max size 10 both sides
+        (^) => (-1, 3)     # Power: unlimited base, max size 3 exponent
+    ]
 )
 ```
 
-The `#N` syntax creates templates that get filled with dataset columns during search, but the placeholders themselves should never be renamed.
-
-### Q: How do I use external Julia libraries for custom operators?
-
-**Loading external libraries:**
+**Alternative:** Post-process expressions by setting tiny constants to zero:
 
 ```julia
-# Import Julia and add packages
-using Pkg
-Pkg.add("SpecialFunctions")
+# Post-process by creating expressions with smaller subtrees
+# (SymbolicRegression.jl doesn't directly control constant ranges)
+options = Options(
+    constraints=[
+        (*) => (5, 5),     # Limit multiplication argument sizes
+        (+) => (8, 8),     # Limit addition argument sizes
+        (/) => (3, 3)      # Limit division argument sizes
+    ],
+    parsimony=0.1  # Higher parsimony discourages complex constants
+)
+```
+
+## How do I enforce physical constraints (positivity, monotonicity, etc.)?
+
+This is the most frequently asked advanced question. Use custom loss functions:
+
+**Example: Enforce positivity**
+
+```julia
+function positive_constraint_loss(tree, dataset, options)
+    prediction, complete = eval_tree_array(tree, dataset.X, options)
+    !complete && return Inf
+
+    # Heavy penalty for negative predictions
+    if any(prediction .< 0)
+        return 1e6
+    end
+
+    return sum(abs2, prediction .- dataset.y) / length(dataset.y)
+end
+
+options = Options(loss_function=positive_constraint_loss)
+```
+
+**Example: Enforce monotonicity**
+
+```julia
+function monotonic_loss(tree, dataset, options)
+    prediction, complete = eval_tree_array(tree, dataset.X, options)
+    !complete && return Inf
+
+    # Check if predictions are monotonic in first variable
+    sorted_indices = sortperm(dataset.X[1, :])
+    sorted_predictions = prediction[sorted_indices]
+
+    # Penalty for non-monotonic behavior
+    violations = sum(diff(sorted_predictions) .< 0)
+    monotonic_penalty = violations * 100.0
+
+    base_loss = sum(abs2, prediction .- dataset.y) / length(dataset.y)
+    return base_loss + monotonic_penalty
+end
+```
+
+## How do I use external Julia packages for custom operators?
+
+Common need for domain-specific functions:
+
+```julia
 using SpecialFunctions
 
-# Define custom operators using external functions
-bessel_op(x, y) = besselj(abs(x), abs(y))  # Make safe for all real inputs
+# Define safe operators that handle domain errors
+safe_gamma(x) = x > 0 ? gamma(x) : NaN
+safe_bessel(n, x) = abs(x) < 100 ? besselj(n, x) : NaN
 
-model = SRRegressor(
-    binary_operators=[+, -, *, bessel_op],
-    nested_constraints=Dict(
-        :bessel_op => Dict(:bessel_op => 0)  # Prevent nested Bessel functions
-    )
+options = Options(
+    unary_operators=[safe_gamma],
+    binary_operators=[+, -, *, /, safe_bessel],
+    # Prevent problematic nesting
+    nested_constraints=[
+        safe_gamma => [safe_gamma => 0],   # No gamma(gamma(x))
+        safe_bessel => [safe_bessel => 0]  # No bessel(bessel(x))
+    ]
 )
 ```
 
-### Q: Dimensional analysis constraints aren't working
+## My search seems slow or finds poor results
 
-**Dimensional analysis troubleshooting:**
+Common performance issues:
 
-1. **Define units correctly:**
+**Most common cause:** Missing the `+` operator
 
 ```julia
-using DynamicQuantities
+# Wrong - can't build additive expressions
+options = Options(binary_operators=[*, /])
 
-model = SRRegressor(
-    binary_operators=[+, -, *, /],
-    dimensional_constraint_penalty=1e6,
-    # Define units for your variables
-    unit_constraints=Dict(
-        1 => u"m",      # First variable has units of meters
-        2 => u"s"       # Second variable has units of seconds
-    )
+# Correct - include + for building complex expressions
+options = Options(binary_operators=[+, -, *, /])
+```
+
+**Other fixes:**
+
+```julia
+options = Options(
+    populations=30,              # More populations for exploration
+    population_size=50,          # Larger populations
+    ncycles_per_iteration=500,   # More evolution per iteration
+    adaptive_parsimony_scaling=1000.0  # Reduce complexity pressure
 )
 ```
 
-2. **Common unit issues:**
-   - Ensure all variables have properly defined units
-   - Check that your target variable's units are achievable
-   - Some operators may not preserve dimensional consistency
+## I need to preprocess my data - what's recommended?
 
-## Data and Input Issues
+Based on successful user workflows:
 
-### Q: How should I preprocess my data?
-
-**Data preprocessing best practices:**
-
-1. **Handle missing data:**
+**Feature scaling:**
 
 ```julia
-# Remove rows with missing values
-mask = .!any(ismissing, eachrow([X y]))
-X_clean = X[mask, :]
-y_clean = y[mask]
-```
-
-2. **Feature scaling:**
-
-```julia
-using MLJ
-# Standardize features
-transformer = Standardizer()
-mach_transform = machine(transformer, X)
-fit!(mach_transform)
-X_scaled = MLJ.transform(mach_transform, X)
-```
-
-3. **Outlier detection:**
-
-```julia
-# Simple outlier removal (±3 standard deviations)
 using Statistics
+# Standardize features to have mean 0, std 1
+X_scaled = (X .- mean(X, dims=2)) ./ std(X, dims=2)
+```
+
+**Handle outliers:**
+
+```julia
+# Remove extreme outliers (beyond 3 standard deviations)
 outliers = abs.(y .- mean(y)) .> 3 * std(y)
-X_clean = X[.!outliers, :]
+X_clean = X[:, .!outliers]
 y_clean = y[.!outliers]
 ```
 
-### Q: I have high-dimensional data - how do I handle many features?
-
-**Dimensionality reduction strategies:**
-
-1. **Feature selection preprocessing:**
+**For noisy data, use robust loss:**
 
 ```julia
-using MLJFeatureSelection
+function huber_loss(tree, dataset, options)
+    prediction, complete = eval_tree_array(tree, dataset.X, options)
+    !complete && return Inf
 
-# Use gradient boosting for feature selection
-selector = FeatureSelector(
-    :rfe,  # Recursive feature elimination
-    n_features=5  # Select top 5 features
-)
-mach_selector = machine(selector, X, y)
-fit!(mach_selector)
-X_selected = MLJ.transform(mach_selector, X)
-```
-
-2. **Symbolic distillation approach:**
-   - First train a neural network on high-dimensional data
-   - Then use symbolic regression on the neural network's learned features
-   - See the paper examples for detailed methodology
-
-### Q: My data has noise - how do I handle it?
-
-**Noise handling strategies:**
-
-1. **Weighted loss functions:**
-
-```julia
-# If you know measurement uncertainties
-weights = 1.0 ./ measurement_errors.^2
-
-model = SRRegressor(
-    elementwise_loss="loss(pred, target, weight) = weight * (pred - target)^2"
-)
-```
-
-2. **Robust loss functions:**
-
-```julia
-# Huber loss for outlier robustness
-huber_loss = """
-function huber_loss(pred, target)
+    residuals = prediction .- dataset.y
     delta = 1.0
-    diff = abs(pred - target)
-    if diff <= delta
-        return 0.5 * diff^2
-    else
-        return delta * (diff - 0.5 * delta)
+
+    huber_values = map(residuals) do r
+        abs(r) <= delta ? 0.5 * r^2 : delta * (abs(r) - 0.5 * delta)
     end
+
+    return sum(huber_values) / length(huber_values)
 end
-"""
-
-model = SRRegressor(elementwise_loss=huber_loss)
 ```
 
-## Technical and Implementation Issues
+## How do I interpret the results and select the best model?
 
-### Q: I'm getting type errors or precision issues
-
-**Type and precision troubleshooting:**
-
-1. **Check input types:**
+**Understanding the output:**
 
 ```julia
-# Ensure consistent numeric types
-X = Float64.(X)  # Convert to Float64
-y = Float64.(y)
-```
-
-2. **Precision settings:**
-
-```julia
-model = SRRegressor(
-    precision=Float32,  # Use Float32 for speed, Float64 for precision
-    # ... other parameters
-)
-```
-
-### Q: How do I save and load trained models?
-
-**Model persistence:**
-
-```julia
-using Serialization
-
-# Save model
-serialize("my_model.jls", mach)
-
-# Load model
-loaded_mach = deserialize("my_model.jls")
-
-# Make predictions
-predictions = MLJ.predict(loaded_mach, X_new)
-```
-
-### Q: The MLJ interface is giving me errors
-
-**MLJ interface troubleshooting:**
-
-1. **Check MLJ compatibility:**
-
-```julia
-using MLJ
-MLJ.version()  # Ensure recent version
-```
-
-2. **Proper MLJ usage pattern:**
-
-```julia
-# Always wrap in machine
-model = SRRegressor(niterations=10)
-mach = machine(model, X, y)  # Required step
-fit!(mach)
-
-# Get results
-r = report(mach)
-predictions = MLJ.predict(mach, X)
-```
-
-### Q: I need to use SymbolicRegression.jl directly (without MLJ)
-
-**Direct library usage:**
-
-```julia
-using SymbolicRegression
-
-options = Options(
-    binary_operators=[+, -, *, /],
-    unary_operators=[sin, cos],
-    npopulations=20,
-    niterations=100
-)
-
-# Direct search
+# Get Hall of Fame (Pareto frontier)
 hall_of_fame = equation_search(X, y; options=options)
 
-# Best equations at each complexity
-best_equations = [member.tree for member in hall_of_fame.members[hall_of_fame.exists]]
+# Each complexity level has the best expression found
+for i in 1:length(hall_of_fame.members)
+    if hall_of_fame.exists[i]
+        member = hall_of_fame.members[i]
+        expr_string = string_tree(member.tree, options)
+        println("Complexity $(i): Loss $(member.loss), Expression: $(expr_string)")
+    end
+end
 ```
 
-## Performance Monitoring and Debugging
+**Model selection:** The "best" model is subjective. Consider:
 
-### Q: How do I monitor search progress effectively?
-
-**Progress monitoring:**
-
-1. **Watch the hall of fame:** New entries indicate progress
-2. **Check head worker occupation:** Should be <50% for good parallelization
-3. **Monitor expressions/second:** Should be >1000 for good performance
-4. **Early stopping:** If no improvement for 100+ iterations, consider stopping
-
-### Q: How do I debug expressions that don't make sense?
-
-**Expression debugging:**
-
-1. **Check expression evaluation:**
+- **Cross-validation**: Test expressions on held-out data
+- **Domain knowledge**: Choose expressions that make physical sense
+- **Simplicity preference**: Often simpler expressions generalize better
 
 ```julia
-# Manually evaluate your expression
-best_expr = report(mach).equations[report(mach).best_idx]
-test_prediction = best_expr(X[1:5, :])  # Test on first 5 rows
+# Example: Cross-validation for model selection
+cv_errors = Float64[]
+for i in 1:length(hall_of_fame.members)
+    if hall_of_fame.exists[i]
+        # Evaluate expression i on validation data
+        expr = hall_of_fame.members[i].tree
+        pred, complete = eval_tree_array(expr, X_val, options)
+        if complete
+            cv_error = sum(abs2, pred .- y_val) / length(y_val)
+            push!(cv_errors, cv_error)
+        else
+            push!(cv_errors, Inf)  # Invalid expression
+        end
+    else
+        push!(cv_errors, Inf)
+    end
+end
+best_by_cv = argmin(cv_errors)
 ```
 
-2. **Simplification issues:**
+## When should I use template expressions vs standard search?
+
+Template expressions are for structured problems:
+
+**Use templates when:**
+
+- You know the general form (e.g., `y = a*f(x) + b*g(x)`)
+- You have theoretical constraints on the structure
+- Standard search finds overly complex expressions
+
+**Use standard search when:**
+
+- You don't know the functional form
+- You want the algorithm to discover the structure
+- You have sufficient computational budget
+
+## How do I resume a search or use warm starts?
+
+Continue previous searches:
 
 ```julia
-# Sometimes expressions can be simplified
-using SymbolicUtils
-simplified = simplify(best_expr)
+# Save intermediate results
+hall_of_fame = equation_search(X, y; options=options)
+using Serialization
+serialize("results.jls", hall_of_fame)
+
+# Resume with modified parameters
+loaded_hof = deserialize("results.jls")
+options_continue = Options(
+    parsimony=0.01,  # Different parsimony for fine-tuning
+    niterations=100
+)
+# Note: Check documentation for correct warm start syntax
+final_results = equation_search(X, y;
+    options=options_continue
+    # saved_state=loaded_hof  # Verify correct parameter name
+)
 ```
-
-3. **Check for numerical issues:**
-   - Look for very large or very small constants
-   - Check for divide-by-zero scenarios
-   - Verify operator precedence in complex expressions
-
-## When to Try Different Approaches
-
-### If Standard Search Isn't Working:
-
-1. **Template expressions** - when you have domain knowledge about functional form
-2. **Custom operators** - when standard math functions don't capture your domain
-3. **Dimensional analysis** - for physics problems with units
-4. **Multi-target regression** - when you have multiple related outputs
-5. **Symbolic distillation** - for high-dimensional problems where neural networks work
-
-### Performance vs Accuracy Trade-offs:
-
-- **Faster search:** Reduce `niterations`, `populations`, `maxsize`
-- **Better results:** Increase all the above parameters
-- **Memory issues:** Reduce `population_size`, use `Float32` precision
-- **Interpretability:** Use `maxsize` < 20, add parsimony pressure
-
-Remember: Symbolic regression is a heuristic search process. If one configuration doesn't work, try adjusting the search space, operators, or constraints rather than just increasing iterations.
