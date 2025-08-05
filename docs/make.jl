@@ -182,6 +182,43 @@ end
 # Run preprocessing on source files before makedocs()
 preprocess_source_index()
 
+# Fix VitePress base path for dual deployment
+function fix_vitepress_base_path()
+    deployment_target = get(ENV, "DEPLOYMENT_TARGET", "astroautomata")
+
+    # Determine the correct base path for each deployment
+    base_path = if deployment_target == "cambridge"
+        "/symbolicregression/dev/"
+    else
+        "/SymbolicRegression.jl/dev/"
+    end
+
+    # Find and fix VitePress config files
+    is_production = get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true"
+    build_subdir = is_production ? "1" : "."
+
+    config_paths = [
+        joinpath(@__DIR__, "build", ".documenter", ".vitepress", "config.mts"),
+        joinpath(@__DIR__, "build", build_subdir, ".vitepress", "config.mts"),
+    ]
+
+    for config_path in config_paths
+        if isfile(config_path)
+            @info "Fixing VitePress base path in $config_path for deployment target: $deployment_target"
+            content = read(config_path, String)
+
+            # Replace the base path with the correct one for this deployment
+            # Look for existing base: '...' patterns and replace them
+            content = replace(content, r"base:\s*'[^']*'" => "base: '$base_path'")
+
+            write(config_path, content)
+            @info "Updated VitePress base path to: $base_path"
+        else
+            @warn "VitePress config not found at: $config_path"
+        end
+    end
+end
+
 # Configure deployment based on target
 deployment_target = get(ENV, "DEPLOYMENT_TARGET", "astroautomata")
 
@@ -223,11 +260,7 @@ makedocs(;
         repo="github.com/MilesCranmer/SymbolicRegression.jl",
         devbranch="master",
         devurl="dev",
-        deploy_url=if deployment_target == "cambridge"
-            "https://ai.damtp.cam.ac.uk/symbolicregression"
-        else
-            "https://astroautomata.com/SymbolicRegression.jl"
-        end,
+        deploy_url=nothing,  # Will be handled by post-processing
         deploy_decision,
         build_vitepress=get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true",
         md_output_path=if get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true"
@@ -256,6 +289,9 @@ makedocs(;
 # Post-processing after makedocs() (for any remaining issues in build output)
 # This runs after VitePress build to fix any final rendering issues
 post_process_vitepress_index()
+
+# Fix VitePress base path for dual deployment
+fix_vitepress_base_path()
 
 # Additional post-processing for VitePress production build issues
 function fix_vitepress_production_output()
