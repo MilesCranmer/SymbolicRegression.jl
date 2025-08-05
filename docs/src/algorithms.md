@@ -84,7 +84,7 @@ Each expression tracks its "birth time" when created, enabling precise age compa
 
 ### Tournament Mechanics
 
-Selection uses tournaments rather than pure fitness ranking. A tournament samples a subset of the population (configurable, default: 12 members) and selects the best with high probability (configurable, default: 0.9).
+Selection uses tournaments rather than pure fitness ranking. A tournament samples a subset of the population (configurable, default: 12 members) and selects using a geometric distribution with parameter p (configurable, default: 0.86).
 
 **Tournament selection pseudocode:**
 
