@@ -92,10 +92,13 @@ Selection uses tournaments rather than pure fitness ranking. A tournament sample
 function select_parent(population):
     tournament_sample = randomly_sample(population, tournament_size)
 
-    if random() < selection_probability:
-        return fittest_member(tournament_sample)
-    else:
-        return random_member(tournament_sample)
+    # Use geometric distribution with parameter p
+    # 1st place: probability p
+    # 2nd place: probability p(1-p)
+    # 3rd place: probability p(1-p)²
+    rank_probabilities = calculate_geometric_weights(selection_probability)
+    selected_rank = sample_from_weights(rank_probabilities)
+    return tournament_sample[selected_rank]
 ```
 
 ### Adaptive Parsimony Integration
@@ -139,7 +142,7 @@ The algorithm uses 14 distinct mutation types, each serving a specific purpose:
 
 **Tree-level mutations:**
 
-- `simplify`: Apply algebraic rules (e.g., `x*x-x*x+y` → `y`)
+- `simplify`: Apply algebraic rules using SymbolicUtils.jl (e.g., `sin(3.0)` → `0.141...`)
 - `optimize`: Tune constants using gradient methods
 - `randomize`: Replace with completely random expression
 - `rotate_tree`: Restructure expression tree
@@ -188,7 +191,7 @@ temperatures = linear_schedule(max_temp, min_temp, num_cycles)
 
 ### Mutation Acceptance
 
-Mutations are accepted probabilistically based on their impact on fitness:
+Mutations are accepted probabilistically based on their impact on cost:
 
 **Acceptance probability**: `P(accept) = exp(-(loss_new - loss_old)/(α × T))`
 
@@ -214,7 +217,7 @@ Each population evolution cycle consists of three distinct stages:
 ```
 for temperature in temperature_schedule:
     apply mutations and crossovers to population
-    accept/reject changes based on temperature and fitness change
+    accept/reject changes based on temperature and cost change
     track best expressions discovered
 ```
 
