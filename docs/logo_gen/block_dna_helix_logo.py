@@ -20,6 +20,9 @@ julia_colors = {
     'purple': '#7D5F8B'
 }
 
+# Font size for mathematical symbols
+FONT_SIZE = 22
+
 def create_ribbon_path(x_center, y_center, dx, dy, width):
     """Create ribbon edges by offsetting the center curve"""
     # Calculate perpendicular direction
@@ -86,9 +89,9 @@ def draw_smooth_ribbon_segment(ax, x_coords, y_coords, start_idx, end_idx, color
     return x_left_all, y_left_all, x_right_all, y_right_all
 
 def create_smooth_dna_helix():
-    fig, ax = plt.subplots(1, 1, figsize=(12, 10))
-    ax.set_xlim(-2, 8)
-    ax.set_ylim(-4, 4)
+    fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+    ax.set_xlim(1.2, -1.2)
+    ax.set_ylim(-1.98, 1.98)
     ax.set_aspect('equal')
     ax.axis('off')
     ax.set_facecolor('white')
@@ -242,9 +245,10 @@ def create_smooth_dna_helix():
             if rotation > 180: rotation -= 360
             if rotation > 90: rotation -= 180
             elif rotation < -90: rotation += 180
+            rotation = -rotation  # Flip rotation for x-axis flip
 
             ax.text(x1[info['center_idx1']], y1[info['center_idx1']], info['symbol1'],
-                   fontsize=14, ha='center', va='center', color='white', weight='bold',
+                   fontsize=FONT_SIZE, ha='center', va='center', color='white', weight='bold',
                    rotation=rotation, zorder=2)
         else:
             # Calculate rotation for strand 2 text
@@ -258,9 +262,10 @@ def create_smooth_dna_helix():
             if rotation > 180: rotation -= 360
             if rotation > 90: rotation -= 180
             elif rotation < -90: rotation += 180
+            rotation = -rotation  # Flip rotation for x-axis flip
 
             ax.text(x2[info['center_idx2']], y2[info['center_idx2']], info['symbol2'],
-                   fontsize=14, ha='center', va='center', color='white', weight='bold',
+                   fontsize=FONT_SIZE, ha='center', va='center', color='white', weight='bold',
                    rotation=rotation, zorder=2)
 
         # Draw front strand (zorder 3)
@@ -284,9 +289,10 @@ def create_smooth_dna_helix():
             if rotation > 180: rotation -= 360
             if rotation > 90: rotation -= 180
             elif rotation < -90: rotation += 180
+            rotation = -rotation  # Flip rotation for x-axis flip
 
             ax.text(x1[info['center_idx1']], y1[info['center_idx1']], info['symbol1'],
-                   fontsize=14, ha='center', va='center', color='white', weight='bold',
+                   fontsize=FONT_SIZE, ha='center', va='center', color='white', weight='bold',
                    rotation=rotation, zorder=4)
         else:
             # Calculate rotation for strand 2 text
@@ -300,9 +306,10 @@ def create_smooth_dna_helix():
             if rotation > 180: rotation -= 360
             if rotation > 90: rotation -= 180
             elif rotation < -90: rotation += 180
+            rotation = -rotation  # Flip rotation for x-axis flip
 
             ax.text(x2[info['center_idx2']], y2[info['center_idx2']], info['symbol2'],
-                   fontsize=14, ha='center', va='center', color='white', weight='bold',
+                   fontsize=FONT_SIZE, ha='center', va='center', color='white', weight='bold',
                    rotation=rotation, zorder=4)
 
 
@@ -314,8 +321,8 @@ def create_smooth_dna_helix():
 # Create and save the illustration
 if __name__ == "__main__":
     fig = create_smooth_dna_helix()
-    plt.savefig('outputs/block_dna_helix_logo.png', dpi=300, bbox_inches='tight',
+    plt.savefig('block_dna_helix_logo.png', dpi=300, bbox_inches='tight',
                 facecolor='white', edgecolor='none')
-    plt.savefig('outputs/block_dna_helix_logo.svg', bbox_inches='tight',
+    plt.savefig('block_dna_helix_logo.svg', bbox_inches='tight',
                 facecolor='white', edgecolor='none')
     print("Smooth DNA helix logo created successfully!")
