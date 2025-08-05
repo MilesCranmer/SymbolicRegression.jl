@@ -43,15 +43,23 @@ function feature_penalty_loss(tree, dataset, options)
     prediction, complete = eval_tree_array(tree, dataset.X, options)
     !complete && return Inf
 
-    # Count nodes as proxy for complexity (SymbolicRegression.jl doesn't have count_features)
-    complexity = count_nodes(tree)
-    max_complexity = 20  # Set reasonable threshold
+    # Count which features are actually used in the expression
+    features_used = Set{Int}()
+    for node in tree
+        if node.degree == 0 && !node.constant
+            push!(features_used, node.feature)
+        end
+    end
 
-    # Penalty for low complexity (encourages using more features indirectly)
-    complexity_penalty = max_complexity - complexity
+    # Get total number of features in dataset
+    total_features = size(dataset.X, 1)
+    unused_features = total_features - length(features_used)
+
+    # Add penalty for unused features
+    feature_penalty = unused_features * 100.0  # Adjust penalty weight as needed
 
     base_loss = sum(abs2, prediction .- dataset.y) / length(dataset.y)
-    return base_loss + unused_penalty
+    return base_loss + feature_penalty
 end
 
 options = Options(loss_function=feature_penalty_loss)
