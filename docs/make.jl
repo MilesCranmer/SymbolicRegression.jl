@@ -42,7 +42,7 @@ hero:
       text: View on GitHub
       link: https://github.com/MilesCranmer/SymbolicRegression.jl
   image:
-    src: /assets/logo.svg
+    src: /logo.png
     alt: SymbolicRegression.jl
 
 features:
