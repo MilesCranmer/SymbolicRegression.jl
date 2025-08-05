@@ -75,3 +75,14 @@ html.dark {
   color: var(--vp-c-brand-1);
   border-bottom-color: var(--vp-c-brand-1);
 }
+
+/* Add space after feature cards */
+.VPFeatures {
+  margin-bottom: 48px;
+}
+
+/* Separator after feature cards */
+.VPFeatures + * {
+  border-top: 1px solid var(--vp-c-divider);
+  padding-top: 48px;
+}
