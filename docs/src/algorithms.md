@@ -1,10 +1,10 @@
 # Advanced Algorithmic Details
 
-This document provides deep technical details about the algorithms implemented in SymbolicRegression.jl, verified against the actual codebase. It is intended for advanced users who want to understand, modify, or contribute to the algorithmic core.
+This document provides deep technical details about the algorithms implemented in SymbolicRegression.jl. It is intended for advanced users who want to understand the algorithmic foundations and make informed decisions about parameters and customizations.
 
 ## Overview: Multi-Population Evolutionary Algorithm
 
-SymbolicRegression.jl implements a sophisticated multi-population evolutionary algorithm with several key innovations beyond standard genetic programming:
+SymbolicRegression.jl implements a sophisticated multi-population evolutionary algorithm with several key components beyond standard genetic programming:
 
 1. **Age-regularized evolution** replacing fitness-based selection
 2. **Adaptive parsimony** with frequency-based complexity penalties
@@ -13,554 +13,443 @@ SymbolicRegression.jl implements a sophisticated multi-population evolutionary a
 5. **Simulated annealing** with temperature scheduling
 6. **Tournament selection** with adaptive penalties
 
-## Multi-Population Architecture
+These components work together to balance exploration and exploitation while maintaining diversity in the search process.
 
-### Population Structure
+## High-Level Algorithm Structure
 
-Each search runs multiple populations (default: `populations=15`) that evolve independently and asynchronously. Each population contains `population_size=33` members by default.
+### Multi-Population Coordination
 
-**Implementation location**: `/src/SymbolicRegression.jl:567-708`
+The algorithm runs multiple populations (configurable, default: 15) that evolve independently. Each population contains a configurable number of members (default: 33) that represent candidate mathematical expressions.
 
-```julia
-# Population initialization (lines 667-687)
-for j in 1:nout, i in 1:(options.populations)
-    new_pop = Population(
-        datasets[j];
-        population_size=options.population_size,
-        nlength=3,  # Initial expression size
-        options=options,
-        nfeatures=max_features(datasets[j], options),
-    )
-end
+**Population initialization pseudocode:**
+
+```
+for each output in outputs:
+    for each population in populations:
+        population = create_new_population(
+            size = population_size,
+            initial_complexity = 3,
+            features = dataset_features
+        )
 ```
 
-### Multi-Population Evolution Loop
+**Main evolution loop:**
 
-The outer algorithm (Algorithm 1 in the PySR paper) coordinates multiple populations:
+```
+while cycles_remaining > 0:
+    select next population in round-robin order
 
-**Main loop implementation**: `/src/SymbolicRegression.jl:842-1091`
-
-```julia
-while sum(state.cycles_remaining) > 0
-    kappa += 1
-    if kappa > options.populations * nout
-        kappa = 1
-    end
-    j, i = state.task_order[kappa]  # Round-robin population selection
-
-    if population_ready
-        # Process completed population
-        # Update hall of fame
-        # Perform migration
-        # Dispatch next evolution cycle
-    end
-end
+    if population_ready:
+        process completed population
+        update hall of fame with best expressions
+        perform migration between populations
+        dispatch next evolution cycle
 ```
 
-Key aspects:
+### Key Design Principles
 
-- **Round-robin scheduling**: Populations are processed in shuffled order for load balancing
 - **Asynchronous execution**: Populations evolve independently without blocking
-- **Adaptive work distribution**: Task assignment accounts for worker availability
+- **Load balancing**: Work is distributed efficiently across available processors
+- **Diversity preservation**: Multiple populations explore different regions of solution space
 
 ## Age-Regularized Evolution
 
-### Core Principle
+### Core Mechanism
 
-Instead of replacing the worst-performing member, the algorithm always replaces the **oldest** member in the population. This prevents premature convergence by maintaining age diversity.
+Traditional genetic programming replaces the worst-performing members. This algorithm instead always replaces the **oldest** member in the population, regardless of fitness.
 
-**Implementation**: `/src/RegularizedEvolution.jl:45,99-103`
+**Age-based replacement pseudocode:**
 
-```julia
-# For mutations (line 45):
-oldest = argmin_fast([pop.members[member].birth for member in 1:(pop.n)])
-pop.members[oldest] = baby
+```
+for mutation:
+    oldest_member = find_oldest_in_population(population)
+    population.replace(oldest_member, new_mutated_expression)
 
-# For crossover (lines 99-103):
-oldest1 = argmin_fast([pop.members[member].birth for member in 1:(pop.n)])
-oldest2 = argmin_fast([
-    i == oldest1 ? typemax(BT) : pop.members[i].birth for i in 1:(pop.n)
-])
+for crossover:
+    oldest_member_1 = find_oldest_in_population(population)
+    oldest_member_2 = find_second_oldest_in_population(population)
+    population.replace(oldest_member_1, child_1)
+    population.replace(oldest_member_2, child_2)
 ```
 
-### Birth Time Tracking
+### Why Age-Based Replacement Works
 
-Each `PopMember` gets a birth time from `time()` when created, enabling precise age tracking:
+- **Prevents premature convergence**: Avoids getting stuck in local optima
+- **Maintains diversity**: Ensures new ideas get time to develop
+- **Balances exploration/exploitation**: Selection pressure comes from tournament selection, not replacement
 
-**Birth assignment**: `/src/PopMember.jl` (birth time set during construction)
-
-This approach, inspired by Neural Architecture Search results, prevents early specialization in local minima while maintaining selection pressure through tournament selection.
+Each expression tracks its "birth time" when created, enabling precise age comparison.
 
 ## Tournament Selection with Adaptive Parsimony
 
 ### Tournament Mechanics
 
-Tournament selection samples `tournament_selection_n=12` members and selects the best with probability `tournament_selection_p=0.9`.
+Selection uses tournaments rather than pure fitness ranking. A tournament samples a subset of the population (configurable, default: 12 members) and selects the best with high probability (configurable, default: 0.9).
 
-**Implementation**: `/src/Population.jl:109-155`
+**Tournament selection pseudocode:**
 
-```julia
-function best_of_sample(pop, running_search_statistics, options)
-    sample = sample_pop(pop, options)  # Sample 12 members
-    return copy(_best_of_sample(sample.members, running_search_statistics, options))
-end
+```
+function select_parent(population):
+    tournament_sample = randomly_sample(population, tournament_size)
 
-function _best_of_sample(members, running_search_statistics, options)
-    # Tournament with probability p=0.9 for fittest
-    chosen_idx = if p == 1.0
-        argmin_fast(adjusted_costs)
-    else
-        tournament_winner = StatsBase.sample(get_tournament_selection_weights(options))
-        # Select member that won that tournament position
-    end
-end
+    if random() < selection_probability:
+        return fittest_member(tournament_sample)
+    else:
+        return random_member(tournament_sample)
 ```
 
 ### Adaptive Parsimony Integration
 
-The key innovation is **frequency-based complexity penalties** that adaptively adjust based on population composition:
+The key innovation is **frequency-based complexity penalties** that adapt based on population composition:
 
-**Implementation**: `/src/Population.jl:124-142`
+**Adaptive cost calculation:**
 
-```julia
-if options.use_frequency_in_tournament
-    adaptive_parsimony_scaling = L(options.adaptive_parsimony_scaling)  # Default: 20.0
+```
+for each member in tournament:
+    base_cost = member.prediction_error
+    complexity = count_nodes(member.expression)
+    frequency = normalized_frequency[complexity] in population
 
-    for i in 1:n
-        member = members[i]
-        size = compute_complexity(member, options)
-        frequency = if (0 < size <= options.maxsize)
-            L(running_search_statistics.normalized_frequencies[size])
-        else
-            L(0)
-        end
-        # Apply exponential penalty based on frequency
-        adjusted_costs[i] = member.cost * exp(adaptive_parsimony_scaling * frequency)
-    end
-end
+    # Apply exponential penalty for overrepresented complexities
+    adjusted_cost = base_cost × exp(parsimony_scaling × frequency)
 ```
 
-**Mathematical formula**: `adjusted_cost = base_cost × exp(20.0 × normalized_frequency)`
+**Mathematical effect**: If 100% of population has the same complexity, the penalty factor is approximately `exp(20×1) ≈ 5×10⁸`, providing strong pressure against homogenization.
 
-For 100% population at one complexity: `exp(-20×1) ≈ 2×10⁻⁹`, providing strong pressure against homogenization.
-
-## Frequency Tracking and Normalization
-
-### Running Statistics
-
-**Implementation**: `/src/AdaptiveParsimony.jl:20-32`
-
-```julia
-struct RunningSearchStatistics
-    window_size::Int            # Default: 100000
-    frequencies::Vector{Float64}        # Raw counts
-    normalized_frequencies::Vector{Float64}  # Normalized to sum=1
-end
-```
-
-### Window Management
-
-The frequency window prevents unbounded growth:
-
-**Implementation**: `/src/AdaptiveParsimony.jl:55-87`
-
-```julia
-function move_window!(running_search_statistics::RunningSearchStatistics)
-    frequencies = running_search_statistics.frequencies
-    window_size = running_search_statistics.window_size
-
-    cur_size_frequency_complexities = sum(frequencies)
-    if cur_size_frequency_complexities > window_size
-        # Proportionally reduce all frequencies to maintain window size
-        # while preserving relative relationships
-    end
-end
-```
-
-This maintains a sliding window of complexity frequencies, ensuring recent patterns have more influence than distant history.
+This prevents the population from converging to a single complexity level and encourages exploration across the complexity spectrum.
 
 ## Mutation System
 
-### Mutation Type Distribution
+### Mutation Type Portfolio
 
-The algorithm uses 14 distinct mutation types with adaptive weighting:
+The algorithm uses 14 distinct mutation types, each serving a specific purpose:
 
-**Base weights** (from `/src/MutationWeights.jl`):
+**Expression modification mutations:**
 
-- `mutate_constant: 0.048`
-- `mutate_operator: 0.47`
-- `add_node: 0.79`
-- `insert_node: 5.1`
-- `delete_node: 1.7`
-- `simplify: 0.0020`
-- `randomize: 0.00023`
-- `optimize: 0.0020`
-- `do_nothing: 0.21`
-- `mutate_feature: 0.048`
-- `swap_operands: 0.23`
-- `rotate_tree: 0.0020`
-- `form_connection: 0.0020` (GraphNode only)
-- `break_connection: 0.0020` (GraphNode only)
+- `mutate_constant`: Adjust numerical values (e.g., `2.1` → `2.3`)
+- `mutate_operator`: Change operators (e.g., `+` → `*`)
+- `mutate_feature`: Change input variables (e.g., `x₁` → `x₂`)
 
-### Constraint-Based Weight Conditioning
+**Structural mutations:**
 
-Weights are dynamically adjusted based on expression properties:
+- `add_node`: Insert new operation (e.g., `x` → `sin(x)`)
+- `insert_node`: Add operation with random branch (e.g., `x+y` → `x+y*z`)
+- `delete_node`: Remove operation (e.g., `sin(x+y)` → `x+y`)
+- `swap_operands`: Reorder arguments (e.g., `x-y` → `y-x`)
 
-**Implementation**: `/src/Mutate.jl:101-157`
+**Tree-level mutations:**
 
-```julia
-function condition_mutation_weights!(weights, member, options, curmaxsize, nfeatures)
-    tree = get_tree(member.tree)
+- `simplify`: Apply algebraic rules (e.g., `x*x-x*x+y` → `y`)
+- `optimize`: Tune constants using gradient methods
+- `randomize`: Replace with completely random expression
+- `rotate_tree`: Restructure expression tree
+- `do_nothing`: Identity operation (maintains diversity)
 
-    if tree.degree == 0  # Leaf node
-        weights.mutate_operator = 0.0
-        weights.swap_operands = 0.0
-        weights.delete_node = 0.0
-        weights.simplify = 0.0
-        # Additional constraints based on constant vs variable
-    end
+**Graph-specific mutations** (for GraphNode expressions):
 
-    if complexity >= curmaxsize  # Size limit reached
-        weights.add_node = 0.0
-        weights.insert_node = 0.0
-    end
+- `form_connection`: Add edge between nodes
+- `break_connection`: Remove edge between nodes
 
-    if nfeatures <= 1  # Single feature
-        weights.mutate_feature = 0.0
-    end
-end
+### Dynamic Weight Conditioning
+
+Mutation weights are dynamically adjusted based on expression properties:
+
+**Weight conditioning pseudocode:**
+
+```
+function condition_weights(expression, current_weights):
+    if expression.is_leaf_node:
+        disable weights: mutate_operator, swap_operands, delete_node
+
+    if expression.complexity >= max_allowed_size:
+        disable weights: add_node, insert_node
+
+    if dataset.num_features <= 1:
+        disable weights: mutate_feature
+
+    return adjusted_weights
 ```
 
-This ensures mutations are always valid and appropriate for the current expression state.
+This ensures all mutations are valid and appropriate for the current expression state.
 
 ## Simulated Annealing Integration
 
 ### Temperature Scheduling
 
-**Implementation**: `/src/SingleIteration.jl:31-36`
+The algorithm uses temperature to control the exploration-exploitation balance. Temperature decreases linearly over each evolution cycle (configurable duration, default: 550 cycles).
 
-```julia
-max_temp = 1.0
-min_temp = 0.0
-if !options.annealing
-    min_temp = max_temp  # Constant temperature
-end
-all_temperatures = ncycles > 1 ? LinRange(max_temp, min_temp, ncycles) : [max_temp]
+**Temperature schedule:**
+
 ```
-
-Temperature decreases linearly from 1.0 to 0.0 over `ncycles_per_iteration=550` cycles.
+max_temperature = 1.0
+min_temperature = 0.0 (configurable: can disable annealing)
+temperatures = linear_schedule(max_temp, min_temp, num_cycles)
+```
 
 ### Mutation Acceptance
 
-**Acceptance probability**: `/src/Mutate.jl` (in mutation functions)
+Mutations are accepted probabilistically based on their impact on fitness:
 
-The acceptance probability for mutations follows: `P(accept) = exp(-(L_new - L_old)/(α × T))`
+**Acceptance probability**: `P(accept) = exp(-(loss_new - loss_old)/(α × T))`
 
 Where:
 
-- `α = 0.1` (adaptive parsimony scaling)
+- `α` = parsimony scaling factor (configurable, default: 0.1)
 - `T` = current temperature ∈ [0,1]
-- `L_new`, `L_old` = losses before/after mutation
+- `loss_new`, `loss_old` = prediction errors before/after mutation
 
-This allows the algorithm to alternate between:
+**Behavioral phases:**
 
-- **High temperature phases**: Accept suboptimal mutations, explore broadly
-- **Low temperature phases**: Only accept improving mutations, exploit locally
+- **High temperature**: Accept many mutations, even harmful ones (exploration)
+- **Low temperature**: Only accept improving mutations (exploitation)
 
 ## Evolve-Simplify-Optimize Loop
 
 ### Three-Stage Process
 
-Each population evolution cycle consists of three stages:
+Each population evolution cycle consists of three distinct stages:
 
-**Implementation**: `/src/SingleIteration.jl:19-66, 68-110`
+**Stage 1: Evolution with annealing**
 
-```julia
-function s_r_cycle(dataset, pop, ncycles, curmaxsize, running_search_statistics; options)
-    # Stage 1: Evolution with simulated annealing
-    for temperature in all_temperatures
-        pop, tmp_num_evals = reg_evol_cycle(
-            batched_dataset, pop, temperature, curmaxsize,
-            running_search_statistics, options, record
-        )
-    end
-
-    # Return best examples seen during evolution
-    return (pop, best_examples_seen, num_evals)
-end
-
-function optimize_and_simplify_population(dataset, pop, options, curmaxsize, record)
-    # Stage 2: Simplification
-    if options.should_simplify
-        tree = simplify_tree!(tree, options.operators)
-        tree = combine_operators(tree, options.operators)
-    end
-
-    # Stage 3: Constant optimization
-    if options.should_optimize_constants && do_optimization[j]
-        pop.members[j], array_num_evals[j] = optimize_constants(
-            batched_dataset, pop.members[j], options
-        )
-    end
-end
+```
+for temperature in temperature_schedule:
+    apply mutations and crossovers to population
+    accept/reject changes based on temperature and fitness change
+    track best expressions discovered
 ```
 
-### Rationale for Staged Approach
+**Stage 2: Simplification**
 
-1. **Evolution first**: Generate diverse expressions through mutations/crossover
-2. **Simplification**: Reduce redundant expressions (e.g., `x*x - x*x + y → y`)
-3. **Optimization**: Fine-tune numerical constants for final accuracy
-
-The separation allows intermediate redundant states (necessary for some mutations) while ensuring final expressions are clean and optimized.
-
-## Constant Optimization Details
-
-### Multi-Restart Gradient-Based Optimization
-
-**Implementation**: `/src/ConstantOptimization.jl:29-59, 88-100`
-
-```julia
-function optimize_constants(dataset, member, options; rng)
-    nconst = count_constants_for_optimization(member.tree)
-
-    if nconst == 1 && !(T <: Complex)
-        algorithm = Optim.Newton(; linesearch=LineSearches.BackTracking())
-    else
-        algorithm = options.optimizer_algorithm  # Default: BFGS
-    end
-
-    # Multiple random restarts for robustness
-    for _ in 1:(options.optimizer_nrestarts)  # Default: 2
-        eps = randn(rng, T, size(x0)...)
-        xt = @. x0 * (T(1) + T(1//2) * eps)  # Perturb initial guess
-        tmpresult = Optim.optimize(obj, xt, algorithm, optimizer_options)
-
-        if tmpresult.minimum < result.minimum
-            result = tmpresult
-        end
-    end
-end
+```
+for each expression in population:
+    apply algebraic simplification rules
+    combine redundant operators
+    canonicalize expression structure
 ```
 
-### Automatic Differentiation
+**Stage 3: Constant optimization**
 
-Constants are optimized using automatic differentiation:
+```
+for selected expressions (probabilistic):
+    optimize numerical constants using gradient methods
+    perform multiple random restarts for robustness
+    use automatic differentiation for gradients
+```
 
-- **Single constant**: Newton's method with line search
-- **Multiple constants**: BFGS with gradient computation
-- **Backend**: Enzyme.jl for reverse-mode AD when available
+### Rationale for Separation
+
+1. **Evolution generates diversity**: Mutations create varied expressions, some temporarily redundant
+2. **Simplification cleans structure**: Removes redundancy while preserving function
+3. **Optimization fine-tunes accuracy**: Adjusts constants for optimal fit
+
+This separation allows beneficial mutations that create temporary redundancy while ensuring final expressions are clean and optimal.
 
 ## Migration Strategies
 
-### Inter-Population Migration
+### Inter-Population Communication
 
-**Implementation**: `/src/Migration.jl:15-37`
+Populations periodically share their best discoveries through migration:
 
-```julia
-function migrate!(migration::Pair{Vector{PM},P}, options; frac::AbstractFloat)
-    population_size = length(base_pop.members)
-    mean_number_replaced = population_size * frac
-    num_replace = poisson_sample(mean_number_replaced)  # Stochastic replacement count
+**Migration types:**
 
-    locations = rand(1:population_size, num_replace)  # Random positions
-    migrants = rand(migrant_candidates, num_replace)  # Random migrants
+1. **Population-to-population migration** (configurable rate, default: 5%):
+   - Source: Best members from other populations (configurable count, default: 12)
+   - Target: Random positions in current population
+   - Effect: Spreads good discoveries across populations
 
-    for (i, migrant) in zip(locations, migrants)
-        base_pop.members[i] = copy(migrant)
-        reset_birth!(base_pop.members[i]; options.deterministic)  # Reset age
-    end
-end
+2. **Hall of Fame migration** (configurable rate, default: 0.5%):
+   - Source: Pareto frontier (best at each complexity level)
+   - Target: Random positions in current population
+   - Effect: Injects globally best solutions
+
+3. **Seed expression migration** (if provided, rate: 10%):
+   - Source: User-provided initial guesses
+   - Target: Random positions in current population
+   - Effect: Incorporates domain knowledge
+
+**Migration pseudocode:**
+
+```
+function migrate(source_population, target_population, migration_rate):
+    num_migrants = poisson_sample(population_size × migration_rate)
+    migrant_positions = random_sample(1:population_size, num_migrants)
+    migrants = select_best(source_population, num_migrants)
+
+    for position, migrant in zip(migrant_positions, migrants):
+        target_population[position] = copy(migrant)
+        reset_birth_time(target_population[position])
 ```
 
-### Migration Types
-
-**In main search loop** (`/src/SymbolicRegression.jl:946-963`):
-
-1. **Population-to-population migration** (`migration=true`):
-   - Source: Best `topn=12` members from each population
-   - Target: Random positions in current population
-   - Rate: `fraction_replaced=0.05` (5% replacement)
-
-2. **Hall of Fame migration** (`hof_migration=true`):
-   - Source: Pareto frontier (dominating expressions at each complexity)
-   - Target: Random positions in current population
-   - Rate: `fraction_replaced_hof=0.005` (0.5% replacement)
-
-3. **Guess seeding** (if initial guesses provided):
-   - Source: Parsed seed expressions
-   - Target: Random positions in current population
-   - Rate: `fraction_replaced_guesses=0.1` (10% replacement)
-
-Migration uses **Poisson sampling** for replacement counts, creating natural stochasticity in migration intensity.
+Migration uses Poisson sampling for natural stochasticity in migration intensity.
 
 ## Hall of Fame and Pareto Management
 
 ### Pareto Frontier Calculation
 
-**Implementation**: `/src/HallOfFame.jl:94-120`
+The Hall of Fame maintains the best expression found at each complexity level, forming a Pareto frontier.
 
-```julia
-function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N})
-    dominating = PopMember{T,L,N}[]
+**Domination rules:**
 
-    for size in 1:(length(hallOfFame.members))
-        if hallOfFame.exists[size]
-            member = hallOfFame.members[size]
+```
+function is_dominating(candidate, hall_of_fame):
+    candidate_complexity = count_nodes(candidate.expression)
+    candidate_error = candidate.prediction_error
 
-            # Check if this member dominates all simpler expressions
-            is_dominating = true
-            for i in 1:(size-1)
-                if hallOfFame.exists[i]
-                    simpler_member = hallOfFame.members[i]
-                    if member.cost >= simpler_member.cost
-                        is_dominating = false
-                        break
-                    end
-                end
-            end
+    for complexity = 1 to candidate_complexity-1:
+        if hall_of_fame.exists[complexity]:
+            simpler_member = hall_of_fame[complexity]
+            if candidate_error >= simpler_member.error:
+                return false  # Candidate doesn't improve on simpler expression
 
-            if is_dominating
-                push!(dominating, member)
-            end
-        end
-    end
-
-    return dominating
-end
+    return true  # Candidate dominates all simpler expressions
 ```
 
-### Domination Rules
+### Pareto Frontier Properties
 
-An expression dominates if it is **strictly better** (lower cost) than **all** simpler expressions. This creates a Pareto frontier where:
-
-- Each complexity level has at most one representative
-- Higher complexity is only accepted if it provides better accuracy
-- The frontier represents the optimal accuracy-complexity trade-offs
+- **Monotonic accuracy**: Higher complexity expressions must have lower error
+- **Unique representatives**: At most one expression per complexity level
+- **Trade-off visualization**: Shows accuracy vs complexity choices
+- **Persistent memory**: Best discoveries are never lost
 
 ## Parallelization Architecture
 
-### Worker Management
+### Parallel Execution Modes
 
-**Implementation**: `/src/SymbolicRegression.jl:617-708`
+The algorithm supports three parallelization strategies (configurable):
 
-The algorithm supports three parallelization modes:
+1. **Serial**: Single-threaded for debugging and development
+2. **Multithreading**: Shared memory parallelism using Julia threads
+3. **Multiprocessing**: Distributed memory parallelism across processes
 
-1. **Serial** (`:serial`): Single-threaded for debugging
-2. **Multithreading** (`:multithreading`): Julia threads, shared memory
-3. **Multiprocessing** (`:multiprocessing`): Distributed processes, message passing
+### Asynchronous Population Management
 
-### Asynchronous Population Evolution
+**Key design principle**: Populations evolve asynchronously without blocking the main coordination thread.
 
-**Key insight**: Populations evolve asynchronously without blocking the main thread.
+**Asynchronous dispatch pseudocode:**
 
-**Implementation**: `/src/SymbolicRegression.jl:986-1007`
+```
+function dispatch_evolution(population, dataset):
+    # Send population to available worker
+    worker_task = spawn_on_worker(evolve_population, population, dataset)
 
-```julia
-# Dispatch evolution to worker
-state.worker_output[j][i] = @sr_spawner(
-    begin
-        _dispatch_s_r_cycle(
-            in_pop, dataset, options;
-            pop=i, out=j, iteration, verbosity, cur_maxsize,
-            running_search_statistics=c_rss,
-        )
-    end,
-    parallelism = ropt.parallelism,
-    worker_idx = worker_idx
-)
+    # Set up asynchronous communication
+    result_channel = create_async_channel()
+    setup_result_handler(worker_task, result_channel)
 
-# Set up async communication
-if ropt.parallelism in (:multiprocessing, :multithreading)
-    state.tasks[j][i] = @filtered_async put!(
-        state.channels[j][i], fetch(state.worker_output[j][i])
-    )
-end
+    return worker_task, result_channel
 ```
 
-This architecture enables:
+**Benefits:**
 
-- **Load balancing**: Faster workers get more populations to process
-- **Fault tolerance**: Failed populations don't block the entire search
-- **Scalability**: Can efficiently use hundreds to thousands of cores
+- **Load balancing**: Faster workers process more populations
+- **Fault tolerance**: Failed workers don't block the search
+- **Scalability**: Efficient use of hundreds to thousands of cores
 
-## Performance Optimizations
+## Constant Optimization Details
 
-### Expression Evaluation Optimizations
+### Multi-Restart Gradient Optimization
 
-1. **SIMD operator fusion**: Julia's JIT compiler automatically vectorizes and fuses operators
-2. **Batching**: Evaluate expressions on data subsets when `batching=true`
-3. **Constraint checking**: Fast rejection of invalid expressions before evaluation
+Constants in expressions are optimized using gradient-based methods with multiple random restarts for robustness.
 
-### Memory Management
+**Optimization algorithm selection:**
 
-1. **Copy-on-write**: Expressions share structure until modified
-2. **Birth time tracking**: Minimal overhead for age-regularized evolution
-3. **Frequency windows**: Bounded memory for adaptive parsimony statistics
+- **Single constant**: Newton's method with line search
+- **Multiple constants**: BFGS with gradient computation (configurable)
+- **Complex numbers**: Specialized algorithms for complex optimization
 
-### Algorithmic Complexity
+**Multi-restart procedure:**
 
-- **Tournament selection**: O(tournament_size × log(tournament_size)) per selection
-- **Mutation**: O(tree_size) for most mutation types
-- **Pareto calculation**: O(maxsize²) per update
-- **Migration**: O(migration_count) with Poisson sampling
+```
+function optimize_constants(expression, dataset, num_restarts):
+    best_result = current_expression
 
-## Algorithm Parameters
+    for restart = 1 to num_restarts:
+        # Perturb constants randomly
+        perturbed_constants = constants × (1 + 0.5 × random_noise)
 
-### Key Parameters and Their Effects
+        # Optimize using gradient methods
+        result = gradient_optimize(expression, perturbed_constants, dataset)
 
-**Population dynamics**:
+        if result.error < best_result.error:
+            best_result = result
 
-- `populations=15`: More populations → better exploration, more compute
-- `population_size=33`: Larger populations → better diversity, slower convergence
-- `tournament_selection_n=12`: Larger tournament → stronger selection pressure
-- `tournament_selection_p=0.9`: Higher probability → more exploitation
+    return best_result
+```
 
-**Evolution parameters**:
+### Automatic Differentiation Integration
 
-- `ncycles_per_iteration=550`: More cycles → more thorough search per iteration
-- `crossover_probability=0.01`: Higher → more recombination vs mutation
-- `annealing=true`: Temperature scheduling vs constant temperature
+Constants are optimized using automatic differentiation for exact gradients:
 
-**Parsimony control**:
+- **Backend**: Uses Enzyme.jl when available for reverse-mode AD
+- **Fallback**: Forward-mode differentiation for compatibility
+- **Optimization target**: Minimize prediction error on dataset
 
-- `adaptive_parsimony_scaling=20.0`: Higher → stronger complexity penalties
-- `use_frequency_in_tournament=true`: Enable/disable adaptive parsimony
+## Algorithm Parameters and Tuning
 
-**Migration rates**:
+### Population Dynamics (all configurable)
 
-- `fraction_replaced=0.05`: Population-to-population migration intensity
-- `fraction_replaced_hof=0.005`: Hall of Fame migration intensity
-- `topn=12`: Number of best members available for migration
+- `populations`: Number of independent populations (default: 15)
+  - More populations → better exploration, higher compute cost
+- `population_size`: Members per population (default: 33)
+  - Larger populations → better diversity, slower convergence
+- `tournament_selection_n`: Tournament size (default: 12)
+  - Larger tournaments → stronger selection pressure
+- `tournament_selection_p`: Selection probability (default: 0.9)
+  - Higher probability → more exploitation vs exploration
 
-**Optimization**:
+### Evolution Control (all configurable)
 
-- `optimizer_probability=0.14`: Fraction of expressions to optimize per iteration
-- `optimizer_nrestarts=2`: Robustness vs compute trade-off for constant optimization
+- `ncycles_per_iteration`: Evolution cycles per iteration (default: 550)
+  - More cycles → more thorough search per iteration
+- `crossover_probability`: Rate of crossover vs mutation (default: 0.01)
+  - Higher values → more recombination between expressions
+- `annealing`: Enable temperature scheduling (default: true)
+  - Controls exploration-exploitation balance over time
 
-### Scaling Recommendations
+### Complexity Management (all configurable)
 
-**For larger datasets** (>10K points):
+- `adaptive_parsimony_scaling`: Strength of complexity penalties (default: 20.0)
+  - Higher values → stronger pressure against overrepresented complexities
+- `use_frequency_in_tournament`: Enable adaptive parsimony (default: true)
+  - Controls whether complexity penalties adapt to population composition
 
-- Enable `batching=true` with `batch_size=50`
-- Increase `population_size` to maintain diversity
-- Consider higher `ncycles_per_iteration` for thorough search
+### Migration Control (all configurable)
 
-**For more complex expressions**:
+- `fraction_replaced`: Population migration rate (default: 0.05)
+- `fraction_replaced_hof`: Hall of Fame migration rate (default: 0.005)
+- `topn`: Number of best members available for migration (default: 12)
 
-- Increase `maxsize` and `maxdepth` constraints
-- Reduce `adaptive_parsimony_scaling` to allow complex solutions
-- Increase `optimizer_nrestarts` for better constant fitting
+### Optimization Settings (all configurable)
 
-**For parallel scaling**:
+- `optimizer_probability`: Fraction of expressions to optimize per iteration (default: 0.14)
+- `optimizer_nrestarts`: Random restarts for constant optimization (default: 2)
+  - More restarts → more robust optimization, higher compute cost
 
-- Increase `populations` proportionally to available cores
-- Use `:multithreading` for single-node, `:multiprocessing` for clusters
-- Monitor `head_node_occupation` to ensure efficient worker utilization
+## Understanding Algorithm Behavior
 
-## Conclusion
+### Performance Characteristics
 
-SymbolicRegression.jl implements a sophisticated evolutionary algorithm that goes far beyond standard genetic programming. The key innovations—age-regularized evolution, adaptive parsimony, evolve-simplify-optimize cycles, and multi-population architecture—work synergistically to enable robust discovery of symbolic expressions from noisy scientific data.
+**Expression evaluation**: The dominant computational cost, scales with dataset size and expression complexity
 
-The algorithm's design reflects deep understanding of the symbolic regression problem, balancing exploration vs exploitation, complexity vs accuracy, and computational efficiency vs solution quality. Each component has been carefully tuned based on empirical results and theoretical insights from the broader evolutionary computation and symbolic regression literature.
+**Selection and mutation**: Relatively fast operations, scale with population size
 
-For researchers and practitioners, this detailed algorithmic understanding enables informed parameter tuning, algorithmic modifications, and principled extensions to the core methodology.
+**Constant optimization**: Moderate cost, depends on number of constants and optimization accuracy requirements
+
+**Migration**: Minimal overhead, happens infrequently
+
+### Convergence Patterns
+
+**Early phase**: High diversity, rapid improvement in best solutions, temperature-driven exploration
+
+**Middle phase**: Population specialization, refinement of promising solution families
+
+**Late phase**: Fine-tuning of constants, exploitation of best-known solutions
+
+### Success Indicators
+
+- **Hall of Fame updates**: New entries indicate algorithmic progress
+- **Population diversity**: Variety in expression complexities and structures
+- **Pareto frontier growth**: Expansion of accuracy-complexity trade-offs
+- **Convergence stability**: Consistent best solutions across runs
+
+This algorithmic framework provides a robust foundation for discovering interpretable mathematical expressions from data, balancing the competing demands of accuracy, simplicity, and computational efficiency through carefully coordinated evolutionary processes.
