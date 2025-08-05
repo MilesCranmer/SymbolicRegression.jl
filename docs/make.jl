@@ -182,14 +182,29 @@ end
 # Run preprocessing on source files before makedocs()
 preprocess_source_index()
 
+# Configure deployment based on target
+deployment_target = get(ENV, "DEPLOYMENT_TARGET", "astroautomata")
+
 deploy_config = Documenter.auto_detect_deploy_system()
-deploy_decision = Documenter.deploy_folder(
-    deploy_config;
-    repo="github.com/MilesCranmer/SymbolicRegression.jl",
-    devbranch="master",
-    devurl="dev",
-    push_preview=true,
-)
+if deployment_target == "cambridge"
+    # Cambridge deployment with different base path
+    deploy_decision = Documenter.deploy_folder(
+        deploy_config;
+        repo="github.com/ai-damtp-cam-ac-uk/symbolicregression",
+        devbranch="master",
+        devurl="dev",
+        push_preview=true,
+    )
+else
+    # Default astroautomata deployment
+    deploy_decision = Documenter.deploy_folder(
+        deploy_config;
+        repo="github.com/MilesCranmer/SymbolicRegression.jl",
+        devbranch="master",
+        devurl="dev",
+        push_preview=true,
+    )
+end
 
 DocMeta.setdocmeta!(
     SymbolicRegression,
@@ -197,6 +212,9 @@ DocMeta.setdocmeta!(
     :(using LossFunctions, DynamicExpressions);
     recursive=true,
 )
+
+base_path =
+    deployment_target == "cambridge" ? "/symbolicregression/" : "/SymbolicRegression.jl/"
 
 makedocs(;
     sitename="SymbolicRegression.jl",
@@ -208,6 +226,11 @@ makedocs(;
         repo="github.com/MilesCranmer/SymbolicRegression.jl",
         devbranch="master",
         devurl="dev",
+        deploy_url=if deployment_target == "cambridge"
+            "symbolicregression/"
+        else
+            "SymbolicRegression.jl/"
+        end,
         deploy_decision,
         build_vitepress=get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true",
         md_output_path=if get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true"
