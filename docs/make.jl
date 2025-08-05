@@ -213,9 +213,6 @@ DocMeta.setdocmeta!(
     recursive=true,
 )
 
-base_path =
-    deployment_target == "cambridge" ? "/symbolicregression/" : "/SymbolicRegression.jl/"
-
 makedocs(;
     sitename="SymbolicRegression.jl",
     authors="Miles Cranmer",
@@ -227,9 +224,9 @@ makedocs(;
         devbranch="master",
         devurl="dev",
         deploy_url=if deployment_target == "cambridge"
-            "symbolicregression/"
+            "https://ai.damtp.cam.ac.uk/symbolicregression"
         else
-            "SymbolicRegression.jl/"
+            "https://astroautomata.com/SymbolicRegression.jl"
         end,
         deploy_decision,
         build_vitepress=get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true",
