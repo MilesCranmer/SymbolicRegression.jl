@@ -275,18 +275,25 @@ end
 # Apply additional fix for production build
 fix_vitepress_production_output()
 
-DocumenterVitepress.deploydocs(;
-    repo="github.com/MilesCranmer/SymbolicRegression.jl.git",
-    push_preview=true,
-    target="build",
-    devbranch="master",
-)
+# Deploy based on environment variable - supports CI matrix strategy
+deployment_target = get(ENV, "DEPLOYMENT_TARGET", "astroautomata")
 
-ENV["DOCUMENTER_KEY"] = get(ENV, "DOCUMENTER_KEY_CAM", "")
-ENV["GITHUB_REPOSITORY"] = "ai-damtp-cam-ac-uk/symbolicregression.git"
-DocumenterVitepress.deploydocs(;
-    repo="github.com/ai-damtp-cam-ac-uk/symbolicregression.git",
-    push_preview=true,
-    target="build",
-    devbranch="master",
-)
+if deployment_target == "astroautomata"
+    DocumenterVitepress.deploydocs(;
+        repo="github.com/MilesCranmer/SymbolicRegression.jl.git",
+        push_preview=true,
+        target="build",
+        devbranch="master",
+    )
+elseif deployment_target == "cambridge"
+    ENV["DOCUMENTER_KEY"] = get(ENV, "DOCUMENTER_KEY_CAM", "")
+    ENV["GITHUB_REPOSITORY"] = "ai-damtp-cam-ac-uk/symbolicregression.git"
+    DocumenterVitepress.deploydocs(;
+        repo="github.com/ai-damtp-cam-ac-uk/symbolicregression.git",
+        push_preview=true,
+        target="build",
+        devbranch="master",
+    )
+else
+    @warn "Unknown DEPLOYMENT_TARGET: $deployment_target. Skipping deployment."
+end

@@ -28,6 +28,9 @@ jobs:
       contents: write
       pull-requests: read
       statuses: write
+    strategy:
+      matrix:
+        target: [astroautomata, cambridge]
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
@@ -51,6 +54,7 @@ jobs:
           DOCUMENTER_KEY_ASTROAUTOMATA: ${{ secrets.DOCUMENTER_KEY }}
           DOCUMENTER_KEY_CAM: ${{ secrets.DAMTP_DEPLOY_KEY }}
           DOCUMENTER_PRODUCTION: "true"
+          DEPLOYMENT_TARGET: ${{ matrix.target }}
         run: |
           julia --project=docs/ docs/make.jl
       - name: Save Julia depot cache on cancel or failure
