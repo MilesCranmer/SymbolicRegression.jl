@@ -257,7 +257,7 @@ makedocs(;
         repo="github.com/MilesCranmer/SymbolicRegression.jl",
         devbranch="master",
         devurl="dev",
-        deploy_url=nothing,  # Will be handled by post-processing
+        deploy_url=nothing,
         deploy_decision,
         build_vitepress=get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true",
         md_output_path=if get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true"
@@ -286,6 +286,22 @@ makedocs(;
 # Post-processing after makedocs() (for any remaining issues in build output)
 # This runs after VitePress build to fix any final rendering issues
 post_process_vitepress_index()
+
+# Fix bases.txt if it's empty (prevents "no bases suitable for deployment" error)
+function fix_empty_bases()
+    bases_file = joinpath(@__DIR__, "build", "bases.txt")
+    if isfile(bases_file)
+        bases = filter(!isempty, readlines(bases_file))
+        if isempty(bases)
+            @info "Fixing empty bases.txt for deployment"
+            open(bases_file, "w") do io
+                println(io, "dev")
+            end
+        end
+    end
+end
+
+fix_empty_bases()
 
 # Fix VitePress base path BEFORE building (moved to before makedocs)
 
