@@ -94,7 +94,7 @@ def create_smooth_dna_helix():
     ax.set_ylim(-1.98, 1.98)
     ax.set_aspect('equal')
     ax.axis('off')
-    ax.set_facecolor('white')
+    ax.set_facecolor('none')
 
     # Parameters for smooth DNA helix
     n_segments = 8  # Number of segments along each strand
@@ -322,7 +322,7 @@ def create_smooth_dna_helix():
 if __name__ == "__main__":
     fig = create_smooth_dna_helix()
     plt.savefig('block_dna_helix_logo.png', dpi=300, bbox_inches='tight',
-                facecolor='white', edgecolor='none')
+                facecolor='none', edgecolor='none', transparent=True)
     plt.savefig('block_dna_helix_logo.svg', bbox_inches='tight',
-                facecolor='white', edgecolor='none')
+                facecolor='none', edgecolor='none', transparent=True)
     print("Smooth DNA helix logo created successfully!")
