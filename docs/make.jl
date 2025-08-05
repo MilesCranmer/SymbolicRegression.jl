@@ -179,9 +179,6 @@ function preprocess_source_index()
     return true
 end
 
-# Run preprocessing on source files before makedocs()
-preprocess_source_index()
-
 # Fix VitePress base path for dual deployment
 function fix_vitepress_base_path()
     deployment_target = get(ENV, "DEPLOYMENT_TARGET", "astroautomata")
@@ -193,14 +190,8 @@ function fix_vitepress_base_path()
         "/SymbolicRegression.jl/dev/"
     end
 
-    # Find and fix VitePress config files
-    is_production = get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true"
-    build_subdir = is_production ? "1" : "."
-
-    config_paths = [
-        joinpath(@__DIR__, "build", ".documenter", ".vitepress", "config.mts"),
-        joinpath(@__DIR__, "build", build_subdir, ".vitepress", "config.mts"),
-    ]
+    # Find and fix VitePress SOURCE config file (before build)
+    config_paths = [joinpath(@__DIR__, "src", ".vitepress", "config.mts")]
 
     for config_path in config_paths
         if isfile(config_path)
@@ -218,6 +209,12 @@ function fix_vitepress_base_path()
         end
     end
 end
+
+# Run preprocessing on source files before makedocs()
+preprocess_source_index()
+
+# Fix VitePress base path BEFORE makedocs() - this is crucial for timing!
+fix_vitepress_base_path()
 
 # Configure deployment based on target
 deployment_target = get(ENV, "DEPLOYMENT_TARGET", "astroautomata")
@@ -290,8 +287,7 @@ makedocs(;
 # This runs after VitePress build to fix any final rendering issues
 post_process_vitepress_index()
 
-# Fix VitePress base path for dual deployment
-fix_vitepress_base_path()
+# Fix VitePress base path BEFORE building (moved to before makedocs)
 
 # Additional post-processing for VitePress production build issues
 function fix_vitepress_production_output()

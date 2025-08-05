@@ -10,7 +10,7 @@ function getBaseRepository(base: string): string {
 }
 
 const baseTemp = {
-  base: 'REPLACE_ME_DOCUMENTER_VITEPRESS',// TODO: replace this in makedocs!
+  base: '/symbolicregression/dev/',// TODO: replace this in makedocs!
 }
 
 const navTemp = {
@@ -26,7 +26,7 @@ const nav = [
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  base: 'REPLACE_ME_DOCUMENTER_VITEPRESS',// TODO: replace this in makedocs!
+  base: '/symbolicregression/dev/',// TODO: replace this in makedocs!
   title: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
   description: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
   lastUpdated: true,
