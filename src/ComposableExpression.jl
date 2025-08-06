@@ -190,15 +190,9 @@ end
 # Method for all-Number arguments (scalars)
 function (ex::AbstractComposableExpression)(x::Number, _xs::Vararg{Number,N}) where {N}
     xs = (x, _xs...)
-    # TODO: We should be using `float`, rather than `Float64`!
-
-    # Check if all numbers are finite
-    if !all(isfinite, xs)
-        return convert(Float64, NaN)
-    end
 
     # Use existing ValidVector method - each number becomes a single-element ValidVector
-    vectors = ntuple(i -> ValidVector([Float64(xs[i])], true), length(xs))
+    vectors = ntuple(i -> ValidVector([float(xs[i])], true), length(xs))
     return only(_get_value(ex(vectors...)))
 end
 
@@ -223,7 +217,7 @@ function (ex::AbstractComposableExpression)(
         else
             # Convert Number to ValidVector with repeated values
             filled_array = similar(sample_vector.x)
-            fill!(filled_array, Float64(arg))
+            fill!(filled_array, float(arg))
             ValidVector(filled_array, _is_valid(arg))
         end
     end
