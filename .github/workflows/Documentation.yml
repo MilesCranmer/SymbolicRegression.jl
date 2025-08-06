@@ -11,26 +11,57 @@ on:
       - ".github/workflows/**"
       - "examples/**"
     tags: "*"
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "src/**"
+      - "docs/**"
+      - "README.md"
+      - ".github/workflows/**"
+      - "examples/**"
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+      statuses: write
+    strategy:
+      matrix:
+        target: [astroautomata, cambridge]
     steps:
       - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@latest
+      - uses: julia-actions/setup-julia@v2
         with:
           version: "1"
-      - name: "Cache dependencies"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Load Julia packages from cache
+        id: julia-cache
         uses: julia-actions/cache@v2
-      - name: Force use of updated Julia registry
-        run: |
-          rm -rf ~/.julia/registries/General
-          julia -e 'ENV["JULIA_PKG_SERVER"]=""; using Pkg; Pkg.update()'
-      - name: "Install dependencies"
+        with:
+          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};os=${{ runner.os }};julia=1;project=${{ hashFiles('**/Project.toml') }}
+      - name: "Install Julia dependencies"
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      - name: "Install Node.js dependencies"
+        run: cd docs && npm install
       - name: "Build and deploy"
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY_ASTROAUTOMATA: ${{ secrets.DOCUMENTER_KEY }}
           DOCUMENTER_KEY_CAM: ${{ secrets.DAMTP_DEPLOY_KEY }}
+          DOCUMENTER_PRODUCTION: "true"
+          DEPLOYMENT_TARGET: ${{ matrix.target }}
         run: |
           julia --project=docs/ docs/make.jl
+      - name: Save Julia depot cache on cancel or failure
+        id: julia-cache-save
+        if: cancelled() || failure()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ steps.julia-cache.outputs.cache-paths }}
+          key: ${{ steps.julia-cache.outputs.cache-key }}

@@ -1,11 +1,14 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DocumenterVitepress = "4710194d-e776-4893-9690-8d956a29c365"
 DynamicExpressions = "a40a106e-89c9-4ca8-8020-a735e8728b6b"
 Gumbo = "708ec375-b3d6-5a57-a7ce-8257bf98657a"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 MLJBase = "a7f614a8-145f-11e9-1d2a-a57a1082229d"
+SymbolicRegression = "8254be44-1295-4e6a-a16d-46603ac705cb"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
-Documenter = "0.27"
+Documenter = "1"
+DocumenterVitepress = "=0.2.6"

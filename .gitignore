@@ -21,6 +21,11 @@ pysr_recorder.json
 docs/src/index.md
 *.code-workspace
 .vscode
-**/*.json
+docs/node_modules/
+docs/package-lock.json
+
 LocalPreferences.toml
 private
+
+# Generated examples:
+docs/src/examples/
