@@ -27,16 +27,14 @@ This is frequently asked and reflects how the algorithm naturally performs featu
 
 **Why this happens:** The algorithm finds the simplest expression that fits the data. If your target can be predicted well using only a subset of features, that's often the correct mathematical relationship.
 
-**What to do:**
-
-1. **Check if the unused variables actually matter** by computing correlations:
+**What to do:** First, check if the unused variables actually matter by computing correlations:
 
 ```julia
 using Statistics
 correlations = [cor(X[:, i], y) for i in 1:size(X, 2)]
 ```
 
-2. **If you need all variables included**, use a custom loss function:
+If you need all variables included, you can use a custom loss function:
 
 ```julia
 function feature_penalty_loss(tree, dataset, options)
@@ -275,17 +273,7 @@ best_by_cv = argmin(cv_errors)
 
 Template expressions are for structured problems:
 
-**Use templates when:**
-
-- You know the general form (e.g., `y = a*f(x) + b*g(x)`)
-- You have theoretical constraints on the structure
-- Standard search finds overly complex expressions
-
-**Use standard search when:**
-
-- You don't know the functional form
-- You want the algorithm to discover the structure
-- You have sufficient computational budget
+Template expressions work best when you know the general functional form (like `y = a*f(x) + b*g(x)`) or have theoretical constraints on structure, especially if standard search produces overly complex expressions. Use standard search when you want the algorithm to discover structure automatically and have sufficient computational budget for exploration.
 
 ## How do I resume a search or use warm starts?
 

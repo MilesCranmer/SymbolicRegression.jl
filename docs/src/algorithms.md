@@ -4,16 +4,7 @@ This document provides deep technical details about the algorithms implemented i
 
 ## Overview: Multi-Population Evolutionary Algorithm
 
-SymbolicRegression.jl implements a sophisticated multi-population evolutionary algorithm with several key components beyond standard genetic programming:
-
-1. **Age-regularized evolution** replacing fitness-based selection
-2. **Adaptive parsimony** with frequency-based complexity penalties
-3. **Evolve-simplify-optimize loop** integrating constant optimization
-4. **Multi-population architecture** with migration strategies
-5. **Simulated annealing** with temperature scheduling
-6. **Tournament selection** with adaptive penalties
-
-These components work together to balance exploration and exploitation while maintaining diversity in the search process.
+SymbolicRegression.jl implements a sophisticated multi-population evolutionary algorithm that goes beyond standard genetic programming. The system replaces traditional fitness-based selection with **age-regularized evolution**, which prevents premature convergence by always replacing the oldest population members rather than the worst-performing ones. **Adaptive parsimony** adjusts complexity penalties based on population composition, while an **evolve-simplify-optimize loop** integrates constant optimization with expression discovery. The **multi-population architecture** enables parallel exploration of different solution regions, coordinated through migration strategies and **temperature scheduling** that balances exploration and exploitation over time.
 
 ## High-Level Algorithm Structure
 
@@ -48,9 +39,7 @@ while cycles_remaining > 0:
 
 ### Key Design Principles
 
-- **Asynchronous execution**: Populations evolve independently without blocking
-- **Load balancing**: Work is distributed efficiently across available processors
-- **Diversity preservation**: Multiple populations explore different regions of solution space
+The system uses asynchronous execution so populations evolve independently without blocking, enabling efficient load balancing across available processors. Multiple populations preserve diversity by exploring different regions of the solution space simultaneously.
 
 ## Age-Regularized Evolution
 
