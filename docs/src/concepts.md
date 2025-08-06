@@ -78,7 +78,7 @@ SymbolicRegression.jl uses evolutionary algorithms inspired by biological evolut
 
 ### Tournament Selection
 
-Rather than always selecting the best expressions from an entire population, the algorithm uses tournament selection. It randomly samples a small subset (parameter: `tournament_selection_n`, default 12 expressions), ranks them by cost, and selects the best with probability `tournament_selection_p` (default: 0.982), but sometimes chooses others. This maintains diversity and prevents premature convergence to local optima.
+Rather than always selecting the best expressions from an entire population, the algorithm uses tournament selection. It randomly samples a small subset (parameter: `tournament_selection_n`, default 15 expressions), ranks them by cost, and selects the best with probability `tournament_selection_p` (default: 0.982), but sometimes chooses others. This maintains diversity and prevents premature convergence to local optima.
 
 The cost function is: `cost = (loss / normalization) + (complexity × parsimony)` where normalization is typically the baseline loss or 0.01 as fallback. The library uses the terms "loss" (prediction error), "complexity" (expression size), and "cost" (combined metric).
 
@@ -106,7 +106,7 @@ The algorithm follows an evolve-simplify-optimize loop. First, it applies mutati
 
 ### Adaptive Parsimony
 
-Rather than using a fixed complexity penalty, the algorithm adapts the penalty based on the current population. If too many expressions have the same complexity, that complexity is penalized more heavily using the parameter `adaptive_parsimony_scaling`. This encourages exploration across different complexity levels.
+Rather than using a fixed complexity penalty, the algorithm adapts the penalty based on the current population. By default, `parsimony=0.0` (no fixed penalty), and instead adaptive parsimony is used via `adaptive_parsimony_scaling` (default: 1040). When too many expressions have the same complexity, that complexity is penalized more heavily. This encourages exploration across different complexity levels while avoiding premature convergence to a single complexity.
 
 ## Constraint Systems
 

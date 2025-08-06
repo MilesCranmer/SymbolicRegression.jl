@@ -126,7 +126,7 @@ The algorithm uses 14 distinct mutation types, each serving a specific purpose:
 
 **Expression modification mutations:**
 
-- `mutate_constant`: Adjust numerical values (e.g., `2.1` → `2.3`)
+- `mutate_constant`: Adjust numerical values (e.g., `2.1` → `2.3`), with `probability_negate_constant` (default: 0.00743) chance of sign flip
 - `mutate_operator`: Change operators (e.g., `+` → `*`)
 - `mutate_feature`: Change input variables (e.g., `x₁` → `x₂`)
 
@@ -171,6 +171,25 @@ function condition_weights(expression, current_weights):
 ```
 
 This ensures all mutations are valid and appropriate for the current expression state.
+
+### Default Mutation Weights
+
+The algorithm uses the following default relative weights for mutation operations (normalized to sum to 1.0):
+
+- `mutate_constant`: 0.0353
+- `mutate_operator`: 3.63 (highest weight - most common mutation)
+- `mutate_feature`: 0.1
+- `swap_operands`: 0.00608
+- `rotate_tree`: 1.42
+- `add_node`: 0.0771
+- `insert_node`: 2.44 (second highest weight)
+- `delete_node`: 0.369
+- `simplify`: 0.00148
+- `randomize`: 0.00695
+- `do_nothing`: 0.431
+- `optimize`: 0.0 (disabled by default - use `optimizer_probability` instead)
+
+These weights favor structural mutations (`mutate_operator`, `insert_node`) over fine-tuning mutations, encouraging exploration of different expression forms.
 
 ## Simulated Annealing Integration
 
@@ -364,8 +383,8 @@ function optimize_constants(expression, dataset, num_restarts):
     best_result = current_expression
 
     for restart = 1 to num_restarts:
-        # Perturb constants randomly
-        perturbed_constants = constants × (1 + 0.5 × random_noise)
+        # Perturb constants randomly (perturbation_factor default: 0.129)
+        perturbed_constants = constants × (1 + perturbation_factor × random_noise)
 
         # Optimize using gradient methods
         result = gradient_optimize(expression, perturbed_constants, dataset)
