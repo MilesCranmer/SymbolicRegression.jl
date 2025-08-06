@@ -19,7 +19,7 @@ These components work together to balance exploration and exploitation while mai
 
 ### Multi-Population Coordination
 
-The algorithm runs multiple populations (configurable, default: 15) that evolve independently. Each population contains a configurable number of members (default: 33) that represent candidate mathematical expressions.
+The algorithm runs multiple populations (configurable, default: 31) that evolve independently. Each population contains a configurable number of members (default: 27) that represent candidate mathematical expressions.
 
 **Population initialization pseudocode:**
 
@@ -84,7 +84,7 @@ Each expression tracks its "birth time" when created, enabling precise age compa
 
 ### Tournament Mechanics
 
-Selection uses tournaments rather than pure fitness ranking. A tournament samples a subset of the population (configurable, default: 12 members) and selects using a geometric distribution with parameter p (configurable, default: 0.86).
+Selection uses tournaments rather than pure fitness ranking. A tournament samples a subset of the population (configurable, default: 15 members) and selects using a geometric distribution with parameter p (configurable, default: 0.982).
 
 **Tournament selection pseudocode:**
 
@@ -114,7 +114,7 @@ for each member in tournament:
     adjusted_cost = base_cost × exp(parsimony_scaling × frequency)
 ```
 
-**Mathematical effect**: If 100% of population has the same complexity, the penalty factor is approximately `exp(20×1) ≈ 5×10⁸`, providing strong pressure against homogenization.
+**Mathematical effect**: If 100% of population has the same complexity, the penalty factor is approximately `exp(1040×1) ≈ 10⁴⁵²`, providing extremely strong pressure against homogenization.
 
 This prevents the population from converging to a single complexity level and encourages exploration across the complexity spectrum.
 
@@ -176,7 +176,7 @@ This ensures all mutations are valid and appropriate for the current expression 
 
 ### Temperature Scheduling
 
-The algorithm uses temperature to control the exploration-exploitation balance. Temperature decreases linearly over each evolution cycle (configurable duration, default: 550 cycles).
+The algorithm uses temperature to control the exploration-exploitation balance. Temperature decreases linearly over each evolution cycle (configurable duration, default: 380 cycles).
 
 **Temperature schedule:**
 
@@ -194,7 +194,7 @@ Mutations are accepted probabilistically based on their impact on cost:
 
 Where:
 
-- `α` = parsimony scaling factor (configurable, default: 0.1)
+- `α` = parsimony scaling factor (configurable, default: 3.17)
 - `T` = current temperature ∈ [0,1]
 - `loss_new`, `loss_old` = prediction errors before/after mutation
 
@@ -252,17 +252,17 @@ Populations periodically share their best discoveries through migration:
 
 **Migration types:**
 
-1. **Population-to-population migration** (configurable rate, default: 5%):
+1. **Population-to-population migration** (configurable rate, default: 0.036%):
    - Source: Best members from other populations (configurable count, default: 12)
    - Target: Random positions in current population
    - Effect: Spreads good discoveries across populations
 
-2. **Hall of Fame migration** (configurable rate, default: 0.5%):
+2. **Hall of Fame migration** (configurable rate, default: 6.14%):
    - Source: Pareto frontier (best at each complexity level)
    - Target: Random positions in current population
    - Effect: Injects globally best solutions
 
-3. **Seed expression migration** (if provided, rate: 10%):
+3. **Seed expression migration** (if provided, rate: 0.1%):
    - Source: User-provided initial guesses
    - Target: Random positions in current population
    - Effect: Incorporates domain knowledge
@@ -388,35 +388,35 @@ Constants are optimized using automatic differentiation for exact gradients:
 
 ### Population Dynamics (all configurable)
 
-- `populations`: Number of independent populations (default: 15)
+- `populations`: Number of independent populations (default: 31)
   - More populations → better exploration, higher compute cost
-- `population_size`: Members per population (default: 33)
+- `population_size`: Members per population (default: 27)
   - Larger populations → better diversity, slower convergence
-- `tournament_selection_n`: Tournament size (default: 12)
+- `tournament_selection_n`: Tournament size (default: 15)
   - Larger tournaments → stronger selection pressure
-- `tournament_selection_p`: Selection probability (default: 0.9)
+- `tournament_selection_p`: Selection probability (default: 0.982)
   - Higher probability → more exploitation vs exploration
 
 ### Evolution Control (all configurable)
 
-- `ncycles_per_iteration`: Evolution cycles per iteration (default: 550)
+- `ncycles_per_iteration`: Evolution cycles per iteration (default: 380)
   - More cycles → more thorough search per iteration
-- `crossover_probability`: Rate of crossover vs mutation (default: 0.01)
+- `crossover_probability`: Rate of crossover vs mutation (default: 0.0259)
   - Higher values → more recombination between expressions
 - `annealing`: Enable temperature scheduling (default: true)
   - Controls exploration-exploitation balance over time
 
 ### Complexity Management (all configurable)
 
-- `adaptive_parsimony_scaling`: Strength of complexity penalties (default: 20.0)
+- `adaptive_parsimony_scaling`: Strength of complexity penalties (default: 1040)
   - Higher values → stronger pressure against overrepresented complexities
 - `use_frequency_in_tournament`: Enable adaptive parsimony (default: true)
   - Controls whether complexity penalties adapt to population composition
 
 ### Migration Control (all configurable)
 
-- `fraction_replaced`: Population migration rate (default: 0.05)
-- `fraction_replaced_hof`: Hall of Fame migration rate (default: 0.005)
+- `fraction_replaced`: Population migration rate (default: 0.00036)
+- `fraction_replaced_hof`: Hall of Fame migration rate (default: 0.0614)
 - `topn`: Number of best members available for migration (default: 12)
 
 ### Optimization Settings (all configurable)
@@ -436,20 +436,3 @@ Constants are optimized using automatic differentiation for exact gradients:
 **Constant optimization**: Moderate cost, depends on number of constants and optimization accuracy requirements
 
 **Migration**: Minimal overhead, happens infrequently
-
-### Convergence Patterns
-
-**Early phase**: High diversity, rapid improvement in best solutions, temperature-driven exploration
-
-**Middle phase**: Population specialization, refinement of promising solution families
-
-**Late phase**: Fine-tuning of constants, exploitation of best-known solutions
-
-### Success Indicators
-
-- **Hall of Fame updates**: New entries indicate algorithmic progress
-- **Population diversity**: Variety in expression complexities and structures
-- **Pareto frontier growth**: Expansion of accuracy-complexity trade-offs
-- **Convergence stability**: Consistent best solutions across runs
-
-This algorithmic framework provides a robust foundation for discovering interpretable mathematical expressions from data, balancing the competing demands of accuracy, simplicity, and computational efficiency through carefully coordinated evolutionary processes.
