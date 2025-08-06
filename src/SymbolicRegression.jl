@@ -338,6 +338,7 @@ using .SearchUtilsModule:
     update_hall_of_fame!,
     parse_guesses,
     logging_callback!
+
 using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
 using .TemplateExpressionModule:
     TemplateExpression, TemplateStructure, TemplateExpressionSpec, ParamVector, has_params

@@ -14,7 +14,9 @@ using SymbolicRegression:
     sample_mutation,
     MutationResult,
     AbstractRuntimeOptions,
+    RuntimeOptions,
     AbstractSearchState,
+    SearchState,
     @extend_operators
 using DynamicExpressions
 
