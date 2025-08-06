@@ -88,18 +88,15 @@ Selection uses tournaments rather than pure fitness ranking. A tournament sample
 
 **Tournament selection pseudocode:**
 
-```
-function select_parent(population):
-    tournament_sample = randomly_sample(population, tournament_size)
+**Tournament selection process:**
 
-    # Use geometric distribution with parameter p
-    # 1st place: probability p
-    # 2nd place: probability p(1-p)
-    # 3rd place: probability p(1-p)²
-    rank_probabilities = calculate_geometric_weights(selection_probability)
-    selected_rank = sample_from_weights(rank_probabilities)
-    return tournament_sample[selected_rank]
-```
+1. **Sample** tournament_selection_n members randomly from population
+2. **Adjust costs** for each member: `adjusted_cost = base_cost × exp(adaptive_parsimony_scaling × frequency)`
+3. **Rank** members by adjusted cost (lowest = rank 1, next lowest = rank 2, etc.)
+4. **Select rank** using geometric weights: rank k gets weight `p × (1-p)^(k-1)`
+5. **Return** the member at the selected rank
+
+The geometric weighting means rank 1 has the highest selection weight, rank 2 has weight `p(1-p)`, rank 3 has weight `p(1-p)²`, and so on. Higher values of p increase selection pressure toward the best member.
 
 ### Adaptive Parsimony Integration
 
@@ -135,14 +132,14 @@ The algorithm uses 14 distinct mutation types, each serving a specific purpose:
 
 **Structural mutations:**
 
-- `add_node`: Insert new operation (e.g., `x` → `sin(x)`)
+- `add_node`: Add new operation by either appending to a leaf or prepending to the root (e.g., `x` → `sin(x)` or `x` → `x+c`)
 - `insert_node`: Add operation with random branch (e.g., `x+y` → `x+y*z`)
 - `delete_node`: Remove operation (e.g., `sin(x+y)` → `x+y`)
 - `swap_operands`: Reorder arguments (e.g., `x-y` → `y-x`)
 
 **Tree-level mutations:**
 
-- `simplify`: Apply algebraic rules using SymbolicUtils.jl (e.g., `sin(3.0)` → `0.141...`)
+- `simplify`: Apply algebraic rules using DynamicExpressions.jl's built-in simplification methods (e.g., `sin(3.0)` → `0.141...`)
 - `optimize`: Tune constants using gradient methods
 - `randomize`: Replace with completely random expression
 - `rotate_tree`: Restructure expression tree
