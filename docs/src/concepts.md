@@ -9,7 +9,7 @@ Symbolic regression is a machine learning approach that searches for mathematica
 The key insight is that we're searching through the space of all possible mathematical expressions to find ones that balance two competing goals:
 
 - **Accuracy**: How well does the expression fit your data?
-- **Simplicity**: How interpretable and generalizable is the expression?
+- **Simplicity**: How short is the expression tree?
 
 This trade-off is fundamental to symbolic regression and drives all the algorithmic decisions described below.
 
@@ -39,41 +39,43 @@ For example, the expression `sin(x * 2.1) + y` becomes:
 
 ### Expression Complexity
 
-The concept of complexity is somewhat arbitrary, but the library defines it by default as counting the number of nodes in the tree. A constant like `2.1` has complexity 1, while `sin(x * 2.1) + y` has complexity 6 (one node each for: `sin`, `*`, `x`, `2.1`, `+`, `y`). This simple measure captures intuitive notions of expression complexity, though you can define custom complexity metrics for your domain.
+The concept of complexity is somewhat arbitrary, but the library defines it by default as counting the number of nodes in the tree. A constant like `2.1` has complexity 1, while `sin(x * 2.1) + y` has complexity 6 (one node each for: `sin`, `*`, `x`, `2.1`, `+`, `y`). This default definition can be overridden by providing a custom complexity function to measure expression size according to domain-specific criteria.
 
 ## The Pareto Frontier: Balancing Accuracy vs Simplicity
 
-These objectives often conflict - more complex expressions can fit data better but are harder to interpret and may overfit.
+These objectives often conflict - more complex expressions can achieve lower loss but have higher complexity.
 
 ### What is a Pareto Frontier?
 
-The Pareto frontier (or Pareto front) is the set of expressions we found where you cannot improve accuracy without increasing complexity, or reduce complexity without sacrificing accuracy. These are the "non-dominated" solutions among those discovered by the search.
+The Pareto frontier (or Pareto front) is the set of expressions we found where you cannot improve loss without increasing complexity, or reduce complexity without increasing loss. These are the "non-dominated" solutions among those discovered by the search.
 
 For example, if you have:
 
-- Expression A: complexity 3, error 0.1
-- Expression B: complexity 5, error 0.05
-- Expression C: complexity 4, error 0.08
+- Expression A: complexity 3, loss 0.1
+- Expression B: complexity 5, loss 0.05
+- Expression C: complexity 4, loss 0.08
 
-Then A and B are on the Pareto frontier (A is simpler, B is more accurate), but C is dominated by B (B is both more accurate and simpler than C).
+Then A and B are on the Pareto frontier (A is simpler, B has lower loss), but C is dominated by B (B has both lower loss and lower complexity than C).
 
 ### Hall of Fame
 
-The "Hall of Fame" maintains the best expression found at each complexity level. This creates a Pareto frontier where you can choose your preferred trade-off between simplicity and accuracy. The Hall of Fame persists the best discoveries throughout the search, ensuring good solutions aren't lost.
+The **Hall of Fame** tracks the best expression found at each complexity level throughout the entire search. The Hall of Fame preserves discoveries - even if a good expression is later replaced in the population, it remains in the Hall of Fame.
 
-The Pareto frontier gives you choices rather than a single answer. You might prefer a simple expression that's "good enough" over a complex one that's slightly more accurate, or vice versa.
+The Pareto frontier is computed from the Hall of Fame by selecting expressions that are non-dominated.
+
+The Pareto frontier gives you choices rather than a single answer. You might prefer a simple expression with acceptable loss over a complex one with slightly lower loss, or vice versa.
 
 ## Population-Based Evolution
 
 ### Evolutionary Algorithm Basics
 
-SymbolicRegression.jl uses evolutionary algorithms inspired by biological evolution. The algorithm maintains a **population** - a collection of candidate expressions. Through **selection**, the algorithm chooses expressions to modify. **Variation** creates new expressions through mutation and crossover. **Replacement** determines which expressions remain in the population for the next generation.
+SymbolicRegression.jl uses evolutionary algorithms inspired by biological evolution. The algorithm maintains a **population** - a collection of candidate expressions. Through **selection**, the algorithm chooses expressions to modify. **Mutation and crossover** create new expressions. **Replacement** determines which expressions remain in the population for the next generation.
 
 ### Tournament Selection
 
 Rather than always selecting the best expressions, the algorithm uses tournament selection. It randomly samples a small subset (parameter: `tournament_selection_n`, default 12 expressions), ranks them by cost, and selects the best with probability `tournament_selection_p` (default: 0.86), but sometimes chooses others. This maintains diversity and prevents premature convergence to local optima.
 
-The cost function is: `cost = (loss / normalization) + (complexity × parsimony)` where normalization is typically the baseline loss or 0.01 as fallback. In some papers this is called "fitness," but the library calls it "cost."
+The cost function is: `cost = (loss / normalization) + (complexity × parsimony)` where normalization is typically the baseline loss or 0.01 as fallback. The library uses the terms "loss" (prediction error), "complexity" (expression size), and "cost" (combined metric).
 
 ### Multiple Populations (Island Model)
 
@@ -134,5 +136,3 @@ The space of mathematical expressions presents several challenges: it's infinite
 ### How the Algorithm Addresses These Challenges
 
 The algorithm uses multi-population search to explore multiple regions simultaneously, temperature control to balance exploration and exploitation, Pareto optimization to avoid getting stuck on accuracy alone, constant optimization to handle the continuous aspects efficiently, and simplification to reduce redundancy.
-
-This conceptual foundation covers the key ideas underlying SymbolicRegression.jl. The algorithm provides a principled way to search the vast space of mathematical expressions, balancing the competing demands of accuracy and interpretability that are central to scientific modeling.
