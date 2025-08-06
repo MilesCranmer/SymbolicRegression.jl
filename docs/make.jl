@@ -268,18 +268,25 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Examples" => [
+        "Getting Started" => [
             "Short Examples" => "examples.md",
+            "Core Concepts" => "concepts.md",
+            "FAQ" => "troubleshooting.md",
+        ],
+        "Examples" => [
             "Template Expressions" => "examples/template_expression.md",
             "Parameterized Expressions" => "examples/parameterized_function.md",
             "Parameterized Template Expressions" => "examples/template_parametric_expression.md",
             "Custom Types" => "examples/custom_types.md",
             "Using SymbolicRegression.jl on a Cluster" => "slurm.md",
         ],
-        "API" => "api.md",
-        "Losses" => "losses.md",
-        "Types" => "types.md",
-        "Customization" => "customization.md",
+        "Reference" => [
+            "API" => "api.md",
+            "Losses" => "losses.md",
+            "Types" => "types.md",
+            "Customization" => "customization.md",
+        ],
+        "Advanced" => ["Algorithm Details" => "algorithms.md"],
     ],
 )
 
