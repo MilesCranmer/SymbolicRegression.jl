@@ -1,29 +1,32 @@
 # Foundational Concepts
 
-This page introduces the fundamental concepts underlying SymbolicRegression.jl.
+This page introduces various fundamental concepts and terminology used throughout SymbolicRegression.jl, both internally and in the API.
 
 ## What is Symbolic Regression?
 
-Symbolic regression is a machine learning approach that searches for mathematical expressions (rather than just fitting parameters) to model your data. Unlike neural networks that create black-box models, symbolic regression discovers interpretable equations like `y = 2.1 * sin(x^2) + 0.3 * x`.
+Symbolic regression is a machine learning task where the goal is to find simple mathematical expressions that optimize some objective. This differs from much of modern deep learning workflows that tend to focus on fitting parameters in an overparametrized flexible black box model.
 
-The key insight is that we're searching through the space of all possible mathematical expressions to find ones that balance two competing goals:
+`y = 2.1 * sin(x^2) + 0.3 * x`
 
-- **Accuracy**: How well does the expression fit your data?
-- **Simplicity**: How short is the expression tree?
+Another difference is that symbolic regression has two objectives. We want to search through the space of all possible mathematical expressions to find ones that balance _two_ competing goals:
 
-This trade-off is fundamental to symbolic regression and drives all the algorithmic decisions described below.
+- **Accuracy**: How well does the expression fit your data or otherwise optimize your objective?
+- **Simplicity**: How small is the expression tree?
+
+This trade-off is fundamental to symbolic regression and drives many of the algorithmic decisions described below.
 
 ## Expression Trees: The Building Blocks
 
 ### Tree Structure
 
-Mathematical expressions are represented as tree data structures where:
+Mathematical expressions are represented in SymbolicRegression.jl as tree data structures where:
 
 - **Leaf nodes** contain variables (`x`, `y`) or constants (`2.1`, `-0.5`)
 - **Operator nodes** contain operators (`+`, `*`, `sin`, `exp`) and have a **degree** (number of arguments)
   - Unary operators like `sin`, `exp` have degree 1
   - Binary operators like `+`, `*` have degree 2
-- **Tree evaluation** happens bottom-up: evaluate leaves first, then combine using operators
+
+Tree evaluation, and many other operations, happen bottom-up (depth-first traversal): evaluate leaves first, then combine using operators.
 
 For example, the expression `sin(x * 2.1) + y` becomes:
 
@@ -39,11 +42,11 @@ For example, the expression `sin(x * 2.1) + y` becomes:
 
 ### Expression Complexity
 
-The concept of complexity is somewhat arbitrary, but the library defines it by default as counting the number of nodes in the tree. A constant like `2.1` has complexity 1, while `sin(x * 2.1) + y` has complexity 6 (one node each for: `sin`, `*`, `x`, `2.1`, `+`, `y`). This default definition can be overridden by providing a custom complexity function to measure expression size according to domain-specific criteria.
+The concept of complexity is somewhat arbitrary, but the library defines the default as counting the number of nodes in the tree. A constant like `2.1` has complexity 1, while `sin(x * 2.1) + y` has complexity 6 (one node each for: `sin`, `*`, `x`, `2.1`, `+`, `y`). This default definition can be overridden with the various `complexity_*` parameters according to domain-specific criteria or personal preferences.
 
 ## The Pareto Frontier: Balancing Accuracy vs Simplicity
 
-These objectives often conflict - more complex expressions can achieve lower loss but have higher complexity.
+The two objectives in symbolic regression conflict - more complexity can almost always achieve lower or equal loss (think of it like a Taylor polynomial expansion - higher complexity is like higher order).
 
 ### What is a Pareto Frontier?
 
@@ -52,10 +55,10 @@ The Pareto frontier (or Pareto front) is the set of expressions we found where y
 For example, if you have:
 
 - Expression A: complexity 3, loss 0.1
-- Expression B: complexity 5, loss 0.05
-- Expression C: complexity 4, loss 0.08
+- Expression B: complexity 4, loss 0.05
+- Expression C: complexity 6, loss 0.08
 
-Then A and B are on the Pareto frontier (A is simpler, B has lower loss), but C is dominated by B (B has both lower loss and lower complexity than C).
+Then A and B are on the Pareto frontier (A is simpler, B has lower loss), but C is _dominated_ by B (B has both lower loss and lower complexity than C), and so is not included.
 
 ### Hall of Fame
 
@@ -65,15 +68,17 @@ The Pareto frontier is computed from the Hall of Fame by selecting expressions t
 
 The Pareto frontier gives you choices rather than a single answer. You might prefer a simple expression with acceptable loss over a complex one with slightly lower loss, or vice versa.
 
+By default, SymbolicRegression.jl uses a heuristic to pick one expression from this Pareto frontier, but this is purely for convenience and compatibility with tools that expect a single prediction. In practice, you should think deeply about this and select an expression based on personal preference or some heuristic of your choosing.
+
 ## Population-Based Evolution
 
 ### Evolutionary Algorithm Basics
 
-SymbolicRegression.jl uses evolutionary algorithms inspired by biological evolution. The algorithm maintains a **population** - a collection of candidate expressions. Through **selection**, the algorithm chooses expressions to modify. **Mutation and crossover** create new expressions. **Replacement** determines which expressions remain in the population for the next generation.
+SymbolicRegression.jl uses evolutionary algorithms inspired by biological evolution. The algorithm maintains a **population** - a collection of candidate expressions. Through **selection**, the algorithm chooses expressions to modify. **Mutation and crossover** create new expressions from the selection in creating the next **generation**. **Replacement** determines which expressions remain in the population for the next generation, and which to replace with the new generation.
 
 ### Tournament Selection
 
-Rather than always selecting the best expressions, the algorithm uses tournament selection. It randomly samples a small subset (parameter: `tournament_selection_n`, default 12 expressions), ranks them by cost, and selects the best with probability `tournament_selection_p` (default: 0.86), but sometimes chooses others. This maintains diversity and prevents premature convergence to local optima.
+Rather than always selecting the best expressions from an entire population, the algorithm uses tournament selection. It randomly samples a small subset (parameter: `tournament_selection_n`, default 12 expressions), ranks them by cost, and selects the best with probability `tournament_selection_p` (default: 0.982), but sometimes chooses others. This maintains diversity and prevents premature convergence to local optima.
 
 The cost function is: `cost = (loss / normalization) + (complexity × parsimony)` where normalization is typically the baseline loss or 0.01 as fallback. The library uses the terms "loss" (prediction error), "complexity" (expression size), and "cost" (combined metric).
 
@@ -83,7 +88,7 @@ The search runs multiple independent populations in parallel. This enables massi
 
 ### Age-Based Replacement
 
-Instead of always replacing the worst expression, the algorithm always replaces the oldest. This prevents the population from prematurely converging and ensures newer ideas get a chance to develop.
+Instead of always replacing the worst expression, the algorithm always replaces the oldest. This technique is called "age-regularized evolution" and is supposed to prevent the population from prematurely converging (as can happen in traditional tournament selection where you simply replace the worst expression) and ensures newer ideas get a chance to develop.
 
 ## Search Dynamics and Temperature
 
