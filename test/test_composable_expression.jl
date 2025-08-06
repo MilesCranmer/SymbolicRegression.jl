@@ -129,3 +129,17 @@ end
     x2_val = ValidVector([1.0, 2.0], false)
     @test ex(x1_val, x2_val).valid == false
 end
+
+@testitem "Test Number inputs" tags = [:part2] begin
+    using SymbolicRegression: ComposableExpression, Node, ValidVector
+    using DynamicExpressions: OperatorEnum
+
+    operators = OperatorEnum(; binary_operators=(+, *))
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators)
+    x2 = ComposableExpression(Node{Float64}(; feature=2); operators)
+    ex = x1 + x2
+
+    @test ex(2.0, 3.0) ≈ 5.0
+    @test isnan(ex(NaN, 3.0))
+    @test ex(ValidVector([1.0], true), 2.0).x ≈ [3.0]
+end
