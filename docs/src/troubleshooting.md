@@ -9,8 +9,8 @@ This is the most common performance question. Check the head worker occupation p
 ```julia
 # If head worker occupation > 50%, increase work per iteration:
 options = Options(
-    ncycles_per_iteration=1000,    # More cycles per iteration
-    populations=20                 # More populations for more cores
+    ncycles_per_iteration=1000,    # More cycles per iteration (default: 380)
+    populations=31                 # More populations for more cores (default: 31)
 )
 
 # For distributed processing (parallelism goes in equation_search):
@@ -178,10 +178,10 @@ options = Options(binary_operators=[+, -, *, /])
 
 ```julia
 options = Options(
-    populations=30,              # More populations for exploration
-    population_size=50,          # Larger populations
-    ncycles_per_iteration=500,   # More evolution per iteration
-    adaptive_parsimony_scaling=1000.0  # Reduce complexity pressure
+    populations=50,              # More populations for exploration (default: 31)
+    population_size=50,          # Larger populations (default: 27)
+    ncycles_per_iteration=500,   # More evolution per iteration (default: 380)
+    adaptive_parsimony_scaling=500.0   # Reduce complexity pressure (default: 1040)
 )
 ```
 
@@ -291,9 +291,9 @@ options_continue = Options(
     parsimony=0.01,  # Different parsimony for fine-tuning
     niterations=100
 )
-# Note: Check documentation for correct warm start syntax
+# Resume with warm start
 final_results = equation_search(X, y;
-    options=options_continue
-    # saved_state=loaded_hof  # Verify correct parameter name
+    options=options_continue,
+    saved_state=loaded_hof  # Use saved Hall of Fame as starting point
 )
 ```

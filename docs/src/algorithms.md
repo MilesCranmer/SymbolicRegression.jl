@@ -14,27 +14,33 @@ The algorithm runs multiple populations (configurable, default: 31) that evolve 
 
 **Population initialization pseudocode:**
 
-```
-for each output in outputs:
-    for each population in populations:
-        population = create_new_population(
-            size = population_size,
-            initial_complexity = 3,
-            features = dataset_features
+```julia
+for output ∈ outputs
+    for population ∈ populations
+        population ← create_new_population(
+            size=population_size,
+            initial_complexity=3,
+            features=dataset_features
         )
+    end
+end
 ```
 
 **Main evolution loop:**
 
-```
-while cycles_remaining > 0:
-    select next population in round-robin order
+```julia
+while cycles_remaining > 0
+    next_population ← select_round_robin(populations)
 
-    if population_ready:
-        process completed population
-        update hall of fame with best expressions
-        perform migration between populations
-        dispatch next evolution cycle
+    if is_population_ready(next_population)
+        process_completed_population(next_population)
+        update_hall_of_fame(best_expressions)
+        perform_migration(populations)
+        dispatch_evolution_cycle(next_population)
+    end
+
+    cycles_remaining ← cycles_remaining - 1
+end
 ```
 
 ### Key Design Principles
@@ -49,16 +55,16 @@ Traditional genetic programming replaces the worst-performing members. This algo
 
 **Age-based replacement pseudocode:**
 
-```
-for mutation:
-    oldest_member = find_oldest_in_population(population)
-    population.replace(oldest_member, new_mutated_expression)
+```julia
+// For mutation
+oldest_member ← find_oldest_in_population(population)
+replace_member(population, oldest_member, new_mutated_expression)
 
-for crossover:
-    oldest_member_1 = find_oldest_in_population(population)
-    oldest_member_2 = find_second_oldest_in_population(population)
-    population.replace(oldest_member_1, child_1)
-    population.replace(oldest_member_2, child_2)
+// For crossover
+oldest_member_1 ← find_oldest_in_population(population)
+oldest_member_2 ← find_second_oldest_in_population(population)
+replace_member(population, oldest_member_1, child_1)
+replace_member(population, oldest_member_2, child_2)
 ```
 
 ### Why Age-Based Replacement Works
@@ -93,14 +99,15 @@ The key innovation is **frequency-based complexity penalties** that adapt based 
 
 **Adaptive cost calculation:**
 
-```
-for each member in tournament:
-    base_cost = member.prediction_error
-    complexity = count_nodes(member.expression)
-    frequency = normalized_frequency[complexity] in population
+```julia
+for member ∈ tournament
+    base_cost ← member.prediction_error
+    complexity ← count_nodes(member.expression)
+    frequency ← normalized_frequency[complexity]  // in population
 
-    # Apply exponential penalty for overrepresented complexities
-    adjusted_cost = base_cost × exp(parsimony_scaling × frequency)
+    // Apply exponential penalty for overrepresented complexities
+    adjusted_cost ← base_cost × exp(parsimony_scaling × frequency)
+end
 ```
 
 **Mathematical effect**: If 100% of population has the same complexity, the penalty factor is approximately `exp(1040×1) ≈ 10⁴⁵²`, providing extremely strong pressure against homogenization.
@@ -145,18 +152,24 @@ Mutation weights are dynamically adjusted based on expression properties:
 
 **Weight conditioning pseudocode:**
 
-```
-function condition_weights(expression, current_weights):
-    if expression.is_leaf_node:
-        disable weights: mutate_operator, swap_operands, delete_node
+```julia
+function condition_weights(expression, current_weights)
+    adjusted_weights ← copy(current_weights)
 
-    if expression.complexity >= max_allowed_size:
-        disable weights: add_node, insert_node
+    if is_leaf_node(expression)
+        disable_weights(adjusted_weights, [mutate_operator, swap_operands, delete_node])
+    end
 
-    if dataset.num_features <= 1:
-        disable weights: mutate_feature
+    if complexity(expression) >= max_allowed_size
+        disable_weights(adjusted_weights, [add_node, insert_node])
+    end
+
+    if num_features(dataset) <= 1
+        disable_weights(adjusted_weights, [mutate_feature])
+    end
 
     return adjusted_weights
+end
 ```
 
 This ensures all mutations are valid and appropriate for the current expression state.
@@ -188,10 +201,10 @@ The algorithm uses temperature to control the exploration-exploitation balance. 
 
 **Temperature schedule:**
 
-```
-max_temperature = 1.0
-min_temperature = 0.0 (configurable: can disable annealing)
-temperatures = linear_schedule(max_temp, min_temp, num_cycles)
+```julia
+max_temperature ← 1.0
+min_temperature ← 0.0  // configurable: can disable annealing
+temperatures ← linear_schedule(max_temp, min_temp, num_cycles)
 ```
 
 ### Mutation Acceptance
@@ -219,29 +232,34 @@ Each population evolution cycle consists of three distinct stages:
 
 **Stage 1: Evolution with annealing**
 
-```
-for temperature in temperature_schedule:
-    apply mutations and crossovers to population
-    accept/reject changes based on temperature and cost change
-    track best expressions discovered
+```julia
+for temperature ∈ temperature_schedule
+    apply_mutations_and_crossovers(population)
+    accept_reject_changes(population, temperature)
+    track_best_expressions(population)
+end
 ```
 
 **Stage 2: Simplification**
 
-```
-for each expression in population:
-    apply algebraic simplification rules
-    combine redundant operators
-    canonicalize expression structure
+```julia
+for expression ∈ population
+    simplified_expression ← apply_simplification_rules(expression)
+    combined_expression ← combine_redundant_operators(simplified_expression)
+    canonical_expression ← canonicalize_structure(combined_expression)
+    update_member(population, expression, canonical_expression)
+end
 ```
 
 **Stage 3: Constant optimization**
 
-```
-for selected expressions (probabilistic):
-    optimize numerical constants using gradient methods
-    perform multiple random restarts for robustness
-    use automatic differentiation for gradients
+```julia
+for member ∈ population
+    if random() < optimizer_probability
+        optimized_expression ← optimize_constants_with_restarts(member.expression)
+        update_member(population, member, optimized_expression)
+    end
+end
 ```
 
 ### Rationale for Separation
@@ -277,15 +295,17 @@ Populations periodically share their best discoveries through migration:
 
 **Migration pseudocode:**
 
-```
-function migrate(source_population, target_population, migration_rate):
-    num_migrants = poisson_sample(population_size × migration_rate)
-    migrant_positions = random_sample(1:population_size, num_migrants)
-    migrants = select_best(source_population, num_migrants)
+```julia
+function migrate(source_population, target_population, migration_rate)
+    num_migrants ← poisson_sample(population_size × migration_rate)
+    migrant_positions ← random_sample(1:population_size, num_migrants)
+    migrants ← select_best(source_population, num_migrants)
 
-    for position, migrant in zip(migrant_positions, migrants):
-        target_population[position] = copy(migrant)
+    for (position, migrant) ∈ zip(migrant_positions, migrants)
+        target_population[position] ← copy(migrant)
         reset_birth_time(target_population[position])
+    end
+end
 ```
 
 Migration uses Poisson sampling for natural stochasticity in migration intensity.
@@ -298,18 +318,22 @@ The Hall of Fame maintains the best expression found at each complexity level, f
 
 **Domination rules:**
 
-```
-function is_dominating(candidate, hall_of_fame):
-    candidate_complexity = count_nodes(candidate.expression)
-    candidate_error = candidate.prediction_error
+```julia
+function is_dominating(candidate, hall_of_fame)
+    candidate_complexity ← count_nodes(candidate.expression)
+    candidate_error ← candidate.prediction_error
 
-    for complexity = 1 to candidate_complexity-1:
-        if hall_of_fame.exists[complexity]:
-            simpler_member = hall_of_fame[complexity]
-            if candidate_error >= simpler_member.error:
-                return false  # Candidate doesn't improve on simpler expression
+    for complexity = 1:(candidate_complexity-1)
+        if exists(hall_of_fame[complexity])
+            simpler_member ← hall_of_fame[complexity]
+            if candidate_error >= simpler_member.error
+                return false  // Candidate doesn't improve on simpler expression
+            end
+        end
+    end
 
-    return true  # Candidate dominates all simpler expressions
+    return true  // Candidate dominates all simpler expressions
+end
 ```
 
 ### Pareto Frontier Properties
@@ -335,16 +359,17 @@ The algorithm supports three parallelization strategies (configurable):
 
 **Asynchronous dispatch pseudocode:**
 
-```
-function dispatch_evolution(population, dataset):
+```julia
+function dispatch_evolution(population, dataset)
     # Send population to available worker
-    worker_task = spawn_on_worker(evolve_population, population, dataset)
+    worker_task ← spawn_on_worker(evolve_population, population, dataset)
 
     # Set up asynchronous communication
-    result_channel = create_async_channel()
+    result_channel ← create_async_channel()
     setup_result_handler(worker_task, result_channel)
 
     return worker_task, result_channel
+end
 ```
 
 **Benefits:**
@@ -367,21 +392,24 @@ Constants in expressions are optimized using gradient-based methods with multipl
 
 **Multi-restart procedure:**
 
-```
-function optimize_constants(expression, dataset, num_restarts):
-    best_result = current_expression
+```julia
+function optimize_constants(expression, dataset, num_restarts)
+    best_result ← current_expression
 
-    for restart = 1 to num_restarts:
+    for restart = 1:num_restarts
         # Perturb constants randomly (perturbation_factor default: 0.129)
-        perturbed_constants = constants × (1 + perturbation_factor × random_noise)
+        perturbed_constants ← constants × (1 + perturbation_factor × random_noise)
 
         # Optimize using gradient methods
-        result = gradient_optimize(expression, perturbed_constants, dataset)
+        result ← gradient_optimize(expression, perturbed_constants, dataset)
 
-        if result.error < best_result.error:
-            best_result = result
+        if result.error < best_result.error
+            best_result ← result
+        end
+    end
 
     return best_result
+end
 ```
 
 ### Automatic Differentiation Integration
