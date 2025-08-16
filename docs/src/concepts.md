@@ -42,7 +42,7 @@ For example, the expression `sin(x * 2.1) + y` becomes:
 
 ### Expression Complexity
 
-The concept of complexity is somewhat arbitrary, but the library defines the default as counting the number of nodes in the tree. A constant like `2.1` has complexity 1, while `sin(x * 2.1) + y` has complexity 6 (one node each for: `sin`, `*`, `x`, `2.1`, `+`, `y`). This default definition can be overridden with the various `complexity_*` parameters according to domain-specific criteria or personal preferences.
+By default, complexity is the number of nodes in the tree. A constant like `2.1` has complexity 1, while `sin(x * 2.1) + y` has complexity 6 (one node each for: `sin`, `*`, `x`, `2.1`, `+`, `y`). This default can be customized via `Options` using operator-specific weights, constant/variable weights, or a custom `complexity_mapping` function.
 
 ## The Pareto Frontier: Balancing Accuracy vs Simplicity
 
@@ -78,9 +78,13 @@ SymbolicRegression.jl uses evolutionary algorithms inspired by biological evolut
 
 ### Tournament Selection
 
-Rather than always selecting the best expressions from an entire population, the algorithm uses tournament selection. It randomly samples a small subset (parameter: `tournament_selection_n`, default 15 expressions), ranks them by cost, and selects the best with probability `tournament_selection_p` (default: 0.982), but sometimes chooses others. This maintains diversity and prevents premature convergence to local optima.
+Rather than always selecting the best expressions from an entire population, the algorithm uses tournament selection. It randomly samples a small subset (`tournament_selection_n`, default 15), computes an adjusted cost per member, and then selects a rank with some probability (`tournament_selection_p`, default 0.982 for the 1st rank). The adjusted cost applies adaptive parsimony when enabled (`use_frequency_in_tournament = true`), multiplying the cost by `exp(adaptive_parsimony_scaling × frequency_at_complexity)` where the frequency is tracked during the search.
 
-The cost function is: `cost = (loss / normalization) + (complexity × parsimony)` where normalization is typically the baseline loss or 0.01 as fallback. The library uses the terms "loss" (prediction error), "complexity" (expression size), and "cost" (combined metric).
+The base cost is derived from the predictive loss, normalized by a baseline, plus a fixed parsimony term when `parsimony > 0`:
+
+`cost = (loss / normalization) + (complexity × parsimony)`
+
+Normalization uses the dataset baseline loss if finite, else a fallback of 0.01.
 
 ### Multiple Populations (Island Model)
 
@@ -88,7 +92,7 @@ The search runs multiple independent populations in parallel. This enables massi
 
 ### Age-Based Replacement
 
-Instead of always replacing the worst expression, the algorithm always replaces the oldest. This technique is called "age-regularized evolution" and is supposed to prevent the population from prematurely converging (as can happen in traditional tournament selection where you simply replace the worst expression) and ensures newer ideas get a chance to develop.
+Instead of replacing the worst expression, the algorithm replaces the oldest member of the population (or the two oldest for crossover). This "age-regularized" evolution prevents premature convergence and helps newer ideas get a chance to develop.
 
 ## Search Dynamics and Temperature
 
@@ -98,15 +102,15 @@ Successful symbolic regression requires balancing exploration (trying diverse, p
 
 ### Simulated Annealing
 
-The algorithm uses "temperature" to control this balance. High temperature means accepting many mutations, even ones that worsen the cost (exploration). Low temperature means only accepting improvements (exploitation). The cooling schedule decreases temperature over time, shifting from exploration to exploitation.
+The algorithm uses a temperature to control this balance. Acceptance probability is `exp(-(cost_new - cost_old)/(α × T))`, optionally scaled by an adaptive parsimony frequency ratio when enabled. Temperature decreases linearly over a cycle, shifting from exploration to exploitation.
 
 ### Evolve-Simplify-Optimize Loop
 
-The algorithm follows an evolve-simplify-optimize loop. First, it applies mutations and crossovers to generate new expressions. Then it applies algebraic simplifications using SymbolicUtils.jl (like converting `sin(3.0)` to its numerical value). Finally, it uses gradient-based methods to optimize numerical constants. This loop is crucial for finding expressions with real-valued constants, which are essential for scientific applications.
+The algorithm follows an evolve-simplify-optimize loop. First, it applies mutations and crossovers to generate new expressions. Then it applies algebraic simplifications using DynamicExpressions.jl’s `simplify_tree!` and `combine_operators`. Finally, it uses Optim.jl-based methods to optimize numerical constants (with AD backend specified in `Options`).
 
 ### Adaptive Parsimony
 
-Rather than using a fixed complexity penalty, the algorithm adapts the penalty based on the current population. By default, `parsimony=0.0` (no fixed penalty), and instead adaptive parsimony is used via `adaptive_parsimony_scaling` (default: 1040). When too many expressions have the same complexity, that complexity is penalized more heavily. This encourages exploration across different complexity levels while avoiding premature convergence to a single complexity.
+Rather than using only a fixed complexity penalty, the algorithm can adapt a per-complexity penalty based on population composition. By default, `parsimony = 0.0` and `use_frequency = true` together with `adaptive_parsimony_scaling = 1040` encourage a balanced distribution over sizes: overrepresented complexities see higher effective costs in tournaments, and acceptance is biased away from them.
 
 ## Constraint Systems
 
@@ -127,6 +131,7 @@ Rather than using a fixed complexity penalty, the algorithm adapts the penalty b
 
 - **Dimensional analysis**: Ensure expressions have correct physical units
 - **Nested operator limits**: Prevent pathological cases like `sin(sin(sin(...)))`
+  - Nested constraints can be specified per-operator (e.g., limit how many times `cos` may be nested within another `cos`).
 
 ## Expressions and Expression Objects
 

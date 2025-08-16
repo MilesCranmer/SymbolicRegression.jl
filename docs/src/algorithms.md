@@ -101,7 +101,7 @@ The key innovation is **frequency-based complexity penalties** that adapt based 
 
 ```julia
 for member ∈ tournament
-    base_cost ← member.prediction_error
+    base_cost ← member.cost
     complexity ← count_nodes(member.expression)
     frequency ← normalized_frequency[complexity]  // in population
 
@@ -141,7 +141,7 @@ The algorithm uses 14 distinct mutation types, each serving a specific purpose:
 - `rotate_tree`: Restructure expression tree
 - `do_nothing`: Identity operation (maintains diversity)
 
-**Graph-specific mutations** (for GraphNode expressions):
+**Graph-specific mutations** (for `GraphNode` expressions; experimental interface):
 
 - `form_connection`: Add edge between nodes
 - `break_connection`: Remove edge between nodes
@@ -172,11 +172,11 @@ function condition_weights(expression, current_weights)
 end
 ```
 
-This ensures all mutations are valid and appropriate for the current expression state.
+This ensures all mutations are valid and appropriate for the current expression state. Conditioning includes simple rules such as: disabling `mutate_feature` when there is only one feature in the dataset, turning off `swap_operands` when all the operators are unary, and propagating `should_simplify`.
 
 ### Default Mutation Weights
 
-The algorithm uses the following default relative weights for mutation operations (normalized to sum to 1.0):
+The algorithm uses the following default relative weights for mutation operations (effective defaults when constructing `Options()`; weights are used proportionally and may be conditioned at runtime):
 
 - `mutate_constant`: 0.0353
 - `mutate_operator`: 3.63 (highest weight - most common mutation)
@@ -189,9 +189,9 @@ The algorithm uses the following default relative weights for mutation operation
 - `simplify`: 0.00148
 - `randomize`: 0.00695
 - `do_nothing`: 0.431
-- `optimize`: 0.0 (disabled by default - use `optimizer_probability` instead)
+- `optimize`: 0.0 (disabled by default)
 
-These weights favor structural mutations (`mutate_operator`, `insert_node`) over fine-tuning mutations, encouraging exploration of different expression forms.
+These weights were optimized using a simple dataset of synthetic expressions, but users should consider optimizing them for a particular problem.
 
 ## Simulated Annealing Integration
 
@@ -209,15 +209,21 @@ temperatures ← linear_schedule(max_temp, min_temp, num_cycles)
 
 ### Mutation Acceptance
 
-Mutations are accepted probabilistically based on their impact on cost:
+Mutations are accepted probabilistically based on their impact on the equation score (cost):
 
-**Acceptance probability**: `P(accept) = exp(-(loss_new - loss_old)/(α × T))`
+**Acceptance probability**: `P(accept) = exp(-(cost_new - cost_old)/(α × T))`
 
 Where:
 
-- `α` = parsimony scaling factor (configurable, default: 3.17)
+- `α` = annealing scale (configurable, default: 3.17)
 - `T` = current temperature ∈ [0,1]
-- `loss_new`, `loss_old` = prediction errors before/after mutation
+- `cost_new`, `cost_old` = costs before/after mutation (includes loss normalization and any fixed parsimony term)
+
+If adaptive parsimony is enabled (`use_frequency = true`, default), the acceptance probability is additionally scaled by the ratio of frequencies of the old vs new complexities:
+
+`P(accept) ← P(accept) × (freq_old / freq_new)`
+
+This discourages transitions into overrepresented complexity levels and encourages movement toward underexplored sizes.
 
 **Behavioral phases:**
 
@@ -244,10 +250,9 @@ end
 
 ```julia
 for expression ∈ population
-    simplified_expression ← apply_simplification_rules(expression)
-    combined_expression ← combine_redundant_operators(simplified_expression)
-    canonical_expression ← canonicalize_structure(combined_expression)
-    update_member(population, expression, canonical_expression)
+    simplified_expression ← simplify_tree!(expression)
+    combined_expression ← combine_operators(simplified_expression)
+    update_member(population, expression, combined_expression)
 end
 ```
 
@@ -397,8 +402,8 @@ function optimize_constants(expression, dataset, num_restarts)
     best_result ← current_expression
 
     for restart = 1:num_restarts
-        # Perturb constants randomly (perturbation_factor default: 0.129)
-        perturbed_constants ← constants × (1 + perturbation_factor × random_noise)
+        # Try a new random initialization for the constants
+        perturbed_constants ← constants × (1 + 0.5 × randn_like(constants))
 
         # Optimize using gradient methods
         result ← gradient_optimize(expression, perturbed_constants, dataset)
@@ -414,11 +419,11 @@ end
 
 ### Automatic Differentiation Integration
 
-Constants are optimized using automatic differentiation for exact gradients:
+Constants are optimized with classical optimizers and automatic differentiation:
 
-- **Backend**: Uses Enzyme.jl when available for reverse-mode AD
-- **Fallback**: Forward-mode differentiation for compatibility
-- **Optimization target**: Minimize prediction error on dataset
+- **Backend**: Uses DifferentiationInterface/ADTypes; can leverage Enzyme.jl when selected
+- **Fallback**: If no AD backend is set, Optim.jl uses gradient-free/finite-difference paths (Newton for single-constant, BFGS otherwise)
+- **Target**: Minimize the predictive loss on the dataset (cost is derived from the loss)
 
 ## Algorithm Parameters and Tuning
 
