@@ -281,6 +281,55 @@ _is_valid(x) = true
 _get_value(x::ValidVector) = x.x
 _get_value(x) = x
 
+struct ValidVectorMixError <: Exception end
+struct ValidVectorAccessError <: Exception end
+
+function Base.showerror(io::IO, ::ValidVectorMixError)
+    return print(
+        io,
+        """
+ValidVectorMixError: Cannot mix ValidVector with regular Vector.
+
+ValidVector handles validity checks, auto-vectorization, and batching in template expressions.
+The .valid field tracks whether computations contain NaN/Inf (false = invalid, true = valid).
+
+Wrap your vectors in ValidVector:
+
+    ```julia
+    valid_ar = ValidVector(ar, all(isfinite, ar))
+    valid_ar + my_validvector
+    ```
+
+Alternatively, you can access the vector from a ValidVector with `my_validvector.x`,
+but you must be sure to propagate the `.valid` field. For example:
+
+    ```julia
+    out = my_validvector.x .+ my_vector
+    ValidVector(out, my_validvector.valid && all(isfinite, out))
+    ```
+
+""",
+    )
+end
+
+function Base.showerror(io::IO, ::ValidVectorAccessError)
+    return print(
+        io,
+        """
+ValidVectorAccessError: ValidVector doesn't support direct array operations.
+
+Use .x for data and .valid for validity:
+
+    ```julia
+    my_validvector.x[1]        # indexing
+    length(my_validvector.x)   # length
+    my_validvector.valid       # check validity (false = an earlier computation failed)
+    ```
+
+ValidVector handles validity/batching automatically in template expressions.""",
+    )
+end
+
 #! format: off
 # First, binary operators:
 for op in (
@@ -293,6 +342,9 @@ for op in (
         Base.$(op)(x::ValidVector, y::ValidVector) = apply_operator(Base.$(op), x, y)
         Base.$(op)(x::ValidVector, y::Number) = apply_operator(Base.$(op), x, y)
         Base.$(op)(x::Number, y::ValidVector) = apply_operator(Base.$(op), x, y)
+
+        Base.$(op)(::ValidVector, ::AbstractVector) = throw(ValidVectorMixError())
+        Base.$(op)(::AbstractVector, ::ValidVector) = throw(ValidVectorMixError())
     end
 end
 function Base.literal_pow(::typeof(^), x::ValidVector, ::Val{p}) where {p}
@@ -314,6 +366,14 @@ for op in (
     @eval Base.$(op)(x::ValidVector) = apply_operator(Base.$(op), x)
 end
 #! format: on
+
+# Array interface error methods for ValidVector
+Base.getindex(::ValidVector, ::Any...) = throw(ValidVectorAccessError())
+Base.length(::ValidVector) = throw(ValidVectorAccessError())
+Base.size(::ValidVector, ::Any...) = throw(ValidVectorAccessError())
+Base.push!(::ValidVector, ::Any) = throw(ValidVectorAccessError())
+Base.append!(::ValidVector, ::Any) = throw(ValidVectorAccessError())
+Base.setindex!(::ValidVector, ::Any...) = throw(ValidVectorAccessError())
 
 # TODO: Support for 3-ary operators
 

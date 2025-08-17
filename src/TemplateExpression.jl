@@ -53,7 +53,7 @@ using ..ComplexityModule: ComplexityModule
 using ..LossFunctionsModule: LossFunctionsModule as LF
 using ..MutateModule: MutateModule as MM
 using ..PopMemberModule: PopMember
-using ..ComposableExpressionModule: ComposableExpression, ValidVector
+using ..ComposableExpressionModule: ComposableExpression, ValidVector, TemplateReturnError
 
 struct ParamVector{T} <: AbstractVector{T}
     _data::Vector{T}
@@ -631,6 +631,40 @@ function HOF.make_prefix(::TemplateExpression, ::AbstractOptions, ::Dataset)
     return ""
 end
 
+struct TemplateReturnError <: Exception end
+
+function Base.showerror(io::IO, ::TemplateReturnError)
+    return print(
+        io,
+        """
+TemplateReturnError: Template expression returned a regular Vector, but ValidVector is required.
+
+Template expressions must return ValidVector for proper handling:
+
+    ```julia
+    return ValidVector(my_data, computation_is_valid)
+    ```
+
+The .valid field is used to track whether there were any non-finite values or otherwise
+failed computations. It's important to handle this correctly.
+
+Example of manually propagating validity:
+
+    ```julia
+    _f_result = f(x1, x2)  # Returns ValidVector
+    _g_result = g(x3)      # Returns ValidVector
+
+    # Combine results manually and propagate validity
+    combined_data = _f_result.x .+ _g_result.x
+    return ValidVector(combined_data, _f_result.valid && _g_result.valid)
+    ```
+
+Note that normally we could simply write `_f_result + _g_result`,
+and this would automatically handle the validity and vectorization.
+""",
+    )
+end
+
 @stable(
     default_mode = "disable",
     default_union_limit = 2,
@@ -657,6 +691,10 @@ end
                 extra_args...,
                 map(x -> ValidVector(copy(x), true), eachrow(cX)),
             )
+            # Validate that template expression returned a ValidVector
+            if !(result isa ValidVector)
+                throw(TemplateReturnError())
+            end
             return result.x, result.valid
         end
         function (ex::TemplateExpression)(
