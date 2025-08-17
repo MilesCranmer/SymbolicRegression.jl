@@ -341,8 +341,9 @@ using .SearchUtilsModule:
 using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
 using .TemplateExpressionModule:
     TemplateExpression, TemplateStructure, TemplateExpressionSpec, ParamVector, has_params
-using .TemplateExpressionModule: ValidVector
-using .ComposableExpressionModule: ComposableExpression
+using .TemplateExpressionModule: ValidVector, TemplateReturnError
+using .ComposableExpressionModule:
+    ComposableExpression, ValidVectorMixError, ValidVectorAccessError
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 using .ParametricExpressionModule: ParametricExpressionSpec
 using .TemplateExpressionMacroModule: @template_spec

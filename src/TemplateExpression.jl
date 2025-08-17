@@ -53,7 +53,7 @@ using ..ComplexityModule: ComplexityModule
 using ..LossFunctionsModule: LossFunctionsModule as LF
 using ..MutateModule: MutateModule as MM
 using ..PopMemberModule: PopMember
-using ..ComposableExpressionModule: ComposableExpression, ValidVector, TemplateReturnError
+using ..ComposableExpressionModule: ComposableExpression, ValidVector
 
 struct ParamVector{T} <: AbstractVector{T}
     _data::Vector{T}
@@ -645,8 +645,8 @@ Template expressions must return ValidVector for proper handling:
     return ValidVector(my_data, computation_is_valid)
     ```
 
-The .valid field is used to track whether there were any non-finite values or otherwise
-failed computations. It's important to handle this correctly.
+The .valid field is used to track whether any upstream computation failed.
+It's important to handle this correctly.
 
 Example of manually propagating validity:
 

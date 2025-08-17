@@ -291,7 +291,7 @@ function Base.showerror(io::IO, ::ValidVectorMixError)
 ValidVectorMixError: Cannot mix ValidVector with regular Vector.
 
 ValidVector handles validity checks, auto-vectorization, and batching in template expressions.
-The .valid field tracks whether computations contain NaN/Inf (false = invalid, true = valid).
+The .valid field tracks whether any upstream computation failed (false = failed, true = valid).
 
 Wrap your vectors in ValidVector:
 
@@ -323,7 +323,7 @@ Use .x for data and .valid for validity:
     ```julia
     my_validvector.x[1]        # indexing
     length(my_validvector.x)   # length
-    my_validvector.valid       # check validity (false = an earlier computation failed)
+    my_validvector.valid       # check validity (false = any upstream computation failed)
     ```
 
 ValidVector handles validity/batching automatically in template expressions.""",
