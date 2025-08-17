@@ -196,7 +196,7 @@ end
         @something(
             worker_timeout,
             tryparse(Float64, get(ENV, "JULIA_WORKER_TIMEOUT", "")),
-            min(60, _numprocs^2)
+            max(60, _numprocs^2)
         )
     )
     _run_id = @something(run_id, generate_run_id())

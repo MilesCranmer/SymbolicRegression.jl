@@ -413,7 +413,7 @@ which is useful for debugging and profiling.
     out-of-memory errors. By default, this is set to `Sys.free_memory() / numprocs`.
 - `worker_timeout::Union{Real,Nothing}=nothing`: Timeout in seconds for worker processes
     to establish connection with the master process. If `JULIA_WORKER_TIMEOUT` is already set,
-    that value is used. Otherwise defaults to `min(60, numprocs^2)`. When explicitly provided,
+    that value is used. Otherwise defaults to `max(60, numprocs^2)`. When explicitly provided,
     this temporarily overrides `JULIA_WORKER_TIMEOUT` only during worker creation.
 - `worker_imports::Union{Vector{Symbol},Nothing}=nothing`: If you want to import
     additional modules on each worker, pass them here as a vector of symbols.
