@@ -193,11 +193,11 @@ end
     _progress = something(progress, options_progress, (_verbosity > 0) && nout == 1)
     _addprocs_function = something(addprocs_function, addprocs)
     _worker_timeout = Float64(
-        @something(
+        something(
             worker_timeout,
             tryparse(Float64, get(ENV, "JULIA_WORKER_TIMEOUT", "")),
-            max(60, _numprocs^2)
-        )
+            max(60, _numprocs^2),
+        ),
     )
     _run_id = @something(run_id, generate_run_id())
 
