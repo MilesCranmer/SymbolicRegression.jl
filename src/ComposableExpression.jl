@@ -191,7 +191,6 @@ end
 function (ex::AbstractComposableExpression)(x::Number, _xs::Vararg{Number,N}) where {N}
     xs = (x, _xs...)
 
-    # Use existing ValidVector method - each number becomes a single-element ValidVector
     vectors = ntuple(i -> ValidVector([float(xs[i])], true), length(xs))
     return only(_get_value(ex(vectors...)))
 end
@@ -200,14 +199,14 @@ function (ex::AbstractComposableExpression)(
     x::Union{ValidVector,Number}, _xs::Vararg{Union{ValidVector,Number},N}
 ) where {N}
     xs = (x, _xs...)
-
     # This method handles mixed ValidVector/Number cases and all-ValidVector cases
     # (All-Number cases are handled by the dedicated Number method above)
 
     # Find first ValidVector to determine sample size for Number conversion
-    first_valid_vector_idx = findfirst(arg -> arg isa ValidVector, xs)::Int
-    sample_vector = xs[first_valid_vector_idx]::ValidVector
-    n_samples = length(sample_vector.x)
+    sample_vector =
+        let first_valid_vector_idx = findfirst(arg -> arg isa ValidVector, xs)::Int
+            xs[first_valid_vector_idx]::ValidVector
+        end
 
     # Convert Numbers to ValidVectors based on first ValidVector's size
     valid_args = ntuple(length(xs)) do i
@@ -222,14 +221,12 @@ function (ex::AbstractComposableExpression)(
         end
     end
 
-    # Use existing ValidVector logic
-    valid = all(_is_valid, valid_args)
-    if !valid
-        return ValidVector(_get_value(first(valid_args)), false)
-    else
+    if all(_is_valid, valid_args)
         X = stack(map(_get_value, valid_args); dims=1)
         eval_options = get_eval_options(ex)
         return ValidVector(eval_tree_array(ex, X; eval_options))
+    else
+        return ValidVector(_get_value(first(valid_args)), false)
     end
 end
 function (ex::AbstractComposableExpression{T})() where {T}

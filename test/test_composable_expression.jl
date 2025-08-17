@@ -142,4 +142,6 @@ end
     @test ex(2.0, 3.0) ≈ 5.0
     @test isnan(ex(NaN, 3.0))
     @test ex(ValidVector([1.0], true), 2.0).x ≈ [3.0]
+    @test ex(ValidVector([1.0, 1.0], true), 2.0).x ≈ [3.0, 3.0]
+    @test ex(ValidVector([1.0, 1.0], false), 2.0).valid == false
 end
