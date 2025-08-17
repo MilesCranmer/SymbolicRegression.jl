@@ -406,6 +406,10 @@ which is useful for debugging and profiling.
     which is the number of processes to use, as well as the `lazy` keyword argument.
     For example, if set up on a slurm cluster, you could pass
     `addprocs_function = addprocs_slurm`, which will set up slurm processes.
+- `worker_timeout::Union{Real,Nothing}=nothing`: Timeout in seconds for worker processes
+    to establish connection with the master process. If `JULIA_WORKER_TIMEOUT` is already set,
+    that value is used. Otherwise defaults to `min(60, numprocs^2)`. When explicitly provided,
+    this temporarily overrides `JULIA_WORKER_TIMEOUT` only during worker creation.
 - `heap_size_hint_in_bytes::Union{Int,Nothing}=nothing`: On Julia 1.9+, you may set the `--heap-size-hint`
     flag on Julia processes, recommending garbage collection once a process
     is close to the recommended size. This is important for long-running distributed
@@ -469,6 +473,7 @@ function equation_search(
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
+    worker_timeout::Union{Real,Nothing}=nothing,
     heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
     worker_imports::Union{Vector{Symbol},Nothing}=nothing,
     runtests::Bool=true,
@@ -520,6 +525,7 @@ function equation_search(
         numprocs=numprocs,
         procs=procs,
         addprocs_function=addprocs_function,
+        worker_timeout=worker_timeout,
         heap_size_hint_in_bytes=heap_size_hint_in_bytes,
         worker_imports=worker_imports,
         runtests=runtests,
@@ -644,6 +650,7 @@ end
             procs=ropt.init_procs,
             ropt.numprocs,
             ropt.addprocs_function,
+            ropt.worker_timeout,
             options,
             worker_imports=ropt.worker_imports,
             project_path=splitdir(Pkg.project().path)[1],

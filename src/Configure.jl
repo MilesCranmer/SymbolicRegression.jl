@@ -368,6 +368,7 @@ function configure_workers(;
     procs::Union{Vector{Int},Nothing},
     numprocs::Int,
     addprocs_function::Function,
+    worker_timeout::Union{Float64,Nothing},
     options::AbstractOptions,
     @nospecialize(worker_imports::Union{Vector{Symbol},Nothing}),
     project_path,
@@ -378,7 +379,9 @@ function configure_workers(;
     runtests::Bool,
 )
     (procs, we_created_procs) = if procs === nothing
-        (addprocs_function(numprocs; lazy=false, exeflags), true)
+        withenv("JULIA_WORKER_TIMEOUT" => string(worker_timeout)) do
+            (addprocs_function(numprocs; lazy=false, exeflags), true)
+        end
     else
         (procs, false)
     end

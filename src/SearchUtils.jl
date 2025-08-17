@@ -82,6 +82,7 @@ struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE,LOGGER} <: AbstractRuntim
     numprocs::Int64
     init_procs::Union{Vector{Int},Nothing}
     addprocs_function::Function
+    worker_timeout::Float64
     exeflags::Cmd
     worker_imports::Union{Vector{Symbol},Nothing}
     runtests::Bool
@@ -117,6 +118,7 @@ end
     numprocs::Union{Int,Nothing}=nothing,
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
+    worker_timeout::Union{Real,Nothing}=nothing,
     heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
     worker_imports::Union{Vector{Symbol},Nothing}=nothing,
     runtests::Bool=true,
@@ -190,6 +192,13 @@ end
     _verbosity = something(verbosity, options_verbosity, 1)
     _progress = something(progress, options_progress, (_verbosity > 0) && nout == 1)
     _addprocs_function = something(addprocs_function, addprocs)
+    _worker_timeout = Float64(
+        @something(
+            worker_timeout,
+            tryparse(Float64, get(ENV, "JULIA_WORKER_TIMEOUT", "")),
+            min(60, _numprocs^2)
+        )
+    )
     _run_id = @something(run_id, generate_run_id())
 
     exeflags = if concurrency == :multiprocessing && isnothing(procs)
@@ -211,6 +220,7 @@ end
         _numprocs,
         procs,
         _addprocs_function,
+        _worker_timeout,
         exeflags,
         worker_imports,
         runtests,
