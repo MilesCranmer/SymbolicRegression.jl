@@ -216,8 +216,8 @@ function (ex::AbstractComposableExpression)(
         else
             # Convert Number to ValidVector with repeated values
             filled_array = similar(sample_vector.x)
-            fill!(filled_array, float(arg))
-            ValidVector(filled_array, _is_valid(arg))
+            fill!(filled_array, arg)
+            ValidVector(filled_array, true)
         end
     end
 
@@ -367,13 +367,11 @@ for op in (
 end
 #! format: on
 
-# Array interface error methods for ValidVector
-Base.getindex(::ValidVector, ::Any...) = throw(ValidVectorAccessError())
 Base.length(::ValidVector) = throw(ValidVectorAccessError())
-Base.size(::ValidVector, ::Any...) = throw(ValidVectorAccessError())
 Base.push!(::ValidVector, ::Any) = throw(ValidVectorAccessError())
-Base.append!(::ValidVector, ::Any) = throw(ValidVectorAccessError())
-Base.setindex!(::ValidVector, ::Any...) = throw(ValidVectorAccessError())
+for op in (:getindex, :size, :append!, :setindex!)
+    @eval Base.$(op)(::ValidVector, ::Any...) = throw(ValidVectorAccessError())
+end
 
 # TODO: Support for 3-ary operators
 
