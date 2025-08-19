@@ -199,10 +199,6 @@ function (ex::AbstractComposableExpression)(
     x::Union{ValidVector,Number}, _xs::Vararg{Union{ValidVector,Number},N}
 ) where {N}
     xs = (x, _xs...)
-    # This method handles mixed ValidVector/Number cases and all-ValidVector cases
-    # (All-Number cases are handled by the dedicated Number method above)
-
-    # Find first ValidVector to determine sample size for Number conversion
     sample_vector =
         let first_valid_vector_idx = findfirst(arg -> arg isa ValidVector, xs)::Int
             xs[first_valid_vector_idx]::ValidVector
