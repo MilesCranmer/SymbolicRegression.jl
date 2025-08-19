@@ -368,7 +368,7 @@ function configure_workers(;
     procs::Union{Vector{Int},Nothing},
     numprocs::Int,
     addprocs_function::Function,
-    worker_timeout::Union{Float64,Nothing},
+    worker_timeout::Float64,
     options::AbstractOptions,
     @nospecialize(worker_imports::Union{Vector{Symbol},Nothing}),
     project_path,
