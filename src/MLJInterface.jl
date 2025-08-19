@@ -78,6 +78,7 @@ function modelexpr(
             procs::Union{Vector{Int},Nothing} = nothing
             addprocs_function::Union{Function,Nothing} = nothing
             heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
+            worker_timeout::Union{Real,Nothing} = nothing
             worker_imports::Union{Vector{Symbol},Nothing} = nothing
             logger::Union{AbstractSRLogger,Nothing} = nothing
             runtests::Bool = true
@@ -300,6 +301,7 @@ function _update(
         procs=m.procs,
         addprocs_function=m.addprocs_function,
         heap_size_hint_in_bytes=m.heap_size_hint_in_bytes,
+        worker_timeout=m.worker_timeout,
         worker_imports=m.worker_imports,
         runtests=m.runtests,
         saved_state=(old_fitresult === nothing ? nothing : old_fitresult.state),

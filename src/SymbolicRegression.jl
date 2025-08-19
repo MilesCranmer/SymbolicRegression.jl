@@ -411,6 +411,9 @@ which is useful for debugging and profiling.
     is close to the recommended size. This is important for long-running distributed
     jobs where each process has an independent memory, and can help avoid
     out-of-memory errors. By default, this is set to `Sys.free_memory() / numprocs`.
+- `worker_timeout::Union{Real,Nothing}=nothing`: Timeout in seconds for worker processes
+    to establish connection with the master process. If `JULIA_WORKER_TIMEOUT` is already set,
+    that value is used. Otherwise defaults to `max(60, numprocs^2)`.
 - `worker_imports::Union{Vector{Symbol},Nothing}=nothing`: If you want to import
     additional modules on each worker, pass them here as a vector of symbols.
     By default some of the extensions will automatically be loaded when needed.
@@ -470,6 +473,7 @@ function equation_search(
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
     heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
+    worker_timeout::Union{Real,Nothing}=nothing,
     worker_imports::Union{Vector{Symbol},Nothing}=nothing,
     runtests::Bool=true,
     saved_state=nothing,
@@ -521,6 +525,7 @@ function equation_search(
         procs=procs,
         addprocs_function=addprocs_function,
         heap_size_hint_in_bytes=heap_size_hint_in_bytes,
+        worker_timeout=worker_timeout,
         worker_imports=worker_imports,
         runtests=runtests,
         saved_state=saved_state,
@@ -644,6 +649,7 @@ end
             procs=ropt.init_procs,
             ropt.numprocs,
             ropt.addprocs_function,
+            ropt.worker_timeout,
             options,
             worker_imports=ropt.worker_imports,
             project_path=splitdir(Pkg.project().path)[1],
