@@ -296,16 +296,16 @@ The .valid field tracks whether any upstream computation failed (false = failed,
 Wrap your vectors in ValidVector:
 
     ```julia
-    valid_ar = ValidVector(ar, all(isfinite, ar))
-    valid_ar + my_validvector
+    valid_ar1 = ValidVector(ar1, all(isfinite, ar1))
+    valid_ar1 + valid_ar2
     ```
 
 Alternatively, you can access the vector from a ValidVector with `my_validvector.x`,
 but you must be sure to propagate the `.valid` field. For example:
 
     ```julia
-    out = my_validvector.x .+ my_vector
-    ValidVector(out, my_validvector.valid && all(isfinite, out))
+    out = ar1 .+ valid_ar2.x
+    ValidVector(out, all(isfinite, out) && valid_ar2.valid)
     ```
 
 """,
@@ -321,9 +321,9 @@ ValidVectorAccessError: ValidVector doesn't support direct array operations.
 Use .x for data and .valid for validity:
 
     ```julia
-    my_validvector.x[1]        # indexing
-    length(my_validvector.x)   # length
-    my_validvector.valid       # check validity (false = any upstream computation failed)
+    valid_ar.x[1]        # indexing
+    length(valid_ar.x)   # length
+    valid_ar.valid       # check validity (false = any upstream computation failed)
     ```
 
 ValidVector handles validity/batching automatically in template expressions.""",
