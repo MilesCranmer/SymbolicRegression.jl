@@ -187,17 +187,42 @@ function (ex::AbstractComposableExpression)(
         return x .* nan
     end
 end
+# Method for all-Number arguments (scalars)
+function (ex::AbstractComposableExpression)(x::Number, _xs::Vararg{Number,N}) where {N}
+    xs = (x, _xs...)
+
+    vectors = ntuple(i -> ValidVector([float(xs[i])], true), length(xs))
+    return only(_get_value(ex(vectors...)))
+end
+
 function (ex::AbstractComposableExpression)(
-    x::ValidVector, _xs::Vararg{ValidVector,N}
+    x::Union{ValidVector,Number}, _xs::Vararg{Union{ValidVector,Number},N}
 ) where {N}
     xs = (x, _xs...)
-    valid = all(_is_valid, xs)
-    if !valid
-        return ValidVector(_get_value(first(xs)), false)
-    else
-        X = Matrix(stack(map(_get_value, xs))')
+    sample_vector =
+        let first_valid_vector_idx = findfirst(arg -> arg isa ValidVector, xs)::Int
+            xs[first_valid_vector_idx]::ValidVector
+        end
+
+    # Convert Numbers to ValidVectors based on first ValidVector's size
+    valid_args = ntuple(length(xs)) do i
+        arg = xs[i]
+        if arg isa ValidVector
+            arg
+        else
+            # Convert Number to ValidVector with repeated values
+            filled_array = similar(sample_vector.x)
+            fill!(filled_array, arg)
+            ValidVector(filled_array, true)
+        end
+    end
+
+    if all(_is_valid, valid_args)
+        X = stack(map(_get_value, valid_args); dims=1)
         eval_options = get_eval_options(ex)
         return ValidVector(eval_tree_array(ex, X; eval_options))
+    else
+        return ValidVector(_get_value(first(valid_args)), false)
     end
 end
 function (ex::AbstractComposableExpression{T})() where {T}
@@ -252,6 +277,55 @@ _is_valid(x) = true
 _get_value(x::ValidVector) = x.x
 _get_value(x) = x
 
+struct ValidVectorMixError <: Exception end
+struct ValidVectorAccessError <: Exception end
+
+function Base.showerror(io::IO, ::ValidVectorMixError)
+    return print(
+        io,
+        """
+ValidVectorMixError: Cannot mix ValidVector with regular Vector.
+
+ValidVector handles validity checks, auto-vectorization, and batching in template expressions.
+The .valid field tracks whether any upstream computation failed (false = failed, true = valid).
+
+Wrap your vectors in ValidVector:
+
+    ```julia
+    valid_ar1 = ValidVector(ar1, all(isfinite, ar1))
+    valid_ar1 + valid_ar2
+    ```
+
+Alternatively, you can access the vector from a ValidVector with `my_validvector.x`,
+but you must be sure to propagate the `.valid` field. For example:
+
+    ```julia
+    out = ar1 .+ valid_ar2.x
+    ValidVector(out, all(isfinite, out) && valid_ar2.valid)
+    ```
+
+""",
+    )
+end
+
+function Base.showerror(io::IO, ::ValidVectorAccessError)
+    return print(
+        io,
+        """
+ValidVectorAccessError: ValidVector doesn't support direct array operations.
+
+Use .x for data and .valid for validity:
+
+    ```julia
+    valid_ar.x[1]        # indexing
+    length(valid_ar.x)   # length
+    valid_ar.valid       # check validity (false = any upstream computation failed)
+    ```
+
+ValidVector handles validity/batching automatically in template expressions.""",
+    )
+end
+
 #! format: off
 # First, binary operators:
 for op in (
@@ -264,6 +338,9 @@ for op in (
         Base.$(op)(x::ValidVector, y::ValidVector) = apply_operator(Base.$(op), x, y)
         Base.$(op)(x::ValidVector, y::Number) = apply_operator(Base.$(op), x, y)
         Base.$(op)(x::Number, y::ValidVector) = apply_operator(Base.$(op), x, y)
+
+        Base.$(op)(::ValidVector, ::AbstractVector) = throw(ValidVectorMixError())
+        Base.$(op)(::AbstractVector, ::ValidVector) = throw(ValidVectorMixError())
     end
 end
 function Base.literal_pow(::typeof(^), x::ValidVector, ::Val{p}) where {p}
@@ -285,6 +362,12 @@ for op in (
     @eval Base.$(op)(x::ValidVector) = apply_operator(Base.$(op), x)
 end
 #! format: on
+
+Base.length(::ValidVector) = throw(ValidVectorAccessError())
+Base.push!(::ValidVector, ::Any) = throw(ValidVectorAccessError())
+for op in (:getindex, :size, :append!, :setindex!)
+    @eval Base.$(op)(::ValidVector, ::Any...) = throw(ValidVectorAccessError())
+end
 
 # TODO: Support for 3-ary operators
 

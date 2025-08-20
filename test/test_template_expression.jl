@@ -657,3 +657,38 @@ end
         parse_guesses(PopMember{Float64,Float64}, [bad_guess], [dataset], options)
     )
 end
+
+@testitem "Template expression return validation" tags = [:part2] begin
+    using SymbolicRegression:
+        TemplateReturnError,
+        ValidVector,
+        ComposableExpression,
+        TemplateStructure,
+        TemplateExpression
+    using DynamicExpressions: OperatorEnum, Node
+
+    operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names=nothing)
+
+    # Test that returning a regular vector from template expression throws TemplateReturnError
+    bad_structure = TemplateStructure{(:f,)}(
+        ((; f), (x,)) -> [1.0, 2.0];  # Returns regular Vector instead of ValidVector
+        num_features=(; f=1),
+    )
+    bad_expr = TemplateExpression(
+        (; f=x1); structure=bad_structure, operators, variable_names=nothing
+    )
+    X = [1.0 2.0]'
+
+    function get_error_msg(err)
+        io = IOBuffer()
+        Base.showerror(io, err)
+        return String(take!(io))
+    end
+
+    err = @test_throws TemplateReturnError bad_expr(X)
+    msg = get_error_msg(err.value)
+    @test contains(msg, "Template expression returned a regular Vector")
+    @test contains(msg, "ValidVector is required")
+    @test contains(msg, "ValidVector(my_data, computation_is_valid)")
+end

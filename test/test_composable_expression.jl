@@ -129,3 +129,56 @@ end
     x2_val = ValidVector([1.0, 2.0], false)
     @test ex(x1_val, x2_val).valid == false
 end
+
+@testitem "ValidVector helpful error messages" tags = [:part2] begin
+    using SymbolicRegression
+    using SymbolicRegression: ValidVector, ValidVectorMixError, ValidVectorAccessError
+
+    vv = ValidVector([1.0, 2.0], true)
+    v = [3.0, 4.0]
+
+    # Helper function to get error message
+    get_error_msg(err) =
+        let io = IOBuffer()
+            Base.showerror(io, err)
+            String(take!(io))
+        end
+
+    # Test vector arithmetic errors encourage ValidVector wrapping
+    err_mix = @test_throws ValidVectorMixError vv + v
+    @test_throws ValidVectorMixError v * vv  # Test other direction too
+
+    mix_msg = get_error_msg(err_mix.value)
+    @test contains(
+        mix_msg,
+        "ValidVector handles validity checks, auto-vectorization, and batching in template expressions",
+    )
+
+    # Test array access errors mention .x and .valid
+    err_access = @test_throws ValidVectorAccessError vv[1]
+    @test_throws ValidVectorAccessError length(vv)
+    @test_throws ValidVectorAccessError push!(vv, 5.0)
+
+    access_msg = get_error_msg(err_access.value)
+    @test contains(access_msg, "valid_ar.x[1]")
+    @test contains(access_msg, "valid_ar.valid")
+    @test contains(access_msg, "length(valid_ar.x)")
+    @test contains(access_msg, "doesn't support direct array operations")
+    @test contains(access_msg, "ValidVector handles validity/batching automatically")
+end
+
+@testitem "Test Number inputs" tags = [:part2] begin
+    using SymbolicRegression: ComposableExpression, Node, ValidVector
+    using DynamicExpressions: OperatorEnum
+
+    operators = OperatorEnum(; binary_operators=(+, *))
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators)
+    x2 = ComposableExpression(Node{Float64}(; feature=2); operators)
+    ex = x1 + x2
+
+    @test ex(2.0, 3.0) ≈ 5.0
+    @test isnan(ex(NaN, 3.0))
+    @test ex(ValidVector([1.0], true), 2.0).x ≈ [3.0]
+    @test ex(ValidVector([1.0, 1.0], true), 2.0).x ≈ [3.0, 3.0]
+    @test ex(ValidVector([1.0, 1.0], false), 2.0).valid == false
+end
