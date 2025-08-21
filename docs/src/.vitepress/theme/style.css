@@ -70,6 +70,10 @@ html.dark {
   background-clip: text;
 }
 
+.vp-doc .header-anchor {
+  -webkit-text-fill-color: var(--vp-c-brand-1) !important;
+}
+
 /* Subtle gold glow for code blocks */
 .vp-code-group .tabs .tab.active {
   color: var(--vp-c-brand-1);
