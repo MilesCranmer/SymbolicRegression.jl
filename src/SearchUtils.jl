@@ -24,6 +24,7 @@ using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..ExpressionBuilderModule: strip_metadata
 using ..InterfaceDynamicExpressionsModule: takes_eval_options
+using ..CheckConstraintsModule: check_constraints
 
 function logging_callback! end
 
@@ -722,6 +723,9 @@ function update_hall_of_fame!(
         size = compute_complexity(member, options)
         valid_size = 0 < size <= options.maxsize
         if !valid_size
+            continue
+        end
+        if !check_constraints(member.tree, options, options.maxsize, size)
             continue
         end
         not_filled = !hall_of_fame.exists[size]
