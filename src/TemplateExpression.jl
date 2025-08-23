@@ -665,6 +665,18 @@ and this would automatically handle the validity and vectorization.
     )
 end
 
+function _match_input_eltype(
+    ::Type{<:AbstractMatrix{T1}}, result::AbstractVector{T2}
+) where {T1,T2}
+    if T1 != T2 && T1 <: AbstractFloat && T2 <: AbstractFloat
+        # Just to handle cases where the user might write
+        # 0.5 in their template spec, but the data is Float32.
+        return Base.Fix1(convert, T1).(result)
+    else
+        return result
+    end
+end
+
 @stable(
     default_mode = "disable",
     default_union_limit = 2,
@@ -695,7 +707,7 @@ end
             if !(result isa ValidVector)
                 throw(TemplateReturnError())
             end
-            return result.x, result.valid
+            return _match_input_eltype(typeof(cX), result.x), result.valid
         end
         function (ex::TemplateExpression)(
             X, operators::Union{AbstractOperatorEnum,Nothing}=nothing; kws...

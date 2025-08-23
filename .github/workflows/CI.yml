@@ -86,7 +86,30 @@ jobs:
           julia --color=yes --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
           julia --color=yes coverage.jl
         shell: bash
-      - uses: codecov/codecov-action@v5
+      - name: "Upload coverage artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.julia-version }}-${{ matrix.os }}-${{ matrix.test }}
+          path: lcov.info
+          retention-days: 1
+
+  upload-coverage:
+    name: Upload Coverage to Codecov
+    needs: test
+    runs-on: ubuntu-latest
+    # Only run on pushes to master or pull requests
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: coverage
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: lcov.info
+          directory: ./coverage
+          fail_ci_if_error: true
+          verbose: true
