@@ -290,14 +290,10 @@ post_process_vitepress_index()
 # Fix bases.txt if it's empty (prevents "no bases suitable for deployment" error)
 function fix_empty_bases()
     bases_file = joinpath(@__DIR__, "build", "bases.txt")
-    if isfile(bases_file)
-        bases = filter(!isempty, readlines(bases_file))
-        if isempty(bases)
-            @info "Fixing empty bases.txt for deployment"
-            open(bases_file, "w") do io
-                println(io, "dev")
-            end
-        end
+    mkpath(dirname(bases_file))
+    if !isfile(bases_file) || isempty(filter(!isempty, readlines(bases_file)))
+        @info "Creating/fixing bases.txt for deployment"
+        write(bases_file, "dev\n")
     end
 end
 
