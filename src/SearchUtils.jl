@@ -725,7 +725,6 @@ function update_hall_of_fame!(
         if !valid_size
             continue
         end
-        # Check if member satisfies constraints
         if !check_constraints(member.tree, options, options.maxsize, size)
             continue
         end
