@@ -28,11 +28,23 @@ export const Theme: ThemeConfig = {
       'nav-screen-content-after': () => h(NolebaseEnhancedReadabilitiesScreenMenu),
     })
   },
-  enhanceApp({ app, router, siteData }) {
+  enhanceApp({ app, router }) {
     enhanceAppWithTabs(app);
     app.component('VersionPicker', VersionPicker);
     app.component('AuthorBadge', AuthorBadge)
     app.component('Authors', Authors)
+
+    // Auto-collapse MultitargetSRRegressor documentation
+    if (typeof window !== 'undefined') {
+      router.onAfterRouteChange = () => {
+        setTimeout(() => {
+          const details = document.querySelector('details:has(a[id*="MultitargetSRRegressor"])')
+          if (details?.hasAttribute('open')) {
+            details.removeAttribute('open')
+          }
+        }, 100)
+      }
+    }
   }
 }
 export default Theme
