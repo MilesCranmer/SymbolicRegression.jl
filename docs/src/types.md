@@ -9,7 +9,7 @@ as follows.
 Node
 ```
 
-When you create an `Options` object, the operators
+When you create an [`Options`](@ref) object, the operators
 passed are also re-defined for `Node` types.
 This allows you use, e.g., `t=Node(; feature=1) * 3f0` to create a tree, so long as
 `*` was specified as a binary operator. This works automatically for
@@ -41,7 +41,7 @@ copy_node(tree::Node)
 
 ## Expressions
 
-Expressions are represented using the `Expression` type, which combines the raw `Node` type with an `OperatorEnum`.
+Expressions are represented using the [`Expression`](@ref) type, which combines the raw [`Node`](@ref) type with an `OperatorEnum`.
 
 ```@docs
 Expression

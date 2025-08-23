@@ -85,7 +85,7 @@ end
 ## 4. Plotting an expression
 
 For now, let's consider the expressions for output 1 from the previous example:
-We can get a SymbolicUtils version with:
+We can get a SymbolicUtils version with [`node_to_symbolic`](@ref):
 
 ```julia
 using SymbolicUtils
