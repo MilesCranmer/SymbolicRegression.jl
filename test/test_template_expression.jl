@@ -696,6 +696,7 @@ end
 @testitem "Test Float32/Float64 type conversion in TemplateExpression" tags = [:part2] begin
     using SymbolicRegression
     using SymbolicRegression: eval_loss
+    using SymbolicRegression.TemplateExpressionModule: _match_input_eltype
 
     template = @template_spec(expressions = (f,)) do x1, x2
         0.5 * f(x1, x2)  # 0.5 is Float64 literal
@@ -719,4 +720,10 @@ end
     loss = eval_loss(template_expr, dataset, options)
     @test loss isa Float32
     @test loss ≈ 0.0
+
+    # Test _match_input_eltype coverage (covers lines 675-676)
+    result_f64 = [1.0, 2.0]
+    @test _match_input_eltype(Matrix{Float64}, result_f64) === result_f64  # Same type
+    result_int = [1, 2]
+    @test _match_input_eltype(Matrix{Float64}, result_int) === result_int  # Non-float type
 end
