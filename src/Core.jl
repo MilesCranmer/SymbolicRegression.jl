@@ -30,7 +30,9 @@ using .OptionsStructModule:
     Options,
     ComplexityMapping,
     specialized_options,
-    operator_specialization
+    operator_specialization,
+    WarmStartIncompatibleError,
+    check_warm_start_compatibility
 using .OperatorsModule:
     get_safe_op,
     plus,

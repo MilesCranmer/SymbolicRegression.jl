@@ -37,7 +37,8 @@ using ..CoreModule:
     ComplexityMapping,
     AbstractExpressionSpec,
     ExpressionSpec,
-    get_expression_type
+    get_expression_type,
+    check_warm_start_compatibility
 using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
@@ -232,7 +233,10 @@ function MMI.update(
     y,
     w=nothing,
 )
-    options = old_fitresult === nothing ? get_options(m) : old_fitresult.options
+    options = get_options(m)
+    if !isnothing(old_fitresult)
+        check_warm_start_compatibility(old_fitresult.options, options)
+    end
     return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, nothing)
 end
 function _update(

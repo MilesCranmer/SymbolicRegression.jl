@@ -1038,6 +1038,7 @@ $(OPTION_DESCRIPTIONS)
     }(
         operators,
         op_constraints,
+        _nested_constraints,
         complexity_mapping,
         tournament_selection_n,
         tournament_selection_p,
@@ -1099,7 +1100,6 @@ $(OPTION_DESCRIPTIONS)
         max_evals,
         input_stream,
         skip_mutation_failures,
-        _nested_constraints,
         deterministic,
         define_helper_functions,
         use_recorder,
