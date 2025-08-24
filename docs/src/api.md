@@ -13,6 +13,12 @@ MultitargetSRRegressor
 equation_search
 ```
 
+## Template Expressions
+
+```@docs
+@template_spec
+```
+
 ## Options
 
 ```@docs

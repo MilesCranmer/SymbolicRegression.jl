@@ -917,8 +917,12 @@ eval(
         replace(
             """
     Multi-target Symbolic Regression regressor (`MultitargetSRRegressor`)
-    conducts several searches for expressions that predict each target variable
-    from a set of input variables. All data is assumed to be `Continuous`.
+    searches for expressions that predict each target variable from a set
+    of input variables. This simply runs independent [`SRRegressor`](@ref)
+    searches for each target column in parallel - there is no joint modeling
+    of targets. All configuration options work identically to `SRRegressor`.
+
+    All data is assumed to be `Continuous`.
     The search is performed using an evolutionary algorithm.
     This algorithm is described in the paper
     https://arxiv.org/abs/2305.01582.

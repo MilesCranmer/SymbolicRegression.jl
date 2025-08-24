@@ -60,7 +60,7 @@ println(r.equations[r.best_idx])
 
 Here, we do the same thing, but with multiple expressions at once,
 each requiring a different feature. This means that we need to use
-`MultitargetSRRegressor` instead of `SRRegressor`:
+[`MultitargetSRRegressor`](@ref) instead of [`SRRegressor`](@ref):
 
 ```julia
 X = 2rand(1000, 5) .+ 0.1
@@ -85,7 +85,7 @@ end
 ## 4. Plotting an expression
 
 For now, let's consider the expressions for output 1 from the previous example:
-We can get a SymbolicUtils version with:
+We can get a SymbolicUtils version with [`node_to_symbolic`](@ref):
 
 ```julia
 using SymbolicUtils
