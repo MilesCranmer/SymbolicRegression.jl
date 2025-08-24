@@ -307,7 +307,7 @@ function Base.showerror(io::IO, e::WarmStartIncompatibleError)
     return print(io, ". Use `fit!(mach, force=true)` to restart training.")
 end
 
-check_warm_start_compatibility(::AbstractOptions, ::AbstractOptions) = nothing
+check_warm_start_compatibility(::AbstractOptions, ::AbstractOptions) = nothing  # LCOV_EXCL_LINE
 
 function check_warm_start_compatibility(old_options::Options, new_options::Options)
     incompatible_fields = (
