@@ -257,3 +257,36 @@ end
     end
     @test occursin("Evaluation failed either due to", msg)
 end
+
+@testitem "MLJ options caching fix" tags = [:part3] begin
+    using SymbolicRegression
+    using SymbolicRegression: WarmStartIncompatibleError
+    using MLJBase
+    using Random: MersenneTwister
+    using Suppressor
+
+    include("test_params.jl")
+
+    # Test that parameter changes are respected and incompatible changes throw errors
+    rng = MersenneTwister(0)
+    X = (x1=randn(rng, 50), x2=randn(rng, 50))
+    y = @. 2.0 * X.x1 + 3.0 * X.x2
+
+    model = SRRegressor(;
+        binary_operators=[+, -, *], niterations=2, tournament_selection_n=10, populations=2
+    )
+
+    mach = machine(model, X, y)
+    @suppress fit!(mach, verbosity=0)
+
+    # Test compatible parameter change
+    model.tournament_selection_n = 20
+    @suppress fit!(mach, verbosity=0)
+    @test mach.fitresult.options.tournament_selection_n == 20  # Should be updated
+
+    # Test incompatible parameter change throws error with correct message
+    model.populations = 4
+    err = @test_throws WarmStartIncompatibleError @suppress fit!(mach, verbosity=0)
+    @test :populations ∈ err.value.fields
+    @test occursin("force=true", sprint(showerror, err.value))
+end

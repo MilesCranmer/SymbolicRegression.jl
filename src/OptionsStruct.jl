@@ -28,6 +28,13 @@ end
 
 Base.eltype(::ComplexityMapping{T}) where {T} = T
 
+function Base.:(==)(a::ComplexityMapping, b::ComplexityMapping)
+    return a.use == b.use &&
+           a.op_complexities == b.op_complexities &&
+           a.variable_complexity == b.variable_complexity &&
+           a.constant_complexity == b.constant_complexity
+end
+
 """Promote type when defining complexity mapping."""
 function ComplexityMapping(;
     op_complexities::Tuple{Vararg{Vector,D}},
@@ -182,6 +189,7 @@ struct Options{
 } <: AbstractOptions
     operators::OP
     op_constraints::OP_CONSTRAINTS
+    nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
     complexity_mapping::CM
     tournament_selection_n::Int
     tournament_selection_p::Float32
@@ -243,7 +251,6 @@ struct Options{
     max_evals::Union{Int,Nothing}
     input_stream::IO
     skip_mutation_failures::Bool
-    nested_constraints::Union{Vector{Tuple{Int,Int,Vector{Tuple{Int,Int,Int}}}},Nothing}
     deterministic::Bool
     define_helper_functions::Bool
     use_recorder::Bool
@@ -288,6 +295,42 @@ end
     quote
         Options{$(type_parameters[1]),$(OP),$(type_parameters[3:end]...)}($(fields...))
     end
+end
+
+struct WarmStartIncompatibleError <: Exception
+    fields::Vector{Symbol}
+end
+
+function Base.showerror(io::IO, e::WarmStartIncompatibleError)
+    print(io, "Warm start incompatible due to changed field(s): ")
+    join(io, e.fields, ", ")
+    return print(io, ". Use `fit!(mach, force=true)` to restart training.")
+end
+
+check_warm_start_compatibility(::AbstractOptions, ::AbstractOptions) = nothing  # LCOV_EXCL_LINE
+
+function check_warm_start_compatibility(old_options::Options, new_options::Options)
+    incompatible_fields = (
+        :operators,
+        :op_constraints,
+        :nested_constraints,
+        :complexity_mapping,
+        :dimensionless_constants_only,
+        :maxsize,
+        :maxdepth,
+        :populations,
+        :population_size,
+        :node_type,
+        :expression_type,
+        :expression_options,
+    )
+
+    changed = [
+        f for f in incompatible_fields if
+        getproperty(old_options, f) != getproperty(new_options, f)
+    ]
+    isempty(changed) || throw(WarmStartIncompatibleError(changed))
+    return nothing
 end
 
 end
