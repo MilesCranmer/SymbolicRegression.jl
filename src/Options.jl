@@ -1109,7 +1109,8 @@ $(OPTION_DESCRIPTIONS)
 end
 
 function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = nothing))
-    if version isa VersionNumber && version < v"1.0.0"
+    version isa VersionNumber &&
+        version < v"1.0.0" &&
         return (;
             # Creating the Search Space
             operators=OperatorEnum(((), (+, -, /, *))),
@@ -1155,56 +1156,61 @@ function default_options(@nospecialize(version::Union{VersionNumber,Nothing} = n
             batching=false,
             batch_size=50,
         )
-    else
-        return (;
-            # Creating the Search Space
-            operators=OperatorEnum(((), (+, -, /, *))),
-            maxsize=30,
-            # Setting the Search Size
-            populations=31,
-            population_size=27,
-            ncycles_per_iteration=380,
-            # Working with Complexities
-            parsimony=0.0,
-            warmup_maxsize_by=0.0,
-            adaptive_parsimony_scaling=1040,
-            # Mutations
-            mutation_weights=MutationWeights(;
-                mutate_constant=0.0346,
-                mutate_operator=0.293,
-                swap_operands=0.198,
-                rotate_tree=4.26,
-                add_node=2.47,
-                insert_node=0.0112,
-                delete_node=0.870,
-                simplify=0.00209,
-                randomize=0.000502,
-                do_nothing=0.273,
-                optimize=0.0,
-                form_connection=0.5,
-                break_connection=0.1,
-            ),
-            crossover_probability=0.0259,
-            annealing=true,
-            alpha=3.17,
-            perturbation_factor=0.129,
-            probability_negate_constant=0.00743,
-            # Tournament Selection
-            tournament_selection_n=15,
-            tournament_selection_p=0.982,
-            # Migration between Populations
-            fraction_replaced=0.00036,
-            ## ^Note: the optimal value found was 0.00000425,
-            ## but I thought this was a symptom of doing the sweep on such
-            ## a small problem, so I increased it to the older value of 0.00036
-            fraction_replaced_hof=0.0614,
-            fraction_replaced_guesses=0.001,
-            topn=12,
-            # Performance and Parallelization
-            batching=false,
-            batch_size=50,
-        )
+
+    defaults = (;
+        # Creating the Search Space
+        operators=OperatorEnum(((), (+, -, /, *))),
+        maxsize=30,
+        # Setting the Search Size
+        populations=31,
+        population_size=27,
+        ncycles_per_iteration=380,
+        # Working with Complexities
+        parsimony=0.0,
+        warmup_maxsize_by=0.0,
+        adaptive_parsimony_scaling=1040.0,
+        # Mutations
+        mutation_weights=MutationWeights(;
+            mutate_constant=0.0346,
+            mutate_operator=0.293,
+            swap_operands=0.198,
+            rotate_tree=4.26,
+            add_node=2.47,
+            insert_node=0.0112,
+            delete_node=0.870,
+            simplify=0.00209,
+            randomize=0.000502,
+            do_nothing=0.273,
+            optimize=0.0,
+            form_connection=0.5,
+            break_connection=0.1,
+        ),
+        crossover_probability=0.0259,
+        annealing=true,
+        alpha=3.17,
+        perturbation_factor=0.129,
+        probability_negate_constant=0.00743,
+        # Tournament Selection
+        tournament_selection_n=15,
+        tournament_selection_p=0.982,
+        # Migration between Populations
+        fraction_replaced=0.00036,
+        ## ^Note: the optimal value found was 0.00000425,
+        ## but I thought this was a symptom of doing the sweep on such
+        ## a small problem, so I increased it to the older value of 0.00036
+        fraction_replaced_hof=0.0614,
+        fraction_replaced_guesses=0.001,
+        topn=12,
+        # Performance and Parallelization
+        batching=false,
+        batch_size=50,
+    )
+
+    if version isa VersionNumber && version >= v"2.0.0-"
+        defaults = (; defaults..., adaptive_parsimony_scaling=20.0)
     end
+
+    return defaults
 end
 
 end
