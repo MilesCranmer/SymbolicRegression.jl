@@ -802,12 +802,32 @@ function _initialize_search!(
     end
     return nothing
 end
+
+function _preserve_loaded_state!(
+    state::AbstractSearchState{T,L,N},
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+) where {T,L,N}
+    nout = length(state.worker_output)
+    for j in 1:nout, i in 1:(options.populations)
+        (pop, _, _, _) = extract_from_worker(
+            state.worker_output[j][i], Population{T,L,N}, HallOfFame{T,L,N}
+        )
+        state.last_pops[j][i] = copy(pop)
+    end
+    return nothing
+end
+
 function _warmup_search!(
     state::AbstractSearchState{T,L,N},
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
 ) where {T,L,N}
+    if ropt.niterations == 0
+        return _preserve_loaded_state!(state, ropt, options)
+    end
+
     nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
         dataset = datasets[j]

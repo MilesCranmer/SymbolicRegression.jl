@@ -144,9 +144,7 @@ end
     include("test_deterministic.jl")
 end
 
-@testitem "Testing whether early stop criteria works." tags = [:part2] begin
-    include("test_early_stop.jl")
-end
+include("test_early_stop.jl")
 
 include("test_mlj.jl")
 
