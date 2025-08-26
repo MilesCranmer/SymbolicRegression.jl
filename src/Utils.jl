@@ -145,6 +145,7 @@ function argmin_fast(x::AbstractVector{T}) where {T}
 end
 
 function poisson_sample(rng::AbstractRNG, λ::T) where {T}
+    iszero(λ) && return 0
     k, p, L = 0, one(T), exp(-λ)
     while p > L
         k += 1
