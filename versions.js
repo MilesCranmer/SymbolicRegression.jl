@@ -1,5 +1,4 @@
 var DOC_VERSIONS = [
-  "dev",
   "stable",
   "v2.0.0-alpha.6",
   "v2.0.0-alpha.5",
