@@ -22,7 +22,7 @@ using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: eval_cost
 using ..CheckConstraintsModule: check_constraints
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
-using ..PopMemberModule: PopMember
+using ..PopMemberModule: AbstractPopMember, PopMember
 using ..MutationFunctionsModule:
     mutate_constant,
     mutate_operator,
@@ -61,7 +61,8 @@ This struct encapsulates the result of a mutation operation. Either a new expres
 Return the `member` if you want to return immediately, and have
 computed the loss value as part of the mutation.
 """
-struct MutationResult{N<:AbstractExpression,P<:PopMember} <: AbstractMutationResult{N,P}
+struct MutationResult{N<:AbstractExpression,P<:AbstractPopMember} <:
+       AbstractMutationResult{N,P}
     tree::Union{N,Nothing}
     member::Union{P,Nothing}
     num_evals::Float64
@@ -73,7 +74,7 @@ struct MutationResult{N<:AbstractExpression,P<:PopMember} <: AbstractMutationRes
         member::Union{_P,Nothing}=nothing,
         num_evals::Float64=0.0,
         return_immediately::Bool=false,
-    ) where {_N<:AbstractExpression,_P<:PopMember}
+    ) where {_N<:AbstractExpression,_P<:AbstractPopMember}
         @assert(
             (tree === nothing) ⊻ (member === nothing),
             "Mutation result must return either a tree or a pop member, not both"
@@ -83,7 +84,7 @@ struct MutationResult{N<:AbstractExpression,P<:PopMember} <: AbstractMutationRes
 end
 
 """
-    condition_mutation_weights!(weights::AbstractMutationWeights, member::PopMember, options::AbstractOptions, curmaxsize::Int, nfeatures::Int)
+    condition_mutation_weights!(weights::AbstractMutationWeights, member::AbstractPopMember, options::AbstractOptions, curmaxsize::Int, nfeatures::Int)
 
 Adjusts the mutation weights based on the properties of the current member and options.
 
@@ -93,7 +94,7 @@ Note that the weights were already copied, so you don't need to worry about muta
 
 # Arguments
 - `weights::AbstractMutationWeights`: The mutation weights to be adjusted.
-- `member::PopMember`: The current population member being mutated.
+- `member::AbstractPopMember`: The current population member being mutated.
 - `options::AbstractOptions`: The options that guide the mutation process.
 - `curmaxsize::Int`: The current maximum size constraint for the member's expression tree.
 - `nfeatures::Int`: The number of features available in the dataset.
@@ -104,7 +105,7 @@ function condition_mutation_weights!(
     options::AbstractOptions,
     curmaxsize::Int,
     nfeatures::Int,
-) where {T,L,N<:AbstractExpression,P<:PopMember{T,L,N}}
+) where {T,L,N<:AbstractExpression,P<:AbstractPopMember{T,L,N}}
     tree = get_tree(member.tree)
     if !preserve_sharing(typeof(member.tree))
         weights.form_connection = 0.0
@@ -181,7 +182,7 @@ end
     tmp_recorder::RecordType,
 )::Tuple{
     P,Bool,Float64
-} where {T,L,D<:Dataset{T,L},N<:AbstractExpression{T},P<:PopMember{T,L,N}}
+} where {T,L,D<:Dataset{T,L},N<:AbstractExpression{T},P<:AbstractPopMember{T,L,N}}
     parent_ref = member.ref
     num_evals = 0.0
 
@@ -665,7 +666,7 @@ function crossover_generation(
     curmaxsize::Int,
     options::AbstractOptions;
     recorder::RecordType=RecordType(),
-)::Tuple{P,P,Bool,Float64} where {T,L,D<:Dataset{T,L},N,P<:PopMember{T,L,N}}
+)::Tuple{P,P,Bool,Float64} where {T,L,D<:Dataset{T,L},N,P<:AbstractPopMember{T,L,N}}
     tree1 = member1.tree
     tree2 = member2.tree
     crossover_accepted = false

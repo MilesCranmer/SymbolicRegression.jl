@@ -40,6 +40,9 @@ using ..MutationWeightsModule: AbstractMutationWeights, MutationWeights, mutatio
 import ..OptionsStructModule: Options
 using ..OptionsStructModule: ComplexityMapping, operator_specialization
 using ..UtilsModule: @save_kwargs, @ignore
+
+# Forward declaration - will be defined in PopMemberModule
+function default_popmember_type end
 using ..ExpressionSpecModule:
     AbstractExpressionSpec,
     ExpressionSpec,
@@ -651,6 +654,7 @@ $(OPTION_DESCRIPTIONS)
     terminal_width::Union{Nothing,Integer}=nothing,
     use_recorder::Bool=false,
     recorder_file::AbstractString="pysr_recorder.json",
+    popmember_type::Type=default_popmember_type(),
     ### Not search options; just construction options:
     define_helper_functions::Bool=true,
     #########################################
@@ -1030,6 +1034,7 @@ $(OPTION_DESCRIPTIONS)
         expression_type,
         typeof(expression_options),
         typeof(set_mutation_weights),
+        popmember_type,
         turbo,
         bumper,
         deprecated_return_state::Union{Bool,Nothing},
@@ -1103,6 +1108,7 @@ $(OPTION_DESCRIPTIONS)
         deterministic,
         define_helper_functions,
         use_recorder,
+        popmember_type,
     )
 
     return options

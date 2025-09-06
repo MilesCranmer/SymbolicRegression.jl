@@ -181,6 +181,7 @@ struct Options{
     E<:AbstractExpression,
     EO<:NamedTuple,
     MW<:AbstractMutationWeights,
+    PM,
     _turbo,
     _bumper,
     _return_state,
@@ -254,6 +255,7 @@ struct Options{
     deterministic::Bool
     define_helper_functions::Bool
     use_recorder::Bool
+    popmember_type::Type{PM}
 end
 
 function Base.print(io::IO, @nospecialize(options::Options))

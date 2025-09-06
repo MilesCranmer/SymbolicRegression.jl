@@ -3,25 +3,29 @@ module PopulationModule
 using StatsBase: StatsBase
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, string_tree
+using ConstructionBase: constructorof
 using ..CoreModule: AbstractOptions, Options, Dataset, RecordType, DATA_TYPE, LOSS_TYPE
 using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: eval_cost, update_baseline_loss!
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..MutationFunctionsModule: gen_random_tree
-using ..PopMemberModule: PopMember
+using ..PopMemberModule: AbstractPopMember, PopMember
+import ..PopMemberModule: popmember_type
 using ..UtilsModule: bottomk_fast, argmin_fast, PerTaskCache
 # A list of members of the population, with easy constructors,
 #  which allow for random generation of new populations
-struct Population{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
-    members::Array{PopMember{T,L,N},1}
+struct Population{
+    T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T},PM<:AbstractPopMember{T,L,N}
+}
+    members::Array{PM,1}
     n::Int
 end
 """
-    Population(pop::Array{PopMember{T,L}, 1})
+    Population(pop::Array{<:AbstractPopMember, 1})
 
 Create population from list of PopMembers.
 """
-function Population(pop::Vector{<:PopMember})
+function Population(pop::Vector{<:AbstractPopMember})
     return Population(pop, size(pop, 1))
 end
 
@@ -41,23 +45,34 @@ function Population(
     npop=nothing,
 ) where {T,L}
     @assert (population_size !== nothing) ⊻ (npop !== nothing)
-    population_size = if npop === nothing
-        population_size
-    else
-        npop
-    end
-    return Population(
-        [
-            PopMember(
+    population_size = something(population_size, npop)
+    PM = options.popmember_type
+
+    # Create first member to get concrete type
+    first_member = constructorof(PM)(
+        dataset,
+        gen_random_tree(nlength, options, nfeatures, T),
+        options;
+        parent=-1,
+        deterministic=options.deterministic,
+    )
+
+    # Use the concrete type for the array
+    members = typeof(first_member)[
+        if i == 1
+            first_member
+        else
+            constructorof(PM)(
                 dataset,
                 gen_random_tree(nlength, options, nfeatures, T),
                 options;
                 parent=-1,
                 deterministic=options.deterministic,
-            ) for _ in 1:population_size
-        ],
-        population_size,
-    )
+            )
+        end for i in 1:population_size
+    ]
+
+    return Population(members, population_size)
 end
 """
     Population(X::AbstractMatrix{T}, y::AbstractVector{T};
@@ -90,8 +105,8 @@ Create random population and score them on the dataset.
     )
 end
 
-function Base.copy(pop::P)::P where {T,L,N,P<:Population{T,L,N}}
-    copied_members = Vector{PopMember{T,L,N}}(undef, pop.n)
+function Base.copy(pop::P)::P where {T,L,N,PM,P<:Population{T,L,N,PM}}
+    copied_members = Vector{PM}(undef, pop.n)
     Threads.@threads for i in 1:(pop.n)
         copied_members[i] = copy(pop.members[i])
     end
@@ -118,7 +133,7 @@ function _best_of_sample(
     members::Vector{P},
     running_search_statistics::RunningSearchStatistics,
     options::AbstractOptions,
-) where {T,L,P<:PopMember{T,L}}
+) where {T,L,N,P<:AbstractPopMember{T,L,N}}
     p = options.tournament_selection_p
     n = length(members)  # == tournament_selection_n
     adjusted_costs = Vector{L}(undef, n)
@@ -217,5 +232,8 @@ function record_population(pop::Population, options::AbstractOptions)::RecordTyp
         "time" => time(),
     )
 end
+
+# Type accessor for Population
+popmember_type(::Type{<:Population{T,L,N,PM}}) where {T,L,N,PM} = PM
 
 end
