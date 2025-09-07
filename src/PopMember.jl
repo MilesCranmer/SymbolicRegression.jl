@@ -198,35 +198,25 @@ function recompute_complexity!(
     return complexity
 end
 
-# Interface for creating child members with custom field preservation
 """
-    create_child(parent::P, tree, cost, loss, options;
-                complexity::Union{Int,Nothing}=nothing, parent_ref, kwargs...) where P<:AbstractPopMember
+    create_child(parent::P, tree::AbstractExpression{T}, cost, loss, options;
+                complexity::Union{Int,Nothing}=nothing, parent_ref, kwargs...) where {T,L,P<:PopMember{T,L}}
 
-Create a new PopMember derived from a parent (mutation case).
-Custom types should override to preserve their additional fields.
-
-# Arguments
-- `parent`: The parent member being mutated
-- `tree`: The new expression tree
-- `cost`: The new cost
-- `loss`: The new loss
-- `options`: The options
-- `complexity`: The complexity (computed if not provided)
-- `parent_ref`: Reference to parent for tracking
+Create a new PopMember with a potentially different expression type.
+Used by embed_metadata where the expression gains metadata.
 """
 function create_child(
     parent::P,
-    tree::N,
+    tree::AbstractExpression{T},
     cost::L,
     loss::L,
     options;
     complexity::Union{Int,Nothing}=nothing,
     parent_ref,
     kwargs...,
-) where {T,L,N<:AbstractExpression{T},P<:PopMember{T,L,N}}
+) where {T,L,P<:PopMember{T,L}}
     actual_complexity = @something complexity compute_complexity(tree, options)
-    return constructorof(P)(
+    return PopMember(
         tree,
         cost,
         loss,
@@ -246,16 +236,16 @@ Custom types should override to blend their additional fields.
 """
 function create_child(
     parents::Tuple{P,P},
-    tree::N,
+    tree::AbstractExpression{T},
     cost::L,
     loss::L,
     options;
     complexity::Union{Int,Nothing}=nothing,
     parent_ref,
     kwargs...,
-) where {T,L,N<:AbstractExpression{T},P<:PopMember{T,L,N}}
+) where {T,L,P<:PopMember{T,L}}
     actual_complexity = @something complexity compute_complexity(tree, options)
-    return constructorof(P)(
+    return PopMember(
         tree,
         cost,
         loss,

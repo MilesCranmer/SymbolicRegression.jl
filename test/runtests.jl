@@ -164,6 +164,7 @@ end
 end
 
 include("test_abstract_numbers.jl")
+include("test_abstract_popmember.jl")
 
 include("test_logging.jl")
 include("test_pretty_printing.jl")

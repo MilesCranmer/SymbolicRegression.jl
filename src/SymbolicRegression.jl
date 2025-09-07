@@ -298,6 +298,7 @@ using .InterfaceDynamicExpressionsModule:
     @extend_operators, require_copy_to_workers, make_example_inputs
 using .LossFunctionsModule: eval_loss, eval_cost, update_baseline_loss!, score_func
 using .PopMemberModule: AbstractPopMember, PopMember, reset_birth!, popmember_type
+using .CoreModule.UtilsModule: get_birth_order
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 using .HallOfFameModule:
     HallOfFame, calculate_pareto_frontier, string_dominating_pareto_curve
@@ -633,8 +634,19 @@ end
     example_dataset = first(datasets)
     example_ex = create_expression(init_value(T), options, example_dataset)
     NT = typeof(example_ex)
-    PopType = Population{T,L,NT}
-    HallOfFameType = HallOfFame{T,L,NT}
+    # Create a prototype member to get the concrete type
+    prototype_member = options.popmember_type(
+        copy(example_ex),
+        L(0),
+        L(Inf),
+        options,
+        1;  # complexity
+        parent=-1,
+        deterministic=options.deterministic,
+    )
+    PMType = typeof(prototype_member)
+    PopType = Population{T,L,NT,PMType}
+    HallOfFameType = HallOfFame{T,L,NT,PMType}
     WorkerOutputType = get_worker_output_type(
         Val(ropt.parallelism), PopType, HallOfFameType
     )
@@ -692,9 +704,9 @@ end
         j in 1:nout
     ]
 
-    seed_members = [PopMember{T,L,NT}[] for j in 1:nout]
+    seed_members = [Vector{PMType}() for j in 1:nout]
 
-    return SearchState{T,L,typeof(example_ex),WorkerOutputType,ChannelType}(;
+    return SearchState{T,L,NT,PMType,WorkerOutputType,ChannelType}(;
         procs=procs,
         we_created_procs=we_created_procs,
         worker_output=worker_output,

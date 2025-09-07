@@ -73,17 +73,36 @@ function HallOfFame(
     options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
     base_tree = create_expression(init_value(T), options, dataset)
+    PM = options.popmember_type
 
-    return HallOfFame{T,L,typeof(base_tree),PopMember{T,L,typeof(base_tree)}}(
+    # Create a prototype member to get the concrete type
+    prototype = PM(
+        copy(base_tree),
+        L(0),
+        L(Inf),
+        options,
+        1;  # complexity
+        parent=-1,
+        deterministic=options.deterministic,
+    )
+
+    PMtype = typeof(prototype)
+
+    return HallOfFame{T,L,typeof(base_tree),PMtype}(
         [
-            PopMember(
-                copy(base_tree),
-                L(0),
-                L(Inf),
-                options;
-                parent=-1,
-                deterministic=options.deterministic,
-            ) for i in 1:(options.maxsize)
+            if i == 1
+                prototype
+            else
+                PM(
+                    copy(base_tree),
+                    L(0),
+                    L(Inf),
+                    options,
+                    1;  # complexity
+                    parent=-1,
+                    deterministic=options.deterministic,
+                )
+            end for i in 1:(options.maxsize)
         ],
         [false for i in 1:(options.maxsize)],
     )
