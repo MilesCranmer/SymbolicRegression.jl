@@ -260,7 +260,7 @@ end
 # Function to extract PopMember type from Population or HallOfFame types
 function popmember_type end
 
-default_popmember_type() = PopMember
-constructorof(::Type{<:PopMember}) = PopMember
+@unstable default_popmember_type() = PopMember
+@unstable constructorof(::Type{<:PopMember}) = PopMember
 
 end

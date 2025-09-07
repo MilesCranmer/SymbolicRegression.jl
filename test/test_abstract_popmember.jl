@@ -2,6 +2,7 @@
     using SymbolicRegression
     using DynamicExpressions
     using Test
+    using DispatchDoctor: @unstable
 
     import SymbolicRegression.PopMemberModule: create_child
 
@@ -76,7 +77,7 @@
         )
     end
 
-    DynamicExpressions.constructorof(::Type{<:CustomPopMember}) = CustomPopMember
+    @unstable DynamicExpressions.constructorof(::Type{<:CustomPopMember}) = CustomPopMember
 
     # Define copy for CustomPopMember
     function Base.copy(p::CustomPopMember)
