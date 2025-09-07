@@ -224,7 +224,7 @@ function create_child(
     complexity::Union{Int,Nothing}=nothing,
     parent_ref,
     kwargs...,
-) where {T,L,N<:AbstractExpression{T},P<:AbstractPopMember{T,L,N}}
+) where {T,L,N<:AbstractExpression{T},P<:PopMember{T,L,N}}
     actual_complexity = @something complexity compute_complexity(tree, options)
     return constructorof(P)(
         tree,
@@ -253,7 +253,7 @@ function create_child(
     complexity::Union{Int,Nothing}=nothing,
     parent_ref,
     kwargs...,
-) where {T,L,N<:AbstractExpression{T},P<:AbstractPopMember{T,L,N}}
+) where {T,L,N<:AbstractExpression{T},P<:PopMember{T,L,N}}
     actual_complexity = @something complexity compute_complexity(tree, options)
     return constructorof(P)(
         tree,
