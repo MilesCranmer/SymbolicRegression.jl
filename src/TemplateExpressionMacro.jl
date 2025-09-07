@@ -121,7 +121,7 @@ function template_spec(func, args...)
                     function $(function_name)((; $(expr_names...)), ($(func_args...),))
                         return $(func_body)
                     end;
-                    num_features=$(num_features),
+                    num_features=($(num_features)),
                 ),
             )
         end
@@ -142,8 +142,8 @@ function template_spec(func, args...)
                     )
                         return $(func_body)
                     end;
-                    num_features=$(num_features),
-                    num_parameters=$(parameters),
+                    num_features=($(num_features)),
+                    num_parameters=($(parameters)),
                 ),
             )
         end
