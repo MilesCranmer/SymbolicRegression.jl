@@ -632,7 +632,7 @@ end
     stdin_reader = watch_stream(options.input_stream)
 
     record = RecordType()
-    @recorder record["options"] = "$(options)"
+    @recorder options record["options"] = "$(options)"
 
     nout = length(datasets)
     example_dataset = first(datasets)
@@ -660,7 +660,6 @@ end
             options,
             worker_imports=ropt.worker_imports,
             project_path=splitdir(Pkg.project().path)[1],
-            file=@__FILE__,
             ropt.exeflags,
             ropt.verbosity,
             example_dataset,
@@ -839,7 +838,7 @@ function _warmup_search!(
         dataset = datasets[j]
         running_search_statistics = state.all_running_search_statistics[j]
         cur_maxsize = state.cur_maxsizes[j]
-        @recorder state.record[]["out$(j)_pop$(i)"] = RecordType()
+        @recorder options state.record[]["out$(j)_pop$(i)"] = RecordType()
         worker_idx = assign_next_worker!(
             state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
         )
@@ -954,7 +953,7 @@ function _main_search_loop!(
             end::DefaultWorkerOutputType{Population{T,L,N},HallOfFame{T,L,N}}
             state.last_pops[j][i] = copy(cur_pop)
             state.best_sub_pops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
-            @recorder state.record[] = recursive_merge(state.record[], cur_record)
+            @recorder options state.record[] = recursive_merge(state.record[], cur_record)
             state.num_evals[j][i] += cur_num_evals
             dataset = datasets[j]
             cur_maxsize = state.cur_maxsizes[j]
@@ -1136,7 +1135,7 @@ function _tear_down!(
             wait(state.worker_output[j][i])
         end
     end
-    @recorder json3_write(state.record[], options.recorder_file)
+    @recorder options json3_write(state.record[], options.recorder_file)
     return nothing
 end
 function _format_output(
@@ -1170,7 +1169,7 @@ end
     running_search_statistics,
 ) where {T,L,N}
     record = RecordType()
-    @recorder record["out$(out)_pop$(pop)"] = RecordType(
+    @recorder options record["out$(out)_pop$(pop)"] = RecordType(
         "iteration$(iteration)" => record_population(in_pop, options)
     )
     num_evals = 0.0

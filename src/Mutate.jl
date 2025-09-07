@@ -247,7 +247,7 @@ end
     tree = rtree[]
 
     if !successful_mutation
-        @recorder begin
+        @recorder options begin
             tmp_recorder["result"] = "reject"
             tmp_recorder["reason"] = "failed_constraint_check"
         end
@@ -271,7 +271,7 @@ end
     num_evals += dataset_fraction(dataset)
 
     if isnan(after_cost)
-        @recorder begin
+        @recorder options begin
             tmp_recorder["result"] = "reject"
             tmp_recorder["reason"] = "nan_loss"
         end
@@ -315,7 +315,7 @@ end
     end
 
     if probChange < rand()
-        @recorder begin
+        @recorder options begin
             tmp_recorder["result"] = "reject"
             tmp_recorder["reason"] = "annealing_or_frequency"
         end
@@ -334,7 +334,7 @@ end
             num_evals,
         )
     else
-        @recorder begin
+        @recorder options begin
             tmp_recorder["result"] = "accept"
             tmp_recorder["reason"] = "pass"
         end
@@ -429,7 +429,7 @@ function mutate!(
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
     tree = mutate_constant(tree, temperature, options)
-    @recorder recorder["type"] = "mutate_constant"
+    @recorder options recorder["type"] = "mutate_constant"
     return MutationResult{N,P}(; tree=tree)
 end
 
@@ -443,7 +443,7 @@ function mutate!(
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
     tree = mutate_operator(tree, options)
-    @recorder recorder["type"] = "mutate_operator"
+    @recorder options recorder["type"] = "mutate_operator"
     return MutationResult{N,P}(; tree=tree)
 end
 
@@ -458,7 +458,7 @@ function mutate!(
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
     tree = mutate_feature(tree, nfeatures)
-    @recorder recorder["type"] = "mutate_feature"
+    @recorder options recorder["type"] = "mutate_feature"
     return MutationResult{N,P}(; tree=tree)
 end
 
@@ -472,7 +472,7 @@ function mutate!(
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
     tree = swap_operands(tree)
-    @recorder recorder["type"] = "swap_operands"
+    @recorder options recorder["type"] = "swap_operands"
     return MutationResult{N,P}(; tree=tree)
 end
 
@@ -488,10 +488,10 @@ function mutate!(
 ) where {N<:AbstractExpression,P<:PopMember}
     if rand() < 0.5
         tree = append_random_op(tree, options, nfeatures)
-        @recorder recorder["type"] = "add_node:append"
+        @recorder options recorder["type"] = "add_node:append"
     else
         tree = prepend_random_op(tree, options, nfeatures)
-        @recorder recorder["type"] = "add_node:prepend"
+        @recorder options recorder["type"] = "add_node:prepend"
     end
     return MutationResult{N,P}(; tree=tree)
 end
@@ -507,7 +507,7 @@ function mutate!(
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
     tree = insert_random_op(tree, options, nfeatures)
-    @recorder recorder["type"] = "insert_node"
+    @recorder options recorder["type"] = "insert_node"
     return MutationResult{N,P}(; tree=tree)
 end
 
@@ -521,7 +521,7 @@ function mutate!(
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
     tree = delete_random_op!(tree)
-    @recorder recorder["type"] = "delete_node"
+    @recorder options recorder["type"] = "delete_node"
     return MutationResult{N,P}(; tree=tree)
 end
 
@@ -535,7 +535,7 @@ function mutate!(
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
     tree = form_random_connection!(tree)
-    @recorder recorder["type"] = "form_connection"
+    @recorder options recorder["type"] = "form_connection"
     return MutationResult{N,P}(; tree=tree)
 end
 
@@ -549,7 +549,7 @@ function mutate!(
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
     tree = break_random_connection!(tree)
-    @recorder recorder["type"] = "break_connection"
+    @recorder options recorder["type"] = "break_connection"
     return MutationResult{N,P}(; tree=tree)
 end
 
@@ -563,7 +563,7 @@ function mutate!(
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
     tree = randomly_rotate_tree!(tree)
-    @recorder recorder["type"] = "rotate_tree"
+    @recorder options recorder["type"] = "rotate_tree"
     return MutationResult{N,P}(; tree=tree)
 end
 
@@ -581,7 +581,7 @@ function mutate!(
     @assert options.should_simplify
     simplify_tree!(tree, options.operators)
     tree = combine_operators(tree, options.operators)
-    @recorder recorder["type"] = "simplify"
+    @recorder options recorder["type"] = "simplify"
     return MutationResult{N,P}(;
         member=PopMember(
             tree,
@@ -607,7 +607,7 @@ function mutate!(
     kws...,
 ) where {T,N<:AbstractExpression{T},P<:PopMember}
     tree = randomize_tree(tree, curmaxsize, options, nfeatures)
-    @recorder recorder["type"] = "randomize"
+    @recorder options recorder["type"] = "randomize"
     return MutationResult{N,P}(; tree=tree)
 end
 
@@ -622,7 +622,7 @@ function mutate!(
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
     cur_member, new_num_evals = optimize_constants(dataset, member, options)
-    @recorder recorder["type"] = "optimize"
+    @recorder options recorder["type"] = "optimize"
     return MutationResult{N,P}(;
         member=cur_member, num_evals=new_num_evals, return_immediately=true
     )
@@ -638,7 +638,7 @@ function mutate!(
     parent_ref,
     kws...,
 ) where {N<:AbstractExpression,P<:PopMember}
-    @recorder begin
+    @recorder options begin
         recorder["type"] = "identity"
         recorder["result"] = "accept"
         recorder["reason"] = "identity"
@@ -686,7 +686,7 @@ function crossover_generation(
             break
         end
         if num_tries > max_tries
-            @recorder begin
+            @recorder options begin
                 recorder["result"] = "reject"
                 recorder["reason"] = "failed_constraint_check"
             end
@@ -723,7 +723,7 @@ function crossover_generation(
         deterministic=options.deterministic,
     )::P
 
-    @recorder begin
+    @recorder options begin
         recorder["result"] = "accept"
         recorder["reason"] = "pass"
     end

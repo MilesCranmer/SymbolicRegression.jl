@@ -101,7 +101,7 @@ function optimize_and_simplify_population(
         pop.members[j].parent = old_ref
         pop.members[j].ref = new_ref
 
-        @recorder begin
+        @recorder options begin
             # Same structure as in RegularizedEvolution.jl,
             # except we assume that the record already exists.
             @assert haskey(record, "mutations")
