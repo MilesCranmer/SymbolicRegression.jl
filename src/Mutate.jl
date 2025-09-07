@@ -22,7 +22,7 @@ using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: eval_cost
 using ..CheckConstraintsModule: check_constraints
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
-using ..PopMemberModule: AbstractPopMember, PopMember
+using ..PopMemberModule: AbstractPopMember, PopMember, create_child
 using ..MutationFunctionsModule:
     mutate_constant,
     mutate_operator,
@@ -254,14 +254,13 @@ end
         end
         mutation_accepted = false
         return (
-            PopMember(
+            create_child(
+                member,
                 copy_into!(node_storage, member.tree),
                 before_cost,
                 before_loss,
-                options,
-                compute_complexity(member, options);
-                parent=parent_ref,
-                deterministic=options.deterministic,
+                options;
+                parent_ref=parent_ref,
             ),
             mutation_accepted,
             num_evals,
@@ -278,14 +277,13 @@ end
         end
         mutation_accepted = false
         return (
-            PopMember(
+            create_child(
+                member,
                 copy_into!(node_storage, member.tree),
                 before_cost,
                 before_loss,
-                options,
-                compute_complexity(member, options);
-                parent=parent_ref,
-                deterministic=options.deterministic,
+                options;
+                parent_ref=parent_ref,
             ),
             mutation_accepted,
             num_evals,
@@ -322,14 +320,13 @@ end
         end
         mutation_accepted = false
         return (
-            PopMember(
+            create_child(
+                member,
                 copy_into!(node_storage, member.tree),
                 before_cost,
                 before_loss,
-                options,
-                compute_complexity(member, options);
-                parent=parent_ref,
-                deterministic=options.deterministic,
+                options;
+                parent_ref=parent_ref,
             ),
             mutation_accepted,
             num_evals,
@@ -340,19 +337,16 @@ end
             tmp_recorder["reason"] = "pass"
         end
         mutation_accepted = true
-        return (
-            PopMember(
-                tree,
-                after_cost,
-                after_loss,
-                options,
-                newSize;
-                parent=parent_ref,
-                deterministic=options.deterministic,
-            ),
-            mutation_accepted,
-            num_evals,
+        new_member = create_child(
+            member,
+            tree,
+            after_cost,
+            after_loss,
+            options;
+            complexity=newSize,
+            parent_ref=parent_ref,
         )
+        return (new_member, mutation_accepted, num_evals)
     end
 end
 
@@ -583,17 +577,10 @@ function mutate!(
     simplify_tree!(tree, options.operators)
     tree = combine_operators(tree, options.operators)
     @recorder recorder["type"] = "simplify"
-    return MutationResult{N,P}(;
-        member=PopMember(
-            tree,
-            member.cost,
-            member.loss,
-            options;
-            parent=parent_ref,
-            deterministic=options.deterministic,
-        ),
-        return_immediately=true,
+    new_member = create_child(
+        member, tree, member.cost, member.loss, options; parent_ref=parent_ref
     )
+    return MutationResult{N,P}(; member=new_member, return_immediately=true)
 end
 
 function mutate!(
@@ -645,14 +632,8 @@ function mutate!(
         recorder["reason"] = "identity"
     end
     return MutationResult{N,P}(;
-        member=PopMember(
-            tree,
-            member.cost,
-            member.loss,
-            options,
-            compute_complexity(tree, options);
-            parent=parent_ref,
-            deterministic=options.deterministic,
+        member=create_child(
+            member, tree, member.cost, member.loss, options; parent_ref=parent_ref
         ),
         return_immediately=true,
     )
@@ -705,23 +686,23 @@ function crossover_generation(
     )
     num_evals += 2 * dataset_fraction(dataset)
 
-    baby1 = PopMember(
+    baby1 = create_child(
+        (member1, member2),
         child_tree1::AbstractExpression,
         after_cost1,
         after_loss1,
-        options,
-        afterSize1;
-        parent=member1.ref,
-        deterministic=options.deterministic,
+        options;
+        complexity=afterSize1,
+        parent_ref=member1.ref,
     )::P
-    baby2 = PopMember(
+    baby2 = create_child(
+        (member1, member2),
         child_tree2::AbstractExpression,
         after_cost2,
         after_loss2,
-        options,
-        afterSize2;
-        parent=member2.ref,
-        deterministic=options.deterministic,
+        options;
+        complexity=afterSize2,
+        parent_ref=member2.ref,
     )::P
 
     @recorder begin

@@ -2,6 +2,7 @@ module PopMemberModule
 
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, AbstractExpressionNode, string_tree
+import DynamicExpressions: constructorof
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, create_expression
 import ..ComplexityModule: compute_complexity
 using ..UtilsModule: get_birth_order
@@ -197,11 +198,81 @@ function recompute_complexity!(
     return complexity
 end
 
+# Interface for creating child members with custom field preservation
+"""
+    create_child(parent::P, tree, cost, loss, options;
+                complexity::Union{Int,Nothing}=nothing, parent_ref, kwargs...) where P<:AbstractPopMember
+
+Create a new PopMember derived from a parent (mutation case).
+Custom types should override to preserve their additional fields.
+
+# Arguments
+- `parent`: The parent member being mutated
+- `tree`: The new expression tree
+- `cost`: The new cost
+- `loss`: The new loss
+- `options`: The options
+- `complexity`: The complexity (computed if not provided)
+- `parent_ref`: Reference to parent for tracking
+"""
+function create_child(
+    parent::P,
+    tree::N,
+    cost::L,
+    loss::L,
+    options;
+    complexity::Union{Int,Nothing}=nothing,
+    parent_ref,
+    kwargs...,
+) where {T,L,N<:AbstractExpression{T},P<:AbstractPopMember{T,L,N}}
+    actual_complexity = @something complexity compute_complexity(tree, options)
+    return constructorof(P)(
+        tree,
+        cost,
+        loss,
+        options,
+        actual_complexity;
+        parent=parent_ref,
+        deterministic=options.deterministic,
+    )
+end
+
+"""
+    create_child(parents::Tuple{P,P}, tree, cost, loss, options;
+                complexity::Union{Int,Nothing}=nothing, parent_ref, kwargs...) where P<:AbstractPopMember
+
+Create a new PopMember from two parents (crossover case).
+Custom types should override to blend their additional fields.
+"""
+function create_child(
+    parents::Tuple{P,P},
+    tree::N,
+    cost::L,
+    loss::L,
+    options;
+    complexity::Union{Int,Nothing}=nothing,
+    parent_ref,
+    kwargs...,
+) where {T,L,N<:AbstractExpression{T},P<:AbstractPopMember{T,L,N}}
+    actual_complexity = @something complexity compute_complexity(tree, options)
+    return constructorof(P)(
+        tree,
+        cost,
+        loss,
+        options,
+        actual_complexity;
+        parent=parent_ref,
+        deterministic=options.deterministic,
+    )
+end
+
 # Function to extract PopMember type from Population or HallOfFame types
 function popmember_type end
 
 # Default PopMember type for Options
 import ..CoreModule.OptionsModule: default_popmember_type
 default_popmember_type() = PopMember
+
+constructorof(::Type{<:PopMember}) = PopMember
 
 end
