@@ -10,12 +10,10 @@ using DynamicExpressions:
     with_contents,
     constructorof,
     set_node!,
-    count_nodes,
     has_constants,
     has_operators,
     get_child,
-    set_child!,
-    max_degree
+    set_child!
 using ..CoreModule: AbstractOptions, DATA_TYPE, init_value, sample_value
 
 import ..CoreModule: mutate_value

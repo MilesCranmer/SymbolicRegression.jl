@@ -1,6 +1,6 @@
 module ExpressionSpecModule
 
-using DynamicExpressions: AbstractExpression, Expression, AbstractExpressionNode, Node
+using DynamicExpressions: Expression, Node
 
 abstract type AbstractExpressionSpec end
 

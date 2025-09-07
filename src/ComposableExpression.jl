@@ -20,8 +20,11 @@ using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
 using DynamicExpressions.ValueInterfaceModule: is_valid_array
 
+using ..UtilsModule: @intentional_import
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 using ..CoreModule: get_safe_op
+
+@intentional_import Interfaces
 
 abstract type AbstractComposableExpression{T,N} <: AbstractExpression{T,N} end
 

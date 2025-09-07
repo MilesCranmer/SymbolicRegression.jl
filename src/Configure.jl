@@ -251,23 +251,12 @@ function activate_env_on_workers(
 end
 
 function import_module_on_workers(
-    procs,
-    filename::String,
-    @nospecialize(worker_imports::Union{Vector{Symbol},Nothing}),
-    verbosity,
+    procs, @nospecialize(worker_imports::Union{Vector{Symbol},Nothing}), verbosity
 )
     loaded_modules_head_worker = [k.name for (k, _) in Base.loaded_modules]
 
-    included_as_local = "SymbolicRegression" ∉ loaded_modules_head_worker
-    expr = if included_as_local
-        quote
-            include($filename)
-            using .SymbolicRegression
-        end
-    else
-        quote
-            using SymbolicRegression
-        end
+    expr = quote
+        using SymbolicRegression
     end
 
     # Need to import any extension code, if loaded on head node
@@ -367,7 +356,6 @@ function configure_workers(;
     options::AbstractOptions,
     @nospecialize(worker_imports::Union{Vector{Symbol},Nothing}),
     project_path,
-    file,
     exeflags::Cmd,
     verbosity,
     example_dataset::Dataset,
@@ -382,7 +370,7 @@ function configure_workers(;
     end
 
     if we_created_procs
-        import_module_on_workers(procs, file, worker_imports, verbosity)
+        import_module_on_workers(procs, worker_imports, verbosity)
     end
 
     move_functions_to_workers(procs, options, example_dataset, verbosity)

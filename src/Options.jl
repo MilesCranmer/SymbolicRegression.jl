@@ -5,7 +5,6 @@ using Optim: Optim
 using DynamicExpressions:
     OperatorEnum,
     AbstractOperatorEnum,
-    Expression,
     default_node_type,
     AbstractExpression,
     AbstractExpressionNode

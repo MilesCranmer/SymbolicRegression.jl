@@ -181,6 +181,10 @@ include("test_loss_scale.jl")
     include("test_aqua.jl")
 end
 
+@testitem "ExplicitImports tests" tags = [:part3] begin
+    include("test_explicit_imports.jl")
+end
+
 @testitem "JET tests" tags = [:jet] begin
     test_jet_file = joinpath((@__DIR__), "test_jet.jl")
     run(`$(Base.julia_cmd()) --startup-file=no $test_jet_file`)

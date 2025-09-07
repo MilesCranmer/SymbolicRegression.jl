@@ -6,8 +6,10 @@ using DynamicQuantities: UnionAbstractQuantity
 using SpecialFunctions: erf, erfc
 using Base: @deprecate
 using DynamicDiff: ForwardDiff
-using ..ProgramConstantsModule: DATA_TYPE
-using ...UtilsModule: @ignore
+using ...UtilsModule: @ignore, @intentional_import
+
+@intentional_import erf, erfc
+
 #TODO - actually add these operators to the module!
 
 # TODO: Should this be limited to AbstractFloat instead?

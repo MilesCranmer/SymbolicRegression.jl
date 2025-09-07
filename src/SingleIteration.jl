@@ -3,14 +3,13 @@ module SingleIterationModule
 using ADTypes: AutoEnzyme
 using DynamicExpressions: AbstractExpression, string_tree, simplify_tree!, combine_operators
 using ..UtilsModule: @threads_if
-using ..CoreModule: AbstractOptions, Dataset, RecordType, create_expression, batch
+using ..CoreModule: AbstractOptions, Dataset, RecordType, batch
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: generate_reference
 using ..PopulationModule: Population, finalize_costs
 using ..HallOfFameModule: HallOfFame
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..RegularizedEvolutionModule: reg_evol_cycle
-using ..LossFunctionsModule: eval_cost
 using ..ConstantOptimizationModule: optimize_constants
 using ..RecorderModule: @recorder
 
@@ -102,7 +101,7 @@ function optimize_and_simplify_population(
         pop.members[j].parent = old_ref
         pop.members[j].ref = new_ref
 
-        @recorder begin
+        @recorder options begin
             # Same structure as in RegularizedEvolution.jl,
             # except we assume that the record already exists.
             @assert haskey(record, "mutations")

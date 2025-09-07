@@ -42,11 +42,18 @@ using ..CoreModule:
 using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
-using ..UtilsModule: subscriptify, @ignore
+using ..UtilsModule: subscriptify, @ignore, @intentional_import
 using ..LoggingModule: AbstractSRLogger
 using ..TemplateExpressionModule: TemplateExpression
 
 import ..equation_search
+
+# These imports are needed for MLJ generated code
+@intentional_import AbstractADType, AbstractExpressionNode, AbstractExpressionSpec
+@intentional_import AbstractLogger, AbstractMutationWeights, AbstractOperatorEnum
+@intentional_import ComplexityMapping, Dataset, Expression, MutationWeights
+@intentional_import Node, SupervisedLoss, TemplateExpression, compute_complexity
+@intentional_import default_node_type, get_tree
 
 abstract type AbstractSymbolicRegressor <: MMI.Deterministic end
 

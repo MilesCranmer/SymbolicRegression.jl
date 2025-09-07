@@ -9,7 +9,6 @@ using DispatchDoctor: @unstable, @stable
 using StyledStrings: @styled_str, annotatedstring
 using DynamicExpressions:
     DynamicExpressions as DE,
-    AbstractStructuredExpression,
     AbstractExpressionNode,
     AbstractExpression,
     AbstractOperatorEnum,
@@ -25,13 +24,12 @@ using DynamicExpressions:
     with_metadata,
     with_contents,
     node_type,
-    count_nodes,
     preserve_sharing
 using DynamicExpressions.InterfacesModule:
     ExpressionInterface, Interfaces, @implements, all_ei_methods_except, Arguments
 using DynamicExpressions.ExpressionModule: _copy
 
-using ..UtilsModule: FixKws
+using ..UtilsModule: FixKws, @intentional_import
 using ..CoreModule:
     AbstractOptions,
     Options,
@@ -54,6 +52,8 @@ using ..LossFunctionsModule: LossFunctionsModule as LF
 using ..MutateModule: MutateModule as MM
 using ..PopMemberModule: PopMember
 using ..ComposableExpressionModule: ComposableExpression, ValidVector
+
+@intentional_import Interfaces
 
 struct ParamVector{T} <: AbstractVector{T}
     _data::Vector{T}

@@ -44,7 +44,7 @@ function reg_evol_cycle(
 
             oldest = argmin_fast([pop.members[member].birth for member in 1:(pop.n)])
 
-            @recorder begin
+            @recorder options begin
                 if !haskey(record, "mutations")
                     record["mutations"] = RecordType()
                 end
@@ -102,7 +102,7 @@ function reg_evol_cycle(
                 i == oldest1 ? typemax(BT) : pop.members[i].birth for i in 1:(pop.n)
             ])
 
-            @recorder begin
+            @recorder options begin
                 if !haskey(record, "mutations")
                     record["mutations"] = RecordType()
                 end
