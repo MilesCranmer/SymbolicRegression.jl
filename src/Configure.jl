@@ -255,6 +255,8 @@ end
 function import_module_on_workers(
     procs, @nospecialize(worker_imports::Union{Vector{Symbol},Nothing}), verbosity
 )
+    loaded_modules_head_worker = [k.name for (k, _) in Base.loaded_modules]
+
     expr = quote
         using SymbolicRegression
     end
