@@ -107,7 +107,7 @@ end
 
     rng = MersenneTwister(0)
     X = (b1=randn(rng, 32), b2=randn(rng, 32))
-    Y = (c1=X.b1 .* X.b2, c2=X.b1 .+ X.b2)
+    Y = (c1=(X.b1 .* X.b2), c2=(X.b1 .+ X.b2))
     w = ones(32)
     model = MultitargetSRRegressor(; niterations=10, stop_kws...)
     mach = machine(model, X, Y, w)
