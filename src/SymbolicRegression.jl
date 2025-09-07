@@ -91,12 +91,12 @@ export Population,
     erfc,
     atanh_clip
 
-using Distributed
+using Distributed: @everywhere, @spawnat, RemoteChannel, addprocs, procs
 using Printf: @printf, @sprintf
 using Pkg: Pkg
 using TOML: parsefile
 using Random: seed!, shuffle!
-using Reexport
+using Reexport: Reexport, @reexport
 using ProgressMeter: finish!
 using DynamicExpressions:
     Node,
@@ -287,7 +287,8 @@ using .CoreModule:
     atanh_clip,
     create_expression,
     has_units
-using .UtilsModule: is_anonymous_function, recursive_merge, json3_write, @ignore
+using .UtilsModule:
+    is_anonymous_function, recursive_merge, json3_write, @ignore, @intentional_import
 using .ComplexityModule: compute_complexity
 using .CheckConstraintsModule: check_constraints
 using .AdaptiveParsimonyModule:
@@ -348,6 +349,10 @@ using .ComposableExpressionModule:
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 using .ParametricExpressionModule: ParametricExpressionSpec
 using .TemplateExpressionMacroModule: @template_spec
+
+@intentional_import BasicDataset, ComplexityMapping, StdinReader, best_of_sample
+@intentional_import get_constants, set_constants!, with_type_parameters
+@intentional_import get_logger, get_safe_op, has_params, random_node, reset_birth!
 
 @stable default_mode = "disable" begin
     include("deprecates.jl")

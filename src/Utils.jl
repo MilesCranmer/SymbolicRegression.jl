@@ -9,6 +9,12 @@ using DispatchDoctor: @unstable
 
 macro ignore(args...) end
 
+"""
+A no-op macro used to mark symbols as intentionally imported.
+This tells ExplicitImports.jl that we need these symbols even if they appear unused.
+"""
+macro intentional_import(args...) end
+
 const pseudo_time = Ref(0)
 
 function get_birth_order(; deterministic::Bool=false)::Int

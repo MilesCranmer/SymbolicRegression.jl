@@ -3,14 +3,13 @@ module SingleIterationModule
 using ADTypes: AutoEnzyme
 using DynamicExpressions: AbstractExpression, string_tree, simplify_tree!, combine_operators
 using ..UtilsModule: @threads_if
-using ..CoreModule: AbstractOptions, Dataset, RecordType, create_expression, batch
+using ..CoreModule: AbstractOptions, Dataset, RecordType, batch
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: generate_reference
 using ..PopulationModule: Population, finalize_costs
 using ..HallOfFameModule: HallOfFame
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..RegularizedEvolutionModule: reg_evol_cycle
-using ..LossFunctionsModule: eval_cost
 using ..ConstantOptimizationModule: optimize_constants
 using ..RecorderModule: @recorder
 
