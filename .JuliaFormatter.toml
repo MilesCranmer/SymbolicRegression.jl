@@ -1,3 +1,4 @@
 style = "blue"
 ignore = ["docs"]
+# Keep pipe operators as they are more readable
 pipe_to_function_call = false
