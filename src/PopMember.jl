@@ -4,6 +4,7 @@ using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, AbstractExpressionNode, string_tree
 import DynamicExpressions: constructorof
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, create_expression
+import ..CoreModule.OptionsModule: default_popmember_type
 import ..ComplexityModule: compute_complexity
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_cost
@@ -259,10 +260,7 @@ end
 # Function to extract PopMember type from Population or HallOfFame types
 function popmember_type end
 
-# Default PopMember type for Options
-import ..CoreModule.OptionsModule: default_popmember_type
 default_popmember_type() = PopMember
-
 constructorof(::Type{<:PopMember}) = PopMember
 
 end
