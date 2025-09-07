@@ -40,9 +40,6 @@ using ..MutationWeightsModule: AbstractMutationWeights, MutationWeights, mutatio
 import ..OptionsStructModule: Options
 using ..OptionsStructModule: ComplexityMapping, operator_specialization
 using ..UtilsModule: @save_kwargs, @ignore
-
-# Forward declaration - will be defined in PopMemberModule
-function default_popmember_type end
 using ..ExpressionSpecModule:
     AbstractExpressionSpec,
     ExpressionSpec,
@@ -226,6 +223,8 @@ recommend_loss_function_expression(expression_type) = false
 
 create_mutation_weights(w::AbstractMutationWeights) = w
 create_mutation_weights(w::NamedTuple) = MutationWeights(; w...)
+
+function default_popmember_type end
 
 @unstable function with_max_degree_from_context(
     node_type, user_provided_operators, operators
