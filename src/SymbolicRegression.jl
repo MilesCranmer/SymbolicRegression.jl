@@ -91,7 +91,7 @@ export Population,
     erfc,
     atanh_clip
 
-using Distributed: @everywhere, @spawnat, RemoteChannel, addprocs, procs
+using Distributed: @everywhere, @spawnat, RemoteChannel, addprocs, procs, rmprocs
 using Printf: @printf, @sprintf
 using Pkg: Pkg
 using TOML: parsefile
