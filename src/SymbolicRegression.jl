@@ -2,7 +2,6 @@ module SymbolicRegression
 
 # Types
 export Population,
-    AbstractPopMember,
     PopMember,
     HallOfFame,
     Options,

@@ -164,7 +164,7 @@ function PopMember(
     )
 end
 
-function Base.copy(p::P) where {P<:AbstractPopMember}
+function Base.copy(p::PopMember)
     tree = copy(p.tree)
     cost = copy(p.cost)
     loss = copy(p.loss)
@@ -172,7 +172,7 @@ function Base.copy(p::P) where {P<:AbstractPopMember}
     complexity = copy(getfield(p, :complexity))
     ref = copy(p.ref)
     parent = copy(p.parent)
-    return P(tree, cost, loss, birth, complexity, ref, parent)
+    return PopMember(tree, cost, loss, birth, complexity, ref, parent)
 end
 
 function reset_birth!(p::AbstractPopMember; deterministic::Bool)
