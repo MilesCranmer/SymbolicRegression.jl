@@ -37,16 +37,18 @@ to avoid spam when worker processes exit normally.
 macro filtered_async(expr)
     return esc(
         quote
-            $(Base).errormonitor(@async begin
-                try
-                    $expr
-                catch ex
-                    if !(ex isa $(Distributed).ProcessExitedException)
-                        rethrow(ex)
+            $(Base).errormonitor(
+                @async begin
+                    try
+                        $expr
+                    catch ex
+                        if !(ex isa $(Distributed).ProcessExitedException)
+                            rethrow(ex)
+                        end
                     end
                 end
-            end)
-        end
+            )
+        end,
     )
 end
 

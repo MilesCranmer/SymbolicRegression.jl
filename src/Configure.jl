@@ -243,10 +243,12 @@ function activate_env_on_workers(
 )
     verbosity > 0 && @info "Activating environment on workers."
     @everywhere procs begin
-        Base.MainInclude.eval(quote
-            using Pkg
-            Pkg.activate($$project_path)
-        end)
+        Base.MainInclude.eval(
+            quote
+                using Pkg
+                Pkg.activate($$project_path)
+            end,
+        )
     end
 end
 
@@ -289,9 +291,12 @@ function import_module_on_workers(
     all_extensions = vcat(relevant_extensions, @something(worker_imports, Symbol[]))
 
     for ext in all_extensions
-        push!(expr.args, quote
-            using $ext: $ext
-        end)
+        push!(
+            expr.args,
+            quote
+                using $ext: $ext
+            end,
+        )
     end
 
     verbosity > 0 && if isempty(relevant_extensions)
