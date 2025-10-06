@@ -171,7 +171,7 @@ function _best_of_sample(
     end
     return members[chosen_idx]
 end
-_get_cost(member::PopMember) = member.cost
+_get_cost(member::AbstractPopMember) = member.cost
 
 const CACHED_WEIGHTS =
     let init_k = collect(0:5),
