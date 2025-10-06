@@ -79,6 +79,13 @@
 
     @unstable DynamicExpressions.constructorof(::Type{<:CustomPopMember}) = CustomPopMember
 
+    # Define with_type_parameters for CustomPopMember
+    @unstable function DynamicExpressions.with_type_parameters(
+        ::Type{<:CustomPopMember}, ::Type{T}, ::Type{L}, ::Type{N}
+    ) where {T,L,N}
+        return CustomPopMember{T,L,N}
+    end
+
     # Define copy for CustomPopMember
     function Base.copy(p::CustomPopMember)
         return CustomPopMember(

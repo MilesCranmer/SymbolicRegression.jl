@@ -297,7 +297,8 @@ using .MutationFunctionsModule:
 using .InterfaceDynamicExpressionsModule:
     @extend_operators, require_copy_to_workers, make_example_inputs
 using .LossFunctionsModule: eval_loss, eval_cost, update_baseline_loss!, score_func
-using .PopMemberModule: AbstractPopMember, PopMember, reset_birth!, popmember_type
+using .PopMemberModule:
+    AbstractPopMember, PopMember, reset_birth!, popmember_type, expression_type
 using .CoreModule.UtilsModule: get_birth_order
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
 using .HallOfFameModule:
@@ -339,7 +340,8 @@ using .SearchUtilsModule:
     get_cur_maxsize,
     update_hall_of_fame!,
     parse_guesses,
-    logging_callback!
+    logging_callback!,
+    infer_popmember_type
 using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
 using .TemplateExpressionModule:
     TemplateExpression, TemplateStructure, TemplateExpressionSpec, ParamVector, has_params
@@ -631,20 +633,8 @@ end
     @recorder record["options"] = "$(options)"
 
     nout = length(datasets)
-    example_dataset = first(datasets)
-    example_ex = create_expression(init_value(T), options, example_dataset)
-    NT = typeof(example_ex)
-    # Create a prototype member to get the concrete type
-    prototype_member = options.popmember_type(
-        copy(example_ex),
-        L(0),
-        L(Inf),
-        options,
-        1;  # complexity
-        parent=-1,
-        deterministic=options.deterministic,
-    )
-    PMType = typeof(prototype_member)
+    PMType = infer_popmember_type(T, L, D, options)
+    NT = expression_type(PMType)
     PopType = Population{T,L,NT,PMType}
     HallOfFameType = HallOfFame{T,L,NT,PMType}
     WorkerOutputType = get_worker_output_type(

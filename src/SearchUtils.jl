@@ -23,7 +23,7 @@ using ..CoreModule:
     Dataset, AbstractOptions, Options, RecordType, max_features, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
-using ..PopMemberModule: PopMember, AbstractPopMember, with_expression_type
+using ..PopMemberModule: PopMember, AbstractPopMember
 using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
 using ..ConstantOptimizationModule: optimize_constants
 using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
@@ -33,6 +33,15 @@ using ..InterfaceDynamicExpressionsModule: takes_eval_options
 using ..CheckConstraintsModule: check_constraints
 
 function logging_callback! end
+
+@unstable @inline function infer_popmember_type(
+    ::Type{T}, ::Type{L}, ::Type{D}, options
+) where {T,L,D<:Dataset}
+    NodeType = with_type_parameters(options.node_type, T)
+    N = Base.promote_op(create_expression, NodeType, typeof(options), D)
+    N in (Any, Union{}) && error("Failed to infer expression type")
+    return with_type_parameters(options.popmember_type, T, L, N)
+end
 
 """
     @filtered_async expr
@@ -798,21 +807,8 @@ end
     guesses::Union{AbstractVector,AbstractVector{<:AbstractVector}},
     datasets::Vector{D},
     options::AbstractOptions,
-) where {T,L,N,P<:AbstractPopMember{T,L,N},D<:Dataset{T,L}}
-    return _parse_guesses_impl(P, guesses, datasets, options)
-end
-
-# Deal with non-concrete PopMember types
-@unstable function parse_guesses(
-    ::Type{P},
-    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector}},
-    datasets::Vector{D},
-    options::AbstractOptions,
 ) where {T,L,P<:AbstractPopMember{T,L},D<:Dataset{T,L}}
-    NodeType = with_type_parameters(options.node_type, T)
-    N = Base.promote_op(create_expression, NodeType, typeof(options), D)
-    N in (Any, Union{}) && error("Failed to infer expression type")
-    ConcreteP = with_expression_type(P, N)
+    ConcreteP = infer_popmember_type(T, L, D, options)
     return _parse_guesses_impl(ConcreteP, guesses, datasets, options)
 end
 

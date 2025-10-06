@@ -2,7 +2,7 @@ module PopMemberModule
 
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, AbstractExpressionNode, string_tree
-import DynamicExpressions: constructorof
+import DynamicExpressions: constructorof, with_type_parameters
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, create_expression
 import ..CoreModule.OptionsModule: default_popmember_type
 import ..ComplexityModule: compute_complexity
@@ -265,6 +265,16 @@ function popmember_type end
     ::Type{<:PopMember{T,L}}, ::Type{N}
 ) where {T,L,N<:AbstractExpression{T}}
     return PopMember{T,L,N}
+end
+
+@inline function with_type_parameters(
+    ::Type{<:PopMember}, ::Type{T}, ::Type{L}, ::Type{N}
+) where {T,L,N}
+    return PopMember{T,L,N}
+end
+
+@inline function expression_type(::Type{<:AbstractPopMember{<:Any,<:Any,N}}) where {N}
+    return N
 end
 
 end
