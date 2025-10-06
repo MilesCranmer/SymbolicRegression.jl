@@ -118,7 +118,6 @@ end
             options;
             complexity=compute_complexity(member, options),
             parent_ref=member.ref,
-            deterministic=options.deterministic,
         )
     end
     function embed_metadata(

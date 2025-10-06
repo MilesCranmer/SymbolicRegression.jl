@@ -101,7 +101,6 @@
         options;
         complexity::Union{Int,Nothing}=nothing,
         parent_ref,
-        kwargs...,
     ) where {T,L}
         actual_complexity = @something complexity SymbolicRegression.compute_complexity(
             tree, options
@@ -126,7 +125,6 @@
         options;
         complexity::Union{Int,Nothing}=nothing,
         parent_ref,
-        kwargs...,
     ) where {T,L,N<:AbstractExpression{T}}
         actual_complexity = @something complexity SymbolicRegression.compute_complexity(
             tree, options

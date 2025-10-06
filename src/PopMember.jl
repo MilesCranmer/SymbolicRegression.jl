@@ -201,7 +201,7 @@ end
 
 """
     create_child(parent::P, tree::AbstractExpression{T}, cost, loss, options;
-                complexity::Union{Int,Nothing}=nothing, parent_ref, kwargs...) where {T,L,P<:PopMember{T,L}}
+                complexity::Union{Int,Nothing}=nothing, parent_ref) where {T,L,P<:PopMember{T,L}}
 
 Create a new PopMember with a potentially different expression type.
 Used by embed_metadata where the expression gains metadata.
@@ -214,7 +214,6 @@ function create_child(
     options;
     complexity::Union{Int,Nothing}=nothing,
     parent_ref,
-    kwargs...,
 ) where {T,L,P<:PopMember{T,L}}
     actual_complexity = @something complexity compute_complexity(tree, options)
     return PopMember(
@@ -230,7 +229,7 @@ end
 
 """
     create_child(parents::Tuple{P,P}, tree, cost, loss, options;
-                complexity::Union{Int,Nothing}=nothing, parent_ref, kwargs...) where P<:AbstractPopMember
+                complexity::Union{Int,Nothing}=nothing, parent_ref) where P<:AbstractPopMember
 
 Create a new PopMember from two parents (crossover case).
 Custom types should override to blend their additional fields.
@@ -243,7 +242,6 @@ function create_child(
     options;
     complexity::Union{Int,Nothing}=nothing,
     parent_ref,
-    kwargs...,
 ) where {T,L,P<:PopMember{T,L}}
     actual_complexity = @something complexity compute_complexity(tree, options)
     return PopMember(
@@ -262,5 +260,11 @@ function popmember_type end
 
 @unstable default_popmember_type() = PopMember
 @unstable constructorof(::Type{<:PopMember}) = PopMember
+
+@inline function with_expression_type(
+    ::Type{<:PopMember{T,L}}, ::Type{N}
+) where {T,L,N<:AbstractExpression{T}}
+    return PopMember{T,L,N}
+end
 
 end

@@ -39,8 +39,8 @@ using ..CoreModule:
     ExpressionSpec,
     get_expression_type,
     check_warm_start_compatibility
-using ..CoreModule.OptionsModule:
-    DEFAULT_OPTIONS, OPTION_DESCRIPTIONS, default_popmember_type
+using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
+using ..PopMemberModule: default_popmember_type
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
 using ..UtilsModule: subscriptify, @ignore

@@ -12,12 +12,18 @@ using DispatchDoctor: @unstable
 using Logging: AbstractLogger
 
 using DynamicExpressions:
-    AbstractExpression, string_tree, parse_expression, EvalOptions, with_type_parameters
+    AbstractExpression,
+    string_tree,
+    parse_expression,
+    EvalOptions,
+    with_type_parameters,
+    constructorof
 using ..UtilsModule: subscriptify
-using ..CoreModule: Dataset, AbstractOptions, Options, RecordType, max_features
+using ..CoreModule:
+    Dataset, AbstractOptions, Options, RecordType, max_features, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
-using ..PopMemberModule: PopMember, AbstractPopMember
+using ..PopMemberModule: PopMember, AbstractPopMember, with_expression_type
 using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
 using ..ConstantOptimizationModule: optimize_constants
 using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
@@ -800,7 +806,9 @@ function parse_guesses(
         dataset = datasets[j]
         for g in guess_lists[j]
             ex = _parse_guess_expression(T, g, dataset, options)
-            member = PopMember(dataset, ex, options; deterministic=options.deterministic)
+            member = constructorof(P)(
+                dataset, ex, options; deterministic=options.deterministic
+            )
             if options.should_optimize_constants
                 member, _ = optimize_constants(dataset, member, options)
             end
@@ -818,6 +826,21 @@ function parse_guesses(
     end
     return out
 end
+
+# Deal with non-concrete PopMember types
+function parse_guesses(
+    ::Type{P},
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector}},
+    datasets::Vector{D},
+    options::AbstractOptions,
+) where {T,L,P<:AbstractPopMember{T,L},D<:Dataset{T,L}}
+    NodeType = with_type_parameters(options.node_type, T)
+    N = Base.promote_op(create_expression, NodeType, typeof(options), D)
+    N === Any && error("Failed to infer expression type")
+    ConcreteP = with_expression_type(P, N)
+    return parse_guesses(ConcreteP, guesses, datasets, options)
+end
+
 function _make_vector_vector(guesses, nout)
     if nout == 1
         if guesses isa AbstractVector{<:AbstractVector}
