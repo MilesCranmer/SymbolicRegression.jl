@@ -793,7 +793,7 @@ end
 
 """Parse user-provided guess expressions and convert them into optimized
 `PopMember` objects for each output dataset."""
-function parse_guesses(
+@unstable function parse_guesses(
     ::Type{P},
     guesses::Union{AbstractVector,AbstractVector{<:AbstractVector}},
     datasets::Vector{D},
@@ -828,7 +828,7 @@ function parse_guesses(
 end
 
 # Deal with non-concrete PopMember types
-function parse_guesses(
+@unstable function parse_guesses(
     ::Type{P},
     guesses::Union{AbstractVector,AbstractVector{<:AbstractVector}},
     datasets::Vector{D},
