@@ -799,6 +799,29 @@ end
     datasets::Vector{D},
     options::AbstractOptions,
 ) where {T,L,N,P<:AbstractPopMember{T,L,N},D<:Dataset{T,L}}
+    return _parse_guesses_impl(P, guesses, datasets, options)
+end
+
+# Deal with non-concrete PopMember types
+@unstable function parse_guesses(
+    ::Type{P},
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector}},
+    datasets::Vector{D},
+    options::AbstractOptions,
+) where {T,L,P<:AbstractPopMember{T,L},D<:Dataset{T,L}}
+    NodeType = with_type_parameters(options.node_type, T)
+    N = Base.promote_op(create_expression, NodeType, typeof(options), D)
+    N in (Any, Union{}) && error("Failed to infer expression type")
+    ConcreteP = with_expression_type(P, N)
+    return _parse_guesses_impl(ConcreteP, guesses, datasets, options)
+end
+
+@inline function _parse_guesses_impl(
+    ::Type{P},
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector}},
+    datasets::Vector{D},
+    options::AbstractOptions,
+) where {T,L,N,P<:AbstractPopMember{T,L,N},D<:Dataset{T,L}}
     nout = length(datasets)
     out = [P[] for _ in 1:nout]
     guess_lists = _make_vector_vector(guesses, nout)
@@ -825,20 +848,6 @@ end
         end
     end
     return out
-end
-
-# Deal with non-concrete PopMember types
-@unstable function parse_guesses(
-    ::Type{P},
-    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector}},
-    datasets::Vector{D},
-    options::AbstractOptions,
-) where {T,L,P<:AbstractPopMember{T,L},D<:Dataset{T,L}}
-    NodeType = with_type_parameters(options.node_type, T)
-    N = Base.promote_op(create_expression, NodeType, typeof(options), D)
-    N === Any && error("Failed to infer expression type")
-    ConcreteP = with_expression_type(P, N)
-    return parse_guesses(ConcreteP, guesses, datasets, options)
 end
 
 function _make_vector_vector(guesses, nout)
