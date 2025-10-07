@@ -2,13 +2,18 @@ using TestItems: @testitem
 using TestItemRunner: @run_package_tests
 
 ENV["SYMBOLIC_REGRESSION_TEST"] = "true"
-tags_to_run = let t = get(ENV, "SYMBOLIC_REGRESSION_TEST_SUITE", "part1,part2,part3")
-    t = split(t, ",")
-    t = map(Symbol, t)
-    t
-end
 
-@eval @run_package_tests filter = ti -> !isdisjoint(ti.tags, $tags_to_run) verbose = true
+const SYMBOLIC_REGRESSION_TEST_SUITE = get(ENV, "SYMBOLIC_REGRESSION_TEST_SUITE", "")
+const SYMBOLIC_REGRESSION_TEST_NAMES = get(ENV, "SYMBOLIC_REGRESSION_TEST_NAMES", "")
+tags_to_run = map(Symbol, filter(!isempty, split(SYMBOLIC_REGRESSION_TEST_SUITE, ",")))
+names_to_run = filter(!isempty, split(SYMBOLIC_REGRESSION_TEST_NAMES, ","))
+test_filter = if !isempty(names_to_run)
+    ti -> any(name -> occursin(name, ti.name), names_to_run)
+else
+    tags_to_run = isempty(tags_to_run) ? [:part1, :part2, :part3] : tags_to_run
+    ti -> !isdisjoint(ti.tags, tags_to_run)
+end
+@run_package_tests(filter = test_filter, verbose = true)
 
 # TODO: This is a very slow test
 include("test_operators.jl")
@@ -76,10 +81,7 @@ end
 end
 
 include("test_complexity.jl")
-
-@testitem "Test options" tags = [:part1] begin
-    include("test_options.jl")
-end
+include("test_options.jl")
 
 @testitem "Test hash of tree" tags = [:part2] begin
     include("test_hash.jl")
@@ -129,6 +131,11 @@ end
     include("../examples/parameterized_function.jl")
 end
 
+@testitem "Running custom types example." tags = [:part3] begin
+    ENV["SYMBOLIC_REGRESSION_IS_TESTING"] = "true"
+    include("../examples/custom_types.jl")
+end
+
 @testitem "Testing whether the recorder works." tags = [:part3] begin
     include("test_recorder.jl")
 end
@@ -137,15 +144,12 @@ end
     include("test_deterministic.jl")
 end
 
-@testitem "Testing whether early stop criteria works." tags = [:part2] begin
-    include("test_early_stop.jl")
-end
+include("test_early_stop.jl")
 
 include("test_mlj.jl")
 
-@testitem "Testing whether we can move operators to workers." tags = [:part1] begin
-    include("test_custom_operators_multiprocessing.jl")
-end
+include("test_custom_operators_multiprocessing.jl")
+include("test_filtered_async.jl")
 
 @testitem "Testing whether we can move loss function expression to workers." tags = [:part2] begin
     include("test_loss_function_expression_multiprocessing.jl")
@@ -159,24 +163,25 @@ end
     include("test_custom_objectives.jl")
 end
 
-@testitem "Test abstract numbers" tags = [:part1] begin
-    include("test_abstract_numbers.jl")
-end
+include("test_abstract_numbers.jl")
 
 include("test_logging.jl")
 include("test_pretty_printing.jl")
 include("test_expression_builder.jl")
+include("test_guesses.jl")
 include("test_composable_expression.jl")
 include("test_parametric_template_expressions.jl")
+include("test_template_expression.jl")
 include("test_template_macro.jl")
 include("test_template_expression_mutation.jl")
 include("test_template_expression_string.jl")
+include("test_loss_scale.jl")
 
 @testitem "Aqua tests" tags = [:part2, :aqua] begin
     include("test_aqua.jl")
 end
 
-@testitem "JET tests" tags = [:part1, :jet] begin
+@testitem "JET tests" tags = [:jet] begin
     test_jet_file = joinpath((@__DIR__), "test_jet.jl")
     run(`$(Base.julia_cmd()) --startup-file=no $test_jet_file`)
 end

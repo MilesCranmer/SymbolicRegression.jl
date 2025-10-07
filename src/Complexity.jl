@@ -51,8 +51,8 @@ function _compute_complexity(
                 t -> t.constant ? cc : vc
             end
         end,
-        let uc = cmap.unaop_complexities, bc = cmap.binop_complexities
-            t -> t.degree == 1 ? @inbounds(uc[t.op]) : @inbounds(bc[t.op])
+        let op_complexities = cmap.op_complexities
+            t -> @inbounds(op_complexities[t.degree][t.op])
         end,
         +,
         tree,

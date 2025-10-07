@@ -110,6 +110,7 @@ using DynamicExpressions:
     AbstractExpressionNode,
     ExpressionInterface,
     OperatorEnum,
+    GenericOperatorEnum,
     @parse_expression,
     parse_expression,
     @declare_expression_operator,
@@ -219,6 +220,7 @@ using DispatchDoctor: @stable
     include("ConstantOptimization.jl")
     include("Population.jl")
     include("HallOfFame.jl")
+    include("ExpressionBuilder.jl")
     include("Mutate.jl")
     include("RegularizedEvolution.jl")
     include("SingleIteration.jl")
@@ -226,7 +228,6 @@ using DispatchDoctor: @stable
     include("Migration.jl")
     include("SearchUtils.jl")
     include("Logging.jl")
-    include("ExpressionBuilder.jl")
     include("ComposableExpression.jl")
     include("TemplateExpression.jl")
     include("TemplateExpressionMacro.jl")
@@ -243,10 +244,14 @@ using .CoreModule:
     AbstractOptions,
     Options,
     ComplexityMapping,
+    WarmStartIncompatibleError,
     AbstractMutationWeights,
     MutationWeights,
     AbstractExpressionSpec,
     ExpressionSpec,
+    init_value,
+    sample_value,
+    mutate_value,
     get_safe_op,
     max_features,
     is_weighted,
@@ -289,12 +294,9 @@ using .CheckConstraintsModule: check_constraints
 using .AdaptiveParsimonyModule:
     RunningSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
 using .MutationFunctionsModule:
-    gen_random_tree,
-    gen_random_tree_fixed_size,
-    random_node,
-    random_node_and_parent,
-    crossover_trees
-using .InterfaceDynamicExpressionsModule: @extend_operators
+    gen_random_tree, gen_random_tree_fixed_size, random_node, crossover_trees
+using .InterfaceDynamicExpressionsModule:
+    @extend_operators, require_copy_to_workers, make_example_inputs
 using .LossFunctionsModule: eval_loss, eval_cost, update_baseline_loss!, score_func
 using .PopMemberModule: AbstractPopMember, PopMember, reset_birth!
 using .PopulationModule: Population, best_sub_pop, record_population, best_of_sample
@@ -316,6 +318,7 @@ using .SearchUtilsModule:
     get_worker_output_type,
     extract_from_worker,
     @sr_spawner,
+    @filtered_async,
     StdinReader,
     watch_stream,
     close_reader!,
@@ -335,12 +338,14 @@ using .SearchUtilsModule:
     save_to_file,
     get_cur_maxsize,
     update_hall_of_fame!,
+    parse_guesses,
     logging_callback!
 using .LoggingModule: AbstractSRLogger, SRLogger, get_logger
 using .TemplateExpressionModule:
-    TemplateExpression, TemplateStructure, TemplateExpressionSpec, ParamVector
-using .TemplateExpressionModule: ValidVector
-using .ComposableExpressionModule: ComposableExpression
+    TemplateExpression, TemplateStructure, TemplateExpressionSpec, ParamVector, has_params
+using .TemplateExpressionModule: ValidVector, TemplateReturnError
+using .ComposableExpressionModule:
+    ComposableExpression, ValidVectorMixError, ValidVectorAccessError
 using .ExpressionBuilderModule: embed_metadata, strip_metadata
 using .ParametricExpressionModule: ParametricExpressionSpec
 using .TemplateExpressionMacroModule: @template_spec
@@ -409,6 +414,9 @@ which is useful for debugging and profiling.
     is close to the recommended size. This is important for long-running distributed
     jobs where each process has an independent memory, and can help avoid
     out-of-memory errors. By default, this is set to `Sys.free_memory() / numprocs`.
+- `worker_timeout::Union{Real,Nothing}=nothing`: Timeout in seconds for worker processes
+    to establish connection with the master process. If `JULIA_WORKER_TIMEOUT` is already set,
+    that value is used. Otherwise defaults to `max(60, numprocs^2)`.
 - `worker_imports::Union{Vector{Symbol},Nothing}=nothing`: If you want to import
     additional modules on each worker, pass them here as a vector of symbols.
     By default some of the extensions will automatically be loaded when needed.
@@ -441,6 +449,11 @@ which is useful for debugging and profiling.
 - `y_units=nothing`: The units of the output, to be used for dimensional constraints.
     If `y` is a matrix, then this can be a vector of units, in which case
     each element corresponds to each output feature.
+- `guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing}=nothing`: Initial
+    guess equations to seed the search. Examples:
+    - Single output: `["x1^2 + x2", "sin(x1) * x2"]`
+    - Multi-output: `[["x1 + x2"], ["x1 * x2", "x1 - x2"]]`
+    Constants will be automatically optimized.
 
 # Returns
 - `hallOfFame::HallOfFame`: The best equations seen during the search.
@@ -463,6 +476,7 @@ function equation_search(
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
     heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
+    worker_timeout::Union{Real,Nothing}=nothing,
     worker_imports::Union{Vector{Symbol},Nothing}=nothing,
     runtests::Bool=true,
     saved_state=nothing,
@@ -475,6 +489,7 @@ function equation_search(
     X_units::Union{AbstractVector,Nothing}=nothing,
     y_units=nothing,
     extra::NamedTuple=NamedTuple(),
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing}=nothing,
     v_dim_out::Val{DIM_OUT}=Val(nothing),
     # Deprecated:
     multithreaded=nothing,
@@ -513,6 +528,7 @@ function equation_search(
         procs=procs,
         addprocs_function=addprocs_function,
         heap_size_hint_in_bytes=heap_size_hint_in_bytes,
+        worker_timeout=worker_timeout,
         worker_imports=worker_imports,
         runtests=runtests,
         saved_state=saved_state,
@@ -521,6 +537,7 @@ function equation_search(
         verbosity=verbosity,
         logger=logger,
         progress=progress,
+        guesses=guesses,
         v_dim_out=Val(DIM_OUT),
     )
 end
@@ -539,6 +556,7 @@ function equation_search(
     datasets::Vector{D};
     options::AbstractOptions=Options(),
     saved_state=nothing,
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing}=nothing,
     runtime_options::Union{AbstractRuntimeOptions,Nothing}=nothing,
     runtime_options_kws...,
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE,D<:Dataset{T,L}}
@@ -554,15 +572,19 @@ function equation_search(
     )
 
     # Underscores here mean that we have mutated the variable
-    return _equation_search(datasets, _runtime_options, options, saved_state)
+    return _equation_search(datasets, _runtime_options, options, saved_state, guesses)
 end
 
 @noinline function _equation_search(
-    datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions, saved_state
+    datasets::Vector{D},
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+    saved_state,
+    guesses,
 ) where {D<:Dataset}
     _validate_options(datasets, ropt, options)
     state = _create_workers(PopMember, datasets, ropt, options)
-    _initialize_search!(state, datasets, ropt, options, saved_state)
+    _initialize_search!(state, datasets, ropt, options, saved_state, guesses)
     _warmup_search!(PopMember, state, datasets, ropt, options)
     _main_search_loop!(PopMember, state, datasets, ropt, options)
     _tear_down!(state, ropt, options)
@@ -610,7 +632,7 @@ end
 
     nout = length(datasets)
     example_dataset = first(datasets)
-    example_ex = create_expression(zero(T), options, example_dataset)
+    example_ex = create_expression(init_value(T), options, example_dataset)
     NT = typeof(example_ex)
     PopType = Population{T,L,NT}
     HallOfFameType = HallOfFame{T,L,NT,PM{T,L,NT}}
@@ -630,6 +652,7 @@ end
             procs=ropt.init_procs,
             ropt.numprocs,
             ropt.addprocs_function,
+            ropt.worker_timeout,
             options,
             worker_imports=ropt.worker_imports,
             project_path=splitdir(Pkg.project().path)[1],
@@ -670,6 +693,8 @@ end
         j in 1:nout
     ]
 
+    seed_members = [PopMember{T,L,NT}[] for j in 1:nout]
+
     return SearchState{T,L,typeof(example_ex),WorkerOutputType,ChannelType}(;
         procs=procs,
         we_created_procs=we_created_procs,
@@ -687,6 +712,7 @@ end
         cur_maxsizes=cur_maxsizes,
         stdin_reader=stdin_reader,
         record=Ref(record),
+        seed_members=seed_members,
     )
 end
 function _initialize_search!(
@@ -695,6 +721,7 @@ function _initialize_search!(
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
     saved_state,
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing},
 ) where {T,L,N}
     nout = length(datasets)
 
@@ -714,6 +741,16 @@ function _initialize_search!(
                 member.loss = result_loss
             end
             state.halls_of_fame[j] = hof
+        end
+    end
+
+    if !isnothing(guesses)
+        parsed_seed_members = parse_guesses(
+            eltype(state.halls_of_fame[1]), guesses, datasets, options
+        )
+        for j in 1:nout
+            state.seed_members[j] = copy(parsed_seed_members[j])
+            update_hall_of_fame!(state.halls_of_fame[j], parsed_seed_members[j], options)
         end
     end
 
@@ -767,6 +804,22 @@ function _initialize_search!(
     end
     return nothing
 end
+
+function _preserve_loaded_state!(
+    state::AbstractSearchState{T,L,N},
+    ropt::AbstractRuntimeOptions,
+    options::AbstractOptions,
+) where {T,L,N}
+    nout = length(state.worker_output)
+    for j in 1:nout, i in 1:(options.populations)
+        (pop, _, _, _) = extract_from_worker(
+            state.worker_output[j][i], Population{T,L,N}, HallOfFame{T,L,N}
+        )
+        state.last_pops[j][i] = copy(pop)
+    end
+    return nothing
+end
+
 function _warmup_search!(
     ::Type{PM},
     state::AbstractSearchState{T,L,N},
@@ -774,6 +827,10 @@ function _warmup_search!(
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
 ) where {T,L,N,PM<:AbstractPopMember}
+    if ropt.niterations == 0
+        return _preserve_loaded_state!(state, ropt, options)
+    end
+
     nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
         dataset = datasets[j]
@@ -844,9 +901,7 @@ function _main_search_loop!(
     if ropt.parallelism in (:multiprocessing, :multithreading)
         for j in 1:nout, i in 1:(options.populations)
             # Start listening for each population to finish:
-            t = Base.errormonitor(
-                @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
-            )
+            t = @filtered_async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
             push!(state.tasks[j], t)
         end
     end
@@ -854,9 +909,9 @@ function _main_search_loop!(
     resource_monitor = ResourceMonitor(;
         # Storing n times as many monitoring intervals as populations seems like it will
         # help get accurate resource estimates:
-        max_recordings=options.populations * 100 * nout,
-        start_reporting_at=options.populations * 3 * nout,
-        window_size=options.populations * 2 * nout,
+        max_recordings=(options.populations * 100 * nout),
+        start_reporting_at=(options.populations * 3 * nout),
+        window_size=(options.populations * 2 * nout),
     )
     while sum(state.cycles_remaining) > 0
         kappa += 1
@@ -932,6 +987,13 @@ function _main_search_loop!(
             if options.hof_migration && length(dominating) > 0
                 migrate!(dominating => cur_pop, options; frac=options.fraction_replaced_hof)
             end
+            if !isempty(state.seed_members[j])
+                migrate!(
+                    state.seed_members[j] => cur_pop,
+                    options;
+                    frac=options.fraction_replaced_guesses,
+                )
+            end
             ###################################################################
 
             state.cycles_remaining[j] -= 1
@@ -972,8 +1034,8 @@ function _main_search_loop!(
                 worker_idx = worker_idx
             )
             if ropt.parallelism in (:multiprocessing, :multithreading)
-                state.tasks[j][i] = Base.errormonitor(
-                    @async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
+                state.tasks[j][i] = @filtered_async put!(
+                    state.channels[j][i], fetch(state.worker_output[j][i])
                 )
             end
 
@@ -1066,6 +1128,7 @@ function _tear_down!(
     close_reader!(state.stdin_reader)
     # Safely close all processes or threads
     if ropt.parallelism == :multiprocessing
+        # TODO: We should unwrap the error monitors here
         state.we_created_procs && rmprocs(state.procs)
     elseif ropt.parallelism == :multithreading
         nout = length(state.worker_output)
@@ -1145,9 +1208,20 @@ function _info_dump(
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
 ) where {D<:Dataset}
+    nout = length(state.halls_of_fame)
+
+    # Ensure files are saved even when niterations=0, regardless of verbosity
+    if options.save_to_file
+        for j in 1:nout
+            hall_of_fame = state.halls_of_fame[j]
+            dataset = datasets[j]
+            dominating = calculate_pareto_frontier(hall_of_fame)
+            save_to_file(dominating, nout, j, dataset, options, ropt)
+        end
+    end
+
     ropt.verbosity <= 0 && return nothing
 
-    nout = length(state.halls_of_fame)
     if nout > 1
         @info "Final populations:"
     else
@@ -1186,7 +1260,11 @@ end
 
 include("MLJInterface.jl")
 using .MLJInterfaceModule:
-    SRRegressor, MultitargetSRRegressor, SRTestRegressor, MultitargetSRTestRegressor
+    get_options,
+    SRRegressor,
+    MultitargetSRRegressor,
+    SRTestRegressor,
+    MultitargetSRTestRegressor
 
 # Hack to get static analysis to work from within tests:
 @ignore include("../test/runtests.jl")

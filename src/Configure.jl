@@ -1,3 +1,5 @@
+using Random: MersenneTwister
+
 const TEST_TYPE = Float32
 
 function test_operator(@nospecialize(op::Function), x::T, y=nothing) where {T}
@@ -33,18 +35,26 @@ precompile(Tuple{typeof(test_operator),Function,Float32})
 
 const TEST_INPUTS = collect(range(-100, 100; length=99))
 
+function get_test_inputs(::Type{T}, ::AbstractOptions) where {T<:Number}
+    return Base.Fix1(convert, T).(TEST_INPUTS)
+end
+function get_test_inputs(::Type{T}, ::AbstractOptions) where {T<:Complex}
+    return Base.Fix1(convert, T).(TEST_INPUTS .+ TEST_INPUTS .* im)
+end
+function get_test_inputs(::Type{T}, options::AbstractOptions) where {T}
+    rng = MersenneTwister(0)
+    return [sample_value(rng, T, options) for _ in 1:100]
+end
+
 function assert_operators_well_defined(T, options::AbstractOptions)
-    test_input = if T <: Complex
-        Base.Fix1(convert, T).(TEST_INPUTS .+ TEST_INPUTS .* im)
-    else
-        Base.Fix1(convert, T).(TEST_INPUTS)
-    end
+    test_input = get_test_inputs(T, options)
     for x in test_input, y in test_input, op in options.operators.binops
         test_operator(op, x, y)
     end
     for x in test_input, op in options.operators.unaops
         test_operator(op, x)
     end
+    return nothing
 end
 
 # Check for errors before they happen
@@ -124,6 +134,7 @@ function move_functions_to_workers(
         :binops,
         :elementwise_loss,
         :early_stop_condition,
+        :expression_type,
         :loss_function,
         :loss_function_expression,
         :complexity_mapping,
@@ -132,19 +143,19 @@ function move_functions_to_workers(
     for function_set in function_sets
         if function_set == :unaops
             ops = options.operators.unaops
-            example_inputs = (zero(T),)
+            example_inputs = (init_value(T),)
         elseif function_set == :binops
             ops = options.operators.binops
-            example_inputs = (zero(T), zero(T))
+            example_inputs = (init_value(T), init_value(T))
         elseif function_set == :elementwise_loss
             if typeof(options.elementwise_loss) <: SupervisedLoss
                 continue
             end
             ops = (options.elementwise_loss,)
             example_inputs = if is_weighted(dataset)
-                (zero(T), zero(T), zero(T))
+                (init_value(T), init_value(T), init_value(T))
             else
-                (zero(T), zero(T))
+                (init_value(T), init_value(T))
             end
         elseif function_set == :early_stop_condition
             if !(typeof(options.early_stop_condition) <: Function)
@@ -152,25 +163,37 @@ function move_functions_to_workers(
             end
             ops = (options.early_stop_condition,)
             example_inputs = (zero(T), 0)
+        elseif function_set == :expression_type
+            # Needs to run _before_ using TemplateExpression anywhere, such
+            # as in `loss_function_expression`!
+            if isnothing(options.expression_type)
+                continue
+            end
+            if !require_copy_to_workers(options.expression_type)
+                continue
+            end
+            (; ops, example_inputs) = make_example_inputs(
+                options.expression_type, T, options, dataset
+            )
         elseif function_set == :loss_function
-            if options.loss_function === nothing
+            if isnothing(options.loss_function)
                 continue
             end
             ops = (options.loss_function,)
-            example_inputs = (Node(T; val=zero(T)), dataset, options)
+            example_inputs = ((options.node_type)(T; val=init_value(T)), dataset, options)
         elseif function_set == :loss_function_expression
-            if options.loss_function_expression === nothing
+            if isnothing(options.loss_function_expression)
                 continue
             end
             ops = (options.loss_function_expression,)
-            ex = create_expression(zero(T), options, dataset)
+            ex = create_expression(init_value(T), options, dataset)
             example_inputs = (ex, dataset, options)
         elseif function_set == :complexity_mapping
             if !(options.complexity_mapping isa Function)
                 continue
             end
             ops = (options.complexity_mapping,)
-            example_inputs = (create_expression(zero(T), options, dataset),)
+            example_inputs = (create_expression(init_value(T), options, dataset),)
         else
             error("Invalid function set: $function_set")
         end
@@ -220,12 +243,10 @@ function activate_env_on_workers(
 )
     verbosity > 0 && @info "Activating environment on workers."
     @everywhere procs begin
-        Base.MainInclude.eval(
-            quote
-                using Pkg
-                Pkg.activate($$project_path)
-            end,
-        )
+        Base.MainInclude.eval(quote
+            using Pkg
+            Pkg.activate($$project_path)
+        end)
     end
 end
 
@@ -256,6 +277,7 @@ function import_module_on_workers(
         :ClusterManagers,
         :Enzyme,
         :LoopVectorization,
+        :Mooncake,
         :SymbolicUtils,
         :TensorBoardLogger,
         :Zygote,
@@ -267,12 +289,9 @@ function import_module_on_workers(
     all_extensions = vcat(relevant_extensions, @something(worker_imports, Symbol[]))
 
     for ext in all_extensions
-        push!(
-            expr.args,
-            quote
-                using $ext: $ext
-            end,
-        )
+        push!(expr.args, quote
+            using $ext: $ext
+        end)
     end
 
     verbosity > 0 && if isempty(relevant_extensions)
@@ -344,6 +363,7 @@ function configure_workers(;
     procs::Union{Vector{Int},Nothing},
     numprocs::Int,
     addprocs_function::Function,
+    worker_timeout::Float64,
     options::AbstractOptions,
     @nospecialize(worker_imports::Union{Vector{Symbol},Nothing}),
     project_path,
@@ -354,7 +374,9 @@ function configure_workers(;
     runtests::Bool,
 )
     (procs, we_created_procs) = if procs === nothing
-        (addprocs_function(numprocs; lazy=false, exeflags), true)
+        withenv("JULIA_WORKER_TIMEOUT" => string(worker_timeout)) do
+            (addprocs_function(numprocs; lazy=false, exeflags), true)
+        end
     else
         (procs, false)
     end

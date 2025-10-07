@@ -134,7 +134,9 @@ function _log_scalars(;
 
     out["summaries"] = Dict([
         "min_loss" => length(dominating) > 0 ? dominating[end].loss : L(Inf),
-        "pareto_volume" => pareto_volume(losses, complexities, options.maxsize),
+        "pareto_volume" => pareto_volume(
+            losses, complexities, options.maxsize, options.loss_scale == :linear
+        ),
     ])
 
     #### Full Pareto front
@@ -152,22 +154,25 @@ function _log_scalars(;
     return out
 end
 
-function pareto_volume(losses::AbstractVector{L}, complexities, maxsize::Int) where {L}
+function pareto_volume(
+    losses::AbstractVector{L}, complexities, maxsize::Int, use_linear_scaling::Bool
+) where {L}
     if length(losses) == 0
         return 0.0
     end
-    log_losses = @. log10(losses + eps(L))
-    log_complexities = @. log10(complexities)
+
+    y = use_linear_scaling ? copy(losses) : @.(log10(losses + eps(L)))
+    x = @. log10(complexities)
 
     # Add a point equal to the best loss and largest possible complexity, + 1
-    push!(log_losses, minimum(log_losses))
-    push!(log_complexities, log10(maxsize + 1))
+    push!(y, minimum(y))
+    push!(x, log10(maxsize + 1))
 
     # Add a point to connect things:
-    push!(log_losses, maximum(log_losses))
-    push!(log_complexities, maximum(log_complexities))
+    push!(y, maximum(y))
+    push!(x, maximum(x))
 
-    xy = cat(log_complexities, log_losses; dims=2)
+    xy = cat(x, y; dims=2)
     hull = convex_hull(xy)
     return Float64(convex_hull_area(hull))
 end

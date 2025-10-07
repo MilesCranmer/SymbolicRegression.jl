@@ -12,8 +12,13 @@ using DynamicExpressions:
     set_node!,
     count_nodes,
     has_constants,
-    has_operators
-using ..CoreModule: AbstractOptions, DATA_TYPE
+    has_operators,
+    get_child,
+    set_child!,
+    max_degree
+using ..CoreModule: AbstractOptions, DATA_TYPE, init_value, sample_value
+
+import ..CoreModule: mutate_value
 
 """
     get_contents_for_mutation(ex::AbstractExpression, rng::AbstractRNG)
@@ -41,6 +46,19 @@ function with_contents_for_mutation(ex::AbstractExpression, new_contents, ::Noth
 end
 
 """
+    get_nfeatures_for_mutation(ex::AbstractExpression, context, nfeatures::Int)
+
+Return the number of features available for mutation in the given expression.
+You can overload this function for custom expression types that need
+context-specific feature ranges (e.g., TemplateExpression subexpressions).
+
+The default implementation simply returns the global `nfeatures`.
+"""
+function get_nfeatures_for_mutation(::AbstractExpression, context, nfeatures::Int)
+    return nfeatures
+end
+
+"""
     random_node(tree::AbstractNode; filter::F=Returns(true))
 
 Return a random node from the tree. You may optionally
@@ -56,18 +74,24 @@ function random_node(
     return rand(rng, NodeSampler(; tree, filter))
 end
 
-"""Swap operands in binary operator for ops like pow and divide"""
+"""Swap operands in operators"""
 function swap_operands(ex::AbstractExpression, rng::AbstractRNG=default_rng())
     tree, context = get_contents_for_mutation(ex, rng)
     ex = with_contents_for_mutation(ex, swap_operands(tree, rng), context)
     return ex
 end
 function swap_operands(tree::AbstractNode, rng::AbstractRNG=default_rng())
-    if !any(node -> node.degree == 2, tree)
+    if !any(node -> node.degree > 1, tree)
         return tree
     end
-    node = rand(rng, NodeSampler(; tree, filter=t -> t.degree == 2))
-    node.l, node.r = node.r, node.l
+    node = rand(rng, NodeSampler(; tree, filter=t -> t.degree > 1))
+    deg = node.degree
+    i1 = rand(rng, 1:deg)
+    i2 = deg == 2 ? (i1 == 1 ? 2 : 1) : rand(rng, filter(!=(i1), 1:deg))
+    n1 = get_child(node, i1)
+    n2 = get_child(node, i2)
+    set_child!(node, n2, i1)
+    set_child!(node, n1, i2)
     return tree
 end
 
@@ -80,19 +104,13 @@ function mutate_operator(
     return ex
 end
 function mutate_operator(
-    tree::AbstractExpressionNode{T},
-    options::AbstractOptions,
-    rng::AbstractRNG=default_rng(),
-) where {T}
+    tree::AbstractExpressionNode, options::AbstractOptions, rng::AbstractRNG=default_rng()
+)
     if !(has_operators(tree))
         return tree
     end
     node = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
-    if node.degree == 1
-        node.op = rand(rng, 1:(options.nuna))
-    else
-        node.op = rand(rng, 1:(options.nbin))
-    end
+    node.op = rand(rng, 1:(options.nops[node.degree]))
     return tree
 end
 
@@ -121,13 +139,15 @@ function mutate_constant(
         return tree
     end
     node = rand(rng, NodeSampler(; tree, filter=t -> (t.degree == 0 && t.constant)))
-
-    node.val *= mutate_factor(T, temperature, options, rng)
-
+    node.val = mutate_value(rng, node.val, temperature, options)
     return tree
 end
 
-function mutate_factor(::Type{T}, temperature, options, rng) where {T<:DATA_TYPE}
+function mutate_value(rng::AbstractRNG, val::Number, temperature, options)
+    return val * mutate_factor(typeof(val), temperature, options, rng)
+end
+
+function mutate_factor(::Type{T}, temperature, options, rng) where {T<:Number}
     bottom = 1//10
     maxChange = options.perturbation_factor * temperature + 1 + bottom
     factor = T(maxChange^rand(rng, T))
@@ -141,52 +161,70 @@ function mutate_factor(::Type{T}, temperature, options, rng) where {T<:DATA_TYPE
     return factor
 end
 
-# TODO: Shouldn't we add a mutate_feature here?
+"""Randomly change which feature a variable node points to"""
+function mutate_feature(
+    ex::AbstractExpression{T}, nfeatures::Int, rng::AbstractRNG=default_rng()
+) where {T<:DATA_TYPE}
+    tree, context = get_contents_for_mutation(ex, rng)
+    local_nfeatures = get_nfeatures_for_mutation(ex, context, nfeatures)
+    ex = with_contents_for_mutation(ex, mutate_feature(tree, local_nfeatures, rng), context)
+    return ex
+end
+function mutate_feature(
+    tree::AbstractExpressionNode{T}, nfeatures::Int, rng::AbstractRNG=default_rng()
+) where {T<:DATA_TYPE}
+    # Quick checks for if there is nothing to do
+    nfeatures <= 1 && return tree
+    !any(node -> node.degree == 0 && !node.constant, tree) && return tree
+
+    node = rand(rng, NodeSampler(; tree, filter=t -> (t.degree == 0 && !t.constant)))
+    node.feature = rand(rng, filter(!=(node.feature), 1:nfeatures))
+    return tree
+end
 
 """Add a random unary/binary operation to the end of a tree"""
 function append_random_op(
     ex::AbstractExpression{T},
     options::AbstractOptions,
     nfeatures::Int,
-    rng::AbstractRNG=default_rng();
-    make_new_bin_op::Union{Bool,Nothing}=nothing,
+    rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
+    local_nfeatures = get_nfeatures_for_mutation(ex, context, nfeatures)
     ex = with_contents_for_mutation(
-        ex, append_random_op(tree, options, nfeatures, rng; make_new_bin_op), context
+        ex, append_random_op(tree, options, local_nfeatures, rng), context
     )
     return ex
 end
-function append_random_op(
-    tree::AbstractExpressionNode{T},
+@generated function append_random_op(
+    tree::AbstractExpressionNode{T,D},
     options::AbstractOptions,
     nfeatures::Int,
-    rng::AbstractRNG=default_rng();
-    make_new_bin_op::Union{Bool,Nothing}=nothing,
-) where {T<:DATA_TYPE}
-    node = rand(rng, NodeSampler(; tree, filter=t -> t.degree == 0))
+    rng::AbstractRNG=default_rng(),
+) where {T<:DATA_TYPE,D}
+    quote
+        node = _sample_leaf(rng, tree)
 
-    _make_new_bin_op = @something(
-        make_new_bin_op, rand(rng) < options.nbin / (options.nuna + options.nbin),
-    )
-
-    if _make_new_bin_op
-        newnode = constructorof(typeof(tree))(;
-            op=rand(rng, 1:(options.nbin)),
-            l=make_random_leaf(nfeatures, T, typeof(tree), rng, options),
-            r=make_random_leaf(nfeatures, T, typeof(tree), rng, options),
+        @assert D == length(options.nops)
+        csum = (0, cumsum(options.nops)...)
+        scaled_rand = rand(rng) * last(csum)
+        # COV_EXCL_START
+        newnode = Base.Cartesian.@nif(
+            $D,
+            i -> scaled_rand > csum[i] && scaled_rand <= csum[i + 1],
+            i -> constructorof(typeof(tree))(;
+                op=rand(rng, 1:(options.nops[i])),
+                children=Base.Cartesian.@ntuple(
+                    i, j -> make_random_leaf(nfeatures, T, typeof(tree), rng, options)
+                )
+            )
         )
-    else
-        newnode = constructorof(typeof(tree))(;
-            op=rand(rng, 1:(options.nuna)),
-            l=make_random_leaf(nfeatures, T, typeof(tree), rng, options),
-        )
+        # COV_EXCL_STOP
+        set_node!(node, newnode)
+        return tree
     end
-
-    set_node!(node, newnode)
-
-    return tree
 end
+_sample_leaf(rng, tree) = rand(rng, NodeSampler(; tree, filter=t -> t.degree == 0))
 
 """Insert random node"""
 function insert_random_op(
@@ -196,32 +234,41 @@ function insert_random_op(
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
+    local_nfeatures = get_nfeatures_for_mutation(ex, context, nfeatures)
     ex = with_contents_for_mutation(
-        ex, insert_random_op(tree, options, nfeatures, rng), context
+        ex, insert_random_op(tree, options, local_nfeatures, rng), context
     )
     return ex
 end
-function insert_random_op(
-    tree::AbstractExpressionNode{T},
+@generated function insert_random_op(
+    tree::AbstractExpressionNode{T,D},
     options::AbstractOptions,
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
-) where {T<:DATA_TYPE}
-    node = rand(rng, NodeSampler(; tree))
-    choice = rand(rng)
-    make_new_bin_op = choice < options.nbin / (options.nuna + options.nbin)
-    left = copy(node)
-
-    if make_new_bin_op
-        right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
-        newnode = constructorof(typeof(tree))(;
-            op=rand(rng, 1:(options.nbin)), l=left, r=right
+) where {T<:DATA_TYPE,D}
+    quote
+        node = rand(rng, NodeSampler(; tree))
+        csum = (0, cumsum(options.nops)...)
+        scaled_rand = rand(rng) * last(csum)
+        newnode = Base.Cartesian.@nif(
+            $D,
+            i -> scaled_rand > csum[i] && scaled_rand <= csum[i + 1],  # COV_EXCL_LINE
+            i -> let  # COV_EXCL_LINE
+                arg_to_carry = rand(rng, 1:i)
+                children = Base.Cartesian.@ntuple(
+                    i,
+                    j -> if j == arg_to_carry  # COV_EXCL_LINE
+                        copy(node)
+                    else
+                        make_random_leaf(nfeatures, T, typeof(tree), rng, options)
+                    end
+                )
+                constructorof(typeof(tree))(; op=rand(rng, 1:(options.nops[i])), children)
+            end
         )
-    else
-        newnode = constructorof(typeof(tree))(; op=rand(rng, 1:(options.nuna)), l=left)
+        set_node!(node, newnode)
+        return tree
     end
-    set_node!(node, newnode)
-    return tree
 end
 
 """Add random node to the top of a tree"""
@@ -232,32 +279,43 @@ function prepend_random_op(
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
+    local_nfeatures = get_nfeatures_for_mutation(ex, context, nfeatures)
     ex = with_contents_for_mutation(
-        ex, prepend_random_op(tree, options, nfeatures, rng), context
+        ex, prepend_random_op(tree, options, local_nfeatures, rng), context
     )
     return ex
 end
-function prepend_random_op(
-    tree::AbstractExpressionNode{T},
+
+@generated function prepend_random_op(
+    tree::AbstractExpressionNode{T,D},
     options::AbstractOptions,
     nfeatures::Int,
     rng::AbstractRNG=default_rng(),
-) where {T<:DATA_TYPE}
-    node = tree
-    choice = rand(rng)
-    make_new_bin_op = choice < options.nbin / (options.nuna + options.nbin)
-    left = copy(tree)
+) where {T<:DATA_TYPE,D}
+    quote
+        @assert D == length(options.nops)
+        csum = (0, cumsum(options.nops)...)
+        scaled_rand = rand(rng) * last(csum)
 
-    if make_new_bin_op
-        right = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
-        newnode = constructorof(typeof(tree))(;
-            op=rand(rng, 1:(options.nbin)), l=left, r=right
+        newroot = Base.Cartesian.@nif(
+            $D,
+            i -> scaled_rand > csum[i] && scaled_rand <= csum[i + 1],  # COV_EXCL_LINE
+            i -> let  # COV_EXCL_LINE
+                carry = rand(rng, 1:i)
+                children = Base.Cartesian.@ntuple(
+                    i,
+                    j -> if j == carry  # COV_EXCL_LINE
+                        tree
+                    else
+                        make_random_leaf(nfeatures, T, typeof(tree), rng, options)
+                    end
+                )
+                constructorof(typeof(tree))(; op=rand(rng, 1:options.nops[i]), children)
+            end,
         )
-    else
-        newnode = constructorof(typeof(tree))(; op=rand(rng, 1:(options.nuna)), l=left)
+
+        return newroot
     end
-    set_node!(node, newnode)
-    return node
 end
 
 function make_random_leaf(
@@ -265,84 +323,36 @@ function make_random_leaf(
     ::Type{T},
     ::Type{N},
     rng::AbstractRNG=default_rng(),
-    ::Union{AbstractOptions,Nothing}=nothing,
+    options::Union{AbstractOptions,Nothing}=nothing,
 ) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
     if rand(rng, Bool)
-        return constructorof(N)(T; val=randn(rng, T))
+        return constructorof(N)(T; val=sample_value(rng, T, options))
     else
         return constructorof(N)(T; feature=rand(rng, 1:nfeatures))
     end
 end
 
-"""Return a random node from the tree with parent, and side ('n' for no parent)"""
-function random_node_and_parent(tree::AbstractNode, rng::AbstractRNG=default_rng())
-    if tree.degree == 0
-        return tree, tree, 'n'
-    end
-    parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
-    if parent.degree == 1 || rand(rng, Bool)
-        return (parent.l, parent, 'l')
-    else
-        return (parent.r, parent, 'r')
-    end
-end
-
 """Select a random node, and splice it out of the tree."""
-function delete_random_op!(
-    ex::AbstractExpression{T},
-    options::AbstractOptions,
-    nfeatures::Int,
-    rng::AbstractRNG=default_rng(),
-) where {T<:DATA_TYPE}
-    tree, context = get_contents_for_mutation(ex, rng)
-    ex = with_contents_for_mutation(
-        ex, delete_random_op!(tree, options, nfeatures, rng), context
-    )
-    return ex
+function delete_random_op!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
+    tree, ctx = get_contents_for_mutation(ex, rng)
+    newtree = delete_random_op!(tree, rng)
+    return with_contents_for_mutation(ex, newtree, ctx)
 end
-function delete_random_op!(
-    tree::AbstractExpressionNode{T},
-    options::AbstractOptions,
-    nfeatures::Int,
-    rng::AbstractRNG=default_rng(),
-) where {T<:DATA_TYPE}
-    node, parent, side = random_node_and_parent(tree, rng)
-    isroot = side == 'n'
 
-    if node.degree == 0
-        # Replace with new constant
-        newnode = make_random_leaf(nfeatures, T, typeof(tree), rng, options)
-        set_node!(node, newnode)
-    elseif node.degree == 1
-        # Join one of the children with the parent
-        if isroot
-            return node.l
-        elseif parent.l == node
-            parent.l = node.l
-        else
-            parent.r = node.l
-        end
+function delete_random_op!(tree::AbstractExpressionNode, rng::AbstractRNG=default_rng())
+    tree.degree == 0 && return tree
+
+    node = rand(rng, NodeSampler(; tree, filter=t -> t.degree > 0))
+    carry_idx = rand(rng, 1:(node.degree))
+    carry = get_child(node, carry_idx)
+
+    if node === tree
+        return carry
     else
-        # Join one of the children with the parent
-        if rand(rng, Bool)
-            if isroot
-                return node.l
-            elseif parent.l == node
-                parent.l = node.l
-            else
-                parent.r = node.l
-            end
-        else
-            if isroot
-                return node.r
-            elseif parent.l == node
-                parent.l = node.r
-            else
-                parent.r = node.r
-            end
-        end
+        parent, idx = _find_parent(tree, node)
+        set_child!(parent, carry, idx)
+        return tree
     end
-    return tree
 end
 
 function randomize_tree(
@@ -353,8 +363,9 @@ function randomize_tree(
     rng::AbstractRNG=default_rng(),
 )
     tree, context = get_contents_for_mutation(ex, rng)
+    local_nfeatures = get_nfeatures_for_mutation(ex, context, nfeatures)
     ex = with_contents_for_mutation(
-        ex, randomize_tree(tree, curmaxsize, options, nfeatures, rng), context
+        ex, randomize_tree(tree, curmaxsize, options, local_nfeatures, rng), context
     )
     return ex
 end
@@ -378,12 +389,53 @@ function gen_random_tree(
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
     # Note that this base tree is just a placeholder; it will be replaced.
-    tree = constructorof(options.node_type)(T; val=convert(T, 1))
+    tree = constructorof(options.node_type)(T; val=init_value(T))
     for i in 1:length
         # TODO: This can be larger number of nodes than length.
         tree = append_random_op(tree, options, nfeatures, rng)
     end
     return tree
+end
+
+@generated function _make_node(
+    arity::Int,
+    proto::AbstractExpressionNode{<:Any,D},
+    nfeatures::Int,
+    ::Type{T},
+    options::AbstractOptions,
+    rng::AbstractRNG,
+) where {T,D}
+    quote
+        # COV_EXCL_START
+        Base.Cartesian.@nif(
+            $D,
+            i -> arity == i,
+            i -> constructorof(typeof(proto))(;
+                op=rand(rng, 1:options.nops[i]),
+                children=Base.Cartesian.@ntuple(
+                    i, j -> make_random_leaf(nfeatures, T, typeof(proto), rng, options),
+                ),
+            ),
+        )
+        # COV_EXCL_STOP
+    end
+end
+
+function _arity_picker(rng::AbstractRNG, remaining::Int, nops::NTuple{D,Int}) where {D}
+    total = 0
+    limit = min(D, remaining)
+    for k in 1:limit
+        total += @inbounds nops[k]
+    end
+    total == 0 && return 0
+
+    thresh = rand(rng, 1:total)
+    acc = 0
+    for k in 1:(limit - 1)
+        acc += @inbounds nops[k]
+        thresh <= acc && return k
+    end
+    return limit
 end
 
 function gen_random_tree_fixed_size(
@@ -393,17 +445,28 @@ function gen_random_tree_fixed_size(
     ::Type{T},
     rng::AbstractRNG=default_rng(),
 ) where {T<:DATA_TYPE}
+    # (1) start with a single leaf
     tree = make_random_leaf(nfeatures, T, options.node_type, rng, options)
-    cur_size = count_nodes(tree)
-    while cur_size < node_count
-        if cur_size == node_count - 1  # only unary operator allowed.
-            options.nuna == 0 && break # We will go over the requested amount, so we must break.
-            tree = append_random_op(tree, options, nfeatures, rng; make_new_bin_op=false)
-        else
-            tree = append_random_op(tree, options, nfeatures, rng)
-        end
-        cur_size = count_nodes(tree)
+    cur_size = 1
+
+    # (2) grow the tree
+    while true
+        remaining = node_count - cur_size
+        remaining == 0 && break
+
+        arity = _arity_picker(rng, remaining, options.nops)
+        arity == 0 && break
+
+        # choose a random leaf to expand
+        leaf = rand(rng, NodeSampler(; tree, filter=t -> t.degree == 0))
+
+        # make a new operator node of that arity
+        newnode = _make_node(arity, leaf, nfeatures, T, options, rng)
+
+        set_node!(leaf, newnode)
+        cur_size += arity
     end
+
     return tree
 end
 
@@ -424,38 +487,34 @@ end
 """Crossover between two expressions"""
 function crossover_trees(
     tree1::N, tree2::N, rng::AbstractRNG=default_rng()
-) where {T,N<:AbstractExpressionNode{T}}
-    if tree1 === tree2
-        error("Attempted to crossover the same tree!")
-    end
-    tree1 = copy(tree1)
-    tree2 = copy(tree2)
+) where {N<:AbstractExpressionNode}
+    tree1 === tree2 && error("Attempted to crossover the same tree!")
 
-    node1, parent1, side1 = random_node_and_parent(tree1, rng)
-    node2, parent2, side2 = random_node_and_parent(tree2, rng)
+    # copy whole trees so original expressions remain unchanged
+    t1 = copy(tree1)
+    t2 = copy(tree2)
 
-    node1 = copy(node1)
+    # pick random nodes (and parents) in each tree
+    n1, p1, i1 = _random_node_and_parent(t1, rng)
+    n2, p2, i2 = _random_node_and_parent(t2, rng)
 
-    if side1 == 'l'
-        parent1.l = copy(node2)
-        # tree1 now contains this.
-    elseif side1 == 'r'
-        parent1.r = copy(node2)
-        # tree1 now contains this.
-    else # 'n'
-        # This means that there is no parent2.
-        tree1 = copy(node2)
+    n1 = copy(n1)
+
+    # splice n2 into t1
+    if i1 == 0
+        t1 = copy(n2)
+    else
+        set_child!(p1, copy(n2), i1)
     end
 
-    if side2 == 'l'
-        parent2.l = node1
-    elseif side2 == 'r'
-        parent2.r = node1
-    else # 'n'
-        tree2 = node1
+    # splice n1 into t2
+    if i2 == 0
+        t2 = n1
+    else
+        set_child!(p2, n1, i2)
     end
 
-    return tree1, tree2
+    return t1, t2
 end
 
 function get_two_nodes_without_loop(tree::AbstractNode, rng::AbstractRNG; max_attempts=10)
@@ -486,12 +545,8 @@ function form_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rn
         return tree
     end
 
-    # Set one of the children to be this new child:
-    if parent.degree == 1 || rand(rng, Bool)
-        parent.l = new_child
-    else
-        parent.r = new_child
-    end
+    i = rand(rng, 1:(parent.degree))
+    set_child!(parent, new_child, i)
     return tree
 end
 
@@ -502,16 +557,42 @@ end
 function break_random_connection!(tree::AbstractNode, rng::AbstractRNG=default_rng())
     tree.degree == 0 && return tree
     parent = rand(rng, NodeSampler(; tree, filter=t -> t.degree != 0))
-    if parent.degree == 1 || rand(rng, Bool)
-        parent.l = copy(parent.l)
-    else
-        parent.r = copy(parent.r)
-    end
+    i = rand(rng, 1:(parent.degree))
+    set_child!(parent, copy(get_child(parent, i)), i)
     return tree
 end
 
-function is_valid_rotation_node(node::AbstractNode)
-    return (node.degree > 0 && node.l.degree > 0) || (node.degree == 2 && node.r.degree > 0)
+"""Return (node, parent, idx) where `idx == 0` iff node is the root."""
+function _random_node_and_parent(
+    tree::AbstractExpressionNode, rng::AbstractRNG=default_rng()
+)
+    node = rand(rng, NodeSampler(; tree))
+    if node === tree
+        return node, node, 0
+    else
+        parent, idx = _find_parent(tree, node)
+        return node, parent, idx
+    end
+end
+function _find_parent(tree::N, node::N) where {N<:AbstractNode}
+    r = Ref{Tuple{typeof(tree),Int}}()
+    finished = any(tree) do t
+        if t.degree > 0
+            for i in 1:(t.degree)
+                if get_child(t, i) === node
+                    r[] = (t, i)
+                    return true
+                end
+            end
+        end
+        return false
+    end
+    @assert finished
+    return r[]
+end
+
+function _valid_rotation_root(tree::AbstractNode)
+    return tree.degree > 0 && any(i -> get_child(tree, i).degree > 0, 1:(tree.degree))
 end
 
 function randomly_rotate_tree!(ex::AbstractExpression, rng::AbstractRNG=default_rng())
@@ -519,101 +600,36 @@ function randomly_rotate_tree!(ex::AbstractExpression, rng::AbstractRNG=default_
     rotated_tree = randomly_rotate_tree!(tree, rng)
     return with_contents_for_mutation(ex, rotated_tree, context)
 end
-function randomly_rotate_tree!(tree::AbstractNode, rng::AbstractRNG=default_rng())
-    num_rotation_nodes = count(is_valid_rotation_node, tree)
-
-    # Return the tree if no valid nodes are found
-    if num_rotation_nodes == 0
+function randomly_rotate_tree!(tree::AbstractExpressionNode, rng::AbstractRNG=default_rng())
+    num_valid_rotation_roots = count(_valid_rotation_root, tree)
+    if num_valid_rotation_roots == 0
         return tree
     end
-
-    root_is_valid_rotation_node = is_valid_rotation_node(tree)
-
-    # Now, we decide if we want to rotate at the root, or at a random node
-    rotate_at_root = root_is_valid_rotation_node && rand(rng) < 1.0 / num_rotation_nodes
-
-    subtree_parent = if rotate_at_root
-        tree
+    rotate_at_root = rand(rng) < 1 / num_valid_rotation_roots
+    (parent, root_idx, root) = if rotate_at_root
+        (tree, 0, tree)
     else
-        rand(
-            rng,
-            NodeSampler(;
-                tree,
-                filter=t -> (
-                    (t.degree > 0 && is_valid_rotation_node(t.l)) ||
-                    (t.degree == 2 && is_valid_rotation_node(t.r))
-                ),
-            ),
+        _root = rand(
+            rng, NodeSampler(; tree, filter=t -> t !== tree && _valid_rotation_root(t))
         )
+        _parent, _root_idx = _find_parent(tree, _root)
+
+        (_parent, _root_idx, _root)
     end
 
-    subtree_side = if rotate_at_root
-        :n
-    elseif subtree_parent.degree == 1
-        :l
+    pivot_idx = rand(rng, [i for i in 1:(root.degree) if get_child(root, i).degree > 0])
+    pivot = get_child(root, pivot_idx)
+    grand_child_idx = rand(rng, 1:(pivot.degree))
+    grand_child = get_child(pivot, grand_child_idx)
+    set_child!(root, grand_child, pivot_idx)
+    set_child!(pivot, root, grand_child_idx)
+
+    if rotate_at_root
+        return pivot
     else
-        if is_valid_rotation_node(subtree_parent.l) &&
-            (!is_valid_rotation_node(subtree_parent.r) || rand(rng, Bool))
-            :l
-        else
-            :r
-        end
+        set_child!(parent, pivot, root_idx)
+        return tree
     end
-
-    subtree_root = if rotate_at_root
-        tree
-    elseif subtree_side == :l
-        subtree_parent.l
-    else
-        subtree_parent.r
-    end
-
-    # Perform the rotation
-    # (reference: https://web.archive.org/web/20230326202118/https://upload.wikimedia.org/wikipedia/commons/1/15/Tree_Rotations.gif)
-    right_rotation_valid = subtree_root.l.degree > 0
-    left_rotation_valid = subtree_root.degree == 2 && subtree_root.r.degree > 0
-
-    right_rotation = right_rotation_valid && (!left_rotation_valid || rand(rng, Bool))
-    if right_rotation
-        node_5 = subtree_root
-        node_3 = leftmost(node_5)
-        node_4 = rightmost(node_3)
-
-        set_leftmost!(node_5, node_4)
-        set_rightmost!(node_3, node_5)
-        if rotate_at_root
-            return node_3  # new root
-        elseif subtree_side == :l
-            subtree_parent.l = node_3
-        else
-            subtree_parent.r = node_3
-        end
-    else  # left rotation
-        node_3 = subtree_root
-        node_5 = rightmost(node_3)
-        node_4 = leftmost(node_5)
-
-        set_rightmost!(node_3, node_4)
-        set_leftmost!(node_5, node_3)
-        if rotate_at_root
-            return node_5  # new root
-        elseif subtree_side == :l
-            subtree_parent.l = node_5
-        else
-            subtree_parent.r = node_5
-        end
-    end
-
-    return tree
 end
-
-#! format: off
-# These functions provide an easier way to work with unary nodes, by
-# simply letting `.r` fall back to `.l` if the node is a unary operator.
-leftmost(node::AbstractNode) = node.l
-rightmost(node::AbstractNode) = node.degree == 1 ? node.l : node.r
-set_leftmost!(node::AbstractNode, l::AbstractNode) = (node.l = l)
-set_rightmost!(node::AbstractNode, r::AbstractNode) = node.degree == 1 ? (node.l = r) : (node.r = r)
-#! format: on
 
 end

@@ -10,6 +10,7 @@ include("OptionsStruct.jl")
 include("Operators.jl")
 include("ExpressionSpec.jl")
 include("Options.jl")
+include("InterfaceDataTypes.jl")
 
 using .ProgramConstantsModule: RecordType, DATA_TYPE, LOSS_TYPE
 using .DatasetModule:
@@ -29,7 +30,9 @@ using .OptionsStructModule:
     Options,
     ComplexityMapping,
     specialized_options,
-    operator_specialization
+    operator_specialization,
+    WarmStartIncompatibleError,
+    check_warm_start_compatibility
 using .OperatorsModule:
     get_safe_op,
     plus,
@@ -67,5 +70,6 @@ using .ExpressionSpecModule:
     get_expression_type,
     get_expression_options,
     get_node_type
+using .InterfaceDataTypesModule: init_value, sample_value, mutate_value
 
 end

@@ -10,6 +10,7 @@ using DynamicExpressions:
     string_tree,
     AbstractExpressionNode,
     AbstractExpression,
+    AbstractOperatorEnum,
     Node,
     Expression,
     default_node_type,
@@ -36,7 +37,8 @@ using ..CoreModule:
     ComplexityMapping,
     AbstractExpressionSpec,
     ExpressionSpec,
-    get_expression_type
+    get_expression_type,
+    check_warm_start_compatibility
 using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 using ..ComplexityModule: compute_complexity
 using ..HallOfFameModule: HallOfFame, format_hall_of_fame
@@ -68,6 +70,7 @@ function modelexpr(
     parent_type::Symbol=:AbstractSymbolicRegressor;
     default_niterations=100,
 )
+    #! format: off
     struct_def =
         :(Base.@kwdef mutable struct $(model_name){D<:AbstractDimensions,L} <: $parent_type
             niterations::Int = $(default_niterations)
@@ -76,14 +79,17 @@ function modelexpr(
             procs::Union{Vector{Int},Nothing} = nothing
             addprocs_function::Union{Function,Nothing} = nothing
             heap_size_hint_in_bytes::Union{Integer,Nothing} = nothing
+            worker_timeout::Union{Real,Nothing} = nothing
             worker_imports::Union{Vector{Symbol},Nothing} = nothing
             logger::Union{AbstractSRLogger,Nothing} = nothing
             runtests::Bool = true
             run_id::Union{String,Nothing} = nothing
             loss_type::Type{L} = Nothing
+            guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing} = nothing
             selection_method::Function = choose_best
             dimensions_type::Type{D} = SymbolicDimensions{DEFAULT_DIM_BASE_TYPE}
         end)
+    #! format: on
     # TODO: store `procs` from initial run if parallelism is `:multiprocessing`
     fields = last(last(struct_def.args).args).args
 
@@ -195,7 +201,12 @@ function full_report(
         nothing
     end
     best_idx = dispatch_selection_for(
-        m, formatted.trees, formatted.losses, formatted.scores, formatted.complexities
+        m,
+        formatted.trees,
+        formatted.losses,
+        formatted.scores,
+        formatted.complexities,
+        fitresult.options,
     )
     return (;
         best_idx=best_idx,
@@ -222,7 +233,10 @@ function MMI.update(
     y,
     w=nothing,
 )
-    options = old_fitresult === nothing ? get_options(m) : old_fitresult.options
+    options = get_options(m)
+    if !isnothing(old_fitresult)
+        check_warm_start_compatibility(old_fitresult.options, options)
+    end
     return _update(m, verbosity, old_fitresult, old_cache, X, y, w, options, nothing)
 end
 function _update(
@@ -291,6 +305,7 @@ function _update(
         procs=m.procs,
         addprocs_function=m.addprocs_function,
         heap_size_hint_in_bytes=m.heap_size_hint_in_bytes,
+        worker_timeout=m.worker_timeout,
         worker_imports=m.worker_imports,
         runtests=m.runtests,
         saved_state=(old_fitresult === nothing ? nothing : old_fitresult.state),
@@ -302,6 +317,7 @@ function _update(
         verbosity=verbosity,
         extra=isnothing(class) ? (;) : (; class),
         logger=m.logger,
+        guesses=m.guesses,
         # Help out with inference:
         v_dim_out=isa(m, AbstractSingletargetSRRegressor) ? Val(1) : Val(2),
     )
@@ -315,7 +331,7 @@ function _update(
         variable_names=variable_names,
         y_variable_names=y_variable_names,
         y_is_table=MMI.istable(y),
-        has_class=!isnothing(class),
+        has_class=(!isnothing(class)),
         X_units=X_units_clean,
         y_units=y_units_clean,
         types=SRFitResultTypes(;
@@ -579,9 +595,9 @@ end
 function get_equation_strings_for(
     ::AbstractSingletargetSRRegressor, trees, options, variable_names
 )
-    return (
-        t -> string_tree(t, options; variable_names=variable_names, pretty=false)
-    ).(trees)
+    return (t -> string_tree(t, options; variable_names=variable_names, pretty=false)).(
+        trees
+    )
 end
 function get_equation_strings_for(
     ::AbstractMultitargetSRRegressor, trees, options, variable_names
@@ -592,11 +608,17 @@ function get_equation_strings_for(
     ]
 end
 
-function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<:LOSS_TYPE}
+function choose_best(;
+    trees, losses::Vector{L}, scores, complexities, options=nothing
+) where {L<:LOSS_TYPE}
     # Same as in PySR:
     # https://github.com/MilesCranmer/PySR/blob/e74b8ad46b163c799908b3aa4d851cf8457c79ef/pysr/sr.py#L2318-L2332
     # threshold = 1.5 * minimum_loss
     # Then, we get max score of those below the threshold.
+    if !isnothing(options) && options.loss_scale == :linear
+        return argmin(losses)
+    end
+
     threshold = 1.5 * minimum(losses)
     return argmax([
         (losses[i] <= threshold) ? scores[i] : typemin(L) for i in eachindex(losses)
@@ -604,20 +626,22 @@ function choose_best(; trees, losses::Vector{L}, scores, complexities) where {L<
 end
 
 function dispatch_selection_for(
-    m::AbstractSingletargetSRRegressor, trees, losses, scores, complexities
+    m::AbstractSingletargetSRRegressor, trees, losses, scores, complexities, options
 )::Int
     length(trees) == 0 && return 0
-    return m.selection_method(;
-        trees=trees, losses=losses, scores=scores, complexities=complexities
-    )
+    return m.selection_method(; trees, losses, scores, complexities, options)
 end
 function dispatch_selection_for(
-    m::AbstractMultitargetSRRegressor, trees, losses, scores, complexities
+    m::AbstractMultitargetSRRegressor, trees, losses, scores, complexities, options
 )
     any(t -> length(t) == 0, trees) && return fill(0, length(trees))
     return [
         m.selection_method(;
-            trees=trees[i], losses=losses[i], scores=scores[i], complexities=complexities[i]
+            trees=trees[i],
+            losses=losses[i],
+            scores=scores[i],
+            complexities=complexities[i],
+            options,
         ) for i in eachindex(trees)
     ]
 end
@@ -647,7 +671,7 @@ for model in [:SRRegressor, :SRTestRegressor]
             target_scitype=AbstractVector{<:MMI.Continuous},
             supports_weights=true,
             reports_feature_importances=false,
-            load_path=$("SymbolicRegression.MLJInterfaceModule." * string(model)),
+            load_path=($("SymbolicRegression.MLJInterfaceModule." * string(model))),
             human_name="Symbolic Regression via Evolutionary Search",
         )
     end
@@ -662,7 +686,7 @@ for model in [:MultitargetSRRegressor, :MultitargetSRTestRegressor]
             },
             supports_weights=true,
             reports_feature_importances=false,
-            load_path=$("SymbolicRegression.MLJInterfaceModule." * string(model)),
+            load_path=($("SymbolicRegression.MLJInterfaceModule." * string(model))),
             human_name="Multi-Target Symbolic Regression via Evolutionary Search",
         )
     end
@@ -893,8 +917,12 @@ eval(
         replace(
             """
     Multi-target Symbolic Regression regressor (`MultitargetSRRegressor`)
-    conducts several searches for expressions that predict each target variable
-    from a set of input variables. All data is assumed to be `Continuous`.
+    searches for expressions that predict each target variable from a set
+    of input variables. This simply runs independent [`SRRegressor`](@ref)
+    searches for each target column in parallel - there is no joint modeling
+    of targets. All configuration options work identically to `SRRegressor`.
+
+    All data is assumed to be `Continuous`.
     The search is performed using an evolutionary algorithm.
     This algorithm is described in the paper
     https://arxiv.org/abs/2305.01582.

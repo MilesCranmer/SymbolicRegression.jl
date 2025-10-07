@@ -11,17 +11,44 @@ using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
 using Logging: AbstractLogger
 
-using DynamicExpressions: AbstractExpression, string_tree
+using DynamicExpressions:
+    AbstractExpression, string_tree, parse_expression, EvalOptions, with_type_parameters
 using ..UtilsModule: subscriptify
 using ..CoreModule: Dataset, AbstractOptions, Options, RecordType, max_features
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: AbstractPopMember, PopMember
 using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
+using ..ConstantOptimizationModule: optimize_constants
 using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
+using ..ExpressionBuilderModule: strip_metadata
+using ..InterfaceDynamicExpressionsModule: takes_eval_options
+using ..CheckConstraintsModule: check_constraints
 
 function logging_callback! end
+
+"""
+    @filtered_async expr
+
+Like `@async` but with error monitoring that ignores `Distributed.ProcessExitedException`
+to avoid spam when worker processes exit normally.
+"""
+macro filtered_async(expr)
+    return esc(
+        quote
+            $(Base).errormonitor(@async begin
+                try
+                    $expr
+                catch ex
+                    if !(ex isa $(Distributed).ProcessExitedException)
+                        rethrow(ex)
+                    end
+                end
+            end)
+        end
+    )
+end
 
 """
     AbstractRuntimeOptions
@@ -54,6 +81,7 @@ struct RuntimeOptions{PARALLELISM,DIM_OUT,RETURN_STATE,LOGGER} <: AbstractRuntim
     numprocs::Int64
     init_procs::Union{Vector{Int},Nothing}
     addprocs_function::Function
+    worker_timeout::Float64
     exeflags::Cmd
     worker_imports::Union{Vector{Symbol},Nothing}
     runtests::Bool
@@ -90,6 +118,7 @@ end
     procs::Union{Vector{Int},Nothing}=nothing,
     addprocs_function::Union{Function,Nothing}=nothing,
     heap_size_hint_in_bytes::Union{Integer,Nothing}=nothing,
+    worker_timeout::Union{Real,Nothing}=nothing,
     worker_imports::Union{Vector{Symbol},Nothing}=nothing,
     runtests::Bool=true,
     return_state::VRS=nothing,
@@ -117,39 +146,39 @@ end
         :serial
     end
     if concurrency in (:multithreading, :serial)
-        numprocs !== nothing && error(
+        !isnothing(numprocs) && error(
             "`numprocs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
         )
-        procs !== nothing && error(
+        !isnothing(procs) && error(
             "`procs` should not be set when using `parallelism=$(parallelism)`. Please use `:multiprocessing`.",
         )
     end
-    verbosity !== nothing &&
-        options_verbosity !== nothing &&
+    !isnothing(verbosity) &&
+        !isnothing(options_verbosity) &&
         error(
             "You cannot set `verbosity` in both the search parameters " *
             "`AbstractOptions` and the call to `equation_search`.",
         )
-    progress !== nothing &&
-        options_progress !== nothing &&
+    !isnothing(progress) &&
+        !isnothing(options_progress) &&
         error(
             "You cannot set `progress` in both the search parameters " *
             "`AbstractOptions` and the call to `equation_search`.",
         )
-    ORS !== nothing &&
-        return_state !== nothing &&
+    !isnothing(ORS) &&
+        !isnothing(return_state) &&
         error(
             "You cannot set `return_state` in both the `AbstractOptions` and in the passed arguments.",
         )
 
-    _numprocs::Int = if numprocs === nothing
-        if procs === nothing
+    _numprocs::Int = if isnothing(numprocs)
+        if isnothing(procs)
             4
         else
             length(procs)
         end
     else
-        if procs === nothing
+        if isnothing(procs)
             numprocs
         else
             @assert length(procs) == numprocs
@@ -162,15 +191,22 @@ end
     _verbosity = something(verbosity, options_verbosity, 1)
     _progress = something(progress, options_progress, (_verbosity > 0) && nout == 1)
     _addprocs_function = something(addprocs_function, addprocs)
+    _worker_timeout = Float64(
+        something(
+            worker_timeout,
+            tryparse(Float64, get(ENV, "JULIA_WORKER_TIMEOUT", "")),
+            max(60, _numprocs^2),
+        ),
+    )
     _run_id = @something(run_id, generate_run_id())
 
-    exeflags = if concurrency == :multiprocessing
+    exeflags = if concurrency == :multiprocessing && isnothing(procs)
         heap_size_hint_in_megabytes = floor(
             Int,
             (@something(heap_size_hint_in_bytes, (Sys.free_memory() / _numprocs))) / 1024^2,
         )
         _verbosity > 0 &&
-            heap_size_hint_in_bytes === nothing &&
+            isnothing(heap_size_hint_in_bytes) &&
             @info "Automatically setting `--heap-size-hint=$(heap_size_hint_in_megabytes)M` on each Julia process. You can configure this with the `heap_size_hint_in_bytes` parameter."
 
         `--heap-size=$(heap_size_hint_in_megabytes)M`
@@ -183,6 +219,7 @@ end
         _numprocs,
         procs,
         _addprocs_function,
+        _worker_timeout,
         exeflags,
         worker_imports,
         runtests,
@@ -261,9 +298,9 @@ macro sr_spawner(expr, kws...)
         if $(parallelism) == :serial
             $(expr)
         elseif $(parallelism) == :multiprocessing
-            @spawnat($(worker_idx), $(expr))
+            $(Distributed).@spawnat($(worker_idx), $(expr))
         elseif $(parallelism) == :multithreading
-            Threads.@spawn($(expr))
+            $(Threads).@spawn($(expr))
         else
             error("Invalid parallel type ", string($(parallelism)), ".")
         end
@@ -562,6 +599,7 @@ Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,Cha
     cur_maxsizes::Vector{Int}
     stdin_reader::StdinReader
     record::Base.RefValue{RecordType}
+    seed_members::Vector{Vector{PopMember{T,L,N}}}
 end
 
 function save_to_file(
@@ -685,12 +723,114 @@ function update_hall_of_fame!(
         if !valid_size
             continue
         end
+        if !check_constraints(member.tree, options, options.maxsize, size)
+            continue
+        end
         not_filled = !hall_of_fame.exists[size]
         better_than_current = member.cost < hall_of_fame.members[size].cost
         if not_filled || better_than_current
             hall_of_fame.members[size] = copy(member)
             hall_of_fame.exists[size] = true
         end
+    end
+end
+
+function _parse_guess_expression(
+    ::Type{T}, g::AbstractExpression, ::Dataset, ::AbstractOptions
+) where {T}
+    return copy(g)
+end
+
+@unstable function _parse_guess_expression(
+    ::Type{T}, g::NamedTuple, dataset::Dataset, options::AbstractOptions
+) where {T}
+    # Check if any expression in the NamedTuple uses actual variable names instead of placeholder syntax
+    for expr_str in values(g), var_name in dataset.variable_names
+        if occursin(Regex("\\b\\Q$(var_name)\\E\\b"), expr_str)
+            throw(
+                ArgumentError(
+                    "Found variable name '$(var_name)' in TemplateExpression guess. " *
+                    "Use placeholder syntax '#1', '#2', etc., (for argument 1, 2, etc.) instead of actual variable names.",
+                ),
+            )
+        end
+    end
+
+    eval_options_kws = if takes_eval_options(options.operators)
+        (; eval_options=EvalOptions(; options.turbo, options.bumper))
+    else
+        NamedTuple()
+    end
+    return parse_expression(
+        g;
+        expression_type=options.expression_type,
+        operators=options.operators,
+        variable_names=nothing,  # Don't pass dataset variable names - let custom parse_expression handle #N placeholders
+        node_type=with_type_parameters(options.node_type, T),
+        expression_options=options.expression_options,
+        eval_options_kws...,
+    )
+end
+
+@unstable function _parse_guess_expression(
+    ::Type{T}, g, dataset::Dataset, options::AbstractOptions
+) where {T}
+    return parse_expression(
+        g;
+        operators=options.operators,
+        variable_names=dataset.variable_names,
+        node_type=with_type_parameters(options.node_type, T),
+        expression_type=options.expression_type,
+    )
+end
+
+"""Parse user-provided guess expressions and convert them into optimized
+`PopMember` objects for each output dataset."""
+function parse_guesses(
+    ::Type{P},
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector}},
+    datasets::Vector{D},
+    options::AbstractOptions,
+) where {T,L,P<:PopMember{T,L},D<:Dataset{T,L}}
+    nout = length(datasets)
+    out = [P[] for _ in 1:nout]
+    guess_lists = _make_vector_vector(guesses, nout)
+    for j in 1:nout
+        dataset = datasets[j]
+        for g in guess_lists[j]
+            ex = _parse_guess_expression(T, g, dataset, options)
+            member = PopMember(dataset, ex, options; deterministic=options.deterministic)
+            if options.should_optimize_constants
+                member, _ = optimize_constants(dataset, member, options)
+            end
+            member = strip_metadata(member, options, dataset)
+
+            # Check if guess expression exceeds maxsize and warn
+            complexity = compute_complexity(member.tree, options)
+            if complexity > options.maxsize
+                expr_str = string_tree(member.tree, options)
+                @warn "Guess expression '$expr_str' has complexity $complexity > maxsize ($(options.maxsize))."
+            end
+
+            push!(out[j], member)
+        end
+    end
+    return out
+end
+function _make_vector_vector(guesses, nout)
+    if nout == 1
+        if guesses isa AbstractVector{<:AbstractVector}
+            @assert length(guesses) == nout
+            return guesses
+        else
+            return [guesses]
+        end
+    else  # nout > 1
+        if !(guesses isa AbstractVector{<:AbstractVector})
+            throw(ArgumentError("`guesses` must be a vector of vectors when `nout > 1`"))
+        end
+        @assert length(guesses) == nout
+        return guesses
     end
 end
 

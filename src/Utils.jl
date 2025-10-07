@@ -4,6 +4,8 @@ module UtilsModule
 using Printf: @printf
 using MacroTools: splitdef
 using StyledStrings: StyledStrings
+using Random: AbstractRNG, default_rng
+using DispatchDoctor: @unstable
 
 macro ignore(args...) end
 
@@ -91,12 +93,14 @@ function _to_vec(v::MutableTuple{S,T}) where {S,T}
 end
 
 """Return the bottom k elements of x, and their indices."""
-bottomk_fast(x::AbstractVector{T}, k) where {T} = Base.Cartesian.@nif(
-    32,
-    d -> d == k,
-    d -> _bottomk_dispatch(x, Val(d))::Tuple{Vector{T},Vector{Int}},
-    _ -> _bottomk_dispatch(x, Val(k))::Tuple{Vector{T},Vector{Int}}
-)
+function bottomk_fast(x::AbstractVector{T}, k) where {T}
+    Base.Cartesian.@nif(
+        32,
+        d -> d == k,
+        d -> _bottomk_dispatch(x, Val(d))::Tuple{Vector{T},Vector{Int}},
+        _ -> _bottomk_dispatch(x, Val(k))::Tuple{Vector{T},Vector{Int}}
+    )
+end
 
 function _bottomk_dispatch(x::AbstractVector{T}, ::Val{k}) where {T,k}
     if k == 1
@@ -142,13 +146,17 @@ function argmin_fast(x::AbstractVector{T}) where {T}
     return findmin_fast(x)[2]
 end
 
-function poisson_sample(λ::T) where {T}
+function poisson_sample(rng::AbstractRNG, λ::T) where {T}
+    iszero(λ) && return 0
     k, p, L = 0, one(T), exp(-λ)
     while p > L
         k += 1
-        p *= rand(T)
+        p *= rand(rng, T)
     end
     return k - 1
+end
+function poisson_sample(λ::T) where {T}
+    return poisson_sample(default_rng(), λ)
 end
 
 macro threads_if(flag, ex)
@@ -203,7 +211,7 @@ json3_write(args...) = error("Please load the JSON3.jl package.")
 
 A per-task cache that allows us to avoid repeated locking.
 """
-mutable struct PerTaskCache{T,F<:Function}
+struct PerTaskCache{T,F<:Function}
     constructor::F
 
     PerTaskCache{T}(constructor::F) where {T,F} = new{T,F}(constructor)
@@ -282,6 +290,10 @@ function FixKws(f::F; kws...) where {F}
 end
 function (f::FixKws{F,KWS})(args::Vararg{Any,N}) where {F,KWS,N}
     return f.f(args...; f.kws...)
+end
+
+@unstable function stable_get!(f::F, dict, key) where {F}
+    return get!(f, dict, key)::(Base.promote_op(f))
 end
 
 end
