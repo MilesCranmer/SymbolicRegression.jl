@@ -30,7 +30,7 @@ layout: home
 hero:
   name: SymbolicRegression.jl
   text: Discover Mathematical Laws from Data
-  tagline: A flexible, user-friendly framework that automatically finds interpretable equations from your data
+  tagline: Fast, flexible evolutionary algorithms for interpretable machine learning
   actions:
     - theme: brand
       text: Get Started
