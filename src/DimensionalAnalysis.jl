@@ -1,7 +1,7 @@
 module DimensionalAnalysisModule
 
 using DynamicExpressions:
-    AbstractExpression, AbstractExpressionNode, get_tree, get_child, tree_mapreduce
+    AbstractExpression, AbstractExpressionNode, get_tree, tree_mapreduce
 using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, constructorof
 
 using ..CoreModule: AbstractOptions, Dataset

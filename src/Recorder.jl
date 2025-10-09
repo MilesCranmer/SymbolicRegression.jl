@@ -2,10 +2,10 @@ module RecorderModule
 
 using ..CoreModule: RecordType
 
-"Assumes that `options` holds the user options::AbstractOptions"
-macro recorder(ex)
-    quote
-        if $(esc(:options)).use_recorder
+"Conditionally execute code based on options.use_recorder"
+macro recorder(options, ex)
+    return quote
+        if $(esc(options)).use_recorder
             $(esc(ex))
         end
     end

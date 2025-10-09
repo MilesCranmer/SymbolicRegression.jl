@@ -14,7 +14,7 @@ using Logging: AbstractLogger
 using DynamicExpressions:
     AbstractExpression, string_tree, parse_expression, EvalOptions, with_type_parameters
 using ..UtilsModule: subscriptify
-using ..CoreModule: Dataset, AbstractOptions, Options, RecordType, max_features
+using ..CoreModule: Dataset, AbstractOptions, RecordType, max_features
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
 using ..PopMemberModule: PopMember
