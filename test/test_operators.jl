@@ -134,13 +134,13 @@ end
         @test_nowarn SymbolicRegression.assert_operators_well_defined(T, options)
     end
 
-    using SymbolicRegression.CoreModule.OptionsModule: inverse_binopmap
+    using SymbolicRegression.CoreModule.OptionsModule: inverse_opmap
 
     # Test inverse mapping for comparison operators
-    @test inverse_binopmap(greater) == (>)
-    @test inverse_binopmap(less) == (<)
-    @test inverse_binopmap(greater_equal) == (>=)
-    @test inverse_binopmap(less_equal) == (<=)
+    @test inverse_opmap(greater) == (>)
+    @test inverse_opmap(less) == (<)
+    @test inverse_opmap(greater_equal) == (>=)
+    @test inverse_opmap(less_equal) == (<=)
 end
 
 @testitem "Built-in operators pass validation for complex numbers" tags = [:part2] begin
@@ -278,6 +278,10 @@ end
         @test iszero(deriv_invalid)
     end
 
+    # On ForwardDiff v1+, this becomes `!isfinite(x)`,
+    # but on earlier versions, invalid inputs returned `0.0`.
+    zero_or_nonfinite(x) = iszero(x) || !isfinite(x)
+
     # Test safe_pow separately since it's binary
     for x in [0.5, 2.0], y in [2.0, 0.5]
         # Test valid derivatives
@@ -287,9 +291,35 @@ end
         @test !isnan(deriv_y)
         @test !iszero(deriv_x)  # Should be non-zero for our test points
 
-        # Test invalid cases return 0.0 derivatives
-        @test iszero(ForwardDiff.derivative(x -> safe_pow(x, -1.0), 0.0))  # 0^(-1)
-        @test iszero(ForwardDiff.derivative(x -> safe_pow(-x, 0.5), 1.0))  # (-x)^0.5
-        @test iszero(ForwardDiff.derivative(x -> safe_pow(x, -0.5), 0.0))  # 0^(-0.5)
+        # Test invalid cases return non-finite or zero derivatives
+        @test zero_or_nonfinite(ForwardDiff.derivative(x -> safe_pow(x, -1.0), 0.0))  # 0^(-1)
+        @test iszero(ForwardDiff.derivative(x -> safe_pow(-x, 0.5), 1.0))
+        @test zero_or_nonfinite(ForwardDiff.derivative(x -> safe_pow(x, -0.5), 0.0))  # 0^(-0.5)
     end
+end
+
+@testitem "user_provided_operators applies safe operator mappings" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: safe_log, safe_pow, safe_sqrt
+    using DynamicExpressions: OperatorEnum
+
+    # Test that when user_provided_operators=true, operators get mapped through opmap
+    # This was a bug where user-provided operators weren't being mapped to safe versions
+
+    # Create operators with regular (potentially unsafe) functions
+    operators = OperatorEnum(
+        1 => (log, sqrt),  # Should become safe_log, safe_sqrt
+        2 => (+, -, (^)),   # ^ should become safe_pow
+    )
+
+    # Create options with user_provided_operators=true
+    options = Options(; operators)
+
+    # Verify that the operators were mapped to their safe versions
+    @test options.operators.ops[1] == (safe_log, safe_sqrt)
+    @test options.operators.ops[2] == (+, -, safe_pow)
+
+    # Also test accessing via convenience properties
+    @test options.operators.unaops == (safe_log, safe_sqrt)
+    @test options.operators.binops == (+, -, safe_pow)
 end

@@ -612,7 +612,7 @@ end
     @test loss_batch ≈ expected_batch_loss
 end
 
-@testitem "warning for loss_function with TemplateExpression" begin
+@testitem "warning for loss_function with TemplateExpression" tags = [:part2] begin
     using SymbolicRegression
 
     @test_warn(
@@ -623,4 +623,107 @@ end
             expression_type=TemplateExpression,
         )
     )
+end
+
+@testitem "TemplateExpression guess validation" tags = [:part1] begin
+    using SymbolicRegression
+    using SymbolicRegression: parse_guesses, Dataset, PopMember
+
+    # Create test data
+    X = Float64[1.0 2.0; 3.0 4.0]
+    y = Float64[5.0, 6.0]
+    dataset = Dataset(X, y)
+    template = @template_spec(expressions = (f, g)) do x1, x2
+        f(x1, x2) + g(x1, x2)
+    end
+    options = Options(; expression_spec=template)
+
+    # Test that using actual variable names throws an error
+    bad_guess = (; f="x1 + x2", g="x1 * x2")
+    @test_throws(
+        ArgumentError(
+            "Found variable name 'x1' in TemplateExpression guess. Use placeholder syntax '#1', '#2', etc., (for argument 1, 2, etc.) instead of actual variable names.",
+        ),
+        parse_guesses(PopMember{Float64,Float64}, [bad_guess], [dataset], options)
+    )
+
+    # Similar with custom variable names
+    dataset = Dataset(X, y; variable_names=["alpha", "beta"])
+    bad_guess = (; f="alpha + beta", g="alpha * beta")
+    @test_throws(
+        ArgumentError(
+            "Found variable name 'alpha' in TemplateExpression guess. Use placeholder syntax '#1', '#2', etc., (for argument 1, 2, etc.) instead of actual variable names.",
+        ),
+        parse_guesses(PopMember{Float64,Float64}, [bad_guess], [dataset], options)
+    )
+end
+
+@testitem "Template expression return validation" tags = [:part2] begin
+    using SymbolicRegression:
+        TemplateReturnError,
+        ValidVector,
+        ComposableExpression,
+        TemplateStructure,
+        TemplateExpression
+    using DynamicExpressions: OperatorEnum, Node
+
+    operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
+    x1 = ComposableExpression(Node{Float64}(; feature=1); operators, variable_names=nothing)
+
+    # Test that returning a regular vector from template expression throws TemplateReturnError
+    bad_structure = TemplateStructure{(:f,)}(
+        ((; f), (x,)) -> [1.0, 2.0];  # Returns regular Vector instead of ValidVector
+        num_features=(; f=1),
+    )
+    bad_expr = TemplateExpression(
+        (; f=x1); structure=bad_structure, operators, variable_names=nothing
+    )
+    X = [1.0 2.0]'
+
+    function get_error_msg(err)
+        io = IOBuffer()
+        Base.showerror(io, err)
+        return String(take!(io))
+    end
+
+    err = @test_throws TemplateReturnError bad_expr(X)
+    msg = get_error_msg(err.value)
+    @test contains(msg, "Template expression returned a regular Vector")
+    @test contains(msg, "ValidVector is required")
+    @test contains(msg, "ValidVector(my_data, computation_is_valid)")
+end
+
+@testitem "Test Float32/Float64 type conversion in TemplateExpression" tags = [:part2] begin
+    using SymbolicRegression
+    using SymbolicRegression: eval_loss
+    using SymbolicRegression.TemplateExpressionModule: _match_input_eltype
+
+    template = @template_spec(expressions = (f,)) do x1, x2
+        0.5 * f(x1, x2)  # 0.5 is Float64 literal
+    end
+
+    options = Options(; binary_operators=[+, *, /, -], expression_spec=template)
+    x1 = ComposableExpression(Node{Float32}(; feature=1); operators=options.operators)
+    x2 = ComposableExpression(Node{Float32}(; feature=2); operators=options.operators)
+    f_expr = x1 + x2
+
+    template_expr = TemplateExpression(
+        (; f=f_expr); structure=template.structure, operators=options.operators
+    )
+
+    X = Float32[1.0 2.0; 3.0 4.0]
+    result = template_expr(X)
+    @test result isa Vector{Float32}
+
+    y = Float32[2.0, 3.0]
+    dataset = Dataset(X, y)
+    loss = eval_loss(template_expr, dataset, options)
+    @test loss isa Float32
+    @test loss ≈ 0.0
+
+    # Test _match_input_eltype coverage (covers lines 675-676)
+    result_f64 = [1.0, 2.0]
+    @test _match_input_eltype(Matrix{Float64}, result_f64) === result_f64  # Same type
+    result_int = [1, 2]
+    @test _match_input_eltype(Matrix{Float64}, result_int) === result_int  # Non-float type
 end

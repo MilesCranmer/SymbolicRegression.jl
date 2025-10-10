@@ -13,7 +13,8 @@ using ..CoreModule:
     LOSS_TYPE,
     is_weighted,
     get_indices,
-    get_full_dataset
+    get_full_dataset,
+    init_value
 using ..ComplexityModule: compute_complexity
 using ..DimensionalAnalysisModule: violates_dimensional_constraints
 using ..InterfaceDynamicExpressionsModule: expected_array_type
@@ -218,7 +219,7 @@ Update the baseline loss of the dataset using the loss function specified in `op
 function update_baseline_loss!(
     dataset::Dataset{T,L}, options::AbstractOptions
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    example_tree = create_expression(zero(T), options, dataset)
+    example_tree = create_expression(init_value(T), options, dataset)
     # constructorof(options.node_type)(T; val=dataset.avg_y)
     # TODO: It could be that the loss function is not defined for this example type?
     baseline_loss = eval_loss(example_tree, dataset, options)

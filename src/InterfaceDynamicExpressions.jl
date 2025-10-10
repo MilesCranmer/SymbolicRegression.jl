@@ -5,6 +5,7 @@ using DispatchDoctor: @stable
 using Compat: Fix
 using DynamicExpressions:
     DynamicExpressions as DE,
+    AbstractOperatorEnum,
     OperatorEnum,
     GenericOperatorEnum,
     AbstractExpression,
@@ -14,8 +15,12 @@ using DynamicExpressions:
     EvalOptions
 using DynamicQuantities: dimension, ustrip
 using ..CoreModule: AbstractOptions, Dataset
-using ..CoreModule.OptionsModule: inverse_binopmap, inverse_unaopmap
+using ..CoreModule.OptionsModule: inverse_opmap
 using ..UtilsModule: subscriptify
+
+takes_eval_options(::Type{<:AbstractOperatorEnum}) = false
+takes_eval_options(::Type{<:OperatorEnum}) = true
+takes_eval_options(::T) where {T} = takes_eval_options(T)
 
 """
     eval_tree_array(tree::Union{AbstractExpression,AbstractExpressionNode}, X::AbstractArray, options::AbstractOptions; kws...)
@@ -62,12 +67,18 @@ which speed up evaluation significantly.
         kws...,
     )
         A = expected_array_type(X, typeof(tree))
-        eval_options = EvalOptions(;
-            turbo=something(turbo, options.turbo), bumper=something(bumper, options.bumper)
-        )
-        out, complete = DE.eval_tree_array(
-            tree, X, DE.get_operators(tree, options); eval_options, kws...
-        )
+        operators = DE.get_operators(tree, options)
+        eval_options_kws = if takes_eval_options(operators)
+            (;
+                eval_options=EvalOptions(;
+                    turbo=something(turbo, options.turbo),
+                    bumper=something(bumper, options.bumper),
+                )
+            )
+        else
+            NamedTuple()
+        end
+        out, complete = DE.eval_tree_array(tree, X, operators; eval_options_kws..., kws...)
         if isnothing(out)
             return nothing, false
         else
@@ -327,13 +338,17 @@ macro extend_operators(options)
         $(DE).@extend_operators $alias_operators
     end |> esc
 end
-function define_alias_operators(operators)
+function define_alias_operators(
+    @nospecialize(operators::Union{OperatorEnum,GenericOperatorEnum})
+)
     # We undo some of the aliases so that the user doesn't need to use, e.g.,
     # `safe_pow(x1, 1.5)`. They can use `x1 ^ 1.5` instead.
     constructor = isa(operators, OperatorEnum) ? OperatorEnum : GenericOperatorEnum
+    @assert operators.ops isa Tuple{Vararg{Any,2}}
+    # TODO: Support for 3-ary operators
     return constructor(;
-        binary_operators=inverse_binopmap.(operators.binops),
-        unary_operators=inverse_unaopmap.(operators.unaops),
+        binary_operators=map(inverse_opmap, operators.ops[2]),
+        unary_operators=map(inverse_opmap, operators.ops[1]),
         define_helper_functions=false,
         empty_old_operators=false,
     )
@@ -363,5 +378,19 @@ end
 
 # Allows special handling of class columns in MLJInterface.jl
 handles_class_column(::Type{<:AbstractExpression}) = false
+
+# These functions allow you to declare functions that must be
+# passed to worker nodes explicitly. See TemplateExpressions.jl for
+# an example. This is used inside Configure.jl.
+# COV_EXCL_START
+require_copy_to_workers(::Type{<:AbstractExpression}) = false
+function make_example_inputs(
+    ::Type{<:AbstractExpression}, ::Type{T}, options, dataset
+) where {T}
+    return error(
+        "`make_example_inputs` is not implemented for `$(typeof(options.expression_type))`."
+    )
+end
+# COV_EXCL_STOP
 
 end

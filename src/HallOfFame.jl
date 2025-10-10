@@ -1,17 +1,17 @@
 module HallOfFameModule
 
-using DispatchDoctor: @unstable
-using StyledStrings: styled
+using StyledStrings: @styled_str
 using DynamicExpressions: AbstractExpression, string_tree
 using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
-using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression
+using ..CoreModule:
+    AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression, init_value
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: AbstractPopMember, PopMember
 using ..InterfaceDynamicExpressionsModule: format_dimensions, WILDCARD_UNIT_STRING
 using Printf: @sprintf
 
 """
-    HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE}
+    HallOfFame{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
 
 List of the best members seen all time in `.members`, with `.members[c]` being
 the best member seen at complexity c. Including only the members which actually
@@ -19,7 +19,7 @@ have been set, you can run `.members[exists]`.
 
 # Fields
 
-- `members::Array{PopMember{T,L},1}`: List of the best members seen all time.
+- `members::Array{PopMember{T,L,N},1}`: List of the best members seen all time.
     These are ordered by complexity, with `.members[1]` the member with complexity 1.
 - `exists::Array{Bool,1}`: Whether the member at the given complexity has been set.
 """
@@ -49,6 +49,9 @@ function Base.show(io::IO, mime::MIME"text/plain", hof::HallOfFame{T,L,N}) where
     end
     return nothing
 end
+function Base.eltype(::Union{HOF,Type{HOF}}) where {T,L,N,HOF<:HallOfFame{T,L,N}}
+    return PopMember{T,L,N}
+end
 
 """
     HallOfFame(options::AbstractOptions, dataset::Dataset{T,L}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
@@ -66,7 +69,7 @@ Arguments:
 function HallOfFame(
     options::AbstractOptions, dataset::Dataset{T,L}
 ) where {T<:DATA_TYPE,L<:LOSS_TYPE}
-    base_tree = create_expression(zero(T), options, dataset)
+    base_tree = create_expression(init_value(T), options, dataset)
 
     return HallOfFame{T,L,typeof(base_tree),PopMember{T,L,typeof(base_tree)}}(
         [
@@ -92,7 +95,7 @@ end
 """
     calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,P}) where {T<:DATA_TYPE,L<:LOSS_TYPE}
 """
-@unstable function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
+function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N}) where {T,L,N}
     # TODO - remove dataset from args.
     # Dominating pareto curve - must be better than all simpler equations
     dominating = similar(hallOfFame.members, 0)
@@ -121,57 +124,54 @@ end
     return dominating
 end
 
-# const HEADER = let
-#     join(
-#         (
-#             rpad(styled"{bold:{underline:Complexity}}", 10),
-#             rpad(styled"{bold:{underline:Loss}}", 9),
-#             rpad(styled"{bold:{underline:Score}}", 9),
-#             styled"{bold:{underline:Equation}}",
-#         ),
-#         "  ",
-#     )
-# end
+let header_parts = (
+        rpad(styled"{bold:{underline:Complexity}}", 10),
+        rpad(styled"{bold:{underline:Loss}}", 9),
+        rpad(styled"{bold:{underline:Score}}", 9),
+        styled"{bold:{underline:Equation}}",
+    )
+    @eval const HEADER = join($(header_parts), "  ")
+    @eval const HEADER_WITHOUT_SCORE = join($(header_parts[[1, 2, 4]]), "  ")
+end
 
-_fmt(x::Integer) = @sprintf("%-10d", x)
-_fmt(x::AbstractFloat) = @sprintf("%-8.3e", x)
-_fmt(x) = rpad(string(x), 12)        # fallback
+show_score_column(options::AbstractOptions) = options.loss_scale == :log
 
 function string_dominating_pareto_curve(
     hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing, pretty::Bool=true
 )
     terminal_width = (width === nothing) ? 100 : max(100, width::Integer)
-    formatted = format_hall_of_fame(hallOfFame, options)
-    stat_cols = collect(propertynames(formatted))
-    filter!(c -> c ≠ :trees, stat_cols)
-    priority = [:complexity, :loss, :score]
-    stat_cols = vcat(intersect(priority, stat_cols), setdiff(stat_cols, priority))
-    header_cells = [
-        rpad(styled("{bold:{underline:$(titlecase(string(c)))}}"), 12) for c in stat_cols
-    ]
-    push!(header_cells, styled("{bold:{underline:Equation}}"))
-    header = join(header_cells, "  ")
-
-    _buffer = IOBuffer()
-    buffer = AnnotatedIOBuffer(_buffer)
+    buffer = AnnotatedIOBuffer(IOBuffer())
     println(buffer, '─'^(terminal_width - 1))
-    println(buffer, header)
-    for i in 1:length(formatted.trees)
-        stats = join((_fmt(getfield(formatted, c)[i]) for c in stat_cols), "  ")
-        print(buffer, stats)
-        eqn = string_tree(
-            formatted.trees[i],
+    if show_score_column(options)
+        println(buffer, HEADER)
+    else
+        println(buffer, HEADER_WITHOUT_SCORE)
+    end
+
+    formatted = format_hall_of_fame(hallOfFame, options)
+    for (tree, score, loss, complexity) in
+        zip(formatted.trees, formatted.scores, formatted.losses, formatted.complexities)
+        eqn_string = string_tree(
+            tree,
             options;
             display_variable_names=dataset.display_variable_names,
             X_sym_units=dataset.X_sym_units,
             y_sym_units=dataset.y_sym_units,
             pretty,
         )
-        prefix = make_prefix(formatted.trees[i], options, dataset)
+        prefix = make_prefix(tree, options, dataset)
+        eqn_string = prefix * eqn_string
+        stats_columns_string = if show_score_column(options)
+            @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
+        else
+            @sprintf("%-10d  %-8.3e  ", complexity, loss)
+        end
+        left_cols_width = length(stats_columns_string)
+        print(buffer, stats_columns_string)
         print(
             buffer,
             wrap_equation_string(
-                prefix * eqn, length(stats) + length(prefix) + 2, terminal_width
+                eqn_string, left_cols_width + length(prefix), terminal_width
             ),
         )
     end
@@ -191,8 +191,8 @@ end
 function wrap_equation_string(eqn_string, left_cols_width, terminal_width)
     dots = "..."
     equation_width = (terminal_width - 1) - left_cols_width - length(dots)
-    _buffer = IOBuffer()
-    buffer = AnnotatedIOBuffer(_buffer)
+
+    buffer = AnnotatedIOBuffer(IOBuffer())
 
     forced_split_eqn = split(eqn_string, '\n')
     print_pad = false
@@ -215,69 +215,65 @@ function wrap_equation_string(eqn_string, left_cols_width, terminal_width)
     return dump_buffer(buffer)
 end
 
-@unstable function format_hall_of_fame(
-    hof::HallOfFame{T,L,N,PM},
-    options;
-    columns::Union{Vector{Symbol},Nothing}=[:losses, :complexities, :scores, :trees],
-) where {T,L,N,PM<:PopMember{T,L,N}}
+function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}
     dominating = calculate_pareto_frontier(hof)
-    foreach(dominating) do member
+
+    # Only check for negative losses if using logarithmic scaling
+    options.loss_scale == :log && for member in dominating
         if member.loss < 0.0
             throw(
                 DomainError(
                     member.loss,
-                    "Your loss function must be non-negative. To do this, consider wrapping your loss inside an exponential, which will not affect the search (unless you are using annealing).",
+                    "Your loss function must be non-negative. To allow negative losses, set the `loss_scale` to linear, or consider wrapping your loss inside an exponential.",
                 ),
             )
         end
     end
 
-    member_fields = if length(dominating) == 0
-        Union{}[]
-    else
-        collect(propertynames(first(dominating)))
-    end
-    filter!(f -> f != :tree && f != :loss, member_fields)
-    coldata = Dict{Symbol,Any}()
-    coldata[:trees] = [member.tree for member in dominating]
-    coldata[:losses] = [member.loss for member in dominating]
+    trees = [member.tree for member in dominating]
+    losses = [member.loss for member in dominating]
+    complexities = [compute_complexity(member, options) for member in dominating]
+    scores = Array{L}(undef, length(dominating))
 
-    for f in member_fields
-        coldata[f] = [getfield(m, f) for m in dominating]
-    end
-    coldata[:complexities] = [compute_complexity(m, options) for m in dominating]
-    ZERO_POINT = eps(L)
     cur_loss = typemax(L)
     last_loss = cur_loss
-    last_complexity = 0
+    last_complexity = zero(eltype(complexities))
 
-    coldata[:scores] = Vector{L}(undef, length(dominating))
-    for i in eachindex(dominating)
-        complexity = coldata[:complexities][i]
-        cur_loss = coldata[:losses][i]
+    for i in 1:length(dominating)
+        complexity = complexities[i]
+        cur_loss = losses[i]
         delta_c = complexity - last_complexity
-        delta_l_mse = log(relu(cur_loss / last_loss) + ZERO_POINT)
-        coldata[:scores][i] = relu(-delta_l_mse / delta_c)
+        scores[i] = if i == 1
+            zero(L)
+        else
+            if options.loss_scale == :linear
+                compute_direct_score(cur_loss, last_loss, delta_c)
+            else
+                compute_zero_centered_score(cur_loss, last_loss, delta_c)
+            end
+        end
         last_loss = cur_loss
         last_complexity = complexity
     end
-    # For coldata, only keep the columns that are in `columns`
-    if columns !== nothing
-        for c in keys(coldata)
-            if !(c in columns)
-                delete!(coldata, c)
-            end
-        end
-    end
-    return NamedTuple(coldata)
+    return (; trees, scores, losses, complexities)
+end
+function compute_direct_score(cur_loss, last_loss, delta_c)
+    delta = cur_loss - last_loss
+    return relu(-delta / delta_c)
+end
+function compute_zero_centered_score(cur_loss, last_loss, delta_c)
+    log_ratio = log(relu(cur_loss / last_loss) + eps(cur_loss))
+    return relu(-log_ratio / delta_c)
 end
 
-@unstable function format_hall_of_fame(hof::AbstractVector{<:HallOfFame}, options)
+function format_hall_of_fame(hof::AbstractVector{<:HallOfFame}, options)
     outs = [format_hall_of_fame(h, options) for h in hof]
-    isempty(outs) && return NamedTuple()
-    ks = propertynames(first(outs))
-    vals = map(k -> [getfield(o, k) for o in outs], ks)
-    return NamedTuple{ks}(vals)
+    return (;
+        trees=[out.trees for out in outs],
+        scores=[out.scores for out in outs],
+        losses=[out.losses for out in outs],
+        complexities=[out.complexities for out in outs],
+    )
 end
 # TODO: Re-use this in `string_dominating_pareto_curve`
 

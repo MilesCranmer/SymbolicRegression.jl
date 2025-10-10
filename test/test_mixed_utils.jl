@@ -124,7 +124,7 @@ function test_mixed(i, batching::Bool, weighted::Bool, parallelism)
         @test length(dom) > 0
         best = dom[end]
         # Assert we created the correct type of trees:
-        @test node_type(typeof(best.tree)) == Node{T}
+        @test node_type(typeof(best.tree)) <: Node{T}
 
         # Test the cost
         @test best.loss < maximum_residual
