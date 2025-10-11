@@ -210,8 +210,42 @@ function fix_vitepress_base_path()
     end
 end
 
+# Generate favicon files from logo.png
+function generate_favicons()
+    logo_path = joinpath(@__DIR__, "src", "assets", "logo.png")
+    public_dir = joinpath(@__DIR__, "src", "public")
+
+    if !isfile(logo_path)
+        @warn "Logo file not found at: $logo_path - skipping favicon generation"
+        return false
+    end
+
+    mkpath(public_dir)
+
+    @info "Generating favicon files from logo.png..."
+
+    # Generate different sizes
+    favicon_configs = [
+        ("favicon.ico", "32x32"),
+        ("favicon-16x16.png", "16x16"),
+        ("favicon-32x32.png", "32x32"),
+        ("apple-touch-icon.png", "180x180"),
+    ]
+
+    for (filename, size) in favicon_configs
+        output_path = joinpath(public_dir, filename)
+        run(`magick $(logo_path) -resize $(size) -background none -gravity center -extent $(size) $(output_path)`)
+        @info "Generated: $filename"
+    end
+
+    return true
+end
+
 # Run preprocessing on source files before makedocs()
 preprocess_source_index()
+
+# Generate favicons before building docs
+generate_favicons()
 
 # Fix VitePress base path BEFORE makedocs() - this is crucial for timing!
 fix_vitepress_base_path()
