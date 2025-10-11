@@ -185,9 +185,9 @@ function fix_vitepress_base_path()
 
     # Determine the correct base path for each deployment
     base_path = if deployment_target == "cambridge"
-        "/symbolicregression/"
+        "/symbolicregression/dev/"
     else
-        "/SymbolicRegression.jl/"
+        "/SymbolicRegression.jl/dev/"
     end
 
     # Find and fix VitePress SOURCE config file (before build)
