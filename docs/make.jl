@@ -190,6 +190,14 @@ function fix_vitepress_base_path()
         "/SymbolicRegression.jl/dev/"
     end
 
+    # The version picker should link to sibling versions that live one
+    # directory above the active version, e.g. `/symbolicregression/v1.12.0/`.
+    # Compute that shared prefix (always the first path segment) so that we can
+    # rewrite `__DEPLOY_ABSPATH__` accordingly.
+    stripped = isempty(base_path) ? base_path : rstrip(base_path, '/')
+    segments = split(stripped, '/'; keepempty=false)
+    deploy_abspath = isempty(segments) ? "/" : "/" * first(segments) * "/"
+
     # Find and fix VitePress SOURCE config file (before build)
     config_paths = [joinpath(@__DIR__, "src", ".vitepress", "config.mts")]
 
@@ -201,9 +209,14 @@ function fix_vitepress_base_path()
             # Replace the base path with the correct one for this deployment
             # Look for existing base: '...' patterns and replace them
             content = replace(content, r"base:\s*'[^']*'" => "base: '$base_path'")
+            content = replace(
+                content,
+                r"__DEPLOY_ABSPATH__\s*:\s*JSON\.stringify\('[^']*'\)" =>
+                    "__DEPLOY_ABSPATH__: JSON.stringify('$deploy_abspath')",
+            )
 
             write(config_path, content)
-            @info "Updated VitePress base path to: $base_path"
+            @info "Updated VitePress base path to: $base_path (deploy abspath: $deploy_abspath)"
         else
             @warn "VitePress config not found at: $config_path"
         end
@@ -274,6 +287,20 @@ else
     )
 end
 
+current_version = let
+    version = get(ENV, "DOCUMENTER_VERSION", nothing)
+    if version !== nothing && !isempty(version)
+        version
+    else
+        fallback = get(ENV, "DOCUMENTER_CURRENT_VERSION", nothing)
+        if fallback !== nothing && !isempty(fallback)
+            fallback
+        else
+            "dev"
+        end
+    end
+end
+
 DocMeta.setdocmeta!(
     SymbolicRegression,
     :DocTestSetup,
@@ -284,6 +311,7 @@ DocMeta.setdocmeta!(
 makedocs(;
     sitename="SymbolicRegression.jl",
     authors="Miles Cranmer",
+    current_version=current_version,
     doctest=true,
     clean=get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true",
     warnonly=[:docs_block, :cross_references, :missing_docs],
