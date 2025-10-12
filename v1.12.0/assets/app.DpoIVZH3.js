@@ -13,6 +13,25 @@ import{T as p}from"./chunks/theme.bYgCZWQU.js";import{R as s,an as i,ao as u,ap 
     const logo = theme.logo && typeof theme.logo === 'object' ? Object.assign({}, theme.logo) : { width: 24, height: 24 };
     logo.src = `${newBase}logo.png`;
     theme.logo = logo;
+
+    const nav = Array.isArray(theme.nav) ? theme.nav.slice() : [];
+    const hasLanguageMenu = nav.some((item) => item && item.text === 'Julia' && Array.isArray(item.items));
+    if (!hasLanguageMenu) {
+      const languageMenu = {
+        text: 'Julia',
+        items: [
+          { text: 'Julia', link: '/' },
+          { text: 'Python', link: 'https://ai.damtp.cam.ac.uk/pysr/dev/' }
+        ]
+      };
+      const versionIndex = nav.findIndex((item) => item && item.component === 'VersionPicker');
+      if (versionIndex === -1) {
+        nav.push(languageMenu);
+      } else {
+        nav.splice(versionIndex, 0, languageMenu);
+      }
+    }
+    theme.nav = nav;
     siteData.themeConfig = theme;
   }
 };
