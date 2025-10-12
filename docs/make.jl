@@ -325,9 +325,19 @@ post_process_vitepress_index()
 function fix_empty_bases()
     bases_file = joinpath(@__DIR__, "build", "bases.txt")
     mkpath(dirname(bases_file))
-    if !isfile(bases_file) || isempty(filter(!isempty, readlines(bases_file)))
-        @info "Creating/fixing bases.txt for deployment"
+
+    if !isfile(bases_file)
+        @info "Creating bases.txt for dev deployment"
         write(bases_file, "dev\n")
+    else
+        bases = filter(!isempty, readlines(bases_file))
+        if isempty(bases)
+            @info "Fixing empty bases.txt for dev deployment"
+            write(bases_file, "dev\n")
+        else
+            @info "bases.txt already exists with $(length(bases)) bases: $bases"
+            # Don't overwrite it - DocumenterVitepress may have generated multiple bases
+        end
     end
 end
 
