@@ -1,4 +1,28 @@
-import{T as p}from"./chunks/theme.bYgCZWQU.js";import{R as s,an as i,ao as u,ap as c,aq as l,ar as f,as as d,at as m,au as h,av as g,aw as A,d as v,u as y,v as w,s as C,ax as P,ay as R,az as T,am as b}from"./chunks/framework.BUNNcBMr.js";function r(e){if(e.extends){const a=r(e.extends);return{...a,...e,async enhanceApp(t){a.enhanceApp&&await a.enhanceApp(t),e.enhanceApp&&await e.enhanceApp(t)}}}return e}const __adjustVitepressBase = (siteData) => {
+import{T as p}from"./chunks/theme.bYgCZWQU.js";import{R as s,an as i,ao as u,ap as c,aq as l,ar as f,as as d,at as m,au as h,av as g,aw as A,d as v,u as y,v as w,s as C,ax as P,ay as R,az as T,am as b}from"./chunks/framework.BUNNcBMr.js";function r(e){if(e.extends){const a=r(e.extends);return{...a,...e,async enhanceApp(t){a.enhanceApp&&await a.enhanceApp(t),e.enhanceApp&&await e.enhanceApp(t)}}}return e}const __ensureLanguageMenu = (siteData) => {
+  if (!siteData) return;
+  const theme = siteData.themeConfig || {};
+  const nav = Array.isArray(theme.nav) ? theme.nav.slice() : [];
+  const hasLanguageMenu = nav.some((item) => item && item.text === 'Julia' && Array.isArray(item.items));
+  if (!hasLanguageMenu) {
+    const languageMenu = {
+      text: 'Julia',
+      items: [
+        { text: 'Julia', link: '/' },
+        { text: 'Python', link: 'https://ai.damtp.cam.ac.uk/pysr/dev/' }
+      ]
+    };
+    const versionIndex = nav.findIndex((item) => item && item.component === 'VersionPicker');
+    if (versionIndex === -1) {
+      nav.push(languageMenu);
+    } else {
+      nav.splice(versionIndex, 0, languageMenu);
+    }
+    theme.nav = nav;
+    siteData.themeConfig = theme;
+  }
+};
+
+const __adjustVitepressBase = (siteData) => {
   if (typeof window === 'undefined') return;
   if (!siteData || typeof siteData.base !== 'string') return;
   const pathname = window.location && typeof window.location.pathname === 'string' ? window.location.pathname : null;
@@ -13,27 +37,9 @@ import{T as p}from"./chunks/theme.bYgCZWQU.js";import{R as s,an as i,ao as u,ap 
     const logo = theme.logo && typeof theme.logo === 'object' ? Object.assign({}, theme.logo) : { width: 24, height: 24 };
     logo.src = `${newBase}logo.png`;
     theme.logo = logo;
-
-    const nav = Array.isArray(theme.nav) ? theme.nav.slice() : [];
-    const hasLanguageMenu = nav.some((item) => item && item.text === 'Julia' && Array.isArray(item.items));
-    if (!hasLanguageMenu) {
-      const languageMenu = {
-        text: 'Julia',
-        items: [
-          { text: 'Julia', link: '/' },
-          { text: 'Python', link: 'https://ai.damtp.cam.ac.uk/pysr/dev/' }
-        ]
-      };
-      const versionIndex = nav.findIndex((item) => item && item.component === 'VersionPicker');
-      if (versionIndex === -1) {
-        nav.push(languageMenu);
-      } else {
-        nav.splice(versionIndex, 0, languageMenu);
-      }
-    }
-    theme.nav = nav;
     siteData.themeConfig = theme;
   }
+  __ensureLanguageMenu(siteData);
 };
 if (typeof window !== "undefined") {
   if (window.__VP_SITE_DATA__) {
