@@ -2,6 +2,7 @@ module HallOfFameModule
 
 using StyledStrings: @styled_str
 using DynamicExpressions: AbstractExpression, string_tree
+using DispatchDoctor: @unstable
 using ..UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
 using ..CoreModule:
     AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression, init_value
@@ -146,6 +147,170 @@ function calculate_pareto_frontier(hallOfFame::HallOfFame{T,L,N,PM}) where {T,L,
     return dominating
 end
 
+"""
+    member_to_row(member::AbstractPopMember, dataset::Dataset, options::AbstractOptions;
+                  pretty::Bool=true)
+
+Convert a PopMember to a row representation for display/export.
+
+This is the primary extension point for custom PopMember types. Users can override this
+method to include additional fields in the output.
+
+# Arguments
+- `member`: The population member to convert
+- `dataset`: Dataset for formatting equation strings
+- `options`: Options controlling complexity and equation formatting
+- `pretty`: Whether to use pretty-printing for equations (default: true)
+
+# Returns
+A NamedTuple containing the member's data. Default fields are:
+- `complexity`: Expression complexity
+- `loss`: Raw loss value
+- `cost`: Cost including complexity penalty
+- `birth`: Birth order/generation
+- `ref`: Unique reference ID
+- `parent`: Parent reference ID
+- `equation`: Formatted equation string
+
+# Example: Adding custom fields
+```julia
+function SymbolicRegression.HallOfFameModule.member_to_row(
+    member::MyCustomPopMember,
+    dataset::Dataset,
+    options::AbstractOptions;
+    kwargs...
+)
+    base = invoke(member_to_row, Tuple{AbstractPopMember, Dataset, AbstractOptions},
+                  member, dataset, options; kwargs...)
+    return merge(base, (my_field = member.custom_data,))
+end
+```
+"""
+function member_to_row(
+    member::AbstractPopMember, dataset::Dataset, options::AbstractOptions; pretty::Bool=true
+)
+    eqn_string = string_tree(
+        member.tree,
+        options;
+        display_variable_names=dataset.display_variable_names,
+        X_sym_units=dataset.X_sym_units,
+        y_sym_units=dataset.y_sym_units,
+        pretty=pretty,
+    )
+    prefix = make_prefix(member.tree, options, dataset)
+    eqn_string = prefix * eqn_string
+    return (
+        complexity=compute_complexity(member, options),
+        loss=member.loss,
+        cost=member.cost,
+        birth=member.birth,
+        ref=member.ref,
+        parent=member.parent,
+        equation=eqn_string,
+    )
+end
+
+"""
+    HOFRows
+
+A lazy iterator for HallOfFame members that computes rows on-demand.
+This struct implements the Tables.jl interface for easy export to DataFrames, CSV, etc.
+
+# Fields
+- `members`: Vector of PopMembers to iterate over
+- `dataset`: Dataset for formatting equations
+- `options`: Options for complexity and formatting
+- `include_score`: Whether to compute and include Pareto improvement scores
+- `pretty`: Whether to use pretty-printing for equations
+"""
+struct HOFRows{PM<:AbstractPopMember}
+    members::Vector{PM}
+    dataset::Dataset
+    options::AbstractOptions
+    include_score::Bool
+    pretty::Bool
+end
+
+# Helper function to create a single row with optional score
+@unstable function _make_row(view::HOFRows, i::Int, scores)
+    row = member_to_row(view.members[i], view.dataset, view.options; pretty=view.pretty)
+
+    return scores === nothing ? row : (; row..., score=scores[i])
+end
+
+# Make HOFRows iterable
+Base.length(view::HOFRows) = length(view.members)
+Base.eltype(::Type{<:HOFRows}) = NamedTuple
+
+function Base.iterate(view::HOFRows)
+    isempty(view.members) && return nothing
+
+    # Compute all scores upfront if needed
+    scores = view.include_score ? compute_scores(view.members, view.options) : nothing
+    state = (scores, 1)
+
+    row = _make_row(view, 1, scores)
+    return (row, state)
+end
+
+function Base.iterate(view::HOFRows, state)
+    scores, i = state
+    i += 1
+    i > length(view.members) && return nothing
+
+    row = _make_row(view, i, scores)
+    return (row, (scores, i))
+end
+
+"""
+    hof_rows(hof::HallOfFame, dataset::Dataset, options::AbstractOptions;
+             pareto_only::Bool=true, include_score::Bool=pareto_only,
+             pretty::Bool=true)
+
+This function returns an `HOFRows` object.
+
+# Arguments
+- `hof`: The HallOfFame to export
+- `dataset`: Dataset for formatting equations
+- `options`: Options controlling complexity and formatting
+- `pareto_only`: Only include Pareto frontier members (default: true)
+- `include_score`: Include Pareto improvement scores (default: same as `pareto_only`)
+- `pretty`: Use pretty-printing for equations (default: true)
+
+# Returns
+An `HOFRows` object that can be used with Tables.jl-compatible consumers like
+`DataFrame`, `CSV.write`, etc.
+
+# Examples
+```julia
+# Get a Tables.jl view of the Pareto frontier
+rows = hof_rows(hof, dataset, options)
+
+# Convert to DataFrame (requires DataFrames.jl)
+using DataFrames
+df = DataFrame(rows)
+
+# Get all members without scores
+all_rows = hof_rows(hof, dataset, options; pareto_only=false, include_score=false)
+```
+"""
+function hof_rows(
+    hof::HallOfFame,
+    dataset::Dataset,
+    options::AbstractOptions;
+    pareto_only::Bool=true,
+    include_score::Bool=pareto_only,
+    pretty::Bool=true,
+)
+    members = if pareto_only
+        calculate_pareto_frontier(hof)
+    else
+        [m for (m, ex) in zip(hof.members, hof.exists) if ex]
+    end
+
+    return HOFRows(members, dataset, options, include_score, pretty)
+end
+
 let header_parts = (
         rpad(styled"{bold:{underline:Complexity}}", 10),
         rpad(styled"{bold:{underline:Loss}}", 9),
@@ -170,23 +335,21 @@ function string_dominating_pareto_curve(
         println(buffer, HEADER_WITHOUT_SCORE)
     end
 
-    formatted = format_hall_of_fame(hallOfFame, options)
-    for (tree, score, loss, complexity) in
-        zip(formatted.trees, formatted.scores, formatted.losses, formatted.complexities)
-        eqn_string = string_tree(
-            tree,
-            options;
-            display_variable_names=dataset.display_variable_names,
-            X_sym_units=dataset.X_sym_units,
-            y_sym_units=dataset.y_sym_units,
-            pretty,
-        )
-        prefix = make_prefix(tree, options, dataset)
-        eqn_string = prefix * eqn_string
+    # Use hof_rows to get data with scores but without prefix
+    # (we need to format prefix specially for wrapping)
+    rows_view = hof_rows(
+        hallOfFame, dataset, options; pareto_only=true, include_score=true, pretty=pretty
+    )
+    members = rows_view.members
+
+    for (i, row) in enumerate(rows_view)
+        member = members[i]
+        prefix = make_prefix(member.tree, options, dataset)
+        eqn_string = row.equation
         stats_columns_string = if show_score_column(options)
-            @sprintf("%-10d  %-8.3e  %-8.3e  ", complexity, loss, score)
+            @sprintf("%-10d  %-8.3e  %-8.3e  ", row.complexity, row.loss, row.score)
         else
-            @sprintf("%-10d  %-8.3e  ", complexity, loss)
+            @sprintf("%-10d  %-8.3e  ", row.complexity, row.loss)
         end
         left_cols_width = length(stats_columns_string)
         print(buffer, stats_columns_string)
@@ -237,6 +400,57 @@ function wrap_equation_string(eqn_string, left_cols_width, terminal_width)
     return dump_buffer(buffer)
 end
 
+"""
+    compute_scores(members::Vector{<:AbstractPopMember}, options::AbstractOptions)
+
+Compute improvement scores for an ordered sequence of members.
+
+Scores measure the improvement in loss per unit complexity compared to the previous
+member in the sequence. The first member always has a score of zero.
+
+This function works with any ordered sequence of members (e.g., Pareto frontier,
+complexity-sorted members, etc.).
+
+# Arguments
+- `members`: Vector of PopMembers in the desired order
+- `options`: Options controlling the loss scale (`:linear` or `:log`)
+
+# Returns
+Vector of scores with the same length as `members`
+"""
+function compute_scores(
+    members::Vector{<:AbstractPopMember{T,L,N}}, options::AbstractOptions
+) where {T,L,N}
+    isempty(members) && return L[]
+
+    scores = Vector{L}(undef, length(members))
+
+    complexities = [compute_complexity(member, options) for member in members]
+    losses = [member.loss for member in members]
+
+    last_loss = typemax(L)
+    last_complexity = zero(eltype(complexities))
+
+    for i in eachindex(members)
+        complexity = complexities[i]
+        cur_loss = losses[i]
+        delta_c = complexity - last_complexity
+        scores[i] = if i == 1
+            zero(L)
+        else
+            if options.loss_scale == :linear
+                compute_direct_score(cur_loss, last_loss, delta_c)
+            else
+                compute_zero_centered_score(cur_loss, last_loss, delta_c)
+            end
+        end
+        last_loss = cur_loss
+        last_complexity = complexity
+    end
+
+    return scores
+end
+
 function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}
     dominating = calculate_pareto_frontier(hof)
 
@@ -255,28 +469,8 @@ function format_hall_of_fame(hof::HallOfFame{T,L}, options) where {T,L}
     trees = [member.tree for member in dominating]
     losses = [member.loss for member in dominating]
     complexities = [compute_complexity(member, options) for member in dominating]
-    scores = Array{L}(undef, length(dominating))
+    scores = compute_scores(dominating, options)
 
-    cur_loss = typemax(L)
-    last_loss = cur_loss
-    last_complexity = zero(eltype(complexities))
-
-    for i in 1:length(dominating)
-        complexity = complexities[i]
-        cur_loss = losses[i]
-        delta_c = complexity - last_complexity
-        scores[i] = if i == 1
-            zero(L)
-        else
-            if options.loss_scale == :linear
-                compute_direct_score(cur_loss, last_loss, delta_c)
-            else
-                compute_zero_centered_score(cur_loss, last_loss, delta_c)
-            end
-        end
-        last_loss = cur_loss
-        last_complexity = complexity
-    end
     return (; trees, scores, losses, complexities)
 end
 function compute_direct_score(cur_loss, last_loss, delta_c)

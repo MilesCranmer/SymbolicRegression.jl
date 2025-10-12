@@ -87,6 +87,8 @@ include("test_options.jl")
     include("test_hash.jl")
 end
 
+include("test_hof_rows.jl")
+
 @testitem "Test migration" tags = [:part3] begin
     include("test_migration.jl")
 end
