@@ -6,7 +6,13 @@ import{T as p}from"./chunks/theme.bYgCZWQU.js";import{R as s,an as i,ao as u,ap 
     const original = normalize(siteData.base);
     const current = normalize(pathname);
     if (original.length >= 2 && current.length >= 2 && current[0] === original[0] && current[1] !== original[1]) {
-      siteData.base = `/${current[0]}/${current[1]}/`;
+      const newBase = `/${current[0]}/${current[1]}/`;
+      siteData.base = newBase;
+      const theme = siteData.themeConfig || {};
+      const logo = theme.logo && typeof theme.logo === 'object' ? Object.assign({}, theme.logo) : { width: 24, height: 24 };
+      logo.src = `${newBase}logo.png`;
+      theme.logo = logo;
+      siteData.themeConfig = theme;
     }
   }
 }
