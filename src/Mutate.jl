@@ -261,6 +261,7 @@ end
                 before_loss,
                 options;
                 parent_ref=parent_ref,
+                mutation_choice=mutation_choice,
             ),
             mutation_accepted,
             num_evals,
@@ -284,6 +285,7 @@ end
                 before_loss,
                 options;
                 parent_ref=parent_ref,
+                mutation_choice=mutation_choice,
             ),
             mutation_accepted,
             num_evals,

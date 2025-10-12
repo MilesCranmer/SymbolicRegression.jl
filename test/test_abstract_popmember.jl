@@ -107,6 +107,7 @@
         loss::L,
         options;
         complexity::Union{Int,Nothing}=nothing,
+        mutation_choice::Union{Symbol,Nothing}=nothing,
         parent_ref,
     ) where {T,L}
         actual_complexity = @something complexity SymbolicRegression.compute_complexity(
@@ -131,6 +132,7 @@
         loss::L,
         options;
         complexity::Union{Int,Nothing}=nothing,
+        mutation_choice::Union{Symbol,Nothing}=nothing,
         parent_ref,
     ) where {T,L,N<:AbstractExpression{T}}
         actual_complexity = @something complexity SymbolicRegression.compute_complexity(
