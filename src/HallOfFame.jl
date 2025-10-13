@@ -172,7 +172,7 @@ A NamedTuple containing the member's data. Default fields are:
 - `parent`: Parent reference ID
 - `equation`: Formatted equation string
 
-# Example: Adding custom fields
+# Example 1: Adding custom fields to a custom PopMember
 ```julia
 function SymbolicRegression.HallOfFameModule.member_to_row(
     member::MyCustomPopMember,
@@ -184,6 +184,28 @@ function SymbolicRegression.HallOfFameModule.member_to_row(
                   member, dataset, options; kwargs...)
     return merge(base, (my_field = member.custom_data,))
 end
+```
+
+# Example 2: Displaying custom fields in the Hall of Fame
+After extending `member_to_row`, create custom columns to display your fields:
+```julia
+using Printf
+
+custom_columns = [
+    HOFColumn(:complexity, "C", row -> row.complexity, string, 5, :right),
+    HOFColumn(:loss, "Loss", row -> row.loss, x -> @sprintf("%.3e", x), 9, :right),
+    HOFColumn(:my_field, "MyField", row -> row.my_field, x -> @sprintf("%.2f", x), 10, :right),
+    HOFColumn(:equation, "Equation", row -> row.equation, identity, nothing, :left)
+]
+
+# Display with custom columns
+str = string_dominating_pareto_curve(hof, dataset, options; columns=custom_columns)
+println(str)
+
+# Or export via Tables.jl with custom columns
+rows = hof_rows(hof, dataset, options; columns=custom_columns)
+using DataFrames
+df = DataFrame(rows)
 ```
 """
 function member_to_row(
@@ -211,6 +233,92 @@ function member_to_row(
 end
 
 """
+    HOFColumn
+
+Specification for a column in Hall of Fame display and export.
+
+# Fields
+- `name::Symbol`: Column identifier (key in the row NamedTuple)
+- `header::String`: Display header text
+- `getter::Function`: Function `(row::NamedTuple) -> value` to extract/compute column value
+- `formatter::Function`: Function `(value) -> String` for display formatting (display only)
+- `width::Union{Int,Nothing}`: Display width (nothing for auto-sizing)
+- `alignment::Symbol`: Text alignment - `:left`, `:right`, or `:center`
+
+# Example
+```julia
+# Simple column that extracts an existing field
+complexity_col = HOFColumn(
+    :complexity, "Complexity",
+    row -> row.complexity,
+    x -> string(x),
+    10, :right
+)
+
+# Computed column
+r2_col = HOFColumn(
+    :r2, "R²",
+    row -> compute_r2(row),  # Custom computation
+    x -> @sprintf("%.3f", x),
+    8, :right
+)
+```
+"""
+struct HOFColumn
+    name::Symbol
+    header::String
+    getter::Function
+    formatter::Function
+    width::Union{Int,Nothing}
+    alignment::Symbol
+end
+
+"""
+    default_columns(options::AbstractOptions) -> Vector{HOFColumn}
+
+Return the default column specifications for Hall of Fame display.
+
+The default columns are:
+- Complexity (right-aligned, width 10)
+- Loss (right-aligned, width 9, scientific notation)
+- Score (conditional on `options.loss_scale == :log`, right-aligned, width 9)
+- Equation (left-aligned, auto-width)
+
+Users can customize by modifying this vector or creating their own.
+"""
+function default_columns(options::AbstractOptions)
+    cols = HOFColumn[
+        HOFColumn(
+            :complexity,
+            "Complexity",
+            row -> row.complexity,
+            x -> @sprintf("%d", x),
+            10,
+            :right,
+        ),
+        HOFColumn(:loss, "Loss", row -> row.loss, x -> @sprintf("%.3e", x), 9, :right),
+    ]
+
+    # Add score column for logarithmic loss scale
+    if options.loss_scale == :log
+        push!(
+            cols,
+            HOFColumn(
+                :score, "Score", row -> row.score, x -> @sprintf("%.3e", x), 9, :right
+            ),
+        )
+    end
+
+    # Equation column (special handling in display due to wrapping)
+    push!(
+        cols,
+        HOFColumn(:equation, "Equation", row -> row.equation, identity, nothing, :left),
+    )
+
+    return cols
+end
+
+"""
     HOFRows
 
 A lazy iterator for HallOfFame members that computes rows on-demand.
@@ -222,6 +330,7 @@ This struct implements the Tables.jl interface for easy export to DataFrames, CS
 - `options`: Options for complexity and formatting
 - `include_score`: Whether to compute and include Pareto improvement scores
 - `pretty`: Whether to use pretty-printing for equations
+- `columns`: Optional column specifications (nothing = all columns from member_to_row)
 """
 struct HOFRows{PM<:AbstractPopMember}
     members::Vector{PM}
@@ -229,13 +338,26 @@ struct HOFRows{PM<:AbstractPopMember}
     options::AbstractOptions
     include_score::Bool
     pretty::Bool
+    columns::Union{Vector{HOFColumn},Nothing}
 end
 
-# Helper function to create a single row with optional score
+# Helper function to create a single row with optional score and column filtering
 @unstable function _make_row(view::HOFRows, i::Int, scores)
+    # Get full row from member_to_row
     row = member_to_row(view.members[i], view.dataset, view.options; pretty=view.pretty)
 
-    return scores === nothing ? row : (; row..., score=scores[i])
+    # Add score if computed
+    row = scores === nothing ? row : (; row..., score=scores[i])
+
+    # Apply column filtering if specified
+    if view.columns !== nothing
+        # Build filtered row using column getters
+        filtered_values = [col.getter(row) for col in view.columns]
+        filtered_names = Tuple(col.name for col in view.columns)
+        return NamedTuple{filtered_names}(filtered_values)
+    end
+
+    return row
 end
 
 # Make HOFRows iterable
@@ -265,7 +387,7 @@ end
 """
     hof_rows(hof::HallOfFame, dataset::Dataset, options::AbstractOptions;
              pareto_only::Bool=true, include_score::Bool=pareto_only,
-             pretty::Bool=true)
+             pretty::Bool=true, columns::Union{Vector{HOFColumn},Nothing}=nothing)
 
 This function returns an `HOFRows` object.
 
@@ -276,6 +398,7 @@ This function returns an `HOFRows` object.
 - `pareto_only`: Only include Pareto frontier members (default: true)
 - `include_score`: Include Pareto improvement scores (default: same as `pareto_only`)
 - `pretty`: Use pretty-printing for equations (default: true)
+- `columns`: Optional column specifications (default: nothing = all columns from member_to_row)
 
 # Returns
 An `HOFRows` object that can be used with Tables.jl-compatible consumers like
@@ -292,6 +415,13 @@ df = DataFrame(rows)
 
 # Get all members without scores
 all_rows = hof_rows(hof, dataset, options; pareto_only=false, include_score=false)
+
+# Get only specific columns
+custom_cols = [
+    HOFColumn(:complexity, "Complexity", row -> row.complexity, string, 10, :right),
+    HOFColumn(:loss, "Loss", row -> row.loss, x -> @sprintf("%.3e", x), 9, :right)
+]
+filtered_rows = hof_rows(hof, dataset, options; columns=custom_cols)
 ```
 """
 function hof_rows(
@@ -301,6 +431,7 @@ function hof_rows(
     pareto_only::Bool=true,
     include_score::Bool=pareto_only,
     pretty::Bool=true,
+    columns::Union{Vector{HOFColumn},Nothing}=nothing,
 )
     members = if pareto_only
         calculate_pareto_frontier(hof)
@@ -308,58 +439,123 @@ function hof_rows(
         [m for (m, ex) in zip(hof.members, hof.exists) if ex]
     end
 
-    return HOFRows(members, dataset, options, include_score, pretty)
+    return HOFRows(members, dataset, options, include_score, pretty, columns)
 end
 
-let header_parts = (
-        rpad(styled"{bold:{underline:Complexity}}", 10),
-        rpad(styled"{bold:{underline:Loss}}", 9),
-        rpad(styled"{bold:{underline:Score}}", 9),
-        styled"{bold:{underline:Equation}}",
+"""
+    string_dominating_pareto_curve(
+        hallOfFame, dataset, options;
+        width::Union{Integer,Nothing}=nothing,
+        pretty::Bool=true,
+        columns::Union{Vector{HOFColumn},Nothing}=nothing
     )
-    @eval const HEADER = join($(header_parts), "  ")
-    @eval const HEADER_WITHOUT_SCORE = join($(header_parts[[1, 2, 4]]), "  ")
-end
 
-show_score_column(options::AbstractOptions) = options.loss_scale == :log
+Format the Pareto frontier as a pretty-printed string table.
 
+# Arguments
+- `hallOfFame`: The HallOfFame to display
+- `dataset`: Dataset for formatting equations
+- `options`: Options controlling complexity and formatting
+- `width`: Terminal width (default: 100)
+- `pretty`: Use pretty-printing for equations (default: true)
+- `columns`: Column specifications (default: nothing = use default_columns(options))
+
+# Example with custom columns
+```julia
+custom_cols = [
+    HOFColumn(:complexity, "C", row -> row.complexity, string, 5, :right),
+    HOFColumn(:loss, "Loss", row -> row.loss, x -> @sprintf("%.2e", x), 8, :right),
+    HOFColumn(:equation, "Equation", row -> row.equation, identity, nothing, :left)
+]
+str = string_dominating_pareto_curve(hof, dataset, options; columns=custom_cols)
+```
+"""
 function string_dominating_pareto_curve(
-    hallOfFame, dataset, options; width::Union{Integer,Nothing}=nothing, pretty::Bool=true
+    hallOfFame,
+    dataset,
+    options;
+    width::Union{Integer,Nothing}=nothing,
+    pretty::Bool=true,
+    columns::Union{Vector{HOFColumn},Nothing}=nothing,
 )
+    # Use default columns if not specified
+    cols = columns === nothing ? default_columns(options) : columns
+
     terminal_width = (width === nothing) ? 100 : max(100, width::Integer)
     buffer = AnnotatedIOBuffer(IOBuffer())
-    println(buffer, '─'^(terminal_width - 1))
-    if show_score_column(options)
-        println(buffer, HEADER)
-    else
-        println(buffer, HEADER_WITHOUT_SCORE)
-    end
 
-    # Use hof_rows to get data with scores but without prefix
-    # (we need to format prefix specially for wrapping)
+    # Print top border
+    println(buffer, '─'^(terminal_width - 1))
+
+    # Build header from column specs
+    header_parts = map(cols) do col
+        header_text = styled"{bold:{underline:$(col.header)}}"
+        if col.width === nothing
+            # Last column (typically equation) - no padding
+            header_text
+        else
+            # Fixed-width column - pad to width
+            rpad(header_text, col.width)
+        end
+    end
+    println(buffer, join(header_parts, "  "))
+
+    # Get rows (without column filtering, we'll format ourselves)
     rows_view = hof_rows(
         hallOfFame, dataset, options; pareto_only=true, include_score=true, pretty=pretty
     )
     members = rows_view.members
 
-    for (i, row) in enumerate(rows_view)
+    # Format each row
+    for (i, full_row) in enumerate(rows_view)
         member = members[i]
-        prefix = make_prefix(member.tree, options, dataset)
-        eqn_string = row.equation
-        stats_columns_string = if show_score_column(options)
-            @sprintf("%-10d  %-8.3e  %-8.3e  ", row.complexity, row.loss, row.score)
-        else
-            @sprintf("%-10d  %-8.3e  ", row.complexity, row.loss)
+
+        # Format all columns except the last one (which may need wrapping)
+        formatted_cols = String[]
+        for (col_idx, col) in enumerate(cols)
+            value = col.getter(full_row)
+            formatted = col.formatter(value)
+
+            if col_idx == length(cols)
+                # Last column - handle separately for wrapping
+                # Calculate left margin from previous columns
+                left_cols_width = sum(
+                    length(formatted_cols[j]) + 2 for j in 1:(length(formatted_cols))
+                )
+
+                # Handle equation prefix if it's an equation column
+                if col.name == :equation && haskey(full_row, :equation)
+                    prefix = make_prefix(member.tree, options, dataset)
+                    wrapped = wrap_equation_string(
+                        formatted, left_cols_width + length(prefix), terminal_width
+                    )
+                    print(buffer, join(formatted_cols, "  "))
+                    print(buffer, "  ")
+                    print(buffer, wrapped)
+                else
+                    # Non-equation last column - just print
+                    push!(formatted_cols, formatted)
+                    println(buffer, join(formatted_cols, "  "))
+                end
+            else
+                # Non-last column - format with alignment and width
+                if col.width !== nothing
+                    if col.alignment == :right
+                        formatted = lpad(formatted, col.width)
+                    elseif col.alignment == :center
+                        formatted = lpad(
+                            rpad(formatted, (col.width + length(formatted)) ÷ 2), col.width
+                        )
+                    else  # :left
+                        formatted = rpad(formatted, col.width)
+                    end
+                end
+                push!(formatted_cols, formatted)
+            end
         end
-        left_cols_width = length(stats_columns_string)
-        print(buffer, stats_columns_string)
-        print(
-            buffer,
-            wrap_equation_string(
-                eqn_string, left_cols_width + length(prefix), terminal_width
-            ),
-        )
     end
+
+    # Print bottom border
     print(buffer, '─'^(terminal_width - 1))
     return dump_buffer(buffer)
 end

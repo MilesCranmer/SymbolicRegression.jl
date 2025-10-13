@@ -237,7 +237,7 @@ end
     end
 
     function create_child(
-        parent::CustomPopMember{T,L},
+        parent::TestCustomPopMember{T,L},
         tree::AbstractExpression{T},
         cost::L,
         loss::L,
@@ -365,5 +365,208 @@ end
         end
     else
         @info "Skipping Tables.jl tests (Julia version < 1.9)"
+    end
+end
+
+@testitem "Column specifications" tags = [:part1] begin
+    using SymbolicRegression
+    using Test
+    using Printf: @sprintf
+
+    X = Float32[1.0 2.0 3.0; 4.0 5.0 6.0]
+    y = Float32[1.0, 2.0, 3.0]
+
+    options = Options(; binary_operators=[+, -], maxsize=5, deterministic=true, seed=0)
+
+    dataset = Dataset(X, y)
+
+    @testset "HOFColumn basics" begin
+        # Create a simple column
+        col = SymbolicRegression.HallOfFameModule.HOFColumn(
+            :loss, "Loss", row -> row.loss, x -> @sprintf("%.2e", x), 8, :right
+        )
+
+        @test col.name == :loss
+        @test col.header == "Loss"
+        @test col.width == 8
+        @test col.alignment == :right
+
+        # Test getter and formatter
+        test_row = (loss=0.123456, complexity=5)
+        @test col.getter(test_row) == 0.123456
+        @test col.formatter(0.123456) == "1.23e-01"
+    end
+
+    @testset "default_columns" begin
+        # Test default columns without score (linear loss scale)
+        options_linear = Options(;
+            binary_operators=[+, -], maxsize=5, loss_scale=:linear, deterministic=true
+        )
+        cols_linear = SymbolicRegression.HallOfFameModule.default_columns(options_linear)
+
+        @test length(cols_linear) == 3  # complexity, loss, equation
+        @test cols_linear[1].name == :complexity
+        @test cols_linear[2].name == :loss
+        @test cols_linear[3].name == :equation
+
+        # Test default columns with score (log loss scale)
+        options_log = Options(;
+            binary_operators=[+, -], maxsize=5, loss_scale=:log, deterministic=true
+        )
+        cols_log = SymbolicRegression.HallOfFameModule.default_columns(options_log)
+
+        @test length(cols_log) == 4  # complexity, loss, score, equation
+        @test cols_log[1].name == :complexity
+        @test cols_log[2].name == :loss
+        @test cols_log[3].name == :score
+        @test cols_log[4].name == :equation
+    end
+
+    @testset "Custom columns with HOFRows" begin
+        hof = SymbolicRegression.HallOfFameModule.HallOfFame(options, dataset)
+        hof.exists[1] = true
+        hof.exists[2] = true
+
+        # Create custom column specs
+        custom_cols = [
+            SymbolicRegression.HallOfFameModule.HOFColumn(
+                :complexity, "C", row -> row.complexity, string, 5, :right
+            ),
+            SymbolicRegression.HallOfFameModule.HOFColumn(
+                :loss, "L", row -> row.loss, x -> @sprintf("%.2e", x), 8, :right
+            ),
+        ]
+
+        # Get rows with custom columns
+        rows = SymbolicRegression.HallOfFameModule.hof_rows(
+            hof, dataset, options; pareto_only=false, columns=custom_cols
+        )
+
+        # Collect and verify
+        collected = collect(rows)
+        @test length(collected) == 2
+
+        # Should only have the two specified columns
+        for row in collected
+            @test haskey(row, :complexity)
+            @test haskey(row, :loss)
+            @test !haskey(row, :equation)  # Not requested
+            @test !haskey(row, :cost)  # Not requested
+        end
+    end
+
+    @testset "string_dominating_pareto_curve with custom columns" begin
+        hof = SymbolicRegression.HallOfFameModule.HallOfFame(options, dataset)
+        hof.exists[1] = true
+
+        # Test with default columns
+        str_default = SymbolicRegression.HallOfFameModule.string_dominating_pareto_curve(
+            hof, dataset, options
+        )
+        @test str_default isa AbstractString
+        @test contains(str_default, "Complexity")
+        @test contains(str_default, "Loss")
+
+        # Test with custom columns
+        custom_cols = [
+            SymbolicRegression.HallOfFameModule.HOFColumn(
+                :complexity, "C", row -> row.complexity, string, 5, :right
+            ),
+            SymbolicRegression.HallOfFameModule.HOFColumn(
+                :loss, "L", row -> row.loss, x -> @sprintf("%.2e", x), 8, :right
+            ),
+            SymbolicRegression.HallOfFameModule.HOFColumn(
+                :equation, "Eq", row -> row.equation, identity, nothing, :left
+            ),
+        ]
+
+        str_custom = SymbolicRegression.HallOfFameModule.string_dominating_pareto_curve(
+            hof, dataset, options; columns=custom_cols
+        )
+        @test str_custom isa AbstractString
+        @test contains(str_custom, "C")  # Custom header
+        @test contains(str_custom, "L")  # Custom header
+        @test !contains(str_custom, "Complexity")  # Original header should not appear
+    end
+
+    @testset "Computed columns" begin
+        hof = SymbolicRegression.HallOfFameModule.HallOfFame(options, dataset)
+        hof.exists[1] = true
+
+        # Create a computed column (e.g., cost/loss ratio)
+        custom_cols = [
+            SymbolicRegression.HallOfFameModule.HOFColumn(
+                :complexity, "C", row -> row.complexity, string, 5, :right
+            ),
+            SymbolicRegression.HallOfFameModule.HOFColumn(
+                :ratio,
+                "Cost/Loss",
+                row -> row.cost / row.loss,  # Computed from multiple fields
+                x -> @sprintf("%.2f", x),
+                10,
+                :right,
+            ),
+        ]
+
+        rows = SymbolicRegression.HallOfFameModule.hof_rows(
+            hof, dataset, options; pareto_only=false, columns=custom_cols
+        )
+
+        collected = collect(rows)
+        @test length(collected) == 1
+        @test haskey(collected[1], :ratio)
+        @test collected[1].ratio isa Number
+    end
+end
+
+@testitem "Column specs with Tables.jl" tags = [:part1] begin
+    using SymbolicRegression
+    using Test
+    using Printf: @sprintf
+
+    # Only run if Tables.jl is available
+    if isdefined(Base, :get_extension)
+        try
+            @eval using Tables
+
+            X = Float32[1.0 2.0 3.0; 4.0 5.0 6.0]
+            y = Float32[1.0, 2.0, 3.0]
+
+            options = Options(;
+                binary_operators=[+, -], maxsize=5, deterministic=true, seed=0
+            )
+
+            dataset = Dataset(X, y)
+            hof = SymbolicRegression.HallOfFameModule.HallOfFame(options, dataset)
+            hof.exists[1] = true
+
+            @testset "Tables.jl with custom columns" begin
+                custom_cols = [
+                    SymbolicRegression.HallOfFameModule.HOFColumn(
+                        :complexity, "C", row -> row.complexity, string, 5, :right
+                    ),
+                    SymbolicRegression.HallOfFameModule.HOFColumn(
+                        :loss, "L", row -> row.loss, x -> @sprintf("%.2e", x), 8, :right
+                    ),
+                ]
+
+                rows = SymbolicRegression.HallOfFameModule.hof_rows(
+                    hof, dataset, options; columns=custom_cols
+                )
+
+                # Test schema
+                schema = Tables.schema(rows)
+                @test schema !== nothing
+                @test schema.names == (:complexity, :loss)
+
+                # Test columntable
+                ct = Tables.columntable(rows)
+                @test haskey(ct, :complexity)
+                @test haskey(ct, :loss)
+                @test !haskey(ct, :equation)  # Not in custom columns
+            end
+        catch e
+            @info "Skipping Tables.jl column spec tests: $e"
+        end
     end
 end
