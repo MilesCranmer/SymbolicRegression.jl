@@ -36,12 +36,14 @@ Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
+Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
 [extensions]
 SymbolicRegressionEnzymeExt = "Enzyme"
 SymbolicRegressionJSON3Ext = "JSON3"
 SymbolicRegressionMooncakeExt = "Mooncake"
 SymbolicRegressionSymbolicUtilsExt = "SymbolicUtils"
+SymbolicRegressionTablesExt = "Tables"
 
 [compat]
 ADTypes = "^1.4.0"
@@ -74,4 +76,5 @@ StatsBase = "0.33, 0.34"
 StyledStrings = "1"
 SymbolicUtils = "0.19, ^1.0.5, 2, 3"
 TOML = "<0.0.1, 1"
+Tables = "1"
 julia = "1.10"

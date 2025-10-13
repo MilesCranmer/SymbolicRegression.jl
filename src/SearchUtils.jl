@@ -12,12 +12,18 @@ using DispatchDoctor: @unstable
 using Logging: AbstractLogger
 
 using DynamicExpressions:
-    AbstractExpression, string_tree, parse_expression, EvalOptions, with_type_parameters
+    AbstractExpression,
+    string_tree,
+    parse_expression,
+    EvalOptions,
+    with_type_parameters,
+    constructorof
 using ..UtilsModule: subscriptify
-using ..CoreModule: Dataset, AbstractOptions, Options, RecordType, max_features
+using ..CoreModule:
+    Dataset, AbstractOptions, Options, RecordType, max_features, create_expression
 using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population
-using ..PopMemberModule: PopMember
+using ..PopMemberModule: PopMember, AbstractPopMember
 using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve
 using ..ConstantOptimizationModule: optimize_constants
 using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
@@ -27,6 +33,15 @@ using ..InterfaceDynamicExpressionsModule: takes_eval_options
 using ..CheckConstraintsModule: check_constraints
 
 function logging_callback! end
+
+@unstable @inline function infer_popmember_type(
+    ::Type{T}, ::Type{L}, ::Type{D}, options
+) where {T,L,D<:Dataset}
+    NodeType = with_type_parameters(options.node_type, T)
+    N = Base.promote_op(create_expression, NodeType, typeof(options), D)
+    N in (Any, Union{}) && error("Failed to infer expression type")
+    return with_type_parameters(options.popmember_type, T, L, N)
+end
 
 """
     @filtered_async expr
@@ -581,8 +596,9 @@ The state of the search, including the populations, worker outputs, tasks, and
 channels. This is used to manage the search and keep track of runtime variables
 in a single struct.
 """
-Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,ChannelType} <:
-                   AbstractSearchState{T,L,N}
+Base.@kwdef struct SearchState{
+    T,L,N<:AbstractExpression{T},PM<:AbstractPopMember{T,L,N},WorkerOutputType,ChannelType
+} <: AbstractSearchState{T,L,N}
     procs::Vector{Int}
     we_created_procs::Bool
     worker_output::Vector{Vector{WorkerOutputType}}
@@ -590,16 +606,16 @@ Base.@kwdef struct SearchState{T,L,N<:AbstractExpression{T},WorkerOutputType,Cha
     channels::Vector{Vector{ChannelType}}
     worker_assignment::WorkerAssignments
     task_order::Vector{Tuple{Int,Int}}
-    halls_of_fame::Vector{HallOfFame{T,L,N}}
-    last_pops::Vector{Vector{Population{T,L,N}}}
-    best_sub_pops::Vector{Vector{Population{T,L,N}}}
+    halls_of_fame::Vector{HallOfFame{T,L,N,PM}}
+    last_pops::Vector{Vector{Population{T,L,N,PM}}}
+    best_sub_pops::Vector{Vector{Population{T,L,N,PM}}}
     all_running_search_statistics::Vector{RunningSearchStatistics}
     num_evals::Vector{Vector{Float64}}
     cycles_remaining::Vector{Int}
     cur_maxsizes::Vector{Int}
     stdin_reader::StdinReader
     record::Base.RefValue{RecordType}
-    seed_members::Vector{Vector{PopMember{T,L,N}}}
+    seed_members::Vector{Vector{PM}}
 end
 
 function save_to_file(
@@ -716,7 +732,7 @@ end
 
 function update_hall_of_fame!(
     hall_of_fame::HallOfFame, members::Vector{PM}, options::AbstractOptions
-) where {PM<:PopMember}
+) where {PM<:AbstractPopMember}
     for member in members
         size = compute_complexity(member, options)
         valid_size = 0 < size <= options.maxsize
@@ -786,12 +802,22 @@ end
 
 """Parse user-provided guess expressions and convert them into optimized
 `PopMember` objects for each output dataset."""
-function parse_guesses(
+@unstable function parse_guesses(
     ::Type{P},
     guesses::Union{AbstractVector,AbstractVector{<:AbstractVector}},
     datasets::Vector{D},
     options::AbstractOptions,
-) where {T,L,P<:PopMember{T,L},D<:Dataset{T,L}}
+) where {T,L,P<:AbstractPopMember{T,L},D<:Dataset{T,L}}
+    ConcreteP = infer_popmember_type(T, L, D, options)
+    return _parse_guesses_impl(ConcreteP, guesses, datasets, options)
+end
+
+@inline function _parse_guesses_impl(
+    ::Type{P},
+    guesses::Union{AbstractVector,AbstractVector{<:AbstractVector}},
+    datasets::Vector{D},
+    options::AbstractOptions,
+) where {T,L,N,P<:AbstractPopMember{T,L,N},D<:Dataset{T,L}}
     nout = length(datasets)
     out = [P[] for _ in 1:nout]
     guess_lists = _make_vector_vector(guesses, nout)
@@ -799,7 +825,9 @@ function parse_guesses(
         dataset = datasets[j]
         for g in guess_lists[j]
             ex = _parse_guess_expression(T, g, dataset, options)
-            member = PopMember(dataset, ex, options; deterministic=options.deterministic)
+            member = constructorof(P)(
+                dataset, ex, options; deterministic=options.deterministic
+            )
             if options.should_optimize_constants
                 member, _ = optimize_constants(dataset, member, options)
             end
@@ -817,6 +845,7 @@ function parse_guesses(
     end
     return out
 end
+
 function _make_vector_vector(guesses, nout)
     if nout == 1
         if guesses isa AbstractVector{<:AbstractVector}
