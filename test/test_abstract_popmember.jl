@@ -159,7 +159,7 @@
 
     options = SymbolicRegression.Options(;
         binary_operators=[+, -],
-        populations=1,
+        populations=2,
         population_size=20,
         maxsize=5,
         popmember_type=CustomPopMember,
