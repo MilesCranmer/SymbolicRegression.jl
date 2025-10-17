@@ -20,6 +20,13 @@ const navTemp = {
 const nav = [
   ...navTemp.nav,
   {
+    text: 'Julia',
+    items: [
+      { text: 'Julia', link: '/' },
+      { text: 'Python', link: 'https://ai.damtp.cam.ac.uk/pysr/dev/' }
+    ]
+  },
+  {
     component: 'VersionPicker'
   }
 ]
@@ -33,7 +40,11 @@ export default defineConfig({
   cleanUrls: true,
   outDir: 'REPLACE_ME_DOCUMENTER_VITEPRESS', // This is required for MarkdownVitepress to work correctly...
   head: [
-    ['link', { rel: 'icon', href: `${baseTemp.base}favicon.ico` }],
+    ['link', { rel: 'icon', type: 'image/x-icon', href: `${baseTemp.base}favicon.ico` }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '16x16', href: `${baseTemp.base}favicon-16x16.png` }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: `${baseTemp.base}favicon-32x32.png` }],
+    ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: `${baseTemp.base}apple-touch-icon.png` }],
+    ['link', { rel: 'stylesheet', href: `${baseTemp.base}nav-logo.css` }],
     ['script', {src: `${getBaseRepository(baseTemp.base)}versions.js`}],
     // ['script', {src: '/versions.js'], for custom domains, I guess if deploy_url is available.
     ['script', {src: `${baseTemp.base}siteinfo.js`}]
