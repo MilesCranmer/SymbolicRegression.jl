@@ -24,7 +24,7 @@ using ..CoreModule:
     AbstractExpressionSpec,
     get_indices,
     ExpressionSpecModule as ES
-using ..PopMemberModule: PopMember
+using ..PopMemberModule: PopMember, AbstractPopMember
 using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
 using ..LossFunctionsModule: LossFunctionsModule as LF
 using ..ExpressionBuilderModule: ExpressionBuilderModule as EB
@@ -102,7 +102,7 @@ end
 function MM.condition_mutate_constant!(
     ::Type{<:ParametricExpression},
     weights::AbstractMutationWeights,
-    member::PopMember,
+    member::AbstractPopMember,
     options::AbstractOptions,
     curmaxsize::Int,
 )

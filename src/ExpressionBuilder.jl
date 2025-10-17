@@ -11,7 +11,8 @@ using DynamicExpressions:
 using ..CoreModule: AbstractOptions, Dataset
 using ..HallOfFameModule: HallOfFame
 using ..PopulationModule: Population
-using ..PopMemberModule: PopMember
+using ..PopMemberModule: PopMember, AbstractPopMember, create_child
+using ..ComplexityModule: compute_complexity
 
 import DynamicExpressions: get_operators
 import ..CoreModule: create_expression
@@ -107,16 +108,16 @@ end
         return with_metadata(ex; init_params(options, dataset, ex, Val(true))...)
     end
     function embed_metadata(
-        member::PopMember, options::AbstractOptions, dataset::Dataset{T,L}
-    ) where {T,L}
-        return PopMember(
+        member::PM, options::AbstractOptions, dataset::Dataset{T,L}
+    ) where {T,L,N,PM<:AbstractPopMember{T,L,N}}
+        return create_child(
+            member,
             embed_metadata(member.tree, options, dataset),
             member.cost,
             member.loss,
-            nothing;
-            member.ref,
-            member.parent,
-            deterministic=options.deterministic,
+            options;
+            complexity=compute_complexity(member, options),
+            parent_ref=member.ref,
         )
     end
     function embed_metadata(
@@ -135,7 +136,7 @@ end
     end
     function embed_metadata(
         vec::Vector{H}, options::AbstractOptions, dataset::Dataset{T,L}
-    ) where {T,L,H<:Union{HallOfFame,Population,PopMember}}
+    ) where {T,L,H<:Union{HallOfFame,Population,AbstractPopMember}}
         return map(Fix{2}(Fix{3}(embed_metadata, dataset), options), vec)
     end
 end

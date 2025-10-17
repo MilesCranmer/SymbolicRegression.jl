@@ -2,13 +2,32 @@ module PopMemberModule
 
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, AbstractExpressionNode, string_tree
+import DynamicExpressions: constructorof, with_type_parameters
 using ..CoreModule: AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, create_expression
+import ..CoreModule.OptionsModule: default_popmember_type
 import ..ComplexityModule: compute_complexity
 using ..UtilsModule: get_birth_order
 using ..LossFunctionsModule: eval_cost
 
+"""
+    AbstractPopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
+
+Abstract type for population members. Defines the interface that all population members must implement.
+
+# Required fields (accessed via getproperty/setproperty!)
+- `tree::N`: The expression tree
+- `cost::L`: The cost including complexity penalty and normalization
+- `loss::L`: The raw loss value
+- `birth::Int`: Birth order/generation number
+- `ref::Int`: Unique reference ID
+- `parent::Int`: Parent reference ID
+- `complexity::Int`: Cached complexity (accessed via getfield/setfield! for special handling)
+"""
+abstract type AbstractPopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}} end
+
 # Define a member of population by equation, cost, and age
-mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
+mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}} <:
+               AbstractPopMember{T,L,N}
     tree::N
     cost::L  # Inludes complexity penalty, normalization
     loss::L  # Raw loss
@@ -19,7 +38,9 @@ mutable struct PopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}
     ref::Int
     parent::Int
 end
-@inline function Base.setproperty!(member::PopMember, field::Symbol, value)
+
+# Generic interface implementations for AbstractPopMember
+@inline function Base.setproperty!(member::AbstractPopMember, field::Symbol, value)
     if field == :complexity
         throw(
             error("Don't set `.complexity` directly. Use `recompute_complexity!` instead.")
@@ -34,7 +55,7 @@ end
     end
     return setfield!(member, field, value)
 end
-@unstable @inline function Base.getproperty(member::PopMember, field::Symbol)
+@unstable @inline function Base.getproperty(member::AbstractPopMember, field::Symbol)
     if field == :complexity
         throw(
             error("Don't access `.complexity` directly. Use `compute_complexity` instead.")
@@ -145,7 +166,7 @@ function PopMember(
     )
 end
 
-function Base.copy(p::P) where {P<:PopMember}
+function Base.copy(p::PopMember)
     tree = copy(p.tree)
     cost = copy(p.cost)
     loss = copy(p.loss)
@@ -153,17 +174,17 @@ function Base.copy(p::P) where {P<:PopMember}
     complexity = copy(getfield(p, :complexity))
     ref = copy(p.ref)
     parent = copy(p.parent)
-    return P(tree, cost, loss, birth, complexity, ref, parent)
+    return PopMember(tree, cost, loss, birth, complexity, ref, parent)
 end
 
-function reset_birth!(p::PopMember; deterministic::Bool)
+function reset_birth!(p::AbstractPopMember; deterministic::Bool)
     p.birth = get_birth_order(; deterministic)
     return p
 end
 
 # Can read off complexity directly from pop members
 function compute_complexity(
-    member::PopMember, options::AbstractOptions; break_sharing=Val(false)
+    member::AbstractPopMember, options::AbstractOptions; break_sharing=Val(false)
 )::Int
     complexity = getfield(member, :complexity)
     complexity == -1 && return recompute_complexity!(member, options; break_sharing)
@@ -171,11 +192,89 @@ function compute_complexity(
     return complexity
 end
 function recompute_complexity!(
-    member::PopMember, options::AbstractOptions; break_sharing=Val(false)
+    member::AbstractPopMember, options::AbstractOptions; break_sharing=Val(false)
 )::Int
     complexity = compute_complexity(member.tree, options; break_sharing)
     setfield!(member, :complexity, complexity)
     return complexity
+end
+
+"""
+    create_child(parent::P, tree::AbstractExpression{T}, cost, loss, options;
+                complexity::Union{Int,Nothing}=nothing, parent_ref) where {T,L,P<:PopMember{T,L}}
+
+Create a new PopMember with a potentially different expression type.
+Used by embed_metadata where the expression gains metadata.
+"""
+function create_child(
+    parent::P,
+    tree::AbstractExpression{T},
+    cost::L,
+    loss::L,
+    options;
+    complexity::Union{Int,Nothing}=nothing,
+    parent_ref,
+) where {T,L,P<:PopMember{T,L}}
+    actual_complexity = @something complexity compute_complexity(tree, options)
+    return PopMember(
+        tree,
+        cost,
+        loss,
+        options,
+        actual_complexity;
+        parent=parent_ref,
+        deterministic=options.deterministic,
+    )
+end
+
+"""
+    create_child(parents::Tuple{P,P}, tree, cost, loss, options;
+                complexity::Union{Int,Nothing}=nothing, parent_ref) where P<:AbstractPopMember
+
+Create a new PopMember from two parents (crossover case).
+Custom types should override to blend their additional fields.
+"""
+function create_child(
+    parents::Tuple{P,P},
+    tree::AbstractExpression{T},
+    cost::L,
+    loss::L,
+    options;
+    complexity::Union{Int,Nothing}=nothing,
+    parent_ref,
+) where {T,L,P<:PopMember{T,L}}
+    actual_complexity = @something complexity compute_complexity(tree, options)
+    return PopMember(
+        tree,
+        cost,
+        loss,
+        options,
+        actual_complexity;
+        parent=parent_ref,
+        deterministic=options.deterministic,
+    )
+end
+
+# Function to extract PopMember type from Population or HallOfFame types
+function popmember_type end
+
+@unstable default_popmember_type() = PopMember
+@unstable constructorof(::Type{<:PopMember}) = PopMember
+
+@inline function with_expression_type(
+    ::Type{<:PopMember{T,L}}, ::Type{N}
+) where {T,L,N<:AbstractExpression{T}}
+    return PopMember{T,L,N}
+end
+
+@inline function with_type_parameters(
+    ::Type{<:PopMember}, ::Type{T}, ::Type{L}, ::Type{N}
+) where {T,L,N}
+    return PopMember{T,L,N}
+end
+
+@inline function expression_type(::Type{<:AbstractPopMember{<:Any,<:Any,N}}) where {N}
+    return N
 end
 
 end
