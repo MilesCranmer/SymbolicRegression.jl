@@ -212,7 +212,9 @@ end
 # Return best 10 examples
 function best_sub_pop(pop::P; topn::Int=10)::P where {P<:Population}
     best_idx = sortperm([pop.members[member].cost for member in 1:(pop.n)])
-    return Population(pop.members[best_idx[1:topn]])
+    # Ensure we don't try to access more elements than exist in the population
+    actual_topn = min(topn, pop.n)
+    return Population(pop.members[best_idx[1:actual_topn]])
 end
 
 function record_population(pop::Population, options::AbstractOptions)::RecordType
