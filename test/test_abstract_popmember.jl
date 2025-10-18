@@ -5,9 +5,11 @@
     using DispatchDoctor: @unstable
 
     import SymbolicRegression.PopMemberModule: create_child
+    import SymbolicRegression: strip_metadata
 
     # Define a custom PopMember that tracks generation count
-    mutable struct CustomPopMember{T,L,N} <: SymbolicRegression.AbstractPopMember{T,L,N}
+    mutable struct CustomPopMember{T,L,N<:AbstractExpression{T}} <:
+                   SymbolicRegression.AbstractPopMember{T,L,N}
         tree::N
         cost::L
         loss::L
@@ -153,6 +155,24 @@
         )
     end
 
+    function strip_metadata(
+        member::CustomPopMember,
+        options::SymbolicRegression.AbstractOptions,
+        dataset::SymbolicRegression.Dataset{T,L},
+    ) where {T,L}
+        complexity = SymbolicRegression.compute_complexity(member.tree, options)
+        return CustomPopMember(
+            strip_metadata(member.tree, options, dataset),
+            member.cost,
+            member.loss,
+            SymbolicRegression.get_birth_order(; deterministic=options.deterministic),
+            complexity,
+            member.ref,
+            member.parent,
+            member.generation,
+        )
+    end
+
     # Test that we can run equation_search with CustomPopMember
     X = randn(Float32, 2, 100)
     y = @. X[1, :]^2 - X[2, :]
@@ -191,4 +211,47 @@
     @test !isnothing(best_idx)
     best_member = hall_of_fame.members[best_idx]
     @test best_member isa CustomPopMember
+
+    # Test that guesses API returns CustomPopMember instances
+    guess_X = randn(Float32, 2, 80)
+    guess_y = @. guess_X[1, :] - guess_X[2, :]
+    guess_dataset = SymbolicRegression.Dataset(guess_X, guess_y)
+
+    guess_options = SymbolicRegression.Options(;
+        binary_operators=[+, -],
+        populations=1,
+        population_size=5,
+        tournament_selection_n=2,
+        maxsize=4,
+        popmember_type=CustomPopMember,
+        deterministic=true,
+        seed=1,
+        verbosity=0,
+        progress=false,
+    )
+
+    parsed = SymbolicRegression.parse_guesses(
+        CustomPopMember{Float32,Float32}, ["x1 - x2"], [guess_dataset], guess_options
+    )
+
+    @test length(parsed) == 1
+    @test length(parsed[1]) == 1
+    parsed_member = parsed[1][1]
+    @test parsed_member isa CustomPopMember{Float32,Float32}
+    @test isapprox(parsed_member.loss, 0.0f0; atol=1.0f-6)
+
+    # Confirm equation_search accepts guesses with CustomPopMember
+    hof_from_guess = equation_search(
+        guess_X,
+        guess_y;
+        options=guess_options,
+        guesses=["x1 - x2"],
+        niterations=0,
+        parallelism=:serial,
+    )
+
+    @test sum(hof_from_guess.exists) > 0
+    guess_best_idx = findlast(hof_from_guess.exists)
+    @test !isnothing(guess_best_idx)
+    @test hof_from_guess.members[guess_best_idx] isa CustomPopMember
 end
