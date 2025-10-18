@@ -137,9 +137,9 @@ end
         !has_cos(member.tree) || any(
             t ->
                 t.degree == 1 &&
-                options.operators.unaops[t.op] == cos &&
-                Node(Float64; feature=1) in t &&
-                compute_complexity(t, options) > 1,
+                    options.operators.unaops[t.op] == cos &&
+                    Node(Float64; feature=1) in t &&
+                    compute_complexity(t, options) > 1,
             get_tree(member.tree),
         ) for member in dominating
     ]
@@ -430,6 +430,7 @@ end
 end
 
 @testitem "Miscellaneous tests of unit interface" tags = [:part3] begin
+    using MLJBase
     using SymbolicRegression
     using DynamicQuantities
     using SymbolicRegression.DimensionalAnalysisModule: @maybe_return_call, WildcardQuantity
