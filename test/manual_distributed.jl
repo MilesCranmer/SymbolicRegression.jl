@@ -5,10 +5,12 @@ procs = addprocs(2)
 using Test, Pkg
 project_path = splitdir(Pkg.project().path)[1]
 @everywhere procs begin
-    Base.MainInclude.eval(quote
-        using Pkg
-        Pkg.activate($$project_path)
-    end)
+    Base.MainInclude.eval(
+        quote
+            using Pkg
+            Pkg.activate($$project_path)
+        end,
+    )
 end
 @everywhere using SymbolicRegression
 @everywhere _inv(x::Float32)::Float32 = 1.0f0 / x
