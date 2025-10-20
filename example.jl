@@ -3,6 +3,10 @@ using SymbolicRegression
 X = randn(Float32, 5, 100)
 y = 2 * cos.(X[4, :]) + X[1, :] .^ 2 .- 2
 
+# show types and shapes of X, y_test
+println("Type of X: ", typeof(X), ", size: ", size(X))
+println("Type of y: ", typeof(y), ", size: ", size(y))
+
 options = SymbolicRegression.Options(;
     binary_operators=[+, *, /, -], unary_operators=[cos, exp]
 )
@@ -25,3 +29,7 @@ for member in dominating
 
     println("$(complexity)\t$(loss)\t$(string)")
 end
+
+println("\nBest equation found:")
+println(string_tree(tree, options))
+println("Did evaluation succeed? ", did_succeed)

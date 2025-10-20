@@ -136,20 +136,33 @@ function evaluator(
 end
 
 # Helper function to collect constants from a tree
-function collect_constants(node)
-    constants = []
-    # A constant is a node with degree == 0x00
-    if node.degree == 0x00 && node.constant == true
-        push!(constants, node.val)
-    else
-        # Iterate through first few children up to node.degree
-        for i in 1:node.degree
-            child = node.children[i].x
-            append!(constants, collect_constants(child))
-        end
-    end
-    return constants
-end
+# function collect_constants(node)
+#     constants = []
+#     # A constant is a node with degree == 0x00 and node.constant == true
+#     if node.degree == 0x00 && node.constant == true
+#         push!(constants, node.val)
+#     else
+#         # Iterate through first few children up to node.degree
+#         for i in 1:node.degree
+#             child = node.children[i].x
+#             append!(constants, collect_constants(child))
+#         end
+#     end
+#     return constants
+# end
+
+# function set_constants!(constant_nodes, values)
+#     for (node, val) in zip(constant_nodes, values)
+#         node.val = val
+#     end
+# end
+
+# function tree_model(constants, tree, X, options)
+#     constant_nodes = collect_constants(tree)
+#     set_constants!(constant_nodes, constants)
+#     output, _ = eval_tree_array(tree, X, options)
+#     return output
+# end
 
 # TODO: Implement an option and the logic for optimizing constants here.
 # Evaluate the loss of a particular expression on the input dataset.
@@ -161,7 +174,7 @@ function eval_loss(
     idx=nothing,
 )::L where {T<:DATA_TYPE,L<:LOSS_TYPE}
     # Collect all constants in the tree
-    constants = collect_constants(get_tree(tree))
+    # constants = collect_constants(get_tree(tree))
     # You can now use the `constants` array as needed, e.g. print or log it
     # println("Constants in tree: ", constants)
 
