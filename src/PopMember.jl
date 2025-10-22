@@ -213,6 +213,7 @@ function create_child(
     loss::L,
     options;
     complexity::Union{Int,Nothing}=nothing,
+    mutation_choice::Union{Symbol,Nothing}=nothing,
     parent_ref,
 ) where {T,L,P<:PopMember{T,L}}
     actual_complexity = @something complexity compute_complexity(tree, options)
@@ -241,6 +242,7 @@ function create_child(
     loss::L,
     options;
     complexity::Union{Int,Nothing}=nothing,
+    mutation_choice::Union{Symbol,Nothing}=nothing,
     parent_ref,
 ) where {T,L,P<:PopMember{T,L}}
     actual_complexity = @something complexity compute_complexity(tree, options)

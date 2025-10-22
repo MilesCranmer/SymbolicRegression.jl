@@ -430,6 +430,7 @@ end
 end
 
 @testitem "Miscellaneous tests of unit interface" tags = [:part3] begin
+    using MLJBase
     using SymbolicRegression
     using DynamicQuantities
     using SymbolicRegression.DimensionalAnalysisModule: @maybe_return_call, WildcardQuantity

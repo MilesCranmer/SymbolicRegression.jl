@@ -628,7 +628,7 @@ end
     datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions
 ) where {T,L,D<:Dataset{T,L}}
     stdin_reader = watch_stream(options.input_stream)
-
+    example_dataset = first(datasets)
     record = RecordType()
     @recorder record["options"] = "$(options)"
 
