@@ -94,8 +94,12 @@ end
     # Test unary operations on ValidVector
     @test sin(x).x ≈ sin.([1.0, 2.0, 3.0])
     @test cos(x).x ≈ cos.([1.0, 2.0, 3.0])
+    @test atan(x).x ≈ atan.([1.0, 2.0, 3.0])
     @test abs(x).x ≈ [1.0, 2.0, 3.0]
     @test (-x).x ≈ [-1.0, -2.0, -3.0]
+
+    # Test binary atan (atan2)
+    @test atan(y, x).x ≈ atan.([0.0, 2.0, 4.0], [1.0, 2.0, 3.0])
 
     # Test propagation of invalid flag
     invalid_x = ValidVector([1.0, 2.0, 3.0], false)
