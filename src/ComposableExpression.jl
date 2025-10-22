@@ -372,7 +372,7 @@ function Base.literal_pow(::typeof(^), x::ValidVector, ::Val{p}) where {p}
 end
 
 for op in (
-    :sin, :cos, :tan, :sinh, :cosh, :tanh, :asin, :acos,
+    :sin, :cos, :tan, :sinh, :cosh, :tanh, :asin, :acos, :atan,
     :asinh, :acosh, :atanh, :sec, :csc, :cot, :asec, :acsc, :acot, :sech, :csch,
     :coth, :asech, :acsch, :acoth, :sinc, :cosc, :cosd, :cotd, :cscd, :secd,
     :sinpi, :cospi, :sind, :tand, :acosd, :acotd, :acscd, :asecd, :asind,
