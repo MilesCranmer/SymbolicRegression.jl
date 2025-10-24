@@ -90,3 +90,11 @@ html.dark {
   border-top: 1px solid var(--vp-c-divider);
   padding-top: 48px;
 }
+
+/* Make language picker match version picker styling (black text, not colored) */
+.VPNavBarMenuGroup button .text {
+  color: var(--vp-c-text-1) !important;
+}
+.VPNavBarMenuGroup:hover button .text {
+  color: var(--vp-c-text-2) !important;
+}

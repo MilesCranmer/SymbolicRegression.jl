@@ -48,6 +48,8 @@ jobs:
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: "Install Node.js dependencies"
         run: cd docs && npm install
+      - name: "Install ImageMagick"
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
       - name: "Build and deploy"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
