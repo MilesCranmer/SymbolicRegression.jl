@@ -136,12 +136,28 @@ jobs:
       - name: "Run integration test"
         env:
           TEST_GROUP: integration/${{ matrix.group }}
-        run: julia --color=yes --project=. --threads=auto --check-bounds=yes -e 'import Pkg; Pkg.test()'
+        run: |
+          julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
+          julia --color=yes --project=. --threads=auto --check-bounds=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
+          julia --color=yes coverage.jl
         shell: bash
+      - name: "Sanitize artifact group"
+        id: sanitize_integration_artifact_group
+        shell: bash
+        run: |
+          group='${{ matrix.group }}'
+          safe_group="${group//\//-}"
+          echo "group=$safe_group" >> "$GITHUB_OUTPUT"
+      - name: "Upload coverage artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-integration-${{ steps.sanitize_integration_artifact_group.outputs.group }}-${{ matrix.julia-version }}
+          path: lcov.info
+          retention-days: 1
 
   upload-coverage:
     name: Upload Coverage to Codecov
-    needs: [unit]
+    needs: [unit, integration]
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
