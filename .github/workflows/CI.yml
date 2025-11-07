@@ -28,38 +28,38 @@ jobs:
         os: [ubuntu-latest]
         julia-version: ["1.10", "1"]
         group:
-          - unit/basic
-          - unit/expressions
-          - unit/templates
-          - unit/operators-core
-          - unit/constraints
-          - unit/evolution-core
-          - unit/evaluation
-          - unit/dataset
-          - unit/parallel
-          - unit/precompile
-          - unit/misc
+          - basic
+          - expressions
+          - templates
+          - operators-core
+          - constraints
+          - evolution-core
+          - evaluation
+          - dataset
+          - parallel
+          - precompile
+          - misc
         include:
           # macOS tests - only on Julia 1 (latest)
           - os: macOS-latest
             julia-version: "1"
-            group: unit/basic
+            group: basic
           - os: macOS-latest
             julia-version: "1"
-            group: unit/expressions
+            group: expressions
           - os: macOS-latest
             julia-version: "1"
-            group: unit/evaluation
+            group: evaluation
           # Windows tests - only on Julia 1 (latest)
           - os: windows-latest
             julia-version: "1"
-            group: unit/basic
+            group: basic
           - os: windows-latest
             julia-version: "1"
-            group: unit/expressions
+            group: expressions
           - os: windows-latest
             julia-version: "1"
-            group: unit/evaluation
+            group: evaluation
 
     steps:
       - uses: actions/checkout@v5
@@ -70,12 +70,12 @@ jobs:
       - name: "Cache dependencies"
         uses: julia-actions/cache@v2
         with:
-          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};os=${{ matrix.os }};julia=${{ matrix.julia-version }};group=${{ matrix.group }};project=${{ hashFiles('test/Project.toml') }}
+          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};os=${{ matrix.os }};julia=${{ matrix.julia-version }};group=unit-${{ matrix.group }};project=${{ hashFiles('test/Project.toml') }}
       - name: "Build package"
         uses: julia-actions/julia-buildpkg@v1
       - name: "Run unit tests (${{ matrix.group }})"
         env:
-          TEST_GROUP: ${{ matrix.group }}
+          TEST_GROUP: unit/${{ matrix.group }}
         run: |
           julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
           julia --color=yes --project=. --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
@@ -104,29 +104,35 @@ jobs:
       matrix:
         julia-version: ["1.10", "1"]
         group:
-          - integration/ad
-          - integration/ext/mooncake
-          - integration/ext/mlj
-          - integration/ext/symbolicutils
-          - integration/ext/json3_recorder
-          - integration/ext/dynamicquantities_units
-          - integration/ext/loopvectorization
-          - integration/aqua
-          - integration/ext/dispatchdoctor
-          - integration/jet
+          - ad
+          - aqua
+          - jet
+          - ext/mooncake
+          - ext/mlj
+          - ext/symbolicutils
+          - ext/json3_recorder
+          - ext/dynamicquantities_units
+          - ext/loopvectorization
+          - ext/dispatchdoctor
     steps:
       - uses: actions/checkout@v5
       - name: "Set up Julia"
         uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.julia-version }}
+      - name: "Sanitize artifact name"
+        id: coverage_name
+        run: |
+          group='${{ matrix.group }}'
+          safe_group="${group//\//-}"
+          echo "group=$safe_group" >> "$GITHUB_OUTPUT"
       - name: "Cache dependencies"
         uses: julia-actions/cache@v2
         with:
-          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};group=${{ matrix.group }};julia=${{ matrix.julia-version }};project=${{ hashFiles(format('test/{0}/Project.toml', matrix.group)) }}
+          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};group=integration-${{ steps.coverage_name.outputs.group }};julia=${{ matrix.julia-version }};project=${{ hashFiles(format('test/integration/{0}/Project.toml', matrix.group)) }}
       - name: "Run integration test"
         env:
-          TEST_GROUP: ${{ matrix.group }}
+          TEST_GROUP: integration/${{ matrix.group }}
         run: julia --color=yes --project=. --threads=auto --check-bounds=yes -e 'import Pkg; Pkg.test()'
         shell: bash
 
