@@ -105,10 +105,12 @@ jobs:
       matrix:
         julia-version: ["1.10", "1"]
         group:
-          - ad
+          - ad/forwarddiff
+          - ad/zygote
+          - ad/enzyme
+          - ad/mooncake
           - aqua
           - jet
-          - ext/mooncake
           - ext/mlj
           - ext/symbolicutils
           - ext/json3_recorder

@@ -10,7 +10,7 @@ ENV["SYMBOLIC_REGRESSION_TEST"] = "true"
 
     # Check if this is an integration test
     if startswith(TEST_GROUP, "integration/")
-        # Extract integration name (e.g., "integration/ad" -> "ad")
+        # Extract integration name (e.g., "integration/ad/zygote" -> "ad/zygote")
         integration_name = replace(TEST_GROUP, "integration/" => "")
         integration_dir = joinpath(@__DIR__, "integration", integration_name)
 

@@ -1,15 +1,13 @@
 @testitem "Dataset construction" tags = [:part3] begin
     using SymbolicRegression
-    # Promotion of types:
-    dataset = Dataset(randn(3, 32), randn(Float32, 32); weights=randn(Float32, 32))
 
-    # Will not automatically convert:
-    @test typeof(dataset.X) == Array{Float64,2}
-    @test typeof(dataset.y) == Array{Float32,1}
-    @test typeof(dataset.weights) == Array{Float32,1}
+    dataset = Dataset(randn(3, 32), randn(Float32, 32); weights=randn(Float32, 32))
+    @test typeof(dataset.X) == Matrix{Float64}
+    @test typeof(dataset.y) == Vector{Float32}
+    @test typeof(dataset.weights) == Vector{Float32}
 end
 
-@testitem "With deprecated kwarg" tags = [:part3] begin
+@testitem "Dataset with deprecated kwarg" tags = [:part3] begin
     using SymbolicRegression
     using DispatchDoctor: allow_unstable
     dataset = allow_unstable() do
@@ -18,7 +16,7 @@ end
     @test dataset isa Dataset{ComplexF32,Float64}
 end
 
-@testitem "vector output" tags = [:part3] begin
+@testitem "Vector output dataset" tags = [:part3] begin
     using SymbolicRegression
 
     X = randn(Float64, 3, 32)

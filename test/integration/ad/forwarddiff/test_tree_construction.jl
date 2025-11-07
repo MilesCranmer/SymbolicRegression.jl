@@ -4,7 +4,7 @@
     using Compat: Fix
     using SymbolicRegression: eval_loss, eval_cost, Dataset
     using ForwardDiff
-    include(joinpath(@__DIR__, "..", "..", "test_params.jl"))
+    include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
 
     x1 = 2.0
 
