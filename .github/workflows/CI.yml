@@ -2,15 +2,11 @@ name: CI
 
 on:
   push:
-    branches:
-      - master
-      - release-*
     paths:
       - "**"
   pull_request:
     branches:
       - master
-      - release-*
     paths:
       - "**"
   workflow_dispatch:
@@ -21,50 +17,52 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  test:
-    name: Julia ${{ matrix.julia-version }}-${{ matrix.os }}-${{ matrix.test }}-${{ github.event_name }}
+  unit:
+    name: Unit (${{ matrix.group }})-Julia-${{ matrix.julia-version }}-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 240
+    timeout-minutes: 60
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     strategy:
       fail-fast: false
       matrix:
-        test:
-          - "part1"
-          - "part2"
-          - "part3"
-        julia-version:
-          - "1.10"
-          - "1"
-        os:
-          - ubuntu-latest
+        os: [ubuntu-latest]
+        julia-version: ['1.10', '1']
+        group:
+          - unit/basic
+          - unit/expressions
+          - unit/templates
+          - unit/operators-core
+          - unit/constraints
+          - unit/evolution-core
+          - unit/evaluation
+          - unit/dataset
+          - unit/parallel
+          - unit/precompile
+          - unit/misc
         include:
-          - os: windows-latest
-            julia-version: "1"
-            test: "part1"
-          - os: windows-latest
-            julia-version: "1"
-            test: "part2"
-          - os: windows-latest
-            julia-version: "1"
-            test: "part3"
+          # macOS tests - only on Julia 1 (latest)
           - os: macOS-latest
-            julia-version: "1"
-            test: "part1"
+            julia-version: '1'
+            group: unit/basic
           - os: macOS-latest
-            julia-version: "1"
-            test: "part2"
+            julia-version: '1'
+            group: unit/expressions
           - os: macOS-latest
-            julia-version: "1"
-            test: "part3"
-          - os: ubuntu-latest
-            julia-version: "1"
-            test: "enzyme"
-          - os: ubuntu-latest
-            julia-version: "1"
-            test: "jet"
+            julia-version: '1'
+            group: unit/evaluation
+          # Windows tests - only on Julia 1 (latest)
+          - os: windows-latest
+            julia-version: '1'
+            group: unit/basic
+          - os: windows-latest
+            julia-version: '1'
+            group: unit/expressions
+          - os: windows-latest
+            julia-version: '1'
+            group: unit/evaluation
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: "Set up Julia"
         uses: julia-actions/setup-julia@v2
         with:
@@ -72,41 +70,88 @@ jobs:
       - name: "Cache dependencies"
         uses: julia-actions/cache@v2
         with:
-          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};os=${{ matrix.os }};julia=${{ matrix.julia-version }};project=${{ hashFiles('**/Project.toml') }}
+          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};os=${{ matrix.os }};julia=${{ matrix.julia-version }};group=${{ matrix.group }};project=${{ hashFiles('test/Project.toml') }}
       - name: "Build package"
         uses: julia-actions/julia-buildpkg@v1
-      - name: "Install Enzyme (if needed)"
-        if: matrix.test == 'enzyme'
-        run: julia --color=yes --project=test -e 'import Pkg; Pkg.add("Enzyme")'
-      - name: "Install JET (if needed)"
-        if: matrix.test == 'jet'
-        run: julia --color=yes --project=test -e 'import Pkg; Pkg.add("JET")'
-      - name: "Run tests"
+      - name: "Run unit tests (${{ matrix.group }})"
         env:
-          SYMBOLIC_REGRESSION_TEST_SUITE: ${{ matrix.test }}
+          TEST_GROUP: ${{ matrix.group }}
         run: |
-          # Work around an LLVM codegen crash seen on GitHub runners for Julia 1.10 + LoopVectorization/HostCPUFeatures.
-          # We keep the test enabled; avoid stale/native pkgimages across different runner CPUs.
-          if [[ "${{ matrix.julia-version }}" == "1.10" ]]; then
-            export JULIA_CPU_TARGET=generic
-            JULIA="julia --pkgimages=no"
-          else
-            JULIA=julia
-          fi
-
-          $JULIA --color=yes -e 'import Pkg; Pkg.add("Coverage")'
-          # Enzyme precompilation can exceed the memory limits on GitHub runners
-          # when using multiple threads on newer Julia versions. Run it single-threaded.
-          if [[ "${{ matrix.test }}" == "enzyme" ]]; then
-            THREADS=1
-          else
-            THREADS=auto
-          fi
-
-          $JULIA --color=yes --threads=$THREADS --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
-          $JULIA --color=yes coverage.jl
+          julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
+          julia --color=yes --project=test --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
+          julia --color=yes coverage.jl
         shell: bash
-      - uses: codecov/codecov-action@v5
+      - name: "Upload coverage artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit-${{ matrix.group }}-${{ matrix.julia-version }}-${{ matrix.os }}
+          path: lcov.info
+          retention-days: 1
+
+  integration:
+    name: Integration (${{ matrix.group }})-Julia-${{ matrix.julia-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        julia-version: ['1.10', '1']
+        group:
+          - integration/ad
+          - integration/ext/mooncake
+          - integration/ext/mlj
+          - integration/ext/symbolicutils
+          - integration/ext/json3_recorder
+          - integration/ext/dynamicquantities_units
+          - integration/ext/loopvectorization
+          - integration/ext/aqua
+          - integration/ext/dispatchdoctor
+        include:
+          # JET only on Julia 1 (latest) since it's a dev tool
+          - julia-version: '1'
+            group: jet
+            is_jet: true
+    steps:
+      - uses: actions/checkout@v5
+      - name: "Set up Julia"
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.julia-version }}
+      - name: "Cache dependencies"
+        uses: julia-actions/cache@v2
+        with:
+          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};group=${{ matrix.group }};julia=${{ matrix.julia-version }};project=${{ hashFiles(format('test/{0}/Project.toml', matrix.group)) }}
+      - name: "Run integration test"
+        if: ${{ !matrix.is_jet }}
+        env:
+          TEST_GROUP: ${{ matrix.group }}
+        run: julia --color=yes --project=test --threads=auto --check-bounds=yes -e 'import Pkg; Pkg.test()'
+        shell: bash
+      - name: "Install JET"
+        if: ${{ matrix.is_jet }}
+        run: julia --color=yes --project=test -e 'import Pkg; Pkg.add("JET")'
+      - name: "Run JET test"
+        if: ${{ matrix.is_jet }}
+        run: julia --color=yes --startup-file=no test/test_jet.jl
+        shell: bash
+
+  upload-coverage:
+    name: Upload Coverage to Codecov
+    needs: [unit]
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: coverage-*
+          path: coverage
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: lcov.info
+          directory: ./coverage
+          fail_ci_if_error: true
+          verbose: true
