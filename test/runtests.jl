@@ -1,7 +1,5 @@
 include("front_matter.jl")
 
-ENV["SYMBOLIC_REGRESSION_TEST"] = "true"
-
 @testset "SymbolicRegression.jl" begin
     # Validate TEST_GROUP format
     if !occursin(r"^(unit|integration)/", TEST_GROUP)
