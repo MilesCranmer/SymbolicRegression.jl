@@ -1,8 +1,10 @@
 [deps]
+DynamicExpressions = "a40a106e-89c9-4ca8-8020-a735e8728b6b"
 LoggingExtras = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 MLJBase = "a7f614a8-145f-11e9-1d2a-a57a1082229d"
 MLJModelInterface = "e80e1ace-859a-464e-9ed9-23947d8ae3ea"
 MLJTestInterface = "72560011-54dd-4dc2-94f3-c5de45b75ecd"
+Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 TensorBoardLogger = "899adc3e-224a-11e9-021f-63837185c80f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

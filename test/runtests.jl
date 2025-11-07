@@ -24,6 +24,9 @@ ENV["SYMBOLIC_REGRESSION_TEST"] = "true"
         # so we don't need to manually call Pkg.develop here
         using Pkg
         Pkg.activate(integration_dir)
+        # Ensure optional dependencies (e.g. MLJBase, Zygote) are available
+        # for each integration environment before we run its tests.
+        Pkg.instantiate()
 
         # Special case: MLJ integration runs examples
         if integration_name == "ext/mlj"
