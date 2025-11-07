@@ -231,6 +231,8 @@ using DispatchDoctor: @stable
     include("TemplateExpression.jl")
     include("TemplateExpressionMacro.jl")
     include("ParametricExpression.jl")
+
+    __dispatch_doctor_unsable_test() = Val(rand(1:10))
 end
 
 using .CoreModule:

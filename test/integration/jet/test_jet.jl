@@ -5,6 +5,13 @@
         return nothing
     end
 
+    try
+        SymbolicRegression.__dispatch_doctor_unsable_test()
+    catch e
+        @error "Dispatch doctor is still enabled" exception=(e, catch_backtrace())
+        @test false
+    end
+
     using SymbolicRegression
     using JET
 
