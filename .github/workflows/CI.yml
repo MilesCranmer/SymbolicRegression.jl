@@ -113,7 +113,6 @@ jobs:
           - ext/json3_recorder
           - ext/dynamicquantities_units
           - ext/loopvectorization
-          - ext/dispatchdoctor
     steps:
       - uses: actions/checkout@v5
       - name: "Set up Julia"
