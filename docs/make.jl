@@ -313,7 +313,7 @@ DocMeta.setdocmeta!(
 makedocs(;
     sitename="SymbolicRegression.jl",
     authors="Miles Cranmer",
-    current_version=current_version,
+    version=current_version,
     doctest=true,
     clean=get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true",
     warnonly=[:docs_block, :cross_references, :missing_docs],
