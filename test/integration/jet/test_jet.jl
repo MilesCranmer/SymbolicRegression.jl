@@ -2,7 +2,7 @@
     if VERSION < v"1.10.0" || VERSION >= v"1.12.0-DEV.0"
         @info "Skipping JET tests on unsupported Julia version" VERSION
         @test true
-        return
+        return nothing
     end
 
     using SymbolicRegression
