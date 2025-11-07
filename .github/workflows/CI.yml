@@ -105,13 +105,9 @@ jobs:
           - integration/ext/json3_recorder
           - integration/ext/dynamicquantities_units
           - integration/ext/loopvectorization
-          - integration/ext/aqua
+          - integration/aqua
           - integration/ext/dispatchdoctor
-        include:
-          # JET only on Julia 1 (latest) since it's a dev tool
-          - julia-version: "1"
-            group: jet
-            is_jet: true
+          - integration/jet
     steps:
       - uses: actions/checkout@v5
       - name: "Set up Julia"
@@ -123,17 +119,9 @@ jobs:
         with:
           cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};group=${{ matrix.group }};julia=${{ matrix.julia-version }};project=${{ hashFiles(format('test/{0}/Project.toml', matrix.group)) }}
       - name: "Run integration test"
-        if: ${{ !matrix.is_jet }}
         env:
           TEST_GROUP: ${{ matrix.group }}
         run: julia --color=yes --project=. --threads=auto --check-bounds=yes -e 'import Pkg; Pkg.test()'
-        shell: bash
-      - name: "Install JET"
-        if: ${{ matrix.is_jet }}
-        run: julia --color=yes --project=test -e 'import Pkg; Pkg.add("JET")'
-      - name: "Run JET test"
-        if: ${{ matrix.is_jet }}
-        run: julia --color=yes --startup-file=no test/test_jet.jl
         shell: bash
 
   upload-coverage:
