@@ -1,9 +1,9 @@
 @testitem "Test turbo NaN with LoopVectorization" begin
     using SymbolicRegression
     using LoopVectorization
-    
+
     bad_op(x::T) where {T} = (x >= 0) ? x : T(0)
-    
+
     options = Options(;
         unary_operators=(sin, exp, sqrt, bad_op),
         binary_operators=(+, *),
@@ -14,9 +14,9 @@
         # ^ Leave as deprecated param, just to test.
         parsimony=0.01,
     )
-    
+
     tree = Node(3, Node(1, Node(; val=-π / 2)))
-    
+
     # Should still be safe against domain errors:
     try
         tree([0.0]', options)
@@ -24,9 +24,9 @@
     catch e
         @test false
     end
-    
+
     tree = Node(3, Node(1, Node(; feature=1)))
-    
+
     try
         tree([-π / 2]', options)
         @test true

@@ -34,7 +34,9 @@ ENV["SYMBOLIC_REGRESSION_TEST"] = "true"
         end
 
         # Run all test items in the integration directory
-        @run_package_tests(filter = ti -> startswith(ti.filename, integration_dir), verbose = true)
+        @run_package_tests(
+            filter = ti -> startswith(ti.filename, integration_dir), verbose = true
+        )
     else
         # Unit tests
         test_dir = joinpath(@__DIR__, TEST_GROUP)

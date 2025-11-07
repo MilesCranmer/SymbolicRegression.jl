@@ -17,7 +17,8 @@
                 sin(
                     custom_cos(
                         sin(1.2926733 - 1.6606787) / sin(
-                            ((0.14577048 * x1) + ((0.111149654 + x1) - -0.8298334)) - -1.2071426
+                            ((0.14577048 * x1) + ((0.111149654 + x1) - -0.8298334)) -
+                            -1.2071426,
                         ),
                     ) * (custom_cos(x3 - 2.3201916) + ((x1 - (x1 * x2)) / x2)),
                 ) / (0.14854191 - ((custom_cos(x2) * -1.6047639) - 0.023943262))
@@ -64,14 +65,16 @@
             @test array_test(predicted_output, true_output)
 
             true_grad = gradient(
-                (x1, x2, x3) -> sum(equation.(x1, x2, x3)), [X[i, :] for i in 1:nfeatures]...
+                (x1, x2, x3) -> sum(equation.(x1, x2, x3)),
+                [X[i, :] for i in 1:nfeatures]...,
             )
             # Convert tuple of vectors to matrix:
             true_grad = reduce(hcat, true_grad)'
             predicted_grad = eval_grad_tree_array(tree, X, options; variable=true)[2]
             predicted_grad2 =
                 reduce(
-                    hcat, [eval_diff_tree_array(tree, X, options, i)[2] for i in 1:nfeatures]
+                    hcat,
+                    [eval_diff_tree_array(tree, X, options, i)[2] for i in 1:nfeatures],
                 )'
 
             # Print largest difference between predicted_grad, true_grad:
