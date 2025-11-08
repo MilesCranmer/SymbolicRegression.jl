@@ -5,7 +5,7 @@
     using LoggingExtras: TeeLogger
     using MLJBase: machine, fit!
 
-    include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
+    include(joinpath(@__DIR__, "..", "..", "..", "..", "test_params.jl"))
 
     dir = mktempdir()
     buf = IOBuffer()

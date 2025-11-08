@@ -26,12 +26,14 @@ include("front_matter.jl")
         # for each integration environment before we run its tests.
         Pkg.instantiate()
 
-        # Special case: MLJ integration runs examples
-        if integration_name == "ext/mlj"
+        # Special case: MLJ integrations run additional setup
+        if startswith(integration_name, "ext/mlj")
             ENV["SYMBOLIC_REGRESSION_IS_TESTING"] = "true"
-            include(joinpath(@__DIR__, "..", "example.jl"))
-            include(joinpath(@__DIR__, "..", "examples", "parameterized_function.jl"))
-            include(joinpath(@__DIR__, "..", "examples", "custom_types.jl"))
+            if integration_name == "ext/mlj/templates"
+                include(joinpath(@__DIR__, "..", "example.jl"))
+                include(joinpath(@__DIR__, "..", "examples", "parameterized_function.jl"))
+                include(joinpath(@__DIR__, "..", "examples", "custom_types.jl"))
+            end
         end
 
         # Run all test items in the integration directory

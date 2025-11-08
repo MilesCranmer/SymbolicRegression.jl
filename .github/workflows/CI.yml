@@ -111,7 +111,9 @@ jobs:
           - ad/mooncake
           - aqua
           - jet
-          - ext/mlj
+          - ext/mlj/core
+          - ext/mlj/mti
+          - ext/mlj/templates
           - ext/symbolicutils
           - ext/json3_recorder
           - ext/dynamicquantities_units

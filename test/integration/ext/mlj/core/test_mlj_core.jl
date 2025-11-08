@@ -1,28 +1,3 @@
-@testitem "Generic interface tests" tags = [:part3] begin
-    using SymbolicRegression
-    using SymbolicRegression: SRTestRegressor, MultitargetSRTestRegressor
-    using MLJTestInterface: MLJTestInterface as MTI
-    include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
-
-    failures, summary = MTI.test(
-        [SRTestRegressor],
-        MTI.make_regression()...;
-        mod=@__MODULE__,
-        verbosity=0,
-        throw=true,
-    )
-    @test isempty(failures)
-
-    X = randn(100, 3)
-    Y = @. cos(X^2) * 3.2 - 0.5
-    (X, Y) = MTI.table.((X, Y))
-    w = ones(100)
-    failures, summary = MTI.test(
-        [MultitargetSRTestRegressor], X, Y, w; mod=@__MODULE__, verbosity=0, throw=true
-    )
-    @test isempty(failures)
-end
-
 @testitem "Variable names - single outputs" tags = [:part3] begin
     using SymbolicRegression
     using SymbolicRegression: Node
@@ -30,7 +5,7 @@ end
     using SymbolicUtils
     using Random: MersenneTwister
 
-    include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
+    include(joinpath(@__DIR__, "..", "..", "..", "..", "test_params.jl"))
 
     stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
@@ -65,7 +40,7 @@ end
     using MLJBase
     using Random: MersenneTwister
 
-    include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
+    include(joinpath(@__DIR__, "..", "..", "..", "..", "test_params.jl"))
 
     stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
@@ -101,7 +76,7 @@ end
     using MLJBase
     using Random: MersenneTwister
 
-    include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
+    include(joinpath(@__DIR__, "..", "..", "..", "..", "test_params.jl"))
 
     stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
@@ -125,7 +100,7 @@ end
     using MLJBase
     using Random: MersenneTwister
 
-    include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
+    include(joinpath(@__DIR__, "..", "..", "..", "..", "test_params.jl"))
 
     stop_kws = (; early_stop_condition=(loss, complexity) -> loss < 1e-5)
 
@@ -194,7 +169,7 @@ end
     using MLJBase
     using Random: MersenneTwister
 
-    include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
+    include(joinpath(@__DIR__, "..", "..", "..", "..", "test_params.jl"))
 
     model = MultitargetSRRegressor()
     rng = MersenneTwister(0)
@@ -265,7 +240,7 @@ end
     using Random: MersenneTwister
     using Suppressor
 
-    include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
+    include(joinpath(@__DIR__, "..", "..", "..", "..", "test_params.jl"))
 
     # Test that parameter changes are respected and incompatible changes throw errors
     rng = MersenneTwister(0)
