@@ -118,6 +118,9 @@ jobs:
           - ext/json3_recorder
           - ext/dynamicquantities_units
           - ext/loopvectorization
+        exclude:
+          - julia-version: "1"
+            group: ad/mooncake
     steps:
       - uses: actions/checkout@v5
       - name: "Set up Julia"
