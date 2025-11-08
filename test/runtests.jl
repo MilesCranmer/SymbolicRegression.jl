@@ -16,13 +16,10 @@ if startswith(TEST_GROUP, "integration/")
     Pkg.activate(integration_dir)
     Pkg.instantiate()
 
-    if startswith(integration_name, "ext/mlj")
-        ENV["SYMBOLIC_REGRESSION_IS_TESTING"] = "true"
-        if integration_name == "ext/mlj/templates"
-            include(joinpath(@__DIR__, "..", "example.jl"))
-            include(joinpath(@__DIR__, "..", "examples", "parameterized_function.jl"))
-            include(joinpath(@__DIR__, "..", "examples", "custom_types.jl"))
-        end
+    if startswith(integration_name, "ext/mlj") && integration_name == "ext/mlj/templates"
+        include(joinpath(@__DIR__, "..", "example.jl"))
+        include(joinpath(@__DIR__, "..", "examples", "parameterized_function.jl"))
+        include(joinpath(@__DIR__, "..", "examples", "custom_types.jl"))
     end
 
     @run_package_tests(
