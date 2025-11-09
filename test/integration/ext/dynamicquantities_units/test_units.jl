@@ -196,7 +196,9 @@ end
     using DynamicQuantities
     using Random: MersenneTwister
 
-    include("utils.jl")
+    # Type aliases for compatibility
+    const RealQuantity = DynamicQuantities.RealQuantity
+    const QuantityArray = DynamicQuantities.QuantityArray
 
     custom_op(x, y) = x + y
     options = Options(;
@@ -391,8 +393,10 @@ end
     using SymbolicRegression
     using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
     using DynamicQuantities
+    using Test
 
-    include("utils.jl")
+    onfail(f, ::Test.Fail) = f()
+    onfail(_, ::Test.Pass) = nothing
 
     options = Options(;
         binary_operators=[+, -, *, /, square, cube],
