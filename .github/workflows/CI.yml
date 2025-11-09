@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   unit:
-    name: unit-${{ matrix.group }}-${{ matrix.julia-version }}-${{ matrix.os }}
+    name: unit/${{ matrix.group }}-${{ matrix.julia-version }}-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
@@ -59,22 +59,29 @@ jobs:
       - name: "Build package"
         uses: julia-actions/julia-buildpkg@v1
       - name: "Run unit tests (${{ matrix.group }})"
+        env:
+          TEST_GROUP: unit/${{ matrix.group }}
         run: |
-          TEST_GROUP="unit/${{ matrix.group }}"
-          export TEST_GROUP="${TEST_GROUP//-//}"
           julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
           julia --color=yes --project=. --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
           julia --color=yes coverage.jl
         shell: bash
+      - name: "Sanitize artifact group"
+        id: sanitize_unit_group
+        shell: bash
+        run: |
+          group='${{ matrix.group }}'
+          safe_group="${group//\//-}"
+          echo "group=$safe_group" >> "$GITHUB_OUTPUT"
       - name: "Upload coverage artifacts"
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-unit-${{ matrix.group }}-${{ matrix.julia-version }}-${{ matrix.os }}
+          name: coverage-unit-${{ steps.sanitize_unit_group.outputs.group }}-${{ matrix.julia-version }}-${{ matrix.os }}
           path: lcov.info
           retention-days: 1
 
   integration:
-    name: integration-${{ matrix.group }}-${{ matrix.julia-version }}-ubuntu-latest
+    name: integration/${{ matrix.group }}-${{ matrix.julia-version }}-ubuntu-latest
     runs-on: ubuntu-latest
     timeout-minutes: 60
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
@@ -83,43 +90,43 @@ jobs:
       matrix:
         julia-version: ["1.10", "1"]
         group:
-          - ad-forwarddiff
-          - ad-zygote
-          - ad-enzyme
-          - ad-mooncake
+          - ad/forwarddiff
+          - ad/zygote
+          - ad/enzyme
+          - ad/mooncake
           - aqua
           - jet
-          - ext-mlj-core
-          - ext-mlj-mti
-          - ext-mlj-templates
-          - ext-symbolicutils
-          - ext-json3_recorder
-          - ext-dynamicquantities_units
-          - ext-loopvectorization
+          - ext/mlj/core
+          - ext/mlj/mti
+          - ext/mlj/templates
+          - ext/symbolicutils
+          - ext/json3_recorder
+          - ext/dynamicquantities_units
+          - ext/loopvectorization
         exclude:
           - julia-version: "1"
-            group: ad-mooncake
+            group: ad/mooncake
     steps:
       - uses: actions/checkout@v5
       - name: "Set up Julia"
         uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.julia-version }}
-      - name: "Convert group name for paths"
-        id: convert_group
+      - name: "Sanitize group"
+        id: sanitize_integration_group
         shell: bash
         run: |
           group='${{ matrix.group }}'
-          slashed_group="${group//-//}"
-          echo "slashed_group=$slashed_group" >> "$GITHUB_OUTPUT"
+          safe_group="${group//\//-}"
+          echo "group=$safe_group" >> "$GITHUB_OUTPUT"
       - name: "Cache dependencies"
         uses: julia-actions/cache@v2
         with:
-          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};group=integration-${{ matrix.group }};julia=${{ matrix.julia-version }};project=${{ hashFiles(format('test/integration/{0}/Project.toml', steps.convert_group.outputs.slashed_group)) }}
+          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};group=integration-${{ steps.sanitize_integration_group.outputs.group }};julia=${{ matrix.julia-version }};project=${{ hashFiles(format('test/integration/{0}/Project.toml', matrix.group)) }}
       - name: "Run integration test"
+        env:
+          TEST_GROUP: integration/${{ matrix.group }}
         run: |
-          TEST_GROUP="integration/${{ matrix.group }}"
-          export TEST_GROUP="${TEST_GROUP//-//}"
           julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
           julia --color=yes --project=. --threads=auto --check-bounds=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
           julia --color=yes coverage.jl
@@ -127,7 +134,7 @@ jobs:
       - name: "Upload coverage artifacts"
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-integration-${{ matrix.group }}-${{ matrix.julia-version }}
+          name: coverage-integration-${{ steps.sanitize_integration_group.outputs.group }}-${{ matrix.julia-version }}
           path: lcov.info
           retention-days: 1
 
