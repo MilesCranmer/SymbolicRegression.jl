@@ -99,6 +99,7 @@ jobs:
           - ext/mlj/core
           - ext/mlj/mti
           - ext/mlj/templates
+          - ext/mlj/parametric_search
           - ext/symbolicutils
           - ext/json3_recorder
           - ext/dynamicquantities_units
