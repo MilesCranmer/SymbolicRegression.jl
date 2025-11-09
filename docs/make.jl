@@ -247,7 +247,9 @@ function generate_favicons()
 
     for (filename, size) in favicon_configs
         output_path = joinpath(public_dir, filename)
-        run(`magick $(logo_path) -resize $(size) -background none -gravity center -extent $(size) $(output_path)`)
+        # Use 'convert' for ImageMagick 6.x (Ubuntu default), 'magick' for ImageMagick 7.x
+        magick_cmd = Sys.which("magick") !== nothing ? "magick" : "convert"
+        run(`$(magick_cmd) $(logo_path) -resize $(size) -background none -gravity center -extent $(size) $(output_path)`)
         @info "Generated: $filename"
     end
 
@@ -311,7 +313,7 @@ DocMeta.setdocmeta!(
 makedocs(;
     sitename="SymbolicRegression.jl",
     authors="Miles Cranmer",
-    current_version=current_version,
+    version=current_version,
     doctest=true,
     clean=get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true",
     warnonly=[:docs_block, :cross_references, :missing_docs],
