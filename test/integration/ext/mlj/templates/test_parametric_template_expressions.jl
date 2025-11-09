@@ -304,6 +304,7 @@ end
     model = SRRegressor(
         binary_operators = (+, -, *, /),
         niterations = 300,
+        populations = 8,
         maxsize = 20,
         expression_spec = template,
         early_stop_condition = (loss, complexity) -> loss < 1e-5 && complexity < 10,  #src
