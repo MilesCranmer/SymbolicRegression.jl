@@ -1,0 +1,6 @@
+[deps]
+DynamicExpressions = "a40a106e-89c9-4ca8-8020-a735e8728b6b"
+SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
+TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"

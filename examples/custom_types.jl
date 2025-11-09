@@ -12,7 +12,7 @@ Let's actually try this. Let's evolve an _expression over strings_.
 First, we mock up a dataset. Say that we wish to find the expression
 
 ```math
-y = \text{zip}(
+y = \text{interleave}(
     \text{concat}(x_1, \text{concat}(\text{``abc''}, x_2)),
     \text{concat}(
         \text{concat}(\text{tail}(x_3), \text{reverse}(x_4)),
@@ -39,7 +39,7 @@ tail(s::String) = length(s) == 0 ? "" : join(collect(s)[max(1, div(length(s), 2)
 concat(a::String, b::String) = a * b
 
 """Interleaves characters from two strings."""
-function zip(a::String, b::String)
+function interleave(a::String, b::String)
     total_length = length(a) + length(b)
     result = Vector{Char}(undef, total_length)
     i_a = firstindex(a)
@@ -71,7 +71,7 @@ function single_instance(rng=Random.default_rng())
     x_4 = join(rand(rng, 'a':'z', rand(rng, 1:10)))
 
     ## True formula:
-    y = zip(x_1 * "abc" * x_2, tail(x_3) * reverse(x_4) * "xyz")
+    y = interleave(x_1 * "abc" * x_2, tail(x_3) * reverse(x_4) * "xyz")
     return (; X=(; x_1, x_2, x_3, x_4), y)
 end
 
@@ -222,7 +222,7 @@ because we are dealing with non-numeric types.
 We also need to manually define the `loss_type`, since it's not inferrable from
 `loss_type`.
 =#
-binary_operators = (concat, zip)
+binary_operators = (concat, interleave)
 unary_operators = (head, tail, reverse)
 hparams = (;
     batching=true,

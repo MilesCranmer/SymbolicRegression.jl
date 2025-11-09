@@ -3,9 +3,9 @@ using Literate: Literate
 # Function to process literate blocks in test files
 function process_literate_blocks(base_path="test")
     test_dir = joinpath(@__DIR__, "..", base_path)
-    for file in readdir(test_dir)
-        if endswith(file, ".jl")
-            process_file(joinpath(test_dir, file))
+    for (dirpath, _, files) in walkdir(test_dir)
+        for file in files
+            endswith(file, ".jl") && process_file(joinpath(dirpath, file))
         end
     end
 end

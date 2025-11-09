@@ -17,48 +17,34 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  test:
-    name: Julia ${{ matrix.julia-version }}-${{ matrix.os }}-${{ matrix.test }}-${{ github.event_name }}
+  unit:
+    name: u/${{ matrix.group }}-${{ matrix.julia-version }}-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 240
+    timeout-minutes: 60
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     strategy:
       fail-fast: false
       matrix:
-        test:
-          - "part1"
-          - "part2"
-          - "part3"
-        julia-version:
-          - "1.10"
-          - "1"
-        os:
-          - ubuntu-latest
-        include:
-          - os: windows-latest
-            julia-version: "1"
-            test: "part1"
-          - os: windows-latest
-            julia-version: "1"
-            test: "part2"
-          - os: windows-latest
-            julia-version: "1"
-            test: "part3"
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+        julia-version: ["1.10", "1"]
+        group:
+          - basic
+          - expressions
+          - templates
+          - operators-core
+          - constraints
+          - evolution-core
+          - evaluation
+          - dataset
+          - parallel
+          - precompile
+          - misc
+        exclude:
+          # Only run Julia 1.10 on ubuntu
           - os: macOS-latest
-            julia-version: "1"
-            test: "part1"
-          - os: macOS-latest
-            julia-version: "1"
-            test: "part2"
-          - os: macOS-latest
-            julia-version: "1"
-            test: "part3"
-          - os: ubuntu-latest
-            julia-version: "1"
-            test: "enzyme"
-          - os: ubuntu-latest
-            julia-version: "1"
-            test: "jet"
+            julia-version: "1.10"
+          - os: windows-latest
+            julia-version: "1.10"
 
     steps:
       - uses: actions/checkout@v5
@@ -69,40 +55,98 @@ jobs:
       - name: "Cache dependencies"
         uses: julia-actions/cache@v2
         with:
-          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};os=${{ matrix.os }};julia=${{ matrix.julia-version }};project=${{ hashFiles('**/Project.toml') }}
+          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};os=${{ matrix.os }};julia=${{ matrix.julia-version }};group=unit-${{ matrix.group }};project=${{ hashFiles('test/Project.toml') }}
       - name: "Build package"
         uses: julia-actions/julia-buildpkg@v1
-      - name: "Install Enzyme (if needed)"
-        if: matrix.test == 'enzyme'
-        run: julia --color=yes --project=test -e 'import Pkg; Pkg.add("Enzyme")'
-      - name: "Install JET (if needed)"
-        if: matrix.test == 'jet'
-        run: julia --color=yes --project=test -e 'import Pkg; Pkg.add("JET")'
-      - name: "Run tests"
+      - name: "Run unit tests (${{ matrix.group }})"
         env:
-          SYMBOLIC_REGRESSION_TEST_SUITE: ${{ matrix.test }}
+          TEST_GROUP: unit/${{ matrix.group }}
         run: |
           julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
-          julia --color=yes --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
+          julia --color=yes --project=. --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
+          julia --color=yes coverage.jl
+        shell: bash
+      - name: "Sanitize artifact group"
+        id: sanitize_unit_group
+        shell: bash
+        run: |
+          group='${{ matrix.group }}'
+          safe_group="${group//\//-}"
+          echo "group=$safe_group" >> "$GITHUB_OUTPUT"
+      - name: "Upload coverage artifacts"
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-unit-${{ steps.sanitize_unit_group.outputs.group }}-${{ matrix.julia-version }}-${{ matrix.os }}
+          path: lcov.info
+          retention-days: 1
+
+  integration:
+    name: i/${{ matrix.group }}-${{ matrix.julia-version }}-ubuntu-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        julia-version: ["1.10", "1"]
+        group:
+          - ad/forwarddiff
+          - ad/zygote
+          - ad/enzyme
+          - ad/mooncake
+          - aqua
+          - jet
+          - ext/mlj/core
+          - ext/mlj/mti
+          - ext/mlj/templates
+          - ext/symbolicutils
+          - ext/json3_recorder
+          - ext/dynamicquantities_units
+          - ext/loopvectorization
+        exclude:
+          - julia-version: "1"
+            group: ad/mooncake
+    steps:
+      - uses: actions/checkout@v5
+      - name: "Set up Julia"
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.julia-version }}
+      - name: "Sanitize group"
+        id: sanitize_integration_group
+        shell: bash
+        run: |
+          group='${{ matrix.group }}'
+          safe_group="${group//\//-}"
+          echo "group=$safe_group" >> "$GITHUB_OUTPUT"
+      - name: "Cache dependencies"
+        uses: julia-actions/cache@v2
+        with:
+          cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};group=integration-${{ steps.sanitize_integration_group.outputs.group }};julia=${{ matrix.julia-version }};project=${{ hashFiles(format('test/integration/{0}/Project.toml', matrix.group)) }}
+      - name: "Run integration test"
+        env:
+          TEST_GROUP: integration/${{ matrix.group }}
+        run: |
+          julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
+          julia --color=yes --project=. --threads=auto --check-bounds=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
           julia --color=yes coverage.jl
         shell: bash
       - name: "Upload coverage artifacts"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
-          name: coverage-${{ matrix.julia-version }}-${{ matrix.os }}-${{ matrix.test }}
+          name: coverage-integration-${{ steps.sanitize_integration_group.outputs.group }}-${{ matrix.julia-version }}
           path: lcov.info
           retention-days: 1
 
   upload-coverage:
     name: Upload Coverage to Codecov
-    needs: test
+    needs: [unit, integration]
     runs-on: ubuntu-latest
-    # Only run on pushes to master or pull requests
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
       - uses: actions/checkout@v5
       - name: Download all coverage artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           pattern: coverage-*
           path: coverage

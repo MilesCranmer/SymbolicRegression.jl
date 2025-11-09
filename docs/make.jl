@@ -30,7 +30,7 @@ layout: home
 hero:
   name: SymbolicRegression.jl
   text: Discover Mathematical Laws from Data
-  tagline: A flexible, user-friendly framework that automatically finds interpretable equations from your data
+  tagline: Fast, flexible evolutionary algorithms for interpretable machine learning
   actions:
     - theme: brand
       text: Get Started
@@ -190,6 +190,14 @@ function fix_vitepress_base_path()
         "/SymbolicRegression.jl/dev/"
     end
 
+    # The version picker should link to sibling versions that live one
+    # directory above the active version, e.g. `/symbolicregression/v1.12.0/`.
+    # Compute that shared prefix (always the first path segment) so that we can
+    # rewrite `__DEPLOY_ABSPATH__` accordingly.
+    stripped = isempty(base_path) ? base_path : rstrip(base_path, '/')
+    segments = split(stripped, '/'; keepempty=false)
+    deploy_abspath = isempty(segments) ? "/" : "/" * first(segments) * "/"
+
     # Find and fix VitePress SOURCE config file (before build)
     config_paths = [joinpath(@__DIR__, "src", ".vitepress", "config.mts")]
 
@@ -201,17 +209,58 @@ function fix_vitepress_base_path()
             # Replace the base path with the correct one for this deployment
             # Look for existing base: '...' patterns and replace them
             content = replace(content, r"base:\s*'[^']*'" => "base: '$base_path'")
+            content = replace(
+                content,
+                r"__DEPLOY_ABSPATH__\s*:\s*JSON\.stringify\('[^']*'\)" =>
+                    "__DEPLOY_ABSPATH__: JSON.stringify('$deploy_abspath')",
+            )
 
             write(config_path, content)
-            @info "Updated VitePress base path to: $base_path"
+            @info "Updated VitePress base path to: $base_path (deploy abspath: $deploy_abspath)"
         else
             @warn "VitePress config not found at: $config_path"
         end
     end
 end
 
+# Generate favicon files from logo.png
+function generate_favicons()
+    logo_path = joinpath(@__DIR__, "src", "assets", "logo.png")
+    public_dir = joinpath(@__DIR__, "src", "public")
+
+    if !isfile(logo_path)
+        @warn "Logo file not found at: $logo_path - skipping favicon generation"
+        return false
+    end
+
+    mkpath(public_dir)
+
+    @info "Generating favicon files from logo.png..."
+
+    # Generate different sizes
+    favicon_configs = [
+        ("favicon.ico", "32x32"),
+        ("favicon-16x16.png", "16x16"),
+        ("favicon-32x32.png", "32x32"),
+        ("apple-touch-icon.png", "180x180"),
+    ]
+
+    for (filename, size) in favicon_configs
+        output_path = joinpath(public_dir, filename)
+        # Use 'convert' for ImageMagick 6.x (Ubuntu default), 'magick' for ImageMagick 7.x
+        magick_cmd = Sys.which("magick") !== nothing ? "magick" : "convert"
+        run(`$(magick_cmd) $(logo_path) -resize $(size) -background none -gravity center -extent $(size) $(output_path)`)
+        @info "Generated: $filename"
+    end
+
+    return true
+end
+
 # Run preprocessing on source files before makedocs()
 preprocess_source_index()
+
+# Generate favicons before building docs
+generate_favicons()
 
 # Fix VitePress base path BEFORE makedocs() - this is crucial for timing!
 fix_vitepress_base_path()
@@ -240,6 +289,20 @@ else
     )
 end
 
+current_version = let
+    version = get(ENV, "DOCUMENTER_VERSION", nothing)
+    if version !== nothing && !isempty(version)
+        version
+    else
+        fallback = get(ENV, "DOCUMENTER_CURRENT_VERSION", nothing)
+        if fallback !== nothing && !isempty(fallback)
+            fallback
+        else
+            "dev"
+        end
+    end
+end
+
 DocMeta.setdocmeta!(
     SymbolicRegression,
     :DocTestSetup,
@@ -250,6 +313,7 @@ DocMeta.setdocmeta!(
 makedocs(;
     sitename="SymbolicRegression.jl",
     authors="Miles Cranmer",
+    version=current_version,
     doctest=true,
     clean=get(ENV, "DOCUMENTER_PRODUCTION", "false") == "true",
     warnonly=[:docs_block, :cross_references, :missing_docs],
@@ -291,9 +355,19 @@ post_process_vitepress_index()
 function fix_empty_bases()
     bases_file = joinpath(@__DIR__, "build", "bases.txt")
     mkpath(dirname(bases_file))
-    if !isfile(bases_file) || isempty(filter(!isempty, readlines(bases_file)))
-        @info "Creating/fixing bases.txt for deployment"
+
+    if !isfile(bases_file)
+        @info "Creating bases.txt for dev deployment"
         write(bases_file, "dev\n")
+    else
+        bases = filter(!isempty, readlines(bases_file))
+        if isempty(bases)
+            @info "Fixing empty bases.txt for dev deployment"
+            write(bases_file, "dev\n")
+        else
+            @info "bases.txt already exists with $(length(bases)) bases: $bases"
+            # Don't overwrite it - DocumenterVitepress may have generated multiple bases
+        end
     end
 end
 
