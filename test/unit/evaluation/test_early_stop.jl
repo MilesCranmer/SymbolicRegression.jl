@@ -1,4 +1,4 @@
-@testitem "Early stop condition" tags = [:part2] begin
+@testitem "Early stop condition" begin
     using SymbolicRegression
 
     X = randn(Float32, 5, 100)
@@ -21,7 +21,7 @@
     )
 end
 
-@testitem "State preservation with niterations=0" tags = [:part2] begin
+@testitem "State preservation with niterations=0" begin
     using SymbolicRegression
     using Random
 

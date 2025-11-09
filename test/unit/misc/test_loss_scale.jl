@@ -1,4 +1,4 @@
-@testitem "loss_scale parameter validation" tags = [:part2] begin
+@testitem "loss_scale parameter validation" begin
     using SymbolicRegression
 
     # Test Options constructor assertion
@@ -12,7 +12,7 @@
     @test options_linear.loss_scale == :linear
 end
 
-@testitem "loss_scale score computation" tags = [:part2] begin
+@testitem "loss_scale score computation" begin
     using SymbolicRegression.HallOfFameModule:
         compute_direct_score, compute_zero_centered_score
 
@@ -24,7 +24,7 @@ end
     @test compute_zero_centered_score(2.0, 1.0, 1.0) ≈ 0.0
 end
 
-@testitem "loss_scale in choose_best" tags = [:part2] begin
+@testitem "loss_scale in choose_best" begin
     using SymbolicRegression
     using SymbolicRegression.MLJInterfaceModule: choose_best
 
@@ -57,7 +57,7 @@ end
     @test best_idx_linear == 4  # Simply picks minimum loss (0.2)
 end
 
-@testitem "loss_scale in pareto_volume" tags = [:part2] begin
+@testitem "loss_scale in pareto_volume" begin
     using SymbolicRegression.LoggingModule: pareto_volume
 
     # Test data
@@ -73,7 +73,7 @@ end
     @test pareto_volume(neg_losses, test_complexities, 10, true) > 0    # works with linear
 end
 
-@testitem "loss_scale in MLJ interface" tags = [:part2] begin
+@testitem "loss_scale in MLJ interface" begin
     using SymbolicRegression
     using SymbolicRegression: get_options
 
@@ -90,7 +90,7 @@ end
     @test get_options(model_mt_linear).loss_scale == :linear
 end
 
-@testitem "loss_scale error handling" tags = [:part2] begin
+@testitem "loss_scale error handling" begin
     using SymbolicRegression
     using SymbolicRegression.CoreModule: Dataset
     using SymbolicRegression.HallOfFameModule: format_hall_of_fame
@@ -131,7 +131,7 @@ end
     @test result.scores[1] >= 0.0
 end
 
-@testitem "string_dominating_pareto_curve header display" tags = [:part2] begin
+@testitem "string_dominating_pareto_curve header display" begin
     using SymbolicRegression
     using SymbolicRegression.HallOfFameModule: HallOfFame, string_dominating_pareto_curve
     using SymbolicRegression.CoreModule: Dataset

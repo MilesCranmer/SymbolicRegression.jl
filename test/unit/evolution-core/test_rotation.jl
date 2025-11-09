@@ -1,4 +1,4 @@
-@testitem "Basic `randomly_rotate_tree!`" tags = [:part1] begin
+@testitem "Basic `randomly_rotate_tree!`" begin
     using SymbolicRegression
     using SymbolicRegression.MutationFunctionsModule: randomly_rotate_tree!
 
@@ -28,7 +28,7 @@
     end
 end
 
-@testitem "Complex `randomly_rotate_tree!`" tags = [:part1] begin
+@testitem "Complex `randomly_rotate_tree!`" begin
     using SymbolicRegression
     using SymbolicRegression.MutationFunctionsModule: randomly_rotate_tree!
     using Random: MersenneTwister

@@ -1,4 +1,4 @@
-@testitem "template expression parameter mutation" tags = [:part3] begin
+@testitem "template expression parameter mutation" begin
     using SymbolicRegression
     using SymbolicRegression.MutationFunctionsModule: mutate_constant
     using Random: MersenneTwister

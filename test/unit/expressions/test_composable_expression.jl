@@ -1,7 +1,7 @@
-@testitem "Integration Test with fit! and Performance Check" tags = [:part3] begin
+@testitem "Integration Test with fit! and Performance Check" begin
     include("../examples/template_expression.jl")
 end
-@testitem "Test ComposableExpression" tags = [:part2] begin
+@testitem "Test ComposableExpression" begin
     using SymbolicRegression: ComposableExpression, Node
     using DynamicExpressions: OperatorEnum
 
@@ -14,7 +14,7 @@ end
     @test ex(x, y) == x
 end
 
-@testitem "Test interface for ComposableExpression" tags = [:part2] begin
+@testitem "Test interface for ComposableExpression" begin
     using SymbolicRegression: ComposableExpression
     using DynamicExpressions.InterfacesModule: Interfaces, ExpressionInterface
     using DynamicExpressions: OperatorEnum
@@ -33,7 +33,7 @@ end
     @test Interfaces.test(ExpressionInterface, ComposableExpression, [f, g])
 end
 
-@testitem "Cover other operators" tags = [:part2] begin
+@testitem "Cover other operators" begin
     using SymbolicRegression
     using SymbolicRegression: ComposableExpression, Node
     using DynamicExpressions: OperatorEnum
@@ -55,7 +55,7 @@ end
     expr = x1 >= 1.0
 end
 
-@testitem "Test error handling" tags = [:part2] begin
+@testitem "Test error handling" begin
     using SymbolicRegression
     using SymbolicRegression: ComposableExpression, Node, ValidVector
     using DynamicExpressions: OperatorEnum
@@ -108,7 +108,7 @@ end
     @test sin(x).valid
 end
 
-@testitem "Test validity propagation with NaN" tags = [:part2] begin
+@testitem "Test validity propagation with NaN" begin
     using SymbolicRegression: ComposableExpression, Node, ValidVector
     using DynamicExpressions: OperatorEnum
 
@@ -130,7 +130,7 @@ end
     @test ex(x1_val, x2_val).valid == false
 end
 
-@testitem "ValidVector helpful error messages" tags = [:part2] begin
+@testitem "ValidVector helpful error messages" begin
     using SymbolicRegression
     using SymbolicRegression: ValidVector, ValidVectorMixError, ValidVectorAccessError
 
@@ -167,7 +167,7 @@ end
     @test contains(access_msg, "ValidVector handles validity/batching automatically")
 end
 
-@testitem "Test Number inputs" tags = [:part2] begin
+@testitem "Test Number inputs" begin
     using SymbolicRegression: ComposableExpression, Node, ValidVector
     using DynamicExpressions: OperatorEnum
 
@@ -183,7 +183,7 @@ end
     @test ex(ValidVector([1.0, 1.0], false), 2.0).valid == false
 end
 
-@testitem "ValidVector operations with Union{} return type" tags = [:part2] begin
+@testitem "ValidVector operations with Union{} return type" begin
     using SymbolicRegression: ValidVector
     using SymbolicRegression.ComposableExpressionModule: apply_operator, _match_eltype
 

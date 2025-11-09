@@ -1,4 +1,4 @@
-@testitem "Test Enzyme derivatives of parametric expression" tags = [:enzyme] begin
+@testitem "Test Enzyme derivatives of parametric expression" begin
     using SymbolicRegression
     using SymbolicRegression.ConstantOptimizationModule: specialized_options
     using DynamicExpressions

@@ -1,4 +1,4 @@
-@testitem "Single output, single guess" tags = [:part1] begin
+@testitem "Single output, single guess" begin
     using SymbolicRegression
     using SymbolicRegression: calculate_pareto_frontier
     using Test
@@ -25,7 +25,7 @@
     @test !any(m -> m.loss < 1e-10, dominating)
 end
 
-@testitem "parse_guesses with NamedTuple" tags = [:part1] begin
+@testitem "parse_guesses with NamedTuple" begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
     using Test
@@ -77,7 +77,7 @@ end
     @test all(m -> m.tree isa TemplateExpression, parsed_multiple[1])
 end
 
-@testitem "parse_guesses with NamedTuple and parameters" tags = [:part1] begin
+@testitem "parse_guesses with NamedTuple and parameters" begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
     using Test
@@ -107,7 +107,7 @@ end
     @test length(get_metadata(member.tree).parameters.p._data) == 2
 end
 
-@testitem "NamedTuple guesses with different variable names" tags = [:part1] begin
+@testitem "NamedTuple guesses with different variable names" begin
     using SymbolicRegression
     using SymbolicRegression: calculate_pareto_frontier
     using Test
@@ -143,7 +143,7 @@ end
     @test any(m -> m.tree isa TemplateExpression, dominating)
 end
 
-@testitem "Float32 dataset with Float64 guess literals" tags = [:part1] begin
+@testitem "Float32 dataset with Float64 guess literals" begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
     using Test
@@ -176,7 +176,7 @@ end
     @test parsed_members[1][1] isa PopMember{Float32,Float32}
 end
 
-@testitem "Custom operators in string guesses" tags = [:part1] begin
+@testitem "Custom operators in string guesses" begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember, calculate_pareto_frontier
     using Test
@@ -231,7 +231,7 @@ end
     @test all(m -> m isa PopMember{Float64,Float64}, parsed_multiple[1])
 end
 
-@testitem "Custom operators in equation_search guesses" tags = [:part1] begin
+@testitem "Custom operators in equation_search guesses" begin
     using SymbolicRegression
     using SymbolicRegression: calculate_pareto_frontier
     using Test
@@ -267,7 +267,7 @@ end
     @test any(m -> m.loss < 1e-2, dominating_complex)
 end
 
-@testitem "Custom operators error handling in guesses" tags = [:part1] begin
+@testitem "Custom operators error handling in guesses" begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
     using Test
@@ -294,7 +294,7 @@ end
     )
 end
 
-@testitem "Custom operators with NamedTuple guesses" tags = [:part1] begin
+@testitem "Custom operators with NamedTuple guesses" begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
     using Test
@@ -333,7 +333,7 @@ end
     @test haskey(member.tree.trees, :g)
 end
 
-@testitem "Smoke test migration with multiple outputs and templates" tags = [:part1] begin
+@testitem "Smoke test migration with multiple outputs and templates" begin
     using SymbolicRegression
     using SymbolicRegression: calculate_pareto_frontier
     using Test
@@ -362,7 +362,7 @@ end
     @test all(h -> any(m -> m.loss < 0.01, calculate_pareto_frontier(h)), hof)
 end
 
-@testitem "parse_guesses with mix of strings and expression objects" tags = [:part1] begin
+@testitem "parse_guesses with mix of strings and expression objects" begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
     using Test
@@ -405,7 +405,7 @@ end
     @test parsed_members[1][3].tree.tree.val != 1.0
 end
 
-@testitem "maxsize warning" tags = [:part1] begin
+@testitem "maxsize warning" begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
     using Test
@@ -437,7 +437,7 @@ end
     @test !contains(String(take!(io)), "maxsize")
 end
 
-@testitem "Vector of vectors input for single output" tags = [:part1] begin
+@testitem "Vector of vectors input for single output" begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
     using Test
@@ -456,7 +456,7 @@ end
     @test length(parsed_members[1]) == 2  # Two guesses for that output
 end
 
-@testitem "Multiple outputs guesses format validation" tags = [:part1] begin
+@testitem "Multiple outputs guesses format validation" begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
     using Test
@@ -472,7 +472,7 @@ end
     )
 end
 
-@testitem "File saving with niterations=0" tags = [:part1] begin
+@testitem "File saving with niterations=0" begin
     using SymbolicRegression
     using Test
     using Random: MersenneTwister

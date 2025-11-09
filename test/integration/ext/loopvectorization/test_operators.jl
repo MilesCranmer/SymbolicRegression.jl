@@ -1,4 +1,4 @@
-@testitem "Generic operator tests" tags = [:part2] begin
+@testitem "Generic operator tests" begin
     using SymbolicRegression
     using SymbolicRegression:
         plus,
@@ -75,7 +75,7 @@
     end
 end
 
-@testitem "Built-in operators pass validation" tags = [:part3] begin
+@testitem "Built-in operators pass validation" begin
     using SymbolicRegression
     using SymbolicRegression: plus, sub, mult, square, cube, neg, relu, greater, less
     using SymbolicRegression: greater_equal, less_equal, logical_or, logical_and, cond
@@ -143,7 +143,7 @@ end
     @test inverse_opmap(less_equal) == (<=)
 end
 
-@testitem "Built-in operators pass validation for complex numbers" tags = [:part2] begin
+@testitem "Built-in operators pass validation for complex numbers" begin
     using SymbolicRegression
     using SymbolicRegression: plus, sub, mult, square, cube, neg
 
@@ -157,7 +157,7 @@ end
     end
 end
 
-@testitem "Incompatibilities are caught" tags = [:part3] begin
+@testitem "Incompatibilities are caught" begin
     using SymbolicRegression
     using SymbolicRegression: greater
 
@@ -170,7 +170,7 @@ end
     )
 end
 
-@testitem "Operators with wrong type fail" tags = [:part2] begin
+@testitem "Operators with wrong type fail" begin
     using SymbolicRegression
 
     my_bad_op(x) = 1.0f0
@@ -184,7 +184,7 @@ end
     @test_nowarn SymbolicRegression.assert_operators_well_defined(Float32, options)
 end
 
-@testitem "Turbo mode matches regular mode" tags = [:part2] begin
+@testitem "Turbo mode matches regular mode" begin
     using SymbolicRegression
     using SymbolicRegression:
         Node,
@@ -239,7 +239,7 @@ end
     end
 end
 
-@testitem "Safe operators are compatible with ForwardDiff" tags = [:part2] begin
+@testitem "Safe operators are compatible with ForwardDiff" begin
     using SymbolicRegression
     using SymbolicRegression:
         safe_log,
@@ -298,7 +298,7 @@ end
     end
 end
 
-@testitem "user_provided_operators applies safe operator mappings" tags = [:part1] begin
+@testitem "user_provided_operators applies safe operator mappings" begin
     using SymbolicRegression
     using SymbolicRegression: safe_log, safe_pow, safe_sqrt
     using DynamicExpressions: OperatorEnum

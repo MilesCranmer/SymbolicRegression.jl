@@ -1,4 +1,4 @@
-@testitem "Test options" tags = [:part1] begin
+@testitem "Test options" begin
     using SymbolicRegression
     using Optim: Optim
 
@@ -27,7 +27,7 @@
     @test_throws AssertionError Options(; loss_scale=:cubic)
 end
 
-@testitem "Test operators parameter conflicts" tags = [:part1] begin
+@testitem "Test operators parameter conflicts" begin
     using SymbolicRegression
     using DynamicExpressions: OperatorEnum
 
@@ -43,7 +43,7 @@ end
     @test_nowarn Options(; operators)
 end
 
-@testitem "Test operators stored globally" tags = [:part1] begin
+@testitem "Test operators stored globally" begin
     using SymbolicRegression
     using DynamicExpressions.OperatorEnumConstructionModule: LATEST_OPERATORS
 
@@ -53,7 +53,7 @@ end
     @test LATEST_OPERATORS[] == operators
 end
 
-@testitem "Test with_max_degree_from_context" tags = [:part1] begin
+@testitem "Test with_max_degree_from_context" begin
     using SymbolicRegression
 
     operators = OperatorEnum(1 => (sin, cos), 2 => (+, *, -))
@@ -73,7 +73,7 @@ end
     @test options.nops == (2, 3, 2)
 end
 
-@testitem "Test operator appears in multiple degrees error" tags = [:part1] begin
+@testitem "Test operator appears in multiple degrees error" begin
     using SymbolicRegression
 
     operators = OperatorEnum(1 => (+, sin), 2 => (+, *))  # + appears in both degrees
@@ -89,7 +89,7 @@ end
     )
 end
 
-@testitem "Test build_constraints with pre-processed vector format" tags = [:part1] begin
+@testitem "Test build_constraints with pre-processed vector format" begin
     using SymbolicRegression
     using SymbolicRegression.CoreModule.OptionsModule: build_constraints
     using DynamicExpressions: OperatorEnum

@@ -1,4 +1,4 @@
-@testitem "Testing whether we can move operators to workers." tags = [:part1] begin
+@testitem "Testing whether we can move operators to workers." begin
     using SymbolicRegression
     using Test
 

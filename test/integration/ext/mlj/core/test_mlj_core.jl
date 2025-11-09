@@ -1,4 +1,4 @@
-@testitem "Variable names - single outputs" tags = [:part3] begin
+@testitem "Variable names - single outputs" begin
     using SymbolicRegression
     using SymbolicRegression: Node
     using MLJBase
@@ -35,7 +35,7 @@
     n2 = convert(Node, eqn2, model)
 end
 
-@testitem "Variable names - multiple outputs" tags = [:part1] begin
+@testitem "Variable names - multiple outputs" begin
     using SymbolicRegression
     using MLJBase
     using Random: MersenneTwister
@@ -71,7 +71,7 @@ end
     @test_throws "If specifying an equation index during" predict(mach, (X=X, idx=1))
 end
 
-@testitem "Variable names - named outputs" tags = [:part1] begin
+@testitem "Variable names - named outputs" begin
     using SymbolicRegression
     using MLJBase
     using Random: MersenneTwister
@@ -95,7 +95,7 @@ end
     )
 end
 
-@testitem "Good predictions" tags = [:part1] begin
+@testitem "Good predictions" begin
     using SymbolicRegression
     using MLJBase
     using Random: MersenneTwister
@@ -164,7 +164,7 @@ end
     end
 end
 
-@testitem "Helpful errors" tags = [:part3] begin
+@testitem "Helpful errors" begin
     using SymbolicRegression
     using MLJBase
     using Random: MersenneTwister
@@ -189,7 +189,7 @@ end
     @test_throws ErrorException @quiet(fit!(mach; verbosity=0))
 end
 
-@testitem "Unfinished search" tags = [:part3] begin
+@testitem "Unfinished search" begin
     using SymbolicRegression
     using MLJBase
     using Suppressor
@@ -233,7 +233,7 @@ end
     @test occursin("Evaluation failed either due to", msg)
 end
 
-@testitem "MLJ options caching fix" tags = [:part3] begin
+@testitem "MLJ options caching fix" begin
     using SymbolicRegression
     using SymbolicRegression: WarmStartIncompatibleError
     using MLJBase

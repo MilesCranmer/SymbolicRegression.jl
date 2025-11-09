@@ -1,4 +1,4 @@
-@testitem "Test derivatives" tags = [:part1] begin
+@testitem "Test derivatives" begin
     using SymbolicRegression
     using Zygote: Zygote
     using Random: MersenneTwister
@@ -35,7 +35,7 @@
     @test δy2 ≈ δy2_hat
 end
 
-@testitem "Test derivatives during optimization" tags = [:part1] begin
+@testitem "Test derivatives during optimization" begin
     using SymbolicRegression
     using SymbolicRegression.ConstantOptimizationModule:
         Evaluator, GradEvaluator, EvaluatorContext
@@ -68,7 +68,7 @@ end
     @test G[] != 0
 end
 
-@testitem "Test derivatives of parametric expression during optimization" tags = [:part3] begin
+@testitem "Test derivatives of parametric expression during optimization" begin
     using SymbolicRegression
     using SymbolicRegression.ConstantOptimizationModule: specialized_options
     using DynamicExpressions

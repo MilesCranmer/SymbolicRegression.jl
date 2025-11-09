@@ -1,5 +1,5 @@
 # This file tests particular functionality of ExpressionBuilderModule
-@testitem "NamedTuple support in parse_expression" tags = [:part3] begin
+@testitem "NamedTuple support in parse_expression" begin
     using SymbolicRegression
     using DynamicExpressions
 
@@ -52,7 +52,7 @@
     @test different_result.trees.g isa ComposableExpression
 end
 
-@testitem "ParametricExpression" tags = [:part3] begin
+@testitem "ParametricExpression" begin
     using SymbolicRegression
     using SymbolicRegression.ExpressionBuilderModule:
         strip_metadata, embed_metadata, init_params

@@ -1,4 +1,4 @@
-@testitem "@filtered_async error forwarding tests" tags = [:part2] begin
+@testitem "@filtered_async error forwarding tests" begin
     using Distributed: Distributed
     using SymbolicRegression.SearchUtilsModule: SearchUtilsModule as SUM
     using Test: Test

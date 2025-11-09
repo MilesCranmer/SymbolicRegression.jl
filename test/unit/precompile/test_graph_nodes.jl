@@ -1,4 +1,4 @@
-@testitem "GraphNode evaluation" tags = [:part1] begin
+@testitem "GraphNode evaluation" begin
     using SymbolicRegression
 
     options = Options(;
@@ -20,7 +20,7 @@
     eval_tree_array(tree, dataset.X, options)
 end
 
-@testitem "GraphNode complexity" tags = [:part1] begin
+@testitem "GraphNode complexity" begin
     using SymbolicRegression
 
     options = Options(;
@@ -35,7 +35,7 @@ end
     @test compute_complexity(tree, options; break_sharing=Val(true)) == 22
 end
 
-@testitem "GraphNode population" tags = [:part1] begin
+@testitem "GraphNode population" begin
     using SymbolicRegression
 
     options = Options(;
@@ -57,7 +57,7 @@ end
     # equation_search([dataset]; niterations=10, options)
 end
 
-@testitem "GraphNode break connection mutation" tags = [:part1] begin
+@testitem "GraphNode break connection mutation" begin
     using SymbolicRegression
     using SymbolicRegression.MutationFunctionsModule: break_random_connection!
     using Random: MersenneTwister
@@ -90,7 +90,7 @@ end
     # Either it breaks the connection or not
 end
 
-@testitem "GraphNode form connection mutation" tags = [:part1] begin
+@testitem "GraphNode form connection mutation" begin
     using SymbolicRegression
     using SymbolicRegression.MutationFunctionsModule: form_random_connection!
     using Random: MersenneTwister

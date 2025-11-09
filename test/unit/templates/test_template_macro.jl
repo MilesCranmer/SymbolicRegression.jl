@@ -1,4 +1,4 @@
-@testitem "Basic @template_spec macro functionality" tags = [:part1, :template_macro] begin
+@testitem "Basic @template_spec macro functionality" begin
     using SymbolicRegression
     using DynamicExpressions: OperatorEnum, Node
 
@@ -36,7 +36,7 @@
     @test result isa Vector{Float64}
 end
 
-@testitem "Template macro error handling" tags = [:part1, :template_macro] begin
+@testitem "Template macro error handling" begin
     using SymbolicRegression
     using SymbolicRegression.TemplateExpressionMacroModule: template_spec
 
@@ -87,7 +87,7 @@ end
     )
 end
 
-@testitem "Template macro with complex structure" tags = [:part3, :template_macro] begin
+@testitem "Template macro with complex structure" begin
     using SymbolicRegression
     using DynamicExpressions: OperatorEnum, Node
     using Test
@@ -123,7 +123,7 @@ end
     @test result[1] ≈ 7.0
 end
 
-@testitem "Template macro without parameters" tags = [:part1, :template_macro] begin
+@testitem "Template macro without parameters" begin
     using SymbolicRegression
     using DynamicExpressions: OperatorEnum, Node
 
@@ -155,7 +155,7 @@ end
     @test result isa Vector{Float64}
 end
 
-@testitem "Template macro additional error handling" tags = [:part1, :template_macro] begin
+@testitem "Template macro additional error handling" begin
     using SymbolicRegression
     using SymbolicRegression.TemplateExpressionMacroModule: template_spec
 
@@ -189,7 +189,7 @@ end
     )
 end
 
-@testitem "Template macro with num_features parameter" tags = [:part1, :template_macro] begin
+@testitem "Template macro with num_features parameter" begin
     using SymbolicRegression
     using DynamicExpressions: OperatorEnum, Node
 

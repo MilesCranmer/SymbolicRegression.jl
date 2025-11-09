@@ -1,4 +1,4 @@
-@testitem "Dataset construction" tags = [:part3] begin
+@testitem "Dataset construction" begin
     using SymbolicRegression
 
     dataset = Dataset(randn(3, 32), randn(Float32, 32); weights=randn(Float32, 32))
@@ -7,7 +7,7 @@
     @test typeof(dataset.weights) == Vector{Float32}
 end
 
-@testitem "Dataset with deprecated kwarg" tags = [:part3] begin
+@testitem "Dataset with deprecated kwarg" begin
     using SymbolicRegression
     using DispatchDoctor: allow_unstable
     dataset = allow_unstable() do
@@ -16,7 +16,7 @@ end
     @test dataset isa Dataset{ComplexF32,Float64}
 end
 
-@testitem "Vector output dataset" tags = [:part3] begin
+@testitem "Vector output dataset" begin
     using SymbolicRegression
 
     X = randn(Float64, 3, 32)

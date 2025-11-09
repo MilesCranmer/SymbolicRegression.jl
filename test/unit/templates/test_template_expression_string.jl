@@ -1,4 +1,4 @@
-@testitem "template expression color function" tags = [:part1, :template_colors] begin
+@testitem "template expression color function" begin
     using SymbolicRegression.TemplateExpressionModule: _colors
 
     # Test empty case
@@ -20,7 +20,7 @@
     @test colors_8[7:8] == (:magenta, :green)  # Should cycle colors properly
 end
 
-@testitem "template expression string representation" tags = [:part1, :template_string] begin
+@testitem "template expression string representation" begin
     using SymbolicRegression
     using StyledStrings: @styled_str, annotatedstring, AnnotatedString
     using DynamicExpressions: string_tree

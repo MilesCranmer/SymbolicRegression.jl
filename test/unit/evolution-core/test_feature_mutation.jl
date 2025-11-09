@@ -1,4 +1,4 @@
-@testitem "Test feature mutation" tags = [:part1] begin
+@testitem "Test feature mutation" begin
     using SymbolicRegression
     using DynamicExpressions: Node
     using StableRNGs: StableRNG

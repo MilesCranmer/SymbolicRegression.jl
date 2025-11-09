@@ -1,4 +1,4 @@
-@testitem "pretty print member" tags = [:part3] begin
+@testitem "pretty print member" begin
     using SymbolicRegression
 
     options = Options(; binary_operators=[+, ^])
@@ -23,7 +23,7 @@
     @test s_member == "PopMember(tree = ((x ^ 2.0) + 1.5), loss = 16.25, cost = 1.0)"
 end
 
-@testitem "pretty print hall of fame" tags = [:part1] begin
+@testitem "pretty print hall of fame" begin
     using SymbolicRegression
     using SymbolicRegression: embed_metadata
     using SymbolicRegression.CoreModule: safe_pow
@@ -68,7 +68,7 @@ end
     @test s_hof == true_s
 end
 
-@testitem "pretty print expression" tags = [:part2] begin
+@testitem "pretty print expression" begin
     using SymbolicRegression
     using Suppressor: @capture_out
 
@@ -106,7 +106,7 @@ end
     @test strip(s) == "sin(x) / (y - y)"
 end
 
-@testitem "printing utilities" tags = [:part2] begin
+@testitem "printing utilities" begin
     using SymbolicRegression.UtilsModule: split_string
     using SymbolicRegression.HallOfFameModule: wrap_equation_string
 
@@ -139,7 +139,7 @@ F_d = (-...
 """
 end
 
-@testitem "pretty print vs serialization for comparison operators" tags = [:part1] begin
+@testitem "pretty print vs serialization for comparison operators" begin
     using SymbolicRegression
     using SymbolicRegression: greater, greater_equal, string_tree
 

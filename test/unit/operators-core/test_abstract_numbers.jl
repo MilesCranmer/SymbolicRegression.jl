@@ -1,4 +1,4 @@
-@testitem "Abstract numbers" tags = [:part1] begin
+@testitem "Abstract numbers" begin
     using SymbolicRegression
     using Random
     include(joinpath(@__DIR__, "..", "..", "test_params.jl"))
@@ -38,7 +38,7 @@
     end
 end
 
-@testitem "Testing error handling in InterfaceDataTypesModule" tags = [:part1] begin
+@testitem "Testing error handling in InterfaceDataTypesModule" begin
     using SymbolicRegression: init_value, sample_value, mutate_value
     using Random
 

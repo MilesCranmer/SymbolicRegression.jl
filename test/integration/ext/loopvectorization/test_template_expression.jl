@@ -1,11 +1,11 @@
-@testitem "Test ParamVector setindex!" tags = [:part1] begin
+@testitem "Test ParamVector setindex!" begin
     using SymbolicRegression: ParamVector
 
     pv = ParamVector([1.0, 2.0])
     @test_throws "ParamVector should be treated as read-only" pv[1] = 3.0
 end
 
-@testitem "Test deprecated num_features warning" tags = [:part1] begin
+@testitem "Test deprecated num_features warning" begin
     using SymbolicRegression
     using Test: @test_warn
 
@@ -16,7 +16,7 @@ end
     @test structure.num_features == (; f=1)
 end
 
-@testitem "Test invalid combiner functions" tags = [:part1] begin
+@testitem "Test invalid combiner functions" begin
     using SymbolicRegression
 
     # Test error for invalid combiner function (no params)
@@ -35,7 +35,7 @@ end
     )
 end
 
-@testitem "Test get_variable_names" tags = [:part1] begin
+@testitem "Test get_variable_names" begin
     using SymbolicRegression
     using SymbolicRegression: Node
     using DynamicExpressions: OperatorEnum, get_variable_names
@@ -50,7 +50,7 @@ end
     @test get_variable_names(expr, ["z1", "z2"]) == ["z1", "z2"]
 end
 
-@testitem "Test parameter handling in scalar constants" tags = [:part2] begin
+@testitem "Test parameter handling in scalar constants" begin
     using SymbolicRegression
     using SymbolicRegression: Node
     using DynamicExpressions: get_metadata, get_scalar_constants, set_scalar_constants!
@@ -74,7 +74,7 @@ end
     @test get_metadata(expr_with_params).parameters.p._data == [3.0, 4.0]
 end
 
-@testitem "Test get_tree with parameters error" tags = [:part2] begin
+@testitem "Test get_tree with parameters error" begin
     using SymbolicRegression
     using SymbolicRegression: Node
     using DynamicExpressions: get_tree
@@ -96,7 +96,7 @@ end
     )
 end
 
-@testitem "Test interface for TemplateExpression" tags = [:part2] begin
+@testitem "Test interface for TemplateExpression" begin
     using SymbolicRegression
     using SymbolicRegression: TemplateExpression
     using DynamicExpressions.InterfacesModule: Interfaces, ExpressionInterface
@@ -120,7 +120,7 @@ end
     @test Interfaces.test(ExpressionInterface, TemplateExpression, [expr])
 end
 
-@testitem "Printing and evaluation of TemplateExpression" tags = [:part2] begin
+@testitem "Printing and evaluation of TemplateExpression" begin
     using SymbolicRegression
 
     structure = TemplateStructure{(:f, :g)}(
@@ -162,7 +162,7 @@ end
     @test g(x3_val) ≈ x3_val
 end
 
-@testitem "Test nothing return and type inference for TemplateExpression" tags = [:part2] begin
+@testitem "Test nothing return and type inference for TemplateExpression" begin
     using SymbolicRegression
     using Test: @inferred
 
@@ -192,7 +192,7 @@ end
     @test @inferred(x1(x1_val, x2_val_false)).valid == false
 end
 
-@testitem "Test compatibility with power laws" tags = [:part3] begin
+@testitem "Test compatibility with power laws" begin
     using SymbolicRegression
     using DynamicExpressions: OperatorEnum
 
@@ -211,7 +211,7 @@ end
     @test expr(X) === nothing
 end
 
-@testitem "Test constraints checking in TemplateExpression" tags = [:part2] begin
+@testitem "Test constraints checking in TemplateExpression" begin
     using SymbolicRegression
     using SymbolicRegression: CheckConstraintsModule as CC
 
@@ -236,7 +236,7 @@ end
     @test !CC.check_constraints(invalid_expr, options, 20)
 end
 
-@testitem "Test feature constraints in TemplateExpression" tags = [:part1] begin
+@testitem "Test feature constraints in TemplateExpression" begin
     using SymbolicRegression
     using DynamicExpressions: Node
 
@@ -274,7 +274,7 @@ end
     @test invalid_template2([1.0 2.0 3.0]') === nothing
 end
 
-@testitem "Test invalid structure" tags = [:part3] begin
+@testitem "Test invalid structure" begin
     using SymbolicRegression
 
     operators = Options(; binary_operators=(+, -, *, /)).operators
@@ -299,7 +299,7 @@ end
     )
 end
 
-@testitem "Test argument-less template structure" tags = [:part2] begin
+@testitem "Test argument-less template structure" begin
     using SymbolicRegression
     using DynamicExpressions: OperatorEnum
 
@@ -323,7 +323,7 @@ end
     @test expr(X) ≈ [6.0]  # 3 + (1 + 2)
 end
 
-@testitem "Test TemplateExpression with differential operator" tags = [:part3] begin
+@testitem "Test TemplateExpression with differential operator" begin
     using SymbolicRegression
     using SymbolicRegression: D
     using DynamicExpressions: OperatorEnum
@@ -345,7 +345,7 @@ end
     @test expr(X) ≈ [1.0, 2.0] .- sin.([3.0, 4.0] .- [5.0, 6.0]) .+ 2.5
 end
 
-@testitem "Test literal_pow with ValidVector" tags = [:part2] begin
+@testitem "Test literal_pow with ValidVector" begin
     using SymbolicRegression: ValidVector
 
     # Test with valid data
@@ -365,7 +365,7 @@ end
     @test Base.literal_pow(^, invalid_x, Val(2)).valid == false
 end
 
-@testitem "Test nan behavior with argument-less expressions" tags = [:part2] begin
+@testitem "Test nan behavior with argument-less expressions" begin
     using SymbolicRegression
     using DynamicExpressions: OperatorEnum, Node
 
@@ -384,7 +384,7 @@ end
     @test typeof(c2()) === Int
 end
 
-@testitem "Test higher-order derivatives of safe_log with DynamicDiff" tags = [:part3] begin
+@testitem "Test higher-order derivatives of safe_log with DynamicDiff" begin
     using SymbolicRegression
     using SymbolicRegression: D, safe_log, ValidVector
     using DynamicExpressions: OperatorEnum
@@ -422,7 +422,7 @@ end
     @test_throws DimensionMismatch expr(X_complex)
 end
 
-@testitem "Test eval_options with turbo mode" tags = [:part3] begin
+@testitem "Test eval_options with turbo mode" begin
     using SymbolicRegression
     using DynamicExpressions: OperatorEnum, EvalOptions
     using LoopVectorization: LoopVectorization
@@ -448,7 +448,7 @@ end
     # this is basically just a smoke test
 end
 
-@testitem "loss_function_expression with expressions and templates" tags = [:part3] begin
+@testitem "loss_function_expression with expressions and templates" begin
     using SymbolicRegression
     using SymbolicRegression: AbstractOptions
     using SymbolicRegression.LossFunctionsModule: eval_loss
@@ -564,7 +564,7 @@ end
     @test loss_batch ≈ expected_batch_loss
 end
 
-@testitem "New batching syntax" tags = [:part3] begin
+@testitem "New batching syntax" begin
     using SymbolicRegression
     using SymbolicRegression: Dataset, batch
     using SymbolicRegression: SubDataset, eval_loss
@@ -612,7 +612,7 @@ end
     @test loss_batch ≈ expected_batch_loss
 end
 
-@testitem "warning for loss_function with TemplateExpression" tags = [:part2] begin
+@testitem "warning for loss_function with TemplateExpression" begin
     using SymbolicRegression
 
     @test_warn(
@@ -625,7 +625,7 @@ end
     )
 end
 
-@testitem "TemplateExpression guess validation" tags = [:part1] begin
+@testitem "TemplateExpression guess validation" begin
     using SymbolicRegression
     using SymbolicRegression: parse_guesses, Dataset, PopMember
 
@@ -658,7 +658,7 @@ end
     )
 end
 
-@testitem "Template expression return validation" tags = [:part2] begin
+@testitem "Template expression return validation" begin
     using SymbolicRegression:
         TemplateReturnError,
         ValidVector,
@@ -693,7 +693,7 @@ end
     @test contains(msg, "ValidVector(my_data, computation_is_valid)")
 end
 
-@testitem "Test Float32/Float64 type conversion in TemplateExpression" tags = [:part2] begin
+@testitem "Test Float32/Float64 type conversion in TemplateExpression" begin
     using SymbolicRegression
     using SymbolicRegression: eval_loss
     using SymbolicRegression.TemplateExpressionModule: _match_input_eltype

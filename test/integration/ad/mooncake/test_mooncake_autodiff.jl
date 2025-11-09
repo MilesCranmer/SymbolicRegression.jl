@@ -1,4 +1,4 @@
-@testitem "Expression constant optimization with Mooncake" tags = [:mooncake, :part1] begin
+@testitem "Expression constant optimization with Mooncake" begin
     using SymbolicRegression
     using SymbolicRegression.ConstantOptimizationModule: optimize_constants
     using DynamicExpressions: get_scalar_constants

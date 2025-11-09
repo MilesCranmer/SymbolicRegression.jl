@@ -1,4 +1,4 @@
-@testitem "Generic interface tests" tags = [:part3] begin
+@testitem "Generic interface tests" begin
     using SymbolicRegression
     using SymbolicRegression: SRTestRegressor, MultitargetSRTestRegressor
     using MLJTestInterface: MLJTestInterface as MTI

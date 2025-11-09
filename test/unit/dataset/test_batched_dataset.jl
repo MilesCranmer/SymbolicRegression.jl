@@ -1,4 +1,4 @@
-@testitem "SubDataset properties" tags = [:part3] begin
+@testitem "SubDataset properties" begin
     using SymbolicRegression
     using SymbolicRegression: batch, SubDataset
     using Random
@@ -50,7 +50,7 @@
     @test batched6.y === nothing
 end
 
-@testitem "ParametricExpression evaluation with batched datasets" tags = [:part3] begin
+@testitem "ParametricExpression evaluation with batched datasets" begin
     using SymbolicRegression
     using SymbolicRegression: batch
     using SymbolicRegression.LossFunctionsModule: eval_loss
@@ -87,7 +87,7 @@ end
     @test loss2 < 1e-10
 end
 
-@testitem "eval_loss correctness with batched datasets" tags = [:part3] begin
+@testitem "eval_loss correctness with batched datasets" begin
     using SymbolicRegression
     using SymbolicRegression: batch
     using SymbolicRegression.LossFunctionsModule: eval_loss

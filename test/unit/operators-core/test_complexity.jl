@@ -1,4 +1,4 @@
-@testitem "Test complexity evaluation" tags = [:part3] begin
+@testitem "Test complexity evaluation" begin
     using SymbolicRegression
 
     x1, x2, x3 = Node("x1"), Node("x2"), Node("x3")
@@ -24,7 +24,7 @@
     @test compute_complexity(tree, options) == round(Int, 12 + (3.2 - 1))
 end
 
-@testitem "Test other things about complexity" tags = [:part3] begin
+@testitem "Test other things about complexity" begin
     using SymbolicRegression
 
     x1, x2, x3 = Node("x1"), Node("x2"), Node("x3")
@@ -66,7 +66,7 @@ end
     @test compute_complexity(tree, options) == 2 + 5 + 2 + 2 + 2
 end
 
-@testitem "Custom complexity mapping" tags = [:part3] begin
+@testitem "Custom complexity mapping" begin
     using SymbolicRegression
 
     function custom_complexity(tree)
