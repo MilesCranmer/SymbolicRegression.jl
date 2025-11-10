@@ -10,8 +10,8 @@
     end
 
     array_options = [
-        (n=n, seed=seed, T=T) for
-        n in (1, 5, 20, 50, 100, 1000), seed in 1:10, T in (Float32, Float64, Int)
+        (n=n, seed=seed, T=T) for n in (1, 5, 20, 50, 100, 1000), seed in 1:10,
+        T in (Float32, Float64, Int)
     ]
 
     @testset "argmin_fast" begin

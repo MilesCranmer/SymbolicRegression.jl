@@ -7,10 +7,10 @@
 
     seed!(0)
 
-    X = randn(5, 100);
-    y = X[2, :] .* 3.2 .+ X[3, :] .+ 2.0;
+    X = randn(5, 100)
+    y = X[2, :] .* 3.2 .+ X[3, :] .+ 2.0
 
-    options = Options();
+    options = Options()
     population1 = Population(
         X, y; population_size=100, options=options, nfeatures=5, nlength=10
     )
