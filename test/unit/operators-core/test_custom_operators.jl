@@ -20,7 +20,7 @@
     tree = op1(op2(x1, x2), op3(x1))
     @test repr(tree) == "op1(op2(x1, x2), op3(x1))"
     # Test evaluation:
-    X = randn(MersenneTwister(0), Float32, 2, 10);
+    X = randn(MersenneTwister(0), Float32, 2, 10)
     @test tree(X, options) ≈ ((x1, x2) -> op1(op2(x1, x2), op3(x1))).(X[1, :], X[2, :])
 
     # Now, test that we can work with operators defined in modules
