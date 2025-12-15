@@ -74,7 +74,7 @@ jobs:
           safe_group="${group//\//-}"
           echo "group=$safe_group" >> "$GITHUB_OUTPUT"
       - name: "Upload coverage artifacts"
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-unit-${{ steps.sanitize_unit_group.outputs.group }}-${{ matrix.julia-version }}-${{ matrix.os }}
           path: lcov.info
@@ -133,7 +133,7 @@ jobs:
           julia --color=yes coverage.jl
         shell: bash
       - name: "Upload coverage artifacts"
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-integration-${{ steps.sanitize_integration_group.outputs.group }}-${{ matrix.julia-version }}
           path: lcov.info
