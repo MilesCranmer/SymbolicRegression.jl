@@ -237,6 +237,10 @@ function generate_favicons()
 
     @info "Generating favicon files from logo.png..."
 
+    # VitePress only copies files from `src/public/` into the built site root.
+    # We reference `/logo.png` in the VitePress home frontmatter, so ensure it exists there.
+    cp(logo_path, joinpath(public_dir, "logo.png"); force=true)
+
     # Generate different sizes
     favicon_configs = [
         ("favicon.ico", "32x32"),
