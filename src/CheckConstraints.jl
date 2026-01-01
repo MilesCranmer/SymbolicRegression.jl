@@ -91,8 +91,8 @@ function check_constraints(
     return true
 end
 
-check_constraints(ex::Union{AbstractExpression,AbstractExpressionNode}, options::AbstractOptions)::Bool = check_constraints(
-    ex, options, options.maxsize
-)
+check_constraints(
+    ex::Union{AbstractExpression,AbstractExpressionNode}, options::AbstractOptions
+)::Bool = check_constraints(ex, options, options.maxsize)
 
 end
