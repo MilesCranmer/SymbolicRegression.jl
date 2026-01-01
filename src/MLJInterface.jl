@@ -595,9 +595,9 @@ end
 function get_equation_strings_for(
     ::AbstractSingletargetSRRegressor, trees, options, variable_names
 )
-    return (t -> string_tree(t, options; variable_names=variable_names, pretty=false)).(
-        trees
-    )
+    return (
+        t -> string_tree(t, options; variable_names=variable_names, pretty=false)
+    ).(trees)
 end
 function get_equation_strings_for(
     ::AbstractMultitargetSRRegressor, trees, options, variable_names
