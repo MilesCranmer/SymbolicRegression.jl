@@ -1,7 +1,7 @@
 name = "SymbolicRegression"
 uuid = "8254be44-1295-4e6a-a16d-46603ac705cb"
-authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
 version = "2.0.0-alpha.8"
+authors = ["MilesCranmer <miles.cranmer@gmail.com>"]
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -61,7 +61,7 @@ Logging = "1"
 LossFunctions = "0.10, 0.11, 1"
 MLJModelInterface = "1.5 - 1.12"
 MacroTools = "0.4, 0.5"
-Mooncake = "0.4.137"
+Mooncake = "0.4.137, 0.5"
 Optim = "1.8 - 1.13"
 Pkg = "<0.0.1, 1"
 PrecompileTools = "1"
