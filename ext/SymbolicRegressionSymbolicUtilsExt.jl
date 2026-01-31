@@ -1,7 +1,6 @@
 module SymbolicRegressionSymbolicUtilsExt
 
 using SymbolicUtils
-# SymbolicUtils v4 uses `BasicSymbolic` as the core expression type.
 const SymbolicType = SymbolicUtils.BasicSymbolic
 using SymbolicRegression: AbstractExpressionNode, AbstractExpression, Node, Options
 using SymbolicRegression.MLJInterfaceModule: AbstractSymbolicRegressor, get_options
