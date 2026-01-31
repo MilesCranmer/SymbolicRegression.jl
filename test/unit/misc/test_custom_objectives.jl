@@ -1,7 +1,12 @@
 @testitem "Test whether custom objectives work." begin
     using SymbolicRegression
     using SymbolicRegression: OperatorEnum, string_tree
+    using Random
     include(joinpath(@__DIR__, "..", "..", "test_params.jl"))
+
+    # Make this test deterministic and robust against tiny shifts in the
+    # ternary decision boundary discovered by the search.
+    Random.seed!(0)
 
     def = quote
         _ifelse_ternary(a, b, c) = a > 0 ? b : c
@@ -40,6 +45,7 @@
     @test options.should_simplify == false
 
     X = rand(3, 100) .* 10 .- 5
+    X[1, 1:10] .= range(-0.2, 0.2; length=10)
     y = _ifelse_ternary.(X[1, :], X[2, :], X[3, :])  # y = x1 > 0 ? x2 : x3
 
     # The best tree should be 2.0 * _ifelse_ternary(x1, x2, x3), since the custom loss function
@@ -51,6 +57,7 @@
     dominating = calculate_pareto_frontier(hall_of_fame)
 
     testX = rand(3, 100) .* 10 .- 5  # Range from -5 to 5
+    testX[1, 1:10] .= range(-0.2, 0.2; length=10)
     expected_y = 2.0 .* _ifelse_ternary.(testX[1, :], testX[2, :], testX[3, :])
     @test eval_tree_array(dominating[end].tree, testX, options)[1] ≈ expected_y atol = 1e-5
 
