@@ -7,7 +7,6 @@ using ..CoreModule:
     AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, relu, create_expression, init_value
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: AbstractPopMember, PopMember
-import ..PopMemberModule: popmember_type
 using ..InterfaceDynamicExpressionsModule: format_dimensions, WILDCARD_UNIT_STRING
 using Printf: @sprintf
 
@@ -298,8 +297,5 @@ function format_hall_of_fame(hof::AbstractVector{<:HallOfFame}, options)
     )
 end
 # TODO: Re-use this in `string_dominating_pareto_curve`
-
-# Type accessor for HallOfFame
-popmember_type(::Type{<:HallOfFame{T,L,N,PM}}) where {T,L,N,PM} = PM
 
 end
