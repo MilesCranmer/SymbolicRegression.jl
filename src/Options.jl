@@ -225,6 +225,8 @@ recommend_loss_function_expression(expression_type) = false
 create_mutation_weights(w::AbstractMutationWeights) = w
 create_mutation_weights(w::NamedTuple) = MutationWeights(; w...)
 
+function default_popmember_type end
+
 @unstable function with_max_degree_from_context(
     node_type, user_provided_operators, operators
 )
@@ -652,6 +654,7 @@ $(OPTION_DESCRIPTIONS)
     terminal_width::Union{Nothing,Integer}=nothing,
     use_recorder::Bool=false,
     recorder_file::AbstractString="pysr_recorder.json",
+    popmember_type::Type=default_popmember_type(),
     ### Not search options; just construction options:
     define_helper_functions::Bool=true,
     #########################################
@@ -1031,6 +1034,7 @@ $(OPTION_DESCRIPTIONS)
         expression_type,
         typeof(expression_options),
         typeof(set_mutation_weights),
+        popmember_type,
         turbo,
         bumper,
         deprecated_return_state::Union{Bool,Nothing},
@@ -1104,6 +1108,7 @@ $(OPTION_DESCRIPTIONS)
         deterministic,
         define_helper_functions,
         use_recorder,
+        popmember_type,
     )
 
     return options
