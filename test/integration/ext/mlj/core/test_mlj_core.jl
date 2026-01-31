@@ -31,7 +31,7 @@
     # Smoke test SymbolicUtils
     eqn = node_to_symbolic(rep.equations[rep.best_idx], model)
     n = symbolic_to_node(eqn, model)
-    eqn2 = convert(SymbolicUtils.Symbolic, n, model)
+    eqn2 = convert(SymbolicUtils.BasicSymbolic, n, model)
     n2 = convert(Node, eqn2, model)
 end
 

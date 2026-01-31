@@ -1,12 +1,8 @@
 module SymbolicRegressionSymbolicUtilsExt
 
 using SymbolicUtils
-# SymbolicUtils v4 renamed Symbolic to BasicSymbolic
-const SymbolicType = if isdefined(SymbolicUtils, :Symbolic)
-    SymbolicUtils.Symbolic
-else
-    SymbolicUtils.BasicSymbolic
-end
+# SymbolicUtils v4 uses `BasicSymbolic` as the core expression type.
+const SymbolicType = SymbolicUtils.BasicSymbolic
 using SymbolicRegression: AbstractExpressionNode, AbstractExpression, Node, Options
 using SymbolicRegression.MLJInterfaceModule: AbstractSymbolicRegressor, get_options
 using DynamicExpressions: get_tree, get_operators

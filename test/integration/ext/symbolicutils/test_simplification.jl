@@ -1,7 +1,7 @@
 @testitem "Test simplification" begin
     include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
     using SymbolicRegression, Test
-    using SymbolicUtils: simplify, Symbolic
+    using SymbolicUtils: simplify, BasicSymbolic
     using DynamicExpressions.OperatorEnumConstructionModule: empty_all_globals!
     #! format: off
     using Base: ≈; using Random: MersenneTwister
@@ -26,7 +26,7 @@
     tree = Node("x1") + Node("x1")
 
     # Should simplify to 2*x1:
-    eqn = convert(Symbolic, tree, options)
+    eqn = convert(BasicSymbolic, tree, options)
     eqn2 = simplify(eqn)
     # Should correctly simplify to 2 x1:
     # (although it might use 2(x1^1))
@@ -43,7 +43,7 @@
     # Finally, let's try converting a product, and ensure
     # that SymbolicUtils does not convert it to a power:
     tree = Node("x1") * Node("x1")
-    eqn = convert(Symbolic, tree, options)
+    eqn = convert(BasicSymbolic, tree, options)
     @test repr(eqn) ≈ "x1*x1"
     # Test converting back:
     tree_copy = convert(Node, eqn, options)
@@ -71,7 +71,7 @@
         )
     )
     # We use `index_functions` to avoid converting the custom operators into the primitives.
-    eqn = convert(Symbolic, tree, options; index_functions=true)
+    eqn = convert(BasicSymbolic, tree, options; index_functions=true)
 
     tree_copy = convert(Node, eqn, options)
     tree_copy2 = convert(Node, simplify(eqn), options)
