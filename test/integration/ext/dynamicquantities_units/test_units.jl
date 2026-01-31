@@ -196,7 +196,7 @@ end
     using DynamicQuantities
     using Random: MersenneTwister
 
-    include("utils.jl")
+    include(joinpath(@__DIR__, "..", "..", "..", "utils.jl"))
 
     custom_op(x, y) = x + y
     options = Options(;
@@ -392,7 +392,7 @@ end
     using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
     using DynamicQuantities
 
-    include("utils.jl")
+    include(joinpath(@__DIR__, "..", "..", "..", "utils.jl"))
 
     options = Options(;
         binary_operators=[+, -, *, /, square, cube],
