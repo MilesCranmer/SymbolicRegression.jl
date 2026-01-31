@@ -1,4 +1,4 @@
-@testitem "Dimensional analysis" tags = [:part3] begin
+@testitem "Dimensional analysis" begin
     using SymbolicRegression
     using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units
     using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
@@ -100,7 +100,7 @@
     end
 end
 
-@testitem "Search with dimensional constraints" tags = [:part3] begin
+@testitem "Search with dimensional constraints" begin
     using SymbolicRegression
     using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
     using Random: MersenneTwister
@@ -147,7 +147,7 @@ end
     @test length(valid_trees) > 0
 end
 
-@testitem "Operator compatibility" tags = [:part3] begin
+@testitem "Operator compatibility" begin
     using SymbolicRegression
     using DynamicQuantities
 
@@ -190,7 +190,7 @@ end
     @test_throws DimensionError atanh_clip(1.0u"m")
 end
 
-@testitem "Search with dimensional constraints on output" tags = [:part3] begin
+@testitem "Search with dimensional constraints on output" begin
     using SymbolicRegression
     using MLJBase: MLJBase as MLJ
     using DynamicQuantities
@@ -314,7 +314,7 @@ end
     end
 end
 
-@testitem "Should error on mismatched units" tags = [:part3] begin
+@testitem "Should error on mismatched units" begin
     using SymbolicRegression
     using DynamicQuantities
 
@@ -323,7 +323,7 @@ end
     @test_throws("Number of features", Dataset(X, y; X_units=["m", "1"], y_units="kg"))
 end
 
-@testitem "Should print units" tags = [:part3] begin
+@testitem "Should print units" begin
     using SymbolicRegression
     using DynamicQuantities
 
@@ -387,7 +387,7 @@ end
     ) == "x₅[5.0 m] * 3.2"
 end
 
-@testitem "Dimensionless constants" tags = [:part3] begin
+@testitem "Dimensionless constants" begin
     using SymbolicRegression
     using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
     using DynamicQuantities
@@ -429,7 +429,7 @@ end
     end
 end
 
-@testitem "Miscellaneous tests of unit interface" tags = [:part3] begin
+@testitem "Miscellaneous tests of unit interface" begin
     using MLJBase
     using SymbolicRegression
     using DynamicQuantities

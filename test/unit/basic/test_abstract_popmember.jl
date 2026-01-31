@@ -1,4 +1,4 @@
-@testitem "Custom AbstractPopMember implementation" tags = [:part1] begin
+@testitem "Custom AbstractPopMember implementation" begin
     using SymbolicRegression
     using DynamicExpressions
     using Test
