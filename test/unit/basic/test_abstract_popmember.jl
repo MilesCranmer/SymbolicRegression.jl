@@ -3,6 +3,13 @@
     using DynamicExpressions
     using Test
 
+    # Julia < 1.11 does not define Base.@unstable. Use a no-op fallback.
+    if !isdefined(Base, Symbol("@unstable"))
+        macro unstable(ex)
+            esc(ex)
+        end
+    end
+
     import SymbolicRegression.PopMemberModule: create_child
     import SymbolicRegression: strip_metadata
 
