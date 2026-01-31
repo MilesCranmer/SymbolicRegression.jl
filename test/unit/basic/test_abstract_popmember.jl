@@ -2,7 +2,6 @@
     using SymbolicRegression
     using DynamicExpressions
     using Test
-    using DispatchDoctor: @unstable
 
     import SymbolicRegression.PopMemberModule: create_child
     import SymbolicRegression: strip_metadata
