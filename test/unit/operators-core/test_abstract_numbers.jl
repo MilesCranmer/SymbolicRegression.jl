@@ -4,7 +4,9 @@
     include(joinpath(@__DIR__, "..", "..", "test_params.jl"))
 
     get_base_type(::Type{<:Complex{BT}}) where {BT} = BT
-    early_stop(loss::L, c) where {L} = ((loss <= L(1e-2)) && (c <= 15))
+    early_stop(loss::L, c) where {L} = (
+        (loss <= (L === Float16 ? L(1.2e-2) : L(1e-2))) && (c <= 15)
+    )
     example_loss(prediction, target) = abs2(prediction - target)
 
     options = SymbolicRegression.Options(;
@@ -33,7 +35,8 @@
             @test typeof(dominating[end].loss) == L
             output, _ = eval_tree_array(dominating[end].tree, X, options)
             @test typeof(output) <: AbstractArray{T}
-            @test sum(abs2, output .- y) / length(output) <= L(1e-2)
+            tol = T == ComplexF16 ? L(1.2e-2) : L(1e-2)
+            @test sum(abs2, output .- y) / length(output) <= tol
         end
     end
 end

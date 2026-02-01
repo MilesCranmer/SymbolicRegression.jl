@@ -196,9 +196,7 @@ end
     using DynamicQuantities
     using Random: MersenneTwister
 
-    # Type aliases for compatibility
-    const RealQuantity = DynamicQuantities.RealQuantity
-    const QuantityArray = DynamicQuantities.QuantityArray
+    include(joinpath(@__DIR__, "..", "..", "..", "utils.jl"))
 
     custom_op(x, y) = x + y
     options = Options(;
@@ -393,10 +391,8 @@ end
     using SymbolicRegression
     using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
     using DynamicQuantities
-    using Test
 
-    onfail(f, ::Test.Fail) = f()
-    onfail(_, ::Test.Pass) = nothing
+    include(joinpath(@__DIR__, "..", "..", "..", "utils.jl"))
 
     options = Options(;
         binary_operators=[+, -, *, /, square, cube],
@@ -434,6 +430,7 @@ end
 end
 
 @testitem "Miscellaneous tests of unit interface" begin
+    using MLJBase
     using SymbolicRegression
     using DynamicQuantities
     using SymbolicRegression.DimensionalAnalysisModule: @maybe_return_call, WildcardQuantity
