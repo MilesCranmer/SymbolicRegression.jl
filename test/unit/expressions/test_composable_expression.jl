@@ -1,6 +1,5 @@
-@testitem "Integration Test with fit! and Performance Check" begin
-    include("../examples/template_expression.jl")
-end
+# NOTE: MLJBase-dependent template-expression example is covered by integration/ext/mlj/* tests.
+# Keep unit/expressions free of MLJBase dependency.
 @testitem "Test ComposableExpression" begin
     using SymbolicRegression: ComposableExpression, Node
     using DynamicExpressions: OperatorEnum

@@ -225,6 +225,8 @@ recommend_loss_function_expression(expression_type) = false
 create_mutation_weights(w::AbstractMutationWeights) = w
 create_mutation_weights(w::NamedTuple) = MutationWeights(; w...)
 
+function default_popmember_type end
+
 @unstable function with_max_degree_from_context(
     node_type, user_provided_operators, operators
 )
@@ -436,9 +438,9 @@ const OPTION_DESCRIPTIONS = """- `defaults`: What set of defaults to use for `Op
     an instance of `AbstractADType` (see `ADTypes.jl`).
     Default is `nothing`, which means `Optim.jl` will estimate gradients (likely
     with finite differences). You can also pass a symbolic version of the backend
-    type, such as `:Zygote` for Zygote.jl or `:Mooncake` for Mooncake.jl. Most backends
-    will not work, and many will never work due to incompatibilities, though
-    support for some is gradually being added.
+    type, such as `:Enzyme` for Enzyme.jl,  `:Mooncake` for Mooncake.jl, or
+    `:Zygote` for Zygote.jl. Most backends will not work, and many will never work
+    due to incompatibilities, though support for some is gradually being added.
 - `perturbation_factor`: When mutating a constant, either
     multiply or divide by (1+perturbation_factor)^(rand()+1).
 - `probability_negate_constant`: Probability of negating a constant in the equation
@@ -652,6 +654,7 @@ $(OPTION_DESCRIPTIONS)
     terminal_width::Union{Nothing,Integer}=nothing,
     use_recorder::Bool=false,
     recorder_file::AbstractString="pysr_recorder.json",
+    popmember_type::Type=default_popmember_type(),
     ### Not search options; just construction options:
     define_helper_functions::Bool=true,
     #########################################
@@ -1031,6 +1034,7 @@ $(OPTION_DESCRIPTIONS)
         expression_type,
         typeof(expression_options),
         typeof(set_mutation_weights),
+        popmember_type,
         turbo,
         bumper,
         deprecated_return_state::Union{Bool,Nothing},
@@ -1104,6 +1108,7 @@ $(OPTION_DESCRIPTIONS)
         deterministic,
         define_helper_functions,
         use_recorder,
+        popmember_type,
     )
 
     return options
