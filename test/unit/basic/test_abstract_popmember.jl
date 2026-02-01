@@ -197,7 +197,12 @@
     @test options.popmember_type == CustomPopMember
 
     hall_of_fame = equation_search(
-        X, y; options=options, niterations=2, parallelism=:serial
+        X,
+        y;
+        options=options,
+        guesses=["x1 - x2"],
+        niterations=2,
+        parallelism=:serial,
     )
 
     # Verify that we got results
