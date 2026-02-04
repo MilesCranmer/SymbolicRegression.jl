@@ -6,10 +6,7 @@
     using Random: MersenneTwister
 
     options = Options(;
-        binary_operators=(+, -, *),
-        unary_operators=(),
-        parsimony=0.5,
-        should_simplify=true,
+        binary_operators=(+, -, *), unary_operators=(), parsimony=0.5, should_simplify=true
     )
     @extend_operators options
 
