@@ -86,7 +86,15 @@ jobs:
           SYMBOLIC_REGRESSION_TEST_SUITE: ${{ matrix.test }}
         run: |
           julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
-          julia --color=yes --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
+          # Enzyme precompilation can exceed the memory limits on GitHub runners
+          # when using multiple threads on newer Julia versions. Run it single-threaded.
+          if [[ "${{ matrix.test }}" == "enzyme" ]]; then
+            THREADS=1
+          else
+            THREADS=auto
+          fi
+
+          julia --color=yes --threads=$THREADS --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
           julia --color=yes coverage.jl
         shell: bash
       - uses: codecov/codecov-action@v5
