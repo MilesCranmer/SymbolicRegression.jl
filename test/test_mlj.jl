@@ -28,6 +28,7 @@ end
     using SymbolicRegression: Node
     using MLJBase
     using SymbolicUtils
+    const SymbolicType = isdefined(SymbolicUtils, :BasicSymbolic) ? SymbolicUtils.BasicSymbolic : SymbolicUtils.Symbolic
     using Random: MersenneTwister
 
     include("test_params.jl")
@@ -56,7 +57,7 @@ end
     # Smoke test SymbolicUtils
     eqn = node_to_symbolic(rep.equations[rep.best_idx], model)
     n = symbolic_to_node(eqn, model)
-    eqn2 = convert(SymbolicUtils.Symbolic, n, model)
+    eqn2 = convert(SymbolicType, n, model)
     n2 = convert(Node, eqn2, model)
 end
 
