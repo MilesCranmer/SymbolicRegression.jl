@@ -28,7 +28,7 @@ end
     using SymbolicRegression: Node
     using MLJBase
     using SymbolicUtils
-    const SymbolicType = isdefined(SymbolicUtils, :BasicSymbolic) ? SymbolicUtils.BasicSymbolic : SymbolicUtils.Symbolic
+    const SymbolicType = isdefined(SymbolicUtils, :Symbolic) ? SymbolicUtils.Symbolic : SymbolicUtils.BasicSymbolic
     using Random: MersenneTwister
 
     include("test_params.jl")

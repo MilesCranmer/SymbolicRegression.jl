@@ -1,7 +1,7 @@
 include("test_params.jl")
 using SymbolicRegression, Test
 using SymbolicUtils: simplify
-const SymbolicType = isdefined(SymbolicUtils, :BasicSymbolic) ? SymbolicUtils.BasicSymbolic : SymbolicUtils.Symbolic
+const SymbolicType = isdefined(SymbolicUtils, :Symbolic) ? SymbolicUtils.Symbolic : SymbolicUtils.BasicSymbolic
 using DynamicExpressions.OperatorEnumConstructionModule: empty_all_globals!
 #! format: off
 using Base: ≈; using Random: MersenneTwister
