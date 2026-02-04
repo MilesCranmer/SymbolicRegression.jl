@@ -19,7 +19,7 @@ using ..CoreModule:
     max_features,
     dataset_fraction
 using ..ComplexityModule: compute_complexity
-using ..LossFunctionsModule: eval_cost
+using ..LossFunctionsModule: eval_cost, loss_to_cost
 using ..CheckConstraintsModule: check_constraints
 using ..AdaptiveParsimonyModule: RunningSearchStatistics
 using ..PopMemberModule: AbstractPopMember, PopMember, create_child
@@ -572,15 +572,31 @@ function mutate!(
     ::AbstractMutationWeights,
     options::AbstractOptions;
     recorder::RecordType,
+    dataset::Dataset,
     parent_ref,
     kws...,
 ) where {N<:AbstractExpression,P<:AbstractPopMember}
     @assert options.should_simplify
     simplify_tree!(tree, options.operators)
     tree = combine_operators(tree, options.operators)
+    simplified_complexity = compute_complexity(tree, options)
+    simplified_cost = loss_to_cost(
+        member.loss,
+        dataset.use_baseline,
+        dataset.baseline_loss,
+        tree,
+        options,
+        simplified_complexity,
+    )
     @recorder recorder["type"] = "simplify"
     new_member = create_child(
-        member, tree, member.cost, member.loss, options; parent_ref=parent_ref
+        member,
+        tree,
+        simplified_cost,
+        member.loss,
+        options;
+        complexity=simplified_complexity,
+        parent_ref=parent_ref,
     )
     return MutationResult{N,P}(; member=new_member, return_immediately=true)
 end
