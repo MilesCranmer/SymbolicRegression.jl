@@ -130,16 +130,7 @@ jobs:
           TEST_GROUP: integration/${{ matrix.group }}
         run: |
           julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
-
-          # Enzyme precompilation can exceed the memory limits on GitHub runners
-          # when using multiple threads on newer Julia versions. Run it single-threaded.
-          if [[ "${{ matrix.group }}" == "ad/enzyme" ]]; then
-            THREADS=1
-          else
-            THREADS=auto
-          fi
-
-          julia --color=yes --project=. --threads=$THREADS --check-bounds=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
+          julia --color=yes --project=. --threads=auto --check-bounds=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
           julia --color=yes coverage.jl
         shell: bash
       - name: "Upload coverage artifacts"
