@@ -1,5 +1,6 @@
 include("test_params.jl")
 using SymbolicRegression, Test
+import SymbolicUtils
 using SymbolicUtils: simplify
 const SymbolicType = if isdefined(SymbolicUtils, :Symbolic)
     SymbolicUtils.Symbolic
