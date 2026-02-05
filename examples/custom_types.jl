@@ -231,6 +231,7 @@ test_kwargs = if get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false") == "true"  
         niterations=10,  #src
         populations=8,  #src
         population_size=15,  #src
+        tournament_selection_n=10,  #src
         ncycles_per_iteration=40,  #src
     )  #src
 else  #src
