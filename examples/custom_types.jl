@@ -229,11 +229,11 @@ unary_operators = (head, tail, reverse)
 test_kwargs = if get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false") == "true"  #src
     (;  #src
         seed=0,  #src
-        niterations=20,  #src
-        populations=8,  #src
-        population_size=20,  #src
+        niterations=30,  #src
+        populations=10,  #src
+        population_size=30,  #src
         tournament_selection_n=10,  #src
-        ncycles_per_iteration=60,  #src
+        ncycles_per_iteration=80,  #src
     )  #src
 else  #src
     NamedTuple()  #src
