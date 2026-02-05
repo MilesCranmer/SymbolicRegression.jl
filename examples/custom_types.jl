@@ -229,7 +229,6 @@ unary_operators = (head, tail, reverse)
 test_kwargs = if get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false") == "true"  #src
     (;  #src
         seed=0,  #src
-        deterministic=true,  #src
         niterations=20,  #src
         populations=8,  #src
         population_size=20,  #src
