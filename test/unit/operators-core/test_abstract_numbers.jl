@@ -4,9 +4,8 @@
     include(joinpath(@__DIR__, "..", "..", "test_params.jl"))
 
     get_base_type(::Type{<:Complex{BT}}) where {BT} = BT
-    early_stop(loss::L, c) where {L} = (
-        (loss <= (L === Float16 ? L(1.2e-2) : L(1e-2))) && (c <= 15)
-    )
+    early_stop(loss::L, c) where {L} =
+        ((loss <= (L === Float16 ? L(1.2e-2) : L(1e-2))) && (c <= 15))
     example_loss(prediction, target) = abs2(prediction - target)
 
     options = SymbolicRegression.Options(;
