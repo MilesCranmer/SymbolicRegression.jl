@@ -224,6 +224,19 @@ We also need to manually define the `loss_type`, since it's not inferrable from
 =#
 binary_operators = (concat, zip)
 unary_operators = (head, tail, reverse)
+
+# Make this example run quickly in CI (it is included in the test suite).  #src
+test_kwargs = if get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false") == "true"  #src
+    (;  #src
+        niterations=10,  #src
+        populations=8,  #src
+        population_size=15,  #src
+        ncycles_per_iteration=40,  #src
+    )  #src
+else  #src
+    NamedTuple()  #src
+end  #src
+
 hparams = (;
     batching=true,
     batch_size=32,
@@ -240,6 +253,7 @@ model = SRRegressor(;
     elementwise_loss=edit_distance,
     loss_type=Float64,
     hparams...,
+    test_kwargs...,  #src
 );
 
 mach = machine(model, X, y; scitype_check_level=0)
