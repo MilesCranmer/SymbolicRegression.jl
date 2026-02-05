@@ -228,11 +228,11 @@ unary_operators = (head, tail, reverse)
 # Make this example run quickly in CI (it is included in the test suite).  #src
 test_kwargs = if get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false") == "true"  #src
     (;  #src
-        niterations=10,  #src
+        niterations=20,  #src
         populations=8,  #src
-        population_size=15,  #src
+        population_size=20,  #src
         tournament_selection_n=10,  #src
-        ncycles_per_iteration=40,  #src
+        ncycles_per_iteration=60,  #src
     )  #src
 else  #src
     NamedTuple()  #src
