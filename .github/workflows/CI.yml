@@ -85,6 +85,12 @@ jobs:
         env:
           SYMBOLIC_REGRESSION_TEST_SUITE: ${{ matrix.test }}
         run: |
+          # Work around an LLVM codegen crash seen on GitHub runners for Julia 1.10 + LoopVectorization.
+          # (Keeps the test enabled; just uses a conservative CPU target.)
+          if [[ "${{ matrix.julia-version }}" == "1.10" ]]; then
+            export JULIA_CPU_TARGET=generic
+          fi
+
           julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
           # Enzyme precompilation can exceed the memory limits on GitHub runners
           # when using multiple threads on newer Julia versions. Run it single-threaded.
