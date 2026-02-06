@@ -85,9 +85,26 @@ jobs:
         env:
           SYMBOLIC_REGRESSION_TEST_SUITE: ${{ matrix.test }}
         run: |
-          julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
-          julia --color=yes --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
-          julia --color=yes coverage.jl
+          # Work around an LLVM codegen crash seen on GitHub runners for Julia 1.10 + LoopVectorization/HostCPUFeatures.
+          # We keep the test enabled; avoid stale/native pkgimages across different runner CPUs.
+          if [[ "${{ matrix.julia-version }}" == "1.10" ]]; then
+            export JULIA_CPU_TARGET=generic
+            JULIA="julia --pkgimages=no"
+          else
+            JULIA=julia
+          fi
+
+          $JULIA --color=yes -e 'import Pkg; Pkg.add("Coverage")'
+          # Enzyme precompilation can exceed the memory limits on GitHub runners
+          # when using multiple threads on newer Julia versions. Run it single-threaded.
+          if [[ "${{ matrix.test }}" == "enzyme" ]]; then
+            THREADS=1
+          else
+            THREADS=auto
+          fi
+
+          $JULIA --color=yes --threads=$THREADS --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
+          $JULIA --color=yes coverage.jl
         shell: bash
       - uses: codecov/codecov-action@v5
         with:
