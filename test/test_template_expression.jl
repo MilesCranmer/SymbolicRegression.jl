@@ -429,15 +429,15 @@ end
     using LoopVectorization: LoopVectorization
 
     # On Julia 1.10 (LLVM 15), this occasionally aborts during codegen on the Ubuntu CI runner.
-    # Since this is only a smoke test (we can't assert turbo actually ran), skip there.
+    # We still run the test, but disable `turbo` on that platform.
+    turbo = true
     @static if VERSION < v"1.11" && Sys.islinux()
-        Test.@test_skip "Skipping turbo smoke test on Julia < 1.11 on Linux due to LLVM codegen abort in CI"
-        return
+        turbo = false
     end
 
     operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
     variable_names = ["x1", "x2"]
-    eval_options = EvalOptions(; turbo=true)
+    eval_options = EvalOptions(; turbo)
 
     # Create expressions with turbo mode enabled
     x1 = ComposableExpression(
