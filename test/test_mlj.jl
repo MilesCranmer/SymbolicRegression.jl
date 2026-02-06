@@ -28,6 +28,11 @@ end
     using SymbolicRegression: Node
     using MLJBase
     using SymbolicUtils
+    const SymbolicType = if isdefined(SymbolicUtils, :Symbolic)
+        SymbolicUtils.Symbolic
+    else
+        SymbolicUtils.BasicSymbolic
+    end
     using Random: MersenneTwister
 
     include("test_params.jl")
@@ -56,7 +61,7 @@ end
     # Smoke test SymbolicUtils
     eqn = node_to_symbolic(rep.equations[rep.best_idx], model)
     n = symbolic_to_node(eqn, model)
-    eqn2 = convert(SymbolicUtils.Symbolic, n, model)
+    eqn2 = convert(SymbolicType, n, model)
     n2 = convert(Node, eqn2, model)
 end
 
@@ -107,7 +112,7 @@ end
 
     rng = MersenneTwister(0)
     X = (b1=randn(rng, 32), b2=randn(rng, 32))
-    Y = (c1=X.b1 .* X.b2, c2=X.b1 .+ X.b2)
+    Y = (c1=(X.b1 .* X.b2), c2=(X.b1 .+ X.b2))
     w = ones(32)
     model = MultitargetSRRegressor(; niterations=10, stop_kws...)
     mach = machine(model, X, Y, w)

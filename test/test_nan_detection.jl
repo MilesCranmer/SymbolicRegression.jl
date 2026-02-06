@@ -2,7 +2,13 @@ println("Testing NaN detection.")
 using SymbolicRegression
 using LoopVectorization
 
-for T in [Float16, Float32, Float64], turbo in [true, false]
+turbo_values = (true, false)
+@static if VERSION < v"1.11" && Sys.islinux()
+    # Julia 1.10 (LLVM 15) has intermittent LLVM aborts on the GH ubuntu runner when turbo=true.
+    turbo_values = (false,)
+end
+
+for T in [Float16, Float32, Float64], turbo in turbo_values
     T == Float16 && turbo && continue
     local options, tree, X
 

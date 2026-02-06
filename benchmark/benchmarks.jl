@@ -90,8 +90,8 @@ function create_utils_benchmark()
         setup = (
             nfeatures = 1;
             dataset = Dataset(randn(nfeatures, 32), randn(32));
-            pop = Population(dataset; npop=100, nlength=20, options=$options, nfeatures);
-            rss = RunningSearchStatistics(; options=$options)
+            pop = Population(dataset; npop=100, nlength=20, options=($options), nfeatures);
+            rss = RunningSearchStatistics(; options=($options))
         )
     )
 
@@ -156,7 +156,7 @@ function create_utils_benchmark()
             nfeatures = 1;
             T = Float64;
             dataset = Dataset(randn(nfeatures, 512), randn(512));
-            ntrees = $ntrees;
+            ntrees = ($ntrees);
             trees = [
                 gen_random_tree_fixed_size(20, $options, nfeatures, T) for i in 1:ntrees
             ];
