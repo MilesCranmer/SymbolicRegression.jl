@@ -437,7 +437,7 @@ end
     )
     f = x1 + x1
     g = x1
-    structure = TemplateStructure{(:f, :g)}(((; f, g), (x1, x2)) -> f(x1) * g(x2)^2)
+    structure = TemplateStructure{(:f, :g)}(((; f, g), (x1, x2)) -> f(x1) * (g(x2) * g(x2)))
     expr = TemplateExpression((; f=x1 + x1, g=x1); structure, operators, variable_names)
 
     n = 32
