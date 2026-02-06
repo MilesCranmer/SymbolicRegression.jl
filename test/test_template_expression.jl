@@ -423,13 +423,21 @@ end
 end
 
 @testitem "Test eval_options with turbo mode" tags = [:part3] begin
+    using Test
     using SymbolicRegression
     using DynamicExpressions: OperatorEnum, EvalOptions
     using LoopVectorization: LoopVectorization
 
+    # On Julia 1.10 (LLVM 15), this occasionally aborts during codegen on the Ubuntu CI runner.
+    # We still run the test, but disable `turbo` on that platform.
+    turbo = true
+    @static if VERSION < v"1.11" && Sys.islinux()
+        turbo = false
+    end
+
     operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
     variable_names = ["x1", "x2"]
-    eval_options = EvalOptions(; turbo=true)
+    eval_options = EvalOptions(; turbo)
 
     # Create expressions with turbo mode enabled
     x1 = ComposableExpression(
