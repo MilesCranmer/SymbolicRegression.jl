@@ -3,10 +3,15 @@ using LoopVectorization
 
 bad_op(x::T) where {T} = (x >= 0) ? x : T(0)
 
+turbo = true
+@static if VERSION < v"1.11" && Sys.islinux()
+    turbo = false
+end
+
 options = Options(;
     unary_operators=(sin, exp, sqrt, bad_op),
     binary_operators=(+, *),
-    turbo=true,
+    turbo=turbo,
     nested_constraints=[sin => [sin => 0], exp => [exp => 0]],
     maxsize=30,
     npopulations=40,
