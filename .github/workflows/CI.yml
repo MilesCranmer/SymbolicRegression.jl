@@ -2,11 +2,15 @@ name: CI
 
 on:
   push:
+    branches:
+      - master
+      - release-*
     paths:
       - "**"
   pull_request:
     branches:
       - master
+      - release-*
     paths:
       - "**"
   workflow_dispatch:
