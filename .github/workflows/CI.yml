@@ -88,7 +88,7 @@ jobs:
       - name: "Upload coverage artifacts"
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-unit-${{ matrix.group }}-${{ matrix.julia-version }}-${{ matrix.os }}
+          name: coverage-unit-${{ replace(matrix.group, '/', '-') }}-${{ matrix.julia-version }}-${{ matrix.os }}
           path: lcov.info
           retention-days: 1
 
