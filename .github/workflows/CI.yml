@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        julia-version: ['1.10', '1']
+        julia-version: ["1.10", "1"]
         group:
           - unit/basic
           - unit/expressions
@@ -46,23 +46,23 @@ jobs:
         include:
           # macOS tests - only on Julia 1 (latest)
           - os: macOS-latest
-            julia-version: '1'
+            julia-version: "1"
             group: unit/basic
           - os: macOS-latest
-            julia-version: '1'
+            julia-version: "1"
             group: unit/expressions
           - os: macOS-latest
-            julia-version: '1'
+            julia-version: "1"
             group: unit/evaluation
           # Windows tests - only on Julia 1 (latest)
           - os: windows-latest
-            julia-version: '1'
+            julia-version: "1"
             group: unit/basic
           - os: windows-latest
-            julia-version: '1'
+            julia-version: "1"
             group: unit/expressions
           - os: windows-latest
-            julia-version: '1'
+            julia-version: "1"
             group: unit/evaluation
 
     steps:
@@ -100,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        julia-version: ['1.10', '1']
+        julia-version: ["1.10", "1"]
         group:
           - integration/ad
           - integration/ext/mooncake
@@ -113,7 +113,7 @@ jobs:
           - integration/ext/dispatchdoctor
         include:
           # JET only on Julia 1 (latest) since it's a dev tool
-          - julia-version: '1'
+          - julia-version: "1"
             group: jet
             is_jet: true
     steps:
