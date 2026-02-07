@@ -4,8 +4,6 @@ using Optim: Optim
 using LineSearches: LineSearches
 using Test: Test
 
-ENV["SYMBOLIC_REGRESSION_IS_TESTING"] = "true"
-
 empty_all_globals!()
 
 const maximum_residual = 2e-2
