@@ -85,10 +85,20 @@ jobs:
           julia --color=yes --project=. --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
           julia --color=yes coverage.jl
         shell: bash
+      - name: "Prepare coverage artifact name"
+        env:
+          GROUP: ${{ matrix.group }}
+          JULIA: ${{ matrix.julia-version }}
+          OS: ${{ matrix.os }}
+        run: |
+          slug="${GROUP//\//-}"
+          echo "COVERAGE_ARTIFACT_NAME=coverage-unit-${slug}-${JULIA}-${OS}" >> "$GITHUB_ENV"
+        shell: bash
+
       - name: "Upload coverage artifacts"
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-unit-${{ replace(matrix.group, '/', '-') }}-${{ matrix.julia-version }}-${{ matrix.os }}
+          name: ${{ env.COVERAGE_ARTIFACT_NAME }}
           path: lcov.info
           retention-days: 1
 
