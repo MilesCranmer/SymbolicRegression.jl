@@ -82,7 +82,7 @@ jobs:
           TEST_GROUP: ${{ matrix.group }}
         run: |
           julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
-          julia --color=yes --project=test --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
+          julia --color=yes --project=. --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
           julia --color=yes coverage.jl
         shell: bash
       - name: "Upload coverage artifacts"
@@ -130,11 +130,11 @@ jobs:
         if: ${{ !matrix.is_jet }}
         env:
           TEST_GROUP: ${{ matrix.group }}
-        run: julia --color=yes --project=test --threads=auto --check-bounds=yes -e 'import Pkg; Pkg.test()'
+        run: julia --color=yes --project=. --threads=auto --check-bounds=yes -e 'import Pkg; Pkg.test()'
         shell: bash
       - name: "Install JET"
         if: ${{ matrix.is_jet }}
-        run: julia --color=yes --project=test -e 'import Pkg; Pkg.add("JET")'
+        run: julia --color=yes --project=. -e 'import Pkg; Pkg.add("JET")'
       - name: "Run JET test"
         if: ${{ matrix.is_jet }}
         run: julia --color=yes --startup-file=no test/test_jet.jl
