@@ -196,7 +196,7 @@ end
     using DynamicQuantities
     using Random: MersenneTwister
 
-    
+
     custom_op(x, y) = x + y
     options = Options(;
         binary_operators=[-, *, /, custom_op],
@@ -391,7 +391,7 @@ end
     using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
     using DynamicQuantities
 
-    
+
     options = Options(;
         binary_operators=[+, -, *, /, square, cube],
         unary_operators=[cos, sin],
