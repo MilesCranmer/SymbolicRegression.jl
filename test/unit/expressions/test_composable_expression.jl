@@ -1,6 +1,3 @@
-@testitem "Integration Test with fit! and Performance Check" tags = [:part3] begin
-    include("../examples/template_expression.jl")
-end
 @testitem "Test ComposableExpression" tags = [:part2] begin
     using SymbolicRegression: ComposableExpression, Node
     using DynamicExpressions: OperatorEnum

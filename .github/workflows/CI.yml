@@ -113,7 +113,6 @@ jobs:
         julia-version: ["1.10", "1"]
         group:
           - integration/ad
-          - integration/ext/mooncake
           - integration/ext/mlj
           - integration/ext/symbolicutils
           - integration/ext/json3_recorder

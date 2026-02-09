@@ -260,6 +260,10 @@ end
 
 @testitem "MLJ options caching fix" tags = [:part3] begin
     using SymbolicRegression
+    if !isdefined(SymbolicRegression, :WarmStartIncompatibleError)
+        @info "Skipping WarmStartIncompatibleError tests on release-v1"
+        return
+    end
     using SymbolicRegression: WarmStartIncompatibleError
     using MLJBase
     using Random: MersenneTwister
