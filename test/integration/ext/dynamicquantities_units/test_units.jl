@@ -196,7 +196,6 @@ end
     using DynamicQuantities
     using Random: MersenneTwister
 
-
     custom_op(x, y) = x + y
     options = Options(;
         binary_operators=[-, *, /, custom_op],
@@ -391,7 +390,6 @@ end
     using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
     using DynamicQuantities
 
-
     options = Options(;
         binary_operators=[+, -, *, /, square, cube],
         unary_operators=[cos, sin],
@@ -406,23 +404,17 @@ end
         1.5 * x1 / (cube(x2) * cube(x4)) * x3, x3, (square(x3) / x3) + x3
     ]
     for tree in dimensionally_valid_equations
-        onfail(@test !violates_dimensional_constraints(tree, dataset, options)) do
-            @warn "Failed on" tree
-        end
+        @test !violates_dimensional_constraints(tree, dataset, options)
     end
     dimensionally_invalid_equations = [Node(Float64; val=1.5), 1.5 * x1, x3 - 1.0 * x1]
     for tree in dimensionally_invalid_equations
-        onfail(@test violates_dimensional_constraints(tree, dataset, options)) do
-            @warn "Failed on" tree
-        end
+        @test violates_dimensional_constraints(tree, dataset, options)
     end
     # But, all of these would be fine if we allow dimensionless constants:
     let
         options = Options(; binary_operators=[+, -, *, /], unary_operators=[cos, sin])
         for tree in dimensionally_invalid_equations
-            onfail(@test !violates_dimensional_constraints(tree, dataset, options)) do
-                @warn "Failed on" tree
-            end
+            @test !violates_dimensional_constraints(tree, dataset, options)
         end
     end
 end

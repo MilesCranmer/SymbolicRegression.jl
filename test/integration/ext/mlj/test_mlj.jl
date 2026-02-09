@@ -260,37 +260,44 @@ end
 
 @testitem "MLJ options caching fix" tags = [:part3] begin
     using SymbolicRegression
-    if !isdefined(SymbolicRegression, :WarmStartIncompatibleError)
-        @info "Skipping WarmStartIncompatibleError tests on release-v1"
-        return
-    end
-    using SymbolicRegression: WarmStartIncompatibleError
-    using MLJBase
-    using Random: MersenneTwister
     using Suppressor
 
-    include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
+    if isdefined(SymbolicRegression, :WarmStartIncompatibleError)
+        WarmStartIncompatibleError = getfield(
+            SymbolicRegression, :WarmStartIncompatibleError
+        )
+        using MLJBase
+        using Random: MersenneTwister
 
-    # Test that parameter changes are respected and incompatible changes throw errors
-    rng = MersenneTwister(0)
-    X = (x1=randn(rng, 50), x2=randn(rng, 50))
-    y = @. 2.0 * X.x1 + 3.0 * X.x2
+        include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
 
-    model = SRRegressor(;
-        binary_operators=[+, -, *], niterations=2, tournament_selection_n=10, populations=2
-    )
+        # Test that parameter changes are respected and incompatible changes throw errors
+        rng = MersenneTwister(0)
+        X = (x1=randn(rng, 50), x2=randn(rng, 50))
+        y = @. 2.0 * X.x1 + 3.0 * X.x2
 
-    mach = machine(model, X, y)
-    @suppress fit!(mach, verbosity=0)
+        model = SRRegressor(;
+            binary_operators=[+, -, *],
+            niterations=2,
+            tournament_selection_n=10,
+            populations=2,
+        )
 
-    # Test compatible parameter change
-    model.tournament_selection_n = 20
-    @suppress fit!(mach, verbosity=0)
-    @test mach.fitresult.options.tournament_selection_n == 20  # Should be updated
+        mach = machine(model, X, y)
+        @suppress fit!(mach, verbosity=0)
 
-    # Test incompatible parameter change throws error with correct message
-    model.populations = 4
-    err = @test_throws WarmStartIncompatibleError @suppress fit!(mach, verbosity=0)
-    @test :populations ∈ err.value.fields
-    @test occursin("force=true", sprint(showerror, err.value))
+        # Test compatible parameter change
+        model.tournament_selection_n = 20
+        @suppress fit!(mach, verbosity=0)
+        @test mach.fitresult.options.tournament_selection_n == 20  # Should be updated
+
+        # Test incompatible parameter change throws error with correct message
+        model.populations = 4
+        err = @test_throws WarmStartIncompatibleError @suppress fit!(mach, verbosity=0)
+        @test :populations ∈ err.value.fields
+        @test occursin("force=true", sprint(showerror, err.value))
+    else
+        @info "Skipping WarmStartIncompatibleError tests on release-v1"
+        @test true
+    end
 end
