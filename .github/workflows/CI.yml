@@ -135,12 +135,34 @@ jobs:
         uses: julia-actions/cache@v2
         with:
           cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};group=${{ matrix.group }};julia=${{ matrix.julia-version }};project=${{ hashFiles(format('test/{0}/Project.toml', matrix.group)) }}
-      - name: "Run integration test"
+      - name: "Run integration tests (${{ matrix.group }})"
         if: ${{ !matrix.is_jet }}
         env:
           TEST_GROUP: ${{ matrix.group }}
-        run: julia --color=yes --project=. --threads=auto --check-bounds=yes -e 'import Pkg; Pkg.test()'
+        run: |
+          julia --color=yes -e 'import Pkg; Pkg.add("Coverage")'
+          julia --color=yes --project=. --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
+          julia --color=yes coverage.jl
         shell: bash
+
+      - name: "Prepare coverage artifact name"
+        if: ${{ !matrix.is_jet }}
+        env:
+          GROUP: ${{ matrix.group }}
+          JULIA: ${{ matrix.julia-version }}
+        run: |
+          slug="${GROUP//\//-}"
+          echo "COVERAGE_ARTIFACT_NAME=coverage-integration-${slug}-${JULIA}-ubuntu-latest" >> "$GITHUB_ENV"
+        shell: bash
+
+      - name: "Upload coverage artifacts"
+        if: ${{ !matrix.is_jet }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.COVERAGE_ARTIFACT_NAME }}
+          path: lcov.info
+          retention-days: 1
+
       - name: "Install JET"
         if: ${{ matrix.is_jet }}
         run: julia --color=yes --project=. -e 'import Pkg; Pkg.add("JET")'
@@ -151,7 +173,7 @@ jobs:
 
   upload-coverage:
     name: Upload Coverage to Codecov
-    needs: [unit]
+    needs: [unit, integration]
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
