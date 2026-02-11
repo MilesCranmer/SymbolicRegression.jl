@@ -338,13 +338,23 @@ macro extend_operators(options)
         $(DE).@extend_operators $alias_operators
     end |> esc
 end
-function define_alias_operators(operators)
+function define_alias_operators(operators::OperatorEnum{B,U}) where {B,U}
     # We undo some of the aliases so that the user doesn't need to use, e.g.,
     # `safe_pow(x1, 1.5)`. They can use `x1 ^ 1.5` instead.
-    constructor = isa(operators, OperatorEnum) ? OperatorEnum : GenericOperatorEnum
-    return constructor(;
-        binary_operators=inverse_binopmap.(operators.binops),
-        unary_operators=inverse_unaopmap.(operators.unaops),
+    return OperatorEnum(;
+        binary_operators=map(inverse_binopmap, operators.binops),
+        unary_operators=map(inverse_unaopmap, operators.unaops),
+        define_helper_functions=false,
+        empty_old_operators=false,
+    )
+end
+
+function define_alias_operators(operators::GenericOperatorEnum{B,U}) where {B,U}
+    # We undo some of the aliases so that the user doesn't need to use, e.g.,
+    # `safe_pow(x1, 1.5)`. They can use `x1 ^ 1.5` instead.
+    return GenericOperatorEnum(;
+        binary_operators=map(inverse_binopmap, operators.binops),
+        unary_operators=map(inverse_unaopmap, operators.unaops),
         define_helper_functions=false,
         empty_old_operators=false,
     )
