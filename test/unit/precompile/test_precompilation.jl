@@ -1,5 +1,5 @@
 @testitem "Test whether the precompilation script works." begin
-using SymbolicRegression
+    using SymbolicRegression
 
-SymbolicRegression.do_precompilation(Val(:compile))
+    SymbolicRegression.do_precompilation(Val(:compile))
 end
