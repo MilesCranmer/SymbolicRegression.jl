@@ -1,3 +1,4 @@
+@testitem "Test JSON3 recorder" begin
 using SymbolicRegression
 using SymbolicRegression.UtilsModule: recursive_merge
 using JSON3
@@ -49,3 +50,4 @@ for (i, key) in enumerate(keys(data.mutations))
 end
 
 @test_throws ErrorException recursive_merge()
+end

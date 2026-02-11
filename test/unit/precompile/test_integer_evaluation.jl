@@ -1,3 +1,4 @@
+@testitem "Test validity of integer expression evaluation" begin
 using SymbolicRegression
 using Random
 include(joinpath(@__DIR__, "..", "..", "test_params.jl"))
@@ -21,3 +22,4 @@ out, flag = eval_tree_array(tree, X, options)
 @test flag
 @test isapprox(out, true_out)
 @test eltype(out) == Int32
+end

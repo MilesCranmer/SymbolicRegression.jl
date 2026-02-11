@@ -1,3 +1,4 @@
+@testitem "Test utils" begin
 using SymbolicRegression
 using SymbolicRegression.UtilsModule:
     findmin_fast, argmin_fast, bottomk_fast, is_anonymous_function
@@ -26,4 +27,5 @@ end
         x = rand(MersenneTwister(opt.seed), opt.T, opt.n) .* 2 .- 1
         @test bottomk_fast(x, k) == simple_bottomk(x, k)
     end
+end
 end

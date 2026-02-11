@@ -1,3 +1,4 @@
+@testitem "Test crossover mutation" begin
 println("Testing crossover function.")
 using SymbolicRegression
 using SymbolicRegression: crossover_trees
@@ -45,3 +46,4 @@ end
 @test exp_flip_to_tree1
 @test swapped_cos_with_exp
 println("Passed.")
+end

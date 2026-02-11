@@ -1,3 +1,4 @@
+@testitem "Test migration" begin
 using SymbolicRegression
 using SymbolicRegression: strip_metadata
 using DynamicExpressions: get_tree
@@ -30,3 +31,4 @@ SymbolicRegression.MigrationModule.migrate!(
 
 # Now we see that the tree is in the population:
 @test tree in [get_tree(p.tree) for p in population1.members]
+end

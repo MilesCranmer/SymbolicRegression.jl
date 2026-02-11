@@ -1,3 +1,4 @@
+@testitem "Test turbo NaN with LoopVectorization" begin
 using SymbolicRegression
 using LoopVectorization
 
@@ -31,4 +32,5 @@ try
     @test true
 catch e
     @test false
+end
 end

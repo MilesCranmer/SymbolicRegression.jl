@@ -1,3 +1,4 @@
+@testitem "Testing whether we can move operators to workers." begin
 using SymbolicRegression
 using Test
 
@@ -53,3 +54,4 @@ hof = equation_search(
     early_stop(member.loss, my_complexity(member.tree)) for
     member in hof.members[hof.exists]
 )
+end

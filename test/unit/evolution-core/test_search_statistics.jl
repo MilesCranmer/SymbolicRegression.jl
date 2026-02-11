@@ -1,3 +1,4 @@
+@testitem "Test RunningSearchStatistics" begin
 using SymbolicRegression
 using SymbolicRegression.AdaptiveParsimonyModule:
     RunningSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
@@ -38,3 +39,4 @@ normalize_frequencies!(statistics)
 
 @test sum(statistics.normalized_frequencies[1:5]) <
     sum(statistics.normalized_frequencies[10:15])
+end

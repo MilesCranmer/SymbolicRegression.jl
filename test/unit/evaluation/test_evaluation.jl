@@ -1,3 +1,4 @@
+@testitem "Test validity of expression evaluation" begin
 using SymbolicRegression
 using Random
 include(joinpath(@__DIR__, "..", "..", "test_params.jl"))
@@ -71,4 +72,5 @@ for fnc in [
 
     zero_tolerance = 1e-6
     @test all(abs.(test_y .- true_y) / N .< zero_tolerance)
+end
 end

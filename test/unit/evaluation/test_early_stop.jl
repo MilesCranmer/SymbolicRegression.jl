@@ -1,3 +1,4 @@
+@testitem "Early stop condition" begin
 using SymbolicRegression
 
 X = randn(Float32, 5, 100)
@@ -17,3 +18,4 @@ hof = equation_search(X, y; options=options, niterations=1_000_000_000)
 @test any(
     early_stop(member.loss, count_nodes(member.tree)) for member in hof.members[hof.exists]
 )
+end

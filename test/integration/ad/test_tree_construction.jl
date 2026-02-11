@@ -1,3 +1,4 @@
+@testitem "integration/ad/test_tree_construction.jl" begin
 using SymbolicRegression
 using Random
 using Compat: Fix
@@ -115,4 +116,5 @@ for unaop in
             @test all(abs.(test_dy .- dy) / N .< zero_tolerance)
         end
     end
+end
 end

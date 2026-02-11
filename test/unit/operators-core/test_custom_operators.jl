@@ -1,3 +1,4 @@
+@testitem "Test custom operators" begin
 using SymbolicRegression
 using Random
 
@@ -74,3 +75,4 @@ tree = my_func_c(my_func_c(x2, 0.2), my_func_d(x1))
 func = (x1, x2) -> my_func_c(my_func_c(x2, 0.2), my_func_d(x1))
 X = randn(MersenneTwister(0), 2, 20)
 @test tree(X, options) ≈ func.(X[1, :], X[2, :])
+end

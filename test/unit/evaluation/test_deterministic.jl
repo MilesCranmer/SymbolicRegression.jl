@@ -1,3 +1,4 @@
+@testitem "Testing whether deterministic mode works." begin
 using SymbolicRegression
 using Random
 
@@ -31,3 +32,4 @@ for i in 1:2
 end
 
 @test string(all_outputs[1]) == string(all_outputs[2])
+end

@@ -1,3 +1,4 @@
+@testitem "Test whether custom objectives work." begin
 using SymbolicRegression
 using SymbolicRegression: OperatorEnum, string_tree
 include(joinpath(@__DIR__, "..", "..", "test_params.jl"))
@@ -52,3 +53,4 @@ expected_y = 2.0 .* _ifelse_ternary.(testX[1, :], testX[2, :], testX[3, :])
 # Also verify that the tree actually uses the ternary operator
 tree_string = string_tree(dominating[end].tree, options)
 @test occursin("_ifelse_ternary", tree_string)
+end

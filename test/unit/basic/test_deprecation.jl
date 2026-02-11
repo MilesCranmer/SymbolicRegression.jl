@@ -1,3 +1,4 @@
+@testitem "Test deprecated options" begin
 using SymbolicRegression
 
 # Deprecated kwargs should still work:
@@ -42,3 +43,4 @@ member = PopMember(dataset, tree, options; deterministic=true)
 # Test that setting .score triggers deprecation warning
 @test_deprecated member.score = 0.5
 @test member.cost == 0.5
+end

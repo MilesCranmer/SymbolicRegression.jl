@@ -1,3 +1,4 @@
+@testitem "Test custom losses" begin
 using SymbolicRegression
 using SymbolicRegression: eval_loss
 using Random
@@ -56,4 +57,5 @@ let
     @test_throws("Element type of `x` is Float32 is different", _loss(x, y, L1DistLoss()))
 
     @test_throws("Element type of `x` is Float32,", _weighted_loss(x, y, w, L1DistLoss()))
+end
 end

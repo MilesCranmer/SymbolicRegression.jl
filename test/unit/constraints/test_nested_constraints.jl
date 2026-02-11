@@ -1,3 +1,4 @@
+@testitem "Test nested constraint checking" begin
 println("Test operator nesting and flagging.")
 using SymbolicRegression
 
@@ -52,3 +53,4 @@ options = create_options([(+) => [(+) => 0]])
 @test SymbolicRegression.CheckConstraintsModule.flag_illegal_nests(tree, options)
 
 println("Passed.")
+end

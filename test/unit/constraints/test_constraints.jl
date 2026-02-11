@@ -1,3 +1,4 @@
+@testitem "Test constraints interface" begin
 using DynamicExpressions: count_depth
 using SymbolicRegression
 using SymbolicRegression: check_constraints
@@ -62,3 +63,4 @@ tree = cos(cos(x1))
 tree = cos(cos(cos(x1)))
 @test count_depth(tree) == 4
 @test check_constraints(tree, options) == false
+end

@@ -1,3 +1,4 @@
+@testitem "Test NaN detection with LoopVectorization" begin
 println("Testing NaN detection.")
 using SymbolicRegression
 using LoopVectorization
@@ -49,3 +50,4 @@ for T in [Float16, Float32, Float64], turbo in [true, false]
 end
 
 println("Passed.")
+end

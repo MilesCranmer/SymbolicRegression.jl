@@ -1,3 +1,4 @@
+@testitem "Testing whether we can move loss function expression to workers." begin
 using SymbolicRegression
 using SymbolicRegression: compute_complexity
 using Test
@@ -52,3 +53,4 @@ hof = equation_search(
     early_stop(member.loss, compute_complexity(member.tree, options)) for
     member in hof.members[hof.exists]
 )
+end

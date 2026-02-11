@@ -1,3 +1,4 @@
+@testitem "Testing fast-cycle and custom variable names" begin
 using SymbolicRegression
 using Random
 include(joinpath(@__DIR__, "..", "..", "test_params.jl"))
@@ -68,3 +69,4 @@ state, hall_of_fame = equation_search(
 dominating = calculate_pareto_frontier(hall_of_fame)
 best = dominating[end]
 @test best.loss ≈ previous_loss * 0.1
+end

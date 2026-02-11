@@ -1,3 +1,4 @@
+@testitem "Testing whether we can stop based on clock time." begin
 using SymbolicRegression
 using Random
 using Distributed: rmprocs
@@ -24,3 +25,4 @@ start_time = time()
 equation_search(X, y; niterations=10000000, options=options, parallelism=:serial)
 end_time = time()
 @test end_time - start_time < 100
+end

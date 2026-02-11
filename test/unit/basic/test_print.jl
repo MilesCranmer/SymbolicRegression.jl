@@ -1,3 +1,4 @@
+@testitem "Test printing" begin
 using SymbolicRegression
 using SymbolicRegression.UtilsModule: split_string
 using DynamicExpressions: DynamicExpressions as DE
@@ -61,4 +62,5 @@ end
     split_string("⋅⋅", 1) == ["⋅", "⋅"]
     split_string("⋅⋅⋅⋅", 2) == ["⋅⋅", "⋅⋅"]
     split_string("ραβγ", 2) == ["ρα", "βγ"]
+end
 end

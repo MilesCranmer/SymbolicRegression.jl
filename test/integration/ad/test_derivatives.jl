@@ -1,3 +1,4 @@
+@testitem "integration/ad/test_derivatives.jl" begin
 using SymbolicRegression
 using SymbolicRegression: eval_diff_tree_array, eval_grad_tree_array
 using Random
@@ -147,3 +148,4 @@ end
 @test check_tree(tree, index_constants(tree), first(get_scalar_constants(tree)))
 
 println("Done.")
+end

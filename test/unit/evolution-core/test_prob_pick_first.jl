@@ -1,3 +1,4 @@
+@testitem "Test tournament selection" begin
 println("Testing whether tournament_selection_p works.")
 using SymbolicRegression
 using DynamicExpressions: with_type_parameters, @parse_expression
@@ -49,3 +50,4 @@ for reverse in [false, true]
 end
 
 println("Passed.")
+end
