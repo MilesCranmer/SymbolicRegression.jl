@@ -284,7 +284,7 @@ end
             binary_operators=[+, *],
             unary_operators=[sqrt, cbrt, abs],
             early_stop_condition=(loss, complexity) -> (loss < 1e-7 && complexity <= 8),
-            niterations=30,
+            niterations=100,
             populations=4,
             population_size=32,
             parallelism=:serial,
