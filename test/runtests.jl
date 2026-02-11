@@ -14,7 +14,7 @@ if startswith(TEST_GROUP, "integration/")
 
     using Pkg
     Pkg.activate(integration_dir)
-    Pkg.develop(path=joinpath(@__DIR__, ".."))
+    Pkg.develop(; path=joinpath(@__DIR__, ".."))
     Pkg.instantiate()
 
     if startswith(integration_name, "ext/mlj") && integration_name == "ext/mlj/templates"
