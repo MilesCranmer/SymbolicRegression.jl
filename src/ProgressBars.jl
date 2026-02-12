@@ -13,7 +13,7 @@ mutable struct WrappedProgressBar
     function WrappedProgressBar(n::Integer, niterations::Integer; kwargs...)
         init_vector = Tuple{AnnotatedString,AnnotatedString}[]
         kwargs = (; kwargs..., desc="Evolving for $niterations iterations...")
-        if get(ENV, "SYMBOLIC_REGRESSION_TEST", "false") == "true"
+        if get(ENV, "SYMBOLIC_REGRESSION_IS_TESTING", "false") == "true"
             # For testing, create a progress bar that writes to devnull
             output = devnull
             return new(Progress(n; output, kwargs...), init_vector)
