@@ -1,7 +1,6 @@
 using SymbolicRegression: L2DistLoss, MutationWeights
 using DynamicExpressions.OperatorEnumConstructionModule: empty_all_globals!
 using Optim: Optim
-using LineSearches: LineSearches
 using Test: Test
 
 empty_all_globals!()
@@ -55,7 +54,7 @@ const default_params = (
     una_constraints=nothing,
     progress=false,
     terminal_width=nothing,
-    optimizer_algorithm=Optim.NelderMead(; linesearch=LineSearches.BackTracking()),
+    optimizer_algorithm=Optim.NelderMead(),
     optimizer_nrestarts=3,
     optimizer_probability=0.1f0,
     optimizer_iterations=100,
