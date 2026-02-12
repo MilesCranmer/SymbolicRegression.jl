@@ -13,7 +13,16 @@ if startswith(TEST_GROUP, "integration/")
     end
 
     using Pkg
-    Pkg.activate(integration_dir)
+
+    # Use a temporary copy of the integration environment so that `Pkg.develop`
+    # doesn't modify tracked files under `test/integration/...`.
+    tmp_env = mktempdir()
+    cp(joinpath(integration_dir, "Project.toml"), joinpath(tmp_env, "Project.toml"); force=true)
+    for mf in filter(f -> startswith(f, "Manifest"), readdir(integration_dir))
+        cp(joinpath(integration_dir, mf), joinpath(tmp_env, mf); force=true)
+    end
+
+    Pkg.activate(tmp_env)
     Pkg.develop(; path=joinpath(@__DIR__, ".."))
     Pkg.instantiate()
 
