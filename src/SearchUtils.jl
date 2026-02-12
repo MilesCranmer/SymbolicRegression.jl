@@ -296,9 +296,45 @@ function init_dummy_pops(
     ]
 end
 
-struct StdinReader
+mutable struct StdinReader
     can_read_user_input::Bool
     stream::IO
+    saw_quit_char::Bool
+end
+StdinReader(can_read_user_input::Bool, stream::IO) =
+    StdinReader(can_read_user_input, stream, false)
+
+function read_available_nonblocking(stream::IO)::Vector{UInt8}
+    try
+        return readavailable(stream)
+    catch err
+        if err isa MethodError || err isa Base.IOError || err isa EOFError
+            return UInt8[]
+        else
+            rethrow(err)
+        end
+    end
+end
+
+function parse_quit_signal(data::AbstractVector{UInt8}, saw_quit_char::Bool)
+    control_c = 0x03
+    quit = 0x71
+    carriage_return = 0x0d
+    newline = 0x0a
+    for c in data
+        if c == control_c
+            return true, false
+        elseif c == quit
+            saw_quit_char = true
+        elseif c == carriage_return || c == newline
+            if saw_quit_char
+                return true, false
+            end
+        else
+            saw_quit_char = false
+        end
+    end
+    return false, saw_quit_char
 end
 
 """Start watching stream (like stdin) for user input."""
@@ -307,11 +343,7 @@ function watch_stream(stream)
 
     can_read_user_input && try
         Base.start_reading(stream)
-        bytes = bytesavailable(stream)
-        if bytes > 0
-            # Clear out initial data
-            read(stream, bytes)
-        end
+        read_available_nonblocking(stream)
     catch err
         if isa(err, MethodError)
             can_read_user_input = false
@@ -333,16 +365,9 @@ end
 """Check if the user typed 'q' and <enter> or <ctl-c>."""
 function check_for_user_quit(reader::StdinReader)::Bool
     if reader.can_read_user_input
-        bytes = bytesavailable(reader.stream)
-        if bytes > 0
-            # Read:
-            data = read(reader.stream, bytes)
-            control_c = 0x03
-            quit = 0x71
-            if length(data) > 1 && (data[end] == control_c || data[end - 1] == quit)
-                return true
-            end
-        end
+        data = read_available_nonblocking(reader.stream)
+        quit, reader.saw_quit_char = parse_quit_signal(data, reader.saw_quit_char)
+        return quit
     end
     return false
 end
