@@ -1,11 +1,11 @@
 @testitem "Test simplification" begin
-    include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
     using SymbolicRegression, Test
     using SymbolicUtils: simplify, Symbolic
     using DynamicExpressions.OperatorEnumConstructionModule: empty_all_globals!
     #! format: off
     using Base: ≈; using Random: MersenneTwister
     #! format: on
+    include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
     # ^ Can't end line with ≈ due to JuliaSyntax.jl bug
 
     function Base.:≈(a::String, b::String)

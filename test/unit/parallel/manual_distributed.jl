@@ -1,8 +1,9 @@
+using Distributed
+using Test, Pkg
+
 include(joinpath(@__DIR__, "..", "..", "test_params.jl"))
 
-using Distributed
 procs = addprocs(2)
-using Test, Pkg
 project_path = splitdir(Pkg.project().path)[1]
 @everywhere procs begin
     Base.MainInclude.eval(

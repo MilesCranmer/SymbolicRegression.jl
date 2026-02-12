@@ -11,8 +11,6 @@ const TEST_GROUP = let g = get(ENV, "TEST_GROUP", nothing)
     g === nothing && length(ARGS) > 0 ? ARGS[1] : (g === nothing ? "unit/basic" : g)
 end
 
-ENV["SYMBOLIC_REGRESSION_TEST"] = "true"
-
 if TEST_GROUP == "integration/jet"
     set_preferences!("SymbolicRegression", "dispatch_doctor_mode" => "disable"; force=true)
 end
