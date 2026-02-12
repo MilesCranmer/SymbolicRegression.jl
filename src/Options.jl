@@ -150,8 +150,7 @@ end
                         break
                     end
                 end
-                found_degree == 0 &&
-                    error("Operator $(op) is not in the operator set.")
+                found_degree == 0 && error("Operator $(op) is not in the operator set.")
                 (found_degree, found_idx)
             end,
             new_max_nesting_dict = [
@@ -167,7 +166,7 @@ end
                             end
                         end
                         found_degree == 0 &&
-                            error("Operator $(nested_op) is not in the operator set.")
+                        error("Operator $(nested_op) is not in the operator set.")
                         (found_degree, found_idx)
                     end
                     (nested_degree, nested_idx, max_nesting)
