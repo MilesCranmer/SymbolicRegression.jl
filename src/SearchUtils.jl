@@ -301,8 +301,9 @@ mutable struct StdinReader
     stream::IO
     saw_quit_char::Bool
 end
-StdinReader(can_read_user_input::Bool, stream::IO) =
-    StdinReader(can_read_user_input, stream, false)
+function StdinReader(can_read_user_input::Bool, stream::IO)
+    return StdinReader(can_read_user_input, stream, false)
+end
 
 function read_available_nonblocking(stream::IO)::Vector{UInt8}
     try
