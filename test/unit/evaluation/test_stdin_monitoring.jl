@@ -25,7 +25,8 @@
     Base.start_reading(::FakeInputStream) = nothing
     Base.stop_reading(::FakeInputStream) = nothing
 
-    Base.bytesavailable(stream::FakeInputStream) = isempty(stream.chunks) ? 0 : stream.reported_bytes
+    Base.bytesavailable(stream::FakeInputStream) =
+        isempty(stream.chunks) ? 0 : stream.reported_bytes
 
     function Base.read(stream::FakeInputStream, ::Integer)
         stream.read_calls += 1
@@ -53,13 +54,17 @@
     # Reproducer for freeze path in watch_stream: read(stream, bytes) can block
     # even when bytesavailable reports positive bytes.
     watch_stream_input = FakeInputStream(["x"]; reported_bytes=1, read_delay_s=0.2)
-    quick_watch, _ = completes_quickly(() -> SymbolicRegression.watch_stream(watch_stream_input))
+    quick_watch, _ = completes_quickly(
+        () -> SymbolicRegression.watch_stream(watch_stream_input)
+    )
     @test quick_watch
 
     # Reproducer for freeze path in check_for_user_quit.
     slow_input = FakeInputStream(["x"]; reported_bytes=1, read_delay_s=0.2)
     slow_reader = SymbolicRegression.StdinReader(true, slow_input)
-    quick_check, result = completes_quickly(() -> SymbolicRegression.check_for_user_quit(slow_reader))
+    quick_check, result = completes_quickly(
+        () -> SymbolicRegression.check_for_user_quit(slow_reader)
+    )
     @test quick_check
     if quick_check
         @test result == false
