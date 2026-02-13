@@ -3,7 +3,7 @@ module ConstantOptimizationModule
 using Random: AbstractRNG, default_rng
 using LineSearches: LineSearches
 using Optim: Optim
-using NLSolversBase: only_fg!
+import NLSolversBase
 using ADTypes: AbstractADType, AutoEnzyme
 using DifferentiationInterface: value_and_gradient, prepare_gradient
 using DynamicExpressions:
@@ -81,7 +81,7 @@ function _optimize_constants_inner(
     obj = if algorithm isa Optim.Newton || options.autodiff_backend === nothing
         f
     else
-        only_fg!(fg!)
+        NLSolversBase.only_fg!(fg!)
     end
     baseline = f(x0)
     result = Optim.optimize(obj, x0, algorithm, optimizer_options)
