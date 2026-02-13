@@ -1,0 +1,93 @@
+#!/usr/bin/env expect
+
+set prompt "julia> "
+set warmup_token "__REPL_WARMUP_OK__"
+set watch_token "__REPL_WATCH_OK__"
+set check_token "__REPL_CHECK_OK__"
+
+set repo_root [file normalize [file join [file dirname [info script]] .. ..]]
+cd $repo_root
+
+if {[info exists env(JULIA)]} {
+    set julia_bin $env(JULIA)
+} else {
+    set julia_bin "julia"
+}
+
+proc fail {message} {
+    puts stderr $message
+    catch {puts stderr "\n--- expect buffer ---\n$::expect_out(buffer)"}
+    catch {exec kill -KILL [exp_pid]}
+    exit 1
+}
+
+spawn -noecho $julia_bin --project=. --startup-file=no --history-file=no --color=no -q
+
+set timeout 30
+expect {
+    -exact $prompt {}
+    timeout { fail "timed out waiting for initial REPL prompt" }
+    eof { fail "julia exited before initial REPL prompt" }
+}
+
+send -- "using SymbolicRegression\r"
+set timeout 180
+expect {
+    -exact $prompt {}
+    timeout { fail "timed out waiting for prompt after using SymbolicRegression" }
+    eof { fail "julia exited while loading SymbolicRegression" }
+}
+
+send -- "SymbolicRegression.check_for_user_quit(SymbolicRegression.StdinReader(false, devnull)); println(\"$warmup_token\")\r"
+set timeout 20
+expect {
+    -exact $warmup_token {}
+    timeout { fail "timed out waiting for $warmup_token" }
+    eof { fail "julia exited before $warmup_token" }
+}
+expect {
+    -exact $prompt {}
+    timeout { fail "timed out waiting for prompt after $warmup_token" }
+    eof { fail "julia exited before prompt after $warmup_token" }
+}
+
+# Key regression check: with a real TTY, stdin monitoring should not block.
+send -- "SymbolicRegression.watch_stream(stdin); println(\"$watch_token\")\r"
+set timeout 3
+expect {
+    -exact $watch_token {}
+    timeout { fail "timed out waiting for $watch_token (watch_stream likely blocked)" }
+    eof { fail "julia exited before $watch_token" }
+}
+set timeout 10
+expect {
+    -exact $prompt {}
+    timeout { fail "timed out waiting for prompt after $watch_token" }
+    eof { fail "julia exited before prompt after $watch_token" }
+}
+
+send -- "let reader = SymbolicRegression.watch_stream(stdin); SymbolicRegression.check_for_user_quit(reader); SymbolicRegression.close_reader!(reader); println(\"$check_token\"); end\r"
+set timeout 3
+expect {
+    -exact $check_token {}
+    timeout { fail "timed out waiting for $check_token (check_for_user_quit likely blocked)" }
+    eof { fail "julia exited before $check_token" }
+}
+set timeout 10
+expect {
+    -exact $prompt {}
+    timeout { fail "timed out waiting for prompt after $check_token" }
+    eof { fail "julia exited before prompt after $check_token" }
+}
+
+catch {exec kill -TERM [exp_pid]}
+set timeout 2
+expect {
+    eof {}
+    timeout {
+        catch {exec kill -KILL [exp_pid]}
+        expect eof
+    }
+}
+
+exit 0

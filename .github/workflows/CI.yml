@@ -70,6 +70,18 @@ jobs:
           julia --color=yes --project=. --threads=auto --check-bounds=yes --depwarn=yes --code-coverage=user -e 'import Coverage; import Pkg; Pkg.test(coverage=true)'
           julia --color=yes coverage.jl
         shell: bash
+      - name: "Install expect"
+        if: matrix.os == 'ubuntu-latest' && matrix.group == 'evaluation'
+        run: |
+          if ! command -v expect >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y expect
+          fi
+        shell: bash
+      - name: "Run REPL stdin nonblocking test"
+        if: matrix.os == 'ubuntu-latest' && matrix.group == 'evaluation'
+        run: expect test/repl/test_repl_stdin_nonblocking.exp
+        shell: bash
       - name: "Sanitize artifact group"
         id: sanitize_unit_group
         shell: bash
