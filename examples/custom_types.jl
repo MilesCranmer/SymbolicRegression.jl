@@ -276,6 +276,5 @@ fit!(mach)
 
 ŷ = report(mach).equations[end](MLJBase.matrix(X; transpose=true))
 mean_loss = sum(map(edit_distance, y, ŷ)) / length(y)
-# This is a stochastic search; allow a bit of slack across platforms/Julia versions.
 @test mean_loss <= 9.5
 #! format: on
