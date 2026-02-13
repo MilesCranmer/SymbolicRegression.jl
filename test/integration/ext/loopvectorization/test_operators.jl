@@ -214,8 +214,12 @@ end
         completed || return nothing
         # We capture any warnings about the LoopVectorization not working
         local y_turbo
+        turbo = true
+        @static if VERSION < v"1.11" && Sys.islinux()
+            turbo = false
+        end
         eval_warnings = @capture_err begin
-            y_turbo, _ = eval_tree_array(tree, Xpart, options; turbo=true)
+            y_turbo, _ = eval_tree_array(tree, Xpart, options; turbo=turbo)
         end
         test_info(@test(y ≈ y_turbo && eval_warnings == "")) do
             @info T tree X[:, seed] y y_turbo eval_warnings
