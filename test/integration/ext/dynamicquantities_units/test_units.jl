@@ -129,17 +129,14 @@ end
         compute_complexity(custom_op(cos(1 * x1), 1 * x1), options)
 
     # Check that every cos(...) which contains x1 also has complexity
-    has_cos(tree) =
-        any(get_tree(tree)) do t
-            t.degree == 1 && options.operators.unaops[t.op] == cos
-        end
     valid_trees = [
-        !has_cos(member.tree) || any(
+        all(
             t ->
-                t.degree == 1 &&
+                !(
+                    t.degree == 1 &&
                     options.operators.unaops[t.op] == cos &&
-                    Node(Float64; feature=1) in t &&
-                    compute_complexity(t, options) > 1,
+                    Node(Float64; feature=1) in t
+                ) || compute_complexity(t, options) > 1,
             get_tree(member.tree),
         ) for member in dominating
     ]
