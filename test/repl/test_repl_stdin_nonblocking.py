@@ -8,7 +8,8 @@ import time
 
 PROMPT = b"julia> "
 WARMUP_TOKEN = b"__REPL_WARMUP_OK__"
-SUCCESS_TOKEN = b"__REPL_STDIN_NONBLOCK_OK__"
+WATCH_TOKEN = b"__REPL_WATCH_OK__"
+CHECK_TOKEN = b"__REPL_CHECK_OK__"
 
 
 def send_line(fd: int, line: str) -> None:
@@ -93,11 +94,19 @@ def main() -> int:
         read_until(master_fd, proc, WARMUP_TOKEN, timeout_s=20.0, transcript=transcript)
         read_until(master_fd, proc, PROMPT, timeout_s=20.0, transcript=transcript)
 
+        # The key regression: with a real TTY (PTY), stdin monitoring should not block.
         send_line(
             master_fd,
-            "let; mutable struct BlockingFakeInput <: IO; chunks::Vector{Vector{UInt8}}; reported_bytes::Int; read_delay_s::Float64; end; BlockingFakeInput(chunks::Vector{String}; reported_bytes::Int=0, read_delay_s::Float64=0.0)=BlockingFakeInput([Vector{UInt8}(codeunits(c)) for c in chunks], reported_bytes, read_delay_s); Base.isreadable(::BlockingFakeInput)=true; Base.start_reading(::BlockingFakeInput)=nothing; Base.stop_reading(::BlockingFakeInput)=nothing; Base.bytesavailable(s::BlockingFakeInput)=isempty(s.chunks) ? 0 : s.reported_bytes; function Base.read(s::BlockingFakeInput, ::Integer); if s.read_delay_s > 0; sleep(s.read_delay_s); end; return isempty(s.chunks) ? UInt8[] : popfirst!(s.chunks); end; Base.readavailable(s::BlockingFakeInput)=isempty(s.chunks) ? UInt8[] : popfirst!(s.chunks); reader=SymbolicRegression.StdinReader(true, BlockingFakeInput([\"x\"]; reported_bytes=1, read_delay_s=5.0)); SymbolicRegression.check_for_user_quit(reader); println(\"__REPL_STDIN_NONBLOCK_OK__\"); end",
+            "SymbolicRegression.watch_stream(stdin); println(\"__REPL_WATCH_OK__\")",
         )
-        read_until(master_fd, proc, SUCCESS_TOKEN, timeout_s=2.5, transcript=transcript)
+        read_until(master_fd, proc, WATCH_TOKEN, timeout_s=2.5, transcript=transcript)
+        read_until(master_fd, proc, PROMPT, timeout_s=10.0, transcript=transcript)
+
+        send_line(
+            master_fd,
+            "let reader = SymbolicRegression.watch_stream(stdin); SymbolicRegression.check_for_user_quit(reader); SymbolicRegression.close_reader!(reader); println(\"__REPL_CHECK_OK__\"); end",
+        )
+        read_until(master_fd, proc, CHECK_TOKEN, timeout_s=2.5, transcript=transcript)
         read_until(master_fd, proc, PROMPT, timeout_s=10.0, transcript=transcript)
 
         # Don't rely on graceful REPL shutdown (can be flaky if background tasks linger).
