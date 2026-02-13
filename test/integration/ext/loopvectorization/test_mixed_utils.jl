@@ -38,7 +38,8 @@ function test_mixed(i, batching::Bool, weighted::Bool, parallelism)
         T = Float16
     elseif i == 5
         T = Float64
-        turbo = true
+        lv_bug = VERSION < v"1.11" && Sys.islinux()
+        turbo = true && !lv_bug
     end
 
     numprocs = parallelism == :multiprocessing ? 2 : nothing
