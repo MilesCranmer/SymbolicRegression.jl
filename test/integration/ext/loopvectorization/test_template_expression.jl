@@ -428,13 +428,8 @@ end
     using DynamicExpressions: OperatorEnum, EvalOptions
     using LoopVectorization: LoopVectorization
 
-    # On Julia 1.10 (LLVM 15), this occasionally aborts during codegen on the Ubuntu CI runner.
-    # We still run the test, but disable `turbo` on that platform.
-    turbo = true
-    @static if VERSION < v"1.11" && Sys.islinux()
-        turbo = false
-    end
-
+    lv_bug = VERSION < v"1.11" && Sys.islinux()
+    turbo = true && !lv_bug
     operators = OperatorEnum(; binary_operators=(+, *, /, -), unary_operators=(sin, cos))
     variable_names = ["x1", "x2"]
     eval_options = EvalOptions(; turbo)
