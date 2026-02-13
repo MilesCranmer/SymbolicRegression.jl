@@ -3,7 +3,7 @@ module ConstantOptimizationModule
 using Random: AbstractRNG, default_rng
 using LineSearches: LineSearches
 using Optim: Optim
-import NLSolversBase
+using NLSolversBase: NLSolversBase
 using ADTypes: AbstractADType, AutoEnzyme
 using DifferentiationInterface: value_and_gradient, prepare_gradient
 using DynamicExpressions:
