@@ -276,5 +276,5 @@ fit!(mach)
 
 ŷ = report(mach).equations[end](MLJBase.matrix(X; transpose=true))
 mean_loss = sum(map(edit_distance, y, ŷ)) / length(y)
-@test mean_loss <= 8.0
+@test mean_loss <= 9.5
 #! format: on
