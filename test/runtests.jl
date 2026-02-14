@@ -20,11 +20,15 @@ if startswith(TEST_GROUP, "integration/")
     # Emit package versions for debugging CI matrix/pins.
     if integration_name == "ad/mooncake"
         try
-            import Optim
-            import NLSolversBase
-            @info "Integration env package versions" Optim = Base.pkgversion(Optim) NLSolversBase = Base.pkgversion(NLSolversBase)
+            using Optim: Optim
+            using NLSolversBase: NLSolversBase
+            @info "Integration env package versions" Optim = Base.pkgversion(Optim) NLSolversBase = Base.pkgversion(
+                NLSolversBase
+            )
         catch err
-            @warn "Could not import Optim/NLSolversBase to report versions" exception = (err, catch_backtrace())
+            @warn "Could not import Optim/NLSolversBase to report versions" exception = (
+                err, catch_backtrace()
+            )
         end
     end
 
