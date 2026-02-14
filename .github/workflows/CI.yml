@@ -144,6 +144,37 @@ jobs:
           path: lcov.info
           retention-days: 1
 
+  integration-optim-v1-mooncake:
+    name: i/ad-mooncake-optim-v1-1.10-ubuntu-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - uses: actions/checkout@v5
+      - name: "Set up Julia"
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: "1.10"
+      - name: "Build package"
+        uses: julia-actions/julia-buildpkg@v1
+      - name: "Prepare mooncake env with Optim v1"
+        run: |
+          julia --color=yes --project=test/integration/ad/mooncake -e '
+            import Pkg
+            Pkg.develop(path=".")
+            Pkg.add(name="Optim", version="1")
+            Pkg.add(name="NLSolversBase", version="7")
+            Pkg.pin(name="Optim")
+            Pkg.pin(name="NLSolversBase")
+            Pkg.instantiate()
+          '
+        shell: bash
+      - name: "Run mooncake integration test (Optim v1)"
+        env:
+          TEST_GROUP: integration/ad/mooncake
+        run: julia --color=yes --project=. --threads=auto --check-bounds=yes -e 'import Pkg; Pkg.test()'
+        shell: bash
+
   upload-coverage:
     name: Upload Coverage to Codecov
     needs: [unit, integration]

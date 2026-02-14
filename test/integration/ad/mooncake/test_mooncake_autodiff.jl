@@ -1,5 +1,14 @@
 @testitem "Expression constant optimization with Mooncake" begin
     using SymbolicRegression
+    using Optim
+    using NLSolversBase
+
+    println(
+        "[mooncake integration] Optim=",
+        Base.pkgversion(Optim),
+        " NLSolversBase=",
+        Base.pkgversion(NLSolversBase),
+    )
     using SymbolicRegression.ConstantOptimizationModule: optimize_constants
     using DynamicExpressions: get_scalar_constants
     using StableRNGs: StableRNG

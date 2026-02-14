@@ -17,6 +17,21 @@ if startswith(TEST_GROUP, "integration/")
     Pkg.develop(; path=joinpath(@__DIR__, ".."))
     Pkg.instantiate()
 
+    # Emit package versions for debugging CI matrix/pins.
+    if integration_name == "ad/mooncake"
+        try
+            using Optim: Optim
+            using NLSolversBase: NLSolversBase
+            @info "Integration env package versions" Optim = Base.pkgversion(Optim) NLSolversBase = Base.pkgversion(
+                NLSolversBase
+            )
+        catch err
+            @warn "Could not import Optim/NLSolversBase to report versions" exception = (
+                err, catch_backtrace()
+            )
+        end
+    end
+
     if startswith(integration_name, "ext/mlj") && integration_name == "ext/mlj/templates"
         include(joinpath(@__DIR__, "..", "example.jl"))
         include(joinpath(@__DIR__, "..", "examples", "parameterized_function.jl"))

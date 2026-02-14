@@ -745,7 +745,7 @@ $(OPTION_DESCRIPTIONS)
             :Options,
         )
         optimizer_algorithm = if optimizer_algorithm == "NelderMead"
-            Optim.NelderMead(; linesearch=LineSearches.BackTracking())
+            Optim.NelderMead()
         else
             Optim.BFGS(; linesearch=LineSearches.BackTracking())
         end
