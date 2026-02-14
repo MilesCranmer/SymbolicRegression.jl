@@ -157,16 +157,16 @@ jobs:
           version: "1.10"
       - name: "Build package"
         uses: julia-actions/julia-buildpkg@v1
-      - name: "Prepare Optim v1 stack (pins apply to test run)"
+      - name: "Prepare mooncake env with Optim v1"
         run: |
-          julia --color=yes --project=. -e '
+          julia --color=yes --project=test/integration/ad/mooncake -e '
             import Pkg
+            Pkg.develop(path=".")
             Pkg.add(name="Optim", version="1")
             Pkg.add(name="NLSolversBase", version="7")
             Pkg.pin(name="Optim")
             Pkg.pin(name="NLSolversBase")
             Pkg.instantiate()
-            Pkg.status()
           '
         shell: bash
       - name: "Run mooncake integration test (Optim v1)"
