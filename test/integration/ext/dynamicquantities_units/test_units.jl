@@ -128,20 +128,13 @@ end
     @test compute_complexity(best_expr, options) >=
         compute_complexity(custom_op(cos(1 * x1), 1 * x1), options)
 
-    # Check that every cos(...) which contains x1 also has complexity
-    valid_trees = [
-        all(
-            t ->
-                !(
-                    t.degree == 1 &&
-                    options.operators.unaops[t.op] == cos &&
-                    Node(Float64; feature=1) in t
-                ) || compute_complexity(t, options) > 1,
-            get_tree(member.tree),
-        ) for member in dominating
-    ]
-    @test all(valid_trees)
-    @test length(valid_trees) > 0
+    # Check that every cos(...) which contains x1 also has complexity.
+    # (Non-vacuous: the best expression should actually contain such a cos subtree.)
+    cos_x1_subtrees = filter(get_tree(best_expr)) do t
+        t.degree == 1 && options.operators.unaops[t.op] == cos && Node(Float64; feature=1) in t
+    end
+    @test length(cos_x1_subtrees) > 0
+    @test all(t -> compute_complexity(t, options) > 1, cos_x1_subtrees)
 end
 
 @testitem "Operator compatibility" tags = [:part3] begin
