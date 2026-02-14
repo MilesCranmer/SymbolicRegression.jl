@@ -501,7 +501,7 @@ function EB.create_expression(
     dataset::Dataset{T,L},
     ::Type{<:AbstractExpressionNode},
     ::Type{E},
-    ::Val{embed}=Val(false),
+    (::Val{embed})=Val(false),
 ) where {T,L,embed,E<:TemplateExpression}
     function_keys = get_function_keys(options.expression_options.structure)
 

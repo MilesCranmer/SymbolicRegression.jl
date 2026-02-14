@@ -853,9 +853,9 @@ function _main_search_loop!(
     resource_monitor = ResourceMonitor(;
         # Storing n times as many monitoring intervals as populations seems like it will
         # help get accurate resource estimates:
-        max_recordings=options.populations * 100 * nout,
-        start_reporting_at=options.populations * 3 * nout,
-        window_size=options.populations * 2 * nout,
+        max_recordings=(options.populations * 100 * nout),
+        start_reporting_at=(options.populations * 3 * nout),
+        window_size=(options.populations * 2 * nout),
     )
     while sum(state.cycles_remaining) > 0
         kappa += 1
