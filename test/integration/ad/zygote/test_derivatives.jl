@@ -81,6 +81,19 @@
             @test array_test(predicted_grad, true_grad)
             @test array_test(predicted_grad2, true_grad)
 
+            # Also test SubArray input (common when batching=true uses view(dataset.X, :, idx))
+            idx = rand(rng, 1:N, 50)
+            Xv = view(X, :, idx)
+            predicted_grad_v = eval_grad_tree_array(tree, Xv, options; variable=true)[2]
+            @test size(predicted_grad_v) == (nfeatures, length(idx))
+
+            true_grad_v = gradient(
+                (x1, x2, x3) -> sum(equation.(x1, x2, x3)),
+                [Xv[i, :] for i in 1:nfeatures]...,
+            )
+            true_grad_v = reduce(hcat, true_grad_v)'
+            @test array_test(predicted_grad_v, true_grad_v)
+
             # Make sure that the array_test actually works:
             @test !array_test(predicted_grad .* 0, true_grad)
             @test !array_test(predicted_grad2 .* 0, true_grad)
