@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - 'bot/**'
   pull_request:
     branches:
       - master
