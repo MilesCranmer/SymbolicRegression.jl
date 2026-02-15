@@ -1,0 +1,45 @@
+name: Downgrade Compat
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  downgrade-compat:
+    name: Downgrade compat (deps)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      TEST_GROUP: unit/basic
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10'
+
+      - name: Cache dependencies
+        uses: julia-actions/cache@v2
+
+      - name: Downgrade compat
+        uses: julia-actions/julia-downgrade-compat@v2
+        with:
+          mode: deps
+          projects: '., test'
+          julia_version: '1.10'
+
+      - name: Build package
+        uses: julia-actions/julia-buildpkg@v1
+
+      - name: Run tests
+        uses: julia-actions/julia-runtest@v1
+        with:
+          allow_reresolve: false
+          force_latest_compatible_version: false
