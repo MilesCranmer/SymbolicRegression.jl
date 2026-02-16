@@ -220,7 +220,7 @@ and `unary_operators` as normal, but now we also pass `GenericOperatorEnum`,
 because we are dealing with non-numeric types.
 
 We also need to manually define the `loss_type`, since it's not inferrable from
-`loss_type`.
+ the data type.
 =#
 binary_operators = (concat, interleave)
 unary_operators = (head, tail, reverse)
@@ -231,7 +231,7 @@ hparams = (;
     parsimony=0.1,
     adaptive_parsimony_scaling=20.0,
     mutation_weights=MutationWeights(; mutate_constant=1.0),
-    early_stop_condition=(l, c) -> l < 1.0 && c <= 15,  # src
+    early_stop_condition=(l, c) -> l < 1.0 && c <= 15,  #src
 )
 model = SRRegressor(;
     binary_operators,
