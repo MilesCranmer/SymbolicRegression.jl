@@ -113,11 +113,11 @@
         function evaluator(x)
             return sum(abs2, x)
         end
-        
+
         # Manually test the inner loop that was buggy
         x0 = Float64[1.0, 2.0]
         rng = Random.default_rng()
-        
+
         # This was the buggy line: randn(rng, T, size(x0)...)
         # where T = MyVec2, which doesn't work with randn
         # The fix uses eltype(x0) = Float64 instead
