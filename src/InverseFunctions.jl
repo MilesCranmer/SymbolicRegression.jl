@@ -1,6 +1,6 @@
 module InverseFunctionsModule
 
-using InverseFunctions: inverse as _inverse, NoInverse
+using InverseFunctions: InverseFunctions
 
 #! format: off
 using ..CoreModule:
@@ -24,8 +24,8 @@ functions to improve the search space.
 The default behavior for operators is to use InverseFunctions.jl.
 """
 function approx_inverse(f::F) where {F<:Function}
-    i_f = _inverse(f)
-    i_f isa NoInverse && return nothing
+    i_f = InverseFunctions.inverse(f)
+    i_f isa InverseFunctions.NoInverse && return nothing
     return i_f
 end
 
