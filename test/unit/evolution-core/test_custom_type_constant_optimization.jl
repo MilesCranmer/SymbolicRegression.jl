@@ -13,7 +13,7 @@
         set_scalar_constants!
     using Optim: Optim
     using Random: default_rng
-    using SymbolicRegression: Options, PopMember
+    using SymbolicRegression: Dataset, Options, PopMember
     using SymbolicRegression.ConstantOptimizationModule: _optimize_constants_inner
 
     # Issue #568:
@@ -32,9 +32,10 @@
     # Note: DynamicExpressions' AbstractExpression has a fairly rich interface.
     # We implement the required methods in the simplest possible way, but keep
     # this type *local* to the test so we don't affect other tests.
-    struct DummyExpr{T,N,M} <: AbstractExpression{T,N}
+    mutable struct DummyExpr{T,N,M} <: AbstractExpression{T,N}
         tree::N
         metadata::M
+        constants::Vector{Float64}
     end
     get_tree(ex::DummyExpr) = ex.tree
     get_metadata(ex::DummyExpr) = ex.metadata
@@ -44,37 +45,50 @@
     get_operators(::DummyExpr, operators=nothing) = something(
         operators, OperatorEnum(1 => (), 2 => ())
     )
-    get_scalar_constants(::DummyExpr) = (Float64[], nothing)
-    set_scalar_constants!(::DummyExpr{T}, _constants, _refs) where {T} = nothing
+    get_scalar_constants(ex::DummyExpr) = (copy(ex.constants), nothing)
+    function set_scalar_constants!(ex::DummyExpr{T}, constants, _refs) where {T}
+        ex.constants .= constants
+        return nothing
+    end
     extract_gradient(gradient, ::DummyExpr) = gradient
 
-    tree = DummyExpr{T,Node{Float64,2},Nothing}(Node{Float64,2}(; feature=1), nothing)
+    x0 = [1.0, 2.0]
+    tree = DummyExpr{T,Node{Float64,2},Nothing}(
+        Node{Float64,2}(; feature=1), nothing, copy(x0)
+    )
 
-    # Dummy dataset only needs dataset_fraction.
-    struct DummyDataset end
-    import SymbolicRegression.CoreModule: dataset_fraction
-    dataset_fraction(::DummyDataset) = 1.0
+    # Use a real Dataset object (so the improved-cost branch is exercised).
+    rng = default_rng()
+    X = randn(rng, 2, 16)
+    y = randn(rng, 16)
+    dataset = Dataset(X, y)
 
     options = Options(;
-        binary_operators=(+,), unary_operators=(), deterministic=true, optimizer_nrestarts=2
+        binary_operators=(+,),
+        unary_operators=(),
+        deterministic=true,
+        optimizer_nrestarts=2,
+        autodiff_backend=nothing,
+        parsimony=0.0,
     )
 
-    member = PopMember(tree, 0.0, 0.0, options; deterministic=true)
+    # Ensure cost calculation doesn't depend on computing tree complexity.
+    member = PopMember(tree, 0.0, 0.0, options, 1; deterministic=true)
 
-    x0 = [1.0, 2.0, 3.0]
     refs = nothing
 
-    # Keep f constant so we don't take the branch that needs real dataset fields.
-    f(_x; regularization=false) = 1.0
+    target = [0.3, -0.7]
+    function f(x; regularization=false)
+        return sum(abs2, x .- target)
+    end
+
     fg! = nothing
+    algorithm = Optim.BFGS()
+    optimizer_options = Optim.Options(; iterations=50)
 
-    rng = default_rng()
-    algorithm = Optim.Newton()
-    optimizer_options = Optim.Options(; iterations=1)
-
-    _optimize_constants_inner(
-        f, fg!, x0, refs, DummyDataset(), member, options, algorithm, optimizer_options, rng
+    new_member, _ = _optimize_constants_inner(
+        f, fg!, x0, refs, dataset, member, options, algorithm, optimizer_options, rng
     )
 
-    @test true
+    @test maximum(abs.(new_member.tree.constants .- target)) < 1e-3
 end
