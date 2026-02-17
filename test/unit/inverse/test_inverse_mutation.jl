@@ -2,7 +2,7 @@
     using SymbolicRegression
     using SymbolicRegression.InverseFunctionsModule: approx_inverse
     using SymbolicRegression.EvaluateInverseModule: eval_inverse_tree_array
-    using SymbolicRegression.MutationFunctionsModule: invert_at_random_node
+    using SymbolicRegression.MutationFunctionsModule: backsolve_rewrite_random_node
     using DynamicExpressions: Node, OperatorEnum, count_nodes, Expression
     using StableRNGs: StableRNG
 
@@ -110,7 +110,7 @@
         @test inverted ≈ [1.0, 2.0, 3.0] atol = 1e-10
     end
 
-    @testset "invert_at_random_node - Basic mutation" begin
+    @testset "backsolve_rewrite_random_node - Basic mutation" begin
         # Create dataset
         X = reshape(Float64[1.0, 2.0, 3.0], 1, 3)
         y = Float64[2.0, 3.0, 4.0]
@@ -127,14 +127,14 @@
         tree = Node(1, sin_node, const_node)  # sin(x1) + 2
 
         # Mutate - should replace some node with a constant
-        mutated_tree = invert_at_random_node(tree, dataset, options, rng)
+        mutated_tree = backsolve_rewrite_random_node(tree, dataset, options, rng)
 
         # Check that mutation happened (tree structure might have changed)
         @test mutated_tree !== nothing
         @test count_nodes(mutated_tree) >= 1
     end
 
-    @testset "invert_at_random_node - Handles single node" begin
+    @testset "backsolve_rewrite_random_node - Handles single node" begin
         # Single node tree should return unchanged
         X = reshape(Float64[1.0], 1, 1)
         y = Float64[1.0]
@@ -143,12 +143,12 @@
         options = Options(; binary_operators=[+], unary_operators=[sin])
 
         tree = Node(Float64; val=1.0)
-        mutated_tree = invert_at_random_node(tree, dataset, options, rng)
+        mutated_tree = backsolve_rewrite_random_node(tree, dataset, options, rng)
 
         @test mutated_tree === tree  # Should be unchanged
     end
 
-    @testset "invert_at_random_node - Handles invalid inversion" begin
+    @testset "backsolve_rewrite_random_node - Handles invalid inversion" begin
         # Tree that might produce invalid values during inversion
         X = reshape(Float64[1.0, 2.0], 1, 2)
         y = Float64[10.0, 20.0]  # Values that might be out of domain
@@ -162,24 +162,24 @@
         tree = Node(1, x_node)
 
         # Mutate - should handle gracefully
-        mutated_tree = invert_at_random_node(tree, dataset, options, rng)
+        mutated_tree = backsolve_rewrite_random_node(tree, dataset, options, rng)
 
         # Should either mutate successfully or return original
         @test mutated_tree !== nothing
     end
 
-    @testset "MutationWeights - invert_node field" begin
-        # Test that invert_node is included in MutationWeights
+    @testset "MutationWeights - backsolve_rewrite field" begin
+        # Test that backsolve_rewrite is included in MutationWeights
         weights = MutationWeights()
-        @test hasfield(typeof(weights), :invert_node)
-        @test weights.invert_node == 0.0  # disabled by default (opt-in)
+        @test hasfield(typeof(weights), :backsolve_rewrite)
+        @test weights.backsolve_rewrite == 0.0  # disabled by default (opt-in)
 
         # Test that a custom value can be set
-        weights_on = MutationWeights(; invert_node=0.5)
-        @test weights_on.invert_node == 0.5
+        weights_on = MutationWeights(; backsolve_rewrite=0.5)
+        @test weights_on.backsolve_rewrite == 0.5
     end
 
-    @testset "Integration - invert_node in mutation pipeline" begin
+    @testset "Integration - backsolve_rewrite in mutation pipeline" begin
         # Test that the mutation can be sampled and executed
         using SymbolicRegression.MutateModule: mutate!
 
@@ -197,11 +197,11 @@
         ex = Expression(tree; operators=options.operators)
         member = PopMember(dataset, tree, options; deterministic=true)
 
-        # Test that mutate! with Val{:invert_node} works
+        # Test that mutate! with Val{:backsolve_rewrite} works
         result = mutate!(
             ex,
             member,
-            Val(:invert_node),
+            Val(:backsolve_rewrite),
             options.mutation_weights,
             options;
             recorder=Dict{String,Any}(),

@@ -636,7 +636,7 @@ function randomly_rotate_tree!(tree::AbstractExpressionNode, rng::AbstractRNG=de
 end
 
 """Invert tree at a random node, replacing it with a new subtree that fits the inverted values using sparse regression if possible, or a constant fallback if not."""
-function invert_at_random_node(
+function backsolve_rewrite_random_node(
     ex::AbstractExpression{T},
     dataset::Dataset{T},
     options::AbstractOptions,
@@ -644,11 +644,11 @@ function invert_at_random_node(
     population=nothing,
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
-    new_tree = invert_at_random_node(tree, dataset, options, rng; population=population)
+    new_tree = backsolve_rewrite_random_node(tree, dataset, options, rng; population=population)
     return with_contents_for_mutation(ex, new_tree, context)
 end
 
-function invert_at_random_node(
+function backsolve_rewrite_random_node(
     tree::AbstractExpressionNode{T},
     dataset::Dataset{T},
     options::AbstractOptions,

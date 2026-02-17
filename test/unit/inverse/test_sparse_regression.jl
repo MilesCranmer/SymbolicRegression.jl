@@ -516,7 +516,7 @@ end
 
 @testitem "Integration test: inverse mutation with sparse regression" tags = [:part2] begin
     using SymbolicRegression
-    using SymbolicRegression.MutationFunctionsModule: invert_at_random_node
+    using SymbolicRegression.MutationFunctionsModule: backsolve_rewrite_random_node
     using DynamicExpressions: Node, eval_tree_array
     using Random: MersenneTwister
 
@@ -549,7 +549,7 @@ end
     orig_vals, _ = eval_tree_array(copy(tree), X, options.operators)
 
     # Perform inverse mutation (signature: tree, dataset, options, rng)
-    mutated_tree = invert_at_random_node(tree, dataset, options, rng)
+    mutated_tree = backsolve_rewrite_random_node(tree, dataset, options, rng)
 
     @test mutated_tree !== nothing
     # Mutation modifies in-place; verify the tree was actually changed
@@ -564,7 +564,7 @@ end
     )
 
     orig_vals2, _ = eval_tree_array(copy(tree), X, options_no_sparse.operators)
-    mutated_tree2 = invert_at_random_node(tree, dataset, options_no_sparse, rng)
+    mutated_tree2 = backsolve_rewrite_random_node(tree, dataset, options_no_sparse, rng)
 
     @test mutated_tree2 !== nothing
     new_vals2, _ = eval_tree_array(mutated_tree2, X, options_no_sparse.operators)
@@ -582,7 +582,7 @@ end
     )
 
     orig_vals3, _ = eval_tree_array(copy(tree), X, options_validate.operators)
-    mutated_tree3 = invert_at_random_node(tree, dataset, options_validate, rng)
+    mutated_tree3 = backsolve_rewrite_random_node(tree, dataset, options_validate, rng)
 
     @test mutated_tree3 !== nothing
     new_vals3, _ = eval_tree_array(mutated_tree3, X, options_validate.operators)
@@ -592,7 +592,7 @@ end
     simple_tree = Node(Float64; feature=1)
     simple_copy = copy(simple_tree)
 
-    mutated_tree4 = invert_at_random_node(simple_tree, dataset, options, rng)
+    mutated_tree4 = backsolve_rewrite_random_node(simple_tree, dataset, options, rng)
 
     @test mutated_tree4 !== nothing
     # Single-node tree should be returned as-is

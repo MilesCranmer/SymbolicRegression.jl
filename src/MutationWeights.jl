@@ -89,8 +89,8 @@ will be normalized to sum to 1.0 after initialization.
 - `optimize::Float64`: How often to optimize the constants in the tree, as a mutation.
     Note that this is different from `optimizer_probability`, which is
     performed at the end of an iteration for all individuals.
-- `invert_node::Float64`: How often to invert the tree at a random node, creating
-    an inverse expression by solving backward from target values.
+- `backsolve_rewrite::Float64`: How often to backsolve and rewrite a random subtree
+    by inverting the evaluation path and fitting a replacement expression.
 - `form_connection::Float64`: **Only used for `GraphNode`, not regular `Node`**.
     Otherwise, this will automatically be set to 0.0. How often to form a
     connection between two nodes.
@@ -115,7 +115,7 @@ Base.@kwdef mutable struct MutationWeights <: AbstractMutationWeights
     randomize::Float64 = 0.00695
     do_nothing::Float64 = 0.431
     optimize::Float64 = 0.0
-    invert_node::Float64 = 0.0
+    backsolve_rewrite::Float64 = 0.0
     form_connection::Float64 = 0.5
     break_connection::Float64 = 0.1
 end

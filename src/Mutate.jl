@@ -37,7 +37,7 @@ using ..MutationFunctionsModule:
     break_random_connection!,
     randomly_rotate_tree!,
     randomize_tree,
-    invert_at_random_node
+    backsolve_rewrite_random_node
 using ..ConstantOptimizationModule: optimize_constants
 using ..RecorderModule: @recorder
 
@@ -570,7 +570,7 @@ end
 function mutate!(
     tree::N,
     member::P,
-    ::Val{:invert_node},
+    ::Val{:backsolve_rewrite},
     ::AbstractMutationWeights,
     options::AbstractOptions;
     recorder::RecordType,
@@ -578,8 +578,8 @@ function mutate!(
     population=nothing,
     kws...,
 ) where {N<:AbstractExpression,P<:AbstractPopMember}
-    tree = invert_at_random_node(tree, dataset, options; population=population)
-    @recorder recorder["type"] = "invert_node"
+    tree = backsolve_rewrite_random_node(tree, dataset, options; population=population)
+    @recorder recorder["type"] = "backsolve_rewrite"
     return MutationResult{N,P}(; tree=tree)
 end
 
