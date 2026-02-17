@@ -1,7 +1,16 @@
 @testitem "Constant optimization with custom types (Issue #568)" begin
     using DynamicExpressions: AbstractExpression, OperatorEnum
     using DynamicExpressions.NodeModule: Node
-    import DynamicExpressions: copy, extract_gradient, get_contents, get_metadata, get_operators, get_scalar_constants, get_tree, get_variable_names, set_scalar_constants!
+    import DynamicExpressions:
+        copy,
+        extract_gradient,
+        get_contents,
+        get_metadata,
+        get_operators,
+        get_scalar_constants,
+        get_tree,
+        get_variable_names,
+        set_scalar_constants!
     using Optim: Optim
     using Random: default_rng
     using SymbolicRegression: Options, PopMember
@@ -32,8 +41,9 @@
     get_contents(ex::DummyExpr) = (tree=ex.tree,)
     copy(ex::DummyExpr; break_sharing::Val=Val(false)) = ex
     get_variable_names(::DummyExpr, variable_names=nothing) = ["x1"]
-    get_operators(::DummyExpr, operators=nothing) =
-        something(operators, OperatorEnum(1 => (), 2 => ()))
+    get_operators(::DummyExpr, operators=nothing) = something(
+        operators, OperatorEnum(1 => (), 2 => ())
+    )
     get_scalar_constants(::DummyExpr) = (Float64[], nothing)
     set_scalar_constants!(::DummyExpr{T}, _constants, _refs) where {T} = nothing
     extract_gradient(gradient, ::DummyExpr) = gradient
@@ -46,10 +56,7 @@
     dataset_fraction(::DummyDataset) = 1.0
 
     options = Options(;
-        binary_operators=(+,),
-        unary_operators=(),
-        deterministic=true,
-        optimizer_nrestarts=2,
+        binary_operators=(+,), unary_operators=(), deterministic=true, optimizer_nrestarts=2
     )
 
     member = PopMember(tree, 0.0, 0.0, options; deterministic=true)
@@ -66,16 +73,7 @@
     optimizer_options = Optim.Options(; iterations=1)
 
     _optimize_constants_inner(
-        f,
-        fg!,
-        x0,
-        refs,
-        DummyDataset(),
-        member,
-        options,
-        algorithm,
-        optimizer_options,
-        rng,
+        f, fg!, x0, refs, DummyDataset(), member, options, algorithm, optimizer_options, rng
     )
 
     @test true
