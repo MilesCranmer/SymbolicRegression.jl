@@ -258,6 +258,12 @@ struct Options{
     define_helper_functions::Bool
     use_recorder::Bool
     popmember_type::Type{PM}
+    use_sparse_regression::Bool
+    sparse_regression_max_library_size::Int
+    sparse_regression_lambda::Float64
+    sparse_regression_max_iter::Int
+    sparse_regression_validate::Bool
+    sparse_regression_max_mse::Float64
 end
 
 function Base.print(io::IO, @nospecialize(options::Options))

@@ -29,5 +29,8 @@ LocalPreferences.toml
 !test/**/LocalPreferences.toml
 private
 
+# Serialized Julia objects
+*.jls
+
 # Generated examples:
 docs/src/examples/

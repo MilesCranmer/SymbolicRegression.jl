@@ -16,7 +16,10 @@ using DynamicExpressions:
     get_child,
     set_child!,
     max_degree
-using ..CoreModule: AbstractOptions, DATA_TYPE, init_value, sample_value
+using Statistics: median
+using ..CoreModule: AbstractOptions, DATA_TYPE, init_value, sample_value, Dataset
+using ..EvaluateInverseModule: eval_inverse_tree_array
+using ..SparseRegressionModule: fit_sparse_expression
 
 import ..CoreModule: mutate_value
 
@@ -628,6 +631,94 @@ function randomly_rotate_tree!(tree::AbstractExpressionNode, rng::AbstractRNG=de
         return pivot
     else
         set_child!(parent, pivot, root_idx)
+        return tree
+    end
+end
+
+"""Invert tree at a random node, replacing it with a new subtree that fits the inverted values using sparse regression if possible, or a constant fallback if not."""
+function invert_at_random_node(
+    ex::AbstractExpression{T},
+    dataset::Dataset{T},
+    options::AbstractOptions,
+    rng::AbstractRNG=default_rng();
+    population=nothing,
+) where {T<:DATA_TYPE}
+    tree, context = get_contents_for_mutation(ex, rng)
+    new_tree = invert_at_random_node(tree, dataset, options, rng; population=population)
+    return with_contents_for_mutation(ex, new_tree, context)
+end
+
+function invert_at_random_node(
+    tree::AbstractExpressionNode{T},
+    dataset::Dataset{T},
+    options::AbstractOptions,
+    rng::AbstractRNG=default_rng();
+    population=nothing,
+) where {T<:DATA_TYPE}
+    # Tree must have at least 2 nodes to perform inversion
+    length(tree) <= 1 && return tree
+
+    # Select a random node to invert at (excluding the root to maintain structure)
+    node_to_invert = rand(rng, NodeSampler(; tree, filter=t -> t !== tree))
+
+    # Perform inverse evaluation to get numerical values
+    inverted_values, success = eval_inverse_tree_array(
+        tree, dataset.X, options.operators, node_to_invert, dataset.y
+    )
+
+    # If inversion failed or produced invalid values, return original tree
+    if !success || any(isnan, inverted_values) || any(isinf, inverted_values)
+        return tree
+    end
+
+    # Try sparse regression if enabled
+    if options.use_sparse_regression
+        nfeatures = size(dataset.X, 1)
+        new_node = fit_sparse_expression(
+            node_to_invert,
+            inverted_values,
+            dataset,
+            options,
+            nfeatures;
+            lambda=T(options.sparse_regression_lambda),
+            max_iter=options.sparse_regression_max_iter,
+            max_library_size=options.sparse_regression_max_library_size,
+            rng=rng,
+            validate=options.sparse_regression_validate,
+            max_mse=T(options.sparse_regression_max_mse),
+            population=population,
+        )
+
+        # If sparse regression succeeded, use its result
+        if new_node !== nothing
+            # Replace the target node in the tree
+            if node_to_invert === tree
+                return new_node
+            else
+                parent, idx = _find_parent(tree, node_to_invert)
+                set_child!(parent, new_node, idx)
+                return tree
+            end
+        end
+        # Otherwise fall through to median constant fallback
+    end
+
+    # Fallback: Use median (for real types) or mean (for complex types) as representative value
+    representative_val = if T <: Real
+        median(inverted_values)
+    else
+        sum(inverted_values) / length(inverted_values)
+    end
+
+    # Create a new constant node with the representative value
+    new_node = constructorof(typeof(tree))(T; val=T(representative_val))
+
+    # Replace the target node in the tree
+    if node_to_invert === tree
+        return new_node
+    else
+        parent, idx = _find_parent(tree, node_to_invert)
+        set_child!(parent, new_node, idx)
         return tree
     end
 end

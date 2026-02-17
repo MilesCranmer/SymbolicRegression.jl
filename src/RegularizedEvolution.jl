@@ -34,6 +34,7 @@ function reg_evol_cycle(
                 running_search_statistics,
                 options;
                 tmp_recorder=mutation_recorder,
+                population=pop,
             )
             num_evals += tmp_num_evals
 
