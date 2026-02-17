@@ -524,12 +524,10 @@ end
     options = Options(;
         binary_operators=(+, *, -),
         unary_operators=(sin, cos),
-        use_sparse_regression=true,
-        sparse_regression_lambda=0.01,
-        sparse_regression_max_iter=10,
-        sparse_regression_max_library_size=500,
-        sparse_regression_validate=false,
-        sparse_regression_max_mse=Inf,
+        sparse_regression=SparseRegressionOptions(;
+            use=true, lambda=0.01, max_iter=10,
+            max_library_size=500, validate=false, max_mse=Inf,
+        ),
     )
 
     X = Float64[1.0 2.0 3.0 4.0; 0.5 1.0 1.5 2.0]  # 2 features × 4 samples
@@ -560,7 +558,7 @@ end
     options_no_sparse = Options(;
         binary_operators=(+, *, -),
         unary_operators=(sin, cos),
-        use_sparse_regression=false,
+        sparse_regression=SparseRegressionOptions(; use=false),
     )
 
     orig_vals2, _ = eval_tree_array(copy(tree), X, options_no_sparse.operators)
@@ -574,11 +572,10 @@ end
     options_validate = Options(;
         binary_operators=(+, *, -),
         unary_operators=(sin, cos),
-        use_sparse_regression=true,
-        sparse_regression_lambda=0.01,
-        sparse_regression_max_iter=10,
-        sparse_regression_validate=true,
-        sparse_regression_max_mse=1.0,
+        sparse_regression=SparseRegressionOptions(;
+            use=true, lambda=0.01, max_iter=10,
+            validate=true, max_mse=1.0,
+        ),
     )
 
     orig_vals3, _ = eval_tree_array(copy(tree), X, options_validate.operators)

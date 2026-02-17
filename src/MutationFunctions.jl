@@ -672,7 +672,8 @@ function backsolve_rewrite_random_node(
     end
 
     # Try sparse regression if enabled
-    if options.use_sparse_regression
+    sr = options.sparse_regression
+    if sr.use
         nfeatures = size(dataset.X, 1)
         new_node = fit_sparse_expression(
             node_to_invert,
@@ -680,12 +681,12 @@ function backsolve_rewrite_random_node(
             dataset,
             options,
             nfeatures;
-            lambda=T(options.sparse_regression_lambda),
-            max_iter=options.sparse_regression_max_iter,
-            max_library_size=options.sparse_regression_max_library_size,
+            lambda=T(sr.lambda),
+            max_iter=sr.max_iter,
+            max_library_size=sr.max_library_size,
             rng=rng,
-            validate=options.sparse_regression_validate,
-            max_mse=T(options.sparse_regression_max_mse),
+            validate=sr.validate,
+            max_mse=T(sr.max_mse),
             population=population,
         )
 

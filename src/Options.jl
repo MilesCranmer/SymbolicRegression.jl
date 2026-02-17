@@ -611,13 +611,8 @@ $(OPTION_DESCRIPTIONS)
     perturbation_factor::Union{Nothing,Real}=nothing,
     probability_negate_constant::Union{Real,Nothing}=nothing,
     skip_mutation_failures::Bool=true,
-    ## Inverse Mutation + Sparse Regression:
-    use_sparse_regression::Bool=false,
-    sparse_regression_max_library_size::Int=500,
-    sparse_regression_lambda::Float64=0.01,
-    sparse_regression_max_iter::Int=10,
-    sparse_regression_validate::Bool=false,
-    sparse_regression_max_mse::Float64=Inf,
+    ## Sparse Regression (for backsolve_rewrite mutation):
+    sparse_regression::SparseRegressionOptions=SparseRegressionOptions(),
     ## 6. Tournament Selection
     ## 7. Constant Optimization:
     optimizer_algorithm::Union{AbstractString,Optim.AbstractOptimizer}=Optim.BFGS(;
@@ -1117,12 +1112,7 @@ $(OPTION_DESCRIPTIONS)
         define_helper_functions,
         use_recorder,
         popmember_type,
-        use_sparse_regression,
-        sparse_regression_max_library_size,
-        sparse_regression_lambda,
-        sparse_regression_max_iter,
-        sparse_regression_validate,
-        sparse_regression_max_mse,
+        sparse_regression,
     )
 
     return options
