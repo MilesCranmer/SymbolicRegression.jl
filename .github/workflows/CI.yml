@@ -161,6 +161,5 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           directory: ./coverage
-          # Forks (and some repos) won't have a Codecov token configured; don't fail CI on upload.
           fail_ci_if_error: ${{ secrets.CODECOV_TOKEN != '' }}
           verbose: true
