@@ -1,77 +1,91 @@
 @testitem "Constant optimization with custom types (Issue #568)" begin
-    using SymbolicRegression
-    using DynamicExpressions
-    using Random: AbstractRNG
-    using MLJBase: machine, fit!, report
+    using DynamicExpressions: Expression, OperatorEnum, get_tree
+    using DynamicExpressions.NodeModule: Node
+    import DynamicExpressions.ValueInterfaceModule:
+        count_scalar_constants,
+        get_number_type,
+        pack_scalar_constants!,
+        unpack_scalar_constants
+    using Optim: Optim
+    using Random: default_rng
+    using SymbolicRegression: Dataset, Options, PopMember
+    using SymbolicRegression.ConstantOptimizationModule: _optimize_constants
 
-    # Custom vector type that packs two Float64s as a single "constant"
-    struct MyVec2
+    # Issue #568:
+    # The constant-optimization restart loop used the PopMember type parameter `T`
+    # (which can be non-scalar) when generating noise:
+    #     randn(rng, T, size(x0)...)   # BUG
+    #
+    # But x0 is a vector of scalar constants, so noise must be drawn from eltype(x0).
+    #
+    # This test uses:
+    # - a real Dataset{T} where each feature/target is itself a small vector-like object,
+    # - a real DynamicExpressions.Expression{T} with a constant of type T,
+    # - a real optimization run via `_optimize_constants`.
+
+    # A small vector-like custom type (stands in for "T is a vector"):
+    struct Vec2
         x::Float64
         y::Float64
     end
 
-    # Required interface for custom types
-    Base.zero(::Type{MyVec2}) = MyVec2(0.0, 0.0)
-    Base.eltype(::Type{MyVec2}) = Float64
-
-    # DynamicExpressions interface for constant optimization
-    DynamicExpressions.count_scalar_constants(::MyVec2) = 2
-    DynamicExpressions.get_number_type(::Type{MyVec2}) = Float64
-
-    function DynamicExpressions.pack_scalar_constants!(
-        nvals::AbstractVector{<:Number}, idx::Int, value::MyVec2
-    )
-        nvals[idx] = value.x
-        nvals[idx + 1] = value.y
+    # Implement the DynamicExpressions ValueInterface so scalar constants can be packed/unpacked.
+    get_number_type(::Type{Vec2}) = Float64
+    count_scalar_constants(::Vec2) = 2
+    function pack_scalar_constants!(nvals::AbstractVector{<:Number}, idx::Int, v::Vec2)
+        nvals[idx] = v.x
+        nvals[idx + 1] = v.y
         return idx + 2
     end
-
-    function DynamicExpressions.unpack_scalar_constants(
-        nvals::AbstractVector{<:Number}, idx::Int, ::MyVec2
-    )
-        return (idx + 2, MyVec2(Float64(nvals[idx]), Float64(nvals[idx + 1])))
+    function unpack_scalar_constants(nvals::AbstractVector{<:Number}, idx::Int, v::Vec2)
+        return idx + 2, Vec2(nvals[idx], nvals[idx + 1])
     end
 
-    # Define arithmetic for evolution
-    Base.:(+)(a::MyVec2, b::MyVec2) = MyVec2(a.x + b.x, a.y + b.y)
-    Base.:(*)(s::Real, v::MyVec2) = MyVec2(s * v.x, s * v.y)
-    Base.abs2(v::MyVec2) = v.x^2 + v.y^2
+    rng = default_rng()
 
-    # Random value generator for initial constants
-    SymbolicRegression.sample_value(rng::AbstractRNG, ::Type{MyVec2}, _) = MyVec2(
-        rand(rng), rand(rng)
-    )
+    n = 16
+    X = fill(Vec2(0.0, 0.0), 1, n)
+    target = Vec2(0.3, -0.7)
+    y = fill(target, n)
+    dataset = Dataset(X, y, Float64)
 
-    # Enable constant optimization for MyVec2
-    SymbolicRegression.ConstantOptimizationModule.can_optimize(::Type{MyVec2}, _) = true
+    operators = OperatorEnum(1 => (), 2 => ())
 
-    # Create synthetic data: y = 2*x1 + 3*x2 where x1, x2 are MyVec2
-    rng = Random.MersenneTwister(42)
-    n = 50
-    X = [MyVec2(rand(rng), rand(rng)) for _ in 1:n]
-    # Target: coefficients 2.0 and 3.0 (will be stored as MyVec2 constants)
-    y = [2.0 * abs2(x) + 3.0 * abs2(x) for x in X]
+    # Constant expression of type Vec2; its scalar constants are [x, y].
+    ex = Expression(Node(Vec2; val=Vec2(1.0, 2.0)); operators, variable_names=["x1"])
 
-    model = SRRegressor(;
+    # Loss depends on the constant Vec2 value and the (Vec2) targets.
+    function loss(ex::Expression{Vec2}, dataset::Dataset{Vec2,Float64}, _options)
+        c = get_tree(ex).val::Vec2
+        s = 0.0
+        @inbounds for yi in dataset.y
+            dx = c.x - yi.x
+            dy = c.y - yi.y
+            s += dx * dx + dy * dy
+        end
+        return s / dataset.n
+    end
+
+    options = Options(;
         binary_operators=(+,),
         unary_operators=(),
-        maxsize=5,
-        niterations=5,
-        populations=1,
-        population_size=10,
-        optimizer_nrestarts=3,  # Key: must be > 0 to trigger the bug
-        optimizer_options=(; iterations=10),
-        loss_type=Float64,
         deterministic=true,
+        optimizer_nrestarts=2,
+        autodiff_backend=nothing,
+        parsimony=0.0,
+        loss_function_expression=loss,
     )
 
-    # This should NOT throw MethodError: no method matching randn(..., ::Type{MyVec2})
-    # The fix uses eltype(x0) = Float64 instead of T = MyVec2
-    mach = machine(model, X, y; scitype_check_level=0)
-    fit!(mach; verbosity=0)
-    rep = report(mach)
+    member = PopMember(dataset, ex, options; deterministic=true)
 
-    # Basic sanity check: should find a reasonable expression
-    @test haskey(rep, :equations)
-    @test length(rep.equations) > 0
+    algorithm = Optim.BFGS()
+    optimizer_options = Optim.Options(; iterations=200)
+
+    new_member, _ = _optimize_constants(
+        dataset, member, options, algorithm, optimizer_options, rng
+    )
+
+    c = get_tree(new_member.tree).val::Vec2
+    @test abs(c.x - target.x) < 1e-3
+    @test abs(c.y - target.y) < 1e-3
 end
