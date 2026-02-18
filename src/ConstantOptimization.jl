@@ -88,7 +88,7 @@ function _optimize_constants_inner(
     num_evals = result.f_calls * eval_fraction
     # Try other initial conditions:
     for _ in 1:(options.optimizer_nrestarts)
-        ET = eltype(x0)  # x0 holds scalar constants
+        ET = eltype(x0)
         eps = randn(rng, ET, size(x0)...)
         xt = @. x0 * (ET(1) + ET(1 // 2) * eps)
         tmpresult = Optim.optimize(obj, xt, algorithm, optimizer_options)
