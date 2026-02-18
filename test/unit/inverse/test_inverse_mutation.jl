@@ -13,10 +13,12 @@
         @test approx_inverse(sin) == SymbolicRegression.CoreModule.safe_asin
         @test approx_inverse(cos) == SymbolicRegression.CoreModule.safe_acos
         @test approx_inverse(exp) == SymbolicRegression.CoreModule.safe_log
-        @test approx_inverse(SymbolicRegression.CoreModule.safe_sqrt) == SymbolicRegression.CoreModule.square
+        @test approx_inverse(SymbolicRegression.CoreModule.safe_sqrt) ==
+            SymbolicRegression.CoreModule.square
         @test approx_inverse(abs) === nothing
         @test approx_inverse(SymbolicRegression.CoreModule.relu) === nothing
-        @test approx_inverse(SymbolicRegression.CoreModule.neg) == SymbolicRegression.CoreModule.neg
+        @test approx_inverse(SymbolicRegression.CoreModule.neg) ==
+            SymbolicRegression.CoreModule.neg
     end
 
     @testset "InverseFunctions - Binary operators" begin
@@ -117,7 +119,9 @@
         dataset = Dataset(X, y)
 
         # Create options
-        operators = OperatorEnum(; binary_operators=[+, *, -, /], unary_operators=[sin, cos])
+        operators = OperatorEnum(;
+            binary_operators=[+, *, -, /], unary_operators=[sin, cos]
+        )
         options = Options(; binary_operators=[+, *, -, /], unary_operators=[sin, cos])
 
         # Tree: sin(x1) + 2

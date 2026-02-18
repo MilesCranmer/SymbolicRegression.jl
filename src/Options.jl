@@ -38,7 +38,8 @@ using ..OperatorsModule:
     safe_atanh
 using ..MutationWeightsModule: AbstractMutationWeights, MutationWeights, mutations
 import ..OptionsStructModule: Options
-using ..OptionsStructModule: ComplexityMapping, operator_specialization
+using ..OptionsStructModule:
+    ComplexityMapping, SparseRegressionOptions, operator_specialization
 using ..UtilsModule: @save_kwargs, @ignore
 using ..ExpressionSpecModule:
     AbstractExpressionSpec,

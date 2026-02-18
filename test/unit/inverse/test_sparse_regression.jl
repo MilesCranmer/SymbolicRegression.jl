@@ -7,11 +7,11 @@
     # y = 2*x1 + 0*x2 + 3*x3 (sparse - x2 should be zeroed)
     # Use well-conditioned columns to ensure unique sparse solution
     Theta = Float64[
-        1.0  0.1  0.2
-        2.0 -0.3  0.1
-        3.0  0.4 -0.5
-        4.0 -0.2  0.3
-        5.0  0.5 -0.1
+        1.0 0.1 0.2
+        2.0 -0.3 0.1
+        3.0 0.4 -0.5
+        4.0 -0.2 0.3
+        5.0 0.5 -0.1
     ]
     y = 2.0 .* Theta[:, 1] .+ 0.0 .* Theta[:, 2] .+ 3.0 .* Theta[:, 3]
 
@@ -62,10 +62,7 @@ end
     using SymbolicRegression.SparseRegressionModule: build_sindy_library
     using DynamicExpressions: Node
 
-    options = Options(;
-        binary_operators=(+, *, -),
-        unary_operators=(sin, cos),
-    )
+    options = Options(; binary_operators=(+, *, -), unary_operators=(sin, cos))
 
     X = Float64[1.0 2.0 3.0; 4.0 5.0 6.0]  # 2 features × 3 samples
     y = Float64[1.0, 2.0, 3.0]
@@ -76,8 +73,7 @@ end
 
     # Without gen_random_tree_fn, library is seed-only: 1 constant + nfeatures
     library_trees, Theta, success = build_sindy_library(
-        tree_prototype, dataset, options, nfeatures;
-        max_library_size=500
+        tree_prototype, dataset, options, nfeatures; max_library_size=500
     )
 
     @test success
@@ -86,14 +82,10 @@ end
     @test size(Theta, 2) == 3
 
     # No operators at all — same result
-    options_minimal = Options(;
-        binary_operators=(),
-        unary_operators=(),
-    )
+    options_minimal = Options(; binary_operators=(), unary_operators=())
 
     library_trees2, Theta2, success2 = build_sindy_library(
-        tree_prototype, dataset, options_minimal, nfeatures;
-        max_library_size=500
+        tree_prototype, dataset, options_minimal, nfeatures; max_library_size=500
     )
 
     @test success2
@@ -108,10 +100,7 @@ end
     using DynamicExpressions: Node
     using Random: MersenneTwister
 
-    options = Options(;
-        binary_operators=(+, *, -),
-        unary_operators=(sin, cos),
-    )
+    options = Options(; binary_operators=(+, *, -), unary_operators=(sin, cos))
 
     X = Float64[1.0 2.0 3.0; 4.0 5.0 6.0]  # 2 features × 3 samples
     y = Float64[1.0, 2.0, 3.0]
@@ -123,7 +112,10 @@ end
 
     # With gen_random_tree_fn: seeds + up to 100 random trees
     library_trees, Theta, success = build_sindy_library(
-        tree_prototype, dataset, options, nfeatures;
+        tree_prototype,
+        dataset,
+        options,
+        nfeatures;
         max_library_size=500,
         gen_random_tree_fn=gen_random_tree_fixed_size,
         rng=rng,
@@ -139,7 +131,10 @@ end
     # Different seed → different library (randomness works)
     rng2 = MersenneTwister(123)
     library_trees_b, _, _ = build_sindy_library(
-        tree_prototype, dataset, options, nfeatures;
+        tree_prototype,
+        dataset,
+        options,
+        nfeatures;
         max_library_size=500,
         gen_random_tree_fn=gen_random_tree_fixed_size,
         rng=rng2,
@@ -150,7 +145,10 @@ end
 
     # max_library_size caps the random portion
     library_trees_small, _, success_small = build_sindy_library(
-        tree_prototype, dataset, options, nfeatures;
+        tree_prototype,
+        dataset,
+        options,
+        nfeatures;
         max_library_size=5,
         gen_random_tree_fn=gen_random_tree_fixed_size,
         rng=MersenneTwister(42),
@@ -165,10 +163,7 @@ end
     using SymbolicRegression.SparseRegressionModule: combine_trees_weighted_sum
     using DynamicExpressions: Node, eval_tree_array
 
-    options = Options(;
-        binary_operators=(+, *),
-        unary_operators=(sin,),
-    )
+    options = Options(; binary_operators=(+, *), unary_operators=(sin,))
 
     X = Float64[1.0 2.0 3.0]
 
@@ -221,10 +216,7 @@ end
     @test vals5 ≈ [5.0, 5.0, 5.0]
 
     # Test 6: Missing + operator
-    options_no_add = Options(;
-        binary_operators=(*,),
-        unary_operators=(sin,),
-    )
+    options_no_add = Options(; binary_operators=(*,), unary_operators=(sin,))
 
     result6 = combine_trees_weighted_sum(trees3, coeffs3, options_no_add)
     @test result6 !== nothing
@@ -232,10 +224,7 @@ end
     @test result6 == tree_b
 
     # Test 7: Missing * operator
-    options_no_mult = Options(;
-        binary_operators=(+,),
-        unary_operators=(sin,),
-    )
+    options_no_mult = Options(; binary_operators=(+,), unary_operators=(sin,))
 
     result7 = combine_trees_weighted_sum(trees3, coeffs3, options_no_mult)
     @test result7 !== nothing
@@ -251,10 +240,7 @@ end
     using DynamicExpressions: Node, eval_tree_array
 
     # Test 1: Simple linear combination
-    options = Options(;
-        binary_operators=(+, *),
-        unary_operators=(sin, cos),
-    )
+    options = Options(; binary_operators=(+, *), unary_operators=(sin, cos))
 
     X = Float64[1.0 2.0 3.0 4.0; 0.5 1.0 1.5 2.0]  # 2 features × 4 samples
     # Target: y = 2*x1 + 3*x2
@@ -266,9 +252,16 @@ end
 
     # Seed-only library (const + x1 + x2) is sufficient for y = 2*x1 + 3*x2
     result = fit_sparse_expression(
-        tree_prototype, y, dataset, options, nfeatures;
-        lambda=0.01, max_iter=10, max_library_size=500,
-        validate=false, max_mse=Inf
+        tree_prototype,
+        y,
+        dataset,
+        options,
+        nfeatures;
+        lambda=0.01,
+        max_iter=10,
+        max_library_size=500,
+        validate=false,
+        max_mse=Inf,
     )
 
     @test result !== nothing
@@ -280,9 +273,16 @@ end
 
     # Test 2: With validation enabled
     result2 = fit_sparse_expression(
-        tree_prototype, y, dataset, options, nfeatures;
-        lambda=0.01, max_iter=10, max_library_size=500,
-        validate=true, max_mse=0.05
+        tree_prototype,
+        y,
+        dataset,
+        options,
+        nfeatures;
+        lambda=0.01,
+        max_iter=10,
+        max_library_size=500,
+        validate=true,
+        max_mse=0.05,
     )
 
     @test result2 !== nothing
@@ -292,9 +292,16 @@ end
 
     # Test 3: Validation fails (max_mse too strict)
     result3 = fit_sparse_expression(
-        tree_prototype, y, dataset, options, nfeatures;
-        lambda=0.01, max_iter=10, max_library_size=500,
-        validate=true, max_mse=1e-10
+        tree_prototype,
+        y,
+        dataset,
+        options,
+        nfeatures;
+        lambda=0.01,
+        max_iter=10,
+        max_library_size=500,
+        validate=true,
+        max_mse=1e-10,
     )
 
     # Might return nothing if MSE too high, or succeed if fit is perfect
@@ -361,10 +368,7 @@ end
     using SymbolicRegression.SparseRegressionModule: build_adaptive_library
     using DynamicExpressions: Node, eval_tree_array, string_tree
 
-    options = Options(;
-        binary_operators=(+, *, -),
-        unary_operators=(sin, cos),
-    )
+    options = Options(; binary_operators=(+, *, -), unary_operators=(sin, cos))
 
     X = Float64[1.0 2.0 3.0 4.0; 0.5 1.0 1.5 2.0]  # 2 features × 4 samples
     y = Float64[3.5, 7.0, 10.5, 14.0]
@@ -374,8 +378,7 @@ end
 
     # Test 1: population=nothing → seed-only library (constant + features)
     library, Theta, success = build_adaptive_library(
-        tree_prototype, dataset, options, nfeatures, nothing;
-        max_library_size=200
+        tree_prototype, dataset, options, nfeatures, nothing; max_library_size=200
     )
 
     @test success
@@ -398,8 +401,7 @@ end
     pop = Population([member1, member2, member3])
 
     library2, Theta2, success2 = build_adaptive_library(
-        tree_prototype, dataset, options, nfeatures, pop;
-        max_library_size=200
+        tree_prototype, dataset, options, nfeatures, pop; max_library_size=200
     )
 
     @test success2
@@ -421,15 +423,13 @@ end
     pop_dup = Population([member_d1, member_d2])
 
     lib_dup, _, success_dup = build_adaptive_library(
-        tree_prototype, dataset, options, nfeatures, pop_dup;
-        max_library_size=200
+        tree_prototype, dataset, options, nfeatures, pop_dup; max_library_size=200
     )
 
     # Single member version for comparison
     pop_single = Population([member_d1])
     lib_single, _, _ = build_adaptive_library(
-        tree_prototype, dataset, options, nfeatures, pop_single;
-        max_library_size=200
+        tree_prototype, dataset, options, nfeatures, pop_single; max_library_size=200
     )
 
     # Both members contribute same subtrees, so dedup should make them equal
@@ -448,23 +448,26 @@ end
     pop_topk = Population([member1b, member2b, member3b])
 
     library_topk, _, success_topk = build_adaptive_library(
-        tree_prototype, dataset, options, nfeatures, pop_topk;
-        max_library_size=200, top_k=1
+        tree_prototype, dataset, options, nfeatures, pop_topk; max_library_size=200, top_k=1
     )
 
     @test success_topk
     # top_k=1 → only member3b (x1) contributes subtrees
     # Library should be smaller than with all members contributing
     library_all, _, _ = build_adaptive_library(
-        tree_prototype, dataset, options, nfeatures, pop_topk;
-        max_library_size=200, top_k=10
+        tree_prototype,
+        dataset,
+        options,
+        nfeatures,
+        pop_topk;
+        max_library_size=200,
+        top_k=10,
     )
     @test length(library_topk) <= length(library_all)
 
     # Test 5: max_library_size caps total library size
     library_capped, _, success_capped = build_adaptive_library(
-        tree_prototype, dataset, options, nfeatures, pop;
-        max_library_size=4, top_k=10
+        tree_prototype, dataset, options, nfeatures, pop; max_library_size=4, top_k=10
     )
 
     @test success_capped
@@ -476,10 +479,7 @@ end
     using SymbolicRegression.SparseRegressionModule: fit_sparse_expression
     using DynamicExpressions: Node, eval_tree_array
 
-    options = Options(;
-        binary_operators=(+, *),
-        unary_operators=(sin, cos),
-    )
+    options = Options(; binary_operators=(+, *), unary_operators=(sin, cos))
 
     X = Float64[1.0 2.0 3.0 4.0; 0.5 1.0 1.5 2.0]  # 2 features × 4 samples
     # Target: y = 2*x1 + 3*x2
@@ -501,9 +501,16 @@ end
     nfeatures = 2
 
     result = fit_sparse_expression(
-        tree_prototype, y, dataset, options, nfeatures;
-        lambda=0.01, max_iter=10, max_library_size=500,
-        validate=true, max_mse=1.0,
+        tree_prototype,
+        y,
+        dataset,
+        options,
+        nfeatures;
+        lambda=0.01,
+        max_iter=10,
+        max_library_size=500,
+        validate=true,
+        max_mse=1.0,
         population=pop,
     )
 
@@ -525,8 +532,12 @@ end
         binary_operators=(+, *, -),
         unary_operators=(sin, cos),
         sparse_regression=SparseRegressionOptions(;
-            use=true, lambda=0.01, max_iter=10,
-            max_library_size=500, validate=false, max_mse=Inf,
+            use=true,
+            lambda=0.01,
+            max_iter=10,
+            max_library_size=500,
+            validate=false,
+            max_mse=Inf,
         ),
     )
 
@@ -573,8 +584,7 @@ end
         binary_operators=(+, *, -),
         unary_operators=(sin, cos),
         sparse_regression=SparseRegressionOptions(;
-            use=true, lambda=0.01, max_iter=10,
-            validate=true, max_mse=1.0,
+            use=true, lambda=0.01, max_iter=10, validate=true, max_mse=1.0
         ),
     )
 
@@ -603,10 +613,7 @@ end
     using DynamicExpressions: Node
 
     # Test 1: No binary operators → +/* guard fires, returns nothing immediately
-    options_empty = Options(;
-        binary_operators=(),
-        unary_operators=(),
-    )
+    options_empty = Options(; binary_operators=(), unary_operators=())
 
     X = Float64[1.0 2.0 3.0]
     y = Float64[1.0, 2.0, 3.0]
@@ -614,21 +621,22 @@ end
     tree_prototype = Node(Float64; val=1.0)
 
     result = fit_sparse_expression(
-        tree_prototype, y, dataset, options_empty, 1;
-        lambda=0.01, max_iter=10
+        tree_prototype, y, dataset, options_empty, 1; lambda=0.01, max_iter=10
     )
 
     @test result === nothing  # no + and * available
 
     # Test 2: Very high lambda (all coefficients zeroed)
-    options = Options(;
-        binary_operators=(+, *),
-        unary_operators=(sin,),
-    )
+    options = Options(; binary_operators=(+, *), unary_operators=(sin,))
 
     result2 = fit_sparse_expression(
-        tree_prototype, y, dataset, options, 1;
-        lambda=1e10, max_iter=10  # Extremely high threshold
+        tree_prototype,
+        y,
+        dataset,
+        options,
+        1;
+        lambda=1e10,
+        max_iter=10,  # Extremely high threshold
     )
 
     # With lambda=1e10 all coefficients should be zeroed → stlsq fails → nothing
@@ -656,8 +664,14 @@ end
     dataset_inf = Dataset(X_inf, y_inf)
 
     result5 = fit_sparse_expression(
-        tree_prototype, y_inf, dataset_inf, options, 1;
-        lambda=0.01, max_iter=10, validate=true
+        tree_prototype,
+        y_inf,
+        dataset_inf,
+        options,
+        1;
+        lambda=0.01,
+        max_iter=10,
+        validate=true,
     )
 
     # Inf in target causes invalid STLSQ result; validation rejects it

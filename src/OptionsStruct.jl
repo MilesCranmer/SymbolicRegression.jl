@@ -293,8 +293,12 @@ function Base.print(io::IO, @nospecialize(options::Options))
         *
         join(
             [
-                if fieldname in
-                    (:optimizer_algorithm, :optimizer_options, :mutation_weights, :sparse_regression)
+                if fieldname in (
+                    :optimizer_algorithm,
+                    :optimizer_options,
+                    :mutation_weights,
+                    :sparse_regression,
+                )
                     "$(fieldname)=..."
                 else
                     "$(fieldname)=$(getfield(options, fieldname))"

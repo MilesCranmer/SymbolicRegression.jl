@@ -5,11 +5,7 @@ using Statistics: median
 using Random: AbstractRNG, default_rng
 using DispatchDoctor: @unstable
 using DynamicExpressions:
-    AbstractExpressionNode,
-    OperatorEnum,
-    constructorof,
-    eval_tree_array,
-    string_tree
+    AbstractExpressionNode, OperatorEnum, constructorof, eval_tree_array, string_tree
 
 using ..CoreModule: AbstractOptions, DATA_TYPE, Dataset
 
@@ -40,10 +36,7 @@ Iteratively solves the sparse regression problem: `Theta * ξ ≈ y` where ξ is
 - Brunton, S. L., Proctor, J. L., & Kutz, J. N. (2016). Discovering governing equations from data by sparse identification of nonlinear dynamical systems. PNAS, 113(15), 3932-3937.
 """
 function stlsq(
-    Theta::AbstractMatrix{T},
-    y::AbstractVector{T};
-    lambda::T=T(0.01),
-    max_iter::Int=10,
+    Theta::AbstractMatrix{T}, y::AbstractVector{T}; lambda::T=T(0.01), max_iter::Int=10
 ) where {T<:DATA_TYPE}
     n_samples, n_features = size(Theta)
 
@@ -265,7 +258,7 @@ function build_adaptive_library(
     # 2. Get top-k members by loss (lower is better) - only if population is provided
     all_subtrees = Vector{typeof(tree_prototype)}()
     if population !== nothing
-        sorted_members = sort(population.members[1:population.n], by=m -> m.loss)
+        sorted_members = sort(population.members[1:population.n]; by=m -> m.loss)
         top_members = sorted_members[1:min(top_k, length(sorted_members))]
 
         # 3. Extract all subtrees from top members
@@ -489,7 +482,11 @@ operator set, since the output is structurally a weighted sum.
     # Build adaptive library from population subtrees
     # This extracts useful subtrees from the best population members
     library_trees, Theta, lib_success = build_adaptive_library(
-        tree_prototype, dataset, options, nfeatures, population;
+        tree_prototype,
+        dataset,
+        options,
+        nfeatures,
+        population;
         max_library_size=max_library_size,
     )
 
@@ -498,7 +495,9 @@ operator set, since the output is structurally a weighted sum.
     end
 
     # Perform sparse regression
-    coefficients, stlsq_success = stlsq(Theta, inverted_values; lambda=lambda, max_iter=max_iter)
+    coefficients, stlsq_success = stlsq(
+        Theta, inverted_values; lambda=lambda, max_iter=max_iter
+    )
 
     if !stlsq_success
         return nothing

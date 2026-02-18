@@ -644,7 +644,9 @@ function backsolve_rewrite_random_node(
     population=nothing,
 ) where {T<:DATA_TYPE}
     tree, context = get_contents_for_mutation(ex, rng)
-    new_tree = backsolve_rewrite_random_node(tree, dataset, options, rng; population=population)
+    new_tree = backsolve_rewrite_random_node(
+        tree, dataset, options, rng; population=population
+    )
     return with_contents_for_mutation(ex, new_tree, context)
 end
 
