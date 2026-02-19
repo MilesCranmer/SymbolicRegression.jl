@@ -271,9 +271,8 @@ function apply_operator(op::F, x::Vararg{Any,N}) where {F<:Function,N}
     if all(_is_valid, x)
         return _apply_operator(op, x...)
     else
-        example_vector = something(
-            map(xi -> xi isa ValidVector ? xi : nothing, x)...
-        )::ValidVector
+        example_vector =
+            something(map(xi -> xi isa ValidVector ? xi : nothing, x)...)::ValidVector
         expected_return_type = Base.promote_op(
             _apply_operator, typeof(op), map(typeof, x)...
         )
