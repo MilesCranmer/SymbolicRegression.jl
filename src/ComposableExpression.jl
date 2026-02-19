@@ -260,11 +260,25 @@ end
 # Basically we want to vectorize every single operation on ValidVector,
 # so that the user can use it easily.
 
-function _apply_operator(op::F, x::Vararg{Any,N}) where {F<:Function,N}
-    vx = map(_get_value, x)
+function _apply_operator_values(op::F, vx::Vararg{Any,N}) where {F<:Function,N}
     safe_op = get_safe_op(op)
     result = safe_op.(vx...)
     return ValidVector(result, is_valid_array(result))
+end
+
+function _apply_operator(op::F, x::Vararg{Any,N}) where {F<:Function,N}
+    vx = map(_get_value, x)
+    return _apply_operator_values(op, vx...)
+end
+
+function _apply_operator(op::F, x::ValidVector, y::Number) where {F<:Function}
+    T = eltype(x.x)
+    return _apply_operator_values(op, x.x, convert(T, y))
+end
+
+function _apply_operator(op::F, x::Number, y::ValidVector) where {F<:Function}
+    T = eltype(y.x)
+    return _apply_operator_values(op, convert(T, x), y.x)
 end
 
 function apply_operator(op::F, x::Vararg{Any,N}) where {F<:Function,N}
