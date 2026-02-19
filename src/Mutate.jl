@@ -36,7 +36,8 @@ using ..MutationFunctionsModule:
     form_random_connection!,
     break_random_connection!,
     randomly_rotate_tree!,
-    randomize_tree
+    randomize_tree,
+    backsolve_rewrite_random_node
 using ..ConstantOptimizationModule: optimize_constants
 using ..RecorderModule: @recorder
 
@@ -180,6 +181,7 @@ end
     running_search_statistics::RunningSearchStatistics,
     options::AbstractOptions;
     tmp_recorder::RecordType,
+    population=nothing,
 )::Tuple{
     P,Bool,Float64
 } where {T,L,D<:Dataset{T,L},N<:AbstractExpression{T},P<:AbstractPopMember{T,L,N}}
@@ -224,6 +226,7 @@ end
             parent_ref,
             curmaxsize,
             nfeatures,
+            population,
         )
         mutation_result::AbstractMutationResult{N,P}
         num_evals += mutation_result.num_evals::Float64
@@ -561,6 +564,22 @@ function mutate!(
 ) where {N<:AbstractExpression,P<:AbstractPopMember}
     tree = randomly_rotate_tree!(tree)
     @recorder recorder["type"] = "rotate_tree"
+    return MutationResult{N,P}(; tree=tree)
+end
+
+function mutate!(
+    tree::N,
+    member::P,
+    ::Val{:backsolve_rewrite},
+    ::AbstractMutationWeights,
+    options::AbstractOptions;
+    recorder::RecordType,
+    dataset::Dataset,
+    population=nothing,
+    kws...,
+) where {N<:AbstractExpression,P<:AbstractPopMember}
+    tree = backsolve_rewrite_random_node(tree, dataset, options; population=population)
+    @recorder recorder["type"] = "backsolve_rewrite"
     return MutationResult{N,P}(; tree=tree)
 end
 

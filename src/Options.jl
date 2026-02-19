@@ -38,7 +38,8 @@ using ..OperatorsModule:
     safe_atanh
 using ..MutationWeightsModule: AbstractMutationWeights, MutationWeights, mutations
 import ..OptionsStructModule: Options
-using ..OptionsStructModule: ComplexityMapping, operator_specialization
+using ..OptionsStructModule:
+    ComplexityMapping, SparseRegressionOptions, operator_specialization
 using ..UtilsModule: @save_kwargs, @ignore
 using ..ExpressionSpecModule:
     AbstractExpressionSpec,
@@ -611,6 +612,8 @@ $(OPTION_DESCRIPTIONS)
     perturbation_factor::Union{Nothing,Real}=nothing,
     probability_negate_constant::Union{Real,Nothing}=nothing,
     skip_mutation_failures::Bool=true,
+    ## Sparse Regression (for backsolve_rewrite mutation):
+    sparse_regression::SparseRegressionOptions=SparseRegressionOptions(),
     ## 6. Tournament Selection
     ## 7. Constant Optimization:
     optimizer_algorithm::Union{AbstractString,Optim.AbstractOptimizer}=Optim.BFGS(;
@@ -1110,6 +1113,7 @@ $(OPTION_DESCRIPTIONS)
         define_helper_functions,
         use_recorder,
         popmember_type,
+        sparse_regression,
     )
 
     return options

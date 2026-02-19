@@ -8,6 +8,7 @@ export Population,
     OperatorEnum,
     Dataset,
     MutationWeights,
+    SparseRegressionOptions,
     Node,
     GraphNode,
     ParametricNode,
@@ -213,6 +214,9 @@ using DispatchDoctor: @stable
     include("DimensionalAnalysis.jl")
     include("CheckConstraints.jl")
     include("AdaptiveParsimony.jl")
+    include("InverseFunctions.jl")
+    include("EvaluateInverse.jl")
+    include("SparseRegression.jl")
     include("MutationFunctions.jl")
     include("LossFunctions.jl")
     include("PopMember.jl")
