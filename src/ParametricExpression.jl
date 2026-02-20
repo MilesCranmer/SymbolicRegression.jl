@@ -117,6 +117,23 @@ function MF.make_random_leaf(
     rng::AbstractRNG=default_rng(),
     options::Union{AbstractOptions,Nothing}=nothing,
 ) where {T<:DATA_TYPE,N<:ParametricNode}
+    if !isnothing(options) && !options.use_constants
+        choice = rand(rng, 1:2)
+        if choice == 1
+            return ParametricNode(T; feature=rand(rng, 1:nfeatures))
+        end
+        tree = ParametricNode{T}()
+        tree.val = zero(T)
+        tree.degree = 0
+        tree.feature = 0
+        tree.constant = false
+        tree.is_parameter = true
+        tree.parameter = rand(
+            rng, UInt16(1):UInt16(options.expression_options.max_parameters)
+        )
+        return tree
+    end
+
     choice = rand(rng, 1:3)
     if choice == 1
         return ParametricNode(; val=randn(rng, T))
