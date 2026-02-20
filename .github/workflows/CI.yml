@@ -20,6 +20,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
+env:
+  # Avoid flaky registry fetches from pkg.julialang.org in CI by falling back
+  # to direct host downloads.
+  JULIA_PKG_SERVER: ""
+
 jobs:
   unit:
     name: u/${{ matrix.group }}-${{ matrix.julia-version }}-${{ matrix.os }}

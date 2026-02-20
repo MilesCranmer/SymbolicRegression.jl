@@ -325,6 +325,10 @@ function make_random_leaf(
     rng::AbstractRNG=default_rng(),
     options::Union{AbstractOptions,Nothing}=nothing,
 ) where {T<:DATA_TYPE,N<:AbstractExpressionNode}
+    if !isnothing(options) && !options.use_constants
+        return constructorof(N)(T; feature=rand(rng, 1:nfeatures))
+    end
+
     if rand(rng, Bool)
         return constructorof(N)(T; val=sample_value(rng, T, options))
     else

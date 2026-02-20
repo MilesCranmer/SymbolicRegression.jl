@@ -113,3 +113,28 @@ end
         [(-1, -1, -1, -1, -1)],
     )
 end
+
+@testitem "Test use_constants disables constant operations" begin
+    using SymbolicRegression
+    using Random: MersenneTwister
+
+    options = Options(;
+        binary_operators=(+, -, *),
+        mutation_weights=MutationWeights(; mutate_constant=1.0, optimize=1.0),
+        should_optimize_constants=true,
+        probability_negate_constant=0.4,
+        use_constants=false,
+    )
+
+    @test options.use_constants == false
+    @test options.should_optimize_constants == false
+    @test options.probability_negate_constant == 0.0f0
+    @test options.mutation_weights.mutate_constant == 0.0
+    @test options.mutation_weights.optimize == 0.0
+
+    rng = MersenneTwister(0)
+    for _ in 1:20
+        tree = gen_random_tree(8, options, 5, Float32, rng)
+        @test !any(node -> node.degree == 0 && node.constant, tree)
+    end
+end
