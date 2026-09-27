@@ -21,7 +21,7 @@ const nav = [
     text: 'Julia',
     items: [
       { text: 'Julia', link: '/' },
-      { text: 'Python', link: 'https://pysr.ai/' }
+      { text: 'Python', link: 'https://pysr.ai/', target: '_self' }
     ]
   },
   {
