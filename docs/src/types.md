@@ -39,6 +39,17 @@ You can create a copy of a node with `copy_node`:
 copy_node(tree::Node)
 ```
 
+## Generic Node Accessors
+
+For accessing and modifying the children of a node:
+
+```@docs
+get_child
+set_child!
+get_children
+set_children!
+```
+
 ## Expressions
 
 Expressions are represented using the [`Expression`](@ref) type, which combines the raw [`Node`](@ref) type with an `OperatorEnum`.
