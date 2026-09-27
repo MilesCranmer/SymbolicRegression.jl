@@ -43,7 +43,12 @@ macro maybe_compile_workload(mode, ex)
 end
 
 """`mode=:precompile` will use `@precompile_*` directives; `mode=:compile` runs."""
-function do_precompilation(::Val{mode}) where {mode}
+function do_precompilation(
+    ::Val{mode};
+    operator_kwargs=(;
+        binary_operators=[+, *, /, -, ^], unary_operators=[sin, cos, exp, log, sqrt, abs]
+    ),
+) where {mode}
     @maybe_setup_workload mode begin
         for T in PRECOMPILE_TYPES, nout in (1,)
             start = nout == 1
@@ -52,8 +57,7 @@ function do_precompilation(::Val{mode}) where {mode}
             y = start ? randn(T, N) : randn(T, nout, N)
             @maybe_compile_workload mode begin
                 options = SymbolicRegression.Options(;
-                    binary_operators=[+, *, /, -, ^],
-                    unary_operators=[sin, cos, exp, log, sqrt, abs],
+                    operator_kwargs...,
                     populations=3,
                     population_size=start ? 50 : 12,
                     tournament_selection_n=6,
