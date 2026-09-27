@@ -379,7 +379,9 @@ using .MutationFunctionsModule:
     gen_random_tree, gen_random_tree_fixed_size, random_node, crossover_trees
 using .InterfaceDynamicExpressionsModule:
     @extend_operators, require_copy_to_workers, make_example_inputs
-using .LossFunctionsModule: eval_loss, eval_cost, update_baseline_loss!, score_func
+using .LossFunctionsModule:
+    EvalContextPool, create_eval_context, take_eval_context!, return_eval_context!,
+    eval_loss, eval_cost, update_baseline_loss!, score_func
 using .ConstantOptimizationModule:
     optimize_constants,
     get_constants_for_optimization,
@@ -847,6 +849,15 @@ end
         j in 1:nout
     ]
 
+    eval_context_pools = if ropt.parallelism == :multiprocessing
+        fill(nothing, nout)
+    else
+        map(datasets) do dataset
+            context = create_eval_context(dataset, options, 0)
+            isnothing(context) ? nothing : EvalContextPool(typeof(context)[], ReentrantLock())
+        end
+    end
+
     seed_members = [Vector{PMType}() for j in 1:nout]
 
     return SearchState{
@@ -859,6 +870,7 @@ end
         PluginStatesType,
         WorkerPluginStatesType,
         typeof(worker_inputs),
+        eltype(eval_context_pools),
     }(;
         procs=procs,
         we_created_procs=we_created_procs,
@@ -879,6 +891,7 @@ end
         seed_members=seed_members,
         plugin_states=plugin_states,
         worker_plugin_states=worker_plugin_states,
+        eval_context_pools=eval_context_pools,
     )
 end
 function _initialize_search!(
@@ -1038,7 +1051,9 @@ function _warmup_search!(
             WorkerPluginStatesType,
         )
 
-        updated_pop = let verbosity = ropt.verbosity
+        updated_pop = let verbosity = ropt.verbosity,
+            eval_context_pool = state.eval_context_pools[j]
+
             @sr_spawner(
                 (datasets, options) -> _dispatch_s_r_cycle(
                     in_pop,
@@ -1050,6 +1065,7 @@ function _warmup_search!(
                     verbosity,
                     cur_maxsize,
                     plugin_states=worker_plugin_states,
+                    eval_context_pool,
                 ),
                 inputs = something(state.worker_inputs, (datasets, options)),
                 parallelism = ropt.parallelism,
@@ -1234,7 +1250,8 @@ function _main_search_loop!(
                         iteration = iteration,
                         verbosity = ropt.verbosity,
                         cur_maxsize = cur_maxsize,
-                        worker_idx = worker_idx
+                        worker_idx = worker_idx,
+                        eval_context_pool = state.eval_context_pools[j]
 
                         @sr_spawner(
                             (datasets, options) -> _dispatch_s_r_cycle(
@@ -1247,6 +1264,7 @@ function _main_search_loop!(
                                 verbosity,
                                 cur_maxsize,
                                 plugin_states=worker_plugin_states,
+                                eval_context_pool,
                             ),
                             inputs = something(state.worker_inputs, (datasets, options)),
                             parallelism = ropt.parallelism,
@@ -1406,20 +1424,28 @@ end
     verbosity,
     cur_maxsize::Int,
     plugin_states::Tuple,
+    eval_context_pool,
 ) where {T,L,N}
     trace = new_trace(options)
     trace_iteration_start!(trace, out, pop, iteration, in_pop, options)
     num_evals = 0.0
-    out_pop, best_seen, evals_from_cycle = s_r_cycle(
-        dataset,
-        in_pop,
-        options.ncycles_per_iteration,
-        cur_maxsize;
-        verbosity=verbosity,
-        options=options,
-        trace=trace,
-        plugin_states,
-    )
+    eval_context = isnothing(eval_context_pool) ? nothing :
+        take_eval_context!(eval_context_pool, dataset, options)
+    out_pop, best_seen, evals_from_cycle = try
+        s_r_cycle(
+            dataset,
+            in_pop,
+            options.ncycles_per_iteration,
+            cur_maxsize;
+            verbosity=verbosity,
+            options=options,
+            trace=trace,
+            plugin_states,
+            eval_context,
+        )
+    finally
+        isnothing(eval_context_pool) || return_eval_context!(eval_context_pool, eval_context)
+    end
     num_evals += evals_from_cycle
     out_pop, evals_from_optimize = optimize_and_simplify_population(
         dataset, out_pop, options, cur_maxsize, trace
