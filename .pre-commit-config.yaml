@@ -19,6 +19,8 @@ repos:
     # We only want to format yaml, md files
     hooks:
       - id: prettier
+        # release-please generates this file; Prettier would add a follow-up commit.
+        exclude: ^CHANGELOG\.md$
         types_or:
           - yaml
           - markdown
