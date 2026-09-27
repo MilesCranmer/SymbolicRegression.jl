@@ -49,7 +49,7 @@ Engine-owned state for one mutation step. Mutable contents accumulate every
 middleware attempt so evaluation counts, Hall-of-Fame updates, and tracing
 stay under engine control.
 """
-struct MutationStep{D,P,O,S,E,H,A,M,R}
+struct MutationStep{D,P,O,S,E,H,A,M,R,Q}
     dataset::D
     population::P
     curmaxsize::Int
@@ -60,6 +60,7 @@ struct MutationStep{D,P,O,S,E,H,A,M,R}
     attempted_results::A
     attempted_members::M
     traced_steps::R
+    mutation_storage::Q
 end
 
 function (step::MutationStep)(parent)
@@ -73,6 +74,7 @@ function (step::MutationStep)(parent)
         plugin_states=step.plugin_states,
         eval_context=step.eval_context,
         population_for_backsolve=step.population,
+        mutation_storage=step.mutation_storage,
     )
     attempt_id = isnothing(step.attempted_results) ? 1 : length(step.attempted_results) + 1
     result = MutationStepResult(member, accepted, attempt_id, num_evals)
@@ -103,6 +105,7 @@ function reg_evol_cycle(
     plugin_states::Tuple,
     best_seen::HallOfFame,
     eval_context=nothing,
+    mutation_storage=nothing,
 )::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:Population{T,L}}
     num_evals = 0.0
     n_evol_cycles = ceil(Int, pop.n / options.tournament_selection_n)
@@ -123,6 +126,7 @@ function reg_evol_cycle(
         attempted_results,
         attempted_members,
         traced_steps,
+        mutation_storage,
     )
     wrapped_step = build_mutation_step(mutation_wrappers, base_step)
 

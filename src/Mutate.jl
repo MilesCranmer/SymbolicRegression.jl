@@ -264,6 +264,40 @@ end
 # The conditioned weights are rebuilt on every mutation; this keeps one
 # scratch vector per task instead of allocating a fresh copy each time.
 const MUTATION_WEIGHTS_SCRATCH = PerTaskCache{Vector{Pair{AbstractMutation,Float64}}}()
+mutable struct MutationStorage{N,C}
+    spare::Union{Nothing,C}
+end
+
+function MutationStorage(tree::N) where {N}
+    container = allocate_container(tree)
+    return MutationStorage{N,typeof(container)}(container)
+end
+_can_reuse_storage(::Any, ::Any) = false
+
+# Plain node arrays do not grow during copy_into!, unlike arena containers.
+function _can_reuse_storage(container::NamedTuple{(:tree,)}, tree::AbstractExpression)
+    inner = container.tree
+    return !(inner isa AbstractArray) || length(inner) >= length(get_tree(tree))
+end
+
+
+_take_storage!(::Nothing, tree) = allocate_container(tree)
+_take_storage!(::MutationStorage, tree) = allocate_container(tree)
+function _take_storage!(storage::MutationStorage{N,C}, tree::N) where {N,C}
+    container = storage.spare
+    storage.spare = nothing
+    if container !== nothing && _can_reuse_storage(container, tree)
+        return container
+    end
+    return allocate_container(tree)
+end
+
+_recycle_storage!(::Nothing, tree, container) = nothing
+_recycle_storage!(::MutationStorage, tree, container) = nothing
+function _recycle_storage!(storage::MutationStorage{N,C}, ::N, container::C) where {N,C}
+    storage.spare = container
+    return nothing
+end
 
 function _mutation_weights_scratch(options::AbstractOptions)
     weights = MUTATION_WEIGHTS_SCRATCH[]
@@ -305,6 +339,7 @@ end
     plugin_states::Tuple,
     eval_context=nothing,
     population_for_backsolve=nothing,
+    mutation_storage=nothing,
 )::Tuple{
     P,Bool,Float64
 } where {T,L,D<:Dataset{T,L},N<:AbstractExpression{T},P<:AbstractPopMember{T,L,N}}
@@ -345,6 +380,7 @@ end
         eval_context,
         population_for_backsolve,
         num_evals,
+        mutation_storage,
     )
 end
 
@@ -364,6 +400,7 @@ function _next_generation(
     eval_context,
     population_for_backsolve,
     num_evals::Float64,
+    mutation_storage,
 )::Tuple{
     P,Bool,Float64
 } where {
@@ -377,7 +414,7 @@ function _next_generation(
     successful_mutation = false
     attempts = 0
     max_attempts = 10
-    node_storage = allocate_container(member.tree)
+    node_storage = _take_storage!(mutation_storage, member.tree)
 
     mut_context = prepare_mutation_context(mutation_choice)
     if !isnothing(mut_context)
@@ -472,19 +509,12 @@ function _next_generation(
             MutationEvent(false, before_cost, nothing, before_loss, nothing, mutation_idx),
             dataset,
         )
-        return (
-            create_child(
-                member,
-                copy_into!(node_storage, member.tree),
-                before_cost,
-                before_loss,
-                options;
-                parent_ref=parent_ref,
-                mutation_choice=mutation_choice,
-            ),
-            mutation_accepted,
-            num_evals,
+        baby = create_child(
+            member, copy(member.tree), before_cost, before_loss, options;
+            parent_ref=parent_ref, mutation_choice=mutation_choice,
         )
+        _recycle_storage!(mutation_storage, member.tree, node_storage)
+        return baby, mutation_accepted, num_evals
     end
 
     after_cost, after_loss = eval_cost(dataset, tree, options; eval_context)
@@ -500,19 +530,12 @@ function _next_generation(
             MutationEvent(false, before_cost, nothing, before_loss, nothing, mutation_idx),
             dataset,
         )
-        return (
-            create_child(
-                member,
-                copy_into!(node_storage, member.tree),
-                before_cost,
-                before_loss,
-                options;
-                parent_ref=parent_ref,
-                mutation_choice=mutation_choice,
-            ),
-            mutation_accepted,
-            num_evals,
+        baby = create_child(
+            member, copy(member.tree), before_cost, before_loss, options;
+            parent_ref=parent_ref, mutation_choice=mutation_choice,
         )
+        _recycle_storage!(mutation_storage, member.tree, node_storage)
+        return baby, mutation_accepted, num_evals
     end
 
     acceptance_ctx = MutationAcceptanceContext(member, tree, before_cost, after_cost)
@@ -533,18 +556,12 @@ function _next_generation(
             ),
             dataset,
         )
-        return (
-            create_child(
-                member,
-                copy_into!(node_storage, member.tree),
-                before_cost,
-                before_loss,
-                options;
-                parent_ref=parent_ref,
-            ),
-            false,
-            num_evals,
+        baby = create_child(
+            member, copy(member.tree), before_cost, before_loss, options;
+            parent_ref=parent_ref,
         )
+        _recycle_storage!(mutation_storage, member.tree, node_storage)
+        return baby, false, num_evals
     end
 
     trace_mutation_result!(tmp_trace, "accept", "pass")
