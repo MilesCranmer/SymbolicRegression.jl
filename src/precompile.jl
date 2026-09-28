@@ -43,7 +43,14 @@ macro maybe_compile_workload(mode, ex)
 end
 
 """`mode=:precompile` will use `@precompile_*` directives; `mode=:compile` runs."""
-function do_precompilation(::Val{mode}) where {mode}
+function do_precompilation(
+    ::Val{mode};
+    operator_kwargs=(;
+        binary_operators=[+, *, /, -, ^], unary_operators=[sin, cos, exp, log, sqrt, abs]
+    ),
+    search_kwargs=(;),
+    parallelism=:multithreading,
+) where {mode}
     @maybe_setup_workload mode begin
         for T in PRECOMPILE_TYPES, nout in (1,)
             start = nout == 1
@@ -52,8 +59,7 @@ function do_precompilation(::Val{mode}) where {mode}
             y = start ? randn(T, N) : randn(T, nout, N)
             @maybe_compile_workload mode begin
                 options = SymbolicRegression.Options(;
-                    binary_operators=[+, *, /, -, ^],
-                    unary_operators=[sin, cos, exp, log, sqrt, abs],
+                    operator_kwargs...,
                     populations=3,
                     population_size=start ? 50 : 12,
                     tournament_selection_n=6,
@@ -81,19 +87,22 @@ function do_precompilation(::Val{mode}) where {mode}
                     y;
                     niterations=start ? 3 : 1,
                     options=options,
-                    parallelism=:multithreading,
+                    parallelism=parallelism,
                     return_state=true,
+                    saved_state=nothing,
                     verbosity=0,
+                    search_kwargs...,
                 )
                 hof = equation_search(
                     X,
                     y;
                     niterations=0,
                     options=options,
-                    parallelism=:multithreading,
+                    parallelism=parallelism,
                     saved_state=state,
                     return_state=false,
                     verbosity=0,
+                    search_kwargs...,
                 )
                 nout == 1 && calculate_pareto_frontier(hof::HallOfFame)
             end
