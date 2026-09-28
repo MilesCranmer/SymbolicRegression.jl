@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.5.0](https://github.com/astroautomata/SymbolicRegression.jl/compare/v2.4.2...v2.5.0) (2026-09-28)
+
+
+### Performance Improvements
+
+* await worker startup checks concurrently ([#745](https://github.com/astroautomata/SymbolicRegression.jl/issues/745)) ([8cddb1d](https://github.com/astroautomata/SymbolicRegression.jl/commit/8cddb1d4b2c6e5dd9844e951e9fc9c4e90f7634d))
+* fetch warmup populations on their workers ([#744](https://github.com/astroautomata/SymbolicRegression.jl/issues/744)) ([127c1d8](https://github.com/astroautomata/SymbolicRegression.jl/commit/127c1d8657e1defa987f27b2000d10c35e7852a4))
+* precompile fit under PythonCall ([#743](https://github.com/astroautomata/SymbolicRegression.jl/issues/743)) ([a73b079](https://github.com/astroautomata/SymbolicRegression.jl/commit/a73b0799c98b6dac21629efb15b23a03fe674d6c))
+* save frontier CSV only after a change ([#747](https://github.com/astroautomata/SymbolicRegression.jl/issues/747)) ([93cb6cd](https://github.com/astroautomata/SymbolicRegression.jl/commit/93cb6cd481e3ec7d8561739208aaaa609846f31f))
+
 ## [2.4.2](https://github.com/astroautomata/SymbolicRegression.jl/compare/v2.4.1...v2.4.2) (2026-09-24)
 
 ### Performance Improvements
