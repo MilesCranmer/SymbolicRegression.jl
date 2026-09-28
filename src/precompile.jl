@@ -1,5 +1,6 @@
 using PrecompileTools: @compile_workload, @setup_workload
 using Preferences: @load_preference
+using Serialization: Serialization
 
 # The precompile workload can be tuned with Preferences.jl. For example, to
 # disable the Float64 precompilation, set the `precompile_float64` preference
@@ -50,6 +51,7 @@ function do_precompilation(
     ),
     search_kwargs=(;),
     parallelism=:multithreading,
+    precompile_serialization=false,
 ) where {mode}
     @maybe_setup_workload mode begin
         for T in PRECOMPILE_TYPES, nout in (1,)
@@ -105,6 +107,14 @@ function do_precompilation(
                     search_kwargs...,
                 )
                 nout == 1 && calculate_pareto_frontier(hof::HallOfFame)
+                if precompile_serialization
+                    for value in (options, state)
+                        buffer = IOBuffer()
+                        Serialization.serialize(buffer, value)
+                        seekstart(buffer)
+                        Serialization.deserialize(buffer)
+                    end
+                end
             end
         end
     end

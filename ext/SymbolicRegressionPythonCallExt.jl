@@ -24,6 +24,7 @@ redirect_stdout(devnull) do
                 runtests=true,
             ),
             parallelism="multithreading",
+            precompile_serialization=true,
         )
     end
 end
