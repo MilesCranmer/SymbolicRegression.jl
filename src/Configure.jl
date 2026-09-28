@@ -229,14 +229,30 @@ function copy_definition_to_workers(
     return nothing
 end
 
+function fetch_all(futures)
+    failures = Vector{Any}(undef, length(futures))
+    @sync for (index, future) in enumerate(futures)
+        @async begin
+            failures[index] = try
+                fetch(future)
+                nothing
+            catch err
+                err
+            end
+        end
+    end
+    for failure in failures
+        isnothing(failure) || throw(failure)
+    end
+    return nothing
+end
+
 function test_function_on_workers(example_inputs, op, procs)
     futures = []
     for proc in procs
         push!(futures, @spawnat proc op(example_inputs...))
     end
-    for future in futures
-        fetch(future)
-    end
+    return fetch_all(futures)
 end
 
 function activate_env_on_workers(
@@ -314,9 +330,7 @@ function test_module_on_workers(procs, options::AbstractOptions, verbosity)
             @spawnat proc SymbolicRegression.gen_random_tree(3, options, 5, TEST_TYPE)
         )
     end
-    for future in futures
-        fetch(future)
-    end
+    fetch_all(futures)
     verbosity > 0 && @info "Finished!"
     return nothing
 end
@@ -360,9 +374,7 @@ function test_entire_pipeline(
             end
         )
     end
-    for future in futures
-        fetch(future)
-    end
+    fetch_all(futures)
     verbosity > 0 && @info "Finished!"
     return nothing
 end
