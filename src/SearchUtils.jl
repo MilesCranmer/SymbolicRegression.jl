@@ -864,6 +864,52 @@ function save_to_file(
     return nothing
 end
 
+mutable struct FrontierSaveState{PM,L}
+    entries::Vector{Tuple{PM,L,L,Int}}
+    saved::Bool
+end
+
+function FrontierSaveState(::HallOfFame{T,L,N,PM}) where {T,L,N,PM}
+    FrontierSaveState{PM,L}(Tuple{PM,L,L,Int}[], false)
+end
+
+function save_frontier_if_changed!(
+    cache::FrontierSaveState,
+    hall::HallOfFame,
+    frontier,
+    nout::Integer,
+    j::Integer,
+    dataset::Dataset,
+    options::AbstractOptions,
+    ropt::AbstractRuntimeOptions,
+)
+    previous = cache.entries
+    changed = !cache.saved || length(previous) != length(frontier)
+    if !changed
+        for (i, member) in enumerate(frontier)
+            complexity = compute_complexity(member, options)
+            saved_member, saved_cost, saved_loss, saved_complexity = previous[i]
+            if hall.members[complexity] !== saved_member ||
+                !isequal(member.cost, saved_cost) ||
+                !isequal(member.loss, saved_loss) ||
+                complexity != saved_complexity
+                changed = true
+                break
+            end
+        end
+    end
+    changed || return false
+
+    save_to_file(frontier, nout, j, dataset, options, ropt)
+    empty!(previous)
+    for member in frontier
+        complexity = compute_complexity(member, options)
+        push!(previous, (hall.members[complexity], member.cost, member.loss, complexity))
+    end
+    cache.saved = true
+    return true
+end
+
 """
     get_cur_maxsize(; options, total_cycles, cycles_remaining)
 
