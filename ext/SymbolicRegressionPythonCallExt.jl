@@ -55,10 +55,11 @@ redirect_stdout(devnull) do
                 y_units=nothing,
                 logger=nothing,
                 run_id="precompile",
-                progress=false,
+                progress=true,
                 runtests=true,
             ),
             parallelism="multithreading",
+            search_verbosity=1,
             precompile_serialization=true,
         )
     end

@@ -51,6 +51,7 @@ function do_precompilation(
     ),
     search_kwargs=(;),
     parallelism=:multithreading,
+    search_verbosity::Int=0,
     precompile_serialization=false,
 ) where {mode}
     @maybe_setup_workload mode begin
@@ -92,7 +93,7 @@ function do_precompilation(
                     parallelism=parallelism,
                     return_state=true,
                     saved_state=nothing,
-                    verbosity=0,
+                    verbosity=search_verbosity,
                     search_kwargs...,
                 )
                 hof = equation_search(
@@ -103,7 +104,7 @@ function do_precompilation(
                     parallelism=parallelism,
                     saved_state=state,
                     return_state=false,
-                    verbosity=0,
+                    verbosity=search_verbosity,
                     search_kwargs...,
                 )
                 nout == 1 && calculate_pareto_frontier(hof::HallOfFame)
