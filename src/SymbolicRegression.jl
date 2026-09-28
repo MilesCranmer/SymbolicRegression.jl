@@ -436,6 +436,8 @@ using .SearchUtilsModule:
     load_saved_population,
     construct_datasets,
     save_to_file,
+    FrontierSaveState,
+    save_frontier_if_changed!,
     get_cur_maxsize,
     init_dummy_pops,
     parse_guesses,
@@ -1022,16 +1024,13 @@ function _warmup_search!(
         PM = popmember_type(PopType)
         HallType = HallOfFame{T,L,N,PM}
         TraceStateType = typeof(state.trace_prototype)
+        WorkerPluginStatesType = eltype(eltype(state.worker_plugin_states))
 
-        (in_pop, _, _, _, worker_plugin_states) = extract_from_worker(
-            last_pop,
-            PopType,
-            HallType,
-            TraceStateType,
-            eltype(eltype(state.worker_plugin_states)),
-        )
         updated_pop = @sr_spawner(
             begin
+                (in_pop, _, _, _, worker_plugin_states) = extract_from_worker(
+                    last_pop, PopType, HallType, TraceStateType, WorkerPluginStatesType
+                )
                 _dispatch_s_r_cycle(
                     in_pop,
                     dataset,
@@ -1064,6 +1063,8 @@ function _main_search_loop!(
 ) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
+    frontier_saves =
+        options.save_to_file ? map(FrontierSaveState, state.halls_of_fame) : nothing
 
     start_time = time()
     progress_bar = if ropt.progress
@@ -1158,7 +1159,16 @@ function _main_search_loop!(
             dominating = calculate_pareto_frontier(state.halls_of_fame[j])
 
             if options.save_to_file
-                save_to_file(dominating, nout, j, dataset, options, ropt)
+                save_frontier_if_changed!(
+                    frontier_saves[j],
+                    state.halls_of_fame[j],
+                    dominating,
+                    nout,
+                    j,
+                    dataset,
+                    options,
+                    ropt,
+                )
             end
 
             # Update plugin state (e.g. parsimony frequency table) from the
