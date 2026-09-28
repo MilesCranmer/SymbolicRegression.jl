@@ -252,6 +252,7 @@ using DispatchDoctor: @stable, @unstable
     include("ConstantOptimization.jl")
     include("Population.jl")
     include("HallOfFame.jl")
+    include("MPTransfer.jl")
     include("Tracing.jl")
     include("ExpressionBuilder.jl")
     include("Mutate.jl")
@@ -397,6 +398,8 @@ using .HallOfFameModule:
     calculate_pareto_frontier,
     string_dominating_pareto_curve,
     update_hall_of_fame!
+using .MPTransferModule:
+    pack_population, unpack_population, pack_worker_output, unpack_worker_output
 using .MutateModule: mutate!, condition_mutation_weights!, MutationResult
 using .CrossoverModule: crossover, CrossoverResult
 using .SingleIterationModule: s_r_cycle, optimize_and_simplify_population
@@ -415,6 +418,7 @@ using .SearchUtilsModule:
     assign_next_worker!,
     get_worker_output_type,
     extract_from_worker,
+    _fetch_worker_output,
     @sr_spawner,
     @filtered_async,
     StdinReader,
@@ -912,6 +916,7 @@ function _initialize_search!(
         end
     end
 
+    pack_transfer = Val(ropt.parallelism == :multiprocessing)
     for j in 1:nout, i in 1:(options.populations)
         worker_idx = assign_next_worker!(
             state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
@@ -929,15 +934,18 @@ function _initialize_search!(
                     member.cost = cost
                     member.loss = result_loss
                 end
-                copy_pop = copy(_saved_pop)
+                copy_pop = pack_population(copy(_saved_pop), pack_transfer)
                 @sr_spawner(
                     begin
-                        (
-                            copy_pop,
-                            HallOfFame(options, _dataset),
-                            new_trace(options),
-                            0.0,
-                            _worker_plugin_states,
+                        pack_worker_output(
+                            (
+                                unpack_population(copy_pop),
+                                HallOfFame(options, _dataset),
+                                new_trace(options),
+                                0.0,
+                                _worker_plugin_states,
+                            ),
+                            pack_transfer,
                         )
                     end,
                     parallelism = ropt.parallelism,
@@ -949,19 +957,22 @@ function _initialize_search!(
                 end
                 @sr_spawner(
                     begin
-                        (
-                            Population(
-                                _dataset;
-                                population_size=options.population_size,
-                                nlength=3,
-                                options=options,
-                                nfeatures=max_features(_dataset, options),
-                                plugin_states=_plugin_states,
+                        pack_worker_output(
+                            (
+                                Population(
+                                    _dataset;
+                                    population_size=options.population_size,
+                                    nlength=3,
+                                    options=options,
+                                    nfeatures=max_features(_dataset, options),
+                                    plugin_states=_plugin_states,
+                                ),
+                                HallOfFame(options, _dataset),
+                                new_trace(options),
+                                Float64(options.population_size),
+                                _worker_plugin_states,
                             ),
-                            HallOfFame(options, _dataset),
-                            new_trace(options),
-                            Float64(options.population_size),
-                            _worker_plugin_states,
+                            pack_transfer,
                         )
                     end,
                     parallelism = ropt.parallelism,
@@ -1010,6 +1021,7 @@ function _warmup_search!(
     end
 
     nout = length(datasets)
+    pack_transfer = Val(ropt.parallelism == :multiprocessing)
     for j in 1:nout, i in 1:(options.populations)
         check_external_stop(ropt) && break
         dataset = datasets[j]
@@ -1031,22 +1043,25 @@ function _warmup_search!(
                 (in_pop, _, _, _, worker_plugin_states) = extract_from_worker(
                     last_pop, PopType, HallType, TraceStateType, WorkerPluginStatesType
                 )
-                _dispatch_s_r_cycle(
-                    in_pop,
-                    dataset,
-                    options;
-                    pop=i,
-                    out=j,
-                    iteration=0,
-                    ropt.verbosity,
-                    cur_maxsize,
-                    plugin_states=worker_plugin_states,
-                )::DefaultWorkerOutputType{
-                    Population{T,L,N},
-                    HallOfFame{T,L,N},
-                    TraceStateType,
-                    typeof(worker_plugin_states),
-                }
+                pack_worker_output(
+                    _dispatch_s_r_cycle(
+                        in_pop,
+                        dataset,
+                        options;
+                        pop=i,
+                        out=j,
+                        iteration=0,
+                        ropt.verbosity,
+                        cur_maxsize,
+                        plugin_states=worker_plugin_states,
+                    )::DefaultWorkerOutputType{
+                        Population{T,L,N},
+                        HallOfFame{T,L,N},
+                        TraceStateType,
+                        typeof(worker_plugin_states),
+                    },
+                    pack_transfer,
+                )
             end,
             parallelism = ropt.parallelism,
             worker_idx = worker_idx
@@ -1065,6 +1080,15 @@ function _main_search_loop!(
     nout = length(datasets)
     frontier_saves =
         options.save_to_file ? map(FrontierSaveState, state.halls_of_fame) : nothing
+    pack_transfer = Val(ropt.parallelism == :multiprocessing)
+    PopType = eltype(eltype(state.last_pops))
+    HallType = HallOfFame{T,L,N,popmember_type(PopType)}
+    WorkerOutput = DefaultWorkerOutputType{
+        PopType,
+        HallType,
+        typeof(state.trace_prototype),
+        eltype(eltype(state.worker_plugin_states)),
+    }
 
     start_time = time()
     progress_bar = if ropt.progress
@@ -1086,7 +1110,10 @@ function _main_search_loop!(
     if ropt.parallelism in (:multiprocessing, :multithreading)
         for j in 1:nout, i in 1:(options.populations)
             # Start listening for each population to finish:
-            t = @filtered_async put!(state.channels[j][i], fetch(state.worker_output[j][i]))
+            t = @filtered_async put!(
+                state.channels[j][i],
+                _fetch_worker_output(state.worker_output[j][i], WorkerOutput),
+            )
             push!(state.tasks[j], t)
         end
     end
@@ -1213,7 +1240,7 @@ function _main_search_loop!(
                 )
                 iteration = next_trace_iteration(cur_trace)
 
-                in_pop = copy(cur_pop::Population{T,L,N})
+                in_pop = pack_population(copy(cur_pop::Population{T,L,N}), pack_transfer)
                 worker_plugin_states = strictmap(
                     options.plugins, returned_plugin_states, state.plugin_states[j]
                 ) do plugin, worker_state, latest_head_state
@@ -1223,16 +1250,19 @@ function _main_search_loop!(
                 end
                 state.worker_output[j][i] = @sr_spawner(
                     begin
-                        _dispatch_s_r_cycle(
-                            in_pop,
-                            dataset,
-                            options;
-                            pop=i,
-                            out=j,
-                            iteration,
-                            ropt.verbosity,
-                            cur_maxsize,
-                            plugin_states=worker_plugin_states,
+                        pack_worker_output(
+                            _dispatch_s_r_cycle(
+                                unpack_population(in_pop),
+                                dataset,
+                                options;
+                                pop=i,
+                                out=j,
+                                iteration,
+                                ropt.verbosity,
+                                cur_maxsize,
+                                plugin_states=worker_plugin_states,
+                            ),
+                            pack_transfer,
                         )
                     end,
                     parallelism = ropt.parallelism,
@@ -1240,7 +1270,8 @@ function _main_search_loop!(
                 )
                 if ropt.parallelism in (:multiprocessing, :multithreading)
                     state.tasks[j][i] = @filtered_async put!(
-                        state.channels[j][i], fetch(state.worker_output[j][i])
+                        state.channels[j][i],
+                        _fetch_worker_output(state.worker_output[j][i], WorkerOutput),
                     )
                 end
 

@@ -32,6 +32,7 @@ using ..ComplexityModule: compute_complexity
 using ..PopulationModule: Population, _population_without_plugins
 using ..PopMemberModule: PopMember, AbstractPopMember
 using ..HallOfFameModule: HallOfFame, string_dominating_pareto_curve, update_hall_of_fame!
+using ..MPTransferModule: unpack_worker_output
 using ..ConstantOptimizationModule: optimize_constants
 using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
 using ..ExpressionBuilderModule: strip_metadata
@@ -314,8 +315,10 @@ end
 
 #! format: off
 extract_from_worker(p::DefaultWorkerOutputType, _, _, _, _) = p
-extract_from_worker(f::Future, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where {P,H,TR<:MaybeTrace,S<:Tuple} = fetch(f)::DefaultWorkerOutputType{P,H,TR,S}
+extract_from_worker(f::Future, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where {P,H,TR<:MaybeTrace,S<:Tuple} = _fetch_worker_output(f, DefaultWorkerOutputType{P,H,TR,S})
 extract_from_worker(t::Task, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where {P,H,TR<:MaybeTrace,S<:Tuple} = fetch(t)::DefaultWorkerOutputType{P,H,TR,S}
+_fetch_worker_output(f::Future, ::Type{O}) where {O} = unpack_worker_output(fetch(f))::O
+_fetch_worker_output(t::Task, ::Type{O}) where {O} = fetch(t)::O
 #! format: on
 
 macro sr_spawner(expr, kws...)
