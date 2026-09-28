@@ -3,6 +3,9 @@ module PopMemberModule
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, AbstractExpressionNode, string_tree
 import DynamicExpressions: constructorof, with_type_parameters
+using Serialization: Serialization
+using Distributed: ClusterSerializer
+using DynamicExpressions: Expression, Node, get_child
 using ..CoreModule:
     AbstractOptions, Dataset, DATA_TYPE, LOSS_TYPE, create_expression, AbstractMutation
 import ..CoreModule.OptionsModule: default_popmember_type
@@ -280,4 +283,121 @@ end
     return N
 end
 
+# Worker transfers avoid a type tag for every Nullable child of a Node.
+function _pack_node!(
+    node::Node{T,D}, degrees, leaf_types, constants, features, ops
+) where {T,D}
+    push!(degrees, node.degree)
+    if node.degree == 0
+        push!(leaf_types, UInt8(node.constant))
+        if node.constant
+            push!(constants, node.val)
+        else
+            push!(features, node.feature)
+        end
+    else
+        push!(ops, node.op)
+        for i in 1:node.degree
+            _pack_node!(get_child(node, i), degrees, leaf_types, constants, features, ops)
+        end
+    end
+    return nothing
+end
+
+function _serialize_member_tree(
+    s::Serialization.AbstractSerializer, ex::Expression{T,N}
+) where {T,N<:Node}
+    write(s.io, UInt8(1))
+    Serialization.serialize(s, getfield(ex, :metadata))
+    degrees = UInt8[]
+    leaf_types = UInt8[]
+    constants = T[]
+    features = UInt16[]
+    ops = UInt8[]
+    _pack_node!(getfield(ex, :tree), degrees, leaf_types, constants, features, ops)
+    for values in (degrees, leaf_types, constants, features, ops)
+        Serialization.serialize(s, values)
+    end
+    return nothing
+end
+function _serialize_member_tree(s::Serialization.AbstractSerializer, ex::AbstractExpression)
+    write(s.io, UInt8(0))
+    Serialization.serialize(s, ex)
+    return nothing
+end
+
+function _unpack_node(
+    ::Type{N}, degrees, leaf_types, constants, features, ops, positions
+) where {T,D,N<:Node{T,D}}
+    degree = degrees[positions[1]]
+    positions[1] += 1
+    degree <= D || throw(ArgumentError("Invalid packed Node degree $degree"))
+    if degree == 0
+        leaf_type = leaf_types[positions[2]]
+        positions[2] += 1
+        if leaf_type == 1
+            value = constants[positions[3]]
+            positions[3] += 1
+            return N(; val=value)
+        elseif leaf_type == 0
+            feature = features[positions[4]]
+            positions[4] += 1
+            return N(; feature)
+        else
+            throw(ArgumentError("Invalid packed Node leaf type $leaf_type"))
+        end
+    end
+    op = ops[positions[5]]
+    positions[5] += 1
+    children = ntuple(
+        _ -> _unpack_node(N, degrees, leaf_types, constants, features, ops, positions),
+        Int(degree),
+    )
+    return N(; op, children)
+end
+
+function _deserialize_member_tree(
+    s::Serialization.AbstractSerializer, ::Type{E}
+) where {T,N<:Node,E<:Expression{T,N}}
+    read(s.io, UInt8) == 1 || throw(ArgumentError("Expected compact Node expression"))
+    metadata = Serialization.deserialize(s)
+    degrees, leaf_types, constants, features, ops = (
+        Serialization.deserialize(s) for _ in 1:5
+    )
+    positions = ones(Int, 5)
+    tree = _unpack_node(N, degrees, leaf_types, constants, features, ops, positions)
+    for (position, values) in
+        zip(positions, (degrees, leaf_types, constants, features, ops))
+        position == length(values) + 1 || throw(ArgumentError("Trailing packed Node data"))
+    end
+    return E(tree, metadata)
+end
+function _deserialize_member_tree(
+    s::Serialization.AbstractSerializer, ::Type{E}
+) where {E<:AbstractExpression}
+    read(s.io, UInt8) == 0 || throw(ArgumentError("Expected uncompressed expression"))
+    return Serialization.deserialize(s)::E
+end
+
+function Serialization.serialize(s::ClusterSerializer, member::P) where {P<:PopMember}
+    Serialization.serialize_cycle_header(s, member) && return nothing
+    write(s.io, UInt8(0xA4))
+    _serialize_member_tree(s, getfield(member, :tree))
+    for field in fieldnames(P)
+        field === :tree && continue
+        Serialization.serialize(s, getfield(member, field))
+    end
+    return nothing
+end
+function Serialization.deserialize(s::ClusterSerializer, ::Type{P}) where {P<:PopMember}
+    read(s.io, UInt8) == 0xA4 || throw(ArgumentError("Unsupported PopMember encoding"))
+    member = ccall(:jl_new_struct_uninit, Any, (Any,), P)::P
+    Serialization.deserialize_cycle(s, member)
+    setfield!(member, :tree, _deserialize_member_tree(s, fieldtype(P, :tree)))
+    for field in fieldnames(P)
+        field === :tree && continue
+        setfield!(member, field, Serialization.deserialize(s))
+    end
+    return member
+end
 end

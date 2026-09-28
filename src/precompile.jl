@@ -1,4 +1,5 @@
 using PrecompileTools: @compile_workload, @setup_workload
+using Serialization: Serialization
 using Preferences: @load_preference
 
 # The precompile workload can be tuned with Preferences.jl. For example, to
@@ -96,6 +97,24 @@ function do_precompilation(::Val{mode}) where {mode}
                     verbosity=0,
                 )
                 nout == 1 && calculate_pareto_frontier(hof::HallOfFame)
+                # The first worker smoke-test response otherwise compiles this codec on every worker.
+                member = first(hof.members)
+                network_serializer_type = Distributed.ClusterSerializer{
+                    Distributed.Sockets.TCPSocket
+                }
+                for sample in (member,)
+                    io = IOBuffer()
+                    Serialization.serialize(Distributed.ClusterSerializer(io), sample)
+                    seekstart(io)
+                    Serialization.deserialize(Distributed.ClusterSerializer(io))
+                    precompile(
+                        Serialization.serialize, (network_serializer_type, typeof(sample))
+                    )
+                    precompile(
+                        Serialization.deserialize,
+                        (network_serializer_type, Type{typeof(sample)}),
+                    )
+                end
             end
         end
     end
