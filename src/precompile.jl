@@ -49,9 +49,7 @@ function do_precompilation(
     operator_kwargs=(;
         binary_operators=[+, *, /, -, ^], unary_operators=[sin, cos, exp, log, sqrt, abs]
     ),
-    search_kwargs=(;),
-    parallelism=:multithreading,
-    search_verbosity::Int=0,
+    search_kwargs=(; parallelism=:multithreading, verbosity=0),
     precompile_serialization=false,
 ) where {mode}
     @maybe_setup_workload mode begin
@@ -90,10 +88,8 @@ function do_precompilation(
                     y;
                     niterations=start ? 3 : 1,
                     options=options,
-                    parallelism=parallelism,
                     return_state=true,
                     saved_state=nothing,
-                    verbosity=search_verbosity,
                     search_kwargs...,
                 )
                 hof = equation_search(
@@ -101,10 +97,8 @@ function do_precompilation(
                     y;
                     niterations=0,
                     options=options,
-                    parallelism=parallelism,
                     saved_state=state,
                     return_state=false,
-                    verbosity=search_verbosity,
                     search_kwargs...,
                 )
                 nout == 1 && calculate_pareto_frontier(hof::HallOfFame)

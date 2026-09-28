@@ -55,9 +55,9 @@ function pysr_shaped_workload(
             run_id="precompile",
             progress=true,
             runtests=true,
+            parallelism="multithreading",
+            verbosity=1,
         ),
-        parallelism="multithreading",
-        search_verbosity=1,
         precompile_serialization=true,
     )
 end
