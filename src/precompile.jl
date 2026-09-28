@@ -1,5 +1,6 @@
 using PrecompileTools: @compile_workload, @setup_workload
 using Preferences: @load_preference
+using Serialization: Serialization
 
 # The precompile workload can be tuned with Preferences.jl. For example, to
 # disable the Float64 precompilation, set the `precompile_float64` preference
@@ -43,7 +44,14 @@ macro maybe_compile_workload(mode, ex)
 end
 
 """`mode=:precompile` will use `@precompile_*` directives; `mode=:compile` runs."""
-function do_precompilation(::Val{mode}) where {mode}
+function do_precompilation(
+    ::Val{mode};
+    operator_kwargs=(;
+        binary_operators=[+, *, /, -, ^], unary_operators=[sin, cos, exp, log, sqrt, abs]
+    ),
+    search_kwargs=(; parallelism=:multithreading, verbosity=0),
+    precompile_serialization=false,
+) where {mode}
     @maybe_setup_workload mode begin
         for T in PRECOMPILE_TYPES, nout in (1,)
             start = nout == 1
@@ -52,8 +60,7 @@ function do_precompilation(::Val{mode}) where {mode}
             y = start ? randn(T, N) : randn(T, nout, N)
             @maybe_compile_workload mode begin
                 options = SymbolicRegression.Options(;
-                    binary_operators=[+, *, /, -, ^],
-                    unary_operators=[sin, cos, exp, log, sqrt, abs],
+                    operator_kwargs...,
                     populations=3,
                     population_size=start ? 50 : 12,
                     tournament_selection_n=6,
@@ -81,21 +88,28 @@ function do_precompilation(::Val{mode}) where {mode}
                     y;
                     niterations=start ? 3 : 1,
                     options=options,
-                    parallelism=:multithreading,
                     return_state=true,
-                    verbosity=0,
+                    saved_state=nothing,
+                    search_kwargs...,
                 )
                 hof = equation_search(
                     X,
                     y;
                     niterations=0,
                     options=options,
-                    parallelism=:multithreading,
                     saved_state=state,
                     return_state=false,
-                    verbosity=0,
+                    search_kwargs...,
                 )
                 nout == 1 && calculate_pareto_frontier(hof::HallOfFame)
+                if precompile_serialization
+                    for value in (options, state)
+                        buffer = IOBuffer()
+                        Serialization.serialize(buffer, value)
+                        seekstart(buffer)
+                        Serialization.deserialize(buffer)
+                    end
+                end
             end
         end
     end

@@ -128,6 +128,7 @@ jobs:
           - ext/json_tracing
           - ext/dynamicquantities_units
           - ext/loopvectorization
+          - ext/pythoncall
           - examples/readme
           - examples/parameterized_function
           - examples/custom_types
