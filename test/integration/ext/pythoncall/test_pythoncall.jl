@@ -5,7 +5,9 @@
     @test Base.get_extension(SymbolicRegression, :SymbolicRegressionPythonCallExt) !==
         nothing
 
-    # Coverage bypasses cached native code. Without coverage, PySR-shaped
+    # Coverage bypasses cached native code, and on Julia 1.10 `julia_cmd()` also
+    # carries `--pkgimages=no` from a coverage run, so the child resets both.
+    # Without coverage, PySR-shaped
     # versus control compile time was 0.83 vs 4.57 s on Julia 1.13.1 and
     # 1.16 vs 4.48 s on Julia 1.10.12.
     code = raw"""
@@ -33,9 +35,11 @@
     project = dirname(Base.active_project())
     # CondaPkg scans each load-path environment, including stale global manifests.
     command = addenv(
-        `$(Base.julia_cmd()) --project=$project --startup-file=no --code-coverage=none -e $code`,
+        `$(Base.julia_cmd()) --project=$project --startup-file=no --code-coverage=none --pkgimages=yes -e $code`,
         "JULIA_LOAD_PATH" => "@:@stdlib",
     )
-    ok = success(command)
-    @test ok
+    output = IOBuffer()
+    process = run(pipeline(ignorestatus(command); stdout=output, stderr=output))
+    success(process) || println(String(take!(output)))
+    @test success(process)
 end
