@@ -1,107 +1,11 @@
 # Changelog
 
-## [2.0.0-beta.1](https://github.com/MilesCranmerBot/SymbolicRegression.jl/compare/v2.5.0...v2.0.0-beta.1) (2026-09-29)
+## [2.5.1](https://github.com/astroautomata/SymbolicRegression.jl/compare/v2.5.0...v2.5.1) (2026-09-29)
 
 
-### ⚠ BREAKING CHANGES
+### Dependencies
 
-* automatic batching for large datasets ([#676](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/676))
-* enable adaptive mutation weights by default ([#678](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/678))
-* centralize debug tracing ([#651](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/651))
-* increase default crossover probability ([#643](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/643))
-* remove ParametricExpression support in favor of TemplateExpressions ([#656](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/656))
-* adaptive-mutation / annealing / mutation  burst plugins + per-call mutation contexts ([#645](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/645))
-* `SearchState` replaces `all_running_search_statistics` with `plugin_states` and gains a plugin-state type parameter. `Options` and `TemplateExpressionSpec` also gain type parameters, changing the concrete type arity of these public structs.
-* cost after simplification must be recomputed ([#550](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/550))
-
-### Features
-
-* adaptive-mutation / annealing / mutation  burst plugins + per-call mutation contexts ([#645](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/645)) ([6787993](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/6787993563b926aec8b154efdf416289f546eb74))
-* add atan to ValidVector unary operators ([#546](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/546)) ([5a9d08c](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/5a9d08c33022f241db321479ca5947c14e991bec))
-* add backsolve mutation ([de86fef](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/de86fef0dc6e99cee05d2e80969ab0d0e0016907))
-* add backsolve rewrite mutation ([a7eb486](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/a7eb486a09e39cd7667006940092a787f889dc50))
-* add composable plugin interface ([94cb307](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/94cb307103ee3e22310e0608b932a11ea86a022b))
-* add generic optimizable parameters for template expressions ([#644](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/644)) ([87b9cbd](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/87b9cbdd7d4d20a7f1442cd465908a5de8033968))
-* add inverse evaluation helpers ([f2153f2](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/f2153f28b0f840b20d24103d036a03e557740f42))
-* add sparse regression library for backsolve ([f9cc312](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/f9cc3126e57ee99f8311104bc59ff479730919b3))
-* address review (drop weights arg, MutateConstant config, inline Backsolve) ([67ee068](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/67ee06837f197e53ff9cb0826000ea8d726658e8))
-* adopt DynamicExpressions 2.9 EvalContext ([#668](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/668)) ([663d30c](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/663d30c2b61c046d17e4b9cbcf4702e404b0155b))
-* allow custom types in TemplateExpression parameters ([#693](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/693)) ([494614b](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/494614b8add88b833fdb9e33e001b3f3a594bb87))
-* automatic batching for large datasets ([#676](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/676)) ([bc04c76](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/bc04c766bdc5677c69da1bdb00af5f9ef6b70e5b))
-* compatibility between template expressions and custom types ([#690](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/690)) ([02f4d1a](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/02f4d1ab5a588587aa5e52ff0c3d35f028052f5f))
-* create AbstractCrossover interface ([#664](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/664)) ([e6484d4](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/e6484d49d9f9a9879b501e8fb8837015ac64df6e))
-* enable adaptive mutation weights by default ([#678](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/678)) ([3f7873c](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/3f7873c247bc33d6daec2f964fe6a20b6b97172f))
-* evaluate guess constants in a module ([#705](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/705)) ([e1232e6](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/e1232e6cff1878067725255153707b7ec3d8750a))
-* generalize inverse evaluation for arbitrary arity ([#616](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/616)) ([99f3f3c](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/99f3f3c2907aacf20bb102e250c23506ed3970eb))
-* improved backsolve as into a monotone budget-aware sparse fit ([#648](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/648)) ([cccea35](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/cccea35fab16d071be97451dafbcb831e8a55a0b))
-* increase default crossover probability ([#643](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/643)) ([ee36121](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/ee361219201250ae51264a7abbb4d09dff5a11e8))
-* let plugins contribute mutation/crossover defaults ([#663](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/663)) ([c3617af](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/c3617af9190e2f8348caf438cfcf2d4eab9da9dc))
-* MLJ-free machine/fit!/predict/report interface ([#680](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/680)) ([719cb71](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/719cb715802dc53bef52304c38aa8e87eaa50a55))
-* poll Windows sockets for external stop requests ([#710](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/710)) ([58b4699](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/58b46994037babee06e6e2b11945f35098eeb4db))
-* remove ParametricExpression support in favor of TemplateExpressions ([#656](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/656)) ([7ba365f](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/7ba365f26e440224528a7abdec462918544376d4))
-* stop searches gracefully on interrupt via stop flag or pipe fd ([#704](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/704)) ([50d9db0](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/50d9db00a4f55eb98f7f1ecb2f27919cd12854e7))
-* support parameter vectors in template guesses ([#713](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/713)) ([8bd8c20](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/8bd8c20115c1e2e4fb1321b02da41af50063eab3))
-
-
-### Bug Fixes
-
-* align mutation overrides with plugins ([c3242b2](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/c3242b2d0c548bc93a50d5443b2cd4492fc6faf3))
-* apply inverse-function review suggestions ([d035318](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/d035318a7fce923d74407c963ed7af3a679b6c11))
-* cap crossover constraint retries at max_tries attempts ([#666](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/666)) ([00c5c01](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/00c5c010ba8f3625b631f3ca619358a5c7cb4333))
-* clear early DimensionMismatch for mismatched X/y sample counts ([#660](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/660)) ([adf80a9](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/adf80a972344f9e1e3b3b37ae0b16b9d369a3785))
-* constant optimization restarts never escaping a zero-valued constant ([#637](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/637)) ([e95759a](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/e95759ad6a5633989c22177778a19e68dd144651))
-* cost after simplification must be recomputed ([#550](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/550)) ([7d87479](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/7d8747918f3f35effcc6eaa3d27f9340266819bb))
-* disable simplification for expression losses ([#674](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/674)) ([47fdd14](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/47fdd14894bf5d9c3ef884a73646e180e4057368))
-* display iterations by same unit for progress=False ([#696](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/696)) ([c1a02d5](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/c1a02d5a1dd93d6a87d9c04836e00559393f8f99))
-* enable discrete custom-value mutation ([#687](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/687)) ([fe92956](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/fe9295616b9127d69d067437e3faf59ad9b24a93))
-* escape quotes in hall of fame CSV ([#698](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/698)) ([7329bc8](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/7329bc8be655861eb5eaa437a35175fe33432402))
-* eval_grad_tree_array works with SubArray inputs ([#566](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/566)) ([fbb1a7f](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/fbb1a7f043729669c1524c1cc678a5a4b97195cc))
-* finalize first-class mutation API ([850d8c2](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/850d8c232c11012d28c2bfa106703a8f59ab9e46))
-* finalize logging after all search outputs complete ([#646](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/646)) ([b25a4fe](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/b25a4fe63ca8fd8244d99bda5e86d78681e43c65))
-* harden sparse regression library ([46a1ad2](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/46a1ad2972c11f00969139c1b687a26ff976907a))
-* ignore template keyword order ([#692](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/692)) ([1c349ab](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/1c349ab8bb6c9ec6a1da91f265471624f9e249d7))
-* import sparse regression options and format code ([00d99ac](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/00d99ac8b108fb9f74f17e4e68e4bdb8461dc988))
-* import sparse regression options in MLJ interface ([cb5f8bc](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/cb5f8bc11009bfc1664328a0262f4470e724667c))
-* import sparse regression options in top-level module ([dcc7f5e](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/dcc7f5e9bbe2b10068432904d39b0fec3f2ba2e1))
-* make stdin quit monitoring non-blocking ([#562](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/562)) ([74cf6b7](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/74cf6b79cdfa47ace674c38edde2a3e1e0ec7c15))
-* preserve natural type promotion in ValidVector-Number ops ([#625](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/625)) ([f1aebde](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/f1aebde4ff98aba72f6e5de1a2da4536d09db433))
-* preserve simulated annealing temperature schedule ([#652](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/652)) ([a7b4db4](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/a7b4db408e5f6608442f62f234cd2cf6b2fbba6e))
-* prevent multiprocessing teardown hangs ([#641](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/641)) ([26efc23](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/26efc235429e94cb42ffdb422a50cb4d2a0920b9))
-* reject unsupported evaluation keywords ([#670](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/670)) ([05029cd](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/05029cdaa8547b049b5a478a2d48a152871dc990))
-* repair first-class mutation regressions ([e68fe14](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/e68fe14ce1708997317b8bd8fa4d2f264a321af5))
-* require DynamicExpressions 2.11 for custom invalid values ([#718](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/718)) ([cbb4d78](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/cbb4d786ca809184adba91cd843af8f6a38c24da))
-* suppress 'press q' prompt when input_stream is devnull ([#623](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/623)) ([3130ece](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/3130ece5b942981856d073d63ccacc96460a1302))
-* TemplateExpression/ParametricExpression overrides for new weights Vector signature ([ac260f9](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/ac260f926adc9dcf91f4f258572d4db5566bea9b))
-* use `first` over `only` for traced snapshot lookup ([#711](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/711)) ([d04b130](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/d04b130e5f7cbccfc5c7d9defb59c26783ab0419))
-* use loss type for early-stop worker checks ([#683](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/683)) ([83dbdf6](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/83dbdf620b449cef1769d19133d54816288c657d))
-* use scalar type rather than leaf type for randn ([#570](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/570)) ([9c6460e](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/9c6460e3fbd151e891b0bae926fa4913dc7ff787))
-
-
-### Performance Improvements
-
-* allocation-free tournament selection and oldest-member scan ([#728](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/728)) ([5df7912](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/5df7912a021f349cc92fa0c3701bd97a57553c45))
-* await worker startup checks concurrently ([#745](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/745)) ([8cddb1d](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/8cddb1d4b2c6e5dd9844e951e9fc9c4e90f7634d))
-* copy not deepcopy for mutations vector in next_generation (pairs are immutable) ([225f951](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/225f9513321e5dcf570366f4b63f49403f7fc20a))
-* fetch warmup populations on their workers ([#744](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/744)) ([127c1d8](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/127c1d8657e1defa987f27b2000d10c35e7852a4))
-* function barrier on next_generation to specialize per mutation type ([5feb572](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/5feb572434c03343e9105c5595d0de53a7418563))
-* hoist s_r_cycle plugin hook closures into functions ([#730](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/730)) ([b65ffa1](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/b65ffa185b4eb3fa82a42064f83d853b96791e10))
-* narrow precompile workload ([#642](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/642)) ([5833a91](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/5833a9131f7b3566453ae46b8827c52076f80f12))
-* precompile fit under PythonCall ([#743](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/743)) ([a73b079](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/a73b0799c98b6dac21629efb15b23a03fe674d6c))
-* reuse a per-task scratch for conditioned mutation weights ([#731](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/731)) ([1052b1c](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/1052b1c93fd45aa7c5df69f93a2649cadb80d87a))
-* reuse evaluation buffers during search ([#654](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/654)) ([5c61538](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/5c6153859590d920865c3e352da415a1d8085a80))
-* run optimize_and_simplify_population as a plain loop ([#727](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/727)) ([a687898](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/a687898e331b7eeca9babf34714757e9092fce93))
-* run population copy and hall-of-fame output as plain loops ([#726](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/726)) ([0a370b4](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/0a370b48a53fc51c79bdd22688a68cc07b20ab24))
-* save frontier CSV only after a change ([#747](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/747)) ([93cb6cd](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/93cb6cd481e3ec7d8561739208aaaa609846f31f))
-
-
-### Miscellaneous Chores
-
-* begin beta releases ([#671](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/671)) ([2d2b112](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/2d2b112227071f70776337d3b9e25ac4f1a43311))
-
-
-### Code Refactoring
-
-* centralize debug tracing ([#651](https://github.com/MilesCranmerBot/SymbolicRegression.jl/issues/651)) ([22e57a4](https://github.com/MilesCranmerBot/SymbolicRegression.jl/commit/22e57a4b7088cf31adfb1fbd4520b3d88feffd11))
+* require DynamicExpressions 2.12 ([#750](https://github.com/astroautomata/SymbolicRegression.jl/issues/750)) ([bb67120](https://github.com/astroautomata/SymbolicRegression.jl/commit/bb67120bc62c545936caed86478922e35f569d65))
 
 ## [2.5.0](https://github.com/astroautomata/SymbolicRegression.jl/compare/v2.4.2...v2.5.0) (2026-09-28)
 
