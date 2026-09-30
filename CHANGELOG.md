@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.1](https://github.com/astroautomata/SymbolicRegression.jl/compare/v2.5.0...v2.5.1) (2026-09-29)
+
+
+### Dependencies
+
+* require DynamicExpressions 2.12 ([#750](https://github.com/astroautomata/SymbolicRegression.jl/issues/750)) ([bb67120](https://github.com/astroautomata/SymbolicRegression.jl/commit/bb67120bc62c545936caed86478922e35f569d65))
+
 ## [2.5.0](https://github.com/astroautomata/SymbolicRegression.jl/compare/v2.4.2...v2.5.0) (2026-09-28)
 
 
