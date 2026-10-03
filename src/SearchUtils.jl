@@ -309,8 +309,8 @@ function spawn_encoded_result(f, worker::Int, ::Type{R})::Task where {R}
     )::R
 end
 
-output_settled(output::Task) = istaskdone(output)
-output_settled(output::Future)::Bool = isready(output)
+_isready(output::Task) = istaskdone(output)
+_isready(output::Future)::Bool = isready(output)
 
 function listen_encoded_result(output::Task, channel::Channel)
     return errormonitor(

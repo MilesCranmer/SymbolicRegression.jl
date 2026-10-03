@@ -453,7 +453,7 @@ end
                 @test istaskfailed(t)
                 exceptions = current_exceptions(t)
                 @test first(exceptions).exception isa Distributed.ProcessExitedException
-                @test THSUM.output_settled(t)
+                @test THSUM._isready(t)
             finally
                 rmprocs(filter(in(workers()), pids))
             end

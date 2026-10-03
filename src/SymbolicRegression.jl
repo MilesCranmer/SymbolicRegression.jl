@@ -416,7 +416,7 @@ using .SearchUtilsModule:
     get_worker_output_type,
     worker_output_type,
     listen_encoded_result,
-    output_settled,
+    _isready,
     make_resident,
     extract_from_worker,
     @sr_spawner,
@@ -1364,7 +1364,7 @@ function _tear_down!(
     if ropt.parallelism in (:multiprocessing, :multithreading)
         outputs = Iterators.flatten(state.worker_output)
         if ropt.parallelism == :multiprocessing
-            timedwait(() -> all(output_settled, outputs), 5.0; pollint=0.01)
+            timedwait(() -> all(_isready, outputs), 5.0; pollint=0.01)
         else
             for output in outputs
                 wait(output)
