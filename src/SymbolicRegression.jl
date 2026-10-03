@@ -1190,9 +1190,9 @@ function _main_search_loop!(
             ###################################################################
             # Migration #######################################################
             if options.migration
-                best_of_each = Population(
-                    reduce(vcat, map(pop -> pop.members, state.best_sub_pops[j]))
-                )
+                best_of_each = Population([
+                    member for pop in state.best_sub_pops[j] for member in pop.members
+                ])
                 migrate!(
                     best_of_each.members => cur_pop, options; frac=options.fraction_replaced
                 )
