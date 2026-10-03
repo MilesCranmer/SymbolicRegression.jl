@@ -354,11 +354,11 @@ extract_from_worker(t::Task, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where 
 macro sr_spawner(expr, assignments...)
     keywords = Dict(ex.args[1] => ex.args[2] for ex in assignments)
     @assert length(keywords) == length(assignments) "duplicate @sr_spawner keyword"
-    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :ResultType) "unknown @sr_spawner keyword in $(collect(keys(keywords)))"
+    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :result_type) "unknown @sr_spawner keyword in $(collect(keys(keywords)))"
     parallelism = keywords[:parallelism]
     worker_idx = keywords[:worker_idx]
-    multiprocessing = if haskey(keywords, :ResultType)
-        :($(spawn_encoded_result)(() -> $(expr), $(worker_idx), $(keywords[:ResultType])))
+    multiprocessing = if haskey(keywords, :result_type)
+        :($(spawn_encoded_result)(() -> $(expr), $(worker_idx), $(keywords[:result_type])))
     else
         :($(Distributed).@spawnat($(worker_idx), $(expr)))
     end

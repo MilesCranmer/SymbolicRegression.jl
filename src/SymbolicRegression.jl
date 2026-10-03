@@ -1259,7 +1259,7 @@ function _main_search_loop!(
                             end,
                             parallelism = ropt.parallelism,
                             worker_idx = worker_idx,
-                            ResultType = worker_result_type(state)
+                            result_type = worker_result_type(state)
                         )
                     end
                 if ropt.parallelism in (:multiprocessing, :multithreading)
