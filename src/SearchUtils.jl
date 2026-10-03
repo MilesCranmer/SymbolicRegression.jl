@@ -301,20 +301,17 @@ end
 
 const DefaultWorkerOutputType{P,H,TR<:MaybeTrace,S<:Tuple} = Tuple{P,H,TR,Float64,S}
 
-# Plugin states can hold a `Future` or `RemoteChannel`, which only Distributed's own
-# serializer sends intact, so they are returned outside the encoded bytes.
-function run_encoded_result(f, ::Type{R}) where {R<:DefaultWorkerOutputType}
-    (pop, hall_of_fame, trace, num_evals, plugin_states) = f()::R
+function run_encoded_result(f, ::Type{R})::Vector{UInt8} where {R}
+    result = f()::R
     io = IOBuffer()
-    serialize(io, (pop, hall_of_fame, trace, num_evals))
-    return (take!(io), plugin_states)
+    serialize(io, result)
+    return take!(io)
 end
 
 function spawn_encoded_result(f, worker::Int, ::Type{R})::Task where {R}
-    return Threads.@spawn begin
-        (bytes, plugin_states) = remotecall_fetch(run_encoded_result, worker, f, R)
-        (deserialize(IOBuffer(bytes))..., plugin_states)::R
-    end
+    return Threads.@spawn deserialize(
+        IOBuffer(remotecall_fetch(run_encoded_result, worker, f, R))
+    )::R
 end
 
 struct WorkerCopy{T}
