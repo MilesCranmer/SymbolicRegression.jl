@@ -10,6 +10,7 @@ using ..CoreModule:
 import ..CoreModule: init_plugin_state, on_mutation_end!
 import ..CoreModule: default_adaptive_mutation_weights_plugin
 import ..MutateModule: condition_mutation_weights!
+import ..SearchUtilsModule: encodable_state
 
 """
     AdaptiveMutationWeightsPlugin <: AbstractPlugin
@@ -105,6 +106,7 @@ struct AdaptiveMutationWeightsState
     multipliers::Vector{Float64}
     active::Vector{Bool}
 end
+encodable_state(::Type{AdaptiveMutationWeightsState}) = true
 
 function init_plugin_state(::AdaptiveMutationWeightsPlugin, options, dataset)
     n = length(options.mutations)

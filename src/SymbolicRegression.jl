@@ -415,6 +415,7 @@ using .SearchUtilsModule:
     assign_next_worker!,
     get_worker_output_type,
     result_transport,
+    worker_output_type,
     listen_encoded_result,
     output_settled,
     make_resident,
@@ -745,39 +746,6 @@ function _validate_options(
     return nothing
 end
 
-SearchUtilsModule.result_transport(::Type, options, ropt) = nothing
-function SearchUtilsModule.result_transport(
-    ::Type{R}, options, ropt
-) where {
-    T<:Union{Float32,Float64},
-    L<:Union{Float32,Float64},
-    D,
-    N<:Expression{
-        T,Node{T,D},NamedTuple{(:operators, :variable_names),Tuple{Nothing,Nothing}}
-    },
-    PM<:PopMember{T,L,N},
-    S<:Tuple{
-        Vararg{
-            Union{
-                Nothing,
-                AdaptiveParsimonyModule.AdaptiveParsimonyState,
-                AdaptiveMutationWeightsModule.AdaptiveMutationWeightsState,
-                SimulatedAnnealingModule.SimulatedAnnealingState,
-            },
-        },
-    },
-    R<:DefaultWorkerOutputType{Population{T,L,N,PM},HallOfFame{T,L,N,PM},Nothing,S},
-}
-    builtin_plugins = all(options.plugins) do plugin
-        plugin isa Union{
-            SimulatedAnnealingPlugin,
-            AdaptiveParsimonyPlugin,
-            AdaptiveMutationWeightsPlugin,
-        }
-    end
-    return ropt.parallelism == :multiprocessing && builtin_plugins ? R : nothing
-end
-
 @stable default_mode = "disable" function _create_workers(
     datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions
 ) where {T,L,D<:Dataset{T,L}}
@@ -820,7 +788,7 @@ end
         ] for j in 1:nout
     ]
     R = DefaultWorkerOutputType{PopType,HallOfFameType,typeof(trace),WorkerPluginStatesType}
-    transport = result_transport(R, options, ropt)
+    transport = result_transport(R, ropt)
     WorkerOutputType = get_worker_output_type(
         Val(ropt.parallelism),
         PopType,
@@ -1104,13 +1072,7 @@ function _main_search_loop!(
 ) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
-    R = DefaultWorkerOutputType{
-        eltype(eltype(state.last_pops)),
-        eltype(state.halls_of_fame),
-        typeof(state.trace_prototype),
-        eltype(eltype(state.worker_plugin_states)),
-    }
-    transport = result_transport(R, options, ropt)
+    transport = result_transport(worker_output_type(state), ropt)
     resident_inputs = make_resident((datasets, options), Val(ropt.parallelism), state.procs)
     frontier_saves =
         options.save_to_file ? map(FrontierSaveState, state.halls_of_fame) : nothing

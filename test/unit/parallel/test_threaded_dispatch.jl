@@ -154,16 +154,16 @@
             function threaded_dispatch_run_tests()
                 dataset, options, pop, states, R = threaded_dispatch_fixture()
                 ropt = THSUM.RuntimeOptions(; parallelism=:multiprocessing)
-                @test THSUM.result_transport(R, options, ropt) === R
+                @test THSUM.result_transport(R, ropt) === R
                 for mode in (:serial, :multithreading)
                     @test THSUM.result_transport(
-                        R, options, THSUM.RuntimeOptions(; parallelism=mode)
+                        R, THSUM.RuntimeOptions(; parallelism=mode)
                     ) === nothing
                 end
-                _, nothing_options, _, _, nothing_R = threaded_dispatch_fixture(;
+                _, _, _, _, nothing_R = threaded_dispatch_fixture(;
                     plugins=(ThreadedDispatchNothingPlugin(),)
                 )
-                @test THSUM.result_transport(nothing_R, nothing_options, ropt) === nothing
+                @test THSUM.result_transport(nothing_R, ropt) === nothing_R
 
                 pids = addprocs(
                     2; exeflags=`--project=$(dirname(Base.active_project())) -t 1`
@@ -209,8 +209,7 @@
                     _, native_options, _, _, native_R = threaded_dispatch_fixture(;
                         plugins=(ThreadedDispatchChannelPlugin(channel),)
                     )
-                    @test THSUM.result_transport(native_R, native_options, ropt) ===
-                        nothing
+                    @test THSUM.result_transport(native_R, ropt) === nothing
                     hof = equation_search(
                         dataset.X,
                         dataset.y;
@@ -490,7 +489,7 @@ end
                          plugin_states=head_states)
         hall = HallOfFame(options, dataset)
         R = SUM.DefaultWorkerOutputType{typeof(pop),typeof(hall),Nothing,typeof(states)}
-        @assert SUM.result_transport(R, options, SUM.RuntimeOptions(;
+        @assert SUM.result_transport(R, SUM.RuntimeOptions(;
                     parallelism=:multiprocessing)) === R
         @assert Threads.nthreads() == 1
         hof = equation_search(dataset.X, dataset.y; options, niterations=3, numprocs=2,

@@ -296,7 +296,17 @@ end
 
 const DefaultWorkerOutputType{P,H,TR<:MaybeTrace,S<:Tuple} = Tuple{P,H,TR,Float64,S}
 
-function result_transport end
+# Encoded results go through plain `serialize`, which cannot carry Distributed references,
+# so each plugin state type opts in only when it holds plain data.
+encodable_state(::Type) = false
+encodable_state(::Type{Nothing}) = true
+
+@unstable function result_transport(
+    ::Type{R}, ropt
+) where {P,H,TR,S,R<:DefaultWorkerOutputType{P,H,TR,S}}
+    encodable = all(encodable_state, fieldtypes(S))
+    return ropt.parallelism == :multiprocessing && encodable ? R : nothing
+end
 
 function run_encoded_result(f, ::Type{R})::Vector{UInt8} where {R}
     result = f()::R
@@ -316,42 +326,24 @@ output_settled(output::Future)::Bool = isready(output)
 
 function listen_encoded_result(output::Task, channel::Channel)
     return errormonitor(
-        @async begin
-            try
-                put!(channel, fetch(output))
-            catch
-                if !(
-                    istaskfailed(output) &&
-                    first(current_exceptions(output)).exception isa
-                    Distributed.ProcessExitedException
-                )
-                    rethrow()
-                end
+        @async try
+            put!(channel, fetch(output))
+        catch
+            if !(
+                istaskfailed(output) &&
+                first(current_exceptions(output)).exception isa
+                Distributed.ProcessExitedException
+            )
+                rethrow()
             end
         end
     )
 end
 
-"""
-    Resident{T}
-
-What one multiprocessing dispatch carries in place of a `T`: a reference to the copy of that
-value already stored on the worker that runs the dispatch. Created by `make_resident`.
-"""
 struct Resident{T}
     copy::Future
 end
 
-"""
-    make_resident(value, Val(parallelism), procs)
-
-Store one copy of `value` on each process in `procs` for a multiprocessing search, so that
-`@sr_spawner` dispatches given `resident = (names...) => copies` carry a `Resident` reference
-instead of the value. Workers hold a snapshot taken here. Each copy is freed through
-Distributed's reference counting once the head and every dispatch have dropped their
-references. Other parallelism modes return `nothing`, and their dispatches use the caller's
-value directly.
-"""
 make_resident(_value, ::Val, _procs) = nothing
 function make_resident(value::T, ::Val{:multiprocessing}, procs) where {T}
     return Dict(p => Resident{T}(remotecall(identity, p, value)) for p in unique(procs))
@@ -396,13 +388,8 @@ extract_from_worker(f::Future, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) wher
 extract_from_worker(t::Task, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where {P,H,TR<:MaybeTrace,S<:Tuple} = fetch(t)::DefaultWorkerOutputType{P,H,TR,S}
 #! format: on
 
-"""
-    @sr_spawner(expr, parallelism=mode, worker_idx=worker[, transport=R][, resident=(names...) => copies])
-
-Run `expr` inline, on a thread, or on process `worker`, according to `parallelism`. With
-`resident`, the listed names inside `expr` refer to the worker's stored copy from
-`make_resident` in multiprocessing mode, and to the caller's values otherwise.
-"""
+# With `resident = (names...) => copies`, the names inside a multiprocessing `expr` are
+# bound to the worker's copy from `make_resident` instead of the caller's values.
 macro sr_spawner(expr, kws...)
     keywords = Dict(ex.args[1] => ex.args[2] for ex in kws)
     @assert length(keywords) == length(kws)
@@ -923,6 +910,15 @@ Base.@kwdef struct SearchState{
     seed_members::Vector{Vector{PM}}
     plugin_states::Vector{PluginStatesType}
     worker_plugin_states::Vector{Vector{WorkerPluginStatesType}}
+end
+
+function worker_output_type(state::SearchState)
+    return DefaultWorkerOutputType{
+        eltype(eltype(state.last_pops)),
+        eltype(state.halls_of_fame),
+        typeof(state.trace_prototype),
+        eltype(eltype(state.worker_plugin_states)),
+    }
 end
 
 function save_to_file(

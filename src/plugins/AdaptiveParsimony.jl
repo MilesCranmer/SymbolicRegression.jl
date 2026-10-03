@@ -4,6 +4,7 @@ using DispatchDoctor: @stable
 using ..CoreModule: AbstractPlugin, AbstractOptions, MutationAcceptanceContext
 using ..ComplexityModule: compute_complexity
 using ..PopMemberModule: AbstractPopMember
+import ..SearchUtilsModule: encodable_state
 import ..CoreModule:
     init_plugin_state,
     fork_plugin_state,
@@ -141,6 +142,7 @@ single `RunningSearchStatistics`.
 struct AdaptiveParsimonyState
     rss::RunningSearchStatistics
 end
+encodable_state(::Type{AdaptiveParsimonyState}) = true
 
 function init_plugin_state(::AdaptiveParsimonyPlugin, options, dataset)
     return AdaptiveParsimonyState(RunningSearchStatistics(; options=options))
