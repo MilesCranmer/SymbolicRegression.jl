@@ -791,14 +791,13 @@ end
         typeof(trace),
         WorkerPluginStatesType,
     )
-    ChannelType = Channel
 
     # Pointers to populations on each worker:
     worker_output = Vector{WorkerOutputType}[WorkerOutputType[] for j in 1:nout]
     # Initialize storage for workers
     tasks = [Task[] for j in 1:nout]
     # Set up a channel to send finished populations back to head node
-    channels = [[ChannelType(1) for i in 1:(options.populations)] for j in 1:nout]
+    channels = [[Channel(1) for i in 1:(options.populations)] for j in 1:nout]
     (procs, we_created_procs) = if ropt.parallelism == :multiprocessing
         configure_workers(;
             procs=ropt.init_procs,
@@ -851,7 +850,7 @@ end
         NT,
         PMType,
         WorkerOutputType,
-        ChannelType,
+        Channel,
         typeof(trace),
         PluginStatesType,
         WorkerPluginStatesType,
