@@ -151,13 +151,6 @@
 
             function threaded_dispatch_run_tests()
                 dataset, options, pop, states, R = threaded_dispatch_fixture()
-                ropt = THSUM.RuntimeOptions(; parallelism=:multiprocessing)
-                @test THSUM.result_transport(R, ropt) === R
-                for mode in (:serial, :multithreading)
-                    @test THSUM.result_transport(
-                        R, THSUM.RuntimeOptions(; parallelism=mode)
-                    ) === nothing
-                end
 
                 pids = addprocs(
                     2; exeflags=`--project=$(dirname(Base.active_project())) -t 1`
@@ -200,10 +193,9 @@
                     @test aliased[2].members[1].loss == 123.0f0
 
                     channel = RemoteChannel(() -> Channel{Tuple{Int,Float32}}(256))
-                    _, channel_options, _, _, channel_R = threaded_dispatch_fixture(;
+                    _, channel_options, _, _, _ = threaded_dispatch_fixture(;
                         plugins=(ThreadedDispatchChannelPlugin(channel),)
                     )
-                    @test THSUM.result_transport(channel_R, ropt) === channel_R
                     hof = equation_search(
                         dataset.X,
                         dataset.y;
@@ -470,30 +462,20 @@ end
 
     script = raw"""
         using SymbolicRegression, Distributed, Random
-        using SymbolicRegression.SearchUtilsModule: SearchUtilsModule as SUM
-        using SymbolicRegression.CoreModule: init_plugin_states, fork_plugin_state
         X = randn(MersenneTwister(0), Float32, 2, 32)
         dataset = Dataset(X, vec(X[1, :] .+ X[2, :]))
         options = Options(; binary_operators=[+, *], populations=2, population_size=8,
                           tournament_selection_n=3, topn=3,
                           ncycles_per_iteration=2, maxsize=10, save_to_file=false)
-        head_states = init_plugin_states(options, dataset)
-        states = map((p,s) -> fork_plugin_state(s,p,dataset), options.plugins, head_states)
-        pop = Population(dataset; options, population_size=8, nfeatures=2,
-                         plugin_states=head_states)
-        hall = HallOfFame(options, dataset)
-        R = SUM.DefaultWorkerOutputType{typeof(pop),typeof(hall),Nothing,typeof(states)}
-        @assert SUM.result_transport(R, SUM.RuntimeOptions(;
-                    parallelism=:multiprocessing)) === R
         @assert Threads.nthreads() == 1
         hof = equation_search(dataset.X, dataset.y; options, niterations=3, numprocs=2,
                               parallelism=:multiprocessing, verbosity=0, progress=false)
         front = calculate_pareto_frontier(hof)
         @assert !isempty(front)
-        println("THREADED_DISPATCH_ONE_THREAD_PASS encoded=true front=", repr(front))
+        println("THREADED_DISPATCH_ONE_THREAD_PASS front=", repr(front))
         """
     command = `$(Base.julia_cmd()) --startup-file=no
         --project=$(dirname(Base.active_project())) -t 1 -e $script`
     output = read(command, String)
-    @test occursin("THREADED_DISPATCH_ONE_THREAD_PASS encoded=true front=", output)
+    @test occursin("THREADED_DISPATCH_ONE_THREAD_PASS front=", output)
 end

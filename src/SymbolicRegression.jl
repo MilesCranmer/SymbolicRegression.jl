@@ -414,7 +414,6 @@ using .SearchUtilsModule:
     DefaultWorkerOutputType,
     assign_next_worker!,
     get_worker_output_type,
-    result_transport,
     worker_output_type,
     listen_encoded_result,
     output_settled,
@@ -787,15 +786,12 @@ end
             end for i in 1:(options.populations)
         ] for j in 1:nout
     ]
-    R = DefaultWorkerOutputType{PopType,HallOfFameType,typeof(trace),WorkerPluginStatesType}
-    transport = result_transport(R, ropt)
     WorkerOutputType = get_worker_output_type(
         Val(ropt.parallelism),
         PopType,
         HallOfFameType,
         typeof(trace),
         WorkerPluginStatesType,
-        transport,
     )
     ChannelType = Channel
 
@@ -1072,7 +1068,7 @@ function _main_search_loop!(
 ) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
-    transport = result_transport(worker_output_type(state), ropt)
+    R = worker_output_type(state)
     resident_inputs = make_resident((datasets, options), Val(ropt.parallelism), state.procs)
     frontier_saves =
         options.save_to_file ? map(FrontierSaveState, state.halls_of_fame) : nothing
@@ -1256,13 +1252,13 @@ function _main_search_loop!(
                             ),
                             parallelism = ropt.parallelism,
                             worker_idx = worker_idx,
-                            transport = transport,
+                            transport = R,
                             resident = (datasets, options) => resident_inputs
                         )
                     end
                 if ropt.parallelism in (:multiprocessing, :multithreading)
                     output = state.worker_output[j][i]
-                    state.tasks[j][i] = if transport !== nothing && output isa Task
+                    state.tasks[j][i] = if ropt.parallelism == :multiprocessing
                         listen_encoded_result(output, state.channels[j][i])
                     else
                         @filtered_async put!(

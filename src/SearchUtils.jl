@@ -296,10 +296,6 @@ end
 
 const DefaultWorkerOutputType{P,H,TR<:MaybeTrace,S<:Tuple} = Tuple{P,H,TR,Float64,S}
 
-function result_transport(::Type{R}, ropt) where {R}
-    ropt.parallelism == :multiprocessing ? R : nothing
-end
-
 function run_encoded_result(f, ::Type{R})::Vector{UInt8} where {R}
     result = f()::R
     io = IOBuffer()
@@ -350,28 +346,16 @@ function get_worker_output_type(
     ::Type{HallOfFameType},
     ::Type{TraceStateType},
     ::Type{PluginStatesType},
-    transport,
 ) where {
     PARALLELISM,PopType,HallOfFameType,TraceStateType<:MaybeTrace,PluginStatesType<:Tuple
 }
     if PARALLELISM == :serial
         DefaultWorkerOutputType{PopType,HallOfFameType,TraceStateType,PluginStatesType}
     elseif PARALLELISM == :multiprocessing
-        Future
+        Union{Future,Task}
     else
         Task
     end
-end
-
-function get_worker_output_type(
-    ::Val{:multiprocessing},
-    ::Type{PopType},
-    ::Type{HallOfFameType},
-    ::Type{TraceStateType},
-    ::Type{PluginStatesType},
-    ::Type,
-) where {PopType,HallOfFameType,TraceStateType<:MaybeTrace,PluginStatesType<:Tuple}
-    return Union{Future,Task}
 end
 
 #! format: off
@@ -382,10 +366,10 @@ extract_from_worker(t::Task, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where 
 
 # With `resident = (names...) => copies`, the names inside a multiprocessing `expr` are
 # bound to the worker's copy from `make_resident` instead of the caller's values.
-macro sr_spawner(expr, kws...)
-    keywords = Dict(ex.args[1] => ex.args[2] for ex in kws)
-    @assert length(keywords) == length(kws)
-    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :transport, :resident)
+macro sr_spawner(expr, assignments...)
+    keywords = Dict(ex.args[1] => ex.args[2] for ex in assignments)
+    @assert length(keywords) == length(assignments) "duplicate @sr_spawner keyword"
+    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :transport, :resident) "unknown @sr_spawner keyword in $(collect(keys(keywords)))"
     parallelism = keywords[:parallelism]
     worker_idx = keywords[:worker_idx]
     transport = get(keywords, :transport, nothing)
