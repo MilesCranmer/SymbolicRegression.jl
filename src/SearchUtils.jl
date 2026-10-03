@@ -356,10 +356,10 @@ extract_from_worker(t::Task, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where 
 macro sr_spawner(expr, assignments...)
     keywords = Dict(ex.args[1] => ex.args[2] for ex in assignments)
     @assert length(keywords) == length(assignments) "duplicate @sr_spawner keyword"
-    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :result_type, :worker_copies) "unknown @sr_spawner keyword in $(collect(keys(keywords)))"
+    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :ResultType, :worker_copies) "unknown @sr_spawner keyword in $(collect(keys(keywords)))"
     parallelism = keywords[:parallelism]
     worker_idx = keywords[:worker_idx]
-    result_type = get(keywords, :result_type, nothing)
+    ResultType = get(keywords, :ResultType, nothing)
     remote_expr = expr
     if haskey(keywords, :worker_copies)
         pair = keywords[:worker_copies]
@@ -373,10 +373,10 @@ macro sr_spawner(expr, assignments...)
         )
     end
     multiprocessing = quote
-        if $(result_type) === nothing
+        if $(ResultType) === nothing
             $(Distributed).@spawnat($(worker_idx), $(remote_expr))
         else
-            $(spawn_encoded_result)(() -> $(remote_expr), $(worker_idx), $(result_type))
+            $(spawn_encoded_result)(() -> $(remote_expr), $(worker_idx), $(ResultType))
         end
     end
     if haskey(keywords, :worker_copies)

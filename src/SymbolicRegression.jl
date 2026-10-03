@@ -1068,7 +1068,9 @@ function _main_search_loop!(
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
     # Store datasets and options on each worker once, so dispatches do not resend them.
-    worker_copies = copy_to_workers((datasets, options), Val(ropt.parallelism), state.procs)
+    worker_datasets_and_options = copy_to_workers(
+        (datasets, options), Val(ropt.parallelism), state.procs
+    )
     frontier_saves =
         options.save_to_file ? map(FrontierSaveState, state.halls_of_fame) : nothing
 
@@ -1251,8 +1253,9 @@ function _main_search_loop!(
                             ),
                             parallelism = ropt.parallelism,
                             worker_idx = worker_idx,
-                            result_type = worker_result_type(state),
-                            worker_copies = (datasets, options) => worker_copies
+                            ResultType = worker_result_type(state),
+                            worker_copies =
+                                (datasets, options) => worker_datasets_and_options
                         )
                     end
                 if ropt.parallelism in (:multiprocessing, :multithreading)
