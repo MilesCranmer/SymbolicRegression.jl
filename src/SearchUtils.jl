@@ -5,7 +5,8 @@ module SearchUtilsModule
 
 using Printf: @printf, @sprintf
 using Dates: Dates
-using Distributed: Distributed, @spawnat, Future, procs, addprocs
+using Distributed: Distributed, @spawnat, Future, procs, addprocs, remotecall_fetch
+using Serialization: serialize, deserialize
 using StatsBase: mean
 using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
@@ -294,12 +295,49 @@ end
 
 const DefaultWorkerOutputType{P,H,TR<:MaybeTrace,S<:Tuple} = Tuple{P,H,TR,Float64,S}
 
+function result_transport end
+
+function run_encoded_result(f, ::Type{R})::Vector{UInt8} where {R}
+    result = f()::R
+    io = IOBuffer()
+    serialize(io, result)
+    return take!(io)
+end
+
+function spawn_encoded_result(f, worker::Int, ::Type{R})::Task where {R}
+    return Threads.@spawn deserialize(
+        IOBuffer(remotecall_fetch(run_encoded_result, worker, f, R))
+    )::R
+end
+
+output_settled(output::Task) = istaskdone(output)
+output_settled(output::Future)::Bool = isready(output)
+
+function listen_encoded_result(output::Task, channel::Channel)
+    return errormonitor(
+        @async begin
+            try
+                put!(channel, fetch(output))
+            catch
+                if !(
+                    istaskfailed(output) &&
+                    first(current_exceptions(output)).exception isa
+                    Distributed.ProcessExitedException
+                )
+                    rethrow()
+                end
+            end
+        end
+    )
+end
+
 function get_worker_output_type(
     ::Val{PARALLELISM},
     ::Type{PopType},
     ::Type{HallOfFameType},
     ::Type{TraceStateType},
     ::Type{PluginStatesType},
+    transport,
 ) where {
     PARALLELISM,PopType,HallOfFameType,TraceStateType<:MaybeTrace,PluginStatesType<:Tuple
 }
@@ -312,6 +350,17 @@ function get_worker_output_type(
     end
 end
 
+function get_worker_output_type(
+    ::Val{:multiprocessing},
+    ::Type{PopType},
+    ::Type{HallOfFameType},
+    ::Type{TraceStateType},
+    ::Type{PluginStatesType},
+    ::Type,
+) where {PopType,HallOfFameType,TraceStateType<:MaybeTrace,PluginStatesType<:Tuple}
+    return Union{Future,Task}
+end
+
 #! format: off
 extract_from_worker(p::DefaultWorkerOutputType, _, _, _, _) = p
 extract_from_worker(f::Future, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where {P,H,TR<:MaybeTrace,S<:Tuple} = fetch(f)::DefaultWorkerOutputType{P,H,TR,S}
@@ -319,18 +368,23 @@ extract_from_worker(t::Task, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where 
 #! format: on
 
 macro sr_spawner(expr, kws...)
-    # Extract parallelism and worker_idx parameters from kws
-    @assert length(kws) == 2
+    @assert length(kws) in (2, 3)
     @assert all(ex -> ex.head == :(=), kws)
     @assert any(ex -> ex.args[1] == :parallelism, kws)
     @assert any(ex -> ex.args[1] == :worker_idx, kws)
     parallelism = kws[findfirst(ex -> ex.args[1] == :parallelism, kws)::Int].args[2]
     worker_idx = kws[findfirst(ex -> ex.args[1] == :worker_idx, kws)::Int].args[2]
+    transport_idx = findfirst(ex -> ex.args[1] == :transport, kws)
+    transport = transport_idx === nothing ? nothing : kws[transport_idx].args[2]
     return quote
         if $(parallelism) == :serial
             $(expr)
         elseif $(parallelism) == :multiprocessing
-            $(Distributed).@spawnat($(worker_idx), $(expr))
+            if $(transport) === nothing
+                $(Distributed).@spawnat($(worker_idx), $(expr))
+            else
+                $(spawn_encoded_result)(() -> $(expr), $(worker_idx), $(transport))
+            end
         elseif $(parallelism) == :multithreading
             $(Threads).@spawn($(expr))
         else
