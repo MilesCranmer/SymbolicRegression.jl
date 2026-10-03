@@ -29,15 +29,15 @@
 
             # With no error
             $future = $SUM.@sr_spawner(
-                44,
+                (44, nothing, nothing, 0.0, ()),
                 parallelism = :multiprocessing,
                 worker_idx = $procs[1],
-                result_type = Int
+                result_type = $SUM.DefaultWorkerOutputType{Int,Nothing,Nothing,Tuple{}}
             )
             $channel = Channel(1)
             $t = $SUM.@filtered_async put!($channel, fetch($future))
             $Test.@test_nowarn fetch($t)
-            $Test.@test take!($channel) == 44
+            $Test.@test take!($channel) == (44, nothing, nothing, 0.0, ())
 
             # With an error - suppress stderr but verify error forwarding works
             $Suppressor.@suppress_err begin
@@ -45,7 +45,7 @@
                     throw(ArgumentError("test multiprocessing error")),
                     parallelism = :multiprocessing,
                     worker_idx = $procs[1],
-                    result_type = Int
+                    result_type = $SUM.DefaultWorkerOutputType{Int,Nothing,Nothing,Tuple{}}
                 )
                 $t = $SUM.@filtered_async fetch($future)
                 $Test.@test_throws TaskFailedException fetch($t)
