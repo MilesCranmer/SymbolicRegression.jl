@@ -1067,7 +1067,6 @@ function _main_search_loop!(
 ) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
-    # Store datasets and options on each worker once, so dispatches do not resend them.
     worker_datasets_and_options = store_on_workers(
         (datasets, options), Val(ropt.parallelism), state.procs
     )
