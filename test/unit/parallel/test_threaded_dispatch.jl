@@ -42,6 +42,8 @@
         binary_operators=[+, *],
         populations=2,
         population_size=8,
+        tournament_selection_n=3,
+        topn=3,
         ncycles_per_iteration=2,
         maxsize=10,
         save_to_file=false,

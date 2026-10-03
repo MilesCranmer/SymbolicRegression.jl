@@ -1059,9 +1059,7 @@ function _main_search_loop!(
 ) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
-    worker_datasets_and_options = store_on_workers(
-        (datasets, options), Val(ropt.parallelism), state.procs
-    )
+    worker_datasets_and_options = store_on_workers((datasets, options), state.procs)
     frontier_saves =
         options.save_to_file ? map(FrontierSaveState, state.halls_of_fame) : nothing
 

@@ -14,6 +14,9 @@
             $Distributed.@everywhere $procs Core.eval(
                 Core.Main, :(using Distributed: Distributed, @spawnat)
             )
+            $Distributed.@everywhere $procs Core.eval(
+                Core.Main, :(using SymbolicRegression)
+            )
 
             # Import Suppressor in Main for @suppress_err
             $t = $SUM.@filtered_async 42
