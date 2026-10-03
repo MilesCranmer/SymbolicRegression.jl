@@ -415,7 +415,6 @@ using .SearchUtilsModule:
     assign_next_worker!,
     get_worker_output_type,
     worker_result_type,
-    _isready,
     store_on_workers,
     extract_from_worker,
     @sr_spawner,
@@ -945,7 +944,8 @@ function _initialize_search!(
                         )
                     end,
                     parallelism = ropt.parallelism,
-                    worker_idx = worker_idx
+                    worker_idx = worker_idx,
+                    result_type = worker_result_type(state)
                 )
             else
                 if saved_pop !== nothing && ropt.verbosity > 0
@@ -969,7 +969,8 @@ function _initialize_search!(
                         )
                     end,
                     parallelism = ropt.parallelism,
-                    worker_idx = worker_idx
+                    worker_idx = worker_idx,
+                    result_type = worker_result_type(state)
                 )
                 # This involves population_size evaluations, on the full dataset:
             end
@@ -1022,38 +1023,39 @@ function _warmup_search!(
             state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
         )
 
-        last_pop = state.worker_output[j][i]
-
         PopType = eltype(eltype(state.last_pops))
         PM = popmember_type(PopType)
         HallType = HallOfFame{T,L,N,PM}
         TraceStateType = typeof(state.trace_prototype)
         WorkerPluginStatesType = eltype(eltype(state.worker_plugin_states))
+        (in_pop, _, _, _, worker_plugin_states) = extract_from_worker(
+            state.worker_output[j][i],
+            PopType,
+            HallType,
+            TraceStateType,
+            WorkerPluginStatesType,
+        )
 
         updated_pop = @sr_spawner(
-            begin
-                (in_pop, _, _, _, worker_plugin_states) = extract_from_worker(
-                    last_pop, PopType, HallType, TraceStateType, WorkerPluginStatesType
-                )
-                _dispatch_s_r_cycle(
-                    in_pop,
-                    dataset,
-                    options;
-                    pop=i,
-                    out=j,
-                    iteration=0,
-                    ropt.verbosity,
-                    cur_maxsize,
-                    plugin_states=worker_plugin_states,
-                )::DefaultWorkerOutputType{
-                    Population{T,L,N},
-                    HallOfFame{T,L,N},
-                    TraceStateType,
-                    typeof(worker_plugin_states),
-                }
-            end,
+            _dispatch_s_r_cycle(
+                in_pop,
+                dataset,
+                options;
+                pop=i,
+                out=j,
+                iteration=0,
+                ropt.verbosity,
+                cur_maxsize,
+                plugin_states=worker_plugin_states,
+            )::DefaultWorkerOutputType{
+                Population{T,L,N},
+                HallOfFame{T,L,N},
+                TraceStateType,
+                typeof(worker_plugin_states),
+            },
             parallelism = ropt.parallelism,
-            worker_idx = worker_idx
+            worker_idx = worker_idx,
+            result_type = worker_result_type(state)
         )
         state.worker_output[j][i] = updated_pop
     end
@@ -1365,7 +1367,7 @@ function _tear_down!(
     if ropt.parallelism in (:multiprocessing, :multithreading)
         outputs = Iterators.flatten(state.worker_output)
         if ropt.parallelism == :multiprocessing
-            timedwait(() -> all(_isready, outputs), 5.0; pollint=0.01)
+            timedwait(() -> all(istaskdone, outputs), 5.0; pollint=0.01)
         else
             for output in outputs
                 wait(output)

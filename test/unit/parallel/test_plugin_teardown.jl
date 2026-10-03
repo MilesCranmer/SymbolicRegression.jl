@@ -28,7 +28,7 @@
         state.called[] = true
         state.workers_alive[] = all(in(workers()), search_state.procs)
         state.outputs_pending[] = any(
-            !isready, Iterators.flatten(search_state.worker_output)
+            !istaskdone, Iterators.flatten(search_state.worker_output)
         )
         return nothing
     end
@@ -40,7 +40,7 @@
            AbstractSearchState{Float64,Float64,TeardownProbeExpression}
         procs::Vector{Int}
         we_created_procs::Bool
-        worker_output::Vector{Vector{Future}}
+        worker_output::Vector{Vector{Task}}
         plugin_states::Vector{Tuple{TeardownProbeState}}
         stdin_reader::TeardownProbeReader
     end
@@ -62,9 +62,9 @@
 
     proc = only(addprocs(1))
     try
-        future = Future(proc)
+        output = Threads.@spawn remotecall_fetch(sleep, proc, 60)
         search_state = TeardownProbeSearchState(
-            [proc], true, [[future]], [(plugin_state,)], TeardownProbeReader()
+            [proc], true, [[output]], [(plugin_state,)], TeardownProbeReader()
         )
 
         elapsed = @elapsed SymbolicRegression._tear_down!(

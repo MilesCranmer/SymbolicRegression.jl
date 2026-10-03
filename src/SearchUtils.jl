@@ -5,8 +5,7 @@ module SearchUtilsModule
 
 using Printf: @printf, @sprintf
 using Dates: Dates
-using Distributed:
-    Distributed, @spawnat, Future, procs, addprocs, remotecall_fetch, remotecall
+using Distributed: Distributed, Future, procs, addprocs, remotecall_fetch, remotecall
 using Serialization: serialize, deserialize
 using StatsBase: mean
 using StyledStrings: @styled_str
@@ -312,9 +311,6 @@ function spawn_encoded_result(f, worker::Int, ::Type{R})::Task where {R}
     )::R
 end
 
-_isready(output::Task) = istaskdone(output)
-_isready(output::Future)::Bool = isready(output)
-
 struct WorkerCopy{T}
     future::Future
 end
@@ -338,8 +334,6 @@ function get_worker_output_type(
 }
     if PARALLELISM == :serial
         DefaultWorkerOutputType{PopType,HallOfFameType,TraceStateType,PluginStatesType}
-    elseif PARALLELISM == :multiprocessing
-        Union{Future,Task}
     else
         Task
     end
@@ -347,26 +341,20 @@ end
 
 #! format: off
 extract_from_worker(p::DefaultWorkerOutputType, _, _, _, _) = p
-extract_from_worker(f::Future, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where {P,H,TR<:MaybeTrace,S<:Tuple} = fetch(f)::DefaultWorkerOutputType{P,H,TR,S}
 extract_from_worker(t::Task, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where {P,H,TR<:MaybeTrace,S<:Tuple} = fetch(t)::DefaultWorkerOutputType{P,H,TR,S}
 #! format: on
 
 macro sr_spawner(expr, assignments...)
     keywords = Dict(ex.args[1] => ex.args[2] for ex in assignments)
-    @assert length(keywords) == length(assignments) "duplicate @sr_spawner keyword"
-    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :result_type) "unknown @sr_spawner keyword in $(collect(keys(keywords)))"
+    @assert sort!([ex.args[1] for ex in assignments]) == [:parallelism, :result_type, :worker_idx] "@sr_spawner takes exactly parallelism, worker_idx and result_type"
     parallelism = keywords[:parallelism]
     worker_idx = keywords[:worker_idx]
-    multiprocessing = if haskey(keywords, :result_type)
-        :($(spawn_encoded_result)(() -> $(expr), $(worker_idx), $(keywords[:result_type])))
-    else
-        :($(Distributed).@spawnat($(worker_idx), $(expr)))
-    end
+    result_type = keywords[:result_type]
     return quote
         if $(parallelism) == :serial
             $(expr)
         elseif $(parallelism) == :multiprocessing
-            $(multiprocessing)
+            $(spawn_encoded_result)(() -> $(expr), $(worker_idx), $(result_type))
         elseif $(parallelism) == :multithreading
             $(Threads).@spawn($(expr))
         else
