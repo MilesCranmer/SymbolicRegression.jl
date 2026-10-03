@@ -415,7 +415,6 @@ using .SearchUtilsModule:
     assign_next_worker!,
     get_worker_output_type,
     worker_output_type,
-    listen_encoded_result,
     _isready,
     make_resident,
     extract_from_worker,
@@ -1257,14 +1256,9 @@ function _main_search_loop!(
                         )
                     end
                 if ropt.parallelism in (:multiprocessing, :multithreading)
-                    output = state.worker_output[j][i]
-                    state.tasks[j][i] = if ropt.parallelism == :multiprocessing
-                        listen_encoded_result(output, state.channels[j][i])
-                    else
-                        @filtered_async put!(
-                            state.channels[j][i], fetch(state.worker_output[j][i])
-                        )
-                    end
+                    state.tasks[j][i] = @filtered_async put!(
+                        state.channels[j][i], fetch(state.worker_output[j][i])
+                    )
                 end
 
                 total_cycles = ropt.niterations * options.populations

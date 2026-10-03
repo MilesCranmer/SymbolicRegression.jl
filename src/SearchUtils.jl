@@ -57,19 +57,22 @@ Like `@async` but with error monitoring that ignores `Distributed.ProcessExitedE
 to avoid spam when worker processes exit normally.
 """
 macro filtered_async(expr)
-    return esc(
-        quote
-            $(Base).errormonitor(@async begin
-                try
-                    $expr
-                catch ex
-                    if !(ex isa $(Distributed).ProcessExitedException)
-                        rethrow(ex)
-                    end
+    return esc(quote
+        $(Base).errormonitor(@async begin
+            try
+                $expr
+            catch ex
+                if !$(is_process_exit)(ex)
+                    rethrow(ex)
                 end
-            end)
-        end
-    )
+            end
+        end)
+    end)
+end
+
+is_process_exit(ex) = ex isa Distributed.ProcessExitedException
+function is_process_exit(ex::TaskFailedException)
+    return is_process_exit(first(current_exceptions(ex.task)).exception)
 end
 
 """
@@ -311,22 +314,6 @@ end
 
 _isready(output::Task) = istaskdone(output)
 _isready(output::Future)::Bool = isready(output)
-
-function listen_encoded_result(output::Task, channel::Channel)
-    return errormonitor(
-        @async try
-            put!(channel, fetch(output))
-        catch
-            if !(
-                istaskfailed(output) &&
-                first(current_exceptions(output)).exception isa
-                Distributed.ProcessExitedException
-            )
-                rethrow()
-            end
-        end
-    )
-end
 
 struct Resident{T}
     copy::Future
