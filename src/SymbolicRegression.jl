@@ -742,7 +742,6 @@ function _validate_options(
     end
     return nothing
 end
-
 @stable default_mode = "disable" function _create_workers(
     datasets::Vector{D}, ropt::AbstractRuntimeOptions, options::AbstractOptions
 ) where {T,L,D<:Dataset{T,L}}
@@ -845,15 +844,7 @@ end
     seed_members = [Vector{PMType}() for j in 1:nout]
 
     return SearchState{
-        T,
-        L,
-        NT,
-        PMType,
-        WorkerOutputType,
-        Channel,
-        typeof(trace),
-        PluginStatesType,
-        WorkerPluginStatesType,
+        T,L,NT,PMType,WorkerOutputType,typeof(trace),PluginStatesType,WorkerPluginStatesType
     }(;
         procs=procs,
         we_created_procs=we_created_procs,
