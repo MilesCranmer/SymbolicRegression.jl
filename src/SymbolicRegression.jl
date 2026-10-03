@@ -414,7 +414,7 @@ using .SearchUtilsModule:
     DefaultWorkerOutputType,
     assign_next_worker!,
     get_worker_output_type,
-    worker_output_type,
+    worker_result_type,
     _isready,
     copy_to_workers,
     extract_from_worker,
@@ -1067,7 +1067,6 @@ function _main_search_loop!(
 ) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
-    R = worker_output_type(state)
     # Store datasets and options on each worker once, so dispatches do not resend them.
     worker_copies = copy_to_workers((datasets, options), Val(ropt.parallelism), state.procs)
     frontier_saves =
@@ -1252,7 +1251,7 @@ function _main_search_loop!(
                             ),
                             parallelism = ropt.parallelism,
                             worker_idx = worker_idx,
-                            transport = R,
+                            result_type = worker_result_type(state),
                             worker_copies = (datasets, options) => worker_copies
                         )
                     end

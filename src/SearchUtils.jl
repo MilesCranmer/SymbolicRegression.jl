@@ -356,10 +356,10 @@ extract_from_worker(t::Task, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where 
 macro sr_spawner(expr, assignments...)
     keywords = Dict(ex.args[1] => ex.args[2] for ex in assignments)
     @assert length(keywords) == length(assignments) "duplicate @sr_spawner keyword"
-    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :transport, :worker_copies) "unknown @sr_spawner keyword in $(collect(keys(keywords)))"
+    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :result_type, :worker_copies) "unknown @sr_spawner keyword in $(collect(keys(keywords)))"
     parallelism = keywords[:parallelism]
     worker_idx = keywords[:worker_idx]
-    transport = get(keywords, :transport, nothing)
+    result_type = get(keywords, :result_type, nothing)
     remote_expr = expr
     if haskey(keywords, :worker_copies)
         pair = keywords[:worker_copies]
@@ -373,10 +373,10 @@ macro sr_spawner(expr, assignments...)
         )
     end
     multiprocessing = quote
-        if $(transport) === nothing
+        if $(result_type) === nothing
             $(Distributed).@spawnat($(worker_idx), $(remote_expr))
         else
-            $(spawn_encoded_result)(() -> $(remote_expr), $(worker_idx), $(transport))
+            $(spawn_encoded_result)(() -> $(remote_expr), $(worker_idx), $(result_type))
         end
     end
     if haskey(keywords, :worker_copies)
@@ -875,7 +875,7 @@ Base.@kwdef struct SearchState{
     worker_plugin_states::Vector{Vector{WorkerPluginStatesType}}
 end
 
-function worker_output_type(state::SearchState)
+function worker_result_type(state::SearchState)
     return DefaultWorkerOutputType{
         eltype(eltype(state.last_pops)),
         eltype(state.halls_of_fame),
