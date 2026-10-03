@@ -416,7 +416,7 @@ using .SearchUtilsModule:
     get_worker_output_type,
     worker_output_type,
     _isready,
-    make_resident,
+    copy_to_workers,
     extract_from_worker,
     @sr_spawner,
     @filtered_async,
@@ -1068,7 +1068,8 @@ function _main_search_loop!(
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
     R = worker_output_type(state)
-    resident_inputs = make_resident((datasets, options), Val(ropt.parallelism), state.procs)
+    # Store datasets and options on each worker once, so dispatches do not resend them.
+    worker_copies = copy_to_workers((datasets, options), Val(ropt.parallelism), state.procs)
     frontier_saves =
         options.save_to_file ? map(FrontierSaveState, state.halls_of_fame) : nothing
 
@@ -1252,7 +1253,7 @@ function _main_search_loop!(
                             parallelism = ropt.parallelism,
                             worker_idx = worker_idx,
                             transport = R,
-                            resident = (datasets, options) => resident_inputs
+                            worker_copies = (datasets, options) => worker_copies
                         )
                     end
                 if ropt.parallelism in (:multiprocessing, :multithreading)

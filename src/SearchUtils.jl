@@ -315,17 +315,17 @@ end
 _isready(output::Task) = istaskdone(output)
 _isready(output::Future)::Bool = isready(output)
 
-struct Resident{T}
-    copy::Future
+struct WorkerCopy{T}
+    future::Future
 end
 
-make_resident(_value, ::Val, _procs) = nothing
-function make_resident(value::T, ::Val{:multiprocessing}, procs) where {T}
-    return Dict(p => Resident{T}(remotecall(identity, p, value)) for p in unique(procs))
+copy_to_workers(_value, ::Val, _procs) = nothing
+function copy_to_workers(value::T, ::Val{:multiprocessing}, procs) where {T}
+    return Dict(p => WorkerCopy{T}(remotecall(identity, p, value)) for p in unique(procs))
 end
 
 # Runs on the worker that owns the copy, where `fetch` is a local lookup.
-resident_value(r::Resident{T}) where {T} = fetch(r.copy)::T
+fetch_copy(c::WorkerCopy{T}) where {T} = fetch(c.future)::T
 
 function get_worker_output_type(
     ::Val{PARALLELISM},
@@ -351,23 +351,23 @@ extract_from_worker(f::Future, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) wher
 extract_from_worker(t::Task, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where {P,H,TR<:MaybeTrace,S<:Tuple} = fetch(t)::DefaultWorkerOutputType{P,H,TR,S}
 #! format: on
 
-# With `resident = (names...) => copies`, the names inside a multiprocessing `expr` are
-# bound to the worker's copy from `make_resident` instead of the caller's values.
+# With `worker_copies = (names...) => copies`, the names inside a multiprocessing `expr` are
+# bound to the worker's copy from `copy_to_workers` instead of the caller's values.
 macro sr_spawner(expr, assignments...)
     keywords = Dict(ex.args[1] => ex.args[2] for ex in assignments)
     @assert length(keywords) == length(assignments) "duplicate @sr_spawner keyword"
-    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :transport, :resident) "unknown @sr_spawner keyword in $(collect(keys(keywords)))"
+    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :transport, :worker_copies) "unknown @sr_spawner keyword in $(collect(keys(keywords)))"
     parallelism = keywords[:parallelism]
     worker_idx = keywords[:worker_idx]
     transport = get(keywords, :transport, nothing)
     remote_expr = expr
-    if haskey(keywords, :resident)
-        resident = keywords[:resident]
-        @assert Meta.isexpr(resident, :call, 3) && resident.args[1] == :(=>)
-        names, copies = resident.args[2], resident.args[3]
-        resident_copy = gensym(:resident_copy)
+    if haskey(keywords, :worker_copies)
+        pair = keywords[:worker_copies]
+        @assert Meta.isexpr(pair, :call, 3) && pair.args[1] == :(=>) "worker_copies must be `(names...) => copies`"
+        names, copies = pair.args[2], pair.args[3]
+        worker_copy = gensym(:worker_copy)
         remote_expr = :(
-            let $(names) = $(resident_value)($(resident_copy))
+            let $(names) = $(fetch_copy)($(worker_copy))
                 $(expr)
             end
         )
@@ -379,9 +379,9 @@ macro sr_spawner(expr, assignments...)
             $(spawn_encoded_result)(() -> $(remote_expr), $(worker_idx), $(transport))
         end
     end
-    if haskey(keywords, :resident)
+    if haskey(keywords, :worker_copies)
         multiprocessing = :(
-            let $(resident_copy) = $(copies)[$(worker_idx)]
+            let $(worker_copy) = $(copies)[$(worker_idx)]
                 $(multiprocessing)
             end
         )
