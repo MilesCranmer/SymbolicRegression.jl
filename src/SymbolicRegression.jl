@@ -416,7 +416,7 @@ using .SearchUtilsModule:
     get_worker_output_type,
     worker_result_type,
     _isready,
-    copy_to_workers,
+    store_on_workers,
     extract_from_worker,
     @sr_spawner,
     @filtered_async,
@@ -1068,7 +1068,7 @@ function _main_search_loop!(
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
     # Store datasets and options on each worker once, so dispatches do not resend them.
-    worker_datasets_and_options = copy_to_workers(
+    worker_datasets_and_options = store_on_workers(
         (datasets, options), Val(ropt.parallelism), state.procs
     )
     frontier_saves =
@@ -1237,25 +1237,30 @@ function _main_search_loop!(
                         iteration = iteration,
                         verbosity = ropt.verbosity,
                         cur_maxsize = cur_maxsize,
-                        worker_idx = worker_idx
+                        worker_idx = worker_idx,
+                        datasets_and_options = if ropt.parallelism == :multiprocessing
+                            worker_datasets_and_options[worker_idx]
+                        else
+                            (datasets, options)
+                        end
 
                         @sr_spawner(
-                            _dispatch_s_r_cycle(
-                                in_pop,
-                                datasets[j],
-                                options;
-                                pop=i,
-                                out=j,
-                                iteration,
-                                verbosity,
-                                cur_maxsize,
-                                plugin_states=worker_plugin_states,
-                            ),
+                            let (datasets, options) = fetch(datasets_and_options)
+                                _dispatch_s_r_cycle(
+                                    in_pop,
+                                    datasets[j],
+                                    options;
+                                    pop=i,
+                                    out=j,
+                                    iteration,
+                                    verbosity,
+                                    cur_maxsize,
+                                    plugin_states=worker_plugin_states,
+                                )
+                            end,
                             parallelism = ropt.parallelism,
                             worker_idx = worker_idx,
-                            ResultType = worker_result_type(state),
-                            worker_copies =
-                                (datasets, options) => worker_datasets_and_options
+                            ResultType = worker_result_type(state)
                         )
                     end
                 if ropt.parallelism in (:multiprocessing, :multithreading)

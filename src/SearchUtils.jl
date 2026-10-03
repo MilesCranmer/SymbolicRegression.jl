@@ -319,8 +319,8 @@ struct WorkerCopy{T}
     future::Future
 end
 
-copy_to_workers(_value, ::Val, _procs) = nothing
-function copy_to_workers(value::T, ::Val{:multiprocessing}, procs) where {T}
+store_on_workers(_value, ::Val, _procs) = nothing
+function store_on_workers(value::T, ::Val{:multiprocessing}, procs) where {T}
     return Dict(p => WorkerCopy{T}(remotecall(identity, p, value)) for p in unique(procs))
 end
 
@@ -351,40 +351,16 @@ extract_from_worker(f::Future, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) wher
 extract_from_worker(t::Task, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where {P,H,TR<:MaybeTrace,S<:Tuple} = fetch(t)::DefaultWorkerOutputType{P,H,TR,S}
 #! format: on
 
-# With `worker_copies = (names...) => copies`, the names inside a multiprocessing `expr` are
-# bound to the worker's copy from `copy_to_workers` instead of the caller's values.
 macro sr_spawner(expr, assignments...)
     keywords = Dict(ex.args[1] => ex.args[2] for ex in assignments)
     @assert length(keywords) == length(assignments) "duplicate @sr_spawner keyword"
-    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :ResultType, :worker_copies) "unknown @sr_spawner keyword in $(collect(keys(keywords)))"
+    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :ResultType) "unknown @sr_spawner keyword in $(collect(keys(keywords)))"
     parallelism = keywords[:parallelism]
     worker_idx = keywords[:worker_idx]
-    ResultType = get(keywords, :ResultType, nothing)
-    remote_expr = expr
-    if haskey(keywords, :worker_copies)
-        pair = keywords[:worker_copies]
-        @assert Meta.isexpr(pair, :call, 3) && pair.args[1] == :(=>) "worker_copies must be `(names...) => copies`"
-        names, copies = pair.args[2], pair.args[3]
-        worker_copy = gensym(:worker_copy)
-        remote_expr = :(
-            let $(names) = $(fetch)($(worker_copy))
-                $(expr)
-            end
-        )
-    end
-    multiprocessing = quote
-        if $(ResultType) === nothing
-            $(Distributed).@spawnat($(worker_idx), $(remote_expr))
-        else
-            $(spawn_encoded_result)(() -> $(remote_expr), $(worker_idx), $(ResultType))
-        end
-    end
-    if haskey(keywords, :worker_copies)
-        multiprocessing = :(
-            let $(worker_copy) = $(copies)[$(worker_idx)]
-                $(multiprocessing)
-            end
-        )
+    multiprocessing = if haskey(keywords, :ResultType)
+        :($(spawn_encoded_result)(() -> $(expr), $(worker_idx), $(keywords[:ResultType])))
+    else
+        :($(Distributed).@spawnat($(worker_idx), $(expr)))
     end
     return quote
         if $(parallelism) == :serial
