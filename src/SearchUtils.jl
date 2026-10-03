@@ -5,7 +5,8 @@ module SearchUtilsModule
 
 using Printf: @printf, @sprintf
 using Dates: Dates
-using Distributed: Distributed, @spawnat, Future, procs, addprocs, remotecall_fetch
+using Distributed:
+    Distributed, @spawnat, Future, procs, addprocs, remotecall_fetch, remotecall
 using Serialization: serialize, deserialize
 using StatsBase: mean
 using StyledStrings: @styled_str
@@ -331,6 +332,34 @@ function listen_encoded_result(output::Task, channel::Channel)
     )
 end
 
+"""
+    Resident{T}
+
+What one multiprocessing dispatch carries in place of a `T`: a reference to the copy of that
+value already stored on the worker that runs the dispatch. Created by `make_resident`.
+"""
+struct Resident{T}
+    copy::Future
+end
+
+"""
+    make_resident(value, Val(parallelism), procs)
+
+Store one copy of `value` on each process in `procs` for a multiprocessing search, so that
+`@sr_spawner` dispatches given `resident = (names...) => copies` carry a `Resident` reference
+instead of the value. Workers hold a snapshot taken here. Each copy is freed through
+Distributed's reference counting once the head and every dispatch have dropped their
+references. Other parallelism modes return `nothing`, and their dispatches use the caller's
+value directly.
+"""
+make_resident(_value, ::Val, _procs) = nothing
+function make_resident(value::T, ::Val{:multiprocessing}, procs) where {T}
+    return Dict(p => Resident{T}(remotecall(identity, p, value)) for p in unique(procs))
+end
+
+# Runs on the worker that owns the copy, where `fetch` is a local lookup.
+resident_value(r::Resident{T}) where {T} = fetch(r.copy)::T
+
 function get_worker_output_type(
     ::Val{PARALLELISM},
     ::Type{PopType},
@@ -367,24 +396,51 @@ extract_from_worker(f::Future, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) wher
 extract_from_worker(t::Task, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where {P,H,TR<:MaybeTrace,S<:Tuple} = fetch(t)::DefaultWorkerOutputType{P,H,TR,S}
 #! format: on
 
+"""
+    @sr_spawner(expr, parallelism=mode, worker_idx=worker[, transport=R][, resident=(names...) => copies])
+
+Run `expr` inline, on a thread, or on process `worker`, according to `parallelism`. With
+`resident`, the listed names inside `expr` refer to the worker's stored copy from
+`make_resident` in multiprocessing mode, and to the caller's values otherwise.
+"""
 macro sr_spawner(expr, kws...)
-    @assert length(kws) in (2, 3)
-    @assert all(ex -> ex.head == :(=), kws)
-    @assert any(ex -> ex.args[1] == :parallelism, kws)
-    @assert any(ex -> ex.args[1] == :worker_idx, kws)
-    parallelism = kws[findfirst(ex -> ex.args[1] == :parallelism, kws)::Int].args[2]
-    worker_idx = kws[findfirst(ex -> ex.args[1] == :worker_idx, kws)::Int].args[2]
-    transport_idx = findfirst(ex -> ex.args[1] == :transport, kws)
-    transport = transport_idx === nothing ? nothing : kws[transport_idx].args[2]
+    keywords = Dict(ex.args[1] => ex.args[2] for ex in kws)
+    @assert length(keywords) == length(kws)
+    @assert keys(keywords) ⊆ (:parallelism, :worker_idx, :transport, :resident)
+    parallelism = keywords[:parallelism]
+    worker_idx = keywords[:worker_idx]
+    transport = get(keywords, :transport, nothing)
+    remote_expr = expr
+    if haskey(keywords, :resident)
+        resident = keywords[:resident]
+        @assert Meta.isexpr(resident, :call, 3) && resident.args[1] == :(=>)
+        names, copies = resident.args[2], resident.args[3]
+        resident_copy = gensym(:resident_copy)
+        remote_expr = :(
+            let $(names) = $(resident_value)($(resident_copy))
+                $(expr)
+            end
+        )
+    end
+    multiprocessing = quote
+        if $(transport) === nothing
+            $(Distributed).@spawnat($(worker_idx), $(remote_expr))
+        else
+            $(spawn_encoded_result)(() -> $(remote_expr), $(worker_idx), $(transport))
+        end
+    end
+    if haskey(keywords, :resident)
+        multiprocessing = :(
+            let $(resident_copy) = $(copies)[$(worker_idx)]
+                $(multiprocessing)
+            end
+        )
+    end
     return quote
         if $(parallelism) == :serial
             $(expr)
         elseif $(parallelism) == :multiprocessing
-            if $(transport) === nothing
-                $(Distributed).@spawnat($(worker_idx), $(expr))
-            else
-                $(spawn_encoded_result)(() -> $(expr), $(worker_idx), $(transport))
-            end
+            $(multiprocessing)
         elseif $(parallelism) == :multithreading
             $(Threads).@spawn($(expr))
         else
