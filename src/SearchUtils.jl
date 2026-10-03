@@ -318,9 +318,12 @@ struct WorkerCopy{T}
     future::Future
 end
 
-store_on_workers(_value, ::Val, _procs) = nothing
-function store_on_workers(value::T, ::Val{:multiprocessing}, procs) where {T}
-    return Dict(p => WorkerCopy{T}(remotecall(identity, p, value)) for p in unique(procs))
+function store_on_workers(value::T, ::Val{PARALLELISM}, procs) where {T,PARALLELISM}
+    if PARALLELISM == :multiprocessing
+        return Dict(p => WorkerCopy{T}(remotecall(identity, p, value)) for p in procs)
+    else
+        return nothing
+    end
 end
 
 # Runs on the worker that owns the copy, where `fetch` is a local lookup.
