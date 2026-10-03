@@ -325,7 +325,7 @@ function copy_to_workers(value::T, ::Val{:multiprocessing}, procs) where {T}
 end
 
 # Runs on the worker that owns the copy, where `fetch` is a local lookup.
-fetch_copy(c::WorkerCopy{T}) where {T} = fetch(c.future)::T
+Base.fetch(c::WorkerCopy{T}) where {T} = fetch(c.future)::T
 
 function get_worker_output_type(
     ::Val{PARALLELISM},
@@ -367,7 +367,7 @@ macro sr_spawner(expr, assignments...)
         names, copies = pair.args[2], pair.args[3]
         worker_copy = gensym(:worker_copy)
         remote_expr = :(
-            let $(names) = $(fetch_copy)($(worker_copy))
+            let $(names) = $(fetch)($(worker_copy))
                 $(expr)
             end
         )
