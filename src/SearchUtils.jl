@@ -69,9 +69,12 @@ macro filtered_async(expr)
     end)
 end
 
-is_process_exit(ex) = ex isa Distributed.ProcessExitedException
-function is_process_exit(ex::TaskFailedException)
-    return is_process_exit(first(current_exceptions(ex.task)).exception)
+function is_process_exit(ex)
+    if ex isa TaskFailedException
+        return is_process_exit(first(current_exceptions(ex.task)).exception)
+    else
+        return ex isa Distributed.ProcessExitedException
+    end
 end
 
 """
