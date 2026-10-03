@@ -13,7 +13,6 @@ import ..CoreModule:
     condition_mutation!,
     mutation_acceptance_multiplier,
     default_simulated_annealing_plugin
-import ..SearchUtilsModule: encodable_state
 
 """
     SimulatedAnnealingPlugin(; alpha=0.1)
@@ -57,7 +56,6 @@ plugin's other hooks.
 mutable struct SimulatedAnnealingState
     temperature::Float64
 end
-encodable_state(::Type{SimulatedAnnealingState}) = true
 
 function init_plugin_state(::SimulatedAnnealingPlugin, options, dataset)
     SimulatedAnnealingState(1.0)

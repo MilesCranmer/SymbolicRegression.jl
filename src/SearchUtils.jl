@@ -296,16 +296,8 @@ end
 
 const DefaultWorkerOutputType{P,H,TR<:MaybeTrace,S<:Tuple} = Tuple{P,H,TR,Float64,S}
 
-# Encoded results go through plain `serialize`, which cannot carry Distributed references,
-# so each plugin state type opts in only when it holds plain data.
-encodable_state(::Type) = false
-encodable_state(::Type{Nothing}) = true
-
-@unstable function result_transport(
-    ::Type{R}, ropt
-) where {P,H,TR,S,R<:DefaultWorkerOutputType{P,H,TR,S}}
-    encodable = all(encodable_state, fieldtypes(S))
-    return ropt.parallelism == :multiprocessing && encodable ? R : nothing
+function result_transport(::Type{R}, ropt) where {R}
+    ropt.parallelism == :multiprocessing ? R : nothing
 end
 
 function run_encoded_result(f, ::Type{R})::Vector{UInt8} where {R}

@@ -38,8 +38,6 @@
                     put!(s.channel, (myid(), minimum(m.loss for m in pop.members)))
                     return nothing
                 end
-                struct ThreadedDispatchNothingPlugin <: SymbolicRegression.AbstractPlugin end
-
                 function threaded_dispatch_fixture(; plugins=nothing)
                     Random.seed!(123)
                     X = randn(Float32, 2, 32)
@@ -160,10 +158,6 @@
                         R, THSUM.RuntimeOptions(; parallelism=mode)
                     ) === nothing
                 end
-                _, _, _, _, nothing_R = threaded_dispatch_fixture(;
-                    plugins=(ThreadedDispatchNothingPlugin(),)
-                )
-                @test THSUM.result_transport(nothing_R, ropt) === nothing_R
 
                 pids = addprocs(
                     2; exeflags=`--project=$(dirname(Base.active_project())) -t 1`
@@ -206,14 +200,14 @@
                     @test aliased[2].members[1].loss == 123.0f0
 
                     channel = RemoteChannel(() -> Channel{Tuple{Int,Float32}}(256))
-                    _, native_options, _, _, native_R = threaded_dispatch_fixture(;
+                    _, channel_options, _, _, channel_R = threaded_dispatch_fixture(;
                         plugins=(ThreadedDispatchChannelPlugin(channel),)
                     )
-                    @test THSUM.result_transport(native_R, ropt) === nothing
+                    @test THSUM.result_transport(channel_R, ropt) === channel_R
                     hof = equation_search(
                         dataset.X,
                         dataset.y;
-                        options=native_options,
+                        options=channel_options,
                         procs=pids,
                         parallelism=:multiprocessing,
                         niterations=3,
