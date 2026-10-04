@@ -84,8 +84,10 @@ so the state needs no particular supertype.
 - `on_generation_end!` runs serially on the head node — safe to mutate.
 - `on_cycle_end!` and `on_mutation_end!` run on workers, against per-population
   states built by [`fork_plugin_state`](@ref) before the first dispatch and
-  retained across later dispatches. Cross-worker
-  communication must use `Channel` / `RemoteChannel`.
+  retained across later dispatches. For communication between processes, store a
+  `RemoteChannel` on the plugin object, which reaches workers through
+  `options.plugins`. Plugin state is copied by value between the head and
+  workers, so it cannot hold a `Future` or `RemoteChannel`.
 - `init_member` reads the head node's per-output state during initial
   population creation. In multithreading mode, multiple population-creation
   tasks may call it concurrently — keep it read-only or thread-safe.
@@ -219,8 +221,8 @@ end
 
 Lifecycle hook called on the worker at the end of each evolution cycle, paired
 with [`on_cycle_start!`](@ref). May run concurrently across workers. Use only
-worker-local state, or use `Channel` / `RemoteChannel` for cross-worker
-communication.
+worker-local state, or a `Channel` (threads) or `RemoteChannel` (processes)
+stored on the plugin object.
 
 Override by dispatching on your plugin type. Default is a no-op.
 

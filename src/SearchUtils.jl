@@ -5,7 +5,8 @@ module SearchUtilsModule
 
 using Printf: @printf, @sprintf
 using Dates: Dates
-using Distributed: Distributed, @spawnat, Future, procs, addprocs
+using Distributed: Distributed, Future, procs, addprocs, remotecall_fetch, remotecall
+using Serialization: serialize, deserialize
 using StatsBase: mean
 using StyledStrings: @styled_str
 using DispatchDoctor: @unstable
@@ -55,19 +56,25 @@ Like `@async` but with error monitoring that ignores `Distributed.ProcessExitedE
 to avoid spam when worker processes exit normally.
 """
 macro filtered_async(expr)
-    return esc(
-        quote
-            $(Base).errormonitor(@async begin
-                try
-                    $expr
-                catch ex
-                    if !(ex isa $(Distributed).ProcessExitedException)
-                        rethrow(ex)
-                    end
+    return esc(quote
+        $(Base).errormonitor(@async begin
+            try
+                $expr
+            catch ex
+                if !$(is_process_exit)(ex)
+                    rethrow(ex)
                 end
-            end)
-        end
-    )
+            end
+        end)
+    end)
+end
+
+function is_process_exit(ex)
+    if ex isa TaskFailedException
+        return is_process_exit(first(current_exceptions(ex.task)).exception)
+    else
+        return ex isa Distributed.ProcessExitedException
+    end
 end
 
 """
@@ -294,6 +301,30 @@ end
 
 const DefaultWorkerOutputType{P,H,TR<:MaybeTrace,S<:Tuple} = Tuple{P,H,TR,Float64,S}
 
+function run_encoded_result(f, ::Type{R})::Vector{UInt8} where {R}
+    result = f()::R
+    io = IOBuffer()
+    serialize(io, result)
+    return take!(io)
+end
+
+function spawn_encoded_result(f, worker::Int, ::Type{R})::Task where {R}
+    return Threads.@spawn deserialize(
+        IOBuffer(remotecall_fetch(run_encoded_result, worker, f, R))
+    )::R
+end
+
+struct WorkerCopy{T}
+    future::Future
+end
+
+function store_on_workers(value::T, procs) where {T}
+    return Dict(p => WorkerCopy{T}(remotecall(identity, p, value)) for p in procs)
+end
+
+# Runs on the worker that owns the copy, where `fetch` is a local lookup.
+Base.fetch(c::WorkerCopy{T}) where {T} = fetch(c.future)::T
+
 function get_worker_output_type(
     ::Val{PARALLELISM},
     ::Type{PopType},
@@ -305,8 +336,6 @@ function get_worker_output_type(
 }
     if PARALLELISM == :serial
         DefaultWorkerOutputType{PopType,HallOfFameType,TraceStateType,PluginStatesType}
-    elseif PARALLELISM == :multiprocessing
-        Future
     else
         Task
     end
@@ -314,23 +343,20 @@ end
 
 #! format: off
 extract_from_worker(p::DefaultWorkerOutputType, _, _, _, _) = p
-extract_from_worker(f::Future, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where {P,H,TR<:MaybeTrace,S<:Tuple} = fetch(f)::DefaultWorkerOutputType{P,H,TR,S}
 extract_from_worker(t::Task, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where {P,H,TR<:MaybeTrace,S<:Tuple} = fetch(t)::DefaultWorkerOutputType{P,H,TR,S}
 #! format: on
 
-macro sr_spawner(expr, kws...)
-    # Extract parallelism and worker_idx parameters from kws
-    @assert length(kws) == 2
-    @assert all(ex -> ex.head == :(=), kws)
-    @assert any(ex -> ex.args[1] == :parallelism, kws)
-    @assert any(ex -> ex.args[1] == :worker_idx, kws)
-    parallelism = kws[findfirst(ex -> ex.args[1] == :parallelism, kws)::Int].args[2]
-    worker_idx = kws[findfirst(ex -> ex.args[1] == :worker_idx, kws)::Int].args[2]
+macro sr_spawner(expr, assignments...)
+    keywords = Dict(ex.args[1] => ex.args[2] for ex in assignments)
+    @assert sort!([ex.args[1] for ex in assignments]) == [:parallelism, :result_type, :worker_idx] "@sr_spawner takes exactly parallelism, worker_idx and result_type"
+    parallelism = keywords[:parallelism]
+    worker_idx = keywords[:worker_idx]
+    result_type = keywords[:result_type]
     return quote
         if $(parallelism) == :serial
             $(expr)
         elseif $(parallelism) == :multiprocessing
-            $(Distributed).@spawnat($(worker_idx), $(expr))
+            $(spawn_encoded_result)(() -> $(expr), $(worker_idx), $(result_type))
         elseif $(parallelism) == :multithreading
             $(Threads).@spawn($(expr))
         else
@@ -778,7 +804,7 @@ Look through the source of `equation_search` to see how this is used.
 abstract type AbstractSearchState{T,L,N<:AbstractExpression{T}} end
 
 """
-    SearchState{T,L,N,PM,WorkerOutputType,ChannelType,TraceStateType,PluginStatesType,WorkerPluginStatesType} <: AbstractSearchState{T,L,N}
+    SearchState{T,L,N,PM,WorkerOutputType,TraceStateType,PluginStatesType,WorkerPluginStatesType} <: AbstractSearchState{T,L,N}
 
 The state of the search, including the populations, worker outputs, tasks, and
 channels. This is used to manage the search and keep track of runtime variables
@@ -790,7 +816,6 @@ Base.@kwdef struct SearchState{
     N<:AbstractExpression{T},
     PM<:AbstractPopMember{T,L,N},
     WorkerOutputType,
-    ChannelType,
     TraceStateType<:MaybeTrace,
     PluginStatesType<:Tuple,
     WorkerPluginStatesType<:Tuple,
@@ -799,7 +824,7 @@ Base.@kwdef struct SearchState{
     we_created_procs::Bool
     worker_output::Vector{Vector{WorkerOutputType}}
     tasks::Vector{Vector{Task}}
-    channels::Vector{Vector{ChannelType}}
+    channels::Vector{Vector{Channel}}
     worker_assignment::WorkerAssignments
     task_order::Vector{Tuple{Int,Int}}
     halls_of_fame::Vector{HallOfFame{T,L,N,PM}}
@@ -813,6 +838,15 @@ Base.@kwdef struct SearchState{
     seed_members::Vector{Vector{PM}}
     plugin_states::Vector{PluginStatesType}
     worker_plugin_states::Vector{Vector{WorkerPluginStatesType}}
+end
+
+function worker_result_type(state::SearchState)
+    return DefaultWorkerOutputType{
+        eltype(eltype(state.last_pops)),
+        eltype(state.halls_of_fame),
+        typeof(state.trace_prototype),
+        eltype(eltype(state.worker_plugin_states)),
+    }
 end
 
 function save_to_file(

@@ -14,6 +14,9 @@
             $Distributed.@everywhere $procs Core.eval(
                 Core.Main, :(using Distributed: Distributed, @spawnat)
             )
+            $Distributed.@everywhere $procs Core.eval(
+                Core.Main, :(using SymbolicRegression)
+            )
 
             # Import Suppressor in Main for @suppress_err
             $t = $SUM.@filtered_async 42
@@ -26,7 +29,10 @@
 
             # With no error
             $future = $SUM.@sr_spawner(
-                44, parallelism = :multiprocessing, worker_idx = $procs[1]
+                44,
+                parallelism = :multiprocessing,
+                worker_idx = $procs[1],
+                result_type = Int
             )
             $channel = Channel(1)
             $t = $SUM.@filtered_async put!($channel, fetch($future))
@@ -38,7 +44,8 @@
                 $future = $SUM.@sr_spawner(
                     throw(ArgumentError("test multiprocessing error")),
                     parallelism = :multiprocessing,
-                    worker_idx = $procs[1]
+                    worker_idx = $procs[1],
+                    result_type = Int
                 )
                 $t = $SUM.@filtered_async fetch($future)
                 $Test.@test_throws TaskFailedException fetch($t)

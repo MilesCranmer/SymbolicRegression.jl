@@ -414,6 +414,8 @@ using .SearchUtilsModule:
     DefaultWorkerOutputType,
     assign_next_worker!,
     get_worker_output_type,
+    worker_result_type,
+    store_on_workers,
     extract_from_worker,
     @sr_spawner,
     @filtered_async,
@@ -788,14 +790,13 @@ end
         typeof(trace),
         WorkerPluginStatesType,
     )
-    ChannelType = ropt.parallelism == :multiprocessing ? RemoteChannel : Channel
 
     # Pointers to populations on each worker:
     worker_output = Vector{WorkerOutputType}[WorkerOutputType[] for j in 1:nout]
     # Initialize storage for workers
     tasks = [Task[] for j in 1:nout]
     # Set up a channel to send finished populations back to head node
-    channels = [[ChannelType(1) for i in 1:(options.populations)] for j in 1:nout]
+    channels = [[Channel(1) for i in 1:(options.populations)] for j in 1:nout]
     (procs, we_created_procs) = if ropt.parallelism == :multiprocessing
         configure_workers(;
             procs=ropt.init_procs,
@@ -843,15 +844,7 @@ end
     seed_members = [Vector{PMType}() for j in 1:nout]
 
     return SearchState{
-        T,
-        L,
-        NT,
-        PMType,
-        WorkerOutputType,
-        ChannelType,
-        typeof(trace),
-        PluginStatesType,
-        WorkerPluginStatesType,
+        T,L,NT,PMType,WorkerOutputType,typeof(trace),PluginStatesType,WorkerPluginStatesType
     }(;
         procs=procs,
         we_created_procs=we_created_procs,
@@ -941,7 +934,8 @@ function _initialize_search!(
                         )
                     end,
                     parallelism = ropt.parallelism,
-                    worker_idx = worker_idx
+                    worker_idx = worker_idx,
+                    result_type = worker_result_type(state)
                 )
             else
                 if saved_pop !== nothing && ropt.verbosity > 0
@@ -965,7 +959,8 @@ function _initialize_search!(
                         )
                     end,
                     parallelism = ropt.parallelism,
-                    worker_idx = worker_idx
+                    worker_idx = worker_idx,
+                    result_type = worker_result_type(state)
                 )
                 # This involves population_size evaluations, on the full dataset:
             end
@@ -1018,38 +1013,39 @@ function _warmup_search!(
             state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
         )
 
-        last_pop = state.worker_output[j][i]
-
         PopType = eltype(eltype(state.last_pops))
         PM = popmember_type(PopType)
         HallType = HallOfFame{T,L,N,PM}
         TraceStateType = typeof(state.trace_prototype)
         WorkerPluginStatesType = eltype(eltype(state.worker_plugin_states))
+        (in_pop, _, _, _, worker_plugin_states) = extract_from_worker(
+            state.worker_output[j][i],
+            PopType,
+            HallType,
+            TraceStateType,
+            WorkerPluginStatesType,
+        )
 
         updated_pop = @sr_spawner(
-            begin
-                (in_pop, _, _, _, worker_plugin_states) = extract_from_worker(
-                    last_pop, PopType, HallType, TraceStateType, WorkerPluginStatesType
-                )
-                _dispatch_s_r_cycle(
-                    in_pop,
-                    dataset,
-                    options;
-                    pop=i,
-                    out=j,
-                    iteration=0,
-                    ropt.verbosity,
-                    cur_maxsize,
-                    plugin_states=worker_plugin_states,
-                )::DefaultWorkerOutputType{
-                    Population{T,L,N},
-                    HallOfFame{T,L,N},
-                    TraceStateType,
-                    typeof(worker_plugin_states),
-                }
-            end,
+            _dispatch_s_r_cycle(
+                in_pop,
+                dataset,
+                options;
+                pop=i,
+                out=j,
+                iteration=0,
+                ropt.verbosity,
+                cur_maxsize,
+                plugin_states=worker_plugin_states,
+            )::DefaultWorkerOutputType{
+                Population{T,L,N},
+                HallOfFame{T,L,N},
+                TraceStateType,
+                typeof(worker_plugin_states),
+            },
             parallelism = ropt.parallelism,
-            worker_idx = worker_idx
+            worker_idx = worker_idx,
+            result_type = worker_result_type(state)
         )
         state.worker_output[j][i] = updated_pop
     end
@@ -1063,6 +1059,7 @@ function _main_search_loop!(
 ) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
+    worker_datasets_and_options = store_on_workers((datasets, options), state.procs)
     frontier_saves =
         options.save_to_file ? map(FrontierSaveState, state.halls_of_fame) : nothing
 
@@ -1221,23 +1218,40 @@ function _main_search_loop!(
                         worker_state, latest_head_state, plugin, dataset
                     )
                 end
-                state.worker_output[j][i] = @sr_spawner(
-                    begin
-                        _dispatch_s_r_cycle(
-                            in_pop,
-                            dataset,
-                            options;
-                            pop=i,
-                            out=j,
-                            iteration,
-                            ropt.verbosity,
-                            cur_maxsize,
-                            plugin_states=worker_plugin_states,
+                state.worker_output[j][i] =
+                    let in_pop = in_pop,
+                        worker_plugin_states = worker_plugin_states,
+                        i = i,
+                        j = j,
+                        iteration = iteration,
+                        verbosity = ropt.verbosity,
+                        cur_maxsize = cur_maxsize,
+                        worker_idx = worker_idx,
+                        datasets_and_options = if ropt.parallelism == :multiprocessing
+                            worker_datasets_and_options[worker_idx]
+                        else
+                            (datasets, options)
+                        end
+
+                        @sr_spawner(
+                            let (datasets, options) = fetch(datasets_and_options)
+                                _dispatch_s_r_cycle(
+                                    in_pop,
+                                    datasets[j],
+                                    options;
+                                    pop=i,
+                                    out=j,
+                                    iteration,
+                                    verbosity,
+                                    cur_maxsize,
+                                    plugin_states=worker_plugin_states,
+                                )
+                            end,
+                            parallelism = ropt.parallelism,
+                            worker_idx = worker_idx,
+                            result_type = worker_result_type(state)
                         )
-                    end,
-                    parallelism = ropt.parallelism,
-                    worker_idx = worker_idx
-                )
+                    end
                 if ropt.parallelism in (:multiprocessing, :multithreading)
                     state.tasks[j][i] = @filtered_async put!(
                         state.channels[j][i], fetch(state.worker_output[j][i])
@@ -1341,7 +1355,7 @@ function _tear_down!(
     if ropt.parallelism in (:multiprocessing, :multithreading)
         outputs = Iterators.flatten(state.worker_output)
         if ropt.parallelism == :multiprocessing
-            timedwait(() -> all(isready, outputs), 5.0; pollint=0.01)
+            timedwait(() -> all(istaskdone, outputs), 5.0; pollint=0.01)
         else
             for output in outputs
                 wait(output)
