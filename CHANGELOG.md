@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/astroautomata/SymbolicRegression.jl/compare/v2.5.1...v2.6.0) (2026-10-04)
+
+
+### Performance Improvements
+
+* faster communication for multiprocessing ([#753](https://github.com/astroautomata/SymbolicRegression.jl/issues/753)) ([959a7fe](https://github.com/astroautomata/SymbolicRegression.jl/commit/959a7feb100895dc44cdf3cdf531a1bb398739d6))
+
 ## [2.5.1](https://github.com/astroautomata/SymbolicRegression.jl/compare/v2.5.0...v2.5.1) (2026-09-29)
 
 
