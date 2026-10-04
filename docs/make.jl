@@ -61,7 +61,7 @@ hero:
       text: View on GitHub
       link: https://github.com/astroautomata/SymbolicRegression.jl
   image:
-    src: /logo.png
+    src: https://raw.githubusercontent.com/MilesCranmer/PySR_Docs/master/images/pysr-logo.png
     alt: SymbolicRegression.jl
 
 features:
@@ -203,50 +203,8 @@ function preprocess_source_index()
     return true
 end
 
-# Generate favicon files from logo.png
-function generate_favicons()
-    logo_path = joinpath(@__DIR__, "src", "assets", "logo.png")
-    public_dir = joinpath(@__DIR__, "src", "public")
-
-    if !isfile(logo_path)
-        @warn "Logo file not found at: $logo_path - skipping favicon generation"
-        return false
-    end
-
-    mkpath(public_dir)
-
-    @info "Generating favicon files from logo.png..."
-
-    # VitePress only copies files from `src/public/` into the built site root.
-    # We reference `/logo.png` in the VitePress home frontmatter, so ensure it exists there.
-    cp(logo_path, joinpath(public_dir, "logo.png"); force=true)
-
-    # Generate different sizes
-    favicon_configs = [
-        ("favicon.ico", "32x32"),
-        ("favicon-16x16.png", "16x16"),
-        ("favicon-32x32.png", "32x32"),
-        ("apple-touch-icon.png", "180x180"),
-    ]
-
-    for (filename, size) in favicon_configs
-        output_path = joinpath(public_dir, filename)
-        # Use 'convert' for ImageMagick 6.x (Ubuntu default), 'magick' for ImageMagick 7.x
-        magick_cmd = Sys.which("magick") !== nothing ? "magick" : "convert"
-        run(
-            `$(magick_cmd) $(logo_path) -resize $(size) -background none -gravity center -extent $(size) $(output_path)`,
-        )
-        @info "Generated: $filename"
-    end
-
-    return true
-end
-
 # Run preprocessing on source files before makedocs()
 preprocess_source_index()
-
-# Generate favicons before building docs
-generate_favicons()
 
 ENV["GITHUB_REPOSITORY"] = "ai-damtp-cam-ac-uk/symbolicregression"
 ENV["DOCUMENTER_KEY"] = get(ENV, "DOCUMENTER_KEY_CAM", "")
