@@ -10,6 +10,8 @@ using SymbolicRegression:
     AbstractOptions,
     mutate!,
     condition_mutation_weights!,
+    crossover,
+    CrossoverResult,
     sample_mutation,
     MutationResult,
     AbstractRuntimeOptions,

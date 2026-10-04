@@ -24,7 +24,7 @@ When using these node constructors, types will automatically be promoted.
 You can convert the type of a node using `convert`:
 
 ```@docs
-convert(::Type{Node{T1}}, tree::Node{T2}) where {T1, T2}
+convert(::Type{Node{T1, D1}}, tree::Node{T2, D2}) where {T1, T2, D1, D2}
 ```
 
 You can set a `tree` (in-place) with `set_node!`:
@@ -77,7 +77,7 @@ TemplateExpressionSpec
 
 You can use the `@template_spec` macro as an easy way to create a `TemplateExpressionSpec`:
 
-```@docs
+```@docs; canonical = false
 @template_spec
 ```
 
