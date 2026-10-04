@@ -38,10 +38,10 @@ export default defineConfig({
   cleanUrls: true,
   outDir: 'REPLACE_ME_DOCUMENTER_VITEPRESS', // This is required for MarkdownVitepress to work correctly...
   head: [
-    ['link', { rel: 'icon', type: 'image/x-icon', href: `${baseTemp.base}favicon.ico` }],
-    ['link', { rel: 'icon', type: 'image/png', sizes: '16x16', href: `${baseTemp.base}favicon-16x16.png` }],
-    ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: `${baseTemp.base}favicon-32x32.png` }],
-    ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: `${baseTemp.base}apple-touch-icon.png` }],
+    ['link', { rel: 'icon', type: 'image/x-icon', href: 'https://raw.githubusercontent.com/MilesCranmer/PySR/master/docs/src/public/favicon.ico' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '16x16', href: 'https://raw.githubusercontent.com/MilesCranmer/PySR/master/docs/src/public/favicon-16x16.png' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: 'https://raw.githubusercontent.com/MilesCranmer/PySR/master/docs/src/public/favicon-32x32.png' }],
+    ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: 'https://raw.githubusercontent.com/MilesCranmer/PySR/master/docs/src/public/apple-touch-icon.png' }],
     ['link', { rel: 'stylesheet', href: `${baseTemp.base}nav-logo.css` }],
     ['script', {src: '/versions.js'}],
     ['script', {src: `${baseTemp.base}siteinfo.js`}]
@@ -82,7 +82,7 @@ export default defineConfig({
   themeConfig: {
     outline: 'deep',
     // https://vitepress.dev/reference/default-theme-config
-    logo: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
+    logo: 'https://raw.githubusercontent.com/MilesCranmer/PySR_Docs/master/images/pysr-logo.png',
     search: {
       provider: 'local',
       options: {
