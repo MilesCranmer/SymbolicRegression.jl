@@ -5,7 +5,7 @@ module SearchUtilsModule
 
 using Printf: @printf, @sprintf
 using Dates: Dates
-using Distributed: Distributed, Future, procs, addprocs, remotecall_fetch, remotecall
+using Distributed: Distributed, procs, addprocs, remotecall_fetch, remotecall
 using Serialization: serialize, deserialize
 using StatsBase: mean
 using StyledStrings: @styled_str
@@ -291,7 +291,9 @@ function assign_next_worker!(
     worker_assignment::WorkerAssignments; pop, out, parallelism, procs
 )::Int
     if parallelism == :multiprocessing
-        worker_idx = next_worker(worker_assignment, procs)
+        worker_idx = get(
+            () -> next_worker(worker_assignment, procs), worker_assignment, (out, pop)
+        )
         worker_assignment[(out, pop)] = worker_idx
         return worker_idx
     else
@@ -301,29 +303,65 @@ end
 
 const DefaultWorkerOutputType{P,H,TR<:MaybeTrace,S<:Tuple} = Tuple{P,H,TR,Float64,S}
 
-function run_encoded_result(f, ::Type{R})::Vector{UInt8} where {R}
-    result = f()::R
+function serialize_to_bytes(value)::Vector{UInt8}
     io = IOBuffer()
-    serialize(io, result)
+    serialize(Distributed.ClusterSerializer(io), value)
     return take!(io)
 end
 
+@unstable function deserialize_from_bytes(bytes::Vector{UInt8})
+    return deserialize(Distributed.ClusterSerializer(IOBuffer(bytes)))
+end
+
+function run_encoded_result(encoded_f::Vector{UInt8}, ::Type{R})::Vector{UInt8} where {R}
+    return serialize_to_bytes(Base.invokelatest(deserialize_from_bytes(encoded_f))::R)
+end
+
 function spawn_encoded_result(f, worker::Int, ::Type{R})::Task where {R}
-    return Threads.@spawn deserialize(
-        IOBuffer(remotecall_fetch(run_encoded_result, worker, f, R))
+    return Threads.@spawn deserialize_from_bytes(
+        remotecall_fetch(run_encoded_result, worker, serialize_to_bytes(f), R)
     )::R
 end
 
+const WORKER_COPIES = Dict{UInt64,Any}()
+const WORKER_COPY_COUNTER = Threads.Atomic{UInt64}(0)
+
 struct WorkerCopy{T}
-    future::Future
+    key::UInt64
+end
+
+function store_worker_copy!(key::UInt64, value)
+    WORKER_COPIES[key] = value
+    return nothing
+end
+
+function delete_worker_copy!(key::UInt64)
+    delete!(WORKER_COPIES, key)
+    return nothing
 end
 
 function store_on_workers(value::T, procs) where {T}
-    return Dict(p => WorkerCopy{T}(remotecall(identity, p, value)) for p in procs)
+    key = Threads.atomic_add!(WORKER_COPY_COUNTER, UInt64(1))
+    @sync for proc in procs
+        @async remotecall_fetch(store_worker_copy!, proc, key, value)
+    end
+    return WorkerCopy{T}(key)
 end
 
-# Runs on the worker that owns the copy, where `fetch` is a local lookup.
-Base.fetch(c::WorkerCopy{T}) where {T} = fetch(c.future)::T
+# Messages to a worker run in order, so this runs after every dispatch already sent to it.
+function delete_on_workers(copy::WorkerCopy, procs)
+    for proc in procs
+        proc in Distributed.procs() || continue
+        try
+            remotecall(delete_worker_copy!, proc, copy.key)
+        catch err
+            is_process_exit(err) || rethrow()
+        end
+    end
+    return nothing
+end
+
+Base.fetch(c::WorkerCopy{T}) where {T} = WORKER_COPIES[c.key]::T
 
 function get_worker_output_type(
     ::Val{PARALLELISM},

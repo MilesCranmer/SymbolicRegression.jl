@@ -416,6 +416,7 @@ using .SearchUtilsModule:
     get_worker_output_type,
     worker_result_type,
     store_on_workers,
+    delete_on_workers,
     extract_from_worker,
     @sr_spawner,
     @filtered_async,
@@ -704,10 +705,23 @@ end
     latch_external_stop!(ropt)
     _validate_options(datasets, ropt, options)
     state = _create_workers(datasets, ropt, options)
-    _initialize_search!(state, datasets, ropt, options, saved_state, guesses)
-    _warmup_search!(state, datasets, ropt, options)
-    _main_search_loop!(state, datasets, ropt, options)
-    _tear_down!(state, datasets, ropt, options)
+    datasets_and_options = if ropt.parallelism == :multiprocessing
+        store_on_workers((datasets, options), state.procs)
+    else
+        (datasets, options)
+    end
+    try
+        _initialize_search!(
+            state, datasets, ropt, options, saved_state, guesses, datasets_and_options
+        )
+        _warmup_search!(state, datasets, ropt, options, datasets_and_options)
+        _main_search_loop!(state, datasets, ropt, options, datasets_and_options)
+        _tear_down!(state, datasets, ropt, options)
+    finally
+        if ropt.parallelism == :multiprocessing
+            delete_on_workers(datasets_and_options, state.procs)
+        end
+    end
     _info_dump(state, datasets, ropt, options)
     return _format_output(state, datasets, ropt, options)
 end
@@ -873,6 +887,7 @@ function _initialize_search!(
     options::AbstractOptions,
     saved_state,
     guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing},
+    datasets_and_options,
 ) where {T,L,N}
     nout = length(datasets)
 
@@ -924,10 +939,10 @@ function _initialize_search!(
                 end
                 copy_pop = copy(_saved_pop)
                 @sr_spawner(
-                    begin
+                    let (datasets, options) = fetch(datasets_and_options)
                         (
                             copy_pop,
-                            HallOfFame(options, _dataset),
+                            HallOfFame(options, datasets[j]),
                             new_trace(options),
                             0.0,
                             _worker_plugin_states,
@@ -942,17 +957,17 @@ function _initialize_search!(
                     @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
                 end
                 @sr_spawner(
-                    begin
+                    let (datasets, options) = fetch(datasets_and_options)
                         (
                             Population(
-                                _dataset;
+                                datasets[j];
                                 population_size=options.population_size,
                                 nlength=3,
                                 options=options,
-                                nfeatures=max_features(_dataset, options),
+                                nfeatures=max_features(datasets[j], options),
                                 plugin_states=_plugin_states,
                             ),
-                            HallOfFame(options, _dataset),
+                            HallOfFame(options, datasets[j]),
                             new_trace(options),
                             Float64(options.population_size),
                             _worker_plugin_states,
@@ -999,6 +1014,7 @@ function _warmup_search!(
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
+    datasets_and_options,
 ) where {T,L,N}
     if ropt.niterations == 0
         return _preserve_loaded_state!(state, ropt, options)
@@ -1007,7 +1023,6 @@ function _warmup_search!(
     nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
         check_external_stop(ropt) && break
-        dataset = datasets[j]
         cur_maxsize = state.cur_maxsizes[j]
         worker_idx = assign_next_worker!(
             state.worker_assignment; out=j, pop=i, parallelism=ropt.parallelism, state.procs
@@ -1026,27 +1041,26 @@ function _warmup_search!(
             WorkerPluginStatesType,
         )
 
-        updated_pop = @sr_spawner(
-            _dispatch_s_r_cycle(
-                in_pop,
-                dataset,
-                options;
-                pop=i,
-                out=j,
-                iteration=0,
-                ropt.verbosity,
-                cur_maxsize,
-                plugin_states=worker_plugin_states,
-            )::DefaultWorkerOutputType{
-                Population{T,L,N},
-                HallOfFame{T,L,N},
-                TraceStateType,
-                typeof(worker_plugin_states),
-            },
-            parallelism = ropt.parallelism,
-            worker_idx = worker_idx,
-            result_type = worker_result_type(state)
-        )
+        updated_pop = let verbosity = ropt.verbosity
+            @sr_spawner(
+                let (datasets, options) = fetch(datasets_and_options)
+                    _dispatch_s_r_cycle(
+                        in_pop,
+                        datasets[j],
+                        options;
+                        pop=i,
+                        out=j,
+                        iteration=0,
+                        verbosity,
+                        cur_maxsize,
+                        plugin_states=worker_plugin_states,
+                    )
+                end,
+                parallelism = ropt.parallelism,
+                worker_idx = worker_idx,
+                result_type = worker_result_type(state)
+            )
+        end
         state.worker_output[j][i] = updated_pop
     end
     return nothing
@@ -1056,10 +1070,17 @@ function _main_search_loop!(
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
+    datasets_and_options,
 ) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
-    worker_datasets_and_options = store_on_workers((datasets, options), state.procs)
+    candidates_per_pop = min(options.topn, options.population_size)
+    migration_candidates = [
+        [
+            pop.members[mod1(k, length(pop.members))] for pop in state.best_sub_pops[j] for
+            k in 1:candidates_per_pop
+        ] for j in 1:nout
+    ]
     frontier_saves =
         options.save_to_file ? map(FrontierSaveState, state.halls_of_fame) : nothing
 
@@ -1142,6 +1163,14 @@ function _main_search_loop!(
                 }
             state.last_pops[j][i] = copy(cur_pop)
             state.best_sub_pops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
+            @assert length(state.best_sub_pops[j][i].members) == candidates_per_pop "Migration requires $candidates_per_pop members per population"
+            copyto!(
+                migration_candidates[j],
+                (i - 1) * candidates_per_pop + 1,
+                state.best_sub_pops[j][i].members,
+                1,
+                candidates_per_pop,
+            )
             write_trace(cur_trace, options.tracing_file)
             state.num_evals[j][i] += cur_num_evals
             dataset = datasets[j]
@@ -1180,11 +1209,10 @@ function _main_search_loop!(
             ###################################################################
             # Migration #######################################################
             if options.migration
-                best_of_each = Population([
-                    member for pop in state.best_sub_pops[j] for member in pop.members
-                ])
                 migrate!(
-                    best_of_each.members => cur_pop, options; frac=options.fraction_replaced
+                    migration_candidates[j] => cur_pop,
+                    options;
+                    frac=options.fraction_replaced,
                 )
             end
             if options.hof_migration && length(dominating) > 0
@@ -1227,11 +1255,7 @@ function _main_search_loop!(
                         verbosity = ropt.verbosity,
                         cur_maxsize = cur_maxsize,
                         worker_idx = worker_idx,
-                        datasets_and_options = if ropt.parallelism == :multiprocessing
-                            worker_datasets_and_options[worker_idx]
-                        else
-                            (datasets, options)
-                        end
+                        datasets_and_options = datasets_and_options
 
                         @sr_spawner(
                             let (datasets, options) = fetch(datasets_and_options)
