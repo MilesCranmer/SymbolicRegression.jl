@@ -349,14 +349,9 @@ function store_on_workers(value::T, procs) where {T}
 end
 
 # Messages to a worker run in order, so this runs after every dispatch already sent to it.
-function delete_on_workers(copy::WorkerCopy, procs)
-    for proc in procs
-        proc in Distributed.procs() || continue
-        try
-            remotecall(delete_worker_copy!, proc, copy.key)
-        catch err
-            is_process_exit(err) || rethrow()
-        end
+function delete_on_workers(copy::WorkerCopy)
+    for proc in Distributed.procs()
+        remotecall(delete_worker_copy!, proc, copy.key)
     end
     return nothing
 end
@@ -857,9 +852,11 @@ Base.@kwdef struct SearchState{
     TraceStateType<:MaybeTrace,
     PluginStatesType<:Tuple,
     WorkerPluginStatesType<:Tuple,
+    DatasetsAndOptionsType,
 } <: AbstractSearchState{T,L,N}
     procs::Vector{Int}
     we_created_procs::Bool
+    datasets_and_options::DatasetsAndOptionsType
     worker_output::Vector{Vector{WorkerOutputType}}
     tasks::Vector{Vector{Task}}
     channels::Vector{Vector{Channel}}

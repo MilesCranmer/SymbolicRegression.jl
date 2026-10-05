@@ -705,23 +705,10 @@ end
     latch_external_stop!(ropt)
     _validate_options(datasets, ropt, options)
     state = _create_workers(datasets, ropt, options)
-    datasets_and_options = if ropt.parallelism == :multiprocessing
-        store_on_workers((datasets, options), state.procs)
-    else
-        (datasets, options)
-    end
-    try
-        _initialize_search!(
-            state, datasets, ropt, options, saved_state, guesses, datasets_and_options
-        )
-        _warmup_search!(state, datasets, ropt, options, datasets_and_options)
-        _main_search_loop!(state, datasets, ropt, options, datasets_and_options)
-        _tear_down!(state, datasets, ropt, options)
-    finally
-        if ropt.parallelism == :multiprocessing
-            delete_on_workers(datasets_and_options, state.procs)
-        end
-    end
+    _initialize_search!(state, datasets, ropt, options, saved_state, guesses)
+    _warmup_search!(state, datasets, ropt, options)
+    _main_search_loop!(state, datasets, ropt, options)
+    _tear_down!(state, datasets, ropt, options)
     _info_dump(state, datasets, ropt, options)
     return _format_output(state, datasets, ropt, options)
 end
@@ -831,6 +818,11 @@ end
     else
         Int[], false
     end
+    datasets_and_options = if ropt.parallelism == :multiprocessing
+        store_on_workers((datasets, options), procs)
+    else
+        (datasets, options)
+    end
     # Get the next worker process to give a job:
     worker_assignment = WorkerAssignments()
     # Randomly order which order to check populations:
@@ -858,10 +850,19 @@ end
     seed_members = [Vector{PMType}() for j in 1:nout]
 
     return SearchState{
-        T,L,NT,PMType,WorkerOutputType,typeof(trace),PluginStatesType,WorkerPluginStatesType
+        T,
+        L,
+        NT,
+        PMType,
+        WorkerOutputType,
+        typeof(trace),
+        PluginStatesType,
+        WorkerPluginStatesType,
+        typeof(datasets_and_options),
     }(;
         procs=procs,
         we_created_procs=we_created_procs,
+        datasets_and_options=datasets_and_options,
         worker_output=worker_output,
         tasks=tasks,
         channels=channels,
@@ -887,9 +888,9 @@ function _initialize_search!(
     options::AbstractOptions,
     saved_state,
     guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing},
-    datasets_and_options,
 ) where {T,L,N}
     nout = length(datasets)
+    datasets_and_options = state.datasets_and_options
 
     init_hall_of_fame = load_saved_hall_of_fame(saved_state)
     if init_hall_of_fame === nothing
@@ -1014,11 +1015,11 @@ function _warmup_search!(
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
-    datasets_and_options,
 ) where {T,L,N}
     if ropt.niterations == 0
         return _preserve_loaded_state!(state, ropt, options)
     end
+    datasets_and_options = state.datasets_and_options
 
     nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
@@ -1070,7 +1071,6 @@ function _main_search_loop!(
     datasets,
     ropt::AbstractRuntimeOptions,
     options::AbstractOptions,
-    datasets_and_options,
 ) where {T,L,N}
     ropt.verbosity > 0 && @info "Started!"
     nout = length(datasets)
@@ -1255,7 +1255,7 @@ function _main_search_loop!(
                         verbosity = ropt.verbosity,
                         cur_maxsize = cur_maxsize,
                         worker_idx = worker_idx,
-                        datasets_and_options = datasets_and_options
+                        datasets_and_options = state.datasets_and_options
 
                         @sr_spawner(
                             let (datasets, options) = fetch(datasets_and_options)
@@ -1393,6 +1393,7 @@ function _tear_down!(
     end
     if ropt.parallelism == :multiprocessing
         # TODO: We should unwrap the error monitors here
+        delete_on_workers(state.datasets_and_options)
         state.we_created_procs && rmprocs(state.procs)
     end
     drain_external_stop!(ropt)
