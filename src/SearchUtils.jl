@@ -346,8 +346,11 @@ function store_on_workers(value::T, procs) where {T}
     return WorkerCopy{T}(key)
 end
 
-# Messages to a worker run in order, so this runs after every dispatch already sent to it.
 function delete_on_workers(copy::WorkerCopy)
+    # Don't wait on these calls as `store_on_workers` does. A worker runs one call at a time
+    # and a search cycle never yields, so waiting would hold up teardown until every running
+    # cycle ends, and would throw for a worker that has exited. Calls to a worker run in
+    # order, so the delete still runs after every dispatch already sent to it.
     for proc in Distributed.procs()
         remotecall(delete_worker_copy!, proc, copy.key)
     end
