@@ -381,28 +381,24 @@ extract_from_worker(t::Task, ::Type{P}, ::Type{H}, ::Type{TR}, ::Type{S}) where 
 
 macro sr_spawner(job, assignments...)
     keywords = Dict(ex.args[1] => ex.args[2] for ex in assignments)
-    @assert sort!([ex.args[1] for ex in assignments]) == [:inputs, :parallelism, :result_type, :worker_copy, :worker_idx] "@sr_spawner takes exactly inputs, worker_copy, parallelism, worker_idx and result_type"
+    @assert sort!([ex.args[1] for ex in assignments]) == [:inputs, :parallelism, :result_type, :worker_idx] "@sr_spawner takes exactly inputs, parallelism, worker_idx and result_type"
     parallelism = keywords[:parallelism]
     worker_idx = keywords[:worker_idx]
     result_type = keywords[:result_type]
-    job_var, inputs_var, copy_var = gensym(:job), gensym(:inputs), gensym(:worker_copy)
+    job_var, inputs_var = gensym(:job), gensym(:inputs)
+    # Both are bound before any closure is built, so a worker receives only the job and `inputs`.
     return quote
-        let $(job_var) = $(job)
+        let $(job_var) = $(job), $(inputs_var) = $(keywords[:inputs])
             if $(parallelism) == :serial
-                $(job_var)($(keywords[:inputs])...)
+                $(job_var)($(fetch)($(inputs_var))...)
             elseif $(parallelism) == :multiprocessing
-                # Only the job and the worker copy's key are sent; the worker reads its own copy.
-                let $(copy_var) = $(keywords[:worker_copy])
-                    $(spawn_encoded_result)(
-                        () -> $(job_var)($(fetch)($(copy_var))...),
-                        $(worker_idx),
-                        $(result_type),
-                    )
-                end
+                $(spawn_encoded_result)(
+                    () -> $(job_var)($(fetch)($(inputs_var))...),
+                    $(worker_idx),
+                    $(result_type),
+                )
             elseif $(parallelism) == :multithreading
-                let $(inputs_var) = $(keywords[:inputs])
-                    $(Threads).@spawn $(job_var)($(inputs_var)...)
-                end
+                $(Threads).@spawn $(job_var)($(fetch)($(inputs_var))...)
             else
                 error("Invalid parallel type ", string($(parallelism)), ".")
             end
@@ -849,7 +845,7 @@ Look through the source of `equation_search` to see how this is used.
 abstract type AbstractSearchState{T,L,N<:AbstractExpression{T}} end
 
 """
-    SearchState{T,L,N,PM,WorkerOutputType,TraceStateType,PluginStatesType,WorkerPluginStatesType,WorkerCopyType} <: AbstractSearchState{T,L,N}
+    SearchState{T,L,N,PM,WorkerOutputType,TraceStateType,PluginStatesType,WorkerPluginStatesType,WorkerInputsType} <: AbstractSearchState{T,L,N}
 
 The state of the search, including the populations, worker outputs, tasks, and
 channels. This is used to manage the search and keep track of runtime variables
@@ -864,11 +860,11 @@ Base.@kwdef struct SearchState{
     TraceStateType<:MaybeTrace,
     PluginStatesType<:Tuple,
     WorkerPluginStatesType<:Tuple,
-    WorkerCopyType<:Union{Nothing,WorkerCopy},
+    WorkerInputsType<:Union{Nothing,WorkerCopy},
 } <: AbstractSearchState{T,L,N}
     procs::Vector{Int}
     we_created_procs::Bool
-    worker_copy::WorkerCopyType
+    worker_inputs::WorkerInputsType
     worker_output::Vector{Vector{WorkerOutputType}}
     tasks::Vector{Vector{Task}}
     channels::Vector{Vector{Channel}}

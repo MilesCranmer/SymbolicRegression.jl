@@ -818,7 +818,7 @@ end
     else
         Int[], false
     end
-    worker_copy = if ropt.parallelism == :multiprocessing
+    worker_inputs = if ropt.parallelism == :multiprocessing
         store_on_workers((datasets, options), procs)
     else
         nothing
@@ -858,11 +858,11 @@ end
         typeof(trace),
         PluginStatesType,
         WorkerPluginStatesType,
-        typeof(worker_copy),
+        typeof(worker_inputs),
     }(;
         procs=procs,
         we_created_procs=we_created_procs,
-        worker_copy=worker_copy,
+        worker_inputs=worker_inputs,
         worker_output=worker_output,
         tasks=tasks,
         channels=channels,
@@ -946,8 +946,7 @@ function _initialize_search!(
                         0.0,
                         _worker_plugin_states,
                     ),
-                    inputs = (datasets, options),
-                    worker_copy = state.worker_copy,
+                    inputs = something(state.worker_inputs, (datasets, options)),
                     parallelism = ropt.parallelism,
                     worker_idx = worker_idx,
                     result_type = worker_result_type(state)
@@ -971,8 +970,7 @@ function _initialize_search!(
                         Float64(options.population_size),
                         _worker_plugin_states,
                     ),
-                    inputs = (datasets, options),
-                    worker_copy = state.worker_copy,
+                    inputs = something(state.worker_inputs, (datasets, options)),
                     parallelism = ropt.parallelism,
                     worker_idx = worker_idx,
                     result_type = worker_result_type(state)
@@ -1053,8 +1051,7 @@ function _warmup_search!(
                     cur_maxsize,
                     plugin_states=worker_plugin_states,
                 ),
-                inputs = (datasets, options),
-                worker_copy = state.worker_copy,
+                inputs = something(state.worker_inputs, (datasets, options)),
                 parallelism = ropt.parallelism,
                 worker_idx = worker_idx,
                 result_type = worker_result_type(state)
@@ -1271,8 +1268,7 @@ function _main_search_loop!(
                                 cur_maxsize,
                                 plugin_states=worker_plugin_states,
                             ),
-                            inputs = (datasets, options),
-                            worker_copy = state.worker_copy,
+                            inputs = something(state.worker_inputs, (datasets, options)),
                             parallelism = ropt.parallelism,
                             worker_idx = worker_idx,
                             result_type = worker_result_type(state)
@@ -1395,7 +1391,7 @@ function _tear_down!(
     end
     if ropt.parallelism == :multiprocessing
         # TODO: We should unwrap the error monitors here
-        delete_on_workers(state.worker_copy)
+        delete_on_workers(state.worker_inputs)
         state.we_created_procs && rmprocs(state.procs)
     end
     drain_external_stop!(ropt)

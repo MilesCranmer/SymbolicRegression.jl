@@ -41,7 +41,7 @@
            AbstractSearchState{Float64,Float64,TeardownProbeExpression}
         procs::Vector{Int}
         we_created_procs::Bool
-        worker_copy::WorkerCopy{Nothing}
+        worker_inputs::WorkerCopy{Nothing}
         worker_output::Vector{Vector{Task}}
         plugin_states::Vector{Tuple{TeardownProbeState}}
         stdin_reader::TeardownProbeReader
