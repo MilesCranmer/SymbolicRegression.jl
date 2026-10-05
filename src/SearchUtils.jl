@@ -291,9 +291,7 @@ function assign_next_worker!(
     worker_assignment::WorkerAssignments; pop, out, parallelism, procs
 )::Int
     if parallelism == :multiprocessing
-        worker_idx = get(
-            () -> next_worker(worker_assignment, procs), worker_assignment, (out, pop)
-        )
+        worker_idx = next_worker(worker_assignment, procs)
         worker_assignment[(out, pop)] = worker_idx
         return worker_idx
     else
