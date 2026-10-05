@@ -3,7 +3,8 @@
     using DynamicExpressions: AbstractExpression, Node
     using SymbolicRegression
     using SymbolicRegression: AbstractPlugin
-    using SymbolicRegression.SearchUtilsModule: AbstractRuntimeOptions, AbstractSearchState
+    using SymbolicRegression.SearchUtilsModule:
+        AbstractRuntimeOptions, AbstractSearchState, WorkerCopy
     import SymbolicRegression.SearchUtilsModule: close_reader!
     using Test
 
@@ -40,6 +41,7 @@
            AbstractSearchState{Float64,Float64,TeardownProbeExpression}
         procs::Vector{Int}
         we_created_procs::Bool
+        worker_inputs::WorkerCopy{Nothing}
         worker_output::Vector{Vector{Task}}
         plugin_states::Vector{Tuple{TeardownProbeState}}
         stdin_reader::TeardownProbeReader
@@ -64,7 +66,12 @@
     try
         output = Threads.@spawn remotecall_fetch(sleep, proc, 60)
         search_state = TeardownProbeSearchState(
-            [proc], true, [[output]], [(plugin_state,)], TeardownProbeReader()
+            [proc],
+            true,
+            WorkerCopy{Nothing}(0),
+            [[output]],
+            [(plugin_state,)],
+            TeardownProbeReader(),
         )
 
         elapsed = @elapsed SymbolicRegression._tear_down!(

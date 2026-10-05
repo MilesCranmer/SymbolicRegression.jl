@@ -29,7 +29,8 @@
 
             # With no error
             $future = $SUM.@sr_spawner(
-                44,
+                (_, _) -> 44,
+                inputs = (nothing, nothing),
                 parallelism = :multiprocessing,
                 worker_idx = $procs[1],
                 result_type = Int
@@ -42,7 +43,8 @@
             # With an error - suppress stderr but verify error forwarding works
             $Suppressor.@suppress_err begin
                 $future = $SUM.@sr_spawner(
-                    throw(ArgumentError("test multiprocessing error")),
+                    (_, _) -> throw(ArgumentError("test multiprocessing error")),
+                    inputs = (nothing, nothing),
                     parallelism = :multiprocessing,
                     worker_idx = $procs[1],
                     result_type = Int
