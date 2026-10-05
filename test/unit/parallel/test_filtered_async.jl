@@ -3,7 +3,7 @@
     using SymbolicRegression.SearchUtilsModule: SearchUtilsModule as SUM
     using Test: Test
     using Suppressor: Suppressor
-    @gensym addprocs rmprocs procs t result future channel
+    @gensym addprocs rmprocs procs t result future channel copy
 
     # n.b., we have to run in main as workers get initialized there,
     # and complain about not being able to access their own closures.
@@ -28,8 +28,11 @@
             $Test.@test $result == 43
 
             # With no error
+            $copy = $SUM.store_on_workers((nothing, nothing), $procs)
             $future = $SUM.@sr_spawner(
-                44,
+                (_, _) -> 44,
+                inputs = (nothing, nothing),
+                worker_copy = $copy,
                 parallelism = :multiprocessing,
                 worker_idx = $procs[1],
                 result_type = Int
@@ -42,7 +45,9 @@
             # With an error - suppress stderr but verify error forwarding works
             $Suppressor.@suppress_err begin
                 $future = $SUM.@sr_spawner(
-                    throw(ArgumentError("test multiprocessing error")),
+                    (_, _) -> throw(ArgumentError("test multiprocessing error")),
+                    inputs = (nothing, nothing),
+                    worker_copy = $copy,
                     parallelism = :multiprocessing,
                     worker_idx = $procs[1],
                     result_type = Int

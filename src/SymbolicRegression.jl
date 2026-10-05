@@ -818,10 +818,10 @@ end
     else
         Int[], false
     end
-    datasets_and_options = if ropt.parallelism == :multiprocessing
+    worker_copy = if ropt.parallelism == :multiprocessing
         store_on_workers((datasets, options), procs)
     else
-        (datasets, options)
+        nothing
     end
     # Get the next worker process to give a job:
     worker_assignment = WorkerAssignments()
@@ -858,11 +858,11 @@ end
         typeof(trace),
         PluginStatesType,
         WorkerPluginStatesType,
-        typeof(datasets_and_options),
+        typeof(worker_copy),
     }(;
         procs=procs,
         we_created_procs=we_created_procs,
-        datasets_and_options=datasets_and_options,
+        worker_copy=worker_copy,
         worker_output=worker_output,
         tasks=tasks,
         channels=channels,
@@ -890,7 +890,6 @@ function _initialize_search!(
     guesses::Union{AbstractVector,AbstractVector{<:AbstractVector},Nothing},
 ) where {T,L,N}
     nout = length(datasets)
-    datasets_and_options = state.datasets_and_options
 
     init_hall_of_fame = load_saved_hall_of_fame(saved_state)
     if init_hall_of_fame === nothing
@@ -940,15 +939,15 @@ function _initialize_search!(
                 end
                 copy_pop = copy(_saved_pop)
                 @sr_spawner(
-                    let (datasets, options) = fetch(datasets_and_options)
-                        (
-                            copy_pop,
-                            HallOfFame(options, datasets[j]),
-                            new_trace(options),
-                            0.0,
-                            _worker_plugin_states,
-                        )
-                    end,
+                    (datasets, options) -> (
+                        copy_pop,
+                        HallOfFame(options, datasets[j]),
+                        new_trace(options),
+                        0.0,
+                        _worker_plugin_states,
+                    ),
+                    inputs = (datasets, options),
+                    worker_copy = state.worker_copy,
                     parallelism = ropt.parallelism,
                     worker_idx = worker_idx,
                     result_type = worker_result_type(state)
@@ -958,22 +957,22 @@ function _initialize_search!(
                     @warn "Recreating population (output=$(j), population=$(i)), as the saved one doesn't have the correct number of members."
                 end
                 @sr_spawner(
-                    let (datasets, options) = fetch(datasets_and_options)
-                        (
-                            Population(
-                                datasets[j];
-                                population_size=options.population_size,
-                                nlength=3,
-                                options=options,
-                                nfeatures=max_features(datasets[j], options),
-                                plugin_states=_plugin_states,
-                            ),
-                            HallOfFame(options, datasets[j]),
-                            new_trace(options),
-                            Float64(options.population_size),
-                            _worker_plugin_states,
-                        )
-                    end,
+                    (datasets, options) -> (
+                        Population(
+                            datasets[j];
+                            population_size=options.population_size,
+                            nlength=3,
+                            options=options,
+                            nfeatures=max_features(datasets[j], options),
+                            plugin_states=_plugin_states,
+                        ),
+                        HallOfFame(options, datasets[j]),
+                        new_trace(options),
+                        Float64(options.population_size),
+                        _worker_plugin_states,
+                    ),
+                    inputs = (datasets, options),
+                    worker_copy = state.worker_copy,
                     parallelism = ropt.parallelism,
                     worker_idx = worker_idx,
                     result_type = worker_result_type(state)
@@ -1019,7 +1018,6 @@ function _warmup_search!(
     if ropt.niterations == 0
         return _preserve_loaded_state!(state, ropt, options)
     end
-    datasets_and_options = state.datasets_and_options
 
     nout = length(datasets)
     for j in 1:nout, i in 1:(options.populations)
@@ -1044,19 +1042,19 @@ function _warmup_search!(
 
         updated_pop = let verbosity = ropt.verbosity
             @sr_spawner(
-                let (datasets, options) = fetch(datasets_and_options)
-                    _dispatch_s_r_cycle(
-                        in_pop,
-                        datasets[j],
-                        options;
-                        pop=i,
-                        out=j,
-                        iteration=0,
-                        verbosity,
-                        cur_maxsize,
-                        plugin_states=worker_plugin_states,
-                    )
-                end,
+                (datasets, options) -> _dispatch_s_r_cycle(
+                    in_pop,
+                    datasets[j],
+                    options;
+                    pop=i,
+                    out=j,
+                    iteration=0,
+                    verbosity,
+                    cur_maxsize,
+                    plugin_states=worker_plugin_states,
+                ),
+                inputs = (datasets, options),
+                worker_copy = state.worker_copy,
                 parallelism = ropt.parallelism,
                 worker_idx = worker_idx,
                 result_type = worker_result_type(state)
@@ -1259,23 +1257,22 @@ function _main_search_loop!(
                         iteration = iteration,
                         verbosity = ropt.verbosity,
                         cur_maxsize = cur_maxsize,
-                        worker_idx = worker_idx,
-                        datasets_and_options = state.datasets_and_options
+                        worker_idx = worker_idx
 
                         @sr_spawner(
-                            let (datasets, options) = fetch(datasets_and_options)
-                                _dispatch_s_r_cycle(
-                                    in_pop,
-                                    datasets[j],
-                                    options;
-                                    pop=i,
-                                    out=j,
-                                    iteration,
-                                    verbosity,
-                                    cur_maxsize,
-                                    plugin_states=worker_plugin_states,
-                                )
-                            end,
+                            (datasets, options) -> _dispatch_s_r_cycle(
+                                in_pop,
+                                datasets[j],
+                                options;
+                                pop=i,
+                                out=j,
+                                iteration,
+                                verbosity,
+                                cur_maxsize,
+                                plugin_states=worker_plugin_states,
+                            ),
+                            inputs = (datasets, options),
+                            worker_copy = state.worker_copy,
                             parallelism = ropt.parallelism,
                             worker_idx = worker_idx,
                             result_type = worker_result_type(state)
@@ -1398,7 +1395,7 @@ function _tear_down!(
     end
     if ropt.parallelism == :multiprocessing
         # TODO: We should unwrap the error monitors here
-        delete_on_workers(state.datasets_and_options)
+        delete_on_workers(state.worker_copy)
         state.we_created_procs && rmprocs(state.procs)
     end
     drain_external_stop!(ropt)
