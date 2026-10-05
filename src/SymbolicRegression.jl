@@ -1076,10 +1076,7 @@ function _main_search_loop!(
     nout = length(datasets)
     candidates_per_pop = min(options.topn, options.population_size)
     migration_candidates = [
-        [
-            pop.members[mod1(k, length(pop.members))] for pop in state.best_sub_pops[j] for
-            k in 1:candidates_per_pop
-        ] for j in 1:nout
+        [member for pop in state.best_sub_pops[j] for member in pop.members] for j in 1:nout
     ]
     frontier_saves =
         options.save_to_file ? map(FrontierSaveState, state.halls_of_fame) : nothing
@@ -1163,14 +1160,22 @@ function _main_search_loop!(
                 }
             state.last_pops[j][i] = copy(cur_pop)
             state.best_sub_pops[j][i] = best_sub_pop(cur_pop; topn=options.topn)
-            @assert length(state.best_sub_pops[j][i].members) == candidates_per_pop "Migration requires $candidates_per_pop members per population"
-            copyto!(
-                migration_candidates[j],
-                (i - 1) * candidates_per_pop + 1,
-                state.best_sub_pops[j][i].members,
-                1,
-                candidates_per_pop,
-            )
+            best_members = state.best_sub_pops[j][i].members
+            if length(migration_candidates[j]) == options.populations * candidates_per_pop
+                @assert length(best_members) == candidates_per_pop "Migration requires $candidates_per_pop members per population"
+                copyto!(
+                    migration_candidates[j],
+                    (i - 1) * candidates_per_pop + 1,
+                    best_members,
+                    1,
+                    candidates_per_pop,
+                )
+            else
+                # Populations that have not returned yet hold a one-member placeholder.
+                migration_candidates[j] = [
+                    member for pop in state.best_sub_pops[j] for member in pop.members
+                ]
+            end
             write_trace(cur_trace, options.tracing_file)
             state.num_evals[j][i] += cur_num_evals
             dataset = datasets[j]
