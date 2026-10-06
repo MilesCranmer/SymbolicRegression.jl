@@ -22,8 +22,7 @@
             prediction, complete = eval_tree_array(ex, dataset.X, options)
             return complete ? sum(abs2, prediction .- dataset.y) / dataset.n : Inf32
         end
-        # Arms the failure on one worker from the head once the main loop has started, so the
-        # failure lands in a main-loop dispatch however the cycles are shared out.
+        # Arms the failure on one worker from the head once the main loop has started.
         struct FailWorkerPlugin <: SymbolicRegression.AbstractPlugin
             worker::Int
             failure::Symbol
@@ -38,10 +37,18 @@
             end
             return nothing
         end
+        # Stops the search once `worker` has exited.
+        struct WorkerExited <: Function
+            worker::Int
+        end
+        (stop::WorkerExited)(_, _) = stop.worker ∉ workers()
     end
     # Workers are initialized in `Core.Main`, so the definitions live there on every process.
     Core.eval(Core.Main, defs)
-    eval(:(using Main: DispatchChannelPlugin, FailWorkerPlugin, dispatch_failure_loss))
+    eval(
+        :(using Main:
+            DispatchChannelPlugin, FailWorkerPlugin, WorkerExited, dispatch_failure_loss),
+    )
 
     X = randn(Float32, 2, 32)
     y = vec(X[1, :] .+ X[2, :])
@@ -100,11 +107,15 @@
         @test !isempty(calculate_pareto_frontier(hof))
     end
 
+    # The failing worker hosts one population, which only runs again after it returns, and
+    # the other population can use up a fixed cycle budget before then. So these searches
+    # run until the failure happens.
+
     # An error thrown on a worker during the main loop reaches the caller.
     with_workers() do pids
-        options = failure_options(pids, :error)
+        options = failure_options(pids, :error; timeout_in_seconds=90.0)
         err = try
-            search(pids, options; niterations=1000)
+            search(pids, options; niterations=10^9)
             nothing
         catch e
             e
@@ -115,9 +126,14 @@
 
     # A worker that exits mid-search does not stop the search on the remaining worker.
     with_workers() do pids
-        options = failure_options(pids, :exit; timeout_in_seconds=90.0)
+        options = failure_options(
+            pids,
+            :exit;
+            early_stop_condition=WorkerExited(first(pids)),
+            timeout_in_seconds=90.0,
+        )
         started = time()
-        hof = search(pids, options; niterations=100)
+        hof = search(pids, options; niterations=10^9)
         @test first(pids) ∉ workers()
         @test last(pids) ∈ workers()
         @test time() - started < 110.0
