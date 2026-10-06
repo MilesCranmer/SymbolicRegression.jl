@@ -3,7 +3,7 @@ module PluginModule
 using DispatchDoctor: @unstable
 using ..MutationsModule: AbstractMutation, ConstantMutation, ConstantMutationContext
 using ..CrossoversModule: AbstractCrossover
-using ..UtilsModule: strictmap
+using ...UtilsModule: strictmap
 
 # ────────────────────────────────────────────────────────────────────────────
 # Hook naming taxonomy

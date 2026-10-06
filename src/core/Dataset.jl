@@ -3,7 +3,7 @@ module DatasetModule
 using Random: AbstractRNG, default_rng
 using DynamicQuantities: Quantity
 
-using ..UtilsModule: subscriptify, get_base_type
+using ...UtilsModule: subscriptify, get_base_type
 using ..ProgramConstantsModule: DATA_TYPE, LOSS_TYPE
 using ...InterfaceDynamicQuantitiesModule: get_si_units, get_sym_units
 

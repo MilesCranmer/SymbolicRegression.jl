@@ -151,7 +151,7 @@
             tree,
             cost,
             loss,
-            SymbolicRegression.CoreModule.UtilsModule.get_birth_order(;
+            SymbolicRegression.get_birth_order(;
                 deterministic=options.deterministic
             ),
             actual_complexity,

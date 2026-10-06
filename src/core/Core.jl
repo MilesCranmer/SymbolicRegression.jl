@@ -2,7 +2,6 @@ module CoreModule
 
 function create_expression end
 
-include("Utils.jl")
 include("ProgramConstants.jl")
 include("Dataset.jl")
 include("Mutations.jl")

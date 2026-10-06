@@ -238,7 +238,7 @@ using DispatchDoctor: @stable, @unstable
 @stable default_mode = "disable" begin
     include("Utils.jl")
     include("InterfaceDynamicQuantities.jl")
-    include("Core.jl")
+    include("core/Core.jl")
     include("InterfaceDynamicExpressions.jl")
     include("Complexity.jl")
     include("DimensionalAnalysis.jl")
@@ -372,7 +372,7 @@ using .CoreModule:
     plugin_mutations,
     plugin_crossovers,
     ConstantMutationContext
-using .UtilsModule: is_anonymous_function, strictmap, @ignore
+using .UtilsModule: is_anonymous_function, strictmap, @ignore, get_birth_order
 using .ComplexityModule: compute_complexity
 using .CheckConstraintsModule: check_constraints
 using .MutationFunctionsModule:
@@ -390,7 +390,6 @@ using .ConstantOptimizationModule:
     extract_optimizable_gradient
 using .PopMemberModule:
     AbstractPopMember, PopMember, reset_birth!, popmember_type, expression_type
-using .CoreModule.UtilsModule: get_birth_order
 using .PopulationModule: Population, best_sub_pop, best_of_sample
 using .HallOfFameModule:
     HallOfFame,
