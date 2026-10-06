@@ -26,7 +26,7 @@ end
 @testitem "pretty print hall of fame" begin
     using SymbolicRegression
     using SymbolicRegression: embed_metadata
-    using SymbolicRegression.CoreModule: safe_pow
+    using SymbolicRegression.ConfigModule.OperatorsModule: safe_pow
 
     options = Options(; binary_operators=[+, safe_pow], maxsize=7)
 
@@ -108,7 +108,7 @@ end
 
 @testitem "printing utilities" begin
     using SymbolicRegression.UtilsModule: split_string
-    using SymbolicRegression.HallOfFameModule: wrap_equation_string
+    using SymbolicRegression.EvolutionModule.HallOfFameModule: wrap_equation_string
 
     @test split_string("abc\ndefg", 3) == ["abc", "\nde", "fg"]
 

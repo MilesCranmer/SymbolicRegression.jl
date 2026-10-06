@@ -1,6 +1,6 @@
 module SymbolicRegressionEnzymeExt
 
-using SymbolicRegression.LossFunctionsModule: eval_loss
+using SymbolicRegression.EvaluationModule.LossFunctionsModule: eval_loss
 using DynamicExpressions:
     AbstractExpression,
     AbstractExpressionNode,
@@ -12,7 +12,8 @@ using DynamicExpressions:
 using ADTypes: AutoEnzyme
 using Enzyme: autodiff, Reverse, Active, Const, Duplicated, make_zero, remake_zero!
 
-import SymbolicRegression.ConstantOptimizationModule: Evaluator, GradEvaluator
+import SymbolicRegression.EvolutionModule.ConstantOptimizationModule:
+    Evaluator, GradEvaluator
 
 # We prepare a copy of the tree and all arrays
 function GradEvaluator(f::F, backend::AE) where {F<:Evaluator,AE<:AutoEnzyme}

@@ -25,25 +25,23 @@ using DynamicQuantities:
     ustrip,
     dimension
 using LossFunctions: SupervisedLoss
-using ..InterfaceDynamicQuantitiesModule: get_dimensions_type
-using ..CoreModule:
-    AbstractOptions,
-    Options,
-    Dataset,
-    MutationWeights,
-    LOSS_TYPE,
-    ComplexityMapping,
-    AbstractExpressionSpec,
-    check_warm_start_compatibility
-using ..CoreModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
-using ..PopMemberModule: default_popmember_type
-using ..ComplexityModule: compute_complexity
-using ..HallOfFameModule: HallOfFame, format_hall_of_fame
+using ..InterfacesModule.InterfaceDynamicQuantitiesModule: get_dimensions_type
+using ..InterfacesModule.OptionsInterfaceModule: AbstractOptions
+using ..ConfigModule.OptionsStructModule:
+    Options, ComplexityMapping, check_warm_start_compatibility
+using ..InterfacesModule.DatasetModule: Dataset
+using ..ConfigModule.MutationWeightsModule: MutationWeights
+using ..InterfacesModule.ProgramConstantsModule: LOSS_TYPE
+using ..InterfacesModule.ExpressionSpecModule: AbstractExpressionSpec
+using ..ConfigModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
+using ..EvolutionModule.PopMemberModule: default_popmember_type
+using ..EvaluationModule.ComplexityModule: compute_complexity
+using ..EvolutionModule.HallOfFameModule: HallOfFame, format_hall_of_fame
 using ..UtilsModule: subscriptify, @ignore
-using ..LoggingModule: AbstractSRLogger
-using ..TemplateExpressionModule: TemplateExpression
+using ..SearchModule.LoggingModule: AbstractSRLogger
+using ..ExpressionsModule.TemplateExpressionModule: TemplateExpression
 
-import ..equation_search
+import ..SearchModule: equation_search
 
 abstract type AbstractSymbolicRegressor <: MMI.Deterministic end
 
@@ -699,9 +697,9 @@ end
 function get_equation_strings_for(
     ::AbstractSingletargetSRRegressor, trees, options, variable_names
 )
-    return (t -> string_tree(t, options; variable_names=variable_names, pretty=false)).(
-        trees
-    )
+    return (
+        t -> string_tree(t, options; variable_names=variable_names, pretty=false)
+    ).(trees)
 end
 function get_equation_strings_for(
     ::AbstractMultitargetSRRegressor, trees, options, variable_names

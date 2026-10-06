@@ -1,9 +1,9 @@
 @testitem "Deprecated best_of_sample signature forwards to current method" begin
     using SymbolicRegression
     using SymbolicRegression: Dataset
-    using SymbolicRegression.AdaptiveParsimonyModule:
+    using SymbolicRegression.PluginsModule.AdaptiveParsimonyModule:
         AdaptiveParsimonyState, RunningSearchStatistics
-    using SymbolicRegression.PopulationModule: best_of_sample
+    using SymbolicRegression.EvolutionModule.PopulationModule: best_of_sample
     using Random
     using Test
 

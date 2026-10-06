@@ -1,6 +1,7 @@
 @testitem "ExternalStop drains and filters trigger bytes" begin
     using SymbolicRegression
-    using SymbolicRegression.SearchUtilsModule: check_stop_fd, check_external_stop
+    using SymbolicRegression.SearchModule.SearchUtilsModule:
+        check_stop_fd, check_external_stop
 
     @test @inferred(check_external_stop(nothing)) === false
 
@@ -85,9 +86,9 @@ end
 @testitem "Teardown drains notifications queued for a finished search" begin
     using DynamicExpressions: AbstractExpression, Node
     using SymbolicRegression
-    using SymbolicRegression.SearchUtilsModule:
+    using SymbolicRegression.SearchModule.SearchUtilsModule:
         AbstractRuntimeOptions, AbstractSearchState, check_stop_fd, drain_external_stop!
-    import SymbolicRegression.SearchUtilsModule: close_reader!, external_stop
+    import SymbolicRegression.SearchModule.SearchUtilsModule: close_reader!, external_stop
 
     @test drain_external_stop!(nothing) === nothing
 
@@ -140,7 +141,7 @@ end
 end
 
 @testitem "Custom AbstractRuntimeOptions default to no external stop" begin
-    using SymbolicRegression.SearchUtilsModule:
+    using SymbolicRegression.SearchModule.SearchUtilsModule:
         AbstractRuntimeOptions, check_external_stop, external_stop, latch_external_stop!
 
     struct NoStopRuntimeOptions <: AbstractRuntimeOptions end

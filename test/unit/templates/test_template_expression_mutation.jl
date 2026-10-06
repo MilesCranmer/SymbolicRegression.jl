@@ -1,7 +1,7 @@
 @testitem "template expression parameter mutation" begin
     using SymbolicRegression
     using SymbolicRegression: condition_mutation_weights!
-    using SymbolicRegression.MutationFunctionsModule: mutate_constant
+    using SymbolicRegression.EvolutionModule.MutationFunctionsModule: mutate_constant
     using Random: MersenneTwister
     using DynamicExpressions: get_metadata
 
@@ -111,7 +111,7 @@ end
     using DynamicExpressions: get_child, get_contents
     using Random: MersenneTwister
     using SymbolicRegression
-    using SymbolicRegression.MutationFunctionsModule:
+    using SymbolicRegression.EvolutionModule.MutationFunctionsModule:
         crossover_trees, get_contents_for_mutation
 
     options = Options(; binary_operators=(+, *), node_type=GraphNode)
@@ -181,8 +181,8 @@ end
     using DynamicExpressions: get_contents, get_metadata
     using Random: MersenneTwister
     using SymbolicRegression
-    using SymbolicRegression.CrossoverModule: crossover_generation
-    using SymbolicRegression.MutationFunctionsModule: crossover_trees
+    using SymbolicRegression.EvolutionModule.CrossoverModule: crossover_generation
+    using SymbolicRegression.EvolutionModule.MutationFunctionsModule: crossover_trees
 
     structure = TemplateStructure{(:f, :g),(:p,)}(
         ((; f, g), (; p), (x,)) -> f(x) + g(x) * p[1]; num_parameters=(; p=2)

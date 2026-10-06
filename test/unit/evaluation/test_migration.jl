@@ -7,10 +7,10 @@
 
     seed!(0)
 
-    X = randn(5, 100);
-    y = X[2, :] .* 3.2 .+ X[3, :] .+ 2.0;
+    X = randn(5, 100)
+    y = X[2, :] .* 3.2 .+ X[3, :] .+ 2.0
 
-    options = Options();
+    options = Options()
     dataset = Dataset(X, y)
     plugin_states = SymbolicRegression.init_plugin_states(options, dataset)
     population1 = Population(
@@ -26,7 +26,7 @@
     )
     ex = strip_metadata(ex, options, dataset)
 
-    SymbolicRegression.MigrationModule.migrate!(
+    SymbolicRegression.EvolutionModule.MigrationModule.migrate!(
         [PopMember(ex, 0.0, Inf, options; deterministic=false)] => population1,
         options;
         frac=0.5,
@@ -42,11 +42,11 @@
     ]
     destinations = [copy(population1) for _ in 1:2]
     seed!(1)
-    SymbolicRegression.MigrationModule.migrate!(
+    SymbolicRegression.EvolutionModule.MigrationModule.migrate!(
         sources => destinations[1], options; frac=0.5
     )
     seed!(1)
-    SymbolicRegression.MigrationModule.migrate!(
+    SymbolicRegression.EvolutionModule.MigrationModule.migrate!(
         [m for pop in sources for m in pop.members] => destinations[2], options; frac=0.5
     )
     trees(pop) = [get_tree(m.tree) for m in pop.members]

@@ -162,7 +162,7 @@ end
 
 @testitem "parameters get mutated" tags = [:part3] begin
     using SymbolicRegression
-    using SymbolicRegression.MutationFunctionsModule: mutate_constant
+    using SymbolicRegression.EvolutionModule.MutationFunctionsModule: mutate_constant
     using Random: MersenneTwister
 
     struct_mut = TemplateStructure{(:f,),(:p,)}(
@@ -289,7 +289,7 @@ end
 
 @testitem "multi-parameter expressions" tags = [:part2] begin
     using SymbolicRegression
-    using SymbolicRegression.MutationFunctionsModule: mutate_constant
+    using SymbolicRegression.EvolutionModule.MutationFunctionsModule: mutate_constant
     using DynamicExpressions:
         allocate_container, copy_into!, get_metadata, get_scalar_constants
     using Random: MersenneTwister

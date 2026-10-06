@@ -139,10 +139,10 @@ Then, for SymbolicRegression.jl, you would
 pass `expression_type` to the `Options` constructor, as well as any
 `expression_options` you need (as a `NamedTuple`).
 
-If needed, you may need to overload `SymbolicRegression.ExpressionBuilder.extra_init_params` in
-case your expression needs additional parameters. See `src/TemplateExpression.jl` for an example.
+If needed, you may need to overload `SymbolicRegression.ExpressionsModule.ExpressionBuilderModule.extra_init_params` in
+case your expression needs additional parameters. See `src/expressions/TemplateExpression.jl` for an example.
 
-You can also look at `src/TemplateExpression.jl` for a custom expression type used by
+You can also look at `src/expressions/TemplateExpression.jl` for a custom expression type used by
 SymbolicRegression.jl.
 
 ## Plugins

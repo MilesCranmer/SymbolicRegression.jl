@@ -8,7 +8,9 @@
     @testset "Basic feature mutation" begin
         # Single feature node
         tree = Node(Float64; feature=1)
-        mutated = SymbolicRegression.MutationFunctionsModule.mutate_feature(tree, 3, rng)
+        mutated = SymbolicRegression.EvolutionModule.MutationFunctionsModule.mutate_feature(
+            tree, 3, rng
+        )
         @test mutated.feature != 1  # Should change
         @test 1 <= mutated.feature <= 3  # In valid range
     end
@@ -16,13 +18,17 @@
     @testset "Edge cases" begin
         # Single feature - should not change when nfeatures=1
         tree = Node(Float64; feature=1)
-        mutated = SymbolicRegression.MutationFunctionsModule.mutate_feature(tree, 1, rng)
+        mutated = SymbolicRegression.EvolutionModule.MutationFunctionsModule.mutate_feature(
+            tree, 1, rng
+        )
         @test mutated.feature == 1
 
         # Constant node - should be unchanged
         tree = Node(Float64; val=1.0)
         original_val = tree.val
-        mutated = SymbolicRegression.MutationFunctionsModule.mutate_feature(tree, 3, rng)
+        mutated = SymbolicRegression.EvolutionModule.MutationFunctionsModule.mutate_feature(
+            tree, 3, rng
+        )
         @test mutated.val == original_val  # Should be unchanged
     end
 
@@ -35,7 +41,8 @@
 
     @testset "get_nfeatures_for_mutation API" begin
         using DynamicExpressions: Expression
-        using SymbolicRegression.MutationFunctionsModule: get_nfeatures_for_mutation
+        using SymbolicRegression.EvolutionModule.MutationFunctionsModule:
+            get_nfeatures_for_mutation
 
         # Test default implementation
         operators = OperatorEnum(; binary_operators=[+, *], unary_operators=[cos])
@@ -70,7 +77,8 @@
             (; f=f_expr, g=g_expr); structure=struct_different_features, operators=operators
         )
 
-        using SymbolicRegression.MutationFunctionsModule: get_nfeatures_for_mutation
+        using SymbolicRegression.EvolutionModule.MutationFunctionsModule:
+            get_nfeatures_for_mutation
 
         # Test that each subexpression gets its specific feature count
         @test get_nfeatures_for_mutation(template_ex, :f, 4) == 2

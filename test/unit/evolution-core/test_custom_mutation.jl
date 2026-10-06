@@ -1,7 +1,7 @@
 @testitem "Custom mutation dispatch" begin
     using SymbolicRegression
     using SymbolicRegression: Dataset, MutationResult, TraceType, mutate!, sample_mutation
-    using SymbolicRegression.MutateModule: _sample_mutation, next_generation
+    using SymbolicRegression.EvolutionModule.MutateModule: _sample_mutation, next_generation
     using Random: seed!
 
     struct CustomMutation <: AbstractMutation

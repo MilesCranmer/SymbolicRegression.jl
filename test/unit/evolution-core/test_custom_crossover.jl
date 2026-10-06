@@ -1,7 +1,7 @@
 @testitem "Custom crossover dispatch" begin
     using SymbolicRegression
     using SymbolicRegression: Dataset, CrossoverResult, crossover
-    using SymbolicRegression.CrossoverModule: crossover_generation
+    using SymbolicRegression.EvolutionModule.CrossoverModule: crossover_generation
     using Random: seed!
 
     struct CountingCrossover <: AbstractCrossover
@@ -41,7 +41,7 @@ end
 @testitem "Crossover retries and giving up" begin
     using SymbolicRegression
     using SymbolicRegression: Dataset, CrossoverResult, with_contents
-    using SymbolicRegression.CrossoverModule: crossover_generation
+    using SymbolicRegression.EvolutionModule.CrossoverModule: crossover_generation
 
     # A child exceeding curmaxsize always fails the constraint check:
     function oversized_child(member, options, curmaxsize)
@@ -120,7 +120,7 @@ end
 @testitem "Crossover weighted sampling and Options merge" begin
     using SymbolicRegression
     using SymbolicRegression: Dataset, CrossoverResult
-    using SymbolicRegression.CrossoverModule: crossover_generation
+    using SymbolicRegression.EvolutionModule.CrossoverModule: crossover_generation
 
     struct TracingCrossover <: AbstractCrossover
         calls::Base.RefValue{Int}
@@ -171,7 +171,7 @@ end
 @testitem "Default crossover matches crossover_trees" begin
     using SymbolicRegression
     using SymbolicRegression: Dataset, crossover_trees
-    using SymbolicRegression.CrossoverModule: crossover_generation
+    using SymbolicRegression.EvolutionModule.CrossoverModule: crossover_generation
     using Random: seed!
 
     options = Options(; binary_operators=(+, *), unary_operators=(cos,))

@@ -1,7 +1,7 @@
 @testitem "trace_optimization! seeds missing old ref" begin
     using SymbolicRegression
     using SymbolicRegression: Options, TraceType, PopMember, Expression
-    using SymbolicRegression.TracingModule: trace_optimization!
+    using SymbolicRegression.EvolutionModule.TracingModule: trace_optimization!
     using Test
 
     options = Options(; binary_operators=(+, *), default_plugins=(), use_tracing=true)
@@ -32,7 +32,7 @@ end
 @testitem "trace_optimization! tolerates a reference held by several slots" begin
     using SymbolicRegression
     using SymbolicRegression: Options, TraceType, PopMember, Expression
-    using SymbolicRegression.TracingModule: trace_optimization!
+    using SymbolicRegression.EvolutionModule.TracingModule: trace_optimization!
     using Test
 
     options = Options(; binary_operators=(+, *), default_plugins=(), use_tracing=true)
@@ -74,7 +74,7 @@ end
 
 @testitem "Tracing requires JSON.jl" begin
     using SymbolicRegression: TraceType
-    using SymbolicRegression.TracingModule: write_trace
+    using SymbolicRegression.EvolutionModule.TracingModule: write_trace
     using Test
 
     err = try
@@ -89,7 +89,7 @@ end
 
 @testitem "Disabled tracing is allocation-free" begin
     using SymbolicRegression: Options, TraceType
-    using SymbolicRegression.TracingModule:
+    using SymbolicRegression.EvolutionModule.TracingModule:
         initialize_trace!,
         new_step_trace,
         new_trace,

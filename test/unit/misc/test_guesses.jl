@@ -555,7 +555,7 @@ end
 
 @testitem "Hall of fame CSV escapes equation quotes" begin
     using SymbolicRegression
-    using SymbolicRegression.SearchUtilsModule: RuntimeOptions, save_to_file
+    using SymbolicRegression.SearchModule.SearchUtilsModule: RuntimeOptions, save_to_file
     using Test
 
     X = reshape([1.0, 2.0], 1, :)
@@ -592,7 +592,9 @@ end
 
     SymbolicRegression.init_value(::Type{Vec2}) = Vec2(0.0, 0.0)
     SymbolicRegression.parse_scope(::Type{Vec2}) = @__MODULE__
-    SymbolicRegression.ConstantOptimizationModule.can_optimize(::Type{Vec2}, _) = false
+    SymbolicRegression.EvolutionModule.ConstantOptimizationModule.can_optimize(
+        ::Type{Vec2}, _
+    ) = false
 
     X = fill(Vec2(0.0, 0.0), 1, 2)
     y = fill(Vec2(3.0, 4.0), 2)

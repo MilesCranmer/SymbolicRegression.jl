@@ -134,7 +134,7 @@ end
         @test_nowarn SymbolicRegression.assert_operators_well_defined(T, options)
     end
 
-    using SymbolicRegression.CoreModule.OptionsModule: inverse_opmap
+    using SymbolicRegression.ConfigModule.OptionsModule: inverse_opmap
 
     # Test inverse mapping for comparison operators
     @test inverse_opmap(greater) == (>)

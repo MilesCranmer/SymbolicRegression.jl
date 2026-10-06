@@ -1,8 +1,8 @@
 @testitem "SimplifyMutation updates cost with complexity" begin
     using SymbolicRegression
     using SymbolicRegression: Dataset, TraceType, MutationWeights
-    using SymbolicRegression.LossFunctionsModule: loss_to_cost
-    using SymbolicRegression.MutateModule: mutate!
+    using SymbolicRegression.EvaluationModule.LossFunctionsModule: loss_to_cost
+    using SymbolicRegression.EvolutionModule.MutateModule: mutate!
     using Random: MersenneTwister
 
     options = Options(;

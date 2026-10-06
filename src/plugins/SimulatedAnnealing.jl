@@ -1,18 +1,12 @@
 module SimulatedAnnealingModule
 
 using DispatchDoctor: @stable, @unstable
-using ..CoreModule:
-    AbstractPlugin,
-    AbstractOptions,
-    ConstantMutation,
-    ConstantMutationContext,
-    MutationAcceptanceContext
-import ..CoreModule:
-    init_plugin_state,
-    on_cycle_start!,
-    condition_mutation!,
-    mutation_acceptance_multiplier,
-    default_simulated_annealing_plugin
+using ...InterfacesModule.PluginModule: AbstractPlugin, MutationAcceptanceContext
+using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
+using ...InterfacesModule.MutationsModule: ConstantMutation, ConstantMutationContext
+import ...InterfacesModule.PluginModule:
+    init_plugin_state, on_cycle_start!, condition_mutation!, mutation_acceptance_multiplier
+import ...ConfigModule.PluginDefaultsModule: default_simulated_annealing_plugin
 
 """
     SimulatedAnnealingPlugin(; alpha=0.1)
@@ -58,7 +52,7 @@ mutable struct SimulatedAnnealingState
 end
 
 function init_plugin_state(::SimulatedAnnealingPlugin, options, dataset)
-    SimulatedAnnealingState(1.0)
+    return SimulatedAnnealingState(1.0)
 end
 
 function on_cycle_start!(

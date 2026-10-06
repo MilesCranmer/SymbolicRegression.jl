@@ -1,6 +1,6 @@
 @testitem "STLSQ algorithm basic functionality" tags = [:part1] begin
     using SymbolicRegression
-    using SymbolicRegression.BacksolveModule: stlsq
+    using SymbolicRegression.EvolutionModule.BacksolveModule: stlsq
     using LinearAlgebra: norm
 
     theta = Float64[
@@ -63,7 +63,7 @@ end
 
 @testitem "Tree combination with weighted sum" tags = [:part1] begin
     using SymbolicRegression
-    using SymbolicRegression.BacksolveModule: combine_trees_weighted_sum
+    using SymbolicRegression.EvolutionModule.BacksolveModule: combine_trees_weighted_sum
     using DynamicExpressions: Node, eval_tree_array
 
     options = Options(; binary_operators=(+, *), unary_operators=(sin,))
@@ -127,7 +127,7 @@ end
 
 @testitem "Fit sparse expression full pipeline" tags = [:part1] begin
     using SymbolicRegression
-    using SymbolicRegression.BacksolveModule: fit_sparse_expression
+    using SymbolicRegression.EvolutionModule.BacksolveModule: fit_sparse_expression
     using DynamicExpressions: Node, eval_tree_array
 
     mutable struct ValidationFlipMatrix <: AbstractMatrix{Float64}
@@ -157,9 +157,14 @@ end
 
     tree_prototype = Node(Float64; val=1.0)
     nfeatures = 2
-    fit(target_values=y, fit_dataset=dataset, fit_nfeatures=nfeatures; kws...) = fit_sparse_expression(
-        tree_prototype, target_values, fit_dataset, make_options(; kws...), fit_nfeatures
-    )
+    fit(target_values=y, fit_dataset=dataset, fit_nfeatures=nfeatures; kws...) =
+        fit_sparse_expression(
+            tree_prototype,
+            target_values,
+            fit_dataset,
+            make_options(; kws...),
+            fit_nfeatures,
+        )
     function fit_mse(tree, target_values=y, fit_X=X)
         predicted, _ = eval_tree_array(tree, fit_X, options.operators)
         return sum(abs2, predicted .- target_values) / length(target_values)
@@ -179,7 +184,8 @@ end
 
 @testitem "build_basis_library" tags = [:part1] begin
     using SymbolicRegression
-    using SymbolicRegression.BacksolveModule: BasisLibrary, build_basis_library
+    using SymbolicRegression.EvolutionModule.BacksolveModule:
+        BasisLibrary, build_basis_library
     using DynamicExpressions: Node, eval_tree_array, string_tree
 
     options = Options(; binary_operators=(+, *, -), unary_operators=(sin, cos))
@@ -272,7 +278,7 @@ end
 
 @testitem "fit_sparse_expression with population_for_backsolve" tags = [:part1] begin
     using SymbolicRegression
-    using SymbolicRegression.BacksolveModule: fit_sparse_expression
+    using SymbolicRegression.EvolutionModule.BacksolveModule: fit_sparse_expression
     using DynamicExpressions: Node, eval_tree_array
 
     options = Options(;
@@ -312,7 +318,8 @@ end
 
 @testitem "Integration test: backsolve rewrite with sparse fit" tags = [:part2] begin
     using SymbolicRegression
-    using SymbolicRegression.MutationFunctionsModule: backsolve_rewrite_random_node
+    using SymbolicRegression.EvolutionModule.MutationFunctionsModule:
+        backsolve_rewrite_random_node
     using DynamicExpressions: Node, eval_tree_array
     using Random: MersenneTwister
 
@@ -355,7 +362,7 @@ end
 
 @testitem "Edge cases and error handling" tags = [:part1] begin
     using SymbolicRegression
-    using SymbolicRegression.BacksolveModule: stlsq, fit_sparse_expression
+    using SymbolicRegression.EvolutionModule.BacksolveModule: stlsq, fit_sparse_expression
     using DynamicExpressions: Node
 
     options_empty = Options(;
@@ -419,7 +426,7 @@ end
     @test success_complex
     @test maximum(abs.(theta_complex * coefficients_complex - y_complex)) < 1e-12
 
-    X_complex = ComplexF64[1.0+1.0im 2.0-1.0im 3.0+2.0im 4.0-3.0im]
+    X_complex = ComplexF64[1.0 + 1.0im 2.0 - 1.0im 3.0 + 2.0im 4.0 - 3.0im]
     y_fit_complex = (2.0 + 1.0im) .* X_complex[1, :]
     dataset_complex = Dataset(X_complex, y_fit_complex)
     tree_prototype_complex = Node(ComplexF64; feature=1)

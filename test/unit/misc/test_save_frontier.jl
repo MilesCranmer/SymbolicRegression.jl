@@ -1,6 +1,6 @@
 @testitem "Save frontier only when its members or values change" begin
     using SymbolicRegression
-    using SymbolicRegression.SearchUtilsModule:
+    using SymbolicRegression.SearchModule.SearchUtilsModule:
         FrontierSaveState, RuntimeOptions, save_frontier_if_changed!
     using Test
 

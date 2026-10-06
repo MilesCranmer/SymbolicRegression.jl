@@ -1,7 +1,7 @@
 @testitem "Test JSON tracing" begin
     using SymbolicRegression
     using SymbolicRegression: TraceType
-    using SymbolicRegression.TracingModule: initialize_trace!, write_trace
+    using SymbolicRegression.EvolutionModule.TracingModule: initialize_trace!, write_trace
     using JSON
     include(joinpath(@__DIR__, "..", "..", "..", "test_params.jl"))
 
