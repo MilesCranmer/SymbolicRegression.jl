@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.7.0](https://github.com/astroautomata/SymbolicRegression.jl/compare/v2.6.0...v2.7.0) (2026-10-06)
+
+
+### Performance Improvements
+
+* faster head communication for multiprocessing ([#756](https://github.com/astroautomata/SymbolicRegression.jl/issues/756)) ([ae02be9](https://github.com/astroautomata/SymbolicRegression.jl/commit/ae02be9bcfa6a9aba51b865cb29d476885149024))
+* gather migration candidates only when needed ([#757](https://github.com/astroautomata/SymbolicRegression.jl/issues/757)) ([d591052](https://github.com/astroautomata/SymbolicRegression.jl/commit/d591052b06260835572639a67c0c8363c693ad07))
+
 ## [2.6.0](https://github.com/astroautomata/SymbolicRegression.jl/compare/v2.5.1...v2.6.0) (2026-10-04)
 
 
