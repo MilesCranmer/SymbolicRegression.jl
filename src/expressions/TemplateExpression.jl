@@ -30,17 +30,13 @@ using DynamicExpressions.InterfacesModule:
 using DynamicExpressions.ExpressionModule: _copy
 
 using ...UtilsModule: FixKws
-using ...InterfacesModule.InterfaceDataTypesModule: InterfaceDataTypesModule as IDT
-using ...InterfacesModule.DatasetModule: DatasetModule as DM
-using ...ConfigModule.OptionsStructModule: OptionsStructModule as OS
-using ...ConfigModule.OptionsModule: OptionsModule as OM
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...ConfigModule.OptionsStructModule: Options
-using ...InterfacesModule.DatasetModule: Dataset
-using ...InterfacesModule.ExpressionSpecModule:
-    AbstractExpressionSpec, ExpressionSpecModule as ES
-using ..InterfaceDynamicExpressionsModule: InterfaceDynamicExpressionsModule as IDE
-using ..InterfaceDynamicExpressionsModule: _process_eval_options
+using ...InterfacesModule: InterfaceDataTypesModule as IDT, DatasetModule as DM
+using ...ConfigModule: OptionsStructModule as OS, OptionsModule as OM
+using ...InterfacesModule: AbstractOptions
+using ...ConfigModule: Options
+using ...InterfacesModule: Dataset, AbstractExpressionSpec, ExpressionSpecModule as ES
+using ..InterfaceDynamicExpressionsModule:
+    InterfaceDynamicExpressionsModule as IDE, _process_eval_options
 using ..ExpressionBuilderModule: ExpressionBuilderModule as EB
 using ..ComposableExpressionModule:
     AbstractComposableExpression, ComposableExpression, ValidVector, get_eval_context

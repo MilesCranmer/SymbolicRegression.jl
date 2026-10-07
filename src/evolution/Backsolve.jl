@@ -4,12 +4,9 @@ using LinearAlgebra: Hermitian, I, PosDefException, cholesky, diag, dot, norm
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpressionNode, constructorof, eval_tree_array, get_tree
 
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.ProgramConstantsModule: DATA_TYPE
-using ...InterfacesModule.DatasetModule: Dataset
-using ...InterfacesModule.MutationsModule: BacksolveMutation
-using ...ConfigModule.OptionsStructModule: specialized_options
-using ...EvaluationModule.ComplexityModule: compute_complexity
+using ...InterfacesModule: AbstractOptions, DATA_TYPE, Dataset, BacksolveMutation
+using ...ConfigModule: specialized_options
+using ...EvaluationModule: compute_complexity
 
 const STLSQ_DATA_TYPE = Union{AbstractFloat,Complex{<:AbstractFloat}}
 

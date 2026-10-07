@@ -7,11 +7,10 @@ module ExpressionBuilderModule
 using DispatchDoctor: @unstable
 using DynamicExpressions:
     AbstractExpressionNode, AbstractExpression, constructorof, with_metadata
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.DatasetModule: Dataset
+using ...InterfacesModule: AbstractOptions, Dataset
 
 import DynamicExpressions: get_operators
-import ...InterfacesModule.OptionsInterfaceModule: create_expression
+import ...InterfacesModule: create_expression
 
 @unstable function create_expression(
     t::T, options::AbstractOptions, dataset::Dataset{T,L}, (::Val{embed})=Val(false)

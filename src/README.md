@@ -13,6 +13,8 @@ Each folder has an assembly file that defines its module and includes its child 
 Module paths follow this layout. For example,
 `SymbolicRegression.EvolutionModule.PopMemberModule` lives in `evolution/PopMember.jl`.
 Methods that connect layers live in the folder implementing those methods.
+Cross-folder imports use shared names from the folder module. Within-folder imports
+and private helpers use child modules directly.
 `Utils.jl` is shared across the package and is included once at the top level.
 Public names such as `SymbolicRegression.Options` remain unchanged; old module
 paths are deprecated aliases in `deprecates.jl`.

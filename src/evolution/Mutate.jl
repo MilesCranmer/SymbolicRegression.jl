@@ -16,8 +16,8 @@ using DynamicExpressions:
     NodeSampler,
     set_child!,
     with_contents
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.MutationsModule:
+using ...InterfacesModule:
+    AbstractOptions,
     AbstractMutation,
     ConstantMutation,
     OperatorMutation,
@@ -35,10 +35,12 @@ using ...InterfacesModule.MutationsModule:
     OptimizeMutation,
     DoNothingMutation,
     BUILTIN_MUTATION_TYPES,
-    ConstantMutationContext
-using ...InterfacesModule.DatasetModule: Dataset, SubDataset, max_features, dataset_fraction
-using ...InterfacesModule.ProgramConstantsModule: MaybeTrace
-using ...InterfacesModule.PluginModule:
+    ConstantMutationContext,
+    Dataset,
+    SubDataset,
+    max_features,
+    dataset_fraction,
+    MaybeTrace,
     AbstractPlugin,
     MutationEvent,
     on_mutation_end!,
@@ -46,9 +48,9 @@ using ...InterfacesModule.PluginModule:
     MutationAcceptanceContext,
     prepare_mutation_context,
     condition_mutation!
-using ...EvaluationModule.ComplexityModule: compute_complexity
-using ...EvaluationModule.LossFunctionsModule: eval_cost, loss_to_cost
-using ...EvaluationModule.CheckConstraintsModule: check_constraints
+using ...EvaluationModule: compute_complexity, eval_cost
+using ...EvaluationModule.LossFunctionsModule: loss_to_cost
+using ...EvaluationModule: check_constraints
 using ..PopMemberModule: AbstractPopMember, PopMember, create_child
 using ...UtilsModule: strictmap, PerTaskCache
 using ..MutationFunctionsModule:

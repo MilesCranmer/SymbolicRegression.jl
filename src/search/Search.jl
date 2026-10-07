@@ -18,13 +18,14 @@ include("ProgressBars.jl")
 include("SearchUtils.jl")
 include("Logging.jl")
 
-using ..InterfacesModule.ProgramConstantsModule: DATA_TYPE, LOSS_TYPE
-using ..InterfacesModule.DatasetModule: Dataset, max_features, is_weighted, has_units
-using ..ConfigModule.OptionsStructModule: use_batching, Options
-using ..InterfacesModule.OptionsInterfaceModule: AbstractOptions, create_expression
+using ..InterfacesModule:
+    DATA_TYPE, LOSS_TYPE, Dataset, max_features, is_weighted, has_units
+using ..ConfigModule: use_batching, Options
+using ..InterfacesModule: AbstractOptions, create_expression
 
-using ..InterfacesModule.InterfaceDataTypesModule: init_value, sample_value
-using ..InterfacesModule.PluginModule:
+using ..InterfacesModule:
+    init_value,
+    sample_value,
     init_plugin_states,
     on_search_start!,
     on_search_end!,
@@ -33,24 +34,30 @@ using ..InterfacesModule.PluginModule:
     refresh_worker_plugin_state
 using ..UtilsModule: is_anonymous_function, strictmap
 
-using ..EvolutionModule.MutationFunctionsModule: gen_random_tree
-using ..ExpressionsModule.InterfaceDynamicExpressionsModule:
-    require_copy_to_workers, make_example_inputs
-using ..EvaluationModule.LossFunctionsModule: eval_cost, update_baseline_loss!
+using ..EvolutionModule: gen_random_tree
+using ..ExpressionsModule: require_copy_to_workers, make_example_inputs
+using ..EvaluationModule: eval_cost, update_baseline_loss!
 
-using ..EvolutionModule.PopMemberModule: PopMember, popmember_type, expression_type
-using ..EvolutionModule.PopulationModule: Population, best_sub_pop
-using ..EvolutionModule.HallOfFameModule:
+using ..EvolutionModule:
+    PopMember,
+    popmember_type,
+    expression_type,
+    Population,
+    best_sub_pop,
     HallOfFame,
     calculate_pareto_frontier,
     string_dominating_pareto_curve,
     update_hall_of_fame!
 
-using ..EvolutionModule.SingleIterationModule: s_r_cycle, optimize_and_simplify_population
+using ..EvolutionModule: s_r_cycle, optimize_and_simplify_population
 using .ProgressBarsModule: WrappedProgressBar
-using ..EvolutionModule.TracingModule:
-    initialize_trace!, new_trace, next_trace_iteration, trace_iteration_start!, write_trace
-using ..EvolutionModule.MigrationModule: migrate!
+using ..EvolutionModule:
+    initialize_trace!,
+    new_trace,
+    next_trace_iteration,
+    trace_iteration_start!,
+    write_trace,
+    migrate!
 using .SearchUtilsModule:
     AbstractSearchState,
     SearchState,
@@ -92,9 +99,9 @@ using .SearchUtilsModule:
     logging_callback!,
     infer_popmember_type
 using .LoggingModule: AbstractSRLogger, SRLogger
-using ..ExpressionsModule.TemplateExpressionModule: TemplateExpression
+using ..ExpressionsModule: TemplateExpression
 
-using ..ExpressionsModule.ExpressionBuilderModule: embed_metadata, strip_metadata
+using ..ExpressionsModule: embed_metadata, strip_metadata
 
 include("Configure.jl")
 @unstable include("EquationSearch.jl")

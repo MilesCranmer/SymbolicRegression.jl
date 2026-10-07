@@ -17,16 +17,13 @@ using DynamicExpressions:
     get_child,
     set_child!,
     max_degree
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.ProgramConstantsModule: DATA_TYPE
-using ...InterfacesModule.InterfaceDataTypesModule: init_value, sample_value
-using ...InterfacesModule.DatasetModule: Dataset
-using ...InterfacesModule.MutationsModule: ConstantMutation
+using ...InterfacesModule:
+    AbstractOptions, DATA_TYPE, init_value, sample_value, Dataset, ConstantMutation
 using ...EvaluationModule.EvaluateInverseModule: eval_inverse_tree_array_masked
 using ..BacksolveModule: fit_sparse_expression, configured_backsolve
-using ...EvaluationModule.ComplexityModule: compute_complexity
+using ...EvaluationModule: compute_complexity
 
-import ...InterfacesModule.InterfaceDataTypesModule: mutate_value
+import ...InterfacesModule: mutate_value
 
 """
     get_contents_for_mutation(ex::AbstractExpression, rng::AbstractRNG)

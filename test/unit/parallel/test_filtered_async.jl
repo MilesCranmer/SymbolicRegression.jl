@@ -1,6 +1,6 @@
 @testitem "@filtered_async error forwarding tests" begin
     using Distributed: Distributed
-    using SymbolicRegression.SearchModule.SearchUtilsModule: SearchUtilsModule as SUM
+    using SymbolicRegression.SearchModule: SearchUtilsModule as SUM
     using Test: Test
     using Suppressor: Suppressor
     @gensym addprocs rmprocs procs t result future channel

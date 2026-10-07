@@ -1,7 +1,7 @@
 module ComposableExpressionEvolutionModule
 
 using DynamicExpressions: DynamicExpressions as DE
-using ...ExpressionsModule.ComposableExpressionModule: ComposableExpression
+using ...ExpressionsModule: ComposableExpression
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 
 function CO.get_optimizable_parameters(ex::ComposableExpression, _options)

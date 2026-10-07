@@ -11,10 +11,16 @@ using DynamicExpressions:
 using DynamicExpressions.EvaluateModule: reset_index!
 using LossFunctions: LossFunctions
 using LossFunctions: SupervisedLoss
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions, create_expression
-using ...InterfacesModule.DatasetModule: Dataset, is_weighted, get_indices, get_full_dataset
-using ...InterfacesModule.ProgramConstantsModule: DATA_TYPE, LOSS_TYPE
-using ...InterfacesModule.InterfaceDataTypesModule: init_value
+using ...InterfacesModule:
+    AbstractOptions,
+    create_expression,
+    Dataset,
+    is_weighted,
+    get_indices,
+    get_full_dataset,
+    DATA_TYPE,
+    LOSS_TYPE,
+    init_value
 using ..ComplexityModule: compute_complexity
 using ..DimensionalAnalysisModule: violates_dimensional_constraints
 using ...ExpressionsModule.InterfaceDynamicExpressionsModule:

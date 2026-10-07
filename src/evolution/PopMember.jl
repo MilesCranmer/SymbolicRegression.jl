@@ -3,14 +3,12 @@ module PopMemberModule
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, AbstractExpressionNode, string_tree
 import DynamicExpressions: constructorof, with_type_parameters
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions, create_expression
-using ...InterfacesModule.DatasetModule: Dataset
-using ...InterfacesModule.ProgramConstantsModule: DATA_TYPE, LOSS_TYPE
-using ...InterfacesModule.MutationsModule: AbstractMutation
+using ...InterfacesModule:
+    AbstractOptions, create_expression, Dataset, DATA_TYPE, LOSS_TYPE, AbstractMutation
 import ...ConfigModule.OptionsModule: default_popmember_type
-import ...EvaluationModule.ComplexityModule: compute_complexity
+import ...EvaluationModule: compute_complexity
 using ...UtilsModule: get_birth_order
-using ...EvaluationModule.LossFunctionsModule: eval_cost
+using ...EvaluationModule: eval_cost
 
 """
     AbstractPopMember{T<:DATA_TYPE,L<:LOSS_TYPE,N<:AbstractExpression{T}}

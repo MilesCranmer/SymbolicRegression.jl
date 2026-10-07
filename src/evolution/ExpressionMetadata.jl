@@ -2,13 +2,12 @@ module ExpressionMetadataModule
 
 using DispatchDoctor: @unstable
 using Compat: Fix
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.DatasetModule: Dataset
-using ...EvaluationModule.ComplexityModule: compute_complexity
+using ...InterfacesModule: AbstractOptions, Dataset
+using ...EvaluationModule: compute_complexity
 using ..PopMemberModule: PopMember, AbstractPopMember, create_child
 using ..PopulationModule: Population
 using ..HallOfFameModule: HallOfFame
-import ...ExpressionsModule.ExpressionBuilderModule: embed_metadata, strip_metadata
+import ...ExpressionsModule: embed_metadata, strip_metadata
 
 @unstable begin
     function embed_metadata(

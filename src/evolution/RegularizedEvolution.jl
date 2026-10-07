@@ -1,12 +1,16 @@
 module RegularizedEvolutionModule
 
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.DatasetModule: Dataset
-using ...InterfacesModule.ProgramConstantsModule: MaybeTrace, DATA_TYPE, LOSS_TYPE
-using ...InterfacesModule.PluginModule: MutationStepResult, wrap_mutation_step
+using ...InterfacesModule:
+    AbstractOptions,
+    Dataset,
+    MaybeTrace,
+    DATA_TYPE,
+    LOSS_TYPE,
+    MutationStepResult,
+    wrap_mutation_step
 using ..PopulationModule: Population, best_of_sample
 using ..HallOfFameModule: HallOfFame, update_hall_of_fame!, _update_hall_of_fame_unchecked!
-using ...EvaluationModule.ComplexityModule: compute_complexity
+using ...EvaluationModule: compute_complexity
 using ..MutateModule: next_generation
 using ..CrossoverModule: crossover_generation
 using ..TracingModule:

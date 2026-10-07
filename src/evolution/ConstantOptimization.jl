@@ -13,12 +13,11 @@ using DynamicExpressions:
     set_scalar_constants!,
     extract_gradient
 using DispatchDoctor: @unstable
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.DatasetModule: Dataset, dataset_fraction
-using ...InterfacesModule.ProgramConstantsModule: DATA_TYPE, LOSS_TYPE
-using ...ConfigModule.OptionsStructModule: specialized_options
+using ...InterfacesModule: AbstractOptions, Dataset, dataset_fraction, DATA_TYPE, LOSS_TYPE
+using ...ConfigModule: specialized_options
 using ...UtilsModule: get_birth_order, PerTaskCache, stable_get!
-using ...EvaluationModule.LossFunctionsModule: create_eval_context, eval_loss, loss_to_cost
+using ...EvaluationModule: eval_loss
+using ...EvaluationModule.LossFunctionsModule: create_eval_context, loss_to_cost
 using ..PopMemberModule: AbstractPopMember, PopMember
 
 function can_optimize(::AbstractExpression{T}, options) where {T}

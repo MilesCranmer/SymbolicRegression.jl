@@ -3,13 +3,16 @@ module PopulationModule
 using StatsBase: StatsBase
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression, constructorof
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...ConfigModule.OptionsStructModule: Options, use_batching
-using ...InterfacesModule.DatasetModule: Dataset
-using ...InterfacesModule.ProgramConstantsModule: DATA_TYPE, LOSS_TYPE
-using ...InterfacesModule.PluginModule:
-    init_member, resolve_init_member, tournament_cost_multiplier
-using ...EvaluationModule.LossFunctionsModule: eval_cost, update_baseline_loss!
+using ...InterfacesModule: AbstractOptions
+using ...ConfigModule: Options, use_batching
+using ...InterfacesModule:
+    Dataset,
+    DATA_TYPE,
+    LOSS_TYPE,
+    init_member,
+    resolve_init_member,
+    tournament_cost_multiplier
+using ...EvaluationModule: eval_cost, update_baseline_loss!
 using ..MutationFunctionsModule: gen_random_tree
 using ..PopMemberModule: AbstractPopMember, PopMember
 import ..PopMemberModule: popmember_type

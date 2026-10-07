@@ -3,13 +3,10 @@ module HallOfFameModule
 using StyledStrings: @styled_str
 using DynamicExpressions: AbstractExpression, string_tree
 using ...UtilsModule: split_string, AnnotatedIOBuffer, dump_buffer
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions, create_expression
-using ...InterfacesModule.DatasetModule: Dataset
-using ...InterfacesModule.ProgramConstantsModule: DATA_TYPE, LOSS_TYPE
-using ...ConfigModule.OperatorsModule: relu
-using ...InterfacesModule.InterfaceDataTypesModule: init_value
-using ...EvaluationModule.ComplexityModule: compute_complexity
-using ...EvaluationModule.CheckConstraintsModule: check_constraints
+using ...InterfacesModule: AbstractOptions, create_expression, Dataset, DATA_TYPE, LOSS_TYPE
+using ...ConfigModule: relu
+using ...InterfacesModule: init_value
+using ...EvaluationModule: compute_complexity, check_constraints
 using ..PopMemberModule: AbstractPopMember, PopMember
 using ...ExpressionsModule.InterfaceDynamicExpressionsModule:
     format_dimensions, WILDCARD_UNIT_STRING

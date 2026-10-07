@@ -4,12 +4,11 @@ using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, get_tree, get_child, tree_mapreduce
 using DynamicQuantities: Quantity, DimensionError, AbstractQuantity, constructorof
 
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.DatasetModule: Dataset
+using ...InterfacesModule: AbstractOptions, Dataset
 using ...UtilsModule: safe_call
 
 import DynamicQuantities: dimension, ustrip
-import ...ConfigModule.OperatorsModule: safe_pow, safe_sqrt
+import ...ConfigModule: safe_pow, safe_sqrt
 
 """
     @maybe_return_call(T, op, (args...))

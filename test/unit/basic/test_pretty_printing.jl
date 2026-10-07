@@ -26,7 +26,7 @@ end
 @testitem "pretty print hall of fame" begin
     using SymbolicRegression
     using SymbolicRegression: embed_metadata
-    using SymbolicRegression.ConfigModule.OperatorsModule: safe_pow
+    using SymbolicRegression.ConfigModule: safe_pow
 
     options = Options(; binary_operators=[+, safe_pow], maxsize=7)
 

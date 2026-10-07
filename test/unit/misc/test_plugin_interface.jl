@@ -284,7 +284,7 @@ end
 @testitem "Plugin interface: init_member hook" begin
     using SymbolicRegression
     import SymbolicRegression: AbstractPlugin, init_member
-    using SymbolicRegression.EvolutionModule.MutationFunctionsModule: gen_random_tree
+    using SymbolicRegression.EvolutionModule: gen_random_tree
     using Test
 
     init_count = Ref(0)
@@ -321,7 +321,7 @@ end
 @testitem "Plugin interface: init_member that returns a tree is consumed" begin
     using SymbolicRegression
     import SymbolicRegression: AbstractPlugin
-    using SymbolicRegression.EvolutionModule.MutationFunctionsModule: gen_random_tree
+    using SymbolicRegression.EvolutionModule: gen_random_tree
     using Test
 
     seeded_calls = Ref(0)
@@ -362,7 +362,7 @@ end
 @testitem "Plugin interface: two init_member providers is an error" begin
     using SymbolicRegression
     import SymbolicRegression: AbstractPlugin, resolve_init_member
-    using SymbolicRegression.EvolutionModule.MutationFunctionsModule: gen_random_tree
+    using SymbolicRegression.EvolutionModule: gen_random_tree
     using Test
 
     struct SeederA <: AbstractPlugin end

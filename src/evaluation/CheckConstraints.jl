@@ -7,7 +7,7 @@ using DynamicExpressions:
     count_depth,
     tree_mapreduce,
     get_child
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
+using ...InterfacesModule: AbstractOptions
 using ..ComplexityModule: compute_complexity, past_complexity_limit
 
 # Generic operator complexity checking for any degree

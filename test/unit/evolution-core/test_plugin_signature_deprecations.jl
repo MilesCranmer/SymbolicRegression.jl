@@ -3,7 +3,7 @@
     using SymbolicRegression: Dataset
     using SymbolicRegression.PluginsModule.AdaptiveParsimonyModule:
         AdaptiveParsimonyState, RunningSearchStatistics
-    using SymbolicRegression.EvolutionModule.PopulationModule: best_of_sample
+    using SymbolicRegression.EvolutionModule: best_of_sample
     using Random
     using Test
 

@@ -6,7 +6,7 @@ using DynamicQuantities: UnionAbstractQuantity
 using SpecialFunctions: erf, erfc
 using Base: @deprecate
 using DynamicDiff: ForwardDiff
-using ...InterfacesModule.ProgramConstantsModule: DATA_TYPE
+using ...InterfacesModule: DATA_TYPE
 using ...UtilsModule: @ignore
 #TODO - actually add these operators to the module!
 

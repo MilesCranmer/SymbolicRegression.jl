@@ -3,8 +3,8 @@
     using Random
     using SymbolicRegression
     using SymbolicRegression: eval_loss
-    using SymbolicRegression.SearchModule.SearchUtilsModule:
-        store_on_workers, delete_worker_copy!
+    using SymbolicRegression.SearchModule: store_on_workers
+    using SymbolicRegression.SearchModule.SearchUtilsModule: delete_worker_copy!
     using Test
 
     procs = addprocs(2)

@@ -1,12 +1,15 @@
 module SimulatedAnnealingModule
 
 using DispatchDoctor: @stable, @unstable
-using ...InterfacesModule.PluginModule: AbstractPlugin, MutationAcceptanceContext
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.MutationsModule: ConstantMutation, ConstantMutationContext
-import ...InterfacesModule.PluginModule:
+using ...InterfacesModule:
+    AbstractPlugin,
+    MutationAcceptanceContext,
+    AbstractOptions,
+    ConstantMutation,
+    ConstantMutationContext
+import ...InterfacesModule:
     init_plugin_state, on_cycle_start!, condition_mutation!, mutation_acceptance_multiplier
-import ...ConfigModule.PluginDefaultsModule: default_simulated_annealing_plugin
+import ...ConfigModule: default_simulated_annealing_plugin
 
 """
     SimulatedAnnealingPlugin(; alpha=0.1)

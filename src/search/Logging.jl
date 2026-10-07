@@ -5,12 +5,10 @@ using Logging: Logging as LG
 using DynamicExpressions: string_tree
 
 using ...UtilsModule: @ignore
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.DatasetModule: Dataset
-using ...EvolutionModule.PopulationModule: Population
-using ...EvolutionModule.HallOfFameModule: HallOfFame
-using ...EvaluationModule.ComplexityModule: compute_complexity
-using ...EvolutionModule.HallOfFameModule: calculate_pareto_frontier
+using ...InterfacesModule: AbstractOptions, Dataset
+using ...EvolutionModule: Population, HallOfFame
+using ...EvaluationModule: compute_complexity
+using ...EvolutionModule: calculate_pareto_frontier
 using ..SearchUtilsModule: AbstractSearchState, AbstractRuntimeOptions
 
 import ..SearchUtilsModule: logging_callback!

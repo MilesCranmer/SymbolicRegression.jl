@@ -1,7 +1,7 @@
 module MutationBurstModule
 
-using ...InterfacesModule.PluginModule: AbstractPlugin
-import ...InterfacesModule.PluginModule: wrap_mutation_step
+using ...InterfacesModule: AbstractPlugin
+import ...InterfacesModule: wrap_mutation_step
 
 """
     MutationBurstPlugin(; retry_attempts=4, compound_probability=0.25, compound_max_steps=2)

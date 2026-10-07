@@ -248,14 +248,21 @@ using DispatchDoctor: @stable, @unstable
     __dispatch_doctor_unsable_test() = Val(rand(1:10))
 end
 
-using .InterfacesModule.ProgramConstantsModule: DATA_TYPE, LOSS_TYPE, TraceType
-using .InterfacesModule.DatasetModule:
-    Dataset, BasicDataset, SubDataset, max_features, is_weighted, batch, has_units
-using .ConfigModule.OptionsStructModule:
-    use_batching, Options, ComplexityMapping, WarmStartIncompatibleError
-using .InterfacesModule.OptionsInterfaceModule: AbstractOptions, create_expression
-using .ConfigModule.MutationWeightsModule: MutationWeights, sample_mutation
-using .InterfacesModule.MutationsModule:
+using .InterfacesModule:
+    DATA_TYPE,
+    LOSS_TYPE,
+    TraceType,
+    Dataset,
+    BasicDataset,
+    SubDataset,
+    max_features,
+    is_weighted,
+    batch,
+    has_units
+using .ConfigModule: use_batching, Options, ComplexityMapping, WarmStartIncompatibleError
+using .InterfacesModule: AbstractOptions, create_expression
+using .ConfigModule: MutationWeights, sample_mutation
+using .InterfacesModule:
     AbstractMutation,
     ConstantMutation,
     OperatorMutation,
@@ -273,13 +280,17 @@ using .InterfacesModule.MutationsModule:
     OptimizeMutation,
     DoNothingMutation,
     default_mutations,
-    ConstantMutationContext
-using .InterfacesModule.CrossoversModule:
-    AbstractCrossover, SubtreeCrossover, default_crossovers
-using .InterfacesModule.ExpressionSpecModule: AbstractExpressionSpec, ExpressionSpec
-using .InterfacesModule.InterfaceDataTypesModule:
-    init_value, parse_scope, sample_value, mutate_value
-using .ConfigModule.OperatorsModule:
+    ConstantMutationContext,
+    AbstractCrossover,
+    SubtreeCrossover,
+    default_crossovers,
+    AbstractExpressionSpec,
+    ExpressionSpec,
+    init_value,
+    parse_scope,
+    sample_value,
+    mutate_value
+using .ConfigModule:
     get_safe_op,
     plus,
     sub,
@@ -310,7 +321,7 @@ using .ConfigModule.OperatorsModule:
     erf,
     erfc,
     atanh_clip
-using .InterfacesModule.PluginModule:
+using .InterfacesModule:
     AbstractPlugin,
     MutationEvent,
     init_plugin_state,
@@ -335,43 +346,51 @@ using .InterfacesModule.PluginModule:
     plugin_mutations,
     plugin_crossovers
 using .UtilsModule: is_anonymous_function, strictmap, @ignore, get_birth_order
-using .EvaluationModule.ComplexityModule: compute_complexity
-using .EvaluationModule.CheckConstraintsModule: check_constraints
-using .EvolutionModule.MutationFunctionsModule:
+using .EvaluationModule: compute_complexity, check_constraints
+using .EvolutionModule:
     gen_random_tree, gen_random_tree_fixed_size, random_node, crossover_trees
-using .ExpressionsModule.InterfaceDynamicExpressionsModule:
-    @extend_operators, require_copy_to_workers, make_example_inputs
-using .EvaluationModule.LossFunctionsModule:
-    eval_loss, eval_cost, update_baseline_loss!, score_func
-using .EvolutionModule.ConstantOptimizationModule:
+using .ExpressionsModule: @extend_operators, require_copy_to_workers, make_example_inputs
+using .EvaluationModule: eval_loss, eval_cost, update_baseline_loss!, score_func
+using .EvolutionModule:
     optimize_constants,
     get_constants_for_optimization,
     set_constants_for_optimization!,
     extract_gradient_for_optimization,
     get_optimizable_parameters,
     set_optimizable_parameters!,
-    extract_optimizable_gradient
-using .EvolutionModule.PopMemberModule:
-    AbstractPopMember, PopMember, reset_birth!, popmember_type, expression_type
-using .EvolutionModule.PopulationModule: Population, best_sub_pop, best_of_sample
-using .EvolutionModule.HallOfFameModule:
+    extract_optimizable_gradient,
+    AbstractPopMember,
+    PopMember,
+    reset_birth!,
+    popmember_type,
+    expression_type,
+    Population,
+    best_sub_pop,
+    best_of_sample,
     HallOfFame,
     calculate_pareto_frontier,
     string_dominating_pareto_curve,
-    update_hall_of_fame!
-using .EvolutionModule.MutateModule: mutate!, condition_mutation_weights!, MutationResult
-using .EvolutionModule.CrossoverModule: crossover, CrossoverResult
-using .EvolutionModule.SingleIterationModule: s_r_cycle, optimize_and_simplify_population
-using .SearchModule.ProgressBarsModule: WrappedProgressBar
-using .EvolutionModule.TracingModule:
-    initialize_trace!, new_trace, next_trace_iteration, trace_iteration_start!, write_trace
-using .EvolutionModule.MigrationModule: migrate!
-using .SearchModule.SearchUtilsModule:
+    update_hall_of_fame!,
+    mutate!,
+    condition_mutation_weights!,
+    MutationResult,
+    crossover,
+    CrossoverResult,
+    s_r_cycle,
+    optimize_and_simplify_population
+using .SearchModule: WrappedProgressBar
+using .EvolutionModule:
+    initialize_trace!,
+    new_trace,
+    next_trace_iteration,
+    trace_iteration_start!,
+    write_trace,
+    migrate!
+using .SearchModule:
     AbstractSearchState,
     SearchState,
     AbstractRuntimeOptions,
     RuntimeOptions,
-    ExternalStop,
     WorkerAssignments,
     DefaultWorkerOutputType,
     assign_next_worker!,
@@ -382,7 +401,6 @@ using .SearchModule.SearchUtilsModule:
     extract_from_worker,
     @sr_spawner,
     @filtered_async,
-    StdinReader,
     watch_stream,
     close_reader!,
     check_for_user_quit,
@@ -408,21 +426,29 @@ using .SearchModule.SearchUtilsModule:
     parse_guesses,
     logging_callback!,
     infer_popmember_type
-using .SearchModule.LoggingModule: AbstractSRLogger, SRLogger, get_logger
-using .ExpressionsModule.TemplateExpressionModule:
-    TemplateExpression, TemplateStructure, TemplateExpressionSpec, ParamVector, has_params
-using .ExpressionsModule.TemplateExpressionModule: ValidVector, TemplateReturnError
-using .ExpressionsModule.ComposableExpressionModule:
+using .SearchModule.SearchUtilsModule: ExternalStop, StdinReader
+using .SearchModule: AbstractSRLogger, SRLogger
+using .SearchModule.LoggingModule: get_logger
+using .ExpressionsModule:
+    TemplateExpression,
+    TemplateStructure,
+    TemplateExpressionSpec,
+    ParamVector,
+    has_params,
+    ValidVector,
+    TemplateReturnError,
     AbstractComposableExpression,
     ComposableExpression,
     ValidVectorMixError,
-    ValidVectorAccessError
-using .ExpressionsModule.ExpressionBuilderModule: embed_metadata, strip_metadata
-using .ExpressionsModule.TemplateExpressionMacroModule: @template_spec
-using .PluginsModule.AdaptiveParsimonyModule: AdaptiveParsimonyPlugin
-using .PluginsModule.AdaptiveMutationWeightsModule: AdaptiveMutationWeightsPlugin
-using .PluginsModule.MutationBurstModule: MutationBurstPlugin
-using .PluginsModule.SimulatedAnnealingModule: SimulatedAnnealingPlugin
+    ValidVectorAccessError,
+    embed_metadata,
+    strip_metadata,
+    @template_spec
+using .PluginsModule:
+    AdaptiveParsimonyPlugin,
+    AdaptiveMutationWeightsPlugin,
+    MutationBurstPlugin,
+    SimulatedAnnealingPlugin
 
 using .SearchModule:
     equation_search,

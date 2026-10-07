@@ -92,9 +92,9 @@ end
 
 @testitem "loss_scale error handling" begin
     using SymbolicRegression
-    using SymbolicRegression.InterfacesModule.DatasetModule: Dataset
+    using SymbolicRegression.InterfacesModule: Dataset
     using SymbolicRegression.EvolutionModule.HallOfFameModule: format_hall_of_fame
-    using SymbolicRegression.EvolutionModule.PopMemberModule: PopMember
+    using SymbolicRegression.EvolutionModule: PopMember
     using DynamicExpressions: Node
 
     # Create test dataset
@@ -133,9 +133,8 @@ end
 
 @testitem "string_dominating_pareto_curve header display" begin
     using SymbolicRegression
-    using SymbolicRegression.EvolutionModule.HallOfFameModule:
-        HallOfFame, string_dominating_pareto_curve
-    using SymbolicRegression.InterfacesModule.DatasetModule: Dataset
+    using SymbolicRegression.EvolutionModule: HallOfFame, string_dominating_pareto_curve
+    using SymbolicRegression.InterfacesModule: Dataset
     using DynamicExpressions: Node, Expression
 
     # Create simple test dataset

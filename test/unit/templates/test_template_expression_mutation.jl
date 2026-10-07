@@ -111,8 +111,9 @@ end
     using DynamicExpressions: get_child, get_contents
     using Random: MersenneTwister
     using SymbolicRegression
+    using SymbolicRegression.EvolutionModule: crossover_trees
     using SymbolicRegression.EvolutionModule.MutationFunctionsModule:
-        crossover_trees, get_contents_for_mutation
+        get_contents_for_mutation
 
     options = Options(; binary_operators=(+, *), node_type=GraphNode)
     operators = options.operators
@@ -182,7 +183,7 @@ end
     using Random: MersenneTwister
     using SymbolicRegression
     using SymbolicRegression.EvolutionModule.CrossoverModule: crossover_generation
-    using SymbolicRegression.EvolutionModule.MutationFunctionsModule: crossover_trees
+    using SymbolicRegression.EvolutionModule: crossover_trees
 
     structure = TemplateStructure{(:f, :g),(:p,)}(
         ((; f, g), (; p), (x,)) -> f(x) + g(x) * p[1]; num_parameters=(; p=2)

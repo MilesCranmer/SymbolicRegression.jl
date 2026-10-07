@@ -37,8 +37,7 @@ using ..OperatorsModule:
     safe_acosh,
     safe_atanh
 using ..MutationWeightsModule: MutationWeightsModule, MutationWeights, _mutation_weights
-using ...InterfacesModule.MutationsModule: MutationsModule
-using ...InterfacesModule.CrossoversModule: CrossoversModule
+using ...InterfacesModule: MutationsModule, CrossoversModule
 import ..OptionsStructModule: Options
 using ..OptionsStructModule: ComplexityMapping, operator_specialization
 using ..PluginDefaultsModule:
@@ -46,9 +45,9 @@ using ..PluginDefaultsModule:
     default_simulated_annealing_plugin,
     default_adaptive_mutation_weights_plugin,
     _merge_with_default_plugins
-using ...InterfacesModule.PluginModule: plugin_mutations, plugin_crossovers
+using ...InterfacesModule: plugin_mutations, plugin_crossovers
 using ...UtilsModule: @save_kwargs, @ignore
-using ...InterfacesModule.ExpressionSpecModule:
+using ...InterfacesModule:
     AbstractExpressionSpec,
     ExpressionSpec,
     get_expression_type,

@@ -1,6 +1,6 @@
 module SymbolicRegressionEnzymeExt
 
-using SymbolicRegression.EvaluationModule.LossFunctionsModule: eval_loss
+using SymbolicRegression.EvaluationModule: eval_loss
 using DynamicExpressions:
     AbstractExpression,
     AbstractExpressionNode,

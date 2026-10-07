@@ -1,10 +1,9 @@
 module TemplateExpressionEvaluationModule
 
 using DynamicExpressions: get_contents
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.DatasetModule: Dataset, has_units
-using ...ExpressionsModule.TemplateExpressionModule:
-    TemplateExpression, has_invalid_variables
+using ...InterfacesModule: AbstractOptions, Dataset, has_units
+using ...ExpressionsModule: TemplateExpression
+using ...ExpressionsModule.TemplateExpressionModule: has_invalid_variables
 using ..ComplexityModule: ComplexityModule
 using ..DimensionalAnalysisModule: DimensionalAnalysisModule as DA
 using ..CheckConstraintsModule: CheckConstraintsModule as CC

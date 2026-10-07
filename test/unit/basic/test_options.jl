@@ -68,9 +68,8 @@ end
 
 @testitem "Test automatic batching options" begin
     using SymbolicRegression
-    using SymbolicRegression.InterfacesModule.DatasetModule: batch
-    using SymbolicRegression.ConfigModule.OptionsStructModule:
-        batching_required, get_batch_size, use_batching
+    using SymbolicRegression.InterfacesModule: batch
+    using SymbolicRegression.ConfigModule: batching_required, get_batch_size, use_batching
 
     struct UnbatchableDataset <: Dataset{Float64,Float64}
         n::Int

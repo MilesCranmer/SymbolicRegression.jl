@@ -1,6 +1,6 @@
 module MutationWeightsModule
 
-import ...InterfacesModule.MutationsModule:
+import ...InterfacesModule:
     AbstractMutation,
     ConstantMutation,
     OperatorMutation,

@@ -7,7 +7,7 @@ include("PluginDefaults.jl")
 include("Options.jl")
 
 using .MutationWeightsModule: MutationWeights, sample_mutation
-using ..InterfacesModule.OptionsInterfaceModule: AbstractOptions
+using ..InterfacesModule: AbstractOptions
 using .OptionsStructModule:
     Options,
     ComplexityMapping,

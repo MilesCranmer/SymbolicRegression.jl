@@ -3,7 +3,7 @@ module InverseFunctionsModule
 using InverseFunctions: InverseFunctions
 
 #! format: off
-using ...ConfigModule.OperatorsModule: square, cube, safe_pow, safe_log, safe_log2, safe_log10, safe_log1p, safe_sqrt, safe_acosh, safe_acos, safe_asin, neg, greater, cond, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip
+using ...ConfigModule: square, cube, safe_pow, safe_log, safe_log2, safe_log10, safe_log1p, safe_sqrt, safe_acosh, safe_acos, safe_asin, neg, greater, cond, relu, logical_or, logical_and, gamma, erf, erfc, atanh_clip
 #! format: on
 
 """

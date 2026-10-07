@@ -2,14 +2,16 @@ module CrossoverModule
 
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.CrossoversModule:
-    AbstractCrossover, SubtreeCrossover, BUILTIN_CROSSOVER_TYPES
-using ...InterfacesModule.DatasetModule: Dataset, max_features, dataset_fraction
-using ...InterfacesModule.ProgramConstantsModule: MaybeTrace
-using ...EvaluationModule.ComplexityModule: compute_complexity
-using ...EvaluationModule.LossFunctionsModule: eval_cost
-using ...EvaluationModule.CheckConstraintsModule: check_constraints
+using ...InterfacesModule:
+    AbstractOptions,
+    AbstractCrossover,
+    SubtreeCrossover,
+    BUILTIN_CROSSOVER_TYPES,
+    Dataset,
+    max_features,
+    dataset_fraction,
+    MaybeTrace
+using ...EvaluationModule: compute_complexity, eval_cost, check_constraints
 using ..PopMemberModule: AbstractPopMember, create_child
 using ..MutationFunctionsModule: crossover_trees
 using ..MutateModule: _sample_mutation

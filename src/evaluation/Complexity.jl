@@ -2,8 +2,8 @@ module ComplexityModule
 
 using DynamicExpressions:
     AbstractExpression, AbstractExpressionNode, get_tree, count_nodes, tree_mapreduce
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...ConfigModule.OptionsStructModule: ComplexityMapping
+using ...InterfacesModule: AbstractOptions
+using ...ConfigModule: ComplexityMapping
 
 function past_complexity_limit(
     tree::Union{AbstractExpression,AbstractExpressionNode}, options::AbstractOptions, limit

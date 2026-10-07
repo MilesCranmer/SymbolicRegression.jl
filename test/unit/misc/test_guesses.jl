@@ -555,7 +555,7 @@ end
 
 @testitem "Hall of fame CSV escapes equation quotes" begin
     using SymbolicRegression
-    using SymbolicRegression.SearchModule.SearchUtilsModule: RuntimeOptions, save_to_file
+    using SymbolicRegression.SearchModule: RuntimeOptions, save_to_file
     using Test
 
     X = reshape([1.0, 2.0], 1, :)

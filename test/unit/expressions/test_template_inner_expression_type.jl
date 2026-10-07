@@ -13,7 +13,7 @@
     using SymbolicRegression
     using SymbolicRegression: AbstractComposableExpression
     using SymbolicRegression.ExpressionsModule.ExpressionBuilderModule: create_expression
-    using SymbolicRegression.EvolutionModule.MutationFunctionsModule: crossover_trees
+    using SymbolicRegression.EvolutionModule: crossover_trees
 
     struct WrappedExpression{T,N<:AbstractExpressionNode{T},D} <:
            AbstractComposableExpression{T,N}
@@ -186,8 +186,8 @@ end
     using DynamicExpressions: Node, OperatorEnum, get_metadata
     using SymbolicRegression
     using SymbolicRegression: ParamVector
-    using SymbolicRegression.ExpressionsModule.ExpressionBuilderModule:
-        create_expression, strip_metadata
+    using SymbolicRegression.ExpressionsModule: strip_metadata
+    using SymbolicRegression.ExpressionsModule.ExpressionBuilderModule: create_expression
 
     operators = OperatorEnum(; binary_operators=(+,))
     structure = TemplateStructure{(:f,),(:weights, :bias)}(

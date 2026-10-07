@@ -10,14 +10,11 @@ using DynamicExpressions:
     with_contents,
     with_metadata,
     preserve_sharing
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.DatasetModule: Dataset
-using ...InterfacesModule.ProgramConstantsModule: DATA_TYPE
-using ...InterfacesModule.MutationsModule: ConstantMutation
-using ...ExpressionsModule.TemplateExpressionModule:
-    TemplateExpression, ParamVector, TemplateOptimizableRefs, has_params, has_constants
-using ...ExpressionsModule.ComposableExpressionModule: AbstractComposableExpression
-using ...EvaluationModule.ComplexityModule: ComplexityModule
+using ...InterfacesModule: AbstractOptions, Dataset, DATA_TYPE, ConstantMutation
+using ...ExpressionsModule: TemplateExpression, ParamVector, has_params
+using ...ExpressionsModule.TemplateExpressionModule: TemplateOptimizableRefs, has_constants
+using ...ExpressionsModule: AbstractComposableExpression
+using ...EvaluationModule: ComplexityModule
 using ..ConstantOptimizationModule: ConstantOptimizationModule as CO
 using ..MutationFunctionsModule: MutationFunctionsModule as MF
 using ..HallOfFameModule: HallOfFameModule as HOF

@@ -1,15 +1,13 @@
 module OptionsStructModule
 
 using DispatchDoctor: @unstable
-import ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
+import ...InterfacesModule: AbstractOptions
 using Optim: Optim
 using DynamicExpressions:
     AbstractOperatorEnum, AbstractExpressionNode, AbstractExpression, OperatorEnum
 using LossFunctions: SupervisedLoss
 
-using ...InterfacesModule.DatasetModule: Dataset, batch
-using ...InterfacesModule.MutationsModule: AbstractMutation
-using ...InterfacesModule.CrossoversModule: AbstractCrossover
+using ...InterfacesModule: Dataset, batch, AbstractMutation, AbstractCrossover
 
 """
 This struct defines how complexity is calculated.

@@ -1,12 +1,15 @@
 module AdaptiveMutationWeightsModule
 
-using ...InterfacesModule.PluginModule: AbstractPlugin, MutationEvent
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.MutationsModule:
-    AbstractMutation, SimplifyMutation, DoNothingMutation
-import ...InterfacesModule.PluginModule: init_plugin_state, on_mutation_end!
-import ...ConfigModule.PluginDefaultsModule: default_adaptive_mutation_weights_plugin
-import ...EvolutionModule.MutateModule: condition_mutation_weights!
+using ...InterfacesModule:
+    AbstractPlugin,
+    MutationEvent,
+    AbstractOptions,
+    AbstractMutation,
+    SimplifyMutation,
+    DoNothingMutation
+import ...InterfacesModule: init_plugin_state, on_mutation_end!
+import ...ConfigModule: default_adaptive_mutation_weights_plugin
+import ...EvolutionModule: condition_mutation_weights!
 
 """
     AdaptiveMutationWeightsPlugin <: AbstractPlugin

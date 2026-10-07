@@ -2,7 +2,7 @@
     using SymbolicRegression
     using SymbolicRegression: Dataset, TraceType, MutationWeights
     using SymbolicRegression.EvaluationModule.LossFunctionsModule: loss_to_cost
-    using SymbolicRegression.EvolutionModule.MutateModule: mutate!
+    using SymbolicRegression.EvolutionModule: mutate!
     using Random: MersenneTwister
 
     options = Options(;

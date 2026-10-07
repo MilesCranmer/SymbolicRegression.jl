@@ -454,7 +454,7 @@ end
 @testitem "loss_function_expression with expressions and templates" begin
     using SymbolicRegression
     using SymbolicRegression: AbstractOptions
-    using SymbolicRegression.EvaluationModule.LossFunctionsModule: eval_loss
+    using SymbolicRegression.EvaluationModule: eval_loss
 
     # Define realistic loss functions for testing
     function tree_loss(

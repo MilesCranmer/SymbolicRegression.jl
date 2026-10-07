@@ -1,6 +1,6 @@
 module MigrationModule
 
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
+using ...InterfacesModule: AbstractOptions
 using ..PopulationModule: Population
 using ..PopMemberModule: AbstractPopMember, PopMember, reset_birth!
 using ...UtilsModule: poisson_sample

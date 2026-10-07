@@ -26,20 +26,17 @@ using DynamicQuantities:
     dimension
 using LossFunctions: SupervisedLoss
 using ..InterfacesModule.InterfaceDynamicQuantitiesModule: get_dimensions_type
-using ..InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ..ConfigModule.OptionsStructModule:
-    Options, ComplexityMapping, check_warm_start_compatibility
-using ..InterfacesModule.DatasetModule: Dataset
-using ..ConfigModule.MutationWeightsModule: MutationWeights
-using ..InterfacesModule.ProgramConstantsModule: LOSS_TYPE
-using ..InterfacesModule.ExpressionSpecModule: AbstractExpressionSpec
+using ..InterfacesModule: AbstractOptions, Dataset, LOSS_TYPE, AbstractExpressionSpec
+using ..ConfigModule:
+    Options, ComplexityMapping, check_warm_start_compatibility, MutationWeights
 using ..ConfigModule.OptionsModule: DEFAULT_OPTIONS, OPTION_DESCRIPTIONS
 using ..EvolutionModule.PopMemberModule: default_popmember_type
-using ..EvaluationModule.ComplexityModule: compute_complexity
-using ..EvolutionModule.HallOfFameModule: HallOfFame, format_hall_of_fame
+using ..EvaluationModule: compute_complexity
+using ..EvolutionModule: HallOfFame
+using ..EvolutionModule.HallOfFameModule: format_hall_of_fame
 using ..UtilsModule: subscriptify, @ignore
-using ..SearchModule.LoggingModule: AbstractSRLogger
-using ..ExpressionsModule.TemplateExpressionModule: TemplateExpression
+using ..SearchModule: AbstractSRLogger
+using ..ExpressionsModule: TemplateExpression
 
 import ..SearchModule: equation_search
 

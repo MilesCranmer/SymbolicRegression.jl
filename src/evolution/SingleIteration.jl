@@ -2,16 +2,15 @@ module SingleIterationModule
 
 using DynamicExpressions: AbstractExpression, simplify_tree!, combine_operators
 using ...UtilsModule: strictmap
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions, create_expression
-using ...InterfacesModule.DatasetModule: Dataset, batch
-using ...InterfacesModule.ProgramConstantsModule: MaybeTrace
-using ...ConfigModule.OptionsStructModule: get_batch_size, batching_required
-using ...InterfacesModule.PluginModule: on_cycle_start!, on_cycle_end!
+using ...InterfacesModule: AbstractOptions, create_expression, Dataset, batch, MaybeTrace
+using ...ConfigModule: get_batch_size, batching_required
+using ...InterfacesModule: on_cycle_start!, on_cycle_end!
 using ..PopMemberModule: generate_reference
 using ..PopulationModule: Population, finalize_costs
 using ..HallOfFameModule: HallOfFame, _update_hall_of_fame_unchecked!
 using ..RegularizedEvolutionModule: reg_evol_cycle
-using ...EvaluationModule.LossFunctionsModule: create_eval_context, eval_cost
+using ...EvaluationModule: eval_cost
+using ...EvaluationModule.LossFunctionsModule: create_eval_context
 using ..ConstantOptimizationModule: optimize_constants
 using ..TracingModule: trace_optimization!
 

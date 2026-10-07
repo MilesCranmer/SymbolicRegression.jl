@@ -20,19 +20,21 @@ using DynamicExpressions:
     with_type_parameters,
     constructorof
 using ...UtilsModule: subscriptify
-using ...InterfacesModule.DatasetModule: Dataset, max_features
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions, create_expression
-using ...ConfigModule.OptionsStructModule: Options
-using ...InterfacesModule.ProgramConstantsModule: MaybeTrace
-using ...InterfacesModule.InterfaceDataTypesModule: init_value, parse_scope
-using ...EvaluationModule.ComplexityModule: compute_complexity
-using ...EvolutionModule.PopulationModule: Population, _population_without_plugins
-using ...EvolutionModule.PopMemberModule: PopMember, AbstractPopMember
-using ...EvolutionModule.HallOfFameModule:
-    HallOfFame, string_dominating_pareto_curve, update_hall_of_fame!
-using ...EvolutionModule.ConstantOptimizationModule: optimize_constants
+using ...InterfacesModule: Dataset, max_features, AbstractOptions, create_expression
+using ...ConfigModule: Options
+using ...InterfacesModule: MaybeTrace, init_value, parse_scope
+using ...EvaluationModule: compute_complexity
+using ...EvolutionModule: Population
+using ...EvolutionModule.PopulationModule: _population_without_plugins
+using ...EvolutionModule:
+    PopMember,
+    AbstractPopMember,
+    HallOfFame,
+    string_dominating_pareto_curve,
+    update_hall_of_fame!,
+    optimize_constants
 using ..ProgressBarsModule: WrappedProgressBar, manually_iterate!, barlen
-using ...ExpressionsModule.ExpressionBuilderModule: strip_metadata
+using ...ExpressionsModule: strip_metadata
 using ...ExpressionsModule.InterfaceDynamicExpressionsModule: takes_eval_context
 
 function logging_callback! end

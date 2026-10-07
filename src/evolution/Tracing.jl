@@ -1,9 +1,8 @@
 module TracingModule
 
 using DynamicExpressions: string_tree
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.ProgramConstantsModule: MaybeTrace, TraceType
-using ...EvaluationModule.ComplexityModule: compute_complexity
+using ...InterfacesModule: AbstractOptions, MaybeTrace, TraceType
+using ...EvaluationModule: compute_complexity
 using ...UtilsModule: json_write
 
 const TRACE_SCHEMA_VERSION = 1

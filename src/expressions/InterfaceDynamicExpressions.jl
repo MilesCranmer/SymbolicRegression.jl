@@ -14,8 +14,7 @@ using DynamicExpressions:
     GraphNode,
     EvalContext
 using DynamicQuantities: dimension, ustrip
-using ...InterfacesModule.OptionsInterfaceModule: AbstractOptions
-using ...InterfacesModule.DatasetModule: Dataset
+using ...InterfacesModule: AbstractOptions, Dataset
 using ...ConfigModule.OptionsModule: inverse_opmap
 using ...UtilsModule: subscriptify
 

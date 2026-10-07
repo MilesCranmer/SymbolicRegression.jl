@@ -421,7 +421,7 @@
     end
 
     @testset "Integration - backsolve in mutation pipeline" begin
-        using SymbolicRegression.EvolutionModule.MutateModule: mutate!
+        using SymbolicRegression.EvolutionModule: mutate!
 
         X = reshape(Float64[1.0, 2.0, 3.0], 1, 3)
         y = Float64[2.0, 4.0, 6.0]
