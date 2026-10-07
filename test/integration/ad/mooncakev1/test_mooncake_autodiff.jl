@@ -1,6 +1,6 @@
 @testitem "Expression constant optimization with Mooncake" begin
     using SymbolicRegression
-    using SymbolicRegression.ConstantOptimizationModule: optimize_constants
+    using SymbolicRegression.EvolutionModule: optimize_constants
     using DynamicExpressions: get_scalar_constants
     using StableRNGs: StableRNG
     using Mooncake

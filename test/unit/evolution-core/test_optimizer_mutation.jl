@@ -3,7 +3,7 @@
     using SymbolicRegression: SymbolicRegression
     using SymbolicRegression: Dataset, TraceType
     using Optim: Optim
-    using SymbolicRegression.MutateModule: next_generation
+    using SymbolicRegression.EvolutionModule.MutateModule: next_generation
     using DynamicExpressions: get_scalar_constants
 
     mutation_weights = (; optimize=1e30)  # We also test whether a named tuple works.

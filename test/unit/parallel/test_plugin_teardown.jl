@@ -3,9 +3,9 @@
     using DynamicExpressions: AbstractExpression, Node
     using SymbolicRegression
     using SymbolicRegression: AbstractPlugin
-    using SymbolicRegression.SearchUtilsModule:
-        AbstractRuntimeOptions, AbstractSearchState, WorkerCopy
-    import SymbolicRegression.SearchUtilsModule: close_reader!
+    using SymbolicRegression.SearchModule: AbstractRuntimeOptions, AbstractSearchState
+    using SymbolicRegression.SearchModule.SearchUtilsModule: WorkerCopy
+    import SymbolicRegression.SearchModule: close_reader!
     using Test
 
     struct TeardownProbeExpression <: AbstractExpression{Float64,Node{Float64}} end

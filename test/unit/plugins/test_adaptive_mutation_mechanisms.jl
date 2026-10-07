@@ -84,7 +84,8 @@ end
 @testitem "skipped mutation kinds stay out of adaptive-weights accounting" begin
     using SymbolicRegression
     using SymbolicRegression: MutationEvent, init_plugin_state, on_mutation_end!
-    import SymbolicRegression.AdaptiveMutationWeightsModule: skip_in_adaptive_weights
+    import SymbolicRegression.PluginsModule.AdaptiveMutationWeightsModule:
+        skip_in_adaptive_weights
     using Test
 
     struct SkippedMutation <: AbstractMutation end
@@ -156,7 +157,7 @@ end
 
 @testitem "SimulatedAnnealingPlugin uses the requested cycle count" begin
     using SymbolicRegression
-    using SymbolicRegression.SimulatedAnnealingModule: SimulatedAnnealingState
+    using SymbolicRegression.PluginsModule.SimulatedAnnealingModule: SimulatedAnnealingState
     using Test
 
     plugin = SimulatedAnnealingPlugin()
@@ -191,7 +192,7 @@ end
         ConstantMutationContext,
         prepare_mutation_context,
         condition_mutation!
-    using SymbolicRegression.SimulatedAnnealingModule: SimulatedAnnealingState
+    using SymbolicRegression.PluginsModule.SimulatedAnnealingModule: SimulatedAnnealingState
     using Test
 
     @test prepare_mutation_context(OperatorMutation()) === nothing
@@ -339,7 +340,7 @@ end
 @testitem "MutationBurstPlugin traces every compound mutation" begin
     using SymbolicRegression
     using SymbolicRegression: Dataset, TraceType, init_plugin_state
-    using SymbolicRegression.RegularizedEvolutionModule: reg_evol_cycle
+    using SymbolicRegression.EvolutionModule.RegularizedEvolutionModule: reg_evol_cycle
     using Test
 
     plugin = MutationBurstPlugin(;
@@ -390,7 +391,7 @@ end
 @testitem "build_mutation_step composes type-stably" begin
     using SymbolicRegression
     using SymbolicRegression: AbstractPlugin
-    using SymbolicRegression.RegularizedEvolutionModule: build_mutation_step
+    using SymbolicRegression.EvolutionModule.RegularizedEvolutionModule: build_mutation_step
     using Test
 
     struct _TagPluginA <: AbstractPlugin end
@@ -424,7 +425,7 @@ end
     using SymbolicRegression
     using SymbolicRegression:
         Dataset, TraceType, init_plugin_state, MutationAcceptanceContext
-    using SymbolicRegression.RegularizedEvolutionModule: reg_evol_cycle
+    using SymbolicRegression.EvolutionModule.RegularizedEvolutionModule: reg_evol_cycle
     using Test
 
     struct _AlwaysRejectPlugin <: SymbolicRegression.AbstractPlugin end
@@ -490,7 +491,7 @@ end
 @testitem "trace captures accepted mutations" begin
     using SymbolicRegression
     using SymbolicRegression: Dataset, TraceType
-    using SymbolicRegression.MutateModule: next_generation
+    using SymbolicRegression.EvolutionModule.MutateModule: next_generation
     using Test
 
     options = Options(;
@@ -515,7 +516,7 @@ end
 @testitem "reg_evol_cycle owns middleware evaluation accounting" begin
     using SymbolicRegression
     using SymbolicRegression: AbstractPlugin, Dataset, MutationResult, TraceType
-    using SymbolicRegression.RegularizedEvolutionModule: reg_evol_cycle
+    using SymbolicRegression.EvolutionModule.RegularizedEvolutionModule: reg_evol_cycle
     using Test
 
     struct CountedMutation <: AbstractMutation end
@@ -647,7 +648,7 @@ end
 @testitem "MutationBurstPlugin preserves accepted intermediate Hall-of-Fame members" begin
     using SymbolicRegression
     using SymbolicRegression: Dataset, MutationResult, TraceType, init_plugin_state
-    using SymbolicRegression.PopMemberModule: create_child
+    using SymbolicRegression.EvolutionModule.PopMemberModule: create_child
     using Test
 
     struct CostSequenceMutation <: AbstractMutation
@@ -695,7 +696,7 @@ end
     using SymbolicRegression
     using SymbolicRegression:
         AbstractPlugin, Dataset, MutationEvent, TraceType, init_plugin_state
-    using SymbolicRegression.MutateModule: next_generation
+    using SymbolicRegression.EvolutionModule.MutateModule: next_generation
     using Test
 
     struct MutationCounterPlugin <: AbstractPlugin
@@ -762,12 +763,11 @@ end
         mutations::Int
         observations::Channel{Int}
     end
-    SymbolicRegression.init_plugin_state(plugin::PersistentPlugin, options, dataset) = PersistentPluginState(
-        0, plugin.observations
-    )
-    SymbolicRegression.fork_plugin_state(state::PersistentPluginState, ::PersistentPlugin, dataset) = PersistentPluginState(
-        state.mutations, state.observations
-    )
+    SymbolicRegression.init_plugin_state(plugin::PersistentPlugin, options, dataset) =
+        PersistentPluginState(0, plugin.observations)
+    SymbolicRegression.fork_plugin_state(
+        state::PersistentPluginState, ::PersistentPlugin, dataset
+    ) = PersistentPluginState(state.mutations, state.observations)
     function SymbolicRegression.on_cycle_start!(
         state::PersistentPluginState,
         ::PersistentPlugin,
@@ -831,12 +831,11 @@ end
         generation::Int
         observations::Channel{Int}
     end
-    SymbolicRegression.init_plugin_state(::DistinctStatePlugin, options, dataset) = DistinctHeadState(
-        0
-    )
-    SymbolicRegression.fork_plugin_state(state::DistinctHeadState, plugin::DistinctStatePlugin, dataset) = DistinctWorkerState(
-        state.generation, plugin.observations
-    )
+    SymbolicRegression.init_plugin_state(::DistinctStatePlugin, options, dataset) =
+        DistinctHeadState(0)
+    SymbolicRegression.fork_plugin_state(
+        state::DistinctHeadState, plugin::DistinctStatePlugin, dataset
+    ) = DistinctWorkerState(state.generation, plugin.observations)
     function SymbolicRegression.refresh_worker_plugin_state(
         worker::DistinctWorkerState,
         latest_head::DistinctHeadState,

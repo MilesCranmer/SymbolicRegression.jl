@@ -3,7 +3,7 @@
         ArrayBuffer, EvalContext, OperatorEnum, eval_tree_array, get_contents, get_metadata
     using SymbolicRegression
     using SymbolicRegression: D
-    using SymbolicRegression.LossFunctionsModule: eval_loss
+    using SymbolicRegression.EvaluationModule: eval_loss
 
     @test Base.isdeprecated(SymbolicRegression, :EvalOptions)
     @test SymbolicRegression.EvalOptions === EvalContext

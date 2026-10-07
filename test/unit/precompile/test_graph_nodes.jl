@@ -63,7 +63,8 @@ end
 @testitem "GraphNode break connection mutation" begin
     using SymbolicRegression
     using SymbolicRegression: TraceType, mutate!
-    using SymbolicRegression.MutationFunctionsModule: break_random_connection!
+    using SymbolicRegression.EvolutionModule.MutationFunctionsModule:
+        break_random_connection!
     using Random: MersenneTwister
 
     options = Options(;
@@ -104,7 +105,8 @@ end
 @testitem "GraphNode form connection mutation" begin
     using SymbolicRegression
     using SymbolicRegression: TraceType, mutate!
-    using SymbolicRegression.MutationFunctionsModule: form_random_connection!
+    using SymbolicRegression.EvolutionModule.MutationFunctionsModule:
+        form_random_connection!
     using Random: MersenneTwister
 
     options = Options(;

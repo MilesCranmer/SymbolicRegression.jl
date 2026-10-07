@@ -1,8 +1,9 @@
 @testitem "template parameters route through the value interface" begin
     using SymbolicRegression
     using SymbolicRegression: ParamVector
-    using SymbolicRegression.MutationFunctionsModule: mutate_constant
-    using SymbolicRegression.TemplateExpressionModule: _initialize_template_parameters
+    using SymbolicRegression.EvolutionModule.MutationFunctionsModule: mutate_constant
+    using SymbolicRegression.ExpressionsModule.TemplateExpressionModule:
+        _initialize_template_parameters
     using DynamicExpressions: DynamicExpressions as DE, get_metadata
     using Random: AbstractRNG, MersenneTwister
 

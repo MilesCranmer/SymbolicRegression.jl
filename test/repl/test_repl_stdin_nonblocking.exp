@@ -53,7 +53,7 @@ expect {
     timeout { fail "timed out loading SymbolicRegression for the negative control" }
     eof { fail "negative-control Julia process exited while loading the package" }
 }
-send -- "@eval SymbolicRegression.SearchUtilsModule read_available_nonblocking(stream::Base.LibuvStream) = (sleep(10); Vector{UInt8}()); SymbolicRegression.watch_stream(stdin)\r"
+send -- "@eval SymbolicRegression.SearchModule.SearchUtilsModule read_available_nonblocking(stream::Base.LibuvStream) = (sleep(10); Vector{UInt8}()); SymbolicRegression.watch_stream(stdin)\r"
 set timeout 1
 expect {
     -exact $prompt { fail "negative control did not block" }

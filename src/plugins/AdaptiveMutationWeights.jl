@@ -1,15 +1,15 @@
 module AdaptiveMutationWeightsModule
 
-using ..CoreModule:
+using ...InterfacesModule:
     AbstractPlugin,
+    MutationEvent,
     AbstractOptions,
     AbstractMutation,
     SimplifyMutation,
-    DoNothingMutation,
-    MutationEvent
-import ..CoreModule: init_plugin_state, on_mutation_end!
-import ..CoreModule: default_adaptive_mutation_weights_plugin
-import ..MutateModule: condition_mutation_weights!
+    DoNothingMutation
+import ...InterfacesModule: init_plugin_state, on_mutation_end!
+import ...ConfigModule: default_adaptive_mutation_weights_plugin
+import ...EvolutionModule: condition_mutation_weights!
 
 """
     AdaptiveMutationWeightsPlugin <: AbstractPlugin
@@ -39,7 +39,7 @@ Mutation kinds excluded from accounting are declared by dispatch on
 `DoNothingMutation` are skipped. To add your own:
 
 ```julia
-SymbolicRegression.AdaptiveMutationWeightsModule.skip_in_adaptive_weights(::MyMutation) = true
+SymbolicRegression.PluginsModule.AdaptiveMutationWeightsModule.skip_in_adaptive_weights(::MyMutation) = true
 ```
 
 !!! warning "Experimental"
@@ -73,7 +73,8 @@ end
 
 # The annotation keeps the forward-declared factory type-stable across
 # module boundaries.
-default_adaptive_mutation_weights_plugin()::AdaptiveMutationWeightsPlugin = AdaptiveMutationWeightsPlugin()
+default_adaptive_mutation_weights_plugin()::AdaptiveMutationWeightsPlugin =
+    AdaptiveMutationWeightsPlugin()
 
 """
     skip_in_adaptive_weights(::AbstractMutation) -> Bool
@@ -86,7 +87,7 @@ represent real search moves).
 Extend by dispatch:
 
 ```julia
-SymbolicRegression.AdaptiveMutationWeightsModule.skip_in_adaptive_weights(::MyMutation) = true
+SymbolicRegression.PluginsModule.AdaptiveMutationWeightsModule.skip_in_adaptive_weights(::MyMutation) = true
 ```
 """
 skip_in_adaptive_weights(::AbstractMutation) = false  # COV_EXCL_LINE

@@ -116,12 +116,10 @@ end
     struct PluginCrossover <: AbstractCrossover end
     struct OperationDefaultsPlugin <: AbstractPlugin end
 
-    SymbolicRegression.plugin_mutations(::OperationDefaultsPlugin) = (
-        PluginMutation() => 2.0, ConstantMutation() => 3.0
-    )
-    SymbolicRegression.plugin_crossovers(::OperationDefaultsPlugin) = (
-        PluginCrossover() => 4.0, SubtreeCrossover() => 5.0
-    )
+    SymbolicRegression.plugin_mutations(::OperationDefaultsPlugin) =
+        (PluginMutation() => 2.0, ConstantMutation() => 3.0)
+    SymbolicRegression.plugin_crossovers(::OperationDefaultsPlugin) =
+        (PluginCrossover() => 4.0, SubtreeCrossover() => 5.0)
 
     plugin = OperationDefaultsPlugin()
     @test plugin_mutations(plugin) == (PluginMutation() => 2.0, ConstantMutation() => 3.0)
@@ -181,29 +179,28 @@ end
         counter_ch::Channel{Any}
     end
 
-    SymbolicRegression.init_plugin_state(p::LifecyclePlugin, options, datasets) = LifecyclePluginState(
-        p.counter_ch
-    )
+    SymbolicRegression.init_plugin_state(p::LifecyclePlugin, options, datasets) =
+        LifecyclePluginState(p.counter_ch)
     # Share the head state's channel with workers (default fork deepcopies,
     # which would isolate the channel and lose worker-side events).
     SymbolicRegression.fork_plugin_state(
         head::LifecyclePluginState, ::LifecyclePlugin, dataset
     ) = head
-    SymbolicRegression.on_search_start!(
-        s::LifecyclePluginState, ::LifecyclePlugin, d, o, r
-    ) = (put!(s.counter_ch, :start); nothing)
-    SymbolicRegression.on_search_end!(
-        s::LifecyclePluginState, ::LifecyclePlugin, ss, d, o, r
-    ) = (put!(s.counter_ch, :end); nothing)
-    SymbolicRegression.on_generation_end!(
-        s::LifecyclePluginState, ::LifecyclePlugin, ss, d, o, r, rp
-    ) = (put!(s.counter_ch, :gen); nothing)
-    SymbolicRegression.on_cycle_end!(
-        s::LifecyclePluginState, ::LifecyclePlugin, pop, d, h, o
-    ) = (put!(s.counter_ch, :cycle_end); put!(s.counter_ch, (:batch_size, d.n)); nothing)
-    SymbolicRegression.on_cycle_start!(
-        s::LifecyclePluginState, ::LifecyclePlugin, cycle_idx::Int, ncycles::Int, o
-    ) = (put!(s.counter_ch, :cycle_start); nothing)
+    SymbolicRegression.on_search_start!(s::LifecyclePluginState, ::LifecyclePlugin, d, o, r) = (
+        put!(s.counter_ch, :start); nothing
+    )
+    SymbolicRegression.on_search_end!(s::LifecyclePluginState, ::LifecyclePlugin, ss, d, o, r) = (
+        put!(s.counter_ch, :end); nothing
+    )
+    SymbolicRegression.on_generation_end!(s::LifecyclePluginState, ::LifecyclePlugin, ss, d, o, r, rp) = (
+        put!(s.counter_ch, :gen); nothing
+    )
+    SymbolicRegression.on_cycle_end!(s::LifecyclePluginState, ::LifecyclePlugin, pop, d, h, o) = (
+        put!(s.counter_ch, :cycle_end); put!(s.counter_ch, (:batch_size, d.n)); nothing
+    )
+    SymbolicRegression.on_cycle_start!(s::LifecyclePluginState, ::LifecyclePlugin, cycle_idx::Int, ncycles::Int, o) = (
+        put!(s.counter_ch, :cycle_start); nothing
+    )
 
     opts = Options(;
         binary_operators=[+, *],
@@ -262,10 +259,12 @@ end
 
     SymbolicRegression.init_plugin_state(p::PluginA, o, d) = PluginAState(p.calls)
     SymbolicRegression.init_plugin_state(p::PluginB, o, d) = PluginBState(p.calls)
-    SymbolicRegression.on_generation_end!(s::PluginAState, ::PluginA, ss, d, o, r, rp) =
-        (s.calls[] += 1; nothing)
-    SymbolicRegression.on_generation_end!(s::PluginBState, ::PluginB, ss, d, o, r, rp) =
-        (s.calls[] += 1; nothing)
+    SymbolicRegression.on_generation_end!(s::PluginAState, ::PluginA, ss, d, o, r, rp) = (
+        s.calls[] += 1; nothing
+    )
+    SymbolicRegression.on_generation_end!(s::PluginBState, ::PluginB, ss, d, o, r, rp) = (
+        s.calls[] += 1; nothing
+    )
 
     opts = Options(;
         binary_operators=[+, *],
@@ -285,7 +284,7 @@ end
 @testitem "Plugin interface: init_member hook" begin
     using SymbolicRegression
     import SymbolicRegression: AbstractPlugin, init_member
-    using SymbolicRegression.MutationFunctionsModule: gen_random_tree
+    using SymbolicRegression.EvolutionModule: gen_random_tree
     using Test
 
     init_count = Ref(0)
@@ -297,13 +296,12 @@ end
         calls::Base.RefValue{Int}
     end
 
-    SymbolicRegression.init_plugin_state(p::InitMemberPlugin, o, d) = InitMemberPluginState(
-        p.calls
-    )
+    SymbolicRegression.init_plugin_state(p::InitMemberPlugin, o, d) =
+        InitMemberPluginState(p.calls)
     # Return nothing to fall through to gen_random_tree, but count calls
-    SymbolicRegression.init_member(
-        s::InitMemberPluginState, ::InitMemberPlugin, dataset, options
-    ) = (s.calls[] += 1; nothing)
+    SymbolicRegression.init_member(s::InitMemberPluginState, ::InitMemberPlugin, dataset, options) = (
+        s.calls[] += 1; nothing
+    )
 
     opts = Options(;
         binary_operators=[+, *],
@@ -323,7 +321,7 @@ end
 @testitem "Plugin interface: init_member that returns a tree is consumed" begin
     using SymbolicRegression
     import SymbolicRegression: AbstractPlugin
-    using SymbolicRegression.MutationFunctionsModule: gen_random_tree
+    using SymbolicRegression.EvolutionModule: gen_random_tree
     using Test
 
     seeded_calls = Ref(0)
@@ -334,9 +332,8 @@ end
     mutable struct SeedingPluginState
         calls::Base.RefValue{Int}
     end
-    SymbolicRegression.init_plugin_state(p::SeedingPlugin, o, d) = SeedingPluginState(
-        p.calls
-    )
+    SymbolicRegression.init_plugin_state(p::SeedingPlugin, o, d) =
+        SeedingPluginState(p.calls)
     function SymbolicRegression.init_member(
         s::SeedingPluginState, ::SeedingPlugin, dataset, options
     )
@@ -365,7 +362,7 @@ end
 @testitem "Plugin interface: two init_member providers is an error" begin
     using SymbolicRegression
     import SymbolicRegression: AbstractPlugin, resolve_init_member
-    using SymbolicRegression.MutationFunctionsModule: gen_random_tree
+    using SymbolicRegression.EvolutionModule: gen_random_tree
     using Test
 
     struct SeederA <: AbstractPlugin end
@@ -402,9 +399,8 @@ end
     mutable struct MutEvalPluginState
         events_ch::Channel{MutationEvent{Float32,Float32}}
     end
-    SymbolicRegression.init_plugin_state(p::MutEvalPlugin, o, d) = MutEvalPluginState(
-        p.events_ch
-    )
+    SymbolicRegression.init_plugin_state(p::MutEvalPlugin, o, d) =
+        MutEvalPluginState(p.events_ch)
     # Share the channel with workers (default fork deepcopies → events lost).
     SymbolicRegression.fork_plugin_state(
         head::MutEvalPluginState, ::MutEvalPlugin, dataset
@@ -476,9 +472,8 @@ end
     mutable struct ZeroConstState
         calls::Base.RefValue{Int}
     end
-    SymbolicRegression.init_plugin_state(plugin::ZeroConstPlugin, o, d) = ZeroConstState(
-        plugin.calls
-    )
+    SymbolicRegression.init_plugin_state(plugin::ZeroConstPlugin, o, d) =
+        ZeroConstState(plugin.calls)
     SymbolicRegression.fork_plugin_state(
         state::ZeroConstState, ::ZeroConstPlugin, dataset
     ) = state

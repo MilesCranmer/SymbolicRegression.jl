@@ -119,7 +119,7 @@ so it is easier to tell apart variables and operators
 from string constants.
 =#
 
-import SymbolicRegression.InterfaceDynamicExpressionsModule: string_constant
+import SymbolicRegression.ExpressionsModule.InterfaceDynamicExpressionsModule: string_constant
 function string_constant(val::String, ::Val{precision}, _) where {precision}
     val = replace(val, "\"" => "\\\"", "\\" => "\\\\")
     return '"' * val * '"'
@@ -133,7 +133,7 @@ value interface and define the `get_scalar_constants` and `set_scalar_constants!
 functions.
 =#
 
-import SymbolicRegression.ConstantOptimizationModule: can_optimize
+import SymbolicRegression.EvolutionModule.ConstantOptimizationModule: can_optimize
 can_optimize(::Type{String}, _) = false
 
 #=

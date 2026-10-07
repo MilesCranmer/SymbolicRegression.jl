@@ -10,7 +10,7 @@
         end
     end
 
-    import SymbolicRegression.PopMemberModule: create_child
+    import SymbolicRegression.EvolutionModule.PopMemberModule: create_child
     import SymbolicRegression: strip_metadata
 
     # Define a custom PopMember that tracks generation count
@@ -151,9 +151,7 @@
             tree,
             cost,
             loss,
-            SymbolicRegression.CoreModule.UtilsModule.get_birth_order(;
-                deterministic=options.deterministic
-            ),
+            SymbolicRegression.get_birth_order(; deterministic=options.deterministic),
             actual_complexity,
             abs(rand(Int)),
             parent_ref,

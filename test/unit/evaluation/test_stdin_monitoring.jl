@@ -79,14 +79,15 @@
     @test io_error_reader.can_read_user_input
     eof_reader = SymbolicRegression.watch_stream(ReadAvailableErrorIO(EOFError()))
     @test eof_reader.can_read_user_input
-    @test_throws ArgumentError SymbolicRegression.SearchUtilsModule.read_available_nonblocking(
+    @test_throws ArgumentError SymbolicRegression.SearchModule.SearchUtilsModule.read_available_nonblocking(
         ReadAvailableErrorIO(ArgumentError("test"))
     )
 
     buffer_stream = Base.BufferStream()
     write(buffer_stream, "x")
-    @test SymbolicRegression.SearchUtilsModule.read_available_nonblocking(buffer_stream) ==
-        UInt8[0x78]
+    @test SymbolicRegression.SearchModule.SearchUtilsModule.read_available_nonblocking(
+        buffer_stream
+    ) == UInt8[0x78]
     close(buffer_stream)
 
     # Reproducer for freeze path in check_for_user_quit.

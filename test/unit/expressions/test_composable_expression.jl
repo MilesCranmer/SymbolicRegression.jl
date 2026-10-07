@@ -197,7 +197,8 @@ end
 
 @testitem "ValidVector operations with Union{} return type" begin
     using SymbolicRegression: ValidVector
-    using SymbolicRegression.ComposableExpressionModule: apply_operator, _match_eltype
+    using SymbolicRegression.ExpressionsModule.ComposableExpressionModule:
+        apply_operator, _match_eltype
 
     error_op(::Any, ::Any) = error("This should cause Union{} inference")
 

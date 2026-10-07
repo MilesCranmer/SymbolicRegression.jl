@@ -37,7 +37,7 @@ end
 
 @testitem "Test derivatives during optimization" begin
     using SymbolicRegression
-    using SymbolicRegression.ConstantOptimizationModule:
+    using SymbolicRegression.EvolutionModule.ConstantOptimizationModule:
         Evaluator, GradEvaluator, EvaluatorContext
     using DynamicExpressions
     using Zygote: Zygote

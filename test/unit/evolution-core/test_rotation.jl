@@ -1,6 +1,6 @@
 @testitem "Basic `randomly_rotate_tree!`" begin
     using SymbolicRegression
-    using SymbolicRegression.MutationFunctionsModule: randomly_rotate_tree!
+    using SymbolicRegression.EvolutionModule.MutationFunctionsModule: randomly_rotate_tree!
 
     # Create a simple binary tree structure directly
     options = Options(; binary_operators=(+, *, -, /), unary_operators=(cos, exp))
@@ -30,7 +30,7 @@ end
 
 @testitem "Complex `randomly_rotate_tree!`" begin
     using SymbolicRegression
-    using SymbolicRegression.MutationFunctionsModule: randomly_rotate_tree!
+    using SymbolicRegression.EvolutionModule.MutationFunctionsModule: randomly_rotate_tree!
     using Random: MersenneTwister
 
     # Create a simple binary tree structure directly

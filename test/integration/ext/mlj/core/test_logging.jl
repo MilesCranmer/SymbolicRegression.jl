@@ -47,7 +47,7 @@
     @test occursin(r"search\s*\n\s*│\s*data\s*=\s*", s)
 end
 @testitem "Test convex hull calculation" begin
-    using SymbolicRegression.LoggingModule: convex_hull, convex_hull_area
+    using SymbolicRegression.SearchModule.LoggingModule: convex_hull, convex_hull_area
 
     # Create a Pareto front with an interior point that should be ignored
     log_complexities = [1.0, 2.0, 3.0, 4.0]

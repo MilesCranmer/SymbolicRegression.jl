@@ -83,8 +83,8 @@ end
         init_plugin_state,
         fork_plugin_state,
         refresh_worker_plugin_state
-    using SymbolicRegression.AdaptiveParsimonyModule: update_frequencies!
-    using SymbolicRegression.CoreModule.DatasetModule: Dataset
+    using SymbolicRegression.PluginsModule.AdaptiveParsimonyModule: update_frequencies!
+    using SymbolicRegression.InterfacesModule: Dataset
     using DynamicExpressions: Node
     using Test
 
@@ -190,8 +190,9 @@ end
 
 @testitem "AdaptiveParsimonyPlugin: per-output state shape (single-output)" begin
     using SymbolicRegression
-    using SymbolicRegression.AdaptiveParsimonyModule:
-        AdaptiveParsimonyPlugin, AdaptiveParsimonyState, RunningSearchStatistics
+    using SymbolicRegression.PluginsModule: AdaptiveParsimonyPlugin
+    using SymbolicRegression.PluginsModule.AdaptiveParsimonyModule:
+        AdaptiveParsimonyState, RunningSearchStatistics
     using SymbolicRegression: Dataset, init_plugin_state, fork_plugin_state
     using Test
 

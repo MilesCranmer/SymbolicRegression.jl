@@ -1,6 +1,6 @@
 @testitem "Test RunningSearchStatistics" begin
     using SymbolicRegression
-    using SymbolicRegression.AdaptiveParsimonyModule:
+    using SymbolicRegression.PluginsModule.AdaptiveParsimonyModule:
         RunningSearchStatistics, update_frequencies!, move_window!, normalize_frequencies!
     using Random
 

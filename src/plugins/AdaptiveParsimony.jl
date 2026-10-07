@@ -1,17 +1,17 @@
 module AdaptiveParsimonyModule
 
 using DispatchDoctor: @stable
-using ..CoreModule: AbstractPlugin, AbstractOptions, MutationAcceptanceContext
-using ..ComplexityModule: compute_complexity
-using ..PopMemberModule: AbstractPopMember
-import ..CoreModule:
+using ...InterfacesModule: AbstractPlugin, MutationAcceptanceContext, AbstractOptions
+using ...EvaluationModule: compute_complexity
+using ...EvolutionModule: AbstractPopMember
+import ...InterfacesModule:
     init_plugin_state,
     fork_plugin_state,
     refresh_worker_plugin_state,
     tournament_cost_multiplier,
     mutation_acceptance_multiplier,
-    on_generation_end!,
-    default_adaptive_parsimony_plugin
+    on_generation_end!
+import ...ConfigModule: default_adaptive_parsimony_plugin
 
 """
     RunningSearchStatistics

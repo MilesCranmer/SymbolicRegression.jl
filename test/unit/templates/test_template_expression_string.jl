@@ -1,5 +1,5 @@
 @testitem "template expression color function" begin
-    using SymbolicRegression.TemplateExpressionModule: _colors
+    using SymbolicRegression.ExpressionsModule.TemplateExpressionModule: _colors
 
     # Test empty case
     @test _colors(Val(0)) == ()

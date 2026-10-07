@@ -29,7 +29,7 @@ end
 
 @testitem "Test versioned default profile selection" begin
     using SymbolicRegression
-    using SymbolicRegression.CoreModule.OptionsModule: default_options
+    using SymbolicRegression.ConfigModule.OptionsModule: default_options
 
     v1_defaults = default_options(v"1.0.0")
     v2_defaults = default_options(v"2.0.0-alpha")
@@ -68,8 +68,8 @@ end
 
 @testitem "Test automatic batching options" begin
     using SymbolicRegression
-    using SymbolicRegression.CoreModule:
-        batch, batching_required, get_batch_size, use_batching
+    using SymbolicRegression.InterfacesModule: batch
+    using SymbolicRegression.ConfigModule: batching_required, get_batch_size, use_batching
 
     struct UnbatchableDataset <: Dataset{Float64,Float64}
         n::Int
@@ -115,7 +115,7 @@ end
 
 @testitem "Test backsolve options" begin
     using SymbolicRegression
-    using SymbolicRegression.BacksolveModule: configured_backsolve
+    using SymbolicRegression.EvolutionModule.BacksolveModule: configured_backsolve
 
     # Backsolve configuration lives on BacksolveMutation.
     default_backsolve = first(
@@ -234,7 +234,7 @@ end
 
 @testitem "Test build_constraints with pre-processed vector format" begin
     using SymbolicRegression
-    using SymbolicRegression.CoreModule.OptionsModule: build_constraints
+    using SymbolicRegression.ConfigModule.OptionsModule: build_constraints
     using DynamicExpressions: OperatorEnum
 
     operators = OperatorEnum(1 => (sin, cos), 2 => (+, *, -), 5 => (max,))

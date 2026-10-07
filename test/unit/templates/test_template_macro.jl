@@ -38,7 +38,7 @@ end
 
 @testitem "Template macro error handling" begin
     using SymbolicRegression
-    using SymbolicRegression.TemplateExpressionMacroModule: template_spec
+    using SymbolicRegression.ExpressionsModule.TemplateExpressionMacroModule: template_spec
 
     # Test missing expressions
     @test_throws(
@@ -157,7 +157,7 @@ end
 
 @testitem "Template macro additional error handling" begin
     using SymbolicRegression
-    using SymbolicRegression.TemplateExpressionMacroModule: template_spec
+    using SymbolicRegression.ExpressionsModule.TemplateExpressionMacroModule: template_spec
 
     # Test setting parameters keyword twice
     @test_throws(

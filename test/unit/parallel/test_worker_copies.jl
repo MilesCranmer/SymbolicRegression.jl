@@ -3,7 +3,8 @@
     using Random
     using SymbolicRegression
     using SymbolicRegression: eval_loss
-    using SymbolicRegression.SearchUtilsModule: store_on_workers, delete_worker_copy!
+    using SymbolicRegression.SearchModule: store_on_workers
+    using SymbolicRegression.SearchModule.SearchUtilsModule: delete_worker_copy!
     using Test
 
     procs = addprocs(2)
@@ -57,7 +58,9 @@
                     Core.eval,
                     proc,
                     Core.Main,
-                    :(isempty(SymbolicRegression.SearchUtilsModule.WORKER_COPIES)),
+                    :(isempty(
+                        SymbolicRegression.SearchModule.SearchUtilsModule.WORKER_COPIES
+                    )),
                 )
             end
         end

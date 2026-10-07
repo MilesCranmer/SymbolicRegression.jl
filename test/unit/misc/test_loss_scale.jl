@@ -13,7 +13,7 @@
 end
 
 @testitem "loss_scale score computation" begin
-    using SymbolicRegression.HallOfFameModule:
+    using SymbolicRegression.EvolutionModule.HallOfFameModule:
         compute_direct_score, compute_zero_centered_score
 
     @test compute_direct_score(0.5, 1.0, 1.0) ≈ 0.5
@@ -58,7 +58,7 @@ end
 end
 
 @testitem "loss_scale in pareto_volume" begin
-    using SymbolicRegression.LoggingModule: pareto_volume
+    using SymbolicRegression.SearchModule.LoggingModule: pareto_volume
 
     # Test data
     test_losses = [0.5, 0.3, 0.2]
@@ -92,9 +92,9 @@ end
 
 @testitem "loss_scale error handling" begin
     using SymbolicRegression
-    using SymbolicRegression.CoreModule: Dataset
-    using SymbolicRegression.HallOfFameModule: format_hall_of_fame
-    using SymbolicRegression.PopMemberModule: PopMember
+    using SymbolicRegression.InterfacesModule: Dataset
+    using SymbolicRegression.EvolutionModule.HallOfFameModule: format_hall_of_fame
+    using SymbolicRegression.EvolutionModule: PopMember
     using DynamicExpressions: Node
 
     # Create test dataset
@@ -133,8 +133,8 @@ end
 
 @testitem "string_dominating_pareto_curve header display" begin
     using SymbolicRegression
-    using SymbolicRegression.HallOfFameModule: HallOfFame, string_dominating_pareto_curve
-    using SymbolicRegression.CoreModule: Dataset
+    using SymbolicRegression.EvolutionModule: HallOfFame, string_dominating_pareto_curve
+    using SymbolicRegression.InterfacesModule: Dataset
     using DynamicExpressions: Node, Expression
 
     # Create simple test dataset

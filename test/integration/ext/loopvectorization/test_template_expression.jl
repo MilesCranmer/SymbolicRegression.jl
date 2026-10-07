@@ -213,7 +213,7 @@ end
 
 @testitem "Test constraints checking in TemplateExpression" begin
     using SymbolicRegression
-    using SymbolicRegression: CheckConstraintsModule as CC
+    using SymbolicRegression.EvaluationModule: CheckConstraintsModule as CC
 
     # Create a template expression with nested exponentials
     options = Options(;
@@ -454,7 +454,7 @@ end
 @testitem "loss_function_expression with expressions and templates" begin
     using SymbolicRegression
     using SymbolicRegression: AbstractOptions
-    using SymbolicRegression.LossFunctionsModule: eval_loss
+    using SymbolicRegression.EvaluationModule: eval_loss
 
     # Define realistic loss functions for testing
     function tree_loss(
@@ -699,7 +699,7 @@ end
 @testitem "Test Float32/Float64 type conversion in TemplateExpression" begin
     using SymbolicRegression
     using SymbolicRegression: eval_loss
-    using SymbolicRegression.TemplateExpressionModule: _match_input_eltype
+    using SymbolicRegression.ExpressionsModule.TemplateExpressionModule: _match_input_eltype
 
     template = @template_spec(expressions = (f,)) do x1, x2
         0.5 * f(x1, x2)  # 0.5 is Float64 literal

@@ -12,8 +12,8 @@
     using Random: AbstractRNG, MersenneTwister
     using SymbolicRegression
     using SymbolicRegression: AbstractComposableExpression
-    using SymbolicRegression.ExpressionBuilderModule: create_expression
-    using SymbolicRegression.MutationFunctionsModule: crossover_trees
+    using SymbolicRegression.ExpressionsModule.ExpressionBuilderModule: create_expression
+    using SymbolicRegression.EvolutionModule: crossover_trees
 
     struct WrappedExpression{T,N<:AbstractExpressionNode{T},D} <:
            AbstractComposableExpression{T,N}
@@ -52,7 +52,7 @@
         )
     end
     crossover_calls = Ref(0)
-    function SymbolicRegression.MutationFunctionsModule.crossover_trees(
+    function SymbolicRegression.EvolutionModule.MutationFunctionsModule.crossover_trees(
         ex1::WrappedExpression{T}, ex2::WrappedExpression{T}, rng::AbstractRNG
     ) where {T}
         crossover_calls[] += 1
@@ -186,7 +186,8 @@ end
     using DynamicExpressions: Node, OperatorEnum, get_metadata
     using SymbolicRegression
     using SymbolicRegression: ParamVector
-    using SymbolicRegression.ExpressionBuilderModule: create_expression, strip_metadata
+    using SymbolicRegression.ExpressionsModule: strip_metadata
+    using SymbolicRegression.ExpressionsModule.ExpressionBuilderModule: create_expression
 
     operators = OperatorEnum(; binary_operators=(+,))
     structure = TemplateStructure{(:f,),(:weights, :bias)}(
@@ -240,7 +241,7 @@ end
 @testitem "TemplateExpressionSpec validates initialized template parameters" begin
     using DynamicExpressions: Node, OperatorEnum
     using SymbolicRegression
-    using SymbolicRegression.ExpressionBuilderModule: create_expression
+    using SymbolicRegression.ExpressionsModule.ExpressionBuilderModule: create_expression
 
     operators = OperatorEnum(; binary_operators=(+,))
     structure = TemplateStructure{(:f,),(:weights, :bias)}(

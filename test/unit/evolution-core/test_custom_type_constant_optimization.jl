@@ -9,7 +9,7 @@
     using Optim: Optim
     using Random: default_rng
     using SymbolicRegression: Dataset, Options, PopMember
-    using SymbolicRegression.ConstantOptimizationModule: _optimize_constants
+    using SymbolicRegression.EvolutionModule.ConstantOptimizationModule: _optimize_constants
 
     # Issue #568:
     # The constant-optimization restart loop used the PopMember type parameter `T`
@@ -97,7 +97,7 @@ end
     using Random: AbstractRNG
     using SymbolicRegression
     using SymbolicRegression: Dataset, TraceType
-    using SymbolicRegression.MutateModule: next_generation
+    using SymbolicRegression.EvolutionModule.MutateModule: next_generation
 
     struct DiscreteValue
         value::Int

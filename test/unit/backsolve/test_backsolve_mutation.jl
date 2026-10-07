@@ -1,9 +1,10 @@
 @testitem "Test backsolve mutation" tags = [:part1] begin
     using SymbolicRegression
-    using SymbolicRegression.InverseFunctionsModule: approx_inverse
-    using SymbolicRegression.EvaluateInverseModule:
+    using SymbolicRegression.EvaluationModule.InverseFunctionsModule: approx_inverse
+    using SymbolicRegression.EvaluationModule.EvaluateInverseModule:
         eval_inverse_tree_array, eval_inverse_tree_array_masked, _eval_inverse_tree_array
-    using SymbolicRegression.MutationFunctionsModule: backsolve_rewrite_random_node
+    using SymbolicRegression.EvolutionModule.MutationFunctionsModule:
+        backsolve_rewrite_random_node
     using DynamicExpressions:
         Node,
         OperatorEnum,
@@ -16,43 +17,47 @@
     using StableRNGs: StableRNG
 
     rng = StableRNG(0)
-    options_with_backsolve(; kws...) = Options(;
-        default_mutations=(), mutations=(BacksolveMutation() => 1.0,), kws...
-    )
+    options_with_backsolve(; kws...) =
+        Options(; default_mutations=(), mutations=(BacksolveMutation() => 1.0,), kws...)
 
     @testset "InverseFunctions - Unary operators" begin
         inverse_pairs = (
-            sin => SymbolicRegression.CoreModule.safe_asin,
-            SymbolicRegression.CoreModule.safe_asin => sin,
-            cos => SymbolicRegression.CoreModule.safe_acos,
-            SymbolicRegression.CoreModule.safe_acos => cos,
+            sin => SymbolicRegression.ConfigModule.OperatorsModule.safe_asin,
+            SymbolicRegression.ConfigModule.OperatorsModule.safe_asin => sin,
+            cos => SymbolicRegression.ConfigModule.OperatorsModule.safe_acos,
+            SymbolicRegression.ConfigModule.OperatorsModule.safe_acos => cos,
             tan => atan,
             atan => tan,
-            cosh => SymbolicRegression.CoreModule.safe_acosh,
-            SymbolicRegression.CoreModule.safe_acosh => cosh,
-            tanh => SymbolicRegression.CoreModule.atanh_clip,
-            SymbolicRegression.CoreModule.atanh_clip => tanh,
-            SymbolicRegression.CoreModule.square => SymbolicRegression.CoreModule.safe_sqrt,
-            exp => SymbolicRegression.CoreModule.safe_log,
-            SymbolicRegression.CoreModule.safe_log => exp,
-            SymbolicRegression.CoreModule.safe_log2 => exp2,
-            exp2 => SymbolicRegression.CoreModule.safe_log2,
-            SymbolicRegression.CoreModule.safe_log10 => exp10,
-            exp10 => SymbolicRegression.CoreModule.safe_log10,
-            SymbolicRegression.CoreModule.safe_sqrt => SymbolicRegression.CoreModule.square,
-            SymbolicRegression.CoreModule.cube => cbrt,
-            cbrt => SymbolicRegression.CoreModule.cube,
-            SymbolicRegression.CoreModule.neg => SymbolicRegression.CoreModule.neg,
+            cosh => SymbolicRegression.ConfigModule.OperatorsModule.safe_acosh,
+            SymbolicRegression.ConfigModule.OperatorsModule.safe_acosh => cosh,
+            tanh => SymbolicRegression.ConfigModule.OperatorsModule.atanh_clip,
+            SymbolicRegression.ConfigModule.OperatorsModule.atanh_clip => tanh,
+            SymbolicRegression.ConfigModule.OperatorsModule.square =>
+                SymbolicRegression.ConfigModule.OperatorsModule.safe_sqrt,
+            exp => SymbolicRegression.ConfigModule.OperatorsModule.safe_log,
+            SymbolicRegression.ConfigModule.OperatorsModule.safe_log => exp,
+            SymbolicRegression.ConfigModule.OperatorsModule.safe_log2 => exp2,
+            exp2 => SymbolicRegression.ConfigModule.OperatorsModule.safe_log2,
+            SymbolicRegression.ConfigModule.OperatorsModule.safe_log10 => exp10,
+            exp10 => SymbolicRegression.ConfigModule.OperatorsModule.safe_log10,
+            SymbolicRegression.ConfigModule.OperatorsModule.safe_sqrt =>
+                SymbolicRegression.ConfigModule.OperatorsModule.square,
+            SymbolicRegression.ConfigModule.OperatorsModule.cube => cbrt,
+            cbrt => SymbolicRegression.ConfigModule.OperatorsModule.cube,
+            SymbolicRegression.ConfigModule.OperatorsModule.neg =>
+                SymbolicRegression.ConfigModule.OperatorsModule.neg,
         )
         for (f, inv_f) in inverse_pairs
             @test approx_inverse(f) == inv_f
         end
         @test isapprox(
-            approx_inverse(SymbolicRegression.CoreModule.safe_log1p)(1.0), exp(1.0) - 1.0
+            approx_inverse(SymbolicRegression.ConfigModule.OperatorsModule.safe_log1p)(1.0),
+            exp(1.0) - 1.0,
         )
-        @test approx_inverse(approx_inverse(SymbolicRegression.CoreModule.safe_log1p)) ==
-            SymbolicRegression.CoreModule.safe_log1p
-        for f in (abs, SymbolicRegression.CoreModule.relu)
+        @test approx_inverse(
+            approx_inverse(SymbolicRegression.ConfigModule.OperatorsModule.safe_log1p)
+        ) == SymbolicRegression.ConfigModule.OperatorsModule.safe_log1p
+        for f in (abs, SymbolicRegression.ConfigModule.OperatorsModule.relu)
             @test approx_inverse(f) === nothing
         end
     end
@@ -63,14 +68,15 @@
         @test inv_f isa Base.Fix2{typeof(/)}
         @test inv_f.x == 2.0
 
-        f_2_pow = Base.Fix1(SymbolicRegression.CoreModule.safe_pow, 2.0)
+        f_2_pow = Base.Fix1(SymbolicRegression.ConfigModule.OperatorsModule.safe_pow, 2.0)
         inv_f = approx_inverse(f_2_pow)
         @test inv_f isa Function
         @test isapprox(inv_f(8.0), 3.0)
 
-        f_pow_2 = Base.Fix2(SymbolicRegression.CoreModule.safe_pow, 2.0)
+        f_pow_2 = Base.Fix2(SymbolicRegression.ConfigModule.OperatorsModule.safe_pow, 2.0)
         inv_f = approx_inverse(f_pow_2)
-        @test inv_f isa Base.Fix2{typeof(SymbolicRegression.CoreModule.safe_pow)}
+        @test inv_f isa
+            Base.Fix2{typeof(SymbolicRegression.ConfigModule.OperatorsModule.safe_pow)}
         @test inv_f.x == 0.5
 
         for f in (Base.Fix1(mod, 2), Base.Fix2(mod, 2))
@@ -87,7 +93,7 @@
 
         # Arities 1 and 2 keep routing through `Base.Fix1`/`Base.Fix2`
         @test approx_inverse(sin, Val(1), (0.0,)) ===
-            SymbolicRegression.CoreModule.safe_asin
+            SymbolicRegression.ConfigModule.OperatorsModule.safe_asin
         @test approx_inverse(*, Val(1), (0.0, 2.0)) isa Base.Fix2{typeof(/)}
         @test approx_inverse(*, Val(2), (2.0, 0.0)) isa Base.Fix1{typeof(\)}
 
@@ -415,7 +421,7 @@
     end
 
     @testset "Integration - backsolve in mutation pipeline" begin
-        using SymbolicRegression.MutateModule: mutate!
+        using SymbolicRegression.EvolutionModule: mutate!
 
         X = reshape(Float64[1.0, 2.0, 3.0], 1, 3)
         y = Float64[2.0, 4.0, 6.0]
@@ -439,7 +445,7 @@
             dataset=dataset,
         )
 
-        @test result isa SymbolicRegression.MutateModule.MutationResult
+        @test result isa SymbolicRegression.EvolutionModule.MutateModule.MutationResult
         @test result.tree !== nothing || result.member !== nothing
     end
 

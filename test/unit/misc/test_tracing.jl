@@ -1,7 +1,7 @@
 @testitem "trace_optimization! seeds missing old ref" begin
     using SymbolicRegression
     using SymbolicRegression: Options, TraceType, PopMember, Expression
-    using SymbolicRegression.TracingModule: trace_optimization!
+    using SymbolicRegression.EvolutionModule.TracingModule: trace_optimization!
     using Test
 
     options = Options(; binary_operators=(+, *), default_plugins=(), use_tracing=true)
@@ -32,7 +32,7 @@ end
 @testitem "trace_optimization! tolerates a reference held by several slots" begin
     using SymbolicRegression
     using SymbolicRegression: Options, TraceType, PopMember, Expression
-    using SymbolicRegression.TracingModule: trace_optimization!
+    using SymbolicRegression.EvolutionModule.TracingModule: trace_optimization!
     using Test
 
     options = Options(; binary_operators=(+, *), default_plugins=(), use_tracing=true)
@@ -74,7 +74,7 @@ end
 
 @testitem "Tracing requires JSON.jl" begin
     using SymbolicRegression: TraceType
-    using SymbolicRegression.TracingModule: write_trace
+    using SymbolicRegression.EvolutionModule: write_trace
     using Test
 
     err = try
@@ -89,22 +89,23 @@ end
 
 @testitem "Disabled tracing is allocation-free" begin
     using SymbolicRegression: Options, TraceType
-    using SymbolicRegression.TracingModule:
+    using SymbolicRegression.EvolutionModule:
         initialize_trace!,
-        new_step_trace,
         new_trace,
-        new_traced_steps,
         next_trace_iteration,
+        trace_iteration_start!,
+        write_trace
+    using SymbolicRegression.EvolutionModule.TracingModule:
+        new_step_trace,
+        new_traced_steps,
         reset_traced_steps!,
         trace_crossover!,
         trace_identity_mutation!,
-        trace_iteration_start!,
         trace_mutation_attempts!,
         trace_mutation_result!,
         trace_mutation_step!,
         trace_mutation_type!,
-        trace_optimization!,
-        write_trace
+        trace_optimization!
     using Test
 
     options = Options(; binary_operators=(+, *), default_plugins=())

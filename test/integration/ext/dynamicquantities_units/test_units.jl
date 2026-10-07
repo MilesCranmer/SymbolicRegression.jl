@@ -1,7 +1,8 @@
 @testitem "Dimensional analysis" begin
     using SymbolicRegression
-    using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_units
-    using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
+    using SymbolicRegression.InterfacesModule.InterfaceDynamicQuantitiesModule: get_units
+    using SymbolicRegression.EvaluationModule.DimensionalAnalysisModule:
+        violates_dimensional_constraints
     using DynamicQuantities
     using DynamicQuantities: DEFAULT_DIM_BASE_TYPE
 
@@ -102,7 +103,8 @@ end
 
 @testitem "Search with dimensional constraints" begin
     using SymbolicRegression
-    using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
+    using SymbolicRegression.EvaluationModule.DimensionalAnalysisModule:
+        violates_dimensional_constraints
     using Random: MersenneTwister
 
     rng = MersenneTwister(0)
@@ -137,9 +139,9 @@ end
         !has_cos(member.tree) || any(
             t ->
                 t.degree == 1 &&
-                options.operators.unaops[t.op] == cos &&
-                Node(Float64; feature=1) in t &&
-                compute_complexity(t, options) > 1,
+                    options.operators.unaops[t.op] == cos &&
+                    Node(Float64; feature=1) in t &&
+                    compute_complexity(t, options) > 1,
             get_tree(member.tree),
         ) for member in dominating
     ]
@@ -389,7 +391,8 @@ end
 
 @testitem "Dimensionless constants" begin
     using SymbolicRegression
-    using SymbolicRegression.DimensionalAnalysisModule: violates_dimensional_constraints
+    using SymbolicRegression.EvaluationModule.DimensionalAnalysisModule:
+        violates_dimensional_constraints
     using DynamicQuantities
 
     include(joinpath(@__DIR__, "..", "..", "..", "utils.jl"))
@@ -433,9 +436,11 @@ end
     using MLJBase
     using SymbolicRegression
     using DynamicQuantities
-    using SymbolicRegression.DimensionalAnalysisModule: @maybe_return_call, WildcardQuantity
+    using SymbolicRegression.EvaluationModule.DimensionalAnalysisModule:
+        @maybe_return_call, WildcardQuantity
     using SymbolicRegression.MLJInterfaceModule: unwrap_units_single
-    using SymbolicRegression.InterfaceDynamicQuantitiesModule: get_dimensions_type
+    using SymbolicRegression.InterfacesModule.InterfaceDynamicQuantitiesModule:
+        get_dimensions_type
     using MLJModelInterface: MLJModelInterface as MMI
 
     function test_return_call(op::Function, w...)
