@@ -16,7 +16,8 @@ using DynamicExpressions:
     has_operators,
     get_child,
     set_child!,
-    max_degree
+    max_degree,
+    preserve_sharing
 using ..CoreModule:
     AbstractOptions, DATA_TYPE, init_value, sample_value, Dataset, ConstantMutation
 using ..EvaluateInverseModule: eval_inverse_tree_array_masked
@@ -521,18 +522,25 @@ function crossover_trees(
     n1, p1, i1 = _random_node_and_parent(t1, rng)
     n2, p2, i2 = _random_node_and_parent(t2, rng)
 
-    n1 = copy(n1)
+    # Each subtree is spliced into the other tree exactly once, so neither
+    # needs a copy: n2 leaves t2 when n1 takes its place, and n1 has already
+    # left t1 by then. Only a root swap keeps the whole tree, so copy there.
+    # With shared nodes a subtree can have other parents, so copy both.
+    if preserve_sharing(N)
+        n1 = copy(n1)
+        n2 = copy(n2)
+    end
 
     # splice n2 into t1
     if i1 == 0
         t1 = copy(n2)
     else
-        set_child!(p1, copy(n2), i1)
+        set_child!(p1, n2, i1)
     end
 
     # splice n1 into t2
     if i2 == 0
-        t2 = n1
+        t2 = copy(n1)
     else
         set_child!(p2, n1, i2)
     end
