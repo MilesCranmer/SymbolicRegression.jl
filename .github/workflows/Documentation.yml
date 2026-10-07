@@ -53,6 +53,15 @@ jobs:
           DOCUMENTER_PRODUCTION: "true"
         run: |
           julia --project=docs/ docs/make.jl
+      - name: "Refresh deployed docs version metadata"
+        if: github.event_name != 'pull_request'
+        env:
+          TARGET: ${{ matrix.target }}
+          DOCUMENTER_KEY_ASTRO: ${{ secrets.DOCUMENTER_KEY }}
+          DOCUMENTER_KEY_CAM: ${{ secrets.DAMTP_DEPLOY_KEY }}
+        run: |
+          chmod +x scripts/docs_versions_fix.sh
+          bash scripts/docs_versions_fix.sh
       - name: Save Julia depot cache on cancel or failure
         id: julia-cache-save
         if: cancelled() || failure()
