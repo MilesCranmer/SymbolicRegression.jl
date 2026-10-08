@@ -1,5 +1,6 @@
 module CrossoverModule
 
+using Random: default_rng
 using DispatchDoctor: @unstable
 using DynamicExpressions: AbstractExpression
 using ..CoreModule:
@@ -15,7 +16,7 @@ using ..ComplexityModule: compute_complexity
 using ..LossFunctionsModule: eval_cost
 using ..CheckConstraintsModule: check_constraints
 using ..PopMemberModule: AbstractPopMember, create_child
-using ..MutationFunctionsModule: crossover_trees
+using ..MutationFunctionsModule: crossover_trees, CrossoverStorage
 using ..MutateModule: _sample_mutation
 using ..TracingModule: trace_mutation_result!, trace_mutation_type!
 
@@ -88,9 +89,12 @@ function crossover(
     ::SubtreeCrossover,
     options::AbstractOptions;
     trace::MaybeTrace,
+    crossover_storage=nothing,
     kws...,
 ) where {T,L,N<:AbstractExpression,P<:AbstractPopMember{T,L,N}}
-    child_tree1, child_tree2 = crossover_trees(member1.tree, member2.tree)
+    child_tree1, child_tree2 = crossover_trees(
+        member1.tree, member2.tree, default_rng(), crossover_storage
+    )
     trace_mutation_type!(trace, "subtree_crossover")
     return CrossoverResult{N}(; child1=child_tree1, child2=child_tree2)
 end
@@ -116,6 +120,7 @@ end
     trace::MaybeTrace=nothing,
     eval_context=nothing,
     plugin_states::Tuple=ntuple(Returns(nothing), length(options.plugins)),
+    crossover_storage=nothing,
 )::Tuple{P,P,Bool,Float64} where {T,L,D<:Dataset{T,L},N,P<:AbstractPopMember{T,L,N}}
     crossovers = options.crossovers
     # Skip sampling for a single entry so the default configuration consumes
@@ -136,6 +141,7 @@ end
         trace,
         eval_context,
         plugin_states,
+        crossover_storage,
     )
 end
 
@@ -149,6 +155,7 @@ function _crossover_generation(
     trace::MaybeTrace,
     eval_context,
     plugin_states::Tuple,
+    crossover_storage,
 )::Tuple{
     P,P,Bool,Float64
 } where {T,L,D<:Dataset{T,L},N,P<:AbstractPopMember{T,L,N},C<:AbstractCrossover}
@@ -162,6 +169,7 @@ function _crossover_generation(
     local child_tree1::N, child_tree2::N
     afterSize1 = -1
     afterSize2 = -1
+    storage_keywords = crossover_choice isa SubtreeCrossover ? (; crossover_storage) : (;)
     while true
         result = crossover(
             member1,
@@ -173,6 +181,7 @@ function _crossover_generation(
             curmaxsize,
             nfeatures,
             attempt=num_tries,
+            storage_keywords...,
             plugin_states,
         )::CrossoverResult{N}
         num_evals += result.num_evals
@@ -182,6 +191,11 @@ function _crossover_generation(
         # Both trees satisfy constraints
         if check_constraints(child_tree1, options, curmaxsize, afterSize1) &&
             check_constraints(child_tree2, options, curmaxsize, afterSize2)
+            if crossover_choice isa SubtreeCrossover &&
+                crossover_storage isa CrossoverStorage
+                crossover_storage.first = nothing
+                crossover_storage.second = nothing
+            end
             break
         end
         if num_tries >= max_tries
