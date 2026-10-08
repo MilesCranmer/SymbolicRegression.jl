@@ -62,9 +62,11 @@ function flag_illegal_nests(tree::AbstractExpressionNode, options::AbstractOptio
     end
 end
 
-_any_op_constraint_violated(
+function _any_op_constraint_violated(
     ::AbstractExpressionNode, ::AbstractOptions, ::Tuple{}, ::Int
-) = false
+)
+    false
+end
 
 function _any_op_constraint_violated(
     tree::AbstractExpressionNode,
