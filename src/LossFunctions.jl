@@ -47,7 +47,9 @@ struct EvalContextPool{C<:EvalContext}
     lock::ReentrantLock
 end
 
-function take_eval_context!(pool::EvalContextPool, dataset::Dataset, options::AbstractOptions)
+function take_eval_context!(
+    pool::EvalContextPool, dataset::Dataset, options::AbstractOptions
+)
     context = lock(pool.lock) do
         isempty(pool.idle) ? nothing : pop!(pool.idle)
     end

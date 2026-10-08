@@ -380,8 +380,14 @@ using .MutationFunctionsModule:
 using .InterfaceDynamicExpressionsModule:
     @extend_operators, require_copy_to_workers, make_example_inputs
 using .LossFunctionsModule:
-    EvalContextPool, create_eval_context, take_eval_context!, return_eval_context!,
-    eval_loss, eval_cost, update_baseline_loss!, score_func
+    EvalContextPool,
+    create_eval_context,
+    take_eval_context!,
+    return_eval_context!,
+    eval_loss,
+    eval_cost,
+    update_baseline_loss!,
+    score_func
 using .ConstantOptimizationModule:
     optimize_constants,
     get_constants_for_optimization,
@@ -854,7 +860,11 @@ end
     else
         map(datasets) do dataset
             context = create_eval_context(dataset, options, 0)
-            isnothing(context) ? nothing : EvalContextPool(typeof(context)[], ReentrantLock())
+            if isnothing(context)
+                nothing
+            else
+                EvalContextPool(typeof(context)[], ReentrantLock())
+            end
         end
     end
 
@@ -1051,28 +1061,27 @@ function _warmup_search!(
             WorkerPluginStatesType,
         )
 
-        updated_pop = let verbosity = ropt.verbosity,
-            eval_context_pool = state.eval_context_pools[j]
-
-            @sr_spawner(
-                (datasets, options) -> _dispatch_s_r_cycle(
-                    in_pop,
-                    datasets[j],
-                    options;
-                    pop=i,
-                    out=j,
-                    iteration=0,
-                    verbosity,
-                    cur_maxsize,
-                    plugin_states=worker_plugin_states,
-                    eval_context_pool,
-                ),
-                inputs = something(state.worker_inputs, (datasets, options)),
-                parallelism = ropt.parallelism,
-                worker_idx = worker_idx,
-                result_type = worker_result_type(state)
-            )
-        end
+        updated_pop =
+            let verbosity = ropt.verbosity, eval_context_pool = state.eval_context_pools[j]
+                @sr_spawner(
+                    (datasets, options) -> _dispatch_s_r_cycle(
+                        in_pop,
+                        datasets[j],
+                        options;
+                        pop=i,
+                        out=j,
+                        iteration=0,
+                        verbosity,
+                        cur_maxsize,
+                        plugin_states=worker_plugin_states,
+                        eval_context_pool,
+                    ),
+                    inputs = something(state.worker_inputs, (datasets, options)),
+                    parallelism = ropt.parallelism,
+                    worker_idx = worker_idx,
+                    result_type = worker_result_type(state)
+                )
+            end
         state.worker_output[j][i] = updated_pop
     end
     return nothing
@@ -1429,8 +1438,11 @@ end
     trace = new_trace(options)
     trace_iteration_start!(trace, out, pop, iteration, in_pop, options)
     num_evals = 0.0
-    eval_context = isnothing(eval_context_pool) ? nothing :
+    eval_context = if isnothing(eval_context_pool)
+        nothing
+    else
         take_eval_context!(eval_context_pool, dataset, options)
+    end
     out_pop, best_seen, evals_from_cycle = try
         s_r_cycle(
             dataset,
@@ -1444,7 +1456,8 @@ end
             eval_context,
         )
     finally
-        isnothing(eval_context_pool) || return_eval_context!(eval_context_pool, eval_context)
+        isnothing(eval_context_pool) ||
+            return_eval_context!(eval_context_pool, eval_context)
     end
     num_evals += evals_from_cycle
     out_pop, evals_from_optimize = optimize_and_simplify_population(
