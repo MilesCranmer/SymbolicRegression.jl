@@ -848,7 +848,7 @@ Look through the source of `equation_search` to see how this is used.
 abstract type AbstractSearchState{T,L,N<:AbstractExpression{T}} end
 
 """
-    SearchState{T,L,N,PM,WorkerOutputType,TraceStateType,PluginStatesType,WorkerPluginStatesType,WorkerInputsType} <: AbstractSearchState{T,L,N}
+    SearchState{T,L,N,PM,WorkerOutputType,TraceStateType,PluginStatesType,WorkerPluginStatesType,WorkerInputsType,EvalContextPoolType} <: AbstractSearchState{T,L,N}
 
 The state of the search, including the populations, worker outputs, tasks, and
 channels. This is used to manage the search and keep track of runtime variables
@@ -864,6 +864,7 @@ Base.@kwdef struct SearchState{
     PluginStatesType<:Tuple,
     WorkerPluginStatesType<:Tuple,
     WorkerInputsType<:Union{Nothing,WorkerCopy},
+    EvalContextPoolType,
 } <: AbstractSearchState{T,L,N}
     procs::Vector{Int}
     we_created_procs::Bool
@@ -884,6 +885,7 @@ Base.@kwdef struct SearchState{
     seed_members::Vector{Vector{PM}}
     plugin_states::Vector{PluginStatesType}
     worker_plugin_states::Vector{Vector{WorkerPluginStatesType}}
+    eval_context_pools::Vector{EvalContextPoolType}
 end
 
 function worker_result_type(state::SearchState)
