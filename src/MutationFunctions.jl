@@ -6,7 +6,10 @@ using DynamicExpressions:
     AbstractExpression,
     AbstractNode,
     Expression,
+    ArenaNode,
     NodeSampler,
+    allocate_container,
+    copy_into!,
     get_contents,
     with_contents,
     constructorof,
@@ -505,6 +508,54 @@ function crossover_trees(
     ex1 = with_contents_for_mutation(ex1, out1, context1)
     ex2 = with_contents_for_mutation(ex2, out2, context2)
     return ex1, ex2
+end
+mutable struct CrossoverStorage{C}
+    first::Union{Nothing,C}
+    second::Union{Nothing,C}
+    scratch::C
+end
+
+CrossoverStorage(::AbstractExpression) = nothing
+function CrossoverStorage(tree::Expression{T,N}) where {T,N<:ArenaNode}
+    first = allocate_container(tree)
+    return CrossoverStorage{typeof(first)}(
+        first, allocate_container(tree), allocate_container(tree)
+    )
+end
+
+crossover_trees(ex1, ex2, rng::AbstractRNG, ::Nothing) = crossover_trees(ex1, ex2, rng)
+
+function crossover_trees(
+    ex1::Expression{T,N}, ex2::Expression{T,N}, rng::AbstractRNG, storage::CrossoverStorage
+) where {T,N<:ArenaNode}
+    ex1 === ex2 && error("Attempted to crossover the same expression!")
+    first = storage.first
+    if first === nothing
+        first = storage.first = allocate_container(ex1)
+    end
+    second = storage.second
+    if second === nothing
+        second = storage.second = allocate_container(ex2)
+    end
+    child1 = copy_into!(first, ex1)
+    child2 = copy_into!(second, ex2)
+    tree1, tree2 = get_contents(child1), get_contents(child2)
+    node1, parent1, index1 = _random_node_and_parent(tree1, rng)
+    node2, parent2, index2 = _random_node_and_parent(tree2, rng)
+
+    # Preserve the donor before replacing a subtree in its arena.
+    donor1 = copy_into!(storage.scratch.tree, node1)
+    if index1 == 0
+        child1 = with_contents(child1, copy_into!(first.tree, node2))
+    else
+        set_child!(parent1, node2, index1)
+    end
+    if index2 == 0
+        child2 = with_contents(child2, copy_into!(second.tree, donor1))
+    else
+        set_child!(parent2, donor1, index2)
+    end
+    return child1, child2
 end
 
 """Crossover between two expressions"""

@@ -16,6 +16,7 @@ using ..PopMemberModule: generate_reference
 using ..PopulationModule: Population, finalize_costs
 using ..HallOfFameModule: HallOfFame, _update_hall_of_fame_unchecked!
 using ..RegularizedEvolutionModule: reg_evol_cycle
+using ..MutationFunctionsModule: CrossoverStorage
 using ..LossFunctionsModule: create_eval_context, eval_cost
 using ..ConstantOptimizationModule: optimize_constants
 using ..TracingModule: trace_optimization!
@@ -43,6 +44,7 @@ function s_r_cycle(
         dataset
     end
     eval_context = create_eval_context(batched_dataset, options, curmaxsize)
+    crossover_storage = CrossoverStorage(pop.members[1].tree)
 
     for cycle_idx in 1:ncycles
         _on_cycle_start!(plugin_states, cycle_idx, ncycles, options)
@@ -55,6 +57,7 @@ function s_r_cycle(
             plugin_states,
             best_seen=best_examples_seen,
             eval_context,
+            crossover_storage,
         )
         num_evals += tmp_num_evals
         _update_hall_of_fame_unchecked!(best_examples_seen, pop.members, options)

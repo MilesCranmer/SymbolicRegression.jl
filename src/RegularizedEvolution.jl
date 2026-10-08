@@ -103,6 +103,7 @@ function reg_evol_cycle(
     plugin_states::Tuple,
     best_seen::HallOfFame,
     eval_context=nothing,
+    crossover_storage=nothing,
 )::Tuple{P,Float64} where {T<:DATA_TYPE,L<:LOSS_TYPE,P<:Population{T,L}}
     num_evals = 0.0
     n_evol_cycles = ceil(Int, pop.n / options.tournament_selection_n)
@@ -186,6 +187,7 @@ function reg_evol_cycle(
                 trace=crossover_trace,
                 plugin_states,
                 eval_context,
+                crossover_storage,
             )
             num_evals += tmp_num_evals
             if crossover_accepted
