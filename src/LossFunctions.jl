@@ -48,12 +48,12 @@ struct EvalContextPool{C<:EvalContext}
 end
 
 function take_eval_context!(
-    pool::EvalContextPool, dataset::Dataset, options::AbstractOptions
-)
+    pool::EvalContextPool{C}, dataset::Dataset, options::AbstractOptions
+) where {C}
     context = lock(pool.lock) do
         isempty(pool.idle) ? nothing : pop!(pool.idle)
     end
-    return isnothing(context) ? create_eval_context(dataset, options, 0) : context
+    return isnothing(context) ? create_eval_context(dataset, options, 0)::C : context
 end
 
 function return_eval_context!(pool::EvalContextPool, context::EvalContext)
