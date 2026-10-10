@@ -51,11 +51,17 @@ function _weighted_loss(
     )
 end
 
+# Only `SupervisedLoss` takes the vectorized loop: those losses are pure, so probing the
+# first element for the accumulator type is harmless. Custom losses keep one call per row.
 function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
 ) where {T,LT<:Union{Function,SupervisedLoss}}
     if loss isa SupervisedLoss
-        return LossFunctions.mean(loss, x, y)
+        total = zero(typeof(loss(first(x), first(y))))
+        @inbounds @simd for i in eachindex(x, y)
+            total += loss(x[i], y[i])
+        end  # COV_EXCL_LINE
+        return total / length(x)
     else
         l(i) = loss(x[i], y[i])
         return LossFunctions.mean(l, eachindex(x))
@@ -66,7 +72,11 @@ function _weighted_loss(
     x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::LT
 ) where {T,LT<:Union{Function,SupervisedLoss}}
     if loss isa SupervisedLoss
-        return sum(loss, x, y, w; normalize=true)
+        total = zero(typeof(first(w) * loss(first(x), first(y))))
+        @inbounds @simd for i in eachindex(x, y, w)
+            total += w[i] * loss(x[i], y[i])
+        end  # COV_EXCL_LINE
+        return total / sum(w)
     else
         l(i) = loss(x[i], y[i], w[i])
         return sum(l, eachindex(x)) / sum(w)
