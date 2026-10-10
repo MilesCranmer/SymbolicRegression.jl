@@ -57,11 +57,10 @@ function _loss(
     x::AbstractArray{T}, y::AbstractArray{T}, loss::LT
 ) where {T,LT<:Union{Function,SupervisedLoss}}
     if loss isa SupervisedLoss
-        axes(x) == axes(y) || throw(DimensionMismatch("Loss array axes must agree"))
         total = zero(typeof(loss(first(x), first(y))))
         @inbounds @simd for i in eachindex(x, y)
             total += loss(x[i], y[i])
-        end
+        end  # COV_EXCL_LINE
         return total / length(x)
     else
         l(i) = loss(x[i], y[i])
@@ -73,12 +72,10 @@ function _weighted_loss(
     x::AbstractArray{T}, y::AbstractArray{T}, w::AbstractArray{T}, loss::LT
 ) where {T,LT<:Union{Function,SupervisedLoss}}
     if loss isa SupervisedLoss
-        (axes(x) == axes(y) == axes(w)) ||
-            throw(DimensionMismatch("Loss array axes must agree"))
         total = zero(typeof(first(w) * loss(first(x), first(y))))
         @inbounds @simd for i in eachindex(x, y, w)
             total += w[i] * loss(x[i], y[i])
-        end
+        end  # COV_EXCL_LINE
         return total / sum(w)
     else
         l(i) = loss(x[i], y[i], w[i])
