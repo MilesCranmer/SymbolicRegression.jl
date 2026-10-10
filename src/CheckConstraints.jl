@@ -49,7 +49,7 @@ end
 function flag_illegal_nests(tree::AbstractExpressionNode, options::AbstractOptions)::Bool
     # We search from the top first, then from child nodes at end.
     nested_constraints = options.nested_constraints
-    (isnothing(nested_constraints) || isempty(nested_constraints)) && return false
+    isnothing(nested_constraints) && return false
     any(tree) do subtree
         any(nested_constraints) do (degree, op_idx, op_constraints)
             subtree.degree == degree &&
@@ -60,27 +60,6 @@ function flag_illegal_nests(tree::AbstractExpressionNode, options::AbstractOptio
                 end
         end
     end
-end
-
-function _any_op_constraint_violated(
-    ::AbstractExpressionNode, ::AbstractOptions, ::Tuple{}, ::Int
-)
-    false
-end
-
-function _any_op_constraint_violated(
-    tree::AbstractExpressionNode,
-    options::AbstractOptions,
-    constraints::Tuple{C,Vararg},
-    degree::Int,
-)::Bool where {C}
-    for (op_idx, cons) in enumerate(first(constraints))
-        if any(!=(-1), cons) &&
-            flag_operator_complexity(tree, degree, op_idx, cons, options)
-            return true
-        end
-    end
-    return _any_op_constraint_violated(tree, options, Base.tail(constraints), degree + 1)
 end
 
 """Check if user-passed constraints are satisfied. Returns false otherwise."""
@@ -101,7 +80,16 @@ function check_constraints(
 )::Bool
     @something(cached_size, compute_complexity(tree, options)) > maxsize && return false
     count_depth(tree) > options.maxdepth && return false
-    _any_op_constraint_violated(tree, options, options.op_constraints, 1) && return false
+    # `map` over the per-degree tuple keeps each degree's constraint type concrete.
+    op_constraints = options.op_constraints
+    degrees = ntuple(identity, Val(length(op_constraints)))
+    invalid_by_degree = map(op_constraints, degrees) do degree_constraints, degree
+        any(enumerate(degree_constraints)) do (op_idx, cons)
+            any(!=(-1), cons) &&
+                flag_operator_complexity(tree, degree, op_idx, cons, options)
+        end
+    end
+    any(invalid_by_degree) && return false
     flag_illegal_nests(tree, options) && return false
     return true
 end
