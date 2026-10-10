@@ -80,13 +80,16 @@ function check_constraints(
 )::Bool
     @something(cached_size, compute_complexity(tree, options)) > maxsize && return false
     count_depth(tree) > options.maxdepth && return false
-    any_invalid = any(enumerate(options.op_constraints)) do (degree, degree_constraints)
+    # `map` over the per-degree tuple keeps each degree's constraint type concrete.
+    op_constraints = options.op_constraints
+    degrees = ntuple(identity, Val(length(op_constraints)))
+    invalid_by_degree = map(op_constraints, degrees) do degree_constraints, degree
         any(enumerate(degree_constraints)) do (op_idx, cons)
             any(!=(-1), cons) &&
                 flag_operator_complexity(tree, degree, op_idx, cons, options)
         end
     end
-    any_invalid && return false
+    any(invalid_by_degree) && return false
     flag_illegal_nests(tree, options) && return false
     return true
 end
