@@ -485,8 +485,11 @@ which is useful for debugging and profiling.
     second dimension is rows.
 - `niterations::Int=100`: The number of iterations to perform the search.
     More iterations will improve the results.
-- `weights::Union{AbstractMatrix{T}, AbstractVector{T}, Nothing}=nothing`: Optionally
-    weight the loss for each `y` by this value (same shape as `y`).
+- `weights::Union{AbstractMatrix, AbstractVector, Nothing}=nothing`: Optionally
+    weight the loss for each `y` by this value (same shape as `y`). Will be
+    converted to the same element type as `X`/`y` if it isn't already
+    (e.g. real weights are automatically promoted to complex if `X`/`y` are
+    complex-valued).
 - `options::AbstractOptions=Options()`: The options for the search, such as
     which operators to use, evolution hyperparameters, etc.
 - `variable_names::Union{Vector{String}, Nothing}=nothing`: The names
@@ -584,7 +587,7 @@ function equation_search(
     X::AbstractMatrix{T},
     y::AbstractMatrix;
     niterations::Int=100,
-    weights::Union{AbstractMatrix{T},AbstractVector{T},Nothing}=nothing,
+    weights::Union{AbstractMatrix,AbstractVector,Nothing}=nothing,
     options::AbstractOptions=Options(),
     variable_names::Union{AbstractVector{String},Nothing}=nothing,
     display_variable_names::Union{AbstractVector{String},Nothing}=variable_names,
@@ -623,6 +626,9 @@ function equation_search(
     if weights !== nothing
         @assert length(weights) == length(y)
         weights = reshape(weights, size(y))
+        if eltype(weights) !== T
+            weights = T.(weights)
+        end
     end
 
     datasets = construct_datasets(
